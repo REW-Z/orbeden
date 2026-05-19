@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="OrbedenCore/OrbedenCore.vcxproj" Id="b12e5123-bd9c-4d91-a1ba-879726128c33" />
+</Solution>
