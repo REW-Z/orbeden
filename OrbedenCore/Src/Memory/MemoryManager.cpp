@@ -1,260 +1,221 @@
-#include <cassert>
-#include <iostream>
-#include <string>
-#include <cstring>
-#include "Defines/types.h"
-#include "Log/Log.h"
 #include "MemoryManager.h"
 
-using namespace std;
+#include "Log/Log.h"
 
-/// ============================================
-/// Allocator
-/// ============================================
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
 
+//获取默认堆分配器
 HeapAllocator* Memory::GetHeapAllocator()
 {
     static HeapAllocator instance;
     return &instance;
 }
 
+Block* HeapAllocator::lastInsertBlock = nullptr;
 
-
-
-
-
-/// ============================================
-/// HeapAllocator
-/// ============================================
-
-Block* HeapAllocator::lastInsertBlock = NULL;
-
-//堆分配内存  
+//堆分配内存
 void* HeapAllocator::Allocate(uint32 size, uint32 alignment, bool isArray)
 {
     //   | (Block) | BEG(uint) |  adjustment with ajustmentMark  |  allocSize    | END(uint) |
 
-    //申请的总空间 (包含冗余的填充用于字节对齐)  （CRE：按理说alignment改为(alignment-1)也可以 ）
+    //申请完整内存块
     uint32 totalSize = sizeof(Block) + sizeof(uint32) + (alignment + sizeof(uint32) + size) + sizeof(uint32);
+    std::byte* blockAddr = static_cast<std::byte*>(std::malloc(totalSize));
+    assert(blockAddr);
 
-    //(分配内存空间)
-    byte* addr = (byte*)malloc(totalSize);//addr ----->  内存块起始
-
-    assert(addr);
-
-    //Block信息 
-    Block* blockPtr = (Block*)addr;
+    //构造并写入块信息
+    Block* blockPtr = new (blockAddr) Block;
     blockPtr->dataSize = size;
     blockPtr->alignment = alignment;
     blockPtr->isArray = isArray;
 
-    for (int i = 0; i < static_cast<int>(sizeof(blockPtr->info) / sizeof(blockPtr->info[0])); i++)
-        blockPtr->info[i] = '\0';
-
-    //Block插入
+    //插入内存块链表
     Insert(blockPtr);
-    addr += sizeof(Block);//addr ----->  Block后
 
-    //数据段的前后标记
-    uint32* beginMark = (uint32*)(addr);
+    //写入数据段头尾标记
+    std::byte* beginMarkAddr = blockAddr + sizeof(Block);
+    uint32* beginMark = reinterpret_cast<uint32*>(beginMarkAddr);
     *beginMark = HeapAllocator::MARK_BEG;
-    addr += sizeof(uint32);//addr ----->  实际分配内存的起始（rawAddr）
 
-    uint32* endMark = (uint32*)(addr + size + alignment + sizeof(uint32));
+    std::byte* rawAddr = beginMarkAddr + sizeof(uint32);
+    uint32* endMark = reinterpret_cast<uint32*>(rawAddr + size + alignment + sizeof(uint32));
     *endMark = HeapAllocator::MARK_END;
 
-    //临时地址用于计算偏移 （预留偏移字节数的存放位置）
-    byte* tmpAddr = addr + sizeof(uint32);
-
-    //计算对齐的地址
-    uint32 byteAdjustment = 0;//0字节对齐时的偏移为0
+    //计算对齐后的数据地址
+    std::byte* tmpAddr = rawAddr + sizeof(uint32);
+    uint32 byteAdjustment = 0;
     if (alignment > 0)
     {
-        //***对齐计算***
         uint32 mask = (alignment - 1);
-        uint32 misAlignment = ((uint32)tmpAddr & mask);
-        unsigned  adjustment = alignment - misAlignment;
-        //**************
-
-        byteAdjustment = adjustment;
+        uint32 misAlignment = static_cast<uint32>(reinterpret_cast<std::uintptr_t>(tmpAddr) & mask);
+        byteAdjustment = (misAlignment == 0) ? 0 : (alignment - misAlignment);
     }
 
-    byte* alignedAddr = tmpAddr + byteAdjustment;
+    std::byte* alignedAddr = tmpAddr + byteAdjustment;
 
-    //已对齐地址的前面4字节--用于存放偏移字节数
-    uint32* adjustmentMark = (uint32*)(alignedAddr - 4);
-    *adjustmentMark = byteAdjustment + 4;
+    //记录释放时回退到原始地址所需的偏移
+    uint32* adjustmentMark = reinterpret_cast<uint32*>(alignedAddr - sizeof(uint32));
+    *adjustmentMark = byteAdjustment + static_cast<uint32>(sizeof(uint32));
 
-
-    //分配记录
-    this->allocateCount++;
+    //更新分配记录
+    allocateCount++;
 
     assert(alignedAddr != 0);
-
-    return (void*)alignedAddr;
+    return alignedAddr;
 }
 
-
-//堆释放内存  
-void HeapAllocator::Deallocate(byte* addr, uint32 alignment, bool isArray)
+//堆释放内存
+void HeapAllocator::Deallocate(std::byte* addr, uint32, bool)
 {
     if (!addr) return;
 
-
-    //取回偏移值 (存放在前面4字节)
-    uint32* adjustmentMark = (uint32*)(addr - 4);
+    //取回偏移值
+    uint32* adjustmentMark = reinterpret_cast<uint32*>(addr - sizeof(uint32));
     uint32 totalAdjustment = *adjustmentMark;
+    std::byte* rawAddr = addr - totalAdjustment;
 
-    //raw Addr位置
-    addr -= totalAdjustment;		//addr ---------> raw Addr位置
-
-    //判断
-    addr -= sizeof(uint32);  //addr ---------> BEG位置
-    uint32* beginMark = (uint32*)(addr);
+    //检查头标记
+    std::byte* beginMarkAddr = rawAddr - sizeof(uint32);
+    uint32* beginMark = reinterpret_cast<uint32*>(beginMarkAddr);
     assert(*beginMark == HeapAllocator::MARK_BEG);
 
-    addr -= sizeof(Block);		//addr ---------> Block位置
-    Block* blockPtr = (Block*)addr;
-    assert(blockPtr->alignment == alignment);
-    assert(blockPtr->isArray == isArray);
+    //读取内存块信息
+    std::byte* blockAddr = beginMarkAddr - sizeof(Block);
+    Block* blockPtr = reinterpret_cast<Block*>(blockAddr);
+    uint32 alignment = blockPtr->alignment;
 
-    uint32* endMark = (uint32*)(addr + sizeof(Block) + sizeof(uint32) + alignment + sizeof(uint32) + blockPtr->dataSize);
+    //检查尾标记
+    uint32* endMark = reinterpret_cast<uint32*>(blockAddr + sizeof(Block) + sizeof(uint32) + alignment + sizeof(uint32) + blockPtr->dataSize);
     assert(*endMark == HeapAllocator::MARK_END);
 
-    //删除节点
+    //释放内存块
     Remove(blockPtr);
+    blockPtr->~Block();
+    std::free(blockAddr);
 
-    //释放空间
-    free(addr);
-
-
-    //释放次数记录
-    this->deallocateCount++;
+    deallocateCount++;
 }
 
-
-
-/// 写入内存块注释
+//写入最近一次分配的内存块注释
 void HeapAllocator::WriteInfo(const char* cstr)
 {
     Block* lastInsert = HeapAllocator::lastInsertBlock;
-    if (lastInsert && cstr)
+    if (!lastInsert || !cstr) return;
+
+    //截断并写入说明
+    uint32 infoLength = static_cast<uint32>(sizeof(lastInsert->info) / sizeof(lastInsert->info[0]));
+    uint32 sourceLength = static_cast<uint32>(std::char_traits<char>::length(cstr));
+    uint32 copyLength = (sourceLength < (infoLength - 1)) ? sourceLength : (infoLength - 1);
+
+    for (uint32 i = 0; i < copyLength; i++)
     {
-        uint32 infoLength = static_cast<uint32>(sizeof(lastInsert->info) / sizeof(lastInsert->info[0]));
-        uint32 sourceLength = static_cast<uint32>(std::char_traits<char>::length(cstr));
-        uint32 copyLength = (sourceLength < (infoLength - 1)) ? sourceLength : (infoLength - 1);
-
-        for (uint32 i = 0; i < copyLength; i++)
-        {
-            lastInsert->info[i] = cstr[i];
-        }
-
-        lastInsert->info[copyLength] = '\0';
+        lastInsert->info[i] = cstr[i];
     }
+
+    lastInsert->info[copyLength] = '\0';
 }
 
-
-/// 插入内存块节点
+//插入内存块节点
 void HeapAllocator::Insert(Block* blockPtr)
 {
-    //Any Blocks?
+    assert(blockPtr);
+
+    //插入链表尾部
+    blockPtr->prevBlock = tailBlock;
+    blockPtr->nextBlock = nullptr;
+
     if (tailBlock)
     {
-        //Set As Last Node
-        blockPtr->prevBlock = tailBlock;
-        blockPtr->nextBlock = 0;
-        this->tailBlock->nextBlock = blockPtr;
-        this->tailBlock = blockPtr;
-
-        //as last insert block
-        HeapAllocator::lastInsertBlock = blockPtr;
+        tailBlock->nextBlock = blockPtr;
     }
-    //No Blocks
     else
     {
-        //New Node As Prev&Tail
-        blockPtr->prevBlock = 0;
-        blockPtr->nextBlock = 0;
-        this->headBlock = blockPtr;
-        this->tailBlock = blockPtr;
-
-        //as last insert block
-        HeapAllocator::lastInsertBlock = blockPtr;
+        headBlock = blockPtr;
     }
+
+    tailBlock = blockPtr;
+    HeapAllocator::lastInsertBlock = blockPtr;
 }
 
-/// 移除内存块节点
+//移除内存块节点
 void HeapAllocator::Remove(Block* blockPtr)
 {
-    //有前置节点
+    assert(blockPtr);
+
+    //连接前后节点
     if (blockPtr->prevBlock)
     {
         blockPtr->prevBlock->nextBlock = blockPtr->nextBlock;
     }
     else
     {
-        this->headBlock = blockPtr->nextBlock;
+        headBlock = blockPtr->nextBlock;
     }
 
-    //有后置节点
     if (blockPtr->nextBlock)
     {
         blockPtr->nextBlock->prevBlock = blockPtr->prevBlock;
     }
     else
     {
-        this->tailBlock = blockPtr->prevBlock;
+        tailBlock = blockPtr->prevBlock;
     }
+
+    blockPtr->prevBlock = nullptr;
+    blockPtr->nextBlock = nullptr;
 }
 
-/// 获取当前内存块数量
+//获取当前内存块数量
 uint32 HeapAllocator::GetBlockCount()
 {
     uint32 count = 0;
-    Block* b = this->headBlock;
-    while (b)
+    Block* block = headBlock;
+
+    while (block)
     {
         count++;
-        b = b->nextBlock;
+        block = block->nextBlock;
     }
+
     return count;
 }
 
-
-
-
-/// 当前内存分配情况
+//输出当前内存分配情况
 void HeapAllocator::Analysis()
 {
     Log::Info("分析内存分配情况...");
-    Block* b = tailBlock;
-    while (b)
+
+    //从尾部向前输出分配块
+    Block* block = tailBlock;
+    while (block)
     {
         std::string str = "\n[Block]";
         str += "\ninfo:";
-        str += b->info;
+        str += block->info;
 
         str += "\n size: ";
-        str += std::to_string(b->dataSize);
+        str += std::to_string(block->dataSize);
         str += "\n";
 
         Log::Info(str.c_str());
 
-        b = b->prevBlock;
+        block = block->prevBlock;
     }
 }
 
-
-
-/// <summary> 析构函数 </summary> 
+//输出内存泄露分析
 HeapAllocator::~HeapAllocator()
 {
     Log::Info("分析内存泄露...");
 
-    std::string allocateText = "总分配次数：" + std::to_string(this->allocateCount);
-    std::string deallocateText = "总释放次数：" + std::to_string(this->deallocateCount);
+    //输出分配统计
+    std::string allocateText = "总分配次数：" + std::to_string(allocateCount);
+    std::string deallocateText = "总释放次数：" + std::to_string(deallocateCount);
     Log::Info(allocateText.c_str());
     Log::Info(deallocateText.c_str());
 
-    this->Analysis();
+    Analysis();
 }
