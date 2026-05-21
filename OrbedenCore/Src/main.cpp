@@ -1,68 +1,93 @@
-
-#include "Defines/types.h"
-#include <cassert>
-#include <cstdint>
-#include <iostream>
+#include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
+#include "Profiler/Profiler.h"
+
+#include <filesystem>
+#include <fstream>
+#include <string>
 
 namespace
 {
-    struct TestObject
+    //同步读取文件并释放
+    void ExampleSyncReadFile(const std::string& path)
     {
-        static int destructorCount;
-
-        int value;
-
-        TestObject()
-            : value(0)
+        File* file = nullptr;
         {
+            PROFILE("SyncReadFile");
+            file = FileSystem::LoadFile(path, FileSystem::IOSLIB::Fstream, FileSystem::MODE::NORMAL);
         }
 
-        TestObject(int input)
-            : value(input)
-        {
-        }
+        FileText* text = static_cast<FileText*>(file);
 
-        ~TestObject()
-        {
-            destructorCount++;
-        }
-    };
+        Log::Info("同步读取:");
+        Log::Info(text->content.c_str());
 
-    int TestObject::destructorCount = 0;
+        DELETE(file);
+    }
 
-    struct alignas(16) AlignedObject
+    //异步读取文件并释放
+    void ExampleAsyncReadFile(const std::string& path)
     {
-        float data[4];
-    };
+        AsyncFileResult* result = FileSystem::LoadFileAsync(path, FileSystem::IOSLIB::Fstream, FileSystem::MODE::NORMAL);
+        result->task.wait();
+
+        FileText* text = static_cast<FileText*>(result->filePtr);
+
+        Log::Info("异步读取:");
+        Log::Info(text->content.c_str());
+
+        DELETE(result->filePtr);
+        DELETE(result);
+    }
+
+    //yield 异步文件结果
+    AsyncFileRoutine ExampleYieldAsyncFile(const std::string& path)
+    {
+        AsyncFileResult* result = FileSystem::LoadFileAsync(path, FileSystem::IOSLIB::Fstream, FileSystem::MODE::NORMAL);
+        co_yield result;
+
+        FileText* text = static_cast<FileText*>(result->filePtr);
+
+        Log::Info("yield 异步读取:");
+        Log::Info(text->content.c_str());
+
+        DELETE(result->filePtr);
+        DELETE(result);
+    }
+
+    //运行 yield 文件协程
+    void RunYieldAsyncFile(AsyncFileRoutine routine)
+    {
+        while (routine.MoveNext())
+        {
+            routine.WaitCurrent();
+        }
+    }
 }
 
 int main()
 {
-    Log::Info("测试中文");
-    Log::Info("aaa");
-    Log::Error("222");
+    std::string path = "OrbedenCore/.bin/FileSystemExample/hello.txt";
 
-    auto defaultObject = NEW(TestObject)TestObject();
-    auto valueObject = NEW(TestObject)TestObject(42);
-    auto alignedObject = NEW(AlignedObject)AlignedObject();
+    std::filesystem::create_directories(Path::GetDirectory(path));
 
-    assert(valueObject->value == 42);
-    assert(reinterpret_cast<std::uintptr_t>(alignedObject) % alignof(AlignedObject) == 0);
+    std::ofstream file(path, std::ios::out);
+    file << "Hello FileSystem";
+    file.close();
 
-    DELETE(defaultObject);
-    DELETE(valueObject);
-    DELETE(alignedObject);
-    DELETE(nullptr);
+    {
+        PROFILE("FileSystemExample");
+        ExampleSyncReadFile(path);
+    }
 
-    assert(defaultObject == nullptr);
-    assert(valueObject == nullptr);
-    assert(alignedObject == nullptr);
-    assert(TestObject::destructorCount == 2);
+    ExampleAsyncReadFile(path);
+    RunYieldAsyncFile(ExampleYieldAsyncFile(path));
+
+    Profiler::WriteProfileLog();
+    Profiler::Clear();
 
     Memory::GetHeapAllocator()->Analysis();
-
 
     return 0;
 }

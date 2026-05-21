@@ -19,7 +19,7 @@ public:
     static void DeleteObject(T*& ptr);
 
     //允许 DELETE(nullptr)
-    static void DeleteObject(std::nullptr_t) {}
+    static void DeleteObject(decltype(nullptr)) {}
 };
 
 //堆内存块
@@ -81,14 +81,97 @@ public:
 
 class LinearAllocator
 {
+private:
+    std::byte* buffer = nullptr;
+    uint32 capacity = 0;
+    uint32 offset = 0;
+    bool ownsBuffer = false;
+
+    //释放内部缓冲区
+    void Release();
+
+public:
+    LinearAllocator() = default;
+    explicit LinearAllocator(uint32 size);
+    LinearAllocator(const LinearAllocator&) = delete;
+    LinearAllocator& operator=(const LinearAllocator&) = delete;
+    ~LinearAllocator();
+
+    //初始化内部缓冲区
+    void Initialize(uint32 size);
+
+    //使用外部缓冲区
+    void Initialize(void* memory, uint32 size);
+
+    //线性分配内存
+    void* Allocate(uint32 size, uint32 alignment = 0, bool isArray = false);
+
+    //线性分配器不支持单块释放
+    void Deallocate(std::byte* addr = nullptr, uint32 alignment = 0, bool isArray = false);
+
+    //重置所有线性分配
+    void Reset();
+
+    //获取已使用大小
+    uint32 GetUsedSize() const;
+
+    //获取容量
+    uint32 GetCapacity() const;
 };
 
 class PoolAllocator
 {
+private:
+    struct FreeBlock
+    {
+        FreeBlock* next = nullptr;
+    };
+
+    std::byte* buffer = nullptr;
+    uint32 blockSize = 0;
+    uint32 blockStride = 0;
+    uint32 blockAlignment = 0;
+    uint32 blockCount = 0;
+    uint32 freeCount = 0;
+    FreeBlock* freeList = nullptr;
+
+    //释放内部缓冲区
+    void Release();
+
+public:
+    PoolAllocator() = default;
+    PoolAllocator(uint32 size, uint32 count, uint32 alignment = 0);
+    PoolAllocator(const PoolAllocator&) = delete;
+    PoolAllocator& operator=(const PoolAllocator&) = delete;
+    ~PoolAllocator();
+
+    //初始化固定块池
+    void Initialize(uint32 size, uint32 count, uint32 alignment = 0);
+
+    //分配一个固定块
+    void* Allocate(uint32 size = 0, uint32 alignment = 0, bool isArray = false);
+
+    //释放一个固定块
+    void Deallocate(std::byte* addr, uint32 alignment = 0, bool isArray = false);
+
+    //重置固定块池
+    void Reset();
+
+    //获取空闲块数量
+    uint32 GetFreeCount() const;
+
+    //获取块数量
+    uint32 GetBlockCount() const;
 };
 
 class SlabAllocator
 {
+public:
+    //临时使用堆分配，后续再按尺寸分桶
+    void* Allocate(uint32 size, uint32 alignment = 0, bool isArray = false);
+
+    //释放临时堆分配
+    void Deallocate(std::byte* addr, uint32 alignment = 0, bool isArray = false);
 };
 
 //析构对象并释放堆内存
