@@ -18,14 +18,23 @@
     <ClInclude Include="Src\Defines\types.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\FileSystem\FileSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Log\Log.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Memory\MemoryManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Profiler\Profiler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\FileSystem\FileSystem.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Log\Log.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -33,6 +42,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Profiler\Profiler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -136,13 +136,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Src\Defines\types.h" />
+    <ClInclude Include="Src\FileSystem\FileSystem.h" />
     <ClInclude Include="Src\Log\Log.h" />
     <ClInclude Include="Src\Memory\MemoryManager.h" />
+    <ClInclude Include="Src\Profiler\Profiler.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Src\Log\Log.cpp" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Memory\MemoryManager.cpp" />
+    <ClCompile Include="Src\Profiler\Profiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
