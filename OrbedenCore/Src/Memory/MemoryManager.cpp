@@ -444,6 +444,15 @@ uint32 PoolAllocator::GetBlockCount() const
     return blockCount;
 }
 
+//判断地址是否属于当前池
+bool PoolAllocator::Contains(std::byte* addr) const
+{
+    if (!buffer || !addr) return false;
+
+    std::byte* end = buffer + blockStride * blockCount;
+    return addr >= buffer && addr < end;
+}
+
 //临时使用堆分配，后续再按尺寸分桶
 void* SlabAllocator::Allocate(uint32 size, uint32 alignment, bool isArray)
 {

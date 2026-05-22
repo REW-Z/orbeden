@@ -2,6 +2,7 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Profiler/Profiler.h"
+#include "Runtime/Actor.h"
 
 #include <filesystem>
 #include <fstream>
@@ -64,6 +65,28 @@ namespace
             routine.WaitCurrent();
         }
     }
+
+    //创建和销毁Actor
+    void ExampleObjectSystem()
+    {
+        Actor garden = Actor::Create("Garden");
+        Actor tree = Actor::Create("Tree");
+
+        tree.SetParent(garden);
+        tree.SetLocalPosition({ 1.0f, 2.0f, 3.0f });
+
+        Type* basicType = typeof(ActorComponent);
+        Ref<ActorComponent> basicPtr(tree.Basic());
+        Object* object = basicPtr.Get();
+        if (object && object->Is(basicType) && object is(ActorComponent))
+        {
+            ActorComponent* basic = object as(ActorComponent);
+            tree.SetName(basic->name);
+        }
+
+        tree.Destroy();
+        garden.Destroy();
+    }
 }
 
 int main()
@@ -83,6 +106,7 @@ int main()
 
     ExampleAsyncReadFile(path);
     RunYieldAsyncFile(ExampleYieldAsyncFile(path));
+    ExampleObjectSystem();
 
     Profiler::WriteProfileLog();
     Profiler::Clear();

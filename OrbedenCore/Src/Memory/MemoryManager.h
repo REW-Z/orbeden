@@ -162,6 +162,9 @@ public:
 
     //获取块数量
     uint32 GetBlockCount() const;
+
+    //判断地址是否属于当前池
+    bool Contains(std::byte* addr) const;
 };
 
 class SlabAllocator
