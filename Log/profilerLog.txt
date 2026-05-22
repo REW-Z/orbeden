@@ -1,12 +1,12 @@
 FileSystemExample
 ---------
-timeTotalUs:1004
-selfTimeUs:22
+timeTotalUs:1095
+selfTimeUs:14
 invokeCounts:1
 
     SyncReadFile
     ---------
-    timeTotalUs:982
-    selfTimeUs:982
+    timeTotalUs:1081
+    selfTimeUs:1081
     invokeCounts:1
 
