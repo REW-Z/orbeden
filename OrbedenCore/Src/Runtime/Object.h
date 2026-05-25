@@ -8,6 +8,7 @@
 class Object;
 class ObjectPoolPage;
 class Type;
+class World;
 
 typedef uint32 TypeId;
 typedef Object* (*ObjectConstructorFunction)();
@@ -126,17 +127,10 @@ public: \
     Object* CLASS::ConstructObject() { return new (CLASS::type.AllocateMemory()) CLASS(); } \
     void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); CLASS::type.DeallocateMemory(reinterpret_cast<std::byte*>(instance)); }
 
-#define TYPEOF(CLASS) CLASS::StaticType()
-#define TYPE_OF(CLASS) TYPEOF(CLASS)
-#define IS(CLASS) ->Is(TYPEOF(CLASS))
-#define AS(CLASS) ->Cast<CLASS>()
+#define typeof(CLASS) CLASS::StaticType()
+#define is(CLASS) ->Is(typeof(CLASS))
+#define as(CLASS) ->Cast<CLASS>()
 
-//旧工程风格的对象操作符宏
-#ifndef ORBEDEN_DISABLE_LEGACY_OBJECT_OPERATORS
-#define typeof(CLASS) TYPEOF(CLASS)
-#define is(CLASS) IS(CLASS)
-#define as(CLASS) AS(CLASS)
-#endif
 
 //基础对象
 class Object
@@ -145,6 +139,12 @@ class Object
 
 private:
     StringId instanceId;
+    World* ownerWorld = nullptr;
+
+    friend class World;
+
+    //设置所属世界
+    void SetWorld(World* world);
 
 public:
     Object() = default;
@@ -156,16 +156,27 @@ public:
     //设置实例ID
     void SetInstanceId(const StringId& id);
 
+    /// <summary> 获取所属世界。 </summary>
+    World* GetWorld() const;
+
     //判断类型
     bool Is(Type* type) const;
 
     //转换类型
     template<typename T>
-    T* Cast();
+    T* Cast()
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        return GetType()->Is(T::StaticType()) ? static_cast<T*>(this) : nullptr;
+    }
 
     //转换类型
     template<typename T>
-    const T* Cast() const;
+    const T* Cast() const
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        return GetType()->Is(T::StaticType()) ? static_cast<const T*>(this) : nullptr;
+    }
 
     //注册类型
     static void RegisterType(Type* type);
@@ -190,7 +201,11 @@ public:
 
     //创建对象
     template<typename T>
-    static T* CreateInstance(const std::string& instancePath = "");
+    static T* CreateInstance(const std::string& instancePath = "")
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        return static_cast<T*>(CreateInstance(T::StaticType(), instancePath));
+    }
 
     //销毁对象
     static bool DeleteInstance(Object* object);
@@ -206,97 +221,56 @@ private:
 
 public:
     Ref() = default;
-    explicit Ref(const StringId& id);
-    explicit Ref(T* value);
+    explicit Ref(const StringId& id)
+        : instanceId(id)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+    }
+
+    explicit Ref(T* value)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        Set(value);
+    }
 
     //设置对象
-    void Set(T* value);
+    void Set(T* value)
+    {
+        object = value;
+        instanceId = value ? value->GetInstanceId() : StringId();
+    }
 
     //获取对象
-    T* Get() const;
+    T* Get() const
+    {
+        if (!instanceId.IsValid()) return nullptr;
+
+        Object* found = Object::FindObject(instanceId);
+        if (found == object) return object;
+
+        object = found ? found->Cast<T>() : nullptr;
+        return object;
+    }
 
     //判断是否为空
-    bool IsNull() const;
+    bool IsNull() const
+    {
+        return Get() == nullptr;
+    }
 
-    T& operator*() const;
-    T* operator->() const;
-    operator T* () const;
+    T& operator*() const
+    {
+        return *Get();
+    }
+
+    T* operator->() const
+    {
+        return Get();
+    }
+
+    operator T* () const
+    {
+        return Get();
+    }
 };
 
-template<typename T>
-T* Object::Cast()
-{
-    static_assert(std::is_base_of_v<Object, T>);
-    return GetType()->Is(T::StaticType()) ? static_cast<T*>(this) : nullptr;
-}
-
-template<typename T>
-const T* Object::Cast() const
-{
-    static_assert(std::is_base_of_v<Object, T>);
-    return GetType()->Is(T::StaticType()) ? static_cast<const T*>(this) : nullptr;
-}
-
-template<typename T>
-T* Object::CreateInstance(const std::string& instancePath)
-{
-    static_assert(std::is_base_of_v<Object, T>);
-    return static_cast<T*>(CreateInstance(T::StaticType(), instancePath));
-}
-
-template<typename T>
-Ref<T>::Ref(const StringId& id)
-    : instanceId(id)
-{
-    static_assert(std::is_base_of_v<Object, T>);
-}
-
-template<typename T>
-Ref<T>::Ref(T* value)
-{
-    static_assert(std::is_base_of_v<Object, T>);
-    Set(value);
-}
-
-template<typename T>
-void Ref<T>::Set(T* value)
-{
-    object = value;
-    instanceId = value ? value->GetInstanceId() : StringId();
-}
-
-template<typename T>
-T* Ref<T>::Get() const
-{
-    if (!instanceId.IsValid()) return nullptr;
-
-    Object* found = Object::FindObject(instanceId);
-    if (found == object) return object;
-
-    object = found ? found->Cast<T>() : nullptr;
-    return object;
-}
-
-template<typename T>
-bool Ref<T>::IsNull() const
-{
-    return Get() == nullptr;
-}
-
-template<typename T>
-T& Ref<T>::operator*() const
-{
-    return *Get();
-}
-
-template<typename T>
-T* Ref<T>::operator->() const
-{
-    return Get();
-}
-
-template<typename T>
-Ref<T>::operator T* () const
-{
-    return Get();
-}

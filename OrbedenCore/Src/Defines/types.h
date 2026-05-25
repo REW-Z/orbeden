@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 //整数类型
 typedef std::int8_t int8;
@@ -31,6 +32,9 @@ typedef double float64;
 
 //原始字节
 typedef std::byte byte;
+
+template<typename T>
+using List = std::vector<T>;
 
 static_assert(sizeof(int8) == 1);
 static_assert(sizeof(int16) == 2);

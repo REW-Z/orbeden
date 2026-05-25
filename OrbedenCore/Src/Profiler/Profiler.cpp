@@ -29,7 +29,7 @@ namespace
         {
             if (IsSameName(sample->name, name)) return sample;
 
-            sample = sample->nextSibling;
+            sample = sample->next;
         }
 
         return nullptr;
@@ -40,7 +40,7 @@ namespace
     {
         if (tail)
         {
-            tail->nextSibling = sample;
+            tail->next = sample;
         }
         else
         {
@@ -67,7 +67,7 @@ namespace
         while (child)
         {
             timeTotal += child->timeTotalMicroseconds;
-            child = child->nextSibling;
+            child = child->next;
         }
 
         return timeTotal;
@@ -110,7 +110,7 @@ namespace
                 WriteSampleLog(output, sample->firstChild, depth + 1);
             }
 
-            sample = sample->nextSibling;
+            sample = sample->next;
         }
     }
 
@@ -119,7 +119,7 @@ namespace
     {
         while (sample)
         {
-            ProfileSample* nextSample = sample->nextSibling;
+            ProfileSample* nextSample = sample->next;
             DeleteSampleTree(sample->firstChild);
             DELETE(sample);
             sample = nextSample;

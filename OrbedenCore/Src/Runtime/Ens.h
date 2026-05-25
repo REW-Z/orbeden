@@ -1,49 +1,138 @@
 #pragma once
 
-#include "Runtime/Object.h"
+#include "Runtime/EnsId.h"
+#include "Runtime/EngineTypes.h"
 
-class Actor;
+#include <string>
+#include <type_traits>
 
-//底层对象句柄
-struct Ens
+class World;
+
+//Ens基础组件
+class EnsComponent : public Component
 {
+    OBJECT_TYPE_DECLARE(EnsComponent)
+
 public:
-    static constexpr uint32 InvalidId = 0xFFFFFFFFu;
+    std::string name;
 
-    uint32 id = InvalidId;
-    uint32 version = 0;
+    EnsId parent;
+    EnsId firstChild;
+    EnsId lastChild;
+    EnsId prev;
+    EnsId next;
 
-    //判断句柄是否为空
-    bool IsNull() const;
+    vector3 localPosition;
+    quaternion localRotation;
+    vector3 localScale = { 1.0f, 1.0f, 1.0f };
 
-    bool operator==(const Ens& other) const;
-    bool operator!=(const Ens& other) const;
+    uint64 componentMask = 0;
+    List<TypeId> componentTypes;
+
+    //判断是否拥有组件类型
+    bool HasComponentType(Type* type) const;
+
+    //记录组件类型
+    void AddComponentType(Type* type);
+
+    //移除组件类型
+    void RemoveComponentType(Type* type);
 };
 
-//组件基类
-class Component : public Object
+//Ens对象封装
+class Ens
 {
-    OBJECT_TYPE_DECLARE(Component)
-
 private:
-    Ens owner;
+    World* world = nullptr;
+    EnsId ens;
 
 public:
-    Component() = default;
-    virtual ~Component() = default;
+    Ens() = default;
+    Ens(World* ownerWorld, EnsId value);
 
-    //获取所属Actor
-    Actor GetActor() const;
+    //创建Ens
+    static Ens Create(const std::string& name = "Ens");
 
-    //获取所属句柄
-    Ens GetOwner() const;
+    //从句柄创建Ens封装
+    static Ens FromEns(EnsId value);
 
-    //设置所属句柄
-    void SetOwner(Ens value);
+    /// <summary> 从指定世界和句柄创建Ens封装。 </summary>
+    static Ens FromEns(World* world, EnsId value);
 
-    //挂载时调用
-    virtual void OnAttach() {}
+    //销毁Ens
+    void Destroy();
 
-    //卸载时调用
-    virtual void OnDetach() {}
+    //判断是否有效
+    bool IsValid() const;
+
+    /// <summary> 获取所属世界。 </summary>
+    World* GetWorld() const;
+
+    //获取底层句柄
+    EnsId GetEns() const;
+
+    //获取基础组件
+    EnsComponent* Basic() const;
+
+    //获取名称
+    const std::string& GetName() const;
+
+    //设置名称
+    void SetName(const std::string& name);
+
+    //获取位置
+    vector3 GetLocalPosition() const;
+
+    //设置位置
+    void SetLocalPosition(const vector3& position);
+
+    //设置父级
+    void SetParent(Ens parent);
+
+    //获取父级
+    Ens GetParent() const;
+
+    //添加组件
+    Component* AddComponent(Type* type);
+
+    //获取组件
+    Component* GetComponent(Type* type) const;
+
+    //移除组件
+    bool RemoveComponent(Type* type);
+
+    //判断是否拥有组件
+    bool HasComponent(Type* type) const;
+
+    //添加组件
+    template<typename T>
+    T* AddComponent()
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        return static_cast<T*>(AddComponent(T::StaticType()));
+    }
+
+    //获取组件
+    template<typename T>
+    T* GetComponent() const
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        return static_cast<T*>(GetComponent(T::StaticType()));
+    }
+
+    //移除组件
+    template<typename T>
+    bool RemoveComponent()
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        return RemoveComponent(T::StaticType());
+    }
+
+    //判断是否拥有组件
+    template<typename T>
+    bool HasComponent() const
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        return HasComponent(T::StaticType());
+    }
 };
