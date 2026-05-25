@@ -15,7 +15,7 @@ public:
     ProfileSample* parent = nullptr;
     ProfileSample* firstChild = nullptr;
     ProfileSample* lastChild = nullptr;
-    ProfileSample* nextSibling = nullptr;
+    ProfileSample* next = nullptr;
 };
 
 //性能剖析器

@@ -30,10 +30,10 @@
     <ClInclude Include="Src\Runtime\Object.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Ens.h">
+    <ClInclude Include="Src\Runtime\EnsId.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Actor.h">
+    <ClInclude Include="Src\Runtime\Ens.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\EngineTypes.h">
@@ -65,10 +65,10 @@
     <ClCompile Include="Src\Runtime\Object.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Ens.cpp">
+    <ClCompile Include="Src\Runtime\EnsId.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Actor.cpp">
+    <ClCompile Include="Src\Runtime\Ens.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\ObjectSystem.cpp">

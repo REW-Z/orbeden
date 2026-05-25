@@ -1,13 +1,29 @@
 #include "Runtime/Object.h"
 
 #include "Memory/MemoryManager.h"
-#include "Runtime/ObjectSystem.h"
 
 #include <cassert>
+#include <unordered_map>
 
 namespace
 {
     constexpr uint32 ObjectPoolPageBlockCount = 64;
+
+    struct ObjectRuntime
+    {
+    public:
+        List<Type*> types;
+        std::unordered_map<std::string, Type*> typeByName;
+        std::unordered_map<std::string, Object*> objectByPath;
+        uint64 nextObjectIndex = 1;
+    };
+
+    //获取对象运行时注册表
+    ObjectRuntime& GetObjectRuntime()
+    {
+        static ObjectRuntime runtime;
+        return runtime;
+    }
 }
 
 //对象池页
@@ -233,6 +249,11 @@ void Object::SetInstanceId(const StringId& id)
     instanceId = id;
 }
 
+World* Object::GetWorld() const
+{
+    return ownerWorld;
+}
+
 //判断类型
 bool Object::Is(Type* type) const
 {
@@ -244,29 +265,29 @@ void Object::RegisterType(Type* type)
 {
     if (!type) return;
 
-    ObjectSystem& system = GetObjectSystem();
-    type->id = static_cast<TypeId>(system.types.size());
+    ObjectRuntime& runtime = GetObjectRuntime();
+    type->id = static_cast<TypeId>(runtime.types.size());
     type->mask = type->id < 64 ? (1ull << type->id) : 0;
 
-    system.types.push_back(type);
-    system.typeByName[type->GetName()] = type;
+    runtime.types.push_back(type);
+    runtime.typeByName[type->GetName()] = type;
 }
 
 //查找类型
 Type* Object::FindType(TypeId typeId)
 {
-    ObjectSystem& system = GetObjectSystem();
-    if (typeId >= system.types.size()) return nullptr;
+    ObjectRuntime& runtime = GetObjectRuntime();
+    if (typeId >= runtime.types.size()) return nullptr;
 
-    return system.types[typeId];
+    return runtime.types[typeId];
 }
 
 //查找类型
 Type* Object::FindType(const std::string& typeName)
 {
-    ObjectSystem& system = GetObjectSystem();
-    auto it = system.typeByName.find(typeName);
-    if (it == system.typeByName.end()) return nullptr;
+    ObjectRuntime& runtime = GetObjectRuntime();
+    auto it = runtime.typeByName.find(typeName);
+    if (it == runtime.typeByName.end()) return nullptr;
 
     return it->second;
 }
@@ -274,23 +295,37 @@ Type* Object::FindType(const std::string& typeName)
 //获取类型数量
 uint32 Object::GetTypeCount()
 {
-    return static_cast<uint32>(GetObjectSystem().types.size());
+    return static_cast<uint32>(GetObjectRuntime().types.size());
 }
 
 //查找对象
 Object* Object::FindObject(uint64 hash)
 {
-    ObjectSystem& system = GetObjectSystem();
-    auto it = system.objectById.find(hash);
-    if (it == system.objectById.end()) return nullptr;
+    if (hash == 0) return nullptr;
 
-    return it->second;
+    ObjectRuntime& runtime = GetObjectRuntime();
+    for (const auto& pair : runtime.objectByPath)
+    {
+        Object* object = pair.second;
+        if (object && object->GetInstanceId().GetHash() == hash)
+        {
+            return object;
+        }
+    }
+
+    return nullptr;
 }
 
 //查找对象
 Object* Object::FindObject(const StringId& id)
 {
-    return FindObject(id.GetHash());
+    if (!id.IsValid()) return nullptr;
+
+    ObjectRuntime& runtime = GetObjectRuntime();
+    auto it = runtime.objectByPath.find(id.GetPath());
+    if (it == runtime.objectByPath.end()) return nullptr;
+
+    return it->second;
 }
 
 //创建对象
@@ -298,21 +333,32 @@ Object* Object::CreateInstance(Type* type, const std::string& instancePath)
 {
     if (!type) return nullptr;
 
-    ObjectSystem& system = GetObjectSystem();
-    Object* object = type->CreateObject();
-    if (!object) return nullptr;
+    ObjectRuntime& runtime = GetObjectRuntime();
 
     std::string finalPath = instancePath;
     if (finalPath.empty())
     {
-        finalPath = std::string(type->GetName()) + "_" + std::to_string(system.nextObjectIndex++);
+        do
+        {
+            finalPath = std::string(type->GetName()) + "_" + std::to_string(runtime.nextObjectIndex++);
+        } while (runtime.objectByPath.find(finalPath) != runtime.objectByPath.end());
+    }
+    else if (runtime.objectByPath.find(finalPath) != runtime.objectByPath.end())
+    {
+        return nullptr;
     }
 
-    object->SetInstanceId(StringId(finalPath));
-    assert(object->GetInstanceId().IsValid());
-    assert(system.objectById.find(object->GetInstanceId().GetHash()) == system.objectById.end());
+    Object* object = type->CreateObject();
+    if (!object) return nullptr;
 
-    system.objectById[object->GetInstanceId().GetHash()] = object;
+    object->SetInstanceId(StringId(finalPath));
+    if (!object->GetInstanceId().IsValid())
+    {
+        type->DestroyObject(object);
+        return nullptr;
+    }
+
+    runtime.objectByPath[object->GetInstanceId().GetPath()] = object;
     return object;
 }
 
@@ -321,10 +367,16 @@ bool Object::DeleteInstance(Object* object)
 {
     if (!object) return false;
 
-    ObjectSystem& system = GetObjectSystem();
-    system.objectById.erase(object->GetInstanceId().GetHash());
+    ObjectRuntime& runtime = GetObjectRuntime();
+    runtime.objectByPath.erase(object->GetInstanceId().GetPath());
 
     Type* type = object->GetType();
     type->DestroyObject(object);
     return true;
+}
+
+//设置所属世界
+void Object::SetWorld(World* world)
+{
+    ownerWorld = world;
 }
