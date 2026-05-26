@@ -34,7 +34,17 @@ void World::SetCurrentWorld(World* world)
 //销毁世界及其运行时对象
 World::~World()
 {
-    //先销毁所有Ens
+    Clear();
+
+    if (CurrentWorld() == this)
+    {
+        SetCurrentWorld(nullptr);
+    }
+}
+
+//清空世界运行时对象
+void World::Clear()
+{
     for (uint32 index = 0; index < enses.size(); ++index)
     {
         const EnsRecord& record = enses[index];
@@ -54,14 +64,37 @@ World::~World()
         Object::DeleteInstance(object);
     }
 
-    if (CurrentWorld() == this)
-    {
-        SetCurrentWorld(nullptr);
-    }
+    enses.clear();
+    freeEnsIds.clear();
+    componentByEnsAndType.clear();
+    componentsByType.clear();
+    nextEnsIndex = 1;
+    nextRuntimeObjectIndex = 1;
 }
 
 //创建Ens
 Ens World::CreateEns(const std::string& name)
+{
+    std::string instancePath;
+    do
+    {
+        instancePath = "world://ens/" + std::to_string(nextEnsIndex++);
+    } while (Object::FindObject(StringId(instancePath)));
+
+    return CreateEnsInternal(name, instancePath);
+}
+
+//使用稳定ID创建Ens
+Ens World::CreateEnsWithStableId(const std::string& stableId, const std::string& name)
+{
+    if (stableId.empty()) return CreateEns(name);
+    if (Object::FindObject(StringId(stableId))) return Ens();
+
+    return CreateEnsInternal(name, stableId);
+}
+
+//使用指定稳定ID创建Ens
+Ens World::CreateEnsInternal(const std::string& name, const std::string& stableId)
 {
     //分配Ens句柄
     EnsId value;
@@ -86,14 +119,7 @@ Ens World::CreateEns(const std::string& name)
         value.version = record->version;
     }
 
-    //创建基础组件
-    std::string instancePath;
-    do
-    {
-        instancePath = "world://ens/" + std::to_string(nextEnsIndex++);
-    } while (Object::FindObject(StringId(instancePath)));
-
-    Object* object = Object::CreateInstance(EnsComponent::StaticType(), instancePath);
+    Object* object = Object::CreateInstance(EnsComponent::StaticType(), stableId);
     EnsComponent* basic = object ? object->Cast<EnsComponent>() : nullptr;
     if (!basic)
     {

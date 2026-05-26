@@ -10,6 +10,12 @@ class ObjectPoolPage;
 class Type;
 class World;
 
+namespace Reflection
+{
+    struct FieldInfo;
+    struct MethodInfo;
+}
+
 typedef uint32 TypeId;
 typedef Object* (*ObjectConstructorFunction)();
 typedef void (*ObjectDestructorFunction)(Object* object);
@@ -86,6 +92,18 @@ public:
     //判断继承关系
     bool Is(Type* type) const;
 
+    //获取字段元数据
+    const List<Reflection::FieldInfo>& GetFields() const;
+
+    //查找字段元数据
+    const Reflection::FieldInfo* GetField(const std::string& fieldName) const;
+
+    //获取方法元数据
+    const List<Reflection::MethodInfo>& GetMethods() const;
+
+    //查找方法元数据
+    const Reflection::MethodInfo* GetMethod(const std::string& methodName) const;
+
     //创建对象实例
     Object* CreateObject();
 
@@ -104,6 +122,7 @@ public:
 
 //声明对象类型
 #define OBJECT_TYPE_DECLARE(CLASS) \
+    friend class ReflectionGeneratedAccess; \
 public: \
     static Type type; \
     static Type* StaticType(); \
@@ -156,7 +175,7 @@ public:
     //设置实例ID
     void SetInstanceId(const StringId& id);
 
-    /// <summary> 获取所属世界。 </summary>
+    //获取所属世界
     World* GetWorld() const;
 
     //判断类型
@@ -273,4 +292,3 @@ public:
         return Get();
     }
 };
-

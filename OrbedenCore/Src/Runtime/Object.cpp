@@ -1,6 +1,7 @@
 #include "Runtime/Object.h"
 
 #include "Memory/MemoryManager.h"
+#include "Runtime/Reflection.h"
 
 #include <cassert>
 #include <unordered_map>
@@ -151,6 +152,40 @@ bool Type::Is(Type* type) const
     }
 
     return false;
+}
+
+//获取字段元数据
+const List<Reflection::FieldInfo>& Type::GetFields() const
+{
+    Reflection::RegisterGeneratedReflection();
+
+    static const List<Reflection::FieldInfo> emptyFields;
+    const Reflection::TypeInfo* info = Reflection::FindTypeInfo(const_cast<Type*>(this));
+    return info ? info->fields : emptyFields;
+}
+
+//查找字段元数据
+const Reflection::FieldInfo* Type::GetField(const std::string& fieldName) const
+{
+    Reflection::RegisterGeneratedReflection();
+    return Reflection::FindField(const_cast<Type*>(this), fieldName);
+}
+
+//获取方法元数据
+const List<Reflection::MethodInfo>& Type::GetMethods() const
+{
+    Reflection::RegisterGeneratedReflection();
+
+    static const List<Reflection::MethodInfo> emptyMethods;
+    const Reflection::TypeInfo* info = Reflection::FindTypeInfo(const_cast<Type*>(this));
+    return info ? info->methods : emptyMethods;
+}
+
+//查找方法元数据
+const Reflection::MethodInfo* Type::GetMethod(const std::string& methodName) const
+{
+    Reflection::RegisterGeneratedReflection();
+    return Reflection::FindMethod(const_cast<Type*>(this), methodName);
 }
 
 //创建对象实例
