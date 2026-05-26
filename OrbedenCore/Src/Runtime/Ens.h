@@ -56,7 +56,7 @@ public:
     //从句柄创建Ens封装
     static Ens FromEns(EnsId value);
 
-    /// <summary> 从指定世界和句柄创建Ens封装。 </summary>
+    //从指定世界和句柄创建Ens封装
     static Ens FromEns(World* world, EnsId value);
 
     //销毁Ens
@@ -65,7 +65,7 @@ public:
     //判断是否有效
     bool IsValid() const;
 
-    /// <summary> 获取所属世界。 </summary>
+    //获取所属世界
     World* GetWorld() const;
 
     //获取底层句柄

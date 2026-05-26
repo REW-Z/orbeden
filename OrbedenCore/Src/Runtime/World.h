@@ -26,49 +26,58 @@ private:
     uint64 nextEnsIndex = 1;
     uint64 nextRuntimeObjectIndex = 1;
 
+    //使用指定稳定ID创建Ens
+    Ens CreateEnsInternal(const std::string& name, const std::string& stableId);
+
 public:
     World() = default;
 
-    /// <summary> 销毁世界及其运行时对象。 </summary>
+    //销毁世界及其运行时对象
     ~World();
 
-    /// <summary> 获取当前活动世界。 </summary>
+    //获取当前活动世界
     static World* CurrentWorld();
 
-    /// <summary> 设置当前活动世界。 </summary>
+    //设置当前活动世界
     static void SetCurrentWorld(World* world);
 
-    /// <summary> 创建Ens。 </summary>
+    //创建Ens
     Ens CreateEns(const std::string& name = "Ens");
 
-    /// <summary> 销毁Ens。 </summary>
+    //使用稳定ID创建Ens
+    Ens CreateEnsWithStableId(const std::string& stableId, const std::string& name = "Ens");
+
+    //清空世界运行时对象
+    void Clear();
+
+    //销毁Ens
     bool DestroyEns(EnsId ens);
 
-    /// <summary> 判断Ens是否存活。 </summary>
+    //判断Ens是否存活
     bool IsAlive(EnsId ens) const;
 
-    /// <summary> 获取基础组件。 </summary>
+    //获取基础组件
     EnsComponent* GetBasicComponent(EnsId ens) const;
 
-    /// <summary> 设置父级。 </summary>
+    //设置父级
     void SetParent(EnsId child, EnsId parent);
 
-    /// <summary> 获取父级。 </summary>
+    //获取父级
     Ens GetParent(EnsId child) const;
 
-    /// <summary> 添加组件。 </summary>
+    //添加组件
     Component* AddComponent(EnsId ens, Type* type);
 
-    /// <summary> 获取组件。 </summary>
+    //获取组件
     Component* GetComponent(EnsId ens, Type* type) const;
 
-    /// <summary> 移除组件。 </summary>
+    //移除组件
     bool RemoveComponent(EnsId ens, Type* type);
 
-    /// <summary> 创建世界内对象。 </summary>
+    //创建世界内对象
     Object* CreateObject(Type* type, const std::string& stableId = "");
 
-    /// <summary> 创建世界内对象。 </summary>
+    //创建世界内对象
     template<typename T>
     T* CreateObject(const std::string& stableId = "")
     {
@@ -76,13 +85,13 @@ public:
         return static_cast<T*>(CreateObject(T::StaticType(), stableId));
     }
 
-    /// <summary> 销毁世界内对象。 </summary>
+    //销毁世界内对象
     bool DestroyObject(Object* object);
 
-    /// <summary> 按稳定ID查找Ens。 </summary>
+    //按稳定ID查找Ens
     Ens FindEns(const StringId& id) const;
 
-    /// <summary> 遍历所有存活的Ens。 </summary>
+    //遍历所有存活的Ens
     template<typename TVisitor>
     void ForEachEns(TVisitor&& visitor) const
     {
@@ -98,7 +107,7 @@ public:
         }
     }
 
-    /// <summary> 按精确类型遍历组件。 </summary>
+    //按精确类型遍历组件
     template<typename TVisitor>
     void ForEachComponent(Type* type, TVisitor&& visitor) const
     {

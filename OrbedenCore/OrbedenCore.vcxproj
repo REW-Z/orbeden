@@ -135,6 +135,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Src\Application.h" />
     <ClInclude Include="Src\Defines\types.h" />
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
     <ClInclude Include="Src\Log\Log.h" />
@@ -144,18 +145,27 @@
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
     <ClInclude Include="Src\Runtime\Object.h" />
     <ClInclude Include="Src\Runtime\ObjectSystem.h" />
+    <ClInclude Include="Src\Runtime\Reflection.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
+    <ClInclude Include="Src\Runtime\World.h" />
+    <ClInclude Include="Src\Runtime\WorldSerializer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Src\Application.cpp" />
+    <ClCompile Include="Src\examples.cpp" />
     <ClCompile Include="Src\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Src\Log\Log.cpp" />
     <ClCompile Include="Src\main.cpp" />
     <ClCompile Include="Src\Memory\MemoryManager.cpp" />
     <ClCompile Include="Src\Runtime\Ens.cpp" />
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
+    <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Object.cpp" />
     <ClCompile Include="Src\Runtime\ObjectSystem.cpp" />
+    <ClCompile Include="Src\Runtime\Reflection.cpp" />
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
+    <ClCompile Include="Src\Runtime\World.cpp" />
+    <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
