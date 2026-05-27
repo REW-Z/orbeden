@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
 #include <variant>
 
 #include "Runtime/EngineTypes.h"
@@ -37,6 +38,7 @@ namespace Reflection
         Float32,
         String,
         StringId,
+        ObjectRef,
         Vector3,
         Quaternion,
         EnsId,
@@ -159,6 +161,7 @@ namespace Reflection
     public:
         const char* name = nullptr;
         const char* typeName = nullptr;
+        const char* objectRefTypeName = nullptr;
         FieldKind kind = FieldKind::Unsupported;
         bool persistent = false;
         FieldGetter getter = nullptr;
@@ -167,7 +170,7 @@ namespace Reflection
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr);
 
         //读取字段值
         Value GetValue(Object* object) const;
@@ -249,6 +252,14 @@ namespace Reflection
     //转换稳定 ID 为 XML 文本
     std::string ToXmlValue(const StringId& value);
 
+    //转换对象引用为 XML 文本，只保存稳定ID
+    template<typename T>
+    std::string ToXmlValue(const Ref<T>& value)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        return ToXmlValue(value.GetInstanceId());
+    }
+
     //转换 vector3 为 XML 文本
     std::string ToXmlValue(const vector3& value);
 
@@ -278,6 +289,15 @@ namespace Reflection
 
     //从 XML 文本读取稳定 ID
     bool SetFromXmlValue(StringId& target, const std::string& value);
+
+    //从 XML 文本读取对象引用，只写入稳定ID
+    template<typename T>
+    bool SetFromXmlValue(Ref<T>& target, const std::string& value)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        target.SetInstanceId(StringId(value));
+        return true;
+    }
 
     //从 XML 文本读取 vector3
     bool SetFromXmlValue(vector3& target, const std::string& value);

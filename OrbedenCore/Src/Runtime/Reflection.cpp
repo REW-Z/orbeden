@@ -294,6 +294,11 @@ namespace Reflection
             value = Value(StringId(text));
             return true;
         }
+        case FieldKind::ObjectRef:
+        {
+            value = Value(StringId(text));
+            return true;
+        }
         case FieldKind::Vector3:
         {
             vector3 parsed;
@@ -327,8 +332,8 @@ namespace Reflection
     }
 
     //创建字段元数据
-    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue)
-        : name(fieldName), typeName(fieldTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue)
+    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName)
+        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue)
     {
     }
 
