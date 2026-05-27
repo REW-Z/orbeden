@@ -12,8 +12,16 @@
 #include "Runtime/World.h"
 
 
+namespace examples
+{
+	void ExampleReflection();
+}
+
 int main()
 {
+    examples::ExampleReflection();
+    return 0;
+
     Application app;
     app.Initialize();
     app.LoadWorld("Worlds/default.world");

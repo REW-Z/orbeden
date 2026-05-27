@@ -155,17 +155,17 @@ namespace Reflection
 
         RegisterTypeFields(EnsComponent::StaticType(),
             {
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_EnsComponent_name, ReflectionGeneratedAccess::Set_EnsComponent_name),
-                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
-                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
-                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
-                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
-                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localPosition, ReflectionGeneratedAccess::Set_EnsComponent_localPosition),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_EnsComponent_localRotation, ReflectionGeneratedAccess::Set_EnsComponent_localRotation),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localScale, ReflectionGeneratedAccess::Set_EnsComponent_localScale),
-                FieldInfo("componentMask", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr),
-                FieldInfo("componentTypes", "List<TypeId>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_EnsComponent_name, ReflectionGeneratedAccess::Set_EnsComponent_name, nullptr),
+                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localPosition, ReflectionGeneratedAccess::Set_EnsComponent_localPosition, nullptr),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_EnsComponent_localRotation, ReflectionGeneratedAccess::Set_EnsComponent_localRotation, nullptr),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localScale, ReflectionGeneratedAccess::Set_EnsComponent_localScale, nullptr),
+                FieldInfo("componentMask", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
+                FieldInfo("componentTypes", "List<TypeId>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(EnsComponent::StaticType(),
@@ -174,7 +174,7 @@ namespace Reflection
 
         RegisterTypeFields(Component::StaticType(),
             {
-                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr),
+                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Component::StaticType(),
@@ -187,8 +187,8 @@ namespace Reflection
 
         RegisterTypeFields(Object::StaticType(),
             {
-                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, false, nullptr, nullptr),
-                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr),
+                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, false, nullptr, nullptr, nullptr),
+                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Object::StaticType(),

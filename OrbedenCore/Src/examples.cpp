@@ -12,7 +12,7 @@
 
 
 
-namespace
+namespace examples
 {
     //同步读取文件并释放
     void ExampleSyncReadFile(const std::string& path)

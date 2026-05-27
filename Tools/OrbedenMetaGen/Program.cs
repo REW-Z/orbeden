@@ -40,6 +40,7 @@ foreach (var classInfo in classes)
     foreach (var field in classInfo.Fields)
     {
         field.Persistent = IsPersistentField(classInfo.Name, field.Name);
+        field.ObjectRefTypeName = GetObjectRefTypeName(field.Type);
         field.Kind = GetFieldKind(field.Type);
 
         if (field.Persistent && field.Kind is null)
@@ -299,7 +300,8 @@ static FieldInfo? ParseFieldStatement(string statement, string access)
 //规范化 C++ 类型空白
 static string NormalizeType(string type)
 {
-    return Regex.Replace(type.Trim(), @"\s*([*&])\s*", "$1");
+    var result = Regex.Replace(type.Trim(), @"\s*([*&])\s*", "$1");
+    return Regex.Replace(result, @"\s*([<>,])\s*", "$1");
 }
 
 //规范化反射值类型，去掉 const/ref/virtual 等修饰
@@ -340,6 +342,11 @@ static bool IsPersistentField(string className, string fieldName)
 //映射字段类型到 C++ FieldKind
 static FieldKindInfo? GetFieldKind(string type)
 {
+    if (GetObjectRefTypeName(type) is not null)
+    {
+        return new FieldKindInfo("Reflection::FieldKind::ObjectRef");
+    }
+
     return NormalizeValueType(type) switch
     {
         "bool" => new FieldKindInfo("Reflection::FieldKind::Bool"),
@@ -355,6 +362,14 @@ static FieldKindInfo? GetFieldKind(string type)
         "EnsId" => new FieldKindInfo("Reflection::FieldKind::EnsId"),
         _ => null,
     };
+}
+
+//读取 Ref<T> 的目标类型名
+static string? GetObjectRefTypeName(string type)
+{
+    var normalized = NormalizeValueType(type);
+    var match = Regex.Match(normalized, @"^Ref<(?<target>[A-Za-z_]\w*(?:::\w+)*)>$");
+    return match.Success ? match.Groups["target"].Value : null;
 }
 
 //映射方法参数和返回值到 C++ ValueKind
@@ -477,7 +492,8 @@ static string GenerateCpp(List<ClassInfo> classes)
             var persistent = field.Persistent ? "true" : "false";
             var getter = field.Persistent ? $"ReflectionGeneratedAccess::Get_{classInfo.Name}_{field.Name}" : "nullptr";
             var setter = field.Persistent ? $"ReflectionGeneratedAccess::Set_{classInfo.Name}_{field.Name}" : "nullptr";
-            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}),");
+            var objectRefTypeName = field.ObjectRefTypeName is null ? "nullptr" : $"\"{field.ObjectRefTypeName}\"";
+            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}),");
         }
 
         output.AppendLine("            });");
@@ -521,6 +537,7 @@ sealed class FieldInfo
     public string Access { get; set; } = "";
     public bool Persistent { get; set; }
     public FieldKindInfo? Kind { get; set; }
+    public string? ObjectRefTypeName { get; set; }
 }
 
 sealed class FieldKindInfo(string cppName)

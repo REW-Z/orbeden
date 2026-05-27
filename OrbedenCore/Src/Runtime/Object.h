@@ -252,6 +252,20 @@ public:
         Set(value);
     }
 
+    //获取引用保存的稳定ID
+    const StringId& GetInstanceId() const
+    {
+        return instanceId;
+    }
+
+    //设置引用保存的稳定ID，并清空运行时缓存
+    void SetInstanceId(const StringId& id)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        instanceId = id;
+        object = nullptr;
+    }
+
     //设置对象
     void Set(T* value)
     {
