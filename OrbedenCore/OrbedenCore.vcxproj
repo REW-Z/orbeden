@@ -144,9 +144,9 @@
     <ClInclude Include="Src\Runtime\EnsId.h" />
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
     <ClInclude Include="Src\Runtime\Object.h" />
-    <ClInclude Include="Src\Runtime\ObjectSystem.h" />
     <ClInclude Include="Src\Runtime\Reflection.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
+    <ClInclude Include="Src\Runtime\SpaceComponent.h" />
     <ClInclude Include="Src\Runtime\World.h" />
     <ClInclude Include="Src\Runtime\WorldSerializer.h" />
   </ItemGroup>
@@ -161,9 +161,9 @@
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Object.cpp" />
-    <ClCompile Include="Src\Runtime\ObjectSystem.cpp" />
     <ClCompile Include="Src\Runtime\Reflection.cpp" />
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
+    <ClCompile Include="Src\Runtime\SpaceComponent.cpp" />
     <ClCompile Include="Src\Runtime\World.cpp" />
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
   </ItemGroup>

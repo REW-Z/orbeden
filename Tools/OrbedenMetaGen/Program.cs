@@ -331,9 +331,9 @@ static bool IsPersistentField(string className, string fieldName)
 {
     if (className == "Object" && (fieldName == "instanceId" || fieldName == "ownerWorld")) return false;
     if (className == "Component" && fieldName == "owner") return false;
-    if (className == "EnsComponent")
+    if (className == "SpaceComponent")
     {
-        return fieldName is "name" or "localPosition" or "localRotation" or "localScale";
+        return fieldName is "localPosition" or "localRotation" or "localScale";
     }
 
     return true;
@@ -405,6 +405,7 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Ens.h\"");
     output.AppendLine("#include \"Runtime/EnsId.h\"");
     output.AppendLine("#include \"Runtime/Object.h\"");
+    output.AppendLine("#include \"Runtime/SpaceComponent.h\"");
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");
     output.AppendLine("{");

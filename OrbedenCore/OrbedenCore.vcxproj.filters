@@ -42,9 +42,6 @@
     <ClInclude Include="Src\Runtime\EngineTypes.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\ObjectSystem.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Profiler\Profiler.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -55,6 +52,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\WorldSerializer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Runtime\SpaceComponent.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -86,9 +86,6 @@
     <ClCompile Include="Src\Runtime\Ens.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\ObjectSystem.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Src\Runtime\World.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -102,6 +99,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\examples.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Runtime\SpaceComponent.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -9,16 +9,10 @@
 //运行时世界
 class World
 {
-private:
-    struct EnsRecord
-    {
-    public:
-        uint32 version = 1;
-        bool alive = false;
-        EnsComponent* basic = nullptr;
-    };
+    friend class Ens;
 
-    List<EnsRecord> enses;
+private:
+    List<Ens> enses;
     List<uint32> freeEnsIds;
     std::unordered_map<uint64, Component*> componentByEnsAndType;
     std::unordered_map<TypeId, List<Component*>> componentsByType;
@@ -28,6 +22,12 @@ private:
 
     //使用指定稳定ID创建Ens
     Ens CreateEnsInternal(const std::string& name, const std::string& stableId);
+
+    //获取World内部Ens数据
+    Ens* GetEns(EnsId ens);
+
+    //获取World内部Ens数据
+    const Ens* GetEns(EnsId ens) const;
 
 public:
     World() = default;
@@ -56,8 +56,8 @@ public:
     //判断Ens是否存活
     bool IsAlive(EnsId ens) const;
 
-    //获取基础组件
-    EnsComponent* GetBasicComponent(EnsId ens) const;
+    //获取空间组件
+    SpaceComponent* GetSpaceComponent(EnsId ens) const;
 
     //设置父级
     void SetParent(EnsId child, EnsId parent);
@@ -97,13 +97,10 @@ public:
     {
         for (uint32 index = 0; index < enses.size(); ++index)
         {
-            const EnsRecord& record = enses[index];
-            if (!record.alive) continue;
+            const Ens& storedEns = enses[index];
+            if (!storedEns.alive) continue;
 
-            EnsId value;
-            value.id = index;
-            value.version = record.version;
-            visitor(Ens(const_cast<World*>(this), value));
+            visitor(Ens(const_cast<World*>(this), storedEns.ens));
         }
     }
 

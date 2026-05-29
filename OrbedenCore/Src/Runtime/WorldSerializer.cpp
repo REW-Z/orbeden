@@ -9,6 +9,7 @@
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/SpaceComponent.h"
 
 namespace
 {
@@ -323,14 +324,15 @@ namespace
     //递归写入 Ens 层级
     void WriteEns(std::ostream& output, Ens ens, int depth)
     {
-        EnsComponent* basic = ens.Basic();
-        if (!basic) return;
+        SpaceComponent* space = ens.Space();
+        if (!space) return;
 
         //写入当前 Ens 和它的组件
         WriteIndent(output, depth);
-        output << "<Ens stableId=\"" << EscapeXml(basic->GetInstanceId().GetPath()) << "\">\n";
+        output << "<Ens stableId=\"" << EscapeXml(space->GetInstanceId().GetPath()) << "\" name=\""
+            << EscapeXml(ens.GetName()) << "\">\n";
 
-        for (TypeId typeId : basic->componentTypes)
+        for (TypeId typeId : ens.GetComponentTypes())
         {
             Type* type = Object::FindType(typeId);
             if (!type) continue;
@@ -339,13 +341,13 @@ namespace
             WriteComponent(output, component, depth + 1);
         }
 
-        //按基础组件链表写入子级 Ens
-        EnsId child = basic->firstChild;
+        //按空间组件链表写入子级 Ens
+        EnsId child = space->firstChild;
         while (!child.IsNull())
         {
             Ens childEns = Ens::FromEns(ens.GetWorld(), child);
-            EnsComponent* childBasic = childEns.Basic();
-            EnsId nextChild = childBasic ? childBasic->next : EnsId();
+            SpaceComponent* childSpace = childEns.Space();
+            EnsId nextChild = childSpace ? childSpace->next : EnsId();
             WriteEns(output, childEns, depth + 1);
             child = nextChild;
         }
@@ -394,8 +396,8 @@ namespace
             return false;
         }
 
-        //基础组件复用 Ens 自带实例，其余组件按类型挂载
-        Component* component = type == EnsComponent::StaticType() ? ens.Basic() : ens.AddComponent(type);
+        //空间组件复用 Ens 自带实例，其余组件按类型挂载
+        Component* component = type == SpaceComponent::StaticType() ? ens.Space() : ens.AddComponent(type);
         if (!component)
         {
             LogSerializerError("World XML failed to create component: " + typeName);
@@ -444,7 +446,8 @@ namespace
     {
         //先创建 Ens，再通过嵌套结构恢复父子关系
         const std::string& stableId = GetAttribute(startToken, "stableId");
-        Ens ens = stableId.empty() ? world.CreateEns("Ens") : world.CreateEnsWithStableId(stableId, "Ens");
+        const std::string& name = GetAttribute(startToken, "name");
+        Ens ens = stableId.empty() ? world.CreateEns(name.empty() ? "Ens" : name) : world.CreateEnsWithStableId(stableId, name.empty() ? "Ens" : name);
         if (!ens.IsValid())
         {
             LogSerializerError("World XML failed to create Ens.");

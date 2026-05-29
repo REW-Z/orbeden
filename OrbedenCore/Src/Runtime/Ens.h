@@ -7,44 +7,30 @@
 #include <type_traits>
 
 class World;
+class SpaceComponent;
 
-//Ens基础组件
-class EnsComponent : public Component
+//Ens对象封装
+class Ens
 {
-    OBJECT_TYPE_DECLARE(EnsComponent)
+    friend class World;
 
-public:
+private:
+    World* world = nullptr;
+    EnsId ens;
+    bool alive = false;
     std::string name;
-
-    EnsId parent;
-    EnsId firstChild;
-    EnsId lastChild;
-    EnsId prev;
-    EnsId next;
-
-    vector3 localPosition;
-    quaternion localRotation;
-    vector3 localScale = { 1.0f, 1.0f, 1.0f };
-
     uint64 componentMask = 0;
     List<TypeId> componentTypes;
-
-    //判断是否拥有组件类型
-    bool HasComponentType(Type* type) const;
+    SpaceComponent* space = nullptr;
 
     //记录组件类型
     void AddComponentType(Type* type);
 
     //移除组件类型
     void RemoveComponentType(Type* type);
-};
 
-//Ens对象封装
-class Ens
-{
-private:
-    World* world = nullptr;
-    EnsId ens;
+    //判断是否记录了组件类型
+    bool HasComponentType(Type* type) const;
 
 public:
     Ens() = default;
@@ -71,8 +57,8 @@ public:
     //获取底层句柄
     EnsId GetEns() const;
 
-    //获取基础组件
-    EnsComponent* Basic() const;
+    //获取空间组件
+    SpaceComponent* Space() const;
 
     //获取名称
     const std::string& GetName() const;
@@ -103,6 +89,9 @@ public:
 
     //判断是否拥有组件
     bool HasComponent(Type* type) const;
+
+    //获取组件类型列表
+    const List<TypeId>& GetComponentTypes() const;
 
     //添加组件
     template<typename T>
