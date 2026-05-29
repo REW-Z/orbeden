@@ -6,66 +6,11 @@
 #include "Runtime/Ens.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/Object.h"
+#include "Runtime/SpaceComponent.h"
 
 class ReflectionGeneratedAccess
 {
 public:
-    //读取 EnsComponent.name 字段
-    static std::string Get_EnsComponent_name(Object* object)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::ToXmlValue(instance->name);
-    }
-
-    //写入 EnsComponent.name 字段
-    static bool Set_EnsComponent_name(Object* object, const std::string& value)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->name, value);
-    }
-
-    //读取 EnsComponent.localPosition 字段
-    static std::string Get_EnsComponent_localPosition(Object* object)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::ToXmlValue(instance->localPosition);
-    }
-
-    //写入 EnsComponent.localPosition 字段
-    static bool Set_EnsComponent_localPosition(Object* object, const std::string& value)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localPosition, value);
-    }
-
-    //读取 EnsComponent.localRotation 字段
-    static std::string Get_EnsComponent_localRotation(Object* object)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::ToXmlValue(instance->localRotation);
-    }
-
-    //写入 EnsComponent.localRotation 字段
-    static bool Set_EnsComponent_localRotation(Object* object, const std::string& value)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localRotation, value);
-    }
-
-    //读取 EnsComponent.localScale 字段
-    static std::string Get_EnsComponent_localScale(Object* object)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::ToXmlValue(instance->localScale);
-    }
-
-    //写入 EnsComponent.localScale 字段
-    static bool Set_EnsComponent_localScale(Object* object, const std::string& value)
-    {
-        EnsComponent* instance = static_cast<EnsComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localScale, value);
-    }
-
     //调用 Component.GetEnsId 方法
     static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
@@ -142,6 +87,48 @@ public:
         return Reflection::Value();
     }
 
+    //读取 SpaceComponent.localPosition 字段
+    static std::string Get_SpaceComponent_localPosition(Object* object)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::ToXmlValue(instance->localPosition);
+    }
+
+    //写入 SpaceComponent.localPosition 字段
+    static bool Set_SpaceComponent_localPosition(Object* object, const std::string& value)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->localPosition, value);
+    }
+
+    //读取 SpaceComponent.localRotation 字段
+    static std::string Get_SpaceComponent_localRotation(Object* object)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::ToXmlValue(instance->localRotation);
+    }
+
+    //写入 SpaceComponent.localRotation 字段
+    static bool Set_SpaceComponent_localRotation(Object* object, const std::string& value)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->localRotation, value);
+    }
+
+    //读取 SpaceComponent.localScale 字段
+    static std::string Get_SpaceComponent_localScale(Object* object)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::ToXmlValue(instance->localScale);
+    }
+
+    //写入 SpaceComponent.localScale 字段
+    static bool Set_SpaceComponent_localScale(Object* object, const std::string& value)
+    {
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->localScale, value);
+    }
+
 };
 
 namespace Reflection
@@ -152,25 +139,6 @@ namespace Reflection
         static bool registered = false;
         if (registered) return;
         registered = true;
-
-        RegisterTypeFields(EnsComponent::StaticType(),
-            {
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_EnsComponent_name, ReflectionGeneratedAccess::Set_EnsComponent_name, nullptr),
-                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localPosition, ReflectionGeneratedAccess::Set_EnsComponent_localPosition, nullptr),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_EnsComponent_localRotation, ReflectionGeneratedAccess::Set_EnsComponent_localRotation, nullptr),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_EnsComponent_localScale, ReflectionGeneratedAccess::Set_EnsComponent_localScale, nullptr),
-                FieldInfo("componentMask", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
-                FieldInfo("componentTypes", "List<TypeId>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(EnsComponent::StaticType(),
-            {
-            });
 
         RegisterTypeFields(Component::StaticType(),
             {
@@ -195,6 +163,22 @@ namespace Reflection
             {
                 MethodInfo("GetInstanceId", "StringId", Reflection::ValueKind::StringId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Object_GetInstanceId_0),
                 MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Object_SetInstanceId_1),
+            });
+
+        RegisterTypeFields(SpaceComponent::StaticType(),
+            {
+                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localPosition, ReflectionGeneratedAccess::Set_SpaceComponent_localPosition, nullptr),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_SpaceComponent_localRotation, ReflectionGeneratedAccess::Set_SpaceComponent_localRotation, nullptr),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localScale, ReflectionGeneratedAccess::Set_SpaceComponent_localScale, nullptr),
+            });
+
+        RegisterTypeMethods(SpaceComponent::StaticType(),
+            {
             });
 
     }

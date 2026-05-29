@@ -1,5 +1,7 @@
 #include "Runtime/World.h"
 
+#include "Runtime/SpaceComponent.h"
+
 #include <algorithm>
 #include <cassert>
 
@@ -47,13 +49,10 @@ void World::Clear()
 {
     for (uint32 index = 0; index < enses.size(); ++index)
     {
-        const EnsRecord& record = enses[index];
-        if (!record.alive) continue;
+        const Ens& storedEns = enses[index];
+        if (!storedEns.alive) continue;
 
-        EnsId value;
-        value.id = index;
-        value.version = record.version;
-        DestroyEns(value);
+        DestroyEns(storedEns.ens);
     }
 
     //再销毁独立世界对象
@@ -98,32 +97,35 @@ Ens World::CreateEnsInternal(const std::string& name, const std::string& stableI
 {
     //分配Ens句柄
     EnsId value;
-    EnsRecord* record = nullptr;
+    Ens* storedEns = nullptr;
     if (!freeEnsIds.empty())
     {
         value.id = freeEnsIds.back();
         freeEnsIds.pop_back();
 
-        record = &enses[value.id];
-        record->version++;
-        record->alive = true;
-        record->basic = nullptr;
-        value.version = record->version;
+        value.version = enses[value.id].ens.version + 1;
+        enses[value.id] = Ens(this, value);
+        storedEns = &enses[value.id];
     }
     else
     {
         value.id = static_cast<uint32>(enses.size());
-        enses.push_back(EnsRecord());
-        record = &enses.back();
-        record->alive = true;
-        value.version = record->version;
+        value.version = 1;
+        enses.push_back(Ens(this, value));
+        storedEns = &enses.back();
     }
 
-    Object* object = Object::CreateInstance(EnsComponent::StaticType(), stableId);
-    EnsComponent* basic = object ? object->Cast<EnsComponent>() : nullptr;
-    if (!basic)
+    storedEns->alive = true;
+
+    Object* object = Object::CreateInstance(SpaceComponent::StaticType(), stableId);
+    SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
+    if (!space)
     {
-        record->alive = false;
+        storedEns->alive = false;
+        storedEns->name.clear();
+        storedEns->componentMask = 0;
+        storedEns->componentTypes.clear();
+        storedEns->space = nullptr;
         freeEnsIds.push_back(value.id);
         if (object)
         {
@@ -132,31 +134,32 @@ Ens World::CreateEnsInternal(const std::string& name, const std::string& stableI
         return Ens();
     }
 
-    basic->SetWorld(this);
-    basic->SetEnsId(value);
-    basic->name = name;
-    basic->AddComponentType(EnsComponent::StaticType());
+    space->SetWorld(this);
+    space->SetEnsId(value);
 
-    record->basic = basic;
-    componentByEnsAndType[GetComponentKey(value, EnsComponent::StaticType())] = basic;
-    componentsByType[EnsComponent::StaticType()->GetId()].push_back(basic);
+    storedEns->name = name;
+    storedEns->space = space;
+    storedEns->AddComponentType(SpaceComponent::StaticType());
+    componentByEnsAndType[GetComponentKey(value, SpaceComponent::StaticType())] = space;
+    componentsByType[SpaceComponent::StaticType()->GetId()].push_back(space);
     return Ens(this, value);
 }
 
 //销毁Ens
 bool World::DestroyEns(EnsId ens)
 {
-    if (!IsAlive(ens)) return false;
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns) return false;
 
-    EnsComponent* basic = GetBasicComponent(ens);
-    if (!basic) return false;
+    SpaceComponent* space = storedEns->space;
+    if (!space) return false;
 
     //先解除子级关系
-    EnsId child = basic->firstChild;
+    EnsId child = space->firstChild;
     while (!child.IsNull())
     {
-        EnsComponent* childBasic = GetBasicComponent(child);
-        EnsId nextChild = childBasic ? childBasic->next : EnsId();
+        SpaceComponent* childSpace = GetSpaceComponent(child);
+        EnsId nextChild = childSpace ? childSpace->next : EnsId();
         SetParent(child, EnsId());
         child = nextChild;
     }
@@ -165,61 +168,78 @@ bool World::DestroyEns(EnsId ens)
     SetParent(ens, EnsId());
 
     //销毁额外组件
-    List<TypeId> componentTypes = basic->componentTypes;
+    List<TypeId> componentTypes = storedEns->componentTypes;
     for (TypeId typeId : componentTypes)
     {
         Type* type = Object::FindType(typeId);
-        if (type && type != EnsComponent::StaticType())
+        if (type && type != SpaceComponent::StaticType())
         {
             RemoveComponent(ens, type);
         }
     }
 
-    //注销基础组件
-    componentByEnsAndType.erase(GetComponentKey(ens, EnsComponent::StaticType()));
+    //注销空间组件
+    componentByEnsAndType.erase(GetComponentKey(ens, SpaceComponent::StaticType()));
 
-    auto componentListIt = componentsByType.find(EnsComponent::StaticType()->GetId());
+    auto componentListIt = componentsByType.find(SpaceComponent::StaticType()->GetId());
     if (componentListIt != componentsByType.end())
     {
         List<Component*>& componentList = componentListIt->second;
-        componentList.erase(std::remove(componentList.begin(), componentList.end(), basic), componentList.end());
+        componentList.erase(std::remove(componentList.begin(), componentList.end(), space), componentList.end());
         if (componentList.empty())
         {
             componentsByType.erase(componentListIt);
         }
     }
 
-    Object::DeleteInstance(basic);
+    Object::DeleteInstance(space);
 
-    EnsRecord& record = enses[ens.id];
-    record.basic = nullptr;
-    record.alive = false;
+    storedEns->name.clear();
+    storedEns->componentMask = 0;
+    storedEns->componentTypes.clear();
+    storedEns->space = nullptr;
+    storedEns->alive = false;
     freeEnsIds.push_back(ens.id);
     return true;
+}
+
+//获取World内部Ens数据
+Ens* World::GetEns(EnsId ens)
+{
+    if (ens.IsNull()) return nullptr;
+    if (ens.id >= enses.size()) return nullptr;
+
+    Ens& storedEns = enses[ens.id];
+    if (!storedEns.alive) return nullptr;
+    if (storedEns.ens.version != ens.version) return nullptr;
+
+    return &storedEns;
+}
+
+//获取World内部Ens数据
+const Ens* World::GetEns(EnsId ens) const
+{
+    return const_cast<World*>(this)->GetEns(ens);
 }
 
 //判断Ens是否存活
 bool World::IsAlive(EnsId ens) const
 {
-    if (ens.IsNull()) return false;
-    if (ens.id >= enses.size()) return false;
-
-    const EnsRecord& record = enses[ens.id];
-    return record.alive && record.version == ens.version;
+    return GetEns(ens) != nullptr;
 }
 
-//获取基础组件
-EnsComponent* World::GetBasicComponent(EnsId ens) const
+//获取空间组件
+SpaceComponent* World::GetSpaceComponent(EnsId ens) const
 {
-    if (!IsAlive(ens)) return nullptr;
-    return enses[ens.id].basic;
+    const Ens* storedEns = GetEns(ens);
+    return storedEns ? storedEns->space : nullptr;
 }
 
 //设置父级
 void World::SetParent(EnsId child, EnsId parent)
 {
-    EnsComponent* basic = GetBasicComponent(child);
-    if (!basic) return;
+    SpaceComponent* space = GetSpaceComponent(child);
+    if (!space) return;
     if (child == parent) return;
     if (!parent.IsNull() && !IsAlive(parent)) return;
 
@@ -229,33 +249,33 @@ void World::SetParent(EnsId child, EnsId parent)
     {
         if (current == child) return;
 
-        EnsComponent* currentBasic = GetBasicComponent(current);
-        current = currentBasic ? currentBasic->parent : EnsId();
+        SpaceComponent* currentSpace = GetSpaceComponent(current);
+        current = currentSpace ? currentSpace->parent : EnsId();
     }
 
     //从旧父级摘除
-    EnsComponent* oldParent = GetBasicComponent(basic->parent);
-    EnsComponent* previous = GetBasicComponent(basic->prev);
-    EnsComponent* next = GetBasicComponent(basic->next);
+    SpaceComponent* oldParent = GetSpaceComponent(space->parent);
+    SpaceComponent* previous = GetSpaceComponent(space->prev);
+    SpaceComponent* next = GetSpaceComponent(space->next);
 
-    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = basic->next;
-    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = basic->prev;
-    if (previous) previous->next = basic->next;
-    if (next) next->prev = basic->prev;
+    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = space->next;
+    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = space->prev;
+    if (previous) previous->next = space->next;
+    if (next) next->prev = space->prev;
 
-    basic->parent = EnsId();
-    basic->prev = EnsId();
-    basic->next = EnsId();
+    space->parent = EnsId();
+    space->prev = EnsId();
+    space->next = EnsId();
 
     if (parent.IsNull()) return;
 
     //挂到新父级末尾
-    EnsComponent* parentBasic = GetBasicComponent(parent);
-    if (!parentBasic) return;
+    SpaceComponent* parentSpace = GetSpaceComponent(parent);
+    if (!parentSpace) return;
 
-    EnsComponent* lastChild = GetBasicComponent(parentBasic->lastChild);
-    basic->parent = parent;
-    basic->prev = parentBasic->lastChild;
+    SpaceComponent* lastChild = GetSpaceComponent(parentSpace->lastChild);
+    space->parent = parent;
+    space->prev = parentSpace->lastChild;
 
     if (lastChild)
     {
@@ -263,31 +283,31 @@ void World::SetParent(EnsId child, EnsId parent)
     }
     else
     {
-        parentBasic->firstChild = child;
+        parentSpace->firstChild = child;
     }
 
-    parentBasic->lastChild = child;
+    parentSpace->lastChild = child;
 }
 
 //获取父级
 Ens World::GetParent(EnsId child) const
 {
-    EnsComponent* basic = GetBasicComponent(child);
-    return basic ? Ens(const_cast<World*>(this), basic->parent) : Ens();
+    SpaceComponent* space = GetSpaceComponent(child);
+    return space ? Ens(const_cast<World*>(this), space->parent) : Ens();
 }
 
 //添加组件
 Component* World::AddComponent(EnsId ens, Type* type)
 {
-    EnsComponent* basic = GetBasicComponent(ens);
-    if (!basic || !type || !type->Is(Component::StaticType())) return nullptr;
-    if (type == EnsComponent::StaticType()) return basic;
+    SpaceComponent* space = GetSpaceComponent(ens);
+    if (!space || !type || !type->Is(Component::StaticType())) return nullptr;
+    if (type == SpaceComponent::StaticType()) return space;
 
     Component* oldComponent = GetComponent(ens, type);
     if (oldComponent) return oldComponent;
 
     //创建并注册组件
-    std::string instancePath = basic->GetInstanceId().GetPath() + "/" + type->GetName();
+    std::string instancePath = space->GetInstanceId().GetPath() + "/" + type->GetName();
     Object* object = Object::CreateInstance(type, instancePath);
     Component* component = object ? object->Cast<Component>() : nullptr;
     if (!component)
@@ -304,7 +324,8 @@ Component* World::AddComponent(EnsId ens, Type* type)
 
     componentByEnsAndType[GetComponentKey(ens, type)] = component;
     componentsByType[type->GetId()].push_back(component);
-    basic->AddComponentType(type);
+    Ens* storedEns = GetEns(ens);
+    if (storedEns) storedEns->AddComponentType(type);
     component->OnAttach();
     return component;
 }
@@ -313,7 +334,7 @@ Component* World::AddComponent(EnsId ens, Type* type)
 Component* World::GetComponent(EnsId ens, Type* type) const
 {
     if (!type) return nullptr;
-    if (type == EnsComponent::StaticType()) return GetBasicComponent(ens);
+    if (type == SpaceComponent::StaticType()) return GetSpaceComponent(ens);
     if (!IsAlive(ens)) return nullptr;
 
     auto it = componentByEnsAndType.find(GetComponentKey(ens, type));
@@ -325,8 +346,8 @@ Component* World::GetComponent(EnsId ens, Type* type) const
 //移除组件
 bool World::RemoveComponent(EnsId ens, Type* type)
 {
-    EnsComponent* basic = GetBasicComponent(ens);
-    if (!basic || !type || type == EnsComponent::StaticType()) return false;
+    SpaceComponent* space = GetSpaceComponent(ens);
+    if (!space || !type || type == SpaceComponent::StaticType()) return false;
 
     auto componentIt = componentByEnsAndType.find(GetComponentKey(ens, type));
     if (componentIt == componentByEnsAndType.end()) return false;
@@ -349,7 +370,8 @@ bool World::RemoveComponent(EnsId ens, Type* type)
         }
     }
 
-    basic->RemoveComponentType(type);
+    Ens* storedEns = GetEns(ens);
+    if (storedEns) storedEns->RemoveComponentType(type);
     Object::DeleteInstance(component);
     return true;
 }
@@ -400,10 +422,10 @@ bool World::DestroyObject(Object* object)
 Ens World::FindEns(const StringId& id) const
 {
     Object* object = Object::FindObject(id);
-    EnsComponent* basic = object ? object->Cast<EnsComponent>() : nullptr;
-    if (!basic) return Ens();
-    if (basic->GetWorld() != this) return Ens();
-    if (!IsAlive(basic->GetEnsId())) return Ens();
+    SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
+    if (!space) return Ens();
+    if (space->GetWorld() != this) return Ens();
+    if (!IsAlive(space->GetEnsId())) return Ens();
 
-    return Ens(const_cast<World*>(this), basic->GetEnsId());
+    return Ens(const_cast<World*>(this), space->GetEnsId());
 }
