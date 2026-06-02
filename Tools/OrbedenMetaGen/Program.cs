@@ -336,6 +336,27 @@ static bool IsPersistentField(string className, string fieldName)
         return fieldName is "localPosition" or "localRotation" or "localScale";
     }
 
+    if (className == "Texture2D")
+    {
+        return fieldName is "name" or "width" or "height" or "channels" or "format";
+    }
+
+    if (className == "Mesh")
+    {
+        return fieldName is "name";
+    }
+
+    if (className == "Material")
+    {
+        return fieldName is "name" or "ambient" or "diffuse" or "specular" or "emission" or "shininess"
+            or "hasDiffuseTexture" or "hasBumpTexture" or "textureDiffuse" or "textureBump" or "shader";
+    }
+
+    if (className == "MaterialShader")
+    {
+        return fieldName is "name" or "vertexPath" or "fragmentPath" or "vertexSource" or "fragmentSource";
+    }
+
     return true;
 }
 
@@ -405,6 +426,10 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Ens.h\"");
     output.AppendLine("#include \"Runtime/EnsId.h\"");
     output.AppendLine("#include \"Runtime/Object.h\"");
+    output.AppendLine("#include \"Runtime/Resources/Material.h\"");
+    output.AppendLine("#include \"Runtime/Resources/MaterialShader.h\"");
+    output.AppendLine("#include \"Runtime/Resources/Mesh.h\"");
+    output.AppendLine("#include \"Runtime/Resources/Texture2D.h\"");
     output.AppendLine("#include \"Runtime/SpaceComponent.h\"");
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");

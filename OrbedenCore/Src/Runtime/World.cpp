@@ -1,5 +1,6 @@
 #include "Runtime/World.h"
 
+#include "Runtime/ResourceManager.h"
 #include "Runtime/SpaceComponent.h"
 
 #include <algorithm>
@@ -47,6 +48,8 @@ World::~World()
 //清空世界运行时对象
 void World::Clear()
 {
+    ReleaseSceneResourceRefs();
+
     for (uint32 index = 0; index < enses.size(); ++index)
     {
         const Ens& storedEns = enses[index];
@@ -416,6 +419,27 @@ bool World::DestroyObject(Object* object)
 
     ownedObjects.erase(it);
     return Object::DeleteInstance(object);
+}
+
+//增加一个场景资源引用
+bool World::AddSceneResourceRef(Type* type, const std::string& key)
+{
+    Object* object = ResourceManager::LoadSceneRef(type, key);
+    if (!object) return false;
+
+    sceneResourceRefs.push_back(ResourceManager::NormalizeKey(key));
+    return true;
+}
+
+//释放当前World持有的所有场景资源引用
+void World::ReleaseSceneResourceRefs()
+{
+    for (const std::string& key : sceneResourceRefs)
+    {
+        ResourceManager::ReleaseSceneRef(key);
+    }
+
+    sceneResourceRefs.clear();
 }
 
 //按稳定ID查找Ens
