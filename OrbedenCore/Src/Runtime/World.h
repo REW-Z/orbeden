@@ -17,6 +17,7 @@ private:
     std::unordered_map<uint64, Component*> componentByEnsAndType;
     std::unordered_map<TypeId, List<Component*>> componentsByType;
     List<Object*> ownedObjects;
+    List<std::string> sceneResourceRefs;
     uint64 nextEnsIndex = 1;
     uint64 nextRuntimeObjectIndex = 1;
 
@@ -87,6 +88,12 @@ public:
 
     //销毁世界内对象
     bool DestroyObject(Object* object);
+
+    //增加一个场景资源引用
+    bool AddSceneResourceRef(Type* type, const std::string& key);
+
+    //释放当前World持有的所有场景资源引用
+    void ReleaseSceneResourceRefs();
 
     //按稳定ID查找Ens
     Ens FindEns(const StringId& id) const;

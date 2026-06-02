@@ -9,6 +9,7 @@
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/ResourceManager.h"
 #include "Runtime/SpaceComponent.h"
 
 namespace
@@ -283,6 +284,12 @@ namespace
         Log::Error(message.c_str());
     }
 
+    //判断是否是World内部对象引用
+    bool IsWorldObjectRef(const std::string& path)
+    {
+        return path.size() >= 8 && path.compare(0, 8, "world://") == 0;
+    }
+
     //写入缩进
     void WriteIndent(std::ostream& output, int depth)
     {
@@ -529,6 +536,46 @@ namespace
 
         return false;
     }
+
+    //扫描单个对象的资源Ref字段
+    void LoadResourceRefsFromObject(World& world, Object* object)
+    {
+        if (!object) return;
+
+        const Reflection::TypeInfo* typeInfo = Reflection::FindTypeInfo(object->GetType());
+        if (!typeInfo) return;
+
+        for (const Reflection::FieldInfo& field : typeInfo->fields)
+        {
+            if (field.kind != Reflection::FieldKind::ObjectRef || !field.objectRefTypeName || !field.getter) continue;
+
+            std::string key = field.GetValueAsString(object);
+            if (key.empty() || IsWorldObjectRef(key)) continue;
+
+            Type* refType = Object::FindType(field.objectRefTypeName);
+            if (!refType)
+            {
+                Log::Warning(("Resource Ref uses unknown type: " + std::string(field.objectRefTypeName)).c_str());
+                continue;
+            }
+
+            world.AddSceneResourceRef(refType, key);
+        }
+    }
+
+    //扫描World中所有组件的资源Ref字段
+    void LoadWorldResourceRefs(World& world)
+    {
+        world.ForEachEns([&world](Ens ens)
+            {
+                for (TypeId typeId : ens.GetComponentTypes())
+                {
+                    Type* type = Object::FindType(typeId);
+                    Component* component = type ? ens.GetComponent(type) : nullptr;
+                    LoadResourceRefsFromObject(world, component);
+                }
+            });
+    }
 }
 
 //从 XML 文件反序列化 World
@@ -558,6 +605,10 @@ bool WorldSerializer::LoadXml(World& world, const std::string& path)
             if (!success)
             {
                 world.Clear();
+            }
+            else
+            {
+                LoadWorldResourceRefs(world);
             }
 
             return success;

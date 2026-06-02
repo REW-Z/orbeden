@@ -4,6 +4,7 @@
 #include "Application.h"
 #include "Log/Log.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
 
 //释放应用持有的运行时状态
@@ -164,6 +165,9 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
+    world.Clear();
+    ResourceManager::Shutdown();
+
     if (World::CurrentWorld() == &world)
     {
         World::SetCurrentWorld(nullptr);
