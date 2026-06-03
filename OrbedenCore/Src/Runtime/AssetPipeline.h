@@ -4,14 +4,6 @@
 
 #include <string>
 
-//导入结果中的资源依赖边
-struct AssetDependency
-{
-public:
-    std::string ownerKey;
-    std::string dependencyKey;
-};
-
 //一次导入产生的复合资源集合
 class AssetCollection
 {
@@ -21,7 +13,6 @@ public:
     List<std::string> objectKeys;
     List<Object*> objects;
     List<std::string> mainKeys;
-    List<AssetDependency> dependencies;
     List<std::string> warnings;
     List<std::string> errors;
 
@@ -33,9 +24,6 @@ public:
 
     //记录导入对象
     void AddObject(const std::string& key, Object* object, bool isMain = false);
-
-    //记录资源依赖
-    void AddDependency(const std::string& ownerKey, const std::string& dependencyKey);
 
     //记录警告
     void AddWarning(const std::string& warning);

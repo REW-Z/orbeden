@@ -364,7 +364,6 @@ namespace
                         currentMaterial->hasBumpTexture = true;
                     }
 
-                    collection.AddDependency(currentMaterialKey, textureKey);
                     ResourceManager::RegisterDependency(currentMaterialKey, textureKey);
                 }
             }
@@ -445,15 +444,6 @@ void AssetCollection::AddObject(const std::string& key, Object* object, bool isM
     {
         mainKeys.push_back(normalizedKey);
     }
-}
-
-//记录资源依赖
-void AssetCollection::AddDependency(const std::string& ownerKey, const std::string& dependencyKey)
-{
-    AssetDependency dependency;
-    dependency.ownerKey = ResourceManager::NormalizeKey(ownerKey);
-    dependency.dependencyKey = ResourceManager::NormalizeKey(dependencyKey);
-    dependencies.push_back(dependency);
 }
 
 //记录警告
@@ -588,7 +578,6 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
             if (materialIt != materials.end())
             {
                 subMesh.material.SetInstanceId(StringId(materialIt->second.key));
-                collection.AddDependency(meshKey, materialIt->second.key);
                 ResourceManager::RegisterDependency(meshKey, materialIt->second.key);
             }
 

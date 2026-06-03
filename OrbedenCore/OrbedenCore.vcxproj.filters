@@ -78,6 +78,15 @@
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Platform\Window.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Platform\GlfwWindow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Platform\InputManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Application.cpp">
@@ -141,6 +150,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\Resources\Texture2D.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\GlfwWindow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\InputManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
