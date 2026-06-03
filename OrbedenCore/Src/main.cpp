@@ -1,28 +1,23 @@
-#include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <string>
-
-#include "FileSystem/FileSystem.h"
+#include "Application.h"
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
+#include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
-#include "Application.h"
-#include "Runtime/Ens.h"
-#include "Runtime/World.h"
-
-
-namespace examples
-{
-	void ExampleReflection();
-}
 
 int main()
 {
-    examples::ExampleReflection();
-    return 0;
+    GlfwWindow window;
+    WindowDesc windowDesc;
+    windowDesc.graphicsApi = WindowGraphicsApi::None;
+
+    if (!window.Create(windowDesc))
+    {
+        Log::Error("Application startup failed: window create failed.");
+        return 1;
+    }
 
     Application app;
+    app.SetWindow(&window);
     app.Initialize();
     app.LoadWorld("Worlds/default.world");
     app.Run();

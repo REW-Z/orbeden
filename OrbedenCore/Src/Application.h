@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 
+#include "Platform/Window.h"
 #include "Runtime/World.h"
 
 class IEngineSystem
@@ -15,12 +16,19 @@ public:
 
     //每帧更新，由 Application 每次 Tick 调用一次
     virtual void Update(World& world, float deltaTime) {}
+
+    //渲染更新，在 gameplay update 后、窗口 present 前调用
+    virtual void Render(World& world, float deltaTime) {}
+
+    //窗口 framebuffer 尺寸变化时调用
+    virtual void OnWindowResize(int width, int height) {}
 };
 
-class Application
+class Application : public IWindowResizeListener
 {
 private:
     World world;
+    IWindow* window = nullptr;
     List<IEngineSystem*> systems;
     bool initialized = false;
     bool running = false;
@@ -99,12 +107,21 @@ public:
     //设置单帧最多补跑 FixedUpdate 的次数
     void SetMaxFixedStepsPerFrame(uint32 value);
 
-protected:
-    //帧开始钩子，未来窗口/input 可以在这里接入
-    virtual void BeginFrame() {}
+    //绑定外部创建的窗口，Application 不拥有窗口生命周期
+    void SetWindow(IWindow* newWindow);
 
-    //帧结束钩子，未来渲染/present 可以在这里接入
-    virtual void EndFrame() {}
+    //获取当前绑定窗口
+    IWindow* GetWindow() const;
+
+    //派发窗口 resize 到已注册系统
+    void OnWindowResize(int32 width, int32 height) override;
+
+protected:
+    //帧开始钩子，处理输入清理和窗口事件
+    virtual void BeginFrame();
+
+    //帧结束钩子，处理窗口 present
+    virtual void EndFrame();
 
     //判断主循环是否继续运行
     virtual bool ShouldKeepRunning() const;

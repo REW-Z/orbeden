@@ -3,6 +3,7 @@
 
 #include "Application.h"
 #include "Log/Log.h"
+#include "Platform/InputManager.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
@@ -113,6 +114,12 @@ void Application::Tick(float deltaTime)
         fixedAccumulator = 0.0f;
     }
 
+    //渲染不属于 gameplay 暂停范围，编辑器/窗口仍可刷新画面
+    for (IEngineSystem* system : systems)
+    {
+        if (system) system->Render(world, deltaTime);
+    }
+
     EndFrame();
 }
 
@@ -165,6 +172,7 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
+    SetWindow(nullptr);
     world.Clear();
     ResourceManager::Shutdown();
 
@@ -247,8 +255,65 @@ void Application::SetMaxFixedStepsPerFrame(uint32 value)
     maxFixedStepsPerFrame = value;
 }
 
+//绑定外部创建的窗口
+void Application::SetWindow(IWindow* newWindow)
+{
+    if (window == newWindow) return;
+
+    if (window)
+    {
+        window->SetResizeListener(nullptr);
+    }
+
+    window = newWindow;
+
+    if (window)
+    {
+        window->SetResizeListener(this);
+        OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
+    }
+}
+
+//获取当前绑定窗口
+IWindow* Application::GetWindow() const
+{
+    return window;
+}
+
+//派发窗口 resize 到已注册系统
+void Application::OnWindowResize(int32 width, int32 height)
+{
+    for (IEngineSystem* system : systems)
+    {
+        if (system) system->OnWindowResize(width, height);
+    }
+}
+
+//帧开始钩子，处理输入清理和窗口事件
+void Application::BeginFrame()
+{
+    InputManager::BeginFrame();
+
+    if (!window) return;
+
+    window->PollEvents();
+    if (window->ShouldClose())
+    {
+        RequestQuit();
+    }
+}
+
+//帧结束钩子，处理窗口 present
+void Application::EndFrame()
+{
+    if (window)
+    {
+        window->Present();
+    }
+}
+
 //判断主循环是否继续运行
 bool Application::ShouldKeepRunning() const
 {
-    return running && !quitRequested;
+    return running && !quitRequested && (!window || !window->ShouldClose());
 }

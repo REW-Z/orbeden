@@ -20,7 +20,7 @@ typedef uint32 TypeId;
 typedef Object* (*ObjectConstructorFunction)();
 typedef void (*ObjectDestructorFunction)(Object* object);
 
-//稳定字符串ID
+//字符串ID
 class StringId
 {
 private:
@@ -230,7 +230,7 @@ public:
     static bool DeleteInstance(Object* object);
 };
 
-//对象弱引用
+//对象软引用
 template<typename T>
 class Ref
 {
