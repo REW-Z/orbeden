@@ -4,6 +4,7 @@
 #include "Application.h"
 #include "Log/Log.h"
 #include "Platform/InputManager.h"
+#include "Rendering/RenderSystem.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
@@ -114,6 +115,9 @@ void Application::Tick(float deltaTime)
         fixedAccumulator = 0.0f;
     }
 
+    //渲染前按需唤起内置系统，避免启动阶段提前创建后端
+    InitBuiltInSystems();
+
     //渲染不属于 gameplay 暂停范围，编辑器/窗口仍可刷新画面
     for (IEngineSystem* system : systems)
     {
@@ -172,6 +176,7 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
+    ShutdownBuiltInSystems();
     SetWindow(nullptr);
     world.Clear();
     ResourceManager::Shutdown();
@@ -260,6 +265,8 @@ void Application::SetWindow(IWindow* newWindow)
 {
     if (window == newWindow) return;
 
+    ShutdownBuiltInSystems();
+
     if (window)
     {
         window->SetResizeListener(nullptr);
@@ -272,6 +279,7 @@ void Application::SetWindow(IWindow* newWindow)
         window->SetResizeListener(this);
         OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
     }
+
 }
 
 //获取当前绑定窗口
@@ -316,4 +324,44 @@ void Application::EndFrame()
 bool Application::ShouldKeepRunning() const
 {
     return running && !quitRequested && (!window || !window->ShouldClose());
+}
+
+//初始化内置系统
+bool Application::InitBuiltInSystems()
+{
+    if (!window) return true;
+    if (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL) return true;
+    if (renderSystemActive) return true;
+
+    if (!renderSystem)
+    {
+        renderSystem = new RenderSystem();
+    }
+
+    if (!renderSystem->Initialize(window))
+    {
+        Log::Error("Application built-in RenderSystem initialize failed.");
+        delete renderSystem;
+        renderSystem = nullptr;
+        return false;
+    }
+
+    RegisterSystem(renderSystem);
+    renderSystem->OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
+    renderSystemActive = true;
+    return true;
+}
+
+//关闭内置系统
+void Application::ShutdownBuiltInSystems()
+{
+    if (renderSystemActive && renderSystem)
+    {
+        UnregisterSystem(renderSystem);
+        renderSystem->Shutdown();
+        renderSystemActive = false;
+    }
+
+    delete renderSystem;
+    renderSystem = nullptr;
 }

@@ -65,6 +65,9 @@ public:
     //获取 framebuffer 高度
     virtual int32 GetFramebufferHeight() const = 0;
 
+    //获取窗口图形 API
+    virtual WindowGraphicsApi GetGraphicsApi() const = 0;
+
     //获取平台原生窗口句柄
     virtual void* GetNativeHandle() const = 0;
 };

@@ -100,6 +100,12 @@ namespace Reflection
     {
     }
 
+    //创建 color4 反射值
+    Value::Value(const color4& value)
+        : kind(ValueKind::Color4), data(value)
+    {
+    }
+
     //创建 quaternion 反射值
     Value::Value(const quaternion& value)
         : kind(ValueKind::Quaternion), data(value)
@@ -144,6 +150,7 @@ namespace Reflection
         case ValueKind::String: return ToXmlValue(std::get<std::string>(data));
         case ValueKind::StringId: return ToXmlValue(std::get<StringId>(data));
         case ValueKind::Vector3: return ToXmlValue(std::get<vector3>(data));
+        case ValueKind::Color4: return ToXmlValue(std::get<color4>(data));
         case ValueKind::Quaternion: return ToXmlValue(std::get<quaternion>(data));
         case ValueKind::EnsId: return ToXmlValue(std::get<EnsId>(data));
         case ValueKind::Object:
@@ -216,6 +223,14 @@ namespace Reflection
     {
         if (kind != ValueKind::Vector3) return false;
         value = std::get<vector3>(data);
+        return true;
+    }
+
+    //尝试读取 color4 值
+    bool Value::TryGet(color4& value) const
+    {
+        if (kind != ValueKind::Color4) return false;
+        value = std::get<color4>(data);
         return true;
     }
 
@@ -302,6 +317,13 @@ namespace Reflection
         case FieldKind::Vector3:
         {
             vector3 parsed;
+            if (!SetFromXmlValue(parsed, text)) return false;
+            value = Value(parsed);
+            return true;
+        }
+        case FieldKind::Color4:
+        {
+            color4 parsed;
             if (!SetFromXmlValue(parsed, text)) return false;
             value = Value(parsed);
             return true;
@@ -506,6 +528,12 @@ namespace Reflection
         return FormatFloat(value.x) + " " + FormatFloat(value.y) + " " + FormatFloat(value.z);
     }
 
+    //转换 color4 为 XML 文本
+    std::string ToXmlValue(const color4& value)
+    {
+        return FormatFloat(value.r) + " " + FormatFloat(value.g) + " " + FormatFloat(value.b) + " " + FormatFloat(value.a);
+    }
+
     //转换 quaternion 为 XML 文本
     std::string ToXmlValue(const quaternion& value)
     {
@@ -580,6 +608,18 @@ namespace Reflection
         std::istringstream stream(value);
         vector3 parsed;
         stream >> parsed.x >> parsed.y >> parsed.z;
+        if (stream.fail()) return false;
+
+        target = parsed;
+        return true;
+    }
+
+    //从 XML 文本读取 color4
+    bool SetFromXmlValue(color4& target, const std::string& value)
+    {
+        std::istringstream stream(value);
+        color4 parsed;
+        stream >> parsed.r >> parsed.g >> parsed.b >> parsed.a;
         if (stream.fail()) return false;
 
         target = parsed;

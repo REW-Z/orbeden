@@ -53,6 +53,9 @@ public:
     //获取 framebuffer 高度
     int32 GetFramebufferHeight() const override;
 
+    //获取窗口图形 API
+    WindowGraphicsApi GetGraphicsApi() const override;
+
     //获取平台原生窗口句柄
     void* GetNativeHandle() const override;
 

@@ -379,8 +379,11 @@ static FieldKindInfo? GetFieldKind(string type)
         "std::string" => new FieldKindInfo("Reflection::FieldKind::String"),
         "StringId" => new FieldKindInfo("Reflection::FieldKind::StringId"),
         "vector3" => new FieldKindInfo("Reflection::FieldKind::Vector3"),
+        "color4" => new FieldKindInfo("Reflection::FieldKind::Color4"),
         "quaternion" => new FieldKindInfo("Reflection::FieldKind::Quaternion"),
         "EnsId" => new FieldKindInfo("Reflection::FieldKind::EnsId"),
+        "ClearMode" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
+        "DrawQueue" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         _ => null,
     };
 }
@@ -408,6 +411,7 @@ static ValueKindInfo? GetValueKind(string type)
         "std::string" => new ValueKindInfo("Reflection::ValueKind::String"),
         "StringId" => new ValueKindInfo("Reflection::ValueKind::StringId"),
         "vector3" => new ValueKindInfo("Reflection::ValueKind::Vector3"),
+        "color4" => new ValueKindInfo("Reflection::ValueKind::Color4"),
         "quaternion" => new ValueKindInfo("Reflection::ValueKind::Quaternion"),
         "EnsId" => new ValueKindInfo("Reflection::ValueKind::EnsId"),
         _ => null,
@@ -430,7 +434,9 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Resources/MaterialShader.h\"");
     output.AppendLine("#include \"Runtime/Resources/Mesh.h\"");
     output.AppendLine("#include \"Runtime/Resources/Texture2D.h\"");
+    output.AppendLine("#include \"Runtime/Camera.h\"");
     output.AppendLine("#include \"Runtime/SpaceComponent.h\"");
+    output.AppendLine("#include \"Runtime/StaticMeshRenderer.h\"");
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");
     output.AppendLine("{");

@@ -84,7 +84,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>F:\ZQJ\glfw\bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "F:\ZQJ\glfw\bin.WIN64\lib-vc2022\glfw3.dll" "$(TargetDir)"</Command>
@@ -106,7 +106,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>F:\ZQJ\glfw\bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "F:\ZQJ\glfw\bin.WIN64\lib-vc2022\glfw3.dll" "$(TargetDir)"</Command>
@@ -126,7 +126,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>F:\ZQJ\glfw\bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "F:\ZQJ\glfw\bin.WIN64\lib-vc2022\glfw3.dll" "$(TargetDir)"</Command>
@@ -148,7 +148,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>F:\ZQJ\glfw\bin.WIN64\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "F:\ZQJ\glfw\bin.WIN64\lib-vc2022\glfw3.dll" "$(TargetDir)"</Command>
@@ -163,7 +163,21 @@
     <ClInclude Include="Src\Platform\GlfwWindow.h" />
     <ClInclude Include="Src\Platform\InputManager.h" />
     <ClInclude Include="Src\Platform\Window.h" />
+    <ClInclude Include="Src\Rendering\Backend\OpenGLContext.h" />
+    <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h" />
+    <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />
+    <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
+    <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
+    <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
+    <ClInclude Include="Src\Rendering\RenderMath.h" />
+    <ClInclude Include="Src\Rendering\RenderScene.h" />
+    <ClInclude Include="Src\Rendering\RenderSceneBuilder.h" />
+    <ClInclude Include="Src\Rendering\RenderSystem.h" />
+    <ClInclude Include="Src\Rendering\RenderTypes.h" />
+    <ClInclude Include="Src\Rendering\SceneCuller.h" />
+    <ClInclude Include="Src\Rendering\SpaceCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
+    <ClInclude Include="Src\Runtime\Camera.h" />
     <ClInclude Include="Src\Runtime\Ens.h" />
     <ClInclude Include="Src\Runtime\EnsId.h" />
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
@@ -176,6 +190,8 @@
     <ClInclude Include="Src\Runtime\Resources\Mesh.h" />
     <ClInclude Include="Src\Runtime\Resources\Texture2D.h" />
     <ClInclude Include="Src\Runtime\SpaceComponent.h" />
+    <ClInclude Include="Src\Runtime\StaticMeshRenderer.h" />
+    <ClInclude Include="Src\ThirdParty\glad\glad.h" />
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h" />
     <ClInclude Include="Src\Runtime\World.h" />
     <ClInclude Include="Src\Runtime\WorldSerializer.h" />
@@ -189,7 +205,19 @@
     <ClCompile Include="Src\Memory\MemoryManager.cpp" />
     <ClCompile Include="Src\Platform\GlfwWindow.cpp" />
     <ClCompile Include="Src\Platform\InputManager.cpp" />
+    <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
+    <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
+    <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
+    <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
+    <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
+    <ClCompile Include="Src\Rendering\RenderMath.cpp" />
+    <ClCompile Include="Src\Rendering\RenderScene.cpp" />
+    <ClCompile Include="Src\Rendering\RenderSceneBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
+    <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
+    <ClCompile Include="Src\Rendering\SpaceCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
+    <ClCompile Include="Src\Runtime\Camera.cpp" />
     <ClCompile Include="Src\Runtime\Ens.cpp" />
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
@@ -202,6 +230,8 @@
     <ClCompile Include="Src\Runtime\Resources\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Resources\Texture2D.cpp" />
     <ClCompile Include="Src\Runtime\SpaceComponent.cpp" />
+    <ClCompile Include="Src\Runtime\StaticMeshRenderer.cpp" />
+    <ClCompile Include="Src\ThirdParty\glad\glad.cpp" />
     <ClCompile Include="Src\Runtime\World.cpp" />
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
   </ItemGroup>

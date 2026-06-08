@@ -4,11 +4,16 @@
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
 
+namespace examples
+{
+    void ExampleRenderScene(World& world);
+}
+
 int main()
 {
     GlfwWindow window;
     WindowDesc windowDesc;
-    windowDesc.graphicsApi = WindowGraphicsApi::None;
+    windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
 
     if (!window.Create(windowDesc))
     {
@@ -18,8 +23,14 @@ int main()
 
     Application app;
     app.SetWindow(&window);
-    app.Initialize();
+    if (!app.Initialize())
+    {
+        Log::Error("Application startup failed: application initialize failed.");
+        return 1;
+    }
+
     app.LoadWorld("Worlds/default.world");
+    examples::ExampleRenderScene(app.GetWorld());
     app.Run();
 
     Profiler::WriteProfileLog();

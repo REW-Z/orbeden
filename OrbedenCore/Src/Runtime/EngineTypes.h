@@ -19,6 +19,16 @@ public:
     float32 z = 0.0f;
 };
 
+//轻量颜色
+struct color4
+{
+public:
+    float32 r = 0.0f;
+    float32 g = 0.0f;
+    float32 b = 0.0f;
+    float32 a = 1.0f;
+};
+
 //轻量四元数
 struct quaternion
 {
