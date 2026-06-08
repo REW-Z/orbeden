@@ -10,11 +10,125 @@
 #include "Runtime/Resources/MaterialShader.h"
 #include "Runtime/Resources/Mesh.h"
 #include "Runtime/Resources/Texture2D.h"
+#include "Runtime/Camera.h"
 #include "Runtime/SpaceComponent.h"
+#include "Runtime/StaticMeshRenderer.h"
 
 class ReflectionGeneratedAccess
 {
 public:
+    //读取 Camera.enabled 字段
+    static std::string Get_Camera_enabled(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //写入 Camera.enabled 字段
+    static bool Set_Camera_enabled(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //读取 Camera.fieldOfView 字段
+    static std::string Get_Camera_fieldOfView(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->fieldOfView);
+    }
+
+    //写入 Camera.fieldOfView 字段
+    static bool Set_Camera_fieldOfView(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->fieldOfView, value);
+    }
+
+    //读取 Camera.nearPlane 字段
+    static std::string Get_Camera_nearPlane(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->nearPlane);
+    }
+
+    //写入 Camera.nearPlane 字段
+    static bool Set_Camera_nearPlane(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->nearPlane, value);
+    }
+
+    //读取 Camera.farPlane 字段
+    static std::string Get_Camera_farPlane(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->farPlane);
+    }
+
+    //写入 Camera.farPlane 字段
+    static bool Set_Camera_farPlane(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->farPlane, value);
+    }
+
+    //读取 Camera.depth 字段
+    static std::string Get_Camera_depth(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->depth);
+    }
+
+    //写入 Camera.depth 字段
+    static bool Set_Camera_depth(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->depth, value);
+    }
+
+    //读取 Camera.drawLayerMask 字段
+    static std::string Get_Camera_drawLayerMask(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->drawLayerMask);
+    }
+
+    //写入 Camera.drawLayerMask 字段
+    static bool Set_Camera_drawLayerMask(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->drawLayerMask, value);
+    }
+
+    //读取 Camera.clearMode 字段
+    static std::string Get_Camera_clearMode(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->clearMode);
+    }
+
+    //写入 Camera.clearMode 字段
+    static bool Set_Camera_clearMode(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->clearMode, value);
+    }
+
+    //读取 Camera.clearColor 字段
+    static std::string Get_Camera_clearColor(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->clearColor);
+    }
+
+    //写入 Camera.clearColor 字段
+    static bool Set_Camera_clearColor(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->clearColor, value);
+    }
+
     //调用 Component.GetEnsId 方法
     static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
@@ -441,6 +555,62 @@ public:
         return Reflection::SetFromXmlValue(instance->localScale, value);
     }
 
+    //读取 StaticMeshRenderer.enabled 字段
+    static std::string Get_StaticMeshRenderer_enabled(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //写入 StaticMeshRenderer.enabled 字段
+    static bool Set_StaticMeshRenderer_enabled(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //读取 StaticMeshRenderer.mesh 字段
+    static std::string Get_StaticMeshRenderer_mesh(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //写入 StaticMeshRenderer.mesh 字段
+    static bool Set_StaticMeshRenderer_mesh(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->mesh, value);
+    }
+
+    //读取 StaticMeshRenderer.drawLayer 字段
+    static std::string Get_StaticMeshRenderer_drawLayer(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->drawLayer);
+    }
+
+    //写入 StaticMeshRenderer.drawLayer 字段
+    static bool Set_StaticMeshRenderer_drawLayer(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->drawLayer, value);
+    }
+
+    //读取 StaticMeshRenderer.drawQueue 字段
+    static std::string Get_StaticMeshRenderer_drawQueue(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->drawQueue);
+    }
+
+    //写入 StaticMeshRenderer.drawQueue 字段
+    static bool Set_StaticMeshRenderer_drawQueue(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->drawQueue, value);
+    }
+
 };
 
 namespace Reflection
@@ -451,6 +621,22 @@ namespace Reflection
         static bool registered = false;
         if (registered) return;
         registered = true;
+
+        RegisterTypeFields(Camera::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr),
+                FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr),
+                FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr),
+                FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr),
+                FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr),
+                FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr),
+                FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr),
+                FieldInfo("clearColor", "color4", Reflection::FieldKind::Color4, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr),
+            });
+
+        RegisterTypeMethods(Camera::StaticType(),
+            {
+            });
 
         RegisterTypeFields(Component::StaticType(),
             {
@@ -551,6 +737,18 @@ namespace Reflection
             });
 
         RegisterTypeMethods(SpaceComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(StaticMeshRenderer::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh"),
+                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr),
+                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr),
+            });
+
+        RegisterTypeMethods(StaticMeshRenderer::StaticType(),
             {
             });
 

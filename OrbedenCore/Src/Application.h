@@ -24,13 +24,17 @@ public:
     virtual void OnWindowResize(int width, int height) {}
 };
 
+class RenderSystem;
+
 class Application : public IWindowResizeListener
 {
 private:
     World world;
     IWindow* window = nullptr;
     List<IEngineSystem*> systems;
+    RenderSystem* renderSystem = nullptr;
     bool initialized = false;
+    bool renderSystemActive = false;
     bool running = false;
     bool quitRequested = false;
     bool paused = false;
@@ -125,4 +129,11 @@ protected:
 
     //判断主循环是否继续运行
     virtual bool ShouldKeepRunning() const;
+
+private:
+    //按需唤起内置系统
+    bool InitBuiltInSystems();
+
+    //关闭内置系统
+    void ShutdownBuiltInSystems();
 };

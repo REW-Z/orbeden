@@ -289,6 +289,12 @@ int32 GlfwWindow::GetFramebufferHeight() const
     return framebufferHeight;
 }
 
+//获取窗口图形 API
+WindowGraphicsApi GlfwWindow::GetGraphicsApi() const
+{
+    return desc.graphicsApi;
+}
+
 //获取平台原生窗口句柄
 void* GlfwWindow::GetNativeHandle() const
 {
