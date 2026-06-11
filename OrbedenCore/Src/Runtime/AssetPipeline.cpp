@@ -87,6 +87,31 @@ namespace
         return ResourceManager::NormalizeKey(std::filesystem::path(path).lexically_normal().string());
     }
 
+    //解析实际磁盘路径，保持资源 Key 不变但兼容不同工作目录
+    std::string ResolveAssetPath(const std::string& path)
+    {
+        std::string normalizedPath = NormalizePath(path);
+        if (FileSystem::Exist(normalizedPath)) return normalizedPath;
+
+        if (StartsWith(normalizedPath, "Resources/"))
+        {
+            const char* prefixes[] =
+            {
+                "../",
+                "../../",
+                "../../../",
+            };
+
+            for (const char* prefix : prefixes)
+            {
+                std::string candidate = NormalizePath(std::string(prefix) + normalizedPath);
+                if (FileSystem::Exist(candidate)) return candidate;
+            }
+        }
+
+        return normalizedPath;
+    }
+
     //获取扩展名小写文本
     std::string GetLowerExtension(const std::string& path)
     {
@@ -205,7 +230,7 @@ namespace
     //导入图片到指定ObjectKey
     Texture2D* ImportImageAsKey(const std::string& filePath, const std::string& objectKey, AssetCollection& collection)
     {
-        std::string normalizedFilePath = NormalizePath(filePath);
+        std::string normalizedFilePath = ResolveAssetPath(filePath);
         std::string normalizedObjectKey = ResourceManager::NormalizeKey(objectKey);
         collection.AddSourceFile(normalizedFilePath);
 
@@ -241,14 +266,15 @@ namespace
     //读取文本文件，失败时记录错误
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection)
     {
-        if (!FileSystem::Exist(path))
+        std::string filePath = ResolveAssetPath(path);
+        if (!FileSystem::Exist(filePath))
         {
             collection.AddError("File does not exist: " + path);
             return std::string();
         }
 
-        collection.AddSourceFile(path);
-        return FileSystem::LoadText(path);
+        collection.AddSourceFile(filePath);
+        return FileSystem::LoadText(filePath);
     }
 
     //查找OBJ引用的MTL文件
@@ -476,7 +502,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
         return Import_OBJ(sourceKey);
     }
 
-    if (FileSystem::Exist(sourceKey + ".vert.glsl") && FileSystem::Exist(sourceKey + ".frag.glsl"))
+    if (FileSystem::Exist(ResolveAssetPath(sourceKey + ".vert.glsl")) && FileSystem::Exist(ResolveAssetPath(sourceKey + ".frag.glsl")))
     {
         return Import_GLSL(sourceKey);
     }
@@ -532,15 +558,16 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
     AssetCollection collection;
     std::string sourceKey = ResourceManager::NormalizeKey(path);
     collection.sourceKey = sourceKey;
-    collection.AddSourceFile(sourceKey);
+    std::string objPath = ResolveAssetPath(sourceKey);
+    collection.AddSourceFile(objPath);
 
-    if (!FileSystem::Exist(sourceKey))
+    if (!FileSystem::Exist(objPath))
     {
         collection.AddError("OBJ file does not exist: " + sourceKey);
         return collection;
     }
 
-    List<std::string> mtlFiles = FindMtlFiles(sourceKey);
+    List<std::string> mtlFiles = FindMtlFiles(objPath);
     std::unordered_map<std::string, MaterialImportInfo> materials = ParseMtlFiles(sourceKey, mtlFiles, collection);
 
     std::string meshKey = sourceKey + "//Mesh/Main";
@@ -635,7 +662,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
             AddTo(mesh->tangents[ic], tangent);
         };
 
-    std::ifstream input(sourceKey);
+    std::ifstream input(objPath);
     std::string line;
     while (std::getline(input, line))
     {

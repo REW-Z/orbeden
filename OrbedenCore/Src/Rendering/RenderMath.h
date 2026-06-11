@@ -7,6 +7,9 @@ namespace RenderMath
     //向量点积
     float32 Dot(const vector3& a, const vector3& b);
 
+    //向量叉积
+    vector3 Cross(const vector3& a, const vector3& b);
+
     //向量归一化
     vector3 Normalize(const vector3& value);
 
@@ -27,6 +30,12 @@ namespace RenderMath
 
     //创建透视投影矩阵
     matrix4x4 Perspective(float32 fieldOfView, float32 aspect, float32 nearPlane, float32 farPlane);
+
+    //创建正交投影矩阵
+    matrix4x4 Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane);
+
+    //创建右手系观察矩阵
+    matrix4x4 LookAt(const vector3& eye, const vector3& target, const vector3& up);
 
     //矩阵求逆，失败时返回单位矩阵
     matrix4x4 Inverse(const matrix4x4& value);
@@ -52,4 +61,3 @@ namespace RenderMath
     //检测视锥与包围盒是否相交
     bool Intersects(const frustum& viewFrustum, const bounds3& bounds);
 }
-

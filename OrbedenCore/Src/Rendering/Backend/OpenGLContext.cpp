@@ -2,7 +2,7 @@
 
 #include "Log/Log.h"
 #include "Platform/GlfwWindow.h"
-#include "ThirdParty/glad/glad.h"
+#include <glad/gl.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -27,7 +27,7 @@ bool OpenGLContext::Initialize(IWindow* window)
     }
 
     glfwMakeContextCurrent(glfwWindow->GetGlfwWindow());
-    if (!gladLoadGLLoader(LoadOpenGLProc))
+    if (!gladLoadGL(LoadOpenGLProc))
     {
         Log::Error("OpenGLContext initialize failed: GLAD load failed.");
         return false;
@@ -41,4 +41,3 @@ bool OpenGLContext::IsInitialized() const
 {
     return initialized;
 }
-

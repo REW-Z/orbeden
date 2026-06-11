@@ -4,35 +4,42 @@
 #include "Runtime/Resources/Material.h"
 #include "Runtime/Resources/MaterialShader.h"
 #include "Runtime/Resources/Mesh.h"
+#include "Runtime/Resources/Skybox.h"
 #include "Runtime/Resources/Texture2D.h"
 
 #include <unordered_map>
 
-struct GpuMeshHandle
+//网格上传到 GPU 后持有的缓冲和顶点输入资源。
+struct GpuMesh
 {
 public:
-    GpuVertexArrayHandle vertexArray;
-    GpuBufferHandle vertexBuffer;
-    GpuBufferHandle indexBuffer;
+    GpuVertexInputID vertexInput;
+    GpuVertexBufferID vertexBuffer;
+    GpuIndexBufferID indexBuffer;
     uint32 indexCount = 0;
 
-    bool IsValid() const { return vertexArray.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
+    bool IsValid() const { return vertexInput.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
 };
 
-struct GpuShaderHandle
+//shader 上传到 GPU 后持有的 shader program 资源。
+struct GpuShader
 {
 public:
-    GpuProgramHandle program;
+    GpuShaderProgramID shaderProgram;
 
-    bool IsValid() const { return program.IsValid(); }
+    bool IsValid() const { return shaderProgram.IsValid(); }
 };
 
-struct GpuMaterialHandle
+//材质上传到 GPU 后持有的 shader、纹理和常量资源。
+struct GpuMaterial
 {
 public:
-    GpuShaderHandle shader;
-    GpuTextureHandle diffuseTexture;
+    GpuShader shader;
+    GpuTextureID diffuseTexture;
+    vector3 ambient;
     vector3 diffuse = { 1.0f, 1.0f, 1.0f };
+    vector3 specular;
+    float32 shininess = 1.0f;
     bool hasDiffuseTexture = false;
 
     bool IsValid() const { return shader.IsValid(); }
@@ -43,10 +50,11 @@ class GpuResourceManager
 {
 private:
     RenderBackend* backend = nullptr;
-    std::unordered_map<Mesh*, GpuMeshHandle> meshes;
-    std::unordered_map<Texture2D*, GpuTextureHandle> textures;
-    std::unordered_map<MaterialShader*, GpuShaderHandle> shaders;
-    std::unordered_map<Material*, GpuMaterialHandle> materials;
+    std::unordered_map<Mesh*, GpuMesh> meshes;
+    std::unordered_map<Texture2D*, GpuTextureID> textures;
+    std::unordered_map<Skybox*, GpuCubeTextureID> skyboxes;
+    std::unordered_map<MaterialShader*, GpuShader> shaders;
+    std::unordered_map<Material*, GpuMaterial> materials;
 
 public:
     //初始化资源管理器
@@ -56,15 +64,17 @@ public:
     void Shutdown();
 
     //获取或上传网格
-    GpuMeshHandle GetMesh(Mesh* mesh);
+    GpuMesh GetMesh(Mesh* mesh);
 
     //获取或上传纹理
-    GpuTextureHandle GetTexture(Texture2D* texture);
+    GpuTextureID GetTexture(Texture2D* texture);
+
+    //获取或上传天空盒立方体纹理
+    GpuCubeTextureID GetSkybox(Skybox* skybox);
 
     //获取或上传 shader
-    GpuShaderHandle GetShader(MaterialShader* shader);
+    GpuShader GetShader(MaterialShader* shader);
 
     //获取或上传材质
-    GpuMaterialHandle GetMaterial(Material* material);
+    GpuMaterial GetMaterial(Material* material);
 };
-

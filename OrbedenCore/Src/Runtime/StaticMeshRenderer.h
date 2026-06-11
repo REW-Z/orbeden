@@ -14,5 +14,6 @@ public:
     Ref<Mesh> mesh;
     uint32 drawLayer = 1u;
     DrawQueue drawQueue = DrawQueue::Opaque;
+    bool castShadows = true;
+    bool receiveShadows = true;
 };
-

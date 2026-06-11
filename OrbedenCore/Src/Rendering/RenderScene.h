@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
+#include "Runtime/DirectionalLight.h"
+#include "Runtime/RenderSettings.h"
 #include "Runtime/Resources/Material.h"
 #include "Runtime/Resources/Mesh.h"
 
@@ -39,13 +41,32 @@ public:
     bounds3 worldBounds;
     vector3 worldPosition;
     float32 cameraDistance = 0.0f;
+    bool castShadows = true;
+    bool receiveShadows = true;
+};
+
+//每帧方向光记录
+struct RenderDirectionalLight
+{
+public:
+    EnsId ens;
+    DirectionalLight* light = nullptr;
+    vector3 direction = { -0.35f, -1.0f, -0.45f };
+    vector3 color = { 1.0f, 1.0f, 1.0f };
+    float32 intensity = 1.0f;
+    bool castShadows = true;
+    float32 shadowBias = 0.004f;
+    float32 shadowStrength = 0.45f;
+    float32 shadowDistance = 24.0f;
 };
 
 //每帧渲染场景
 class RenderScene
 {
 public:
+    RenderSettings renderSettings;
     List<RenderCamera> cameras;
+    List<RenderDirectionalLight> directionalLights;
     List<RenderItem> items;
 
     //清空当前帧数据
@@ -62,4 +83,3 @@ public:
     //清空可见集合
     void Clear();
 };
-

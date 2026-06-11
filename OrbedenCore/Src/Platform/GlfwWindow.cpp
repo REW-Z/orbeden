@@ -2,6 +2,7 @@
 
 #include <array>
 
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -182,6 +183,7 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
         glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     }
 
     window = glfwCreateWindow(desc.width, desc.height, desc.title.c_str(), nullptr, nullptr);
