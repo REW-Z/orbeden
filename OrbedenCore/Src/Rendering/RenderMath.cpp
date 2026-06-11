@@ -45,6 +45,16 @@ namespace RenderMath
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
+    vector3 Cross(const vector3& a, const vector3& b)
+    {
+        return
+        {
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x,
+        };
+    }
+
     vector3 Normalize(const vector3& value)
     {
         float32 length = Length(value);
@@ -146,6 +156,48 @@ namespace RenderMath
         result.m[10] = (safeFar + safeNear) / (safeNear - safeFar);
         result.m[11] = -1.0f;
         result.m[14] = (2.0f * safeFar * safeNear) / (safeNear - safeFar);
+        return result;
+    }
+
+    matrix4x4 Orthographic(float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane)
+    {
+        float32 width = std::max(right - left, 0.0001f);
+        float32 height = std::max(top - bottom, 0.0001f);
+        float32 depth = std::max(farPlane - nearPlane, 0.0001f);
+
+        matrix4x4 result;
+        result.m[0] = 2.0f / width;
+        result.m[5] = 2.0f / height;
+        result.m[10] = -2.0f / depth;
+        result.m[12] = -(right + left) / width;
+        result.m[13] = -(top + bottom) / height;
+        result.m[14] = -(farPlane + nearPlane) / depth;
+        return result;
+    }
+
+    matrix4x4 LookAt(const vector3& eye, const vector3& target, const vector3& up)
+    {
+        vector3 forward = Normalize({ target.x - eye.x, target.y - eye.y, target.z - eye.z });
+        if (Dot(forward, forward) <= 0.000001f) forward = { 0.0f, 0.0f, -1.0f };
+
+        vector3 right = Normalize(Cross(forward, up));
+        if (Dot(right, right) <= 0.000001f) right = { 1.0f, 0.0f, 0.0f };
+
+        vector3 realUp = Cross(right, forward);
+
+        matrix4x4 result;
+        result.m[0] = right.x;
+        result.m[1] = realUp.x;
+        result.m[2] = -forward.x;
+        result.m[4] = right.y;
+        result.m[5] = realUp.y;
+        result.m[6] = -forward.y;
+        result.m[8] = right.z;
+        result.m[9] = realUp.z;
+        result.m[10] = -forward.z;
+        result.m[12] = -Dot(right, eye);
+        result.m[13] = -Dot(realUp, eye);
+        result.m[14] = Dot(forward, eye);
         return result;
     }
 

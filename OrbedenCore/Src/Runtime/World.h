@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Runtime/Ens.h"
+#include "Runtime/RenderSettings.h"
 
 #include <string>
 #include <type_traits>
@@ -31,6 +32,8 @@ private:
     const Ens* GetEns(EnsId ens) const;
 
 public:
+    RenderSettings renderSettings;
+
     World() = default;
 
     //销毁世界及其运行时对象

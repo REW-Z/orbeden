@@ -70,6 +70,7 @@ void World::Clear()
     freeEnsIds.clear();
     componentByEnsAndType.clear();
     componentsByType.clear();
+    renderSettings = RenderSettings();
     nextEnsIndex = 1;
     nextRuntimeObjectIndex = 1;
 }

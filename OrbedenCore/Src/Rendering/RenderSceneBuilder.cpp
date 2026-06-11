@@ -3,6 +3,7 @@
 #include "Log/Log.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Camera.h"
+#include "Runtime/DirectionalLight.h"
 #include "Runtime/StaticMeshRenderer.h"
 
 #include <algorithm>
@@ -10,6 +11,7 @@
 void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewportWidth, int32 viewportHeight, RenderScene& scene)
 {
     scene.Clear();
+    scene.renderSettings = world.renderSettings;
     spaceCache.Update(world);
 
     float32 aspect = viewportHeight > 0 ? static_cast<float32>(viewportWidth) / static_cast<float32>(viewportHeight) : 1.0f;
@@ -38,6 +40,28 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         return a.depth < b.depth;
     });
 
+    world.ForEachComponent(DirectionalLight::StaticType(), [&](Component* component)
+    {
+        DirectionalLight* light = component ? component->Cast<DirectionalLight>() : nullptr;
+        if (!light || !light->enabled) return;
+
+        RenderDirectionalLight renderLight;
+        renderLight.ens = light->GetEnsId();
+        renderLight.light = light;
+        renderLight.direction = RenderMath::Normalize(light->direction);
+        if (RenderMath::Dot(renderLight.direction, renderLight.direction) <= 0.000001f)
+        {
+            renderLight.direction = { -0.35f, -1.0f, -0.45f };
+        }
+        renderLight.color = light->color;
+        renderLight.intensity = light->intensity;
+        renderLight.castShadows = light->castShadows;
+        renderLight.shadowBias = light->shadowBias;
+        renderLight.shadowStrength = light->shadowStrength;
+        renderLight.shadowDistance = light->shadowDistance;
+        scene.directionalLights.push_back(renderLight);
+    });
+
     world.ForEachComponent(StaticMeshRenderer::StaticType(), [&](Component* component)
     {
         StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
@@ -62,6 +86,18 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         for (uint32 index = 0; index < mesh->subMeshes.size(); ++index)
         {
             const SubMesh& subMesh = mesh->subMeshes[index];
+            usize indexStart = static_cast<usize>(subMesh.indexStart);
+            usize indexCount = static_cast<usize>(subMesh.indexCount);
+            if (indexCount == 0)
+            {
+                continue;
+            }
+            if (indexStart > mesh->indices.size() || indexCount > mesh->indices.size() - indexStart)
+            {
+                Log::Error("StaticMeshRenderer render skipped: submesh index range is invalid.");
+                continue;
+            }
+
             Material* material = subMesh.material.Get();
             if (!material)
             {
@@ -79,6 +115,8 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
             item.indexCount = subMesh.indexCount;
             item.drawLayer = renderer->drawLayer;
             item.drawQueue = renderer->drawQueue;
+            item.castShadows = renderer->castShadows;
+            item.receiveShadows = renderer->receiveShadows;
             item.localToWorld = localToWorld;
             item.localBounds = localBounds;
             item.worldBounds = worldBounds;
@@ -87,4 +125,3 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         }
     });
 }
-

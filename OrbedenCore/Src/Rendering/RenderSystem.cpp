@@ -29,6 +29,7 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
 
 void RenderSystem::Shutdown()
 {
+    forwardPipeline.Shutdown();
     resources.Shutdown();
     backend.Shutdown();
     initialized = false;
@@ -57,7 +58,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     {
         culler.Cull(scene, camera, visibleSet);
         sorter.Sort(visibleSet);
-        forwardPipeline.Render(visibleSet, resources);
+        forwardPipeline.Render(scene, visibleSet, resources);
     }
     backend.EndFrame();
 }
@@ -67,4 +68,3 @@ void RenderSystem::OnWindowResize(int width, int height)
     framebufferWidth = width;
     framebufferHeight = height;
 }
-

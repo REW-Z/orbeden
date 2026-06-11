@@ -9,8 +9,10 @@
 #include "Runtime/Resources/Material.h"
 #include "Runtime/Resources/MaterialShader.h"
 #include "Runtime/Resources/Mesh.h"
+#include "Runtime/Resources/Skybox.h"
 #include "Runtime/Resources/Texture2D.h"
 #include "Runtime/Camera.h"
+#include "Runtime/DirectionalLight.h"
 #include "Runtime/SpaceComponent.h"
 #include "Runtime/StaticMeshRenderer.h"
 
@@ -127,6 +129,118 @@ public:
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::SetFromXmlValue(instance->clearColor, value);
+    }
+
+    //读取 DirectionalLight.enabled 字段
+    static std::string Get_DirectionalLight_enabled(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //写入 DirectionalLight.enabled 字段
+    static bool Set_DirectionalLight_enabled(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //读取 DirectionalLight.direction 字段
+    static std::string Get_DirectionalLight_direction(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->direction);
+    }
+
+    //写入 DirectionalLight.direction 字段
+    static bool Set_DirectionalLight_direction(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->direction, value);
+    }
+
+    //读取 DirectionalLight.color 字段
+    static std::string Get_DirectionalLight_color(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->color);
+    }
+
+    //写入 DirectionalLight.color 字段
+    static bool Set_DirectionalLight_color(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->color, value);
+    }
+
+    //读取 DirectionalLight.intensity 字段
+    static std::string Get_DirectionalLight_intensity(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->intensity);
+    }
+
+    //写入 DirectionalLight.intensity 字段
+    static bool Set_DirectionalLight_intensity(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->intensity, value);
+    }
+
+    //读取 DirectionalLight.castShadows 字段
+    static std::string Get_DirectionalLight_castShadows(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->castShadows);
+    }
+
+    //写入 DirectionalLight.castShadows 字段
+    static bool Set_DirectionalLight_castShadows(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->castShadows, value);
+    }
+
+    //读取 DirectionalLight.shadowBias 字段
+    static std::string Get_DirectionalLight_shadowBias(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowBias);
+    }
+
+    //写入 DirectionalLight.shadowBias 字段
+    static bool Set_DirectionalLight_shadowBias(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowBias, value);
+    }
+
+    //读取 DirectionalLight.shadowStrength 字段
+    static std::string Get_DirectionalLight_shadowStrength(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowStrength);
+    }
+
+    //写入 DirectionalLight.shadowStrength 字段
+    static bool Set_DirectionalLight_shadowStrength(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowStrength, value);
+    }
+
+    //读取 DirectionalLight.shadowDistance 字段
+    static std::string Get_DirectionalLight_shadowDistance(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowDistance);
+    }
+
+    //写入 DirectionalLight.shadowDistance 字段
+    static bool Set_DirectionalLight_shadowDistance(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowDistance, value);
     }
 
     //调用 Component.GetEnsId 方法
@@ -513,6 +627,90 @@ public:
         return Reflection::SetFromXmlValue(instance->format, value);
     }
 
+    //读取 Skybox.right 字段
+    static std::string Get_Skybox_right(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->right);
+    }
+
+    //写入 Skybox.right 字段
+    static bool Set_Skybox_right(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->right, value);
+    }
+
+    //读取 Skybox.left 字段
+    static std::string Get_Skybox_left(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->left);
+    }
+
+    //写入 Skybox.left 字段
+    static bool Set_Skybox_left(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->left, value);
+    }
+
+    //读取 Skybox.top 字段
+    static std::string Get_Skybox_top(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->top);
+    }
+
+    //写入 Skybox.top 字段
+    static bool Set_Skybox_top(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->top, value);
+    }
+
+    //读取 Skybox.bottom 字段
+    static std::string Get_Skybox_bottom(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->bottom);
+    }
+
+    //写入 Skybox.bottom 字段
+    static bool Set_Skybox_bottom(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->bottom, value);
+    }
+
+    //读取 Skybox.front 字段
+    static std::string Get_Skybox_front(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->front);
+    }
+
+    //写入 Skybox.front 字段
+    static bool Set_Skybox_front(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->front, value);
+    }
+
+    //读取 Skybox.back 字段
+    static std::string Get_Skybox_back(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::ToXmlValue(instance->back);
+    }
+
+    //写入 Skybox.back 字段
+    static bool Set_Skybox_back(Object* object, const std::string& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return Reflection::SetFromXmlValue(instance->back, value);
+    }
+
     //读取 SpaceComponent.localPosition 字段
     static std::string Get_SpaceComponent_localPosition(Object* object)
     {
@@ -611,6 +809,34 @@ public:
         return Reflection::SetFromXmlValue(instance->drawQueue, value);
     }
 
+    //读取 StaticMeshRenderer.castShadows 字段
+    static std::string Get_StaticMeshRenderer_castShadows(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->castShadows);
+    }
+
+    //写入 StaticMeshRenderer.castShadows 字段
+    static bool Set_StaticMeshRenderer_castShadows(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->castShadows, value);
+    }
+
+    //读取 StaticMeshRenderer.receiveShadows 字段
+    static std::string Get_StaticMeshRenderer_receiveShadows(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->receiveShadows);
+    }
+
+    //写入 StaticMeshRenderer.receiveShadows 字段
+    static bool Set_StaticMeshRenderer_receiveShadows(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->receiveShadows, value);
+    }
+
 };
 
 namespace Reflection
@@ -635,6 +861,22 @@ namespace Reflection
             });
 
         RegisterTypeMethods(Camera::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(DirectionalLight::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
+                FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
+                FieldInfo("color", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
+                FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr),
+                FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr),
+                FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr),
+                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr),
+            });
+
+        RegisterTypeMethods(DirectionalLight::StaticType(),
             {
             });
 
@@ -724,6 +966,20 @@ namespace Reflection
             {
             });
 
+        RegisterTypeFields(Skybox::StaticType(),
+            {
+                FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D"),
+                FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D"),
+                FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D"),
+                FieldInfo("bottom", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_bottom, ReflectionGeneratedAccess::Set_Skybox_bottom, "Texture2D"),
+                FieldInfo("front", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_front, ReflectionGeneratedAccess::Set_Skybox_front, "Texture2D"),
+                FieldInfo("back", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_back, ReflectionGeneratedAccess::Set_Skybox_back, "Texture2D"),
+            });
+
+        RegisterTypeMethods(Skybox::StaticType(),
+            {
+            });
+
         RegisterTypeFields(SpaceComponent::StaticType(),
             {
                 FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
@@ -746,6 +1002,8 @@ namespace Reflection
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh"),
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr),
                 FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr),
+                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr),
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),

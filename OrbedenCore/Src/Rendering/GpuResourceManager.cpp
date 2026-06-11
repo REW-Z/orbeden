@@ -19,9 +19,9 @@ void GpuResourceManager::Shutdown()
     {
         for (auto& pair : meshes)
         {
-            backend->DeleteVertexArray(pair.second.vertexArray);
-            backend->DeleteBuffer(pair.second.vertexBuffer);
-            backend->DeleteBuffer(pair.second.indexBuffer);
+            backend->DeleteVertexInput(pair.second.vertexInput);
+            backend->DeleteVertexBuffer(pair.second.vertexBuffer);
+            backend->DeleteIndexBuffer(pair.second.indexBuffer);
         }
 
         for (auto& pair : textures)
@@ -29,22 +29,28 @@ void GpuResourceManager::Shutdown()
             backend->DeleteTexture(pair.second);
         }
 
+        for (auto& pair : skyboxes)
+        {
+            backend->DeleteCubeTexture(pair.second);
+        }
+
         for (auto& pair : shaders)
         {
-            backend->DeleteProgram(pair.second.program);
+            backend->DeleteShaderProgram(pair.second.shaderProgram);
         }
     }
 
     meshes.clear();
     textures.clear();
+    skyboxes.clear();
     shaders.clear();
     materials.clear();
     backend = nullptr;
 }
 
-GpuMeshHandle GpuResourceManager::GetMesh(Mesh* mesh)
+GpuMesh GpuResourceManager::GetMesh(Mesh* mesh)
 {
-    if (!backend || !mesh) return GpuMeshHandle();
+    if (!backend || !mesh) return GpuMesh();
 
     auto it = meshes.find(mesh);
     if (it != meshes.end()) return it->second;
@@ -52,7 +58,7 @@ GpuMeshHandle GpuResourceManager::GetMesh(Mesh* mesh)
     if (mesh->vertices.empty() || mesh->indices.empty())
     {
         Log::Error("GpuResourceManager mesh upload failed: mesh has no vertices or indices.");
-        return GpuMeshHandle();
+        return GpuMesh();
     }
 
     List<float32> vertexData;
@@ -78,90 +84,139 @@ GpuMeshHandle GpuResourceManager::GetMesh(Mesh* mesh)
         vertexData[offset + 10] = tangent.z;
     }
 
-    BufferInfo vertexBufferInfo;
-    vertexBufferInfo.kind = BufferKind::Vertex;
-    vertexBufferInfo.data = vertexData.data();
-    vertexBufferInfo.size = vertexData.size() * sizeof(float32);
+    GpuBufferDesc vertexBufferDesc;
+    vertexBufferDesc.data = vertexData.data();
+    vertexBufferDesc.size = vertexData.size() * sizeof(float32);
 
-    BufferInfo indexBufferInfo;
-    indexBufferInfo.kind = BufferKind::Index;
-    indexBufferInfo.data = mesh->indices.data();
-    indexBufferInfo.size = mesh->indices.size() * sizeof(uint32);
+    GpuBufferDesc indexBufferDesc;
+    indexBufferDesc.data = mesh->indices.data();
+    indexBufferDesc.size = mesh->indices.size() * sizeof(uint32);
 
-    GpuMeshHandle handle;
-    handle.vertexBuffer = backend->CreateBuffer(vertexBufferInfo);
-    handle.indexBuffer = backend->CreateBuffer(indexBufferInfo);
-    handle.indexCount = static_cast<uint32>(mesh->indices.size());
+    GpuMesh gpuMesh;
+    gpuMesh.vertexBuffer = backend->CreateVertexBuffer(vertexBufferDesc);
+    gpuMesh.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
+    gpuMesh.indexCount = static_cast<uint32>(mesh->indices.size());
 
-    VertexLayoutInfo layoutInfo;
-    layoutInfo.vertexBuffer = handle.vertexBuffer;
-    layoutInfo.indexBuffer = handle.indexBuffer;
-    layoutInfo.stride = VertexStride;
-    handle.vertexArray = backend->CreateVertexArray(layoutInfo);
+    GpuVertexInputDesc vertexInputDesc;
+    vertexInputDesc.vertexBuffer = gpuMesh.vertexBuffer;
+    vertexInputDesc.indexBuffer = gpuMesh.indexBuffer;
+    vertexInputDesc.stride = VertexStride;
+    gpuMesh.vertexInput = backend->CreateVertexInput(vertexInputDesc);
 
-    if (!handle.IsValid())
+    if (!gpuMesh.IsValid())
     {
         Log::Error("GpuResourceManager mesh upload failed: backend returned invalid mesh handles.");
-        backend->DeleteVertexArray(handle.vertexArray);
-        backend->DeleteBuffer(handle.vertexBuffer);
-        backend->DeleteBuffer(handle.indexBuffer);
-        return GpuMeshHandle();
+        backend->DeleteVertexInput(gpuMesh.vertexInput);
+        backend->DeleteVertexBuffer(gpuMesh.vertexBuffer);
+        backend->DeleteIndexBuffer(gpuMesh.indexBuffer);
+        return GpuMesh();
     }
 
-    meshes[mesh] = handle;
-    return handle;
+    meshes[mesh] = gpuMesh;
+    return gpuMesh;
 }
 
-GpuTextureHandle GpuResourceManager::GetTexture(Texture2D* texture)
+GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
 {
-    if (!backend || !texture) return GpuTextureHandle();
+    if (!backend || !texture) return GpuTextureID();
 
     auto it = textures.find(texture);
     if (it != textures.end()) return it->second;
 
-    TextureInfo info;
-    info.width = texture->width;
-    info.height = texture->height;
-    info.channels = texture->channels;
-    info.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
+    GpuTextureDesc textureDesc;
+    textureDesc.width = texture->width;
+    textureDesc.height = texture->height;
+    textureDesc.channels = texture->channels;
+    textureDesc.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
 
-    GpuTextureHandle handle = backend->CreateTexture(info);
-    if (!handle.IsValid())
+    GpuTextureID textureID = backend->CreateTexture(textureDesc);
+    if (!textureID.IsValid())
     {
         Log::Error("GpuResourceManager texture upload failed.");
-        return GpuTextureHandle();
+        return GpuTextureID();
     }
 
-    textures[texture] = handle;
-    return handle;
+    textures[texture] = textureID;
+    return textureID;
 }
 
-GpuShaderHandle GpuResourceManager::GetShader(MaterialShader* shader)
+GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
 {
-    if (!backend || !shader) return GpuShaderHandle();
+    if (!backend || !skybox) return GpuCubeTextureID();
+
+    auto it = skyboxes.find(skybox);
+    if (it != skyboxes.end()) return it->second;
+
+    Texture2D* faces[6] =
+    {
+        skybox->right.Get(),
+        skybox->left.Get(),
+        skybox->top.Get(),
+        skybox->bottom.Get(),
+        skybox->front.Get(),
+        skybox->back.Get(),
+    };
+
+    Texture2D* firstFace = faces[0];
+    if (!firstFace || firstFace->pixels.empty())
+    {
+        Log::Error("GpuResourceManager skybox upload failed: first face is missing.");
+        return GpuCubeTextureID();
+    }
+
+    GpuCubeTextureDesc desc;
+    desc.width = firstFace->width;
+    desc.height = firstFace->height;
+    desc.channels = firstFace->channels;
+    for (uint32 face = 0; face < 6; ++face)
+    {
+        Texture2D* texture = faces[face];
+        if (!texture || texture->width != desc.width || texture->height != desc.height || texture->channels != desc.channels || texture->pixels.empty())
+        {
+            Log::Error("GpuResourceManager skybox upload failed: faces must share size and format.");
+            return GpuCubeTextureID();
+        }
+
+        desc.faces[face] = texture->pixels.data();
+    }
+
+    GpuCubeTextureID cubeTexture = backend->CreateCubeTexture(desc);
+    if (!cubeTexture.IsValid())
+    {
+        Log::Error("GpuResourceManager skybox upload failed.");
+        return GpuCubeTextureID();
+    }
+
+    skyboxes[skybox] = cubeTexture;
+    return cubeTexture;
+}
+
+GpuShader GpuResourceManager::GetShader(MaterialShader* shader)
+{
+    if (!backend || !shader) return GpuShader();
 
     auto it = shaders.find(shader);
     if (it != shaders.end()) return it->second;
 
-    ProgramInfo info;
-    info.vertexSource = shader->vertexSource.c_str();
-    info.fragmentSource = shader->fragmentSource.c_str();
+    GpuShaderProgramDesc shaderProgramDesc;
+    shaderProgramDesc.vertexSource = shader->vertexSource.c_str();
+    shaderProgramDesc.fragmentSource = shader->fragmentSource.c_str();
 
-    GpuShaderHandle handle;
-    handle.program = backend->CreateProgram(info);
-    if (!handle.IsValid())
+    GpuShader gpuShader;
+    gpuShader.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+    if (!gpuShader.IsValid())
     {
         Log::Error("GpuResourceManager shader upload failed.");
-        return GpuShaderHandle();
+        return GpuShader();
     }
 
-    shaders[shader] = handle;
-    return handle;
+    shaders[shader] = gpuShader;
+    return gpuShader;
 }
 
-GpuMaterialHandle GpuResourceManager::GetMaterial(Material* material)
+GpuMaterial GpuResourceManager::GetMaterial(Material* material)
 {
-    if (!backend || !material) return GpuMaterialHandle();
+    if (!backend || !material) return GpuMaterial();
 
     auto it = materials.find(material);
     if (it != materials.end()) return it->second;
@@ -170,21 +225,24 @@ GpuMaterialHandle GpuResourceManager::GetMaterial(Material* material)
     if (!shader)
     {
         Log::Error("GpuResourceManager material upload failed: shader is missing.");
-        return GpuMaterialHandle();
+        return GpuMaterial();
     }
 
-    GpuMaterialHandle handle;
-    handle.shader = GetShader(shader);
-    handle.diffuse = material->diffuse;
-    if (!handle.shader.IsValid()) return GpuMaterialHandle();
+    GpuMaterial gpuMaterial;
+    gpuMaterial.shader = GetShader(shader);
+    gpuMaterial.ambient = material->ambient;
+    gpuMaterial.diffuse = material->diffuse;
+    gpuMaterial.specular = material->specular;
+    gpuMaterial.shininess = material->shininess > 0.0f ? material->shininess : 1.0f;
+    if (!gpuMaterial.shader.IsValid()) return GpuMaterial();
 
     if (material->hasDiffuseTexture)
     {
         Texture2D* diffuseTexture = material->textureDiffuse.Get();
         if (diffuseTexture)
         {
-            handle.diffuseTexture = GetTexture(diffuseTexture);
-            handle.hasDiffuseTexture = handle.diffuseTexture.IsValid();
+            gpuMaterial.diffuseTexture = GetTexture(diffuseTexture);
+            gpuMaterial.hasDiffuseTexture = gpuMaterial.diffuseTexture.IsValid();
         }
         else
         {
@@ -192,7 +250,6 @@ GpuMaterialHandle GpuResourceManager::GetMaterial(Material* material)
         }
     }
 
-    materials[material] = handle;
-    return handle;
+    materials[material] = gpuMaterial;
+    return gpuMaterial;
 }
-

@@ -6,7 +6,7 @@
 
 namespace examples
 {
-    void ExampleRenderScene(World& world);
+    void SetupExampleWorld(Application& app);
 }
 
 int main()
@@ -29,8 +29,7 @@ int main()
         return 1;
     }
 
-    app.LoadWorld("Worlds/default.world");
-    examples::ExampleRenderScene(app.GetWorld());
+    examples::SetupExampleWorld(app);
     app.Run();
 
     Profiler::WriteProfileLog();
