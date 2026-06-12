@@ -3,4 +3,4 @@ Ka 0.08 0.06 0.05
 Kd 0.86 0.42 0.20
 Ks 0.55 0.48 0.42
 Ns 48.0
-
+shader Resources/Examples/World/Shaders/blinn_phong_shadow

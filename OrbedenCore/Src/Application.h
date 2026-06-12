@@ -117,6 +117,9 @@ public:
     //获取当前绑定窗口
     IWindow* GetWindow() const;
 
+    //获取内置渲染系统，尚未初始化时返回 nullptr
+    RenderSystem* GetRenderSystem() const;
+
     //派发窗口 resize 到已注册系统
     void OnWindowResize(int32 width, int32 height) override;
 

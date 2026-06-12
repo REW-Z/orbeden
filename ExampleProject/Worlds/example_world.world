@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<World version="1">
+    <Ens stableId="world://examples/world/cube" name="ExampleCube">
+        <Component type="SpaceComponent">
+            <Field name="localPosition" type="vector3" value="0 1 0" />
+            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Component type="StaticMeshRenderer">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resources/Examples/World/Meshes/cube.obj//Mesh/Main" />
+            <Field name="drawLayer" type="uint32" value="1" />
+            <Field name="drawQueue" type="DrawQueue" value="0" />
+            <Field name="castShadows" type="bool" value="true" />
+            <Field name="receiveShadows" type="bool" value="true" />
+        </Component>
+    </Ens>
+    <Ens stableId="world://examples/world/ground" name="ExampleGround">
+        <Component type="SpaceComponent">
+            <Field name="localPosition" type="vector3" value="0 0 0" />
+            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Component type="StaticMeshRenderer">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resources/Examples/World/Meshes/ground.obj//Mesh/Main" />
+            <Field name="drawLayer" type="uint32" value="1" />
+            <Field name="drawQueue" type="DrawQueue" value="0" />
+            <Field name="castShadows" type="bool" value="false" />
+            <Field name="receiveShadows" type="bool" value="true" />
+        </Component>
+    </Ens>
+    <Ens stableId="world://examples/world/directional_light" name="ExampleDirectionalLight">
+        <Component type="SpaceComponent">
+            <Field name="localPosition" type="vector3" value="0 4 0" />
+            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Component type="DirectionalLight">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="direction" type="vector3" value="-0.45 -1 -0.35" />
+            <Field name="color" type="vector3" value="1 0.96 0.86" />
+            <Field name="intensity" type="float32" value="1.35" />
+            <Field name="castShadows" type="bool" value="true" />
+            <Field name="shadowBias" type="float32" value="0.004" />
+            <Field name="shadowStrength" type="float32" value="0.45" />
+            <Field name="shadowDistance" type="float32" value="24" />
+        </Component>
+    </Ens>
+    <Ens stableId="world://examples/world/camera" name="ExampleCamera">
+        <Component type="SpaceComponent">
+            <Field name="localPosition" type="vector3" value="5 3.2 7" />
+            <Field name="localRotation" type="quaternion" value="-0.1819 0.2952 0.0574 0.9362" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Component type="Camera">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="fieldOfView" type="float32" value="60" />
+            <Field name="nearPlane" type="float32" value="0.1" />
+            <Field name="farPlane" type="float32" value="100" />
+            <Field name="depth" type="float32" value="0" />
+            <Field name="drawLayerMask" type="uint32" value="4294967295" />
+            <Field name="clearMode" type="ClearMode" value="2" />
+            <Field name="clearColor" type="color4" value="0.62 0.78 0.96 1" />
+        </Component>
+    </Ens>
+</World>

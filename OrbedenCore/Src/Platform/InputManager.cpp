@@ -11,12 +11,37 @@ namespace
     std::array<bool, KeyCount> keyUpThisFrame{};
     vector2 mousePos{};
     vector2 mouseMov{};
+    bool inputEnabled = true;
 
     bool IsValidKey(KeyEnum key)
     {
         usize index = static_cast<usize>(key);
         return index < KeyCount && key != KeyEnum::UNMAPPED;
     }
+
+    void ClearInputState()
+    {
+        keyStates.fill(false);
+        keyDownThisFrame.fill(false);
+        keyUpThisFrame.fill(false);
+        mouseMov = vector2{};
+    }
+}
+
+//设置输入系统是否接收平台事件
+void InputManager::SetEnabled(bool value)
+{
+    inputEnabled = value;
+    if (!inputEnabled)
+    {
+        ClearInputState();
+    }
+}
+
+//判断输入系统是否接收平台事件
+bool InputManager::IsEnabled()
+{
+    return inputEnabled;
 }
 
 //清理本帧瞬时输入状态
@@ -30,6 +55,7 @@ void InputManager::BeginFrame()
 //写入按键状态，供平台回调调用
 void InputManager::SetKeyState(KeyEnum key, bool pressed)
 {
+    if (!inputEnabled) return;
     if (!IsValidKey(key)) return;
 
     usize index = static_cast<usize>(key);
@@ -49,6 +75,7 @@ void InputManager::SetKeyState(KeyEnum key, bool pressed)
 //写入鼠标位置，供平台回调调用
 void InputManager::SetMousePosition(float32 x, float32 y)
 {
+    if (!inputEnabled) return;
     mouseMov.x += x - mousePos.x;
     mouseMov.y += y - mousePos.y;
     mousePos.x = x;
@@ -58,31 +85,31 @@ void InputManager::SetMousePosition(float32 x, float32 y)
 //读取持续按下状态
 bool InputManager::Key(KeyEnum key)
 {
-    return IsValidKey(key) && keyStates[static_cast<usize>(key)];
+    return inputEnabled && IsValidKey(key) && keyStates[static_cast<usize>(key)];
 }
 
 //读取本帧按下状态
 bool InputManager::KeyDown(KeyEnum key)
 {
-    return IsValidKey(key) && keyDownThisFrame[static_cast<usize>(key)];
+    return inputEnabled && IsValidKey(key) && keyDownThisFrame[static_cast<usize>(key)];
 }
 
 //读取本帧抬起状态
 bool InputManager::KeyUp(KeyEnum key)
 {
-    return IsValidKey(key) && keyUpThisFrame[static_cast<usize>(key)];
+    return inputEnabled && IsValidKey(key) && keyUpThisFrame[static_cast<usize>(key)];
 }
 
 //读取鼠标当前位置
 vector2 InputManager::MousePos()
 {
-    return mousePos;
+    return inputEnabled ? mousePos : vector2{};
 }
 
 //读取鼠标本帧移动量
 vector2 InputManager::MouseMov()
 {
-    return mouseMov;
+    return inputEnabled ? mouseMov : vector2{};
 }
 
 //读取持续按下状态

@@ -3,13 +3,16 @@
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
+#include "Runtime/ProjectContext.h"
+
+#include <string>
 
 namespace examples
 {
     void SetupExampleWorld(Application& app);
 }
 
-int main()
+int main(int argc, char** argv)
 {
     GlfwWindow window;
     WindowDesc windowDesc;
@@ -17,7 +20,7 @@ int main()
 
     if (!window.Create(windowDesc))
     {
-        Log::Error("Application startup failed: window create failed.");
+        Log::Error("Game startup failed: window create failed.");
         return 1;
     }
 
@@ -26,8 +29,14 @@ int main()
     app.SetTargetFrameRate(60);
     if (!app.Initialize())
     {
-        Log::Error("Application startup failed: application initialize failed.");
+        Log::Error("Game startup failed: application initialize failed.");
         return 1;
+    }
+
+    std::string exampleProject = ProjectContext::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
+    if (!exampleProject.empty())
+    {
+        ProjectContext::SetProjectRoot(exampleProject);
     }
 
     examples::SetupExampleWorld(app);

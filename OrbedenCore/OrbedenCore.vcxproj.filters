@@ -33,6 +33,9 @@
     <ClInclude Include="Src\Runtime\Object.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\ProjectContext.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\EnsId.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -135,6 +138,9 @@
     <ClInclude Include="Src\Rendering\ForwardPipeline.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Rendering\ImGuiLayer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Rendering\RenderSystem.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -147,12 +153,33 @@
     <ClInclude Include="Src\ThirdParty\glad\include\glad\gl.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_opengl3.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imconfig.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imgui.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imgui_internal.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_rectpack.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_textedit.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_truetype.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Application.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\example_world.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\FileSystem\FileSystem.cpp">
@@ -164,13 +191,13 @@
     <ClCompile Include="Src\Memory\MemoryManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\main.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Src\Profiler\Profiler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\Object.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Runtime\ProjectContext.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\EnsId.cpp">
@@ -189,9 +216,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\examples.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\SpaceComponent.cpp">
@@ -266,43 +290,29 @@
     <ClCompile Include="Src\Rendering\RenderSystem.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Rendering\ImGuiLayer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\ThirdParty\glad\src\gl.c">
       <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Resources\Examples\World\Meshes\cube.obj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Meshes\cube.mtl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Meshes\ground.obj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Meshes\ground.mtl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Shaders\blinn_phong_shadow.vert.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Shaders\blinn_phong_shadow.frag.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Examples\World\Textures\sky_blue.png">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Engine\Shaders\shadow_depth.vert.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Engine\Shaders\shadow_depth.frag.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Engine\Shaders\skybox.vert.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\Resources\Engine\Shaders\skybox.frag.glsl">
-      <Filter>资源文件</Filter>
-    </None>
+    <ClCompile Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ThirdParty\imgui\backends\imgui_impl_opengl3_orbeden.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ThirdParty\imgui\imgui.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ThirdParty\imgui\imgui_draw.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ThirdParty\imgui\imgui_tables.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\ThirdParty\imgui\imgui_widgets.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

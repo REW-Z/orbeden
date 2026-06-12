@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <thread>
 
 #include "Application.h"
@@ -8,6 +9,55 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
+
+namespace
+{
+    std::chrono::steady_clock::duration CalculateFrameTimeTolerance(uint32 targetFrameRate)
+    {
+        if (targetFrameRate == 0) return std::chrono::steady_clock::duration::zero();
+
+        double targetFrameSeconds = 1.0 / static_cast<double>(targetFrameRate);
+        double acceptedFastFrameSeconds = 1.0 / static_cast<double>(targetFrameRate + 1);
+        return std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(targetFrameSeconds - acceptedFastFrameSeconds));
+    }
+
+    void WaitUntilFrameTime(std::chrono::steady_clock::time_point targetTime, uint32 targetFrameRate)
+    {
+        using Clock = std::chrono::steady_clock;
+        using Microseconds = std::chrono::microseconds;
+        constexpr auto shortSleep = std::chrono::milliseconds(1);
+        constexpr auto sleepPadding = std::chrono::microseconds(100);
+        static int64 estimatedSleepUs = 1000;
+
+        auto acceptedTime = targetTime - CalculateFrameTimeTolerance(targetFrameRate);
+        while (Clock::now() < acceptedTime)
+        {
+            auto remaining = acceptedTime - Clock::now();
+            auto sleepGuard = Microseconds(estimatedSleepUs) + sleepPadding;
+            if (remaining > sleepGuard)
+            {
+                auto sleepStart = Clock::now();
+                std::this_thread::sleep_for(shortSleep);
+                auto sleepEnd = Clock::now();
+
+                int64 sleptUs = std::chrono::duration_cast<Microseconds>(sleepEnd - sleepStart).count();
+                if (sleptUs > estimatedSleepUs)
+                {
+                    estimatedSleepUs = sleptUs;
+                }
+                else
+                {
+                    estimatedSleepUs = (estimatedSleepUs * 7 + sleptUs) / 8;
+                }
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
+        }
+    }
+}
 
 //释放应用持有的运行时状态
 Application::~Application()
@@ -142,21 +192,17 @@ void Application::Run()
     {
         //计算本帧真实 deltaTime
         auto frameStartTime = Clock::now();
-        auto currentTime = Clock::now();
-        std::chrono::duration<float> elapsed = currentTime - previousTime;
-        previousTime = currentTime;
+        std::chrono::duration<float> elapsed = frameStartTime - previousTime;
+        previousTime = frameStartTime;
 
         Tick(elapsed.count());
 
-        //没有窗口垂直同步时，使用简单限帧避免空转烧满 CPU
+        //显式设置目标帧率时，先低 CPU 等待，再短暂 yield 对齐目标时间
         if (targetFrameRate > 0)
         {
             std::chrono::duration<float> targetFrameTime(1.0f / static_cast<float>(targetFrameRate));
-            std::chrono::duration<float> usedFrameTime = Clock::now() - frameStartTime;
-            if (usedFrameTime < targetFrameTime)
-            {
-                std::this_thread::sleep_for(targetFrameTime - usedFrameTime);
-            }
+            auto targetEndTime = frameStartTime + std::chrono::duration_cast<Clock::duration>(targetFrameTime);
+            WaitUntilFrameTime(targetEndTime, targetFrameRate);
         }
         else
         {
@@ -286,6 +332,12 @@ void Application::SetWindow(IWindow* newWindow)
 IWindow* Application::GetWindow() const
 {
     return window;
+}
+
+//获取内置渲染系统
+RenderSystem* Application::GetRenderSystem() const
+{
+    return renderSystemActive ? renderSystem : nullptr;
 }
 
 //派发窗口 resize 到已注册系统

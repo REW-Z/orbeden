@@ -1,23 +1,20 @@
 #include "Application.h"
+#include "Editor/EditorSystem.h"
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
 
-namespace examples
-{
-    void SetupExampleWorld(Application& app);
-}
-
-int main()
+int main(int argc, char** argv)
 {
     GlfwWindow window;
     WindowDesc windowDesc;
+    windowDesc.title = "Orbeden Editor";
     windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
 
     if (!window.Create(windowDesc))
     {
-        Log::Error("Application startup failed: window create failed.");
+        Log::Error("Editor startup failed: window create failed.");
         return 1;
     }
 
@@ -26,11 +23,12 @@ int main()
     app.SetTargetFrameRate(60);
     if (!app.Initialize())
     {
-        Log::Error("Application startup failed: application initialize failed.");
+        Log::Error("Editor startup failed: application initialize failed.");
         return 1;
     }
 
-    examples::SetupExampleWorld(app);
+    EditorSystem editorSystem(app, argc > 0 ? argv[0] : "");
+    app.RegisterSystem(&editorSystem);
     app.Run();
 
     Profiler::WriteProfileLog();

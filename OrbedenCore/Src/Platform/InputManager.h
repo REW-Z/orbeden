@@ -66,6 +66,12 @@ enum KeyEnum
 class InputManager
 {
 public:
+    //设置输入系统是否接收平台事件
+    static void SetEnabled(bool value);
+
+    //判断输入系统是否接收平台事件
+    static bool IsEnabled();
+
     //清理本帧瞬时输入状态
     static void BeginFrame();
 
