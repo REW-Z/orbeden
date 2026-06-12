@@ -1,0 +1,16 @@
+Dear ImGui 1.92.8 subset for Orbeden.
+
+Included:
+- Core ImGui files: imgui.cpp, imgui_draw.cpp, imgui_tables.cpp, imgui_widgets.cpp and required headers.
+- GLFW platform backend: backends/imgui_impl_glfw.*
+- OpenGL3 renderer backend: backends/imgui_impl_opengl3.* plus Orbeden wrapper that uses engine GLAD2.
+- Vulkan renderer backend: backends/imgui_impl_vulkan.* for future Vulkan support. Not compiled until Vulkan is integrated.
+- std::string helper: misc/cpp/imgui_stdlib.*
+- LICENSE.txt
+
+Not included:
+- examples/
+- docs/
+- fonts/
+- freetype helper
+- platform-specific renderer backends other than OpenGL3/Vulkan

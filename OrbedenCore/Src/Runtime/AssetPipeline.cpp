@@ -10,6 +10,7 @@
 #include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
+#include "Runtime/ProjectContext.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Resources/Material.h"
 #include "Runtime/Resources/MaterialShader.h"
@@ -95,6 +96,9 @@ namespace
 
         if (StartsWith(normalizedPath, "Resources/"))
         {
+            std::string projectCandidate = ProjectContext::ResolveResourcePath(normalizedPath);
+            if (FileSystem::Exist(projectCandidate)) return projectCandidate;
+
             const char* prefixes[] =
             {
                 "../",
@@ -366,6 +370,16 @@ namespace
                 else if (command == "Ns")
                 {
                     stream >> currentMaterial->shininess;
+                }
+                else if (command == "shader")
+                {
+                    std::string shaderKey;
+                    stream >> shaderKey;
+                    if (shaderKey.empty()) continue;
+
+                    AssetPipeline::ImportSource(shaderKey);
+                    currentMaterial->shader.SetInstanceId(StringId(shaderKey));
+                    ResourceManager::RegisterDependency(currentMaterialKey, shaderKey);
                 }
                 else if (command == "map_Kd" || command == "map_Bump" || command == "bump")
                 {
