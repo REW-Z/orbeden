@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
-#include "Runtime/DirectionalLight.h"
+#include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/RenderSettings.h"
-#include "Runtime/Resources/Material.h"
-#include "Runtime/Resources/Mesh.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/Mesh.h"
 
 //每帧相机记录
 struct RenderCamera

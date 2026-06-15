@@ -5,11 +5,12 @@
 #include "Profiler/Profiler.h"
 #include "Runtime/ProjectContext.h"
 
+#include <filesystem>
 #include <string>
 
 namespace examples
 {
-    void SetupExampleWorld(Application& app);
+    void InitializeExampleWorldRuntime(Application& app);
 }
 
 int main(int argc, char** argv)
@@ -37,9 +38,15 @@ int main(int argc, char** argv)
     if (!exampleProject.empty())
     {
         ProjectContext::SetProjectRoot(exampleProject);
+        std::string worldPath = (std::filesystem::path(exampleProject) / "Worlds/example_world.world").lexically_normal().generic_string();
+        app.LoadWorld(worldPath);
+    }
+    else
+    {
+        Log::Warning("Game startup warning: ExampleProject was not found.");
     }
 
-    examples::SetupExampleWorld(app);
+    examples::InitializeExampleWorldRuntime(app);
     app.Run();
 
     Profiler::WriteProfileLog();

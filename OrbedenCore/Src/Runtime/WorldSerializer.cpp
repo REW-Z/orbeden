@@ -10,7 +10,7 @@
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/SpaceComponent.h"
+#include "Runtime/Object/SpaceComponent.h"
 
 namespace
 {

@@ -3,23 +3,26 @@
 #include "Rendering/RenderTypes.h"
 #include "Runtime/World.h"
 
-#include <unordered_map>
-
-//每帧空间矩阵缓存
+//空间矩阵缓存，按脏标记刷新 SpaceComponent 的世界变换
 class SpaceCache
 {
 private:
     World* world = nullptr;
-    std::unordered_map<uint64, matrix4x4> worldMatrices;
 
 public:
-    //重建世界矩阵缓存
+    //更新世界矩阵缓存
     void Update(World& currentWorld);
 
     //获取世界矩阵
     matrix4x4 GetWorldMatrix(EnsId ens) const;
 
 private:
-    matrix4x4 BuildWorldMatrix(EnsId ens);
-};
+    //检测 public local 字段变更并标记脏状态
+    void DetectTransformChanges(World& currentWorld);
 
+    //递归标记子树脏状态
+    void MarkDirtyRecursive(EnsId ens);
+
+    //递归刷新子树世界变换
+    void UpdateNodeRecursive(EnsId ens, const matrix4x4& parentMatrix, const quaternion& parentRotation, bool parentDirty);
+};

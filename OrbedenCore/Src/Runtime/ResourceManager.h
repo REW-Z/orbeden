@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Runtime/Object.h"
+#include "Runtime/Object/Object.h"
 
 #include <string>
 

@@ -1,6 +1,7 @@
 #include "Editor/EditorProject.h"
 
 #include "Application.h"
+#include "Editor/ExampleWorldGenerator.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/ProjectContext.h"
@@ -115,6 +116,14 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     if (parsedResourceRoot.empty()) parsedResourceRoot = "Resources";
     std::string worldPath = NormalizePath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
 
+    bool useExampleWorldGenerator = ExampleWorldGenerator::IsExampleProject(parsedName);
+    if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateWorldFile(parsedProjectRoot, parsedStartupWorld))
+    {
+        lastError = "Example project world generation failed: " + worldPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
     RenderSystem* renderSystem = app.GetRenderSystem();
     if (renderSystem)
     {
@@ -142,6 +151,11 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
         lastError = "Project loaded, but startup world failed: " + worldPath;
         Log::Error(lastError.c_str());
         return false;
+    }
+
+    if (useExampleWorldGenerator)
+    {
+        ExampleWorldGenerator::ApplyRuntimeEnvironment(app);
     }
 
     Log::Info(("Project loaded: " + projectName).c_str());

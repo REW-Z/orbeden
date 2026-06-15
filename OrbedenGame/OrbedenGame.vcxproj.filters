@@ -11,10 +11,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Src\game_main.cpp">
+    <ClCompile Include="Src\ExampleWorldRuntime.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\OrbedenCore\Src\example_world.cpp">
+    <ClCompile Include="Src\game_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

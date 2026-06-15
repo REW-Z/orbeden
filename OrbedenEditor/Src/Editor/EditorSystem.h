@@ -1,14 +1,18 @@
 #pragma once
 
 #include "Application.h"
+#include "Editor/EditorSelection.h"
 #include "Editor/EditorProject.h"
+#include "Editor/EnsViewPanel.h"
+#include "Editor/PanelManager.h"
+#include "Editor/ProjectPanel.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/EnsId.h"
 
 #include <string>
 
-//编辑器主系统，负责项目菜单和编辑器 ImGui 覆盖层。
-class EditorSystem : public IEngineSystem, public IImGuiOverlay
+//编辑器主系统，负责项目菜单和编辑器渲染覆盖层。
+class EditorSystem : public IEngineSystem, public IRenderOverlay
 {
 private:
     Application& app;
@@ -16,11 +20,15 @@ private:
     std::string executablePath;
     std::string dialogDirectory;
     std::string dialogError;
-    std::string saveStatus;
+    std::string projectStatus;
     char pathBuffer[1024] = {};
     bool openProjectDialog = false;
     bool autoLoadAttempted = false;
     bool previousInputEnabled = true;
+    EditorSelection selection;
+    PanelManager panelManager;
+    ProjectPanel projectPanel;
+    EnsViewPanel ensViewPanel;
     EnsId editorCameraEns;
     float32 cameraYaw = 35.0f;
     float32 cameraPitch = -22.0f;
@@ -37,13 +45,49 @@ public:
     //每帧更新编辑器状态
     void Update(World& world, float deltaTime) override;
 
-    //接入渲染系统的 ImGui 覆盖层
+    //接入渲染系统的覆盖层
     void Render(World& world, float deltaTime) override;
 
-    //绘制编辑器 ImGui
-    void DrawImGui() override;
+    //绘制编辑器覆盖层
+    void DrawOverlay() override;
+
+    //请求打开项目选择弹窗
+    void RequestOpenProjectDialog();
+
+    //请求保存当前场景
+    void RequestSaveCurrentWorld();
+
+    //判断是否已经打开项目
+    bool HasProject() const;
+
+    //获取当前项目名
+    const std::string& GetProjectName() const;
+
+    //获取当前项目根目录
+    const std::string& GetProjectRoot() const;
+
+    //获取启动场景完整路径
+    std::string GetStartupWorldPath() const;
+
+    //获取项目操作状态文本
+    const std::string& GetProjectStatusText() const;
+
+    //获取当前World
+    World& GetWorld();
+
+    //获取当前World
+    const World& GetWorld() const;
+
+    //获取编辑器选择状态
+    EditorSelection& GetSelection();
+
+    //获取编辑器选择状态
+    const EditorSelection& GetSelection() const;
 
 private:
+    //注册内置编辑器面板
+    void RegisterBuiltInPanels();
+
     //确保编辑器观察相机存在
     void EnsureEditorCamera(World& world);
 
