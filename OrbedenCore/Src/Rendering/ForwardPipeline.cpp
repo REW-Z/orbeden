@@ -2,9 +2,9 @@
 
 #include "Log/Log.h"
 #include "Rendering/RenderMath.h"
-#include "Runtime/Camera.h"
+#include "Runtime/Object/Camera.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/Resources/MaterialShader.h"
+#include "Runtime/Object/MaterialShader.h"
 
 #include <algorithm>
 

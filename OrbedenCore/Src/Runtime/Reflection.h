@@ -5,7 +5,7 @@
 #include <variant>
 
 #include "Runtime/EngineTypes.h"
-#include "Runtime/Object.h"
+#include "Runtime/Object/Object.h"
 #include "Runtime/EnsId.h"
 
 namespace Reflection

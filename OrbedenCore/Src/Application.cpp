@@ -80,19 +80,38 @@ bool Application::Initialize()
 //注册参与 Update/FixedUpdate 的运行时系统
 void Application::RegisterSystem(IEngineSystem* system)
 {
+    RegisterSystem(system, EngineSystemUpdateMode::Simulation);
+}
+
+//使用指定更新模式注册系统
+void Application::RegisterSystem(IEngineSystem* system, EngineSystemUpdateMode updateMode)
+{
     if (!system) return;
 
     //避免重复注册同一个系统实例
-    auto it = std::find(systems.begin(), systems.end(), system);
-    if (it != systems.end()) return;
+    auto it = std::find_if(systems.begin(), systems.end(), [system](const EngineSystemRegistration& registration)
+        {
+            return registration.system == system;
+        });
+    if (it != systems.end())
+    {
+        it->updateMode = updateMode;
+        return;
+    }
 
-    systems.push_back(system);
+    EngineSystemRegistration registration;
+    registration.system = system;
+    registration.updateMode = updateMode;
+    systems.push_back(registration);
 }
 
 //移除运行时系统
 void Application::UnregisterSystem(IEngineSystem* system)
 {
-    systems.erase(std::remove(systems.begin(), systems.end(), system), systems.end());
+    systems.erase(std::remove_if(systems.begin(), systems.end(), [system](const EngineSystemRegistration& registration)
+        {
+            return registration.system == system;
+        }), systems.end());
 }
 
 //从 XML 文件读取 World，失败时保留空 World 继续运行
@@ -130,8 +149,9 @@ void Application::Tick(float deltaTime)
         deltaTime = 0.0f;
     }
 
-    //暂停时仍保留帧钩子，只跳过 Gameplay 更新
-    if (!paused)
+    //Simulation 可被外部宿主关闭，Frame 系统仍会继续更新。
+    bool runSimulation = simulationEnabled && !paused;
+    if (runSimulation)
     {
         fixedAccumulator += deltaTime;
 
@@ -139,9 +159,10 @@ void Application::Tick(float deltaTime)
         uint32 fixedStepCount = 0;
         while (fixedAccumulator >= fixedDeltaTime && fixedStepCount < maxFixedStepsPerFrame)
         {
-            for (IEngineSystem* system : systems)
+            for (const EngineSystemRegistration& registration : systems)
             {
-                if (system) system->FixedUpdate(world, fixedDeltaTime);
+                if (registration.updateMode != EngineSystemUpdateMode::Simulation) continue;
+                if (registration.system) registration.system->FixedUpdate(world, fixedDeltaTime);
             }
 
             fixedAccumulator -= fixedDeltaTime;
@@ -155,9 +176,10 @@ void Application::Tick(float deltaTime)
         }
 
         //每帧调用一次普通 Update
-        for (IEngineSystem* system : systems)
+        for (const EngineSystemRegistration& registration : systems)
         {
-            if (system) system->Update(world, deltaTime);
+            if (registration.updateMode != EngineSystemUpdateMode::Simulation) continue;
+            if (registration.system) registration.system->Update(world, deltaTime);
         }
     }
     else
@@ -165,13 +187,20 @@ void Application::Tick(float deltaTime)
         fixedAccumulator = 0.0f;
     }
 
+    //Frame 系统不属于 Simulation，可用于工具宿主、UI 和外部每帧逻辑。
+    for (const EngineSystemRegistration& registration : systems)
+    {
+        if (registration.updateMode != EngineSystemUpdateMode::Frame) continue;
+        if (registration.system) registration.system->Update(world, deltaTime);
+    }
+
     //渲染前按需唤起内置系统，避免启动阶段提前创建后端
     InitBuiltInSystems();
 
-    //渲染不属于 gameplay 暂停范围，编辑器/窗口仍可刷新画面
-    for (IEngineSystem* system : systems)
+    //渲染不属于 Simulation 暂停范围，窗口仍可刷新画面
+    for (const EngineSystemRegistration& registration : systems)
     {
-        if (system) system->Render(world, deltaTime);
+        if (registration.system) registration.system->Render(world, deltaTime);
     }
 
     EndFrame();
@@ -242,7 +271,7 @@ bool Application::IsRunning() const
     return running && !quitRequested;
 }
 
-//判断应用是否暂停 Gameplay 更新
+//判断应用是否暂停 Simulation 更新
 bool Application::IsPaused() const
 {
     return paused;
@@ -252,6 +281,22 @@ bool Application::IsPaused() const
 void Application::SetPaused(bool value)
 {
     paused = value;
+}
+
+//判断 Simulation 更新是否启用
+bool Application::IsSimulationEnabled() const
+{
+    return simulationEnabled;
+}
+
+//设置 Simulation 更新是否启用
+void Application::SetSimulationEnabled(bool value)
+{
+    simulationEnabled = value;
+    if (!simulationEnabled)
+    {
+        fixedAccumulator = 0.0f;
+    }
 }
 
 //获取应用持有的 World
@@ -343,9 +388,9 @@ RenderSystem* Application::GetRenderSystem() const
 //派发窗口 resize 到已注册系统
 void Application::OnWindowResize(int32 width, int32 height)
 {
-    for (IEngineSystem* system : systems)
+    for (const EngineSystemRegistration& registration : systems)
     {
-        if (system) system->OnWindowResize(width, height);
+        if (registration.system) registration.system->OnWindowResize(width, height);
     }
 }
 

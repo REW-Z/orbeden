@@ -1,7 +1,7 @@
 #include "Rendering/SceneCuller.h"
 
 #include "Rendering/RenderMath.h"
-#include "Runtime/Camera.h"
+#include "Runtime/Object/Camera.h"
 
 void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, VisibleSet& visibleSet)
 {

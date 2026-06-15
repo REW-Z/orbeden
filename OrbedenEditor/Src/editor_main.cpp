@@ -21,6 +21,7 @@ int main(int argc, char** argv)
     Application app;
     app.SetWindow(&window);
     app.SetTargetFrameRate(60);
+    app.SetSimulationEnabled(false);
     if (!app.Initialize())
     {
         Log::Error("Editor startup failed: application initialize failed.");
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
     }
 
     EditorSystem editorSystem(app, argc > 0 ? argv[0] : "");
-    app.RegisterSystem(&editorSystem);
+    app.RegisterSystem(&editorSystem, EngineSystemUpdateMode::Frame);
     app.Run();
 
     Profiler::WriteProfileLog();

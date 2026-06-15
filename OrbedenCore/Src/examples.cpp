@@ -4,12 +4,12 @@
 #include "Profiler/Profiler.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Reflection.h"
-#include "Runtime/Camera.h"
-#include "Runtime/Resources/Material.h"
-#include "Runtime/Resources/MaterialShader.h"
-#include "Runtime/Resources/Mesh.h"
-#include "Runtime/SpaceComponent.h"
-#include "Runtime/StaticMeshRenderer.h"
+#include "Runtime/Object/Camera.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
 #include <filesystem>

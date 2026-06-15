@@ -1,6 +1,6 @@
 #include "Runtime/Ens.h"
 
-#include "Runtime/SpaceComponent.h"
+#include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/World.h"
 
 #include <algorithm>

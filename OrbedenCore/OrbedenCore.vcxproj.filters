@@ -30,7 +30,7 @@
     <ClInclude Include="Src\Memory\MemoryManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Object.h">
+    <ClInclude Include="Src\Runtime\Object\Object.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\ProjectContext.h">
@@ -57,28 +57,31 @@
     <ClInclude Include="Src\Runtime\WorldSerializer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\SpaceComponent.h">
+    <ClInclude Include="Src\Runtime\Object\SpaceComponent.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\AssetPipeline.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\Managed\ScriptSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\ResourceManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Resources\Material.h">
+    <ClInclude Include="Src\Runtime\Object\Material.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Resources\MaterialShader.h">
+    <ClInclude Include="Src\Runtime\Object\MaterialShader.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Resources\Mesh.h">
+    <ClInclude Include="Src\Runtime\Object\Mesh.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Resources\Texture2D.h">
+    <ClInclude Include="Src\Runtime\Object\Texture2D.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Resources\Skybox.h">
+    <ClInclude Include="Src\Runtime\Object\Skybox.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h">
@@ -93,13 +96,13 @@
     <ClInclude Include="Src\Platform\InputManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Camera.h">
+    <ClInclude Include="Src\Runtime\Object\Camera.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\DirectionalLight.h">
+    <ClInclude Include="Src\Runtime\Object\DirectionalLight.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\StaticMeshRenderer.h">
+    <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\RenderTypes.h">
@@ -153,6 +156,15 @@
     <ClInclude Include="Src\ThirdParty\glad\include\glad\gl.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\ThirdParty\dotnet\include\coreclr_delegates.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\dotnet\include\hostfxr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\dotnet\include\nethost.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -194,7 +206,7 @@
     <ClCompile Include="Src\Profiler\Profiler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Object.cpp">
+    <ClCompile Include="Src\Runtime\Object\Object.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\ProjectContext.cpp">
@@ -218,28 +230,31 @@
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\SpaceComponent.cpp">
+    <ClCompile Include="Src\Runtime\Object\SpaceComponent.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Runtime\Managed\ScriptSystem.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Runtime\ResourceManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Resources\Material.cpp">
+    <ClCompile Include="Src\Runtime\Object\Material.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Resources\MaterialShader.cpp">
+    <ClCompile Include="Src\Runtime\Object\MaterialShader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Resources\Mesh.cpp">
+    <ClCompile Include="Src\Runtime\Object\Mesh.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Resources\Texture2D.cpp">
+    <ClCompile Include="Src\Runtime\Object\Texture2D.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Resources\Skybox.cpp">
+    <ClCompile Include="Src\Runtime\Object\Skybox.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Platform\GlfwWindow.cpp">
@@ -248,13 +263,13 @@
     <ClCompile Include="Src\Platform\InputManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Camera.cpp">
+    <ClCompile Include="Src\Runtime\Object\Camera.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\DirectionalLight.cpp">
+    <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\StaticMeshRenderer.cpp">
+    <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\RenderMath.cpp">
@@ -314,5 +329,25 @@
     <ClCompile Include="Src\ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Src\Runtime\Managed\OrbedenCore.runtimeconfig.json">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Src\ThirdParty\dotnet\README.md">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Src\ThirdParty\dotnet\lib\win-x64\libnethost.lib">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Src\ThirdParty\dotnet\lib\win-x64\nethost.lib">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Src\ThirdParty\dotnet\lib\win-x86\libnethost.lib">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Src\ThirdParty\dotnet\lib\win-x86\nethost.lib">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

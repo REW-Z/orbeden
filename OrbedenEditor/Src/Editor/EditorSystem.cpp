@@ -4,10 +4,10 @@
 #include "Platform/GlfwWindow.h"
 #include "Platform/InputManager.h"
 #include "Rendering/RenderMath.h"
-#include "Runtime/Camera.h"
+#include "Runtime/Object/Camera.h"
 #include "Runtime/Ens.h"
 #include "Runtime/ProjectContext.h"
-#include "Runtime/SpaceComponent.h"
+#include "Runtime/Object/SpaceComponent.h"
 
 #include <algorithm>
 #include <cmath>
@@ -126,10 +126,13 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     : app(application)
     , project(application)
     , executablePath(startupExecutablePath ? startupExecutablePath : "")
+    , projectPanel(*this)
+    , ensViewPanel(*this)
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
     SetDialogDirectory(NormalizePath(std::filesystem::current_path()));
+    RegisterBuiltInPanels();
 }
 
 EditorSystem::~EditorSystem()
@@ -138,7 +141,7 @@ EditorSystem::~EditorSystem()
 
     if (RenderSystem* renderSystem = app.GetRenderSystem())
     {
-        renderSystem->SetEditorOverlay(nullptr);
+        renderSystem->SetRenderOverlay(nullptr);
     }
 }
 
@@ -155,14 +158,88 @@ void EditorSystem::Render(World& world, float deltaTime)
 
     if (RenderSystem* renderSystem = app.GetRenderSystem())
     {
-        renderSystem->SetEditorOverlay(this);
+        renderSystem->SetRenderOverlay(this);
+        renderSystem->SetFpsLabelVisible(false);
     }
 }
 
-void EditorSystem::DrawImGui()
+void EditorSystem::DrawOverlay()
 {
     DrawMainMenuBar();
     DrawProjectDialog();
+    panelManager.DrawPanels();
+}
+
+void EditorSystem::RequestOpenProjectDialog()
+{
+    OpenProjectDialog();
+}
+
+void EditorSystem::RequestSaveCurrentWorld()
+{
+    SaveCurrentWorld();
+}
+
+bool EditorSystem::HasProject() const
+{
+    return project.HasProject();
+}
+
+const std::string& EditorSystem::GetProjectName() const
+{
+    return project.GetProjectName();
+}
+
+const std::string& EditorSystem::GetProjectRoot() const
+{
+    return project.GetProjectRoot();
+}
+
+std::string EditorSystem::GetStartupWorldPath() const
+{
+    return project.GetStartupWorldPath();
+}
+
+const std::string& EditorSystem::GetProjectStatusText() const
+{
+    return projectStatus;
+}
+
+World& EditorSystem::GetWorld()
+{
+    return app.GetWorld();
+}
+
+const World& EditorSystem::GetWorld() const
+{
+    return app.GetWorld();
+}
+
+EditorSelection& EditorSystem::GetSelection()
+{
+    return selection;
+}
+
+const EditorSelection& EditorSystem::GetSelection() const
+{
+    return selection;
+}
+
+void EditorSystem::RegisterBuiltInPanels()
+{
+    PanelInfo projectInfo;
+    projectInfo.id = projectPanel.GetPanelId();
+    projectInfo.title = projectPanel.GetPanelTitle();
+    projectInfo.defaultVisible = true;
+    projectInfo.defaultSize = { 360.0f, 180.0f };
+    panelManager.RegisterPanel(projectInfo, &projectPanel);
+
+    PanelInfo ensViewInfo;
+    ensViewInfo.id = ensViewPanel.GetPanelId();
+    ensViewInfo.title = ensViewPanel.GetPanelTitle();
+    ensViewInfo.defaultVisible = true;
+    ensViewInfo.defaultSize = { 320.0f, 420.0f };
+    panelManager.RegisterPanel(ensViewInfo, &ensViewPanel);
 }
 
 void EditorSystem::EnsureEditorCamera(World& world)
@@ -287,8 +364,8 @@ void EditorSystem::SaveCurrentWorld()
 {
     if (!project.HasProject())
     {
-        saveStatus = "No project is open.";
-        Log::Warning(saveStatus.c_str());
+        projectStatus = "No project is open.";
+        Log::Warning(projectStatus.c_str());
         return;
     }
 
@@ -310,7 +387,7 @@ void EditorSystem::SaveCurrentWorld()
     }
 
     bool saved = project.SaveStartupWorld();
-    saveStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
+    projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
 
     EnsureEditorCamera(world);
     if (hadEditorCamera)
@@ -343,6 +420,8 @@ void EditorSystem::TryAutoLoadExampleProject()
     if (project.HasProject())
     {
         SetDialogDirectory(project.GetProjectRoot());
+        projectStatus = "Loaded: " + project.GetProjectRoot();
+        selection.Clear();
         EnsureEditorCamera(app.GetWorld());
     }
 #endif
@@ -370,22 +449,38 @@ void EditorSystem::DrawMainMenuBar()
             ImGui::Separator();
         }
 
-        if (ImGui::MenuItem("Save", nullptr, false, project.HasProject()))
+        if (!project.HasProject())
+        {
+            ImGui::BeginDisabled();
+        }
+
+        if (ImGui::Selectable("Save", false))
         {
             SaveCurrentWorld();
         }
 
-        if (ImGui::MenuItem("Load..."))
+        if (!project.HasProject())
+        {
+            ImGui::EndDisabled();
+        }
+
+        if (ImGui::Selectable("Load...", false))
         {
             OpenProjectDialog();
         }
 
-        if (!saveStatus.empty())
+        if (!projectStatus.empty())
         {
             ImGui::Separator();
-            ImGui::TextWrapped("%s", saveStatus.c_str());
+            ImGui::TextWrapped("%s", projectStatus.c_str());
         }
 
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Views"))
+    {
+        panelManager.DrawViewsMenu();
         ImGui::EndMenu();
     }
 
@@ -448,12 +543,15 @@ void EditorSystem::DrawProjectDialog()
         {
             dialogError.clear();
             SetDialogDirectory(project.GetProjectRoot());
+            projectStatus = "Loaded: " + project.GetProjectRoot();
+            selection.Clear();
             EnsureEditorCamera(app.GetWorld());
             ImGui::CloseCurrentPopup();
         }
         else
         {
             dialogError = project.GetLastError();
+            projectStatus = dialogError;
         }
     }
 

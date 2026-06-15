@@ -1,7 +1,7 @@
 #include "Runtime/World.h"
 
 #include "Runtime/ResourceManager.h"
-#include "Runtime/SpaceComponent.h"
+#include "Runtime/Object/SpaceComponent.h"
 
 #include <algorithm>
 #include <cassert>

@@ -18,18 +18,51 @@
     <ClCompile Include="Src\editor_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\ExampleWorldGenerator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\EditorProject.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorSelection.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\EditorSystem.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EnsViewPanel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\PanelManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\ProjectPanel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Src\Editor\ExampleWorldGenerator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EditorProject.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorSelection.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EditorSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EnsViewPanel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\IEditorPanel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\PanelManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ProjectPanel.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

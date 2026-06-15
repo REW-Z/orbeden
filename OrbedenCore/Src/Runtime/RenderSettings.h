@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Runtime/Object.h"
-#include "Runtime/Resources/Skybox.h"
+#include "Runtime/Object/Object.h"
+#include "Runtime/Object/Skybox.h"
 
 //世界级渲染环境参数，不挂在具体 Ens 上。
 struct RenderSettings

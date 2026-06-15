@@ -2,9 +2,9 @@
 
 #include "Log/Log.h"
 #include "Rendering/RenderMath.h"
-#include "Runtime/Camera.h"
-#include "Runtime/DirectionalLight.h"
-#include "Runtime/StaticMeshRenderer.h"
+#include "Runtime/Object/Camera.h"
+#include "Runtime/Object/DirectionalLight.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
 

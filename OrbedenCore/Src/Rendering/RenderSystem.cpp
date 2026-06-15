@@ -34,7 +34,7 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
 
 void RenderSystem::Shutdown()
 {
-    editorOverlay = nullptr;
+    renderOverlay = nullptr;
     imguiLayer.Shutdown();
     forwardPipeline.Shutdown();
     resources.Shutdown();
@@ -43,9 +43,14 @@ void RenderSystem::Shutdown()
     window = nullptr;
 }
 
-void RenderSystem::SetEditorOverlay(IImGuiOverlay* overlay)
+void RenderSystem::SetRenderOverlay(IRenderOverlay* overlay)
 {
-    editorOverlay = overlay;
+    renderOverlay = overlay;
+}
+
+void RenderSystem::SetFpsLabelVisible(bool value)
+{
+    fpsLabelVisible = value;
 }
 
 void RenderSystem::PrepareProjectReload()
@@ -113,10 +118,13 @@ void RenderSystem::OnWindowResize(int width, int height)
 void RenderSystem::RenderDebugOverlay()
 {
     imguiLayer.BeginFrame();
-    if (editorOverlay)
+    if (renderOverlay)
     {
-        editorOverlay->DrawImGui();
+        renderOverlay->DrawOverlay();
     }
-    imguiLayer.DrawFpsLabel();
+    if (fpsLabelVisible)
+    {
+        imguiLayer.DrawFpsLabel();
+    }
     imguiLayer.Render();
 }

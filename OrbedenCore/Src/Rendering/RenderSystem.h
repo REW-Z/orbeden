@@ -8,14 +8,14 @@
 #include "Rendering/RenderSceneBuilder.h"
 #include "Rendering/SceneCuller.h"
 
-//ImGui 扩展绘制接口，由渲染系统统一管理 frame 生命周期。
-class IImGuiOverlay
+//渲染覆盖层接口，由渲染系统统一管理 frame 生命周期。
+class IRenderOverlay
 {
 public:
-    virtual ~IImGuiOverlay() = default;
+    virtual ~IRenderOverlay() = default;
 
-    //绘制一帧 ImGui 内容
-    virtual void DrawImGui() = 0;
+    //绘制一帧覆盖层内容
+    virtual void DrawOverlay() = 0;
 };
 
 //渲染系统
@@ -37,7 +37,8 @@ private:
     int32 framebufferHeight = 0;
     bool initialized = false;
     bool warnedMissingCamera = false;
-    IImGuiOverlay* editorOverlay = nullptr;
+    bool fpsLabelVisible = true;
+    IRenderOverlay* renderOverlay = nullptr;
 
     //绘制渲染系统级调试 UI
     void RenderDebugOverlay();
@@ -49,8 +50,11 @@ public:
     //关闭渲染系统
     void Shutdown();
 
-    //设置额外的 ImGui 覆盖层
-    void SetEditorOverlay(IImGuiOverlay* overlay);
+    //设置额外的渲染覆盖层
+    void SetRenderOverlay(IRenderOverlay* overlay);
+
+    //设置是否绘制 FPS 标签
+    void SetFpsLabelVisible(bool value);
 
     //准备切换项目，释放当前 GPU 上传缓存和内置管线资源
     void PrepareProjectReload();

@@ -12,10 +12,10 @@
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/ProjectContext.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/Resources/Material.h"
-#include "Runtime/Resources/MaterialShader.h"
-#include "Runtime/Resources/Mesh.h"
-#include "Runtime/Resources/Texture2D.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/Texture2D.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"

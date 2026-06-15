@@ -17,11 +17,26 @@ public:
     //每帧更新，由 Application 每次 Tick 调用一次
     virtual void Update(World& world, float deltaTime) {}
 
-    //渲染更新，在 gameplay update 后、窗口 present 前调用
+    //渲染更新，在 Simulation/Frame 更新后、窗口 present 前调用
     virtual void Render(World& world, float deltaTime) {}
 
     //窗口 framebuffer 尺寸变化时调用
     virtual void OnWindowResize(int width, int height) {}
+};
+
+//系统每帧更新模式
+enum class EngineSystemUpdateMode
+{
+    Simulation,
+    Frame,
+};
+
+//已注册系统记录
+struct EngineSystemRegistration
+{
+public:
+    IEngineSystem* system = nullptr;
+    EngineSystemUpdateMode updateMode = EngineSystemUpdateMode::Simulation;
 };
 
 class RenderSystem;
@@ -31,13 +46,14 @@ class Application : public IWindowResizeListener
 private:
     World world;
     IWindow* window = nullptr;
-    List<IEngineSystem*> systems;
+    List<EngineSystemRegistration> systems;
     RenderSystem* renderSystem = nullptr;
     bool initialized = false;
     bool renderSystemActive = false;
     bool running = false;
     bool quitRequested = false;
     bool paused = false;
+    bool simulationEnabled = true;
     uint32 targetFrameRate = 60;
     float fixedDeltaTime = 0.02f;
     uint32 maxFixedStepsPerFrame = 5;
@@ -56,6 +72,9 @@ public:
 
     //注册参与 Update/FixedUpdate 的运行时系统
     void RegisterSystem(IEngineSystem* system);
+
+    //使用指定更新模式注册系统
+    void RegisterSystem(IEngineSystem* system, EngineSystemUpdateMode updateMode);
 
     //移除运行时系统
     void UnregisterSystem(IEngineSystem* system);
@@ -81,11 +100,17 @@ public:
     //判断应用主循环是否仍在运行
     bool IsRunning() const;
 
-    //判断应用是否暂停 Gameplay 更新
+    //判断应用是否暂停 Simulation 更新
     bool IsPaused() const;
 
     //设置暂停状态，暂停时仍保留 BeginFrame/EndFrame
     void SetPaused(bool value);
+
+    //判断 Simulation 更新是否启用
+    bool IsSimulationEnabled() const;
+
+    //设置 Simulation 更新是否启用
+    void SetSimulationEnabled(bool value);
 
     //获取应用持有的 World
     World& GetWorld();

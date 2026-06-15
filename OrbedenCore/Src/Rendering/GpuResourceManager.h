@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Rendering/Backend/RenderBackend.h"
-#include "Runtime/Resources/Material.h"
-#include "Runtime/Resources/MaterialShader.h"
-#include "Runtime/Resources/Mesh.h"
-#include "Runtime/Resources/Skybox.h"
-#include "Runtime/Resources/Texture2D.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/Skybox.h"
+#include "Runtime/Object/Texture2D.h"
 
 #include <unordered_map>
 
