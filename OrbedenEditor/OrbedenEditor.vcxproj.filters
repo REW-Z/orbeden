@@ -30,7 +30,13 @@
     <ClCompile Include="Src\Editor\EditorSystem.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\EnsViewPanel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\ManagedEditorOverlay.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\PanelManager.cpp">
@@ -53,7 +59,13 @@
     <ClInclude Include="Src\Editor\EditorSystem.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGizmoBridge.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EnsViewPanel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ManagedEditorOverlay.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\IEditorPanel.h">
@@ -104,6 +116,24 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.frag.glsl">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\GuiOverlay.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\SampleBehaviour.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Gizmos.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

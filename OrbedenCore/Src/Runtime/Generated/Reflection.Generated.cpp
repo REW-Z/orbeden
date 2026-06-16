@@ -13,12 +13,63 @@
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/DirectionalLight.h"
+#include "Runtime/Object/ScriptsComponent.h"
 #include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 
 class ReflectionGeneratedAccess
 {
 public:
+    //调用 Component.GetEnsId 方法
+    static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnsId();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Component.SetEnsId 方法
+    static Reflection::Value Invoke_Component_SetEnsId_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        EnsId arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnsId(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Component.OnAttach 方法
+    static Reflection::Value Invoke_Component_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Component.OnDetach 方法
+    static Reflection::Value Invoke_Component_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Camera.enabled 字段
     static std::string Get_Camera_enabled(Object* object)
     {
@@ -241,82 +292,6 @@ public:
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->shadowDistance, value);
-    }
-
-    //调用 Component.GetEnsId 方法
-    static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetEnsId();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 Component.SetEnsId 方法
-    static Reflection::Value Invoke_Component_SetEnsId_1(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        EnsId arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetEnsId(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Component.OnAttach 方法
-    static Reflection::Value Invoke_Component_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnAttach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Component.OnDetach 方法
-    static Reflection::Value Invoke_Component_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnDetach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Object.GetInstanceId 方法
-    static Reflection::Value Invoke_Object_GetInstanceId_0(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Object* instance = static_cast<Object*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetInstanceId();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 Object.SetInstanceId 方法
-    static Reflection::Value Invoke_Object_SetInstanceId_1(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Object* instance = static_cast<Object*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        StringId arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetInstanceId(arg0);
-        success = true;
-        return Reflection::Value();
     }
 
     //读取 Material.name 字段
@@ -557,74 +532,30 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
-    //读取 Texture2D.name 字段
-    static std::string Get_Texture2D_name(Object* object)
+    //调用 Object.GetInstanceId 方法
+    static Reflection::Value Invoke_Object_GetInstanceId_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::ToXmlValue(instance->name);
+        success = false;
+        Object* instance = static_cast<Object*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetInstanceId();
+        success = true;
+        return Reflection::Value(result);
     }
 
-    //写入 Texture2D.name 字段
-    static bool Set_Texture2D_name(Object* object, const std::string& value)
+    //调用 Object.SetInstanceId 方法
+    static Reflection::Value Invoke_Object_SetInstanceId_1(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->name, value);
-    }
+        success = false;
+        Object* instance = static_cast<Object*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
 
-    //读取 Texture2D.width 字段
-    static std::string Get_Texture2D_width(Object* object)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::ToXmlValue(instance->width);
-    }
-
-    //写入 Texture2D.width 字段
-    static bool Set_Texture2D_width(Object* object, const std::string& value)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->width, value);
-    }
-
-    //读取 Texture2D.height 字段
-    static std::string Get_Texture2D_height(Object* object)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::ToXmlValue(instance->height);
-    }
-
-    //写入 Texture2D.height 字段
-    static bool Set_Texture2D_height(Object* object, const std::string& value)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->height, value);
-    }
-
-    //读取 Texture2D.channels 字段
-    static std::string Get_Texture2D_channels(Object* object)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::ToXmlValue(instance->channels);
-    }
-
-    //写入 Texture2D.channels 字段
-    static bool Set_Texture2D_channels(Object* object, const std::string& value)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->channels, value);
-    }
-
-    //读取 Texture2D.format 字段
-    static std::string Get_Texture2D_format(Object* object)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::ToXmlValue(instance->format);
-    }
-
-    //写入 Texture2D.format 字段
-    static bool Set_Texture2D_format(Object* object, const std::string& value)
-    {
-        Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->format, value);
+        StringId arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetInstanceId(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
     //读取 Skybox.right 字段
@@ -837,6 +768,76 @@ public:
         return Reflection::SetFromXmlValue(instance->receiveShadows, value);
     }
 
+    //读取 Texture2D.name 字段
+    static std::string Get_Texture2D_name(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::ToXmlValue(instance->name);
+    }
+
+    //写入 Texture2D.name 字段
+    static bool Set_Texture2D_name(Object* object, const std::string& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::SetFromXmlValue(instance->name, value);
+    }
+
+    //读取 Texture2D.width 字段
+    static std::string Get_Texture2D_width(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::ToXmlValue(instance->width);
+    }
+
+    //写入 Texture2D.width 字段
+    static bool Set_Texture2D_width(Object* object, const std::string& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::SetFromXmlValue(instance->width, value);
+    }
+
+    //读取 Texture2D.height 字段
+    static std::string Get_Texture2D_height(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::ToXmlValue(instance->height);
+    }
+
+    //写入 Texture2D.height 字段
+    static bool Set_Texture2D_height(Object* object, const std::string& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::SetFromXmlValue(instance->height, value);
+    }
+
+    //读取 Texture2D.channels 字段
+    static std::string Get_Texture2D_channels(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::ToXmlValue(instance->channels);
+    }
+
+    //写入 Texture2D.channels 字段
+    static bool Set_Texture2D_channels(Object* object, const std::string& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::SetFromXmlValue(instance->channels, value);
+    }
+
+    //读取 Texture2D.format 字段
+    static std::string Get_Texture2D_format(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::ToXmlValue(instance->format);
+    }
+
+    //写入 Texture2D.format 字段
+    static bool Set_Texture2D_format(Object* object, const std::string& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return Reflection::SetFromXmlValue(instance->format, value);
+    }
+
 };
 
 namespace Reflection
@@ -847,6 +848,19 @@ namespace Reflection
         static bool registered = false;
         if (registered) return;
         registered = true;
+
+        RegisterTypeFields(Component::StaticType(),
+            {
+                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(Component::StaticType(),
+            {
+                MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
+                MethodInfo("SetEnsId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Component_SetEnsId_1),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_2),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_3),
+            });
 
         RegisterTypeFields(Camera::StaticType(),
             {
@@ -878,31 +892,6 @@ namespace Reflection
 
         RegisterTypeMethods(DirectionalLight::StaticType(),
             {
-            });
-
-        RegisterTypeFields(Component::StaticType(),
-            {
-                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(Component::StaticType(),
-            {
-                MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
-                MethodInfo("SetEnsId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Component_SetEnsId_1),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_2),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_3),
-            });
-
-        RegisterTypeFields(Object::StaticType(),
-            {
-                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, false, nullptr, nullptr, nullptr),
-                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(Object::StaticType(),
-            {
-                MethodInfo("GetInstanceId", "StringId", Reflection::ValueKind::StringId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Object_GetInstanceId_0),
-                MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Object_SetInstanceId_1),
             });
 
         RegisterTypeFields(Material::StaticType(),
@@ -952,17 +941,24 @@ namespace Reflection
             {
             });
 
-        RegisterTypeFields(Texture2D::StaticType(),
+        RegisterTypeFields(Object::StaticType(),
             {
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr),
-                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr),
-                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr),
-                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr),
-                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr),
-                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, false, nullptr, nullptr, nullptr),
+                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
             });
 
-        RegisterTypeMethods(Texture2D::StaticType(),
+        RegisterTypeMethods(Object::StaticType(),
+            {
+                MethodInfo("GetInstanceId", "StringId", Reflection::ValueKind::StringId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Object_GetInstanceId_0),
+                MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Object_SetInstanceId_1),
+            });
+
+        RegisterTypeFields(ScriptsComponent::StaticType(),
+            {
+                FieldInfo("scripts", "List<ScriptSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(ScriptsComponent::StaticType(),
             {
             });
 
@@ -990,6 +986,16 @@ namespace Reflection
                 FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localPosition, ReflectionGeneratedAccess::Set_SpaceComponent_localPosition, nullptr),
                 FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_SpaceComponent_localRotation, ReflectionGeneratedAccess::Set_SpaceComponent_localRotation, nullptr),
                 FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localScale, ReflectionGeneratedAccess::Set_SpaceComponent_localScale, nullptr),
+                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
+                FieldInfo("cachedLocalPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
+                FieldInfo("cachedLocalRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
+                FieldInfo("cachedLocalScale", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
+                FieldInfo("cachedParent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
+                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(SpaceComponent::StaticType(),
@@ -1007,6 +1013,20 @@ namespace Reflection
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(Texture2D::StaticType(),
+            {
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr),
+                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr),
+                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr),
+                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr),
+                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr),
+                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(Texture2D::StaticType(),
             {
             });
 

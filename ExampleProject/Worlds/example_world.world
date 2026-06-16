@@ -20,6 +20,9 @@
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
             </Component>
+            <Component type="ScriptsComponent">
+                <Script enabled="true" assembly="ExampleGame" type="ExampleGame.SampleBehaviour" />
+            </Component>
         </Ens>
         <Ens stableId="world://examples/world/ground" name="ExampleGround">
             <Component type="SpaceComponent">

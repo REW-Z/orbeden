@@ -77,18 +77,22 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;libnethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -101,18 +105,22 @@ if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\Exampl
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;libnethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -123,18 +131,22 @@ if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\Exampl
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;libnethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -147,18 +159,22 @@ if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\Exampl
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;libnethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -187,6 +203,9 @@ if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\Exampl
     <None Include="..\ExampleProject\Resources\Engine\Shaders\shadow_depth.frag.glsl" />
     <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.vert.glsl" />
     <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.frag.glsl" />
+    <None Include="..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" />
+    <None Include="..\ExampleProject\Scripts\ExampleGame\GuiOverlay.cs" />
+    <None Include="..\ExampleProject\Scripts\ExampleGame\SampleBehaviour.cs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

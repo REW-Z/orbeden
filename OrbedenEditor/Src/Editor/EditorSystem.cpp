@@ -29,6 +29,14 @@ namespace
         return path.lexically_normal().generic_string();
     }
 
+    std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
+    {
+        if (executablePath.empty()) return std::filesystem::current_path();
+
+        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
+        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
+    }
+
     void CopyToBuffer(char* buffer, std::size_t bufferSize, const std::string& value)
     {
         if (!buffer || bufferSize == 0) return;
@@ -133,10 +141,24 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     InputManager::SetEnabled(false);
     SetDialogDirectory(NormalizePath(std::filesystem::current_path()));
     RegisterBuiltInPanels();
+
+    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    std::filesystem::path managedDirectory = executableDirectory / "Managed";
+    ScriptSystemConfig scriptConfig;
+    scriptConfig.runtimeConfigPath = NormalizePath(executableDirectory / "OrbedenCore.runtimeconfig.json");
+    scriptConfig.managedDirectory = NormalizePath(managedDirectory);
+    scriptConfig.runtimeAssemblyPath = NormalizePath(managedDirectory / "Orbeden.Runtime.dll");
+    scriptConfig.componentAssemblyPath = scriptConfig.runtimeAssemblyPath;
+    if (scriptSystem.Initialize(scriptConfig))
+    {
+        managedOverlay.Initialize(scriptSystem, executablePath);
+    }
 }
 
 EditorSystem::~EditorSystem()
 {
+    managedOverlay.Shutdown();
+    scriptSystem.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
 
     if (RenderSystem* renderSystem = app.GetRenderSystem())
@@ -166,8 +188,10 @@ void EditorSystem::Render(World& world, float deltaTime)
 void EditorSystem::DrawOverlay()
 {
     DrawMainMenuBar();
+    DrawManagedSceneGizmos();
     DrawProjectDialog();
     panelManager.DrawPanels();
+    managedOverlay.DrawPanels();
 }
 
 void EditorSystem::RequestOpenProjectDialog()
@@ -485,6 +509,31 @@ void EditorSystem::DrawMainMenuBar()
     }
 
     ImGui::EndMainMenuBar();
+}
+
+void EditorSystem::DrawManagedSceneGizmos()
+{
+    World& world = app.GetWorld();
+    SpaceComponent* space = world.GetSpaceComponent(editorCameraEns);
+    Camera* camera = nullptr;
+    if (world.IsAlive(editorCameraEns))
+    {
+        Ens cameraEns = Ens::FromEns(&world, editorCameraEns);
+        camera = cameraEns.GetComponent<Camera>();
+    }
+    if (!space || !camera || !camera->enabled) return;
+
+    // 使用当前 EditorCamera 计算 SceneView 的 VP 矩阵。
+    IWindow* window = app.GetWindow();
+    int32 width = window ? window->GetFramebufferWidth() : 0;
+    int32 height = window ? window->GetFramebufferHeight() : 0;
+    float32 aspect = height > 0 ? static_cast<float32>(width) / static_cast<float32>(height) : 1.0f;
+    matrix4x4 worldMatrix = RenderMath::TRS(space->localPosition, space->localRotation, space->localScale);
+    matrix4x4 viewMatrix = RenderMath::Inverse(worldMatrix);
+    matrix4x4 projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
+    matrix4x4 viewProjection = RenderMath::Mul(projectionMatrix, viewMatrix);
+
+    managedOverlay.DrawSceneGizmos(viewProjection, width, height);
 }
 
 void EditorSystem::DrawProjectDialog()

@@ -58,5 +58,14 @@
     <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.frag.glsl">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\GuiOverlay.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Scripts\ExampleGame\SampleBehaviour.cs">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

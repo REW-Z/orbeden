@@ -3,6 +3,8 @@
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
+#include "Runtime/Managed/ManagedRuntimeOverlay.h"
+#include "Runtime/Managed/ScriptSystem.h"
 #include "Runtime/ProjectContext.h"
 
 #include <filesystem>
@@ -11,6 +13,17 @@
 namespace examples
 {
     void InitializeExampleWorldRuntime(Application& app);
+}
+
+namespace
+{
+    std::filesystem::path GetExecutableDirectory(const char* executablePath)
+    {
+        if (!executablePath || executablePath[0] == '\0') return std::filesystem::current_path();
+
+        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
+        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
+    }
 }
 
 int main(int argc, char** argv)
@@ -47,7 +60,38 @@ int main(int argc, char** argv)
     }
 
     examples::InitializeExampleWorldRuntime(app);
+
+    std::filesystem::path executableDirectory = GetExecutableDirectory(argc > 0 ? argv[0] : "");
+    std::filesystem::path managedDirectory = executableDirectory / "Managed";
+
+    ScriptSystem scriptSystem;
+    ScriptSystemConfig scriptConfig;
+    scriptConfig.runtimeConfigPath = (executableDirectory / "OrbedenCore.runtimeconfig.json").lexically_normal().generic_string();
+    scriptConfig.managedDirectory = managedDirectory.lexically_normal().generic_string();
+    scriptConfig.runtimeAssemblyPath = (managedDirectory / "Orbeden.Runtime.dll").lexically_normal().generic_string();
+    scriptConfig.componentAssemblyPath = scriptConfig.runtimeAssemblyPath;
+    if (scriptSystem.Initialize(scriptConfig))
+    {
+        app.RegisterSystem(&scriptSystem);
+    }
+
+    ManagedRuntimeOverlay managedOverlay;
+    ManagedRuntimeOverlayConfig managedConfig;
+    managedConfig.userAssemblyPath = (managedDirectory / "ExampleGame.dll").lexically_normal().generic_string();
+    managedConfig.userTypeName = "ExampleGame.GuiOverlay, ExampleGame";
+    managedConfig.userMethodName = "OnGui";
+    if (managedOverlay.Initialize(scriptSystem, managedConfig))
+    {
+        if (RenderSystem* renderSystem = app.GetRenderSystem())
+        {
+            renderSystem->SetRenderOverlay(&managedOverlay);
+        }
+    }
+
     app.Run();
+    managedOverlay.Shutdown();
+    app.UnregisterSystem(&scriptSystem);
+    scriptSystem.Shutdown();
 
     Profiler::WriteProfileLog();
     Profiler::Clear();
