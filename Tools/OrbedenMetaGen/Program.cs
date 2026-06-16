@@ -346,6 +346,11 @@ static bool IsPersistentField(string className, string fieldName)
         return fieldName is "name";
     }
 
+    if (className == "ScriptsComponent")
+    {
+        return false;
+    }
+
     if (className == "Material")
     {
         return fieldName is "name" or "ambient" or "diffuse" or "specular" or "emission" or "shininess"
@@ -429,14 +434,17 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Reflection.h\"");
     output.AppendLine("#include \"Runtime/Ens.h\"");
     output.AppendLine("#include \"Runtime/EnsId.h\"");
-    output.AppendLine("#include \"Runtime/Object.h\"");
-    output.AppendLine("#include \"Runtime/Resources/Material.h\"");
-    output.AppendLine("#include \"Runtime/Resources/MaterialShader.h\"");
-    output.AppendLine("#include \"Runtime/Resources/Mesh.h\"");
-    output.AppendLine("#include \"Runtime/Resources/Texture2D.h\"");
-    output.AppendLine("#include \"Runtime/Camera.h\"");
-    output.AppendLine("#include \"Runtime/SpaceComponent.h\"");
-    output.AppendLine("#include \"Runtime/StaticMeshRenderer.h\"");
+    output.AppendLine("#include \"Runtime/Object/Object.h\"");
+    output.AppendLine("#include \"Runtime/Object/Material.h\"");
+    output.AppendLine("#include \"Runtime/Object/MaterialShader.h\"");
+    output.AppendLine("#include \"Runtime/Object/Mesh.h\"");
+    output.AppendLine("#include \"Runtime/Object/Skybox.h\"");
+    output.AppendLine("#include \"Runtime/Object/Texture2D.h\"");
+    output.AppendLine("#include \"Runtime/Object/Camera.h\"");
+    output.AppendLine("#include \"Runtime/Object/DirectionalLight.h\"");
+    output.AppendLine("#include \"Runtime/Object/ScriptsComponent.h\"");
+    output.AppendLine("#include \"Runtime/Object/SpaceComponent.h\"");
+    output.AppendLine("#include \"Runtime/Object/StaticMeshRenderer.h\"");
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");
     output.AppendLine("{");

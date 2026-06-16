@@ -4,6 +4,7 @@
 #include "Editor/EditorSelection.h"
 #include "Editor/EditorProject.h"
 #include "Editor/EnsViewPanel.h"
+#include "Editor/ManagedEditorOverlay.h"
 #include "Editor/PanelManager.h"
 #include "Editor/ProjectPanel.h"
 #include "Rendering/RenderSystem.h"
@@ -29,6 +30,8 @@ private:
     PanelManager panelManager;
     ProjectPanel projectPanel;
     EnsViewPanel ensViewPanel;
+    ScriptSystem scriptSystem;
+    ManagedEditorOverlay managedOverlay;
     EnsId editorCameraEns;
     float32 cameraYaw = 35.0f;
     float32 cameraPitch = -22.0f;
@@ -105,6 +108,9 @@ private:
 
     //绘制顶部菜单栏
     void DrawMainMenuBar();
+
+    //绘制托管 SceneView Gizmos
+    void DrawManagedSceneGizmos();
 
     //绘制项目文件夹选择弹窗
     void DrawProjectDialog();

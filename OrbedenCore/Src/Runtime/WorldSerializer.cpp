@@ -10,6 +10,7 @@
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
+#include "Runtime/Object/ScriptsComponent.h"
 #include "Runtime/Object/SpaceComponent.h"
 
 namespace
@@ -300,12 +301,41 @@ namespace
     }
 
     //写入单个组件和持久化字段
+    void WriteScriptsComponent(std::ostream& output, ScriptsComponent* component, int depth)
+    {
+        if (!component) return;
+
+        //写入脚本组件起始节点
+        WriteIndent(output, depth);
+        output << "<Component type=\"ScriptsComponent\">\n";
+
+        //写入每个托管脚本槽位
+        for (const ScriptSlot& script : component->scripts)
+        {
+            WriteIndent(output, depth + 1);
+            output << "<Script enabled=\"" << (script.enabled ? "true" : "false")
+                << "\" assembly=\"" << EscapeXml(script.assemblyName)
+                << "\" type=\"" << EscapeXml(script.typeName)
+                << "\" />\n";
+        }
+
+        WriteIndent(output, depth);
+        output << "</Component>\n";
+    }
+
+    //写入单个组件和持久化字段
     void WriteComponent(std::ostream& output, Component* component, int depth)
     {
         if (!component) return;
 
         //写入组件起始节点
         Type* type = component->GetType();
+        if (type == ScriptsComponent::StaticType())
+        {
+            WriteScriptsComponent(output, component->Cast<ScriptsComponent>(), depth);
+            return;
+        }
+
         WriteIndent(output, depth);
         output << "<Component type=\"" << EscapeXml(type->GetName()) << "\">\n";
 
@@ -382,6 +412,52 @@ namespace
     }
 
     //读取组件节点并应用字段
+    bool ReadScriptsComponent(XmlReader& reader, ScriptsComponent* component, const XmlToken& startToken)
+    {
+        if (!component) return false;
+
+        component->scripts.clear();
+        if (startToken.emptyElement) return true;
+
+        //读取 Script 子节点，其他未知节点跳过
+        XmlToken token;
+        while (reader.Next(token))
+        {
+            if (token.kind == XmlTokenKind::EndElement && token.name == startToken.name)
+            {
+                return true;
+            }
+
+            if (token.kind == XmlTokenKind::StartElement && token.name == "Script")
+            {
+                ScriptSlot slot;
+                slot.assemblyName = GetAttribute(token, "assembly");
+                slot.typeName = GetAttribute(token, "type");
+
+                const std::string& enabled = GetAttribute(token, "enabled");
+                if (!enabled.empty())
+                {
+                    Reflection::SetFromXmlValue(slot.enabled, enabled);
+                }
+
+                component->scripts.push_back(slot);
+                if (!token.emptyElement && !reader.SkipElement(token.name))
+                {
+                    return false;
+                }
+                continue;
+            }
+
+            if (token.kind == XmlTokenKind::StartElement && !token.emptyElement)
+            {
+                reader.SkipElement(token.name);
+            }
+        }
+
+        return false;
+    }
+
+    //读取组件节点并应用字段
     bool ReadComponent(XmlReader& reader, World& world, Ens ens, const XmlToken& startToken)
     {
         (void)world;
@@ -410,6 +486,11 @@ namespace
             LogSerializerError("World XML failed to create component: " + typeName);
             if (!startToken.emptyElement) reader.SkipElement(startToken.name);
             return false;
+        }
+
+        if (type == ScriptsComponent::StaticType())
+        {
+            return ReadScriptsComponent(reader, component->Cast<ScriptsComponent>(), startToken);
         }
 
         if (startToken.emptyElement) return true;

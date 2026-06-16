@@ -124,6 +124,7 @@
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
     <ClInclude Include="Src\Log\Log.h" />
     <ClInclude Include="Src\Memory\MemoryManager.h" />
+    <ClInclude Include="Src\Platform\DynamicLibrary.h" />
     <ClInclude Include="Src\Platform\GlfwWindow.h" />
     <ClInclude Include="Src\Platform\InputManager.h" />
     <ClInclude Include="Src\Platform\Window.h" />
@@ -143,6 +144,8 @@
     <ClInclude Include="Src\Rendering\SpaceCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
     <ClInclude Include="Src\Runtime\Managed\ScriptSystem.h" />
+    <ClInclude Include="Src\Runtime\Managed\ManagedRuntimeOverlay.h" />
+    <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h" />
     <ClInclude Include="Src\Runtime\Object\Camera.h" />
     <ClInclude Include="Src\Runtime\Object\DirectionalLight.h" />
     <ClInclude Include="Src\Runtime\Ens.h" />
@@ -158,6 +161,7 @@
     <ClInclude Include="Src\Runtime\Object\MaterialShader.h" />
     <ClInclude Include="Src\Runtime\Object\Mesh.h" />
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
+    <ClInclude Include="Src\Runtime\Object\ScriptsComponent.h" />
     <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
     <ClInclude Include="Src\Runtime\Object\SpaceComponent.h" />
     <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
@@ -183,6 +187,7 @@
     <ClCompile Include="Src\FileSystem\FileSystem.cpp" />
     <ClCompile Include="Src\Log\Log.cpp" />
     <ClCompile Include="Src\Memory\MemoryManager.cpp" />
+    <ClCompile Include="Src\Platform\DynamicLibrary.cpp" />
     <ClCompile Include="Src\Platform\GlfwWindow.cpp" />
     <ClCompile Include="Src\Platform\InputManager.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
@@ -199,6 +204,8 @@
     <ClCompile Include="Src\Rendering\SpaceCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
     <ClCompile Include="Src\Runtime\Managed\ScriptSystem.cpp" />
+    <ClCompile Include="Src\Runtime\Managed\ManagedRuntimeOverlay.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp" />
     <ClCompile Include="Src\Runtime\Object\Camera.cpp" />
     <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp" />
     <ClCompile Include="Src\Runtime\Ens.cpp" />
@@ -213,6 +220,7 @@
     <ClCompile Include="Src\Runtime\Object\MaterialShader.cpp" />
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
+    <ClCompile Include="Src\Runtime\Object\ScriptsComponent.cpp" />
     <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
     <ClCompile Include="Src\Runtime\Object\SpaceComponent.cpp" />
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />
@@ -228,10 +236,16 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" />
+    <None Include="Managed\Orbeden.Runtime\GUI.cs" />
+    <None Include="Managed\Orbeden.Runtime\NativeGui.cs" />
+    <None Include="Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" />
+    <None Include="Managed\Orbeden.Runtime\RuntimeTypes.cs" />
+    <None Include="Managed\Orbeden.Runtime\ScriptBehaviour.cs" />
+    <None Include="Managed\Orbeden.Runtime\ScriptRuntime.cs" />
     <None Include="Src\ThirdParty\dotnet\README.md" />
-    <None Include="Src\ThirdParty\dotnet\lib\win-x64\libnethost.lib" />
+    <None Include="Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" />
     <None Include="Src\ThirdParty\dotnet\lib\win-x64\nethost.lib" />
-    <None Include="Src\ThirdParty\dotnet\lib\win-x86\libnethost.lib" />
+    <None Include="Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" />
     <None Include="Src\ThirdParty\dotnet\lib\win-x86\nethost.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

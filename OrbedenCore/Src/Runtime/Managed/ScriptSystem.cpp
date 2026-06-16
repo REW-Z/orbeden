@@ -1,175 +1,154 @@
 #include "Runtime/Managed/ScriptSystem.h"
 
 #include "Log/Log.h"
+#include "Platform/DynamicLibrary.h"
+#include "Runtime/Gui/RuntimeGuiBridge.h"
+#include "Runtime/Object/ScriptsComponent.h"
 
-#define NETHOST_USE_AS_STATIC
 #include <nethost.h>
-#include <coreclr_delegates.h>
 #include <hostfxr.h>
+#include <coreclr_delegates.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <sstream>
 #include <vector>
 
-#if defined(_WIN32)
-extern "C"
-{
-    __declspec(dllimport) void* __stdcall LoadLibraryW(const wchar_t* fileName);
-    __declspec(dllimport) int __stdcall FreeLibrary(void* module);
-    __declspec(dllimport) void* __stdcall GetProcAddress(void* module, const char* name);
-    __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int codePage,
-        unsigned long flags,
-        const wchar_t* wideText,
-        int wideTextLength,
-        char* text,
-        int textLength,
-        const char* defaultChar,
-        int* usedDefaultChar);
-}
-#else
-#include <dlfcn.h>
-#endif
+using string_t = std::basic_string<char_t>;
 
 namespace
 {
-#if defined(_WIN32)
-    // Windows 下的 UTF-8 代码页编号，避免包含完整 Win32 头。
-    constexpr unsigned int WindowsCodePageUtf8 = 65001;
-#endif
+    // 保存 hostfxr exports 的全局函数指针。
+    hostfxr_initialize_for_runtime_config_fn FuncInitForConfig = nullptr;
+    hostfxr_get_runtime_delegate_fn FuncGetDelegate = nullptr;
+    hostfxr_close_fn FuncClose = nullptr;
+    hostfxr_set_error_writer_fn FuncSetErrorWriter = nullptr;
 
-    using HostString = std::basic_string<char_t>;
+    struct ManagedEnsId
+    {
+    public:
+        uint32 id = EnsId::InvalidId;
+        uint32 version = 0;
+    };
 
-#if defined(_WIN32)
-    static_assert(sizeof(char_t) == sizeof(wchar_t), "char_t must match wchar_t on Windows.");
-#endif
+    using ManagedInitializeRuntimeFn = void(CORECLR_DELEGATE_CALLTYPE*)(void*);
+    using ManagedLoadScriptAssemblyFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
+    using ManagedCreateBehaviourFn = uint64(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, ManagedEnsId);
+    using ManagedStartBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64);
+    using ManagedUpdateBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64, float32);
+    using ManagedEndBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64);
 
-    hostfxr_initialize_for_runtime_config_fn InitializeForRuntimeConfig = nullptr;
-    hostfxr_get_runtime_delegate_fn GetRuntimeDelegate = nullptr;
-    hostfxr_close_fn CloseHostfxr = nullptr;
-    hostfxr_set_error_writer_fn SetErrorWriter = nullptr;
+    constexpr const char* RuntimeTypeName = "Orbeden.ScriptRuntime, Orbeden.Runtime";
+    constexpr const char* RuntimeInitializeMethod = "Initialize";
+    constexpr const char* RuntimeLoadScriptAssemblyMethod = "LoadScriptAssembly";
+    constexpr const char* RuntimeCreateBehaviourMethod = "CreateBehaviour";
+    constexpr const char* RuntimeStartBehaviourMethod = "StartBehaviour";
+    constexpr const char* RuntimeUpdateBehaviourMethod = "UpdateBehaviour";
+    constexpr const char* RuntimeEndBehaviourMethod = "EndBehaviour";
 
-    HostString ToHostString(const std::string& value)
+    // 把普通路径字符串转换为 hostfxr 需要的字符类型。
+    string_t ToStringT(const std::string& value)
     {
 #if defined(_WIN32)
-        std::wstring wide = std::filesystem::path(value).wstring();
-        return HostString(wide.begin(), wide.end());
+        std::wstring wideValue = std::filesystem::path(value).wstring();
+        return string_t(wideValue.begin(), wideValue.end());
 #else
         return value;
 #endif
     }
 
-    std::string FromHostString(const char_t* value)
+    // 把 hostfxr 字符串转换为 UTF-8 字符串。
+    std::string FromStringT(const char_t* value)
     {
         if (value == nullptr) return std::string();
 
 #if defined(_WIN32)
-        const wchar_t* wideValue = reinterpret_cast<const wchar_t*>(value);
-        int length = WideCharToMultiByte(WindowsCodePageUtf8, 0, wideValue, -1, nullptr, 0, nullptr, nullptr);
-        if (length <= 0) return std::string();
-
-        std::string result(static_cast<size_t>(length), '\0');
-        WideCharToMultiByte(WindowsCodePageUtf8, 0, wideValue, -1, result.data(), length, nullptr, nullptr);
-        if (!result.empty() && result.back() == '\0')
-        {
-            result.pop_back();
-        }
-
-        return result;
+        return std::filesystem::path(reinterpret_cast<const wchar_t*>(value)).generic_string();
 #else
         return std::string(value);
 #endif
     }
 
+    // 把 hostfxr 字符串转换为标准库路径对象。
+    std::filesystem::path ToPathT(const char_t* value)
+    {
+        if (value == nullptr) return std::filesystem::path();
+
+#if defined(_WIN32)
+        return std::filesystem::path(reinterpret_cast<const wchar_t*>(value));
+#else
+        return std::filesystem::path(value);
+#endif
+    }
+
+    // 规范化磁盘路径。
     std::string NormalizePath(const std::string& path)
     {
         if (path.empty()) return std::string();
         return std::filesystem::absolute(std::filesystem::path(path)).lexically_normal().generic_string();
     }
 
+    // 把路径转换为不强制绝对化的标准文本。
+    std::string NormalizePathText(const std::filesystem::path& path)
+    {
+        return path.lexically_normal().generic_string();
+    }
+
+    // 输出 hostfxr 内部错误。
     void WriteHostfxrError(const char_t* message)
     {
-        std::string text = FromHostString(message);
+        std::string text = FromStringT(message);
         if (!text.empty())
         {
             Log::Error(text.c_str());
         }
     }
 
-    std::string FormatHostError(const char* action, int32_t result)
+    // 格式化 hostfxr 返回码。
+    std::string FormatHostError(const char* action, int result)
     {
         std::ostringstream stream;
         stream << action << " failed. hostfxr result: 0x" << std::hex << result;
         return stream.str();
     }
 
-    bool IsHostSuccess(int32_t result)
+    // 判断 hostfxr 返回码是否成功。
+    bool IsHostSuccess(int result)
     {
         return result >= 0;
     }
 
-    void* LoadNativeLibrary(const HostString& path)
+    // 可选字符串为空时返回空指针。
+    const char_t* OptionalStringT(const string_t& value)
     {
-#if defined(_WIN32)
-        return LoadLibraryW(reinterpret_cast<const wchar_t*>(path.c_str()));
-#else
-        return dlopen(path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-#endif
+        return value.empty() ? nullptr : value.c_str();
     }
 
-    void CloseNativeLibrary(void* library)
+    // 解析并缓存 hostfxr 的必要导出函数。
+    bool LoadHostfxr(const ScriptSystemConfig& config, void*& hostfxrLibrary, std::string& hostfxrPath, std::string& lastError)
     {
-        if (library == nullptr) return;
+        if (hostfxrLibrary != nullptr
+            && FuncInitForConfig != nullptr
+            && FuncGetDelegate != nullptr
+            && FuncClose != nullptr
+            && FuncSetErrorWriter != nullptr)
+        {
+            return true;
+        }
 
-#if defined(_WIN32)
-        FreeLibrary(library);
-#else
-        dlclose(library);
-#endif
-    }
-
-    void* LoadNativeSymbol(void* library, const char* name)
-    {
-        if (library == nullptr || name == nullptr) return nullptr;
-
-#if defined(_WIN32)
-        return GetProcAddress(library, name);
-#else
-        return dlsym(library, name);
-#endif
-    }
-
-    bool LoadHostfxrFunctions(void* library)
-    {
-        // 解析 hostfxr 的核心入口函数。
-        InitializeForRuntimeConfig = reinterpret_cast<hostfxr_initialize_for_runtime_config_fn>(
-            LoadNativeSymbol(library, "hostfxr_initialize_for_runtime_config"));
-        GetRuntimeDelegate = reinterpret_cast<hostfxr_get_runtime_delegate_fn>(
-            LoadNativeSymbol(library, "hostfxr_get_runtime_delegate"));
-        CloseHostfxr = reinterpret_cast<hostfxr_close_fn>(
-            LoadNativeSymbol(library, "hostfxr_close"));
-        SetErrorWriter = reinterpret_cast<hostfxr_set_error_writer_fn>(
-            LoadNativeSymbol(library, "hostfxr_set_error_writer"));
-
-        return InitializeForRuntimeConfig != nullptr
-            && GetRuntimeDelegate != nullptr
-            && CloseHostfxr != nullptr
-            && SetErrorWriter != nullptr;
-    }
-
-    bool ResolveHostfxrPath(const ScriptSystemConfig& config, HostString& resolvedPath, std::string& error)
-    {
-        // 让 nethost 根据配置查找当前平台可用的 hostfxr。
-        HostString dotnetRoot = ToHostString(config.dotnetRoot);
-        HostString componentAssemblyPath = ToHostString(config.componentAssemblyPath);
+        // 组装 nethost 查询参数，dotnetRoot 和 assemblyPath 都允许为空。
+        string_t dotnetRoot = ToStringT(config.dotnetRoot);
+        string_t componentAssemblyPath = ToStringT(config.componentAssemblyPath);
 
         get_hostfxr_parameters parameters{};
         parameters.size = sizeof(get_hostfxr_parameters);
-        parameters.dotnet_root = dotnetRoot.empty() ? nullptr : dotnetRoot.c_str();
-        parameters.assembly_path = componentAssemblyPath.empty() ? nullptr : componentAssemblyPath.c_str();
+        parameters.assembly_path = OptionalStringT(componentAssemblyPath);
+        parameters.dotnet_root = OptionalStringT(dotnetRoot);
 
+        // 通过 nethost 查找当前机器上可用的 hostfxr 动态库。
         std::vector<char_t> buffer(4096);
         size_t bufferSize = buffer.size();
-        int32_t result = get_hostfxr_path(buffer.data(), &bufferSize, &parameters);
+        int result = get_hostfxr_path(buffer.data(), &bufferSize, &parameters);
         if (result != 0 && bufferSize > buffer.size())
         {
             buffer.resize(bufferSize);
@@ -178,17 +157,75 @@ namespace
 
         if (result != 0)
         {
-            error = FormatHostError("get_hostfxr_path", result);
+            lastError = FormatHostError("get_hostfxr_path", result);
             return false;
         }
 
-        resolvedPath.assign(buffer.data());
+        // 加载 hostfxr；不要在 Shutdown 中卸载 .NET 原生库。
+        hostfxrPath = FromStringT(buffer.data());
+        DynamicLibrary library = LoadDynamicLibrary(ToPathT(buffer.data()));
+        if (library.handle == nullptr)
+        {
+            lastError = "Failed to load hostfxr: " + hostfxrPath;
+            return false;
+        }
+
+        // 获取 DLL 加载模式需要的 hostfxr exports。
+        FuncInitForConfig = reinterpret_cast<hostfxr_initialize_for_runtime_config_fn>(GetDynamicLibrarySymbol(library, "hostfxr_initialize_for_runtime_config"));
+        FuncGetDelegate = reinterpret_cast<hostfxr_get_runtime_delegate_fn>(GetDynamicLibrarySymbol(library, "hostfxr_get_runtime_delegate"));
+        FuncClose = reinterpret_cast<hostfxr_close_fn>(GetDynamicLibrarySymbol(library, "hostfxr_close"));
+        FuncSetErrorWriter = reinterpret_cast<hostfxr_set_error_writer_fn>(GetDynamicLibrarySymbol(library, "hostfxr_set_error_writer"));
+
+        if (FuncInitForConfig == nullptr || FuncGetDelegate == nullptr || FuncClose == nullptr || FuncSetErrorWriter == nullptr)
+        {
+            lastError = "Failed to load required hostfxr exports.";
+            return false;
+        }
+
+        hostfxrLibrary = library.handle;
         return true;
     }
 
-    const char_t* OptionalHostString(const HostString& value)
+    // 初始化 .NET Core 并获取加载 C# DLL 的函数指针。
+    load_assembly_and_get_function_pointer_fn GetDotnetLoadAssembly(const char_t* runtimeConfigPath,
+        const char_t* dotnetRoot,
+        std::string& lastError)
     {
-        return value.empty() ? nullptr : value.c_str();
+        // 有显式 dotnetRoot 时才传初始化参数，保持官方示例的默认路径简洁。
+        hostfxr_initialize_parameters parameters{};
+        parameters.size = sizeof(hostfxr_initialize_parameters);
+        parameters.host_path = nullptr;
+        parameters.dotnet_root = dotnetRoot;
+
+        const bool hasParameters = dotnetRoot != nullptr;
+
+        // 按 runtimeconfig.json 初始化 .NET runtime。
+        hostfxr_handle context = nullptr;
+        int result = FuncInitForConfig(runtimeConfigPath, hasParameters ? &parameters : nullptr, &context);
+        if (!IsHostSuccess(result) || context == nullptr)
+        {
+            lastError = FormatHostError("hostfxr_initialize_for_runtime_config", result);
+            if (context != nullptr)
+            {
+                FuncClose(context);
+            }
+
+            return nullptr;
+        }
+
+        // 从 hostfxr context 获取 DLL 加载 delegate。
+        void* LoadAssemblyAndGetFunctionPointer = nullptr;
+        result = FuncGetDelegate(context, hdt_load_assembly_and_get_function_pointer, &LoadAssemblyAndGetFunctionPointer);
+        if (!IsHostSuccess(result) || LoadAssemblyAndGetFunctionPointer == nullptr)
+        {
+            lastError = FormatHostError("hostfxr_get_runtime_delegate", result);
+            FuncClose(context);
+            return nullptr;
+        }
+
+        // 关闭 hostfxr context；获取到的 runtime delegate 可以继续被 ScriptSystem 缓存使用。
+        FuncClose(context);
+        return reinterpret_cast<load_assembly_and_get_function_pointer_fn>(LoadAssemblyAndGetFunctionPointer);
     }
 }
 
@@ -202,7 +239,10 @@ bool ScriptSystem::Initialize(const ScriptSystemConfig& config)
     if (IsInitialized()) return true;
 
     lastError.clear();
-    hostfxrPath.clear();
+    managedDirectory.clear();
+    runtimeAssemblyPath.clear();
+    loadedScriptAssemblies.clear();
+    activeScriptHandles.clear();
 
     // 检查 runtimeconfig.json 是否存在。
     std::string runtimeConfigPath = NormalizePath(config.runtimeConfigPath);
@@ -220,68 +260,40 @@ bool ScriptSystem::Initialize(const ScriptSystemConfig& config)
         return false;
     }
 
-    // 查找并加载 hostfxr 动态库。
-    HostString resolvedHostfxrPath;
-    if (!ResolveHostfxrPath(config, resolvedHostfxrPath, lastError))
+    // 加载 hostfxr 并解析必要导出函数。
+    if (!LoadHostfxr(config, hostfxrLibrary, hostfxrPath, lastError))
     {
         Log::Error(lastError.c_str());
         return false;
     }
 
-    hostfxrPath = FromHostString(resolvedHostfxrPath.c_str());
-    hostfxrLibrary = LoadNativeLibrary(resolvedHostfxrPath);
-    if (hostfxrLibrary == nullptr)
-    {
-        lastError = "Failed to load hostfxr: " + hostfxrPath;
-        Log::Error(lastError.c_str());
-        return false;
-    }
+    // 接管 hostfxr 错误输出，便于初始化失败时进入引擎日志。
+    FuncSetErrorWriter(&WriteHostfxrError);
 
-    // 从 hostfxr 中解析初始化和委托获取函数。
-    if (!LoadHostfxrFunctions(hostfxrLibrary))
+    // 转换 hostfxr 初始化所需路径。
+    string_t runtimeConfigHostPath = ToStringT(runtimeConfigPath);
+    string_t dotnetRoot = ToStringT(config.dotnetRoot);
+
+    // 初始化 .NET 并获取 load_assembly_and_get_function_pointer。
+    load_assembly_and_get_function_pointer_fn LoadAssemblyAndGetFunction = GetDotnetLoadAssembly(
+        runtimeConfigHostPath.c_str(),
+        OptionalStringT(dotnetRoot),
+        lastError);
+
+    if (LoadAssemblyAndGetFunction == nullptr)
     {
-        lastError = "Failed to load required hostfxr exports.";
         Log::Error(lastError.c_str());
         Shutdown();
         return false;
     }
 
-    SetErrorWriter(&WriteHostfxrError);
-
-    // 使用 runtimeconfig 初始化托管运行时上下文。
-    HostString runtimeConfigHostPath = ToHostString(runtimeConfigPath);
-    HostString dotnetRoot = ToHostString(config.dotnetRoot);
-    HostString componentAssemblyPath = ToHostString(config.componentAssemblyPath);
-
-    hostfxr_initialize_parameters parameters{};
-    parameters.size = sizeof(hostfxr_initialize_parameters);
-    parameters.dotnet_root = OptionalHostString(dotnetRoot);
-    parameters.host_path = OptionalHostString(componentAssemblyPath);
-
-    hostfxr_handle context = nullptr;
-    int32_t result = InitializeForRuntimeConfig(runtimeConfigHostPath.c_str(), &parameters, &context);
-    if (!IsHostSuccess(result) || context == nullptr)
+    // 缓存 DLL 加载 delegate，后续所有 C# 函数绑定都从这里进入。
+    this->LoadAssemblyAndGetFunction = reinterpret_cast<void*>(LoadAssemblyAndGetFunction);
+    if (!InitializeRuntimeBridge(config))
     {
-        lastError = FormatHostError("hostfxr_initialize_for_runtime_config", result);
-        Log::Error(lastError.c_str());
         Shutdown();
         return false;
     }
-
-    // 获取后续加载 C# 入口函数所需的运行时委托。
-    void* runtimeDelegate = nullptr;
-    result = GetRuntimeDelegate(context, hdt_load_assembly_and_get_function_pointer, &runtimeDelegate);
-    if (!IsHostSuccess(result) || runtimeDelegate == nullptr)
-    {
-        lastError = FormatHostError("hostfxr_get_runtime_delegate", result);
-        Log::Error(lastError.c_str());
-        CloseHostfxr(context);
-        Shutdown();
-        return false;
-    }
-
-    hostContext = context;
-    loadAssemblyAndGetFunctionPointer = runtimeDelegate;
 
     Log::Info("ScriptSystem initialized.");
     return true;
@@ -289,33 +301,97 @@ bool ScriptSystem::Initialize(const ScriptSystemConfig& config)
 
 void ScriptSystem::Shutdown()
 {
-    // 关闭 hostfxr 上下文。
-    if (hostContext != nullptr && CloseHostfxr != nullptr)
+    // 先通知所有仍然活着的 C# 脚本结束。
+    for (uint64 handle : activeScriptHandles)
     {
-        CloseHostfxr(static_cast<hostfxr_handle>(hostContext));
+        EndManagedBehaviour(handle);
+    }
+    activeScriptHandles.clear();
+    loadedScriptAssemblies.clear();
+
+    // 清空 runtime delegate，但不卸载 hostfxr 或 .NET 原生库。
+    LoadAssemblyAndGetFunction = nullptr;
+    LoadScriptAssemblyFunction = nullptr;
+    CreateBehaviourFunction = nullptr;
+    StartBehaviourFunction = nullptr;
+    UpdateBehaviourFunction = nullptr;
+    EndBehaviourFunction = nullptr;
+    managedDirectory.clear();
+    runtimeAssemblyPath.clear();
+
+    // 还原 hostfxr 错误回调，避免对象销毁后继续写入引擎日志。
+    if (FuncSetErrorWriter != nullptr)
+    {
+        FuncSetErrorWriter(nullptr);
+    }
+}
+
+void ScriptSystem::Update(World& world, float deltaTime)
+{
+    if (!IsInitialized() || CreateBehaviourFunction == nullptr || UpdateBehaviourFunction == nullptr) return;
+
+    List<uint64> currentHandles;
+    ManagedCreateBehaviourFn CreateBehaviour = reinterpret_cast<ManagedCreateBehaviourFn>(CreateBehaviourFunction);
+    ManagedStartBehaviourFn StartBehaviour = reinterpret_cast<ManagedStartBehaviourFn>(StartBehaviourFunction);
+    ManagedUpdateBehaviourFn UpdateBehaviour = reinterpret_cast<ManagedUpdateBehaviourFn>(UpdateBehaviourFunction);
+
+    // 扫描当前 World 上所有脚本槽位。
+    world.ForEachComponent(ScriptsComponent::StaticType(), [&](Component* component)
+        {
+            ScriptsComponent* scriptsComponent = component ? component->Cast<ScriptsComponent>() : nullptr;
+            if (!scriptsComponent) return;
+
+            for (ScriptSlot& slot : scriptsComponent->scripts)
+            {
+                if (!slot.enabled || slot.assemblyName.empty() || slot.typeName.empty())
+                {
+                    slot.managedHandle = 0;
+                    slot.started = false;
+                    continue;
+                }
+
+                // 首次运行时加载程序集并创建 C# ScriptBehaviour。
+                if (slot.managedHandle == 0)
+                {
+                    if (!EnsureScriptAssemblyLoaded(slot.assemblyName)) continue;
+
+                    ManagedEnsId ensId{ component->GetEnsId().id, component->GetEnsId().version };
+                    slot.managedHandle = CreateBehaviour(
+                        reinterpret_cast<const uint8*>(slot.typeName.data()),
+                        static_cast<int32>(slot.typeName.size()),
+                        ensId);
+                    slot.started = false;
+                }
+
+                if (slot.managedHandle == 0) continue;
+
+                // 第一次创建成功后调用 OnStart。
+                if (!slot.started && StartBehaviour != nullptr)
+                {
+                    StartBehaviour(slot.managedHandle);
+                    slot.started = true;
+                }
+
+                UpdateBehaviour(slot.managedHandle, deltaTime);
+                currentHandles.push_back(slot.managedHandle);
+            }
+        });
+
+    // 对已经离开 World 或被禁用的旧脚本调用 OnEnd。
+    for (uint64 handle : activeScriptHandles)
+    {
+        if (std::find(currentHandles.begin(), currentHandles.end(), handle) == currentHandles.end())
+        {
+            EndManagedBehaviour(handle);
+        }
     }
 
-    hostContext = nullptr;
-    loadAssemblyAndGetFunctionPointer = nullptr;
-
-    if (SetErrorWriter != nullptr)
-    {
-        SetErrorWriter(nullptr);
-    }
-
-    // 卸载 hostfxr 动态库并清空函数指针。
-    CloseNativeLibrary(hostfxrLibrary);
-    hostfxrLibrary = nullptr;
-
-    InitializeForRuntimeConfig = nullptr;
-    GetRuntimeDelegate = nullptr;
-    CloseHostfxr = nullptr;
-    SetErrorWriter = nullptr;
+    activeScriptHandles = currentHandles;
 }
 
 bool ScriptSystem::IsInitialized() const
 {
-    return hostContext != nullptr && loadAssemblyAndGetFunctionPointer != nullptr;
+    return LoadAssemblyAndGetFunction != nullptr;
 }
 
 const std::string& ScriptSystem::GetHostfxrPath() const
@@ -360,20 +436,23 @@ bool ScriptSystem::LoadAssemblyFunction(const std::string& assemblyPath,
         return false;
     }
 
-    HostString assemblyHostPath = ToHostString(normalizedAssemblyPath);
-    HostString typeHostName = ToHostString(typeName);
-    HostString methodHostName = ToHostString(methodName);
-    HostString delegateHostTypeName = ToHostString(delegateTypeName);
+    // 转换 load_assembly_and_get_function_pointer 需要的托管符号。
+    string_t assemblyHostPath = ToStringT(normalizedAssemblyPath);
+    string_t typeHostName = ToStringT(typeName);
+    string_t methodHostName = ToStringT(methodName);
+    string_t delegateHostTypeName = ToStringT(delegateTypeName);
+    const char_t* delegateTypeNameValue = delegateHostTypeName.empty()
+        ? UNMANAGEDCALLERSONLY_METHOD
+        : delegateHostTypeName.c_str();
 
-    load_assembly_and_get_function_pointer_fn loadFunction =
-        reinterpret_cast<load_assembly_and_get_function_pointer_fn>(loadAssemblyAndGetFunctionPointer);
+    // 方式二的底层路径：直接把 C# 静态函数绑定到 void**。
+    load_assembly_and_get_function_pointer_fn FuncLoadAssemblyAndGetFunction =
+        reinterpret_cast<load_assembly_and_get_function_pointer_fn>(LoadAssemblyAndGetFunction);
 
-    // 让 .NET 加载程序集并返回指定静态方法的函数指针。
-    int32_t result = loadFunction(
-        assemblyHostPath.c_str(),
+    int result = FuncLoadAssemblyAndGetFunction(assemblyHostPath.c_str(),
         typeHostName.c_str(),
         methodHostName.c_str(),
-        OptionalHostString(delegateHostTypeName),
+        delegateTypeNameValue,
         nullptr,
         functionPointer);
 
@@ -385,4 +464,94 @@ bool ScriptSystem::LoadAssemblyFunction(const std::string& assemblyPath,
     }
 
     return true;
+}
+
+bool ScriptSystem::BindCSharpFunction(const std::string& assemblyPath,
+    const std::string& typeName,
+    const std::string& methodName,
+    void** functionPointer)
+{
+    // 方式二：调用方显式传入 void**，常用于先 typedef 再绑定。
+    return LoadAssemblyFunction(assemblyPath, typeName, methodName, std::string(), functionPointer);
+}
+
+bool ScriptSystem::InitializeRuntimeBridge(const ScriptSystemConfig& config)
+{
+    // 确定 Orbeden.Runtime 和 Managed 目录。
+    runtimeAssemblyPath = NormalizePath(config.runtimeAssemblyPath.empty() ? config.componentAssemblyPath : config.runtimeAssemblyPath);
+    if (runtimeAssemblyPath.empty() || !std::filesystem::exists(runtimeAssemblyPath))
+    {
+        lastError = "Orbeden.Runtime assembly does not exist: " + runtimeAssemblyPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    managedDirectory = config.managedDirectory.empty()
+        ? NormalizePathText(std::filesystem::path(runtimeAssemblyPath).parent_path())
+        : NormalizePath(config.managedDirectory);
+
+    // 绑定 Runtime 初始化入口和脚本生命周期入口。
+    ManagedInitializeRuntimeFn InitializeRuntime = nullptr;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeInitializeMethod, reinterpret_cast<void**>(&InitializeRuntime))) return false;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeLoadScriptAssemblyMethod, &LoadScriptAssemblyFunction)) return false;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeCreateBehaviourMethod, &CreateBehaviourFunction)) return false;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeStartBehaviourMethod, &StartBehaviourFunction)) return false;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeUpdateBehaviourMethod, &UpdateBehaviourFunction)) return false;
+    if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeEndBehaviourMethod, &EndBehaviourFunction)) return false;
+
+    // 把 Runtime GUI 原生函数表传给 C# Runtime。
+    RuntimeGuiApi runtimeGuiApi = RuntimeGuiBridge::GetApi();
+    InitializeRuntime(&runtimeGuiApi);
+    return true;
+}
+
+std::string ScriptSystem::ResolveScriptAssemblyPath(const std::string& assemblyName) const
+{
+    if (assemblyName.empty()) return std::string();
+
+    std::filesystem::path assemblyPath(assemblyName);
+    if (!assemblyPath.has_extension())
+    {
+        assemblyPath += ".dll";
+    }
+
+    if (!assemblyPath.is_absolute())
+    {
+        assemblyPath = std::filesystem::path(managedDirectory) / assemblyPath;
+    }
+
+    return NormalizePathText(assemblyPath);
+}
+
+bool ScriptSystem::EnsureScriptAssemblyLoaded(const std::string& assemblyName)
+{
+    std::string assemblyPath = ResolveScriptAssemblyPath(assemblyName);
+    if (assemblyPath.empty()) return false;
+    if (std::find(loadedScriptAssemblies.begin(), loadedScriptAssemblies.end(), assemblyPath) != loadedScriptAssemblies.end()) return true;
+
+    if (!std::filesystem::exists(assemblyPath))
+    {
+        lastError = "Script assembly does not exist: " + assemblyPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    ManagedLoadScriptAssemblyFn LoadScriptAssembly = reinterpret_cast<ManagedLoadScriptAssemblyFn>(LoadScriptAssemblyFunction);
+    if (!LoadScriptAssembly || LoadScriptAssembly(reinterpret_cast<const uint8*>(assemblyPath.data()), static_cast<int32>(assemblyPath.size())) == 0)
+    {
+        lastError = "Script assembly load failed: " + assemblyPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    loadedScriptAssemblies.push_back(assemblyPath);
+    return true;
+}
+
+void ScriptSystem::EndManagedBehaviour(uint64 handle)
+{
+    if (handle == 0 || EndBehaviourFunction == nullptr) return;
+
+    ManagedEndBehaviourFn EndBehaviour = reinterpret_cast<ManagedEndBehaviourFn>(EndBehaviourFunction);
+    EndBehaviour(handle);
 }
