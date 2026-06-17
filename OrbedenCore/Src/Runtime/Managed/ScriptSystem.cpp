@@ -3,6 +3,7 @@
 #include "Log/Log.h"
 #include "Platform/DynamicLibrary.h"
 #include "Runtime/Gui/RuntimeGuiBridge.h"
+#include "Runtime/Managed/ScriptComponentBinds.h"
 #include "Runtime/Object/ScriptsComponent.h"
 
 #include <nethost.h>
@@ -24,16 +25,9 @@ namespace
     hostfxr_close_fn FuncClose = nullptr;
     hostfxr_set_error_writer_fn FuncSetErrorWriter = nullptr;
 
-    struct ManagedEnsId
-    {
-    public:
-        uint32 id = EnsId::InvalidId;
-        uint32 version = 0;
-    };
-
-    using ManagedInitializeRuntimeFn = void(CORECLR_DELEGATE_CALLTYPE*)(void*);
+    using ManagedInitializeRuntimeFn = void(CORECLR_DELEGATE_CALLTYPE*)(void*, void*, void*, void*);
     using ManagedLoadScriptAssemblyFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
-    using ManagedCreateBehaviourFn = uint64(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, ManagedEnsId);
+    using ManagedCreateBehaviourFn = uint64(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, EnsId);
     using ManagedStartBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64);
     using ManagedUpdateBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64, float32);
     using ManagedEndBehaviourFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint64);
@@ -355,11 +349,10 @@ void ScriptSystem::Update(World& world, float deltaTime)
                 {
                     if (!EnsureScriptAssemblyLoaded(slot.assemblyName)) continue;
 
-                    ManagedEnsId ensId{ component->GetEnsId().id, component->GetEnsId().version };
                     slot.managedHandle = CreateBehaviour(
                         reinterpret_cast<const uint8*>(slot.typeName.data()),
                         static_cast<int32>(slot.typeName.size()),
-                        ensId);
+                        component->GetEnsId());
                     slot.started = false;
                 }
 
@@ -499,9 +492,12 @@ bool ScriptSystem::InitializeRuntimeBridge(const ScriptSystemConfig& config)
     if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeUpdateBehaviourMethod, &UpdateBehaviourFunction)) return false;
     if (!BindCSharpFunction(runtimeAssemblyPath, RuntimeTypeName, RuntimeEndBehaviourMethod, &EndBehaviourFunction)) return false;
 
-    // 把 Runtime GUI 原生函数表传给 C# Runtime。
+    // 把 Runtime 原生函数表传给 C# Runtime。
     RuntimeGuiApi runtimeGuiApi = RuntimeGuiBridge::GetApi();
-    InitializeRuntime(&runtimeGuiApi);
+    EnsBind ensBind = EnsBind::Create();
+    SpaceComponentBind spaceComponentBind = SpaceComponentBind::Create();
+    StaticMeshRendererBind staticMeshRendererBind = StaticMeshRendererBind::Create();
+    InitializeRuntime(&runtimeGuiApi, &ensBind, &spaceComponentBind, &staticMeshRendererBind);
     return true;
 }
 

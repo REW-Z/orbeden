@@ -16,9 +16,12 @@ public static unsafe class ScriptRuntime
 
     /// <summary>初始化 Runtime 托管桥接。</summary>
     [UnmanagedCallersOnly]
-    public static void Initialize(IntPtr runtimeGuiApi)
+    public static void Initialize(IntPtr runtimeGuiApi, IntPtr ensBind, IntPtr spaceComponentBind, IntPtr staticMeshRendererBind)
     {
         NativeGui.Initialize(runtimeGuiApi);
+        EnsBind.Initialize(ensBind);
+        SpaceComponentBind.Initialize(spaceComponentBind);
+        StaticMeshRendererBind.Initialize(staticMeshRendererBind);
     }
 
     /// <summary>加载脚本程序集。</summary>
@@ -61,7 +64,7 @@ public static unsafe class ScriptRuntime
             ScriptBehaviour? behaviour = Activator.CreateInstance(type) as ScriptBehaviour;
             if (behaviour == null) return 0;
 
-            behaviour.Ens = ens;
+            behaviour.Ens = new Ens(ens);
             ulong handle = nextBehaviourHandle++;
             if (handle == 0) handle = nextBehaviourHandle++;
             behaviours[handle] = behaviour;

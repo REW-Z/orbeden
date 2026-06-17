@@ -5,18 +5,34 @@ namespace ExampleGame;
 /// <summary>示例托管脚本行为。</summary>
 public sealed class SampleBehaviour : ScriptBehaviour
 {
+    private vector3 startPosition;
+    private float totalTime;
     private float elapsedTime;
     private int reportCount;
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
     {
-        Console.WriteLine($"SampleBehaviour start: Ens({Ens.id}, {Ens.version})");
+        startPosition = Ens.Space.localPosition;
+        Console.WriteLine($"SampleBehaviour start: Ens({EnsId.id}, {EnsId.version})");
     }
 
     /// <summary>脚本每帧更新时调用。</summary>
     protected override void OnUpdate(float deltaTime)
     {
+        totalTime += deltaTime;
+        SpaceComponent space = Ens.Space;
+        vector3 position = startPosition;
+        position.y += MathF.Sin(totalTime) * 0.25f;
+        space.localPosition = position;
+
+        StaticMeshRenderer? renderer = Ens.GetComponent<StaticMeshRenderer>();
+        if (renderer != null)
+        {
+            renderer.castShadows = true;
+            renderer.receiveShadows = true;
+        }
+
         elapsedTime += deltaTime;
         if (elapsedTime < 2.0f) return;
 
