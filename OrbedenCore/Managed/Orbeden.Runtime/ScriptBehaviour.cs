@@ -4,7 +4,10 @@ namespace Orbeden;
 public abstract class ScriptBehaviour
 {
     /// <summary>脚本所属 Ens。</summary>
-    public EnsId Ens { get; internal set; }
+    public Ens Ens { get; internal set; } = new Ens(EnsId.Null);
+
+    /// <summary>脚本所属 EnsId。</summary>
+    public EnsId EnsId => Ens.Id;
 
     //由 Runtime 调用脚本启动回调
     internal void InvokeStart()

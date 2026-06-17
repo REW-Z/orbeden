@@ -43,8 +43,8 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static void DrawSceneGizmos()
     {
-        Gizmos.Line(new Vector3(-1.5f, 0.05f, 0.0f), new Vector3(1.5f, 0.05f, 0.0f), new Color(0.95f, 0.25f, 0.20f, 1.0f));
-        Gizmos.Line(new Vector3(0.0f, 0.05f, -1.5f), new Vector3(0.0f, 0.05f, 1.5f), new Color(0.20f, 0.80f, 0.95f, 1.0f));
-        Gizmos.Label(new Vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
+        Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color4(0.95f, 0.25f, 0.20f, 1.0f));
+        Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color4(0.20f, 0.80f, 0.95f, 1.0f));
+        Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
     }
 }

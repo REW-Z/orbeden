@@ -3,7 +3,7 @@
 #include "Defines/types.h"
 #include "Rendering/RenderTypes.h"
 
-// Editor Gizmo 三维向量，布局与 C# Orbeden.Vector3 一致。
+// Editor Gizmo 三维向量，布局与 C# Orbeden.vector3 一致。
 struct EditorGizmoVector3
 {
 public:
@@ -12,7 +12,7 @@ public:
     float32 z = 0.0f;
 };
 
-// Editor Gizmo 颜色，布局与 C# Orbeden.Color 一致。
+// Editor Gizmo 颜色，布局与 C# Orbeden.color4 一致。
 struct EditorGizmoColor
 {
 public:
