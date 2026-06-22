@@ -10,7 +10,7 @@
 #include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
-#include "Runtime/ProjectContext.h"
+#include "Runtime/ContentContext.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/MaterialShader.h"
@@ -88,28 +88,19 @@ namespace
         return ResourceManager::NormalizeKey(std::filesystem::path(path).lexically_normal().string());
     }
 
-    //解析实际磁盘路径，保持资源 Key 不变但兼容不同工作目录
+    //解析实际磁盘路径，保持资源 Key 不变但由宿主内容根决定来源。
     std::string ResolveAssetPath(const std::string& path)
     {
         std::string normalizedPath = NormalizePath(path);
         if (FileSystem::Exist(normalizedPath)) return normalizedPath;
 
-        if (StartsWith(normalizedPath, "Resources/"))
+        if (ContentContext::HasContentRoot())
         {
-            std::string projectCandidate = ProjectContext::ResolveResourcePath(normalizedPath);
-            if (FileSystem::Exist(projectCandidate)) return projectCandidate;
-
-            const char* prefixes[] =
+            std::string resourceRoot = ContentContext::GetResourceRoot();
+            if (normalizedPath == resourceRoot || StartsWith(normalizedPath, resourceRoot + "/"))
             {
-                "../",
-                "../../",
-                "../../../",
-            };
-
-            for (const char* prefix : prefixes)
-            {
-                std::string candidate = NormalizePath(std::string(prefix) + normalizedPath);
-                if (FileSystem::Exist(candidate)) return candidate;
+                std::string contentCandidate = ContentContext::ResolveResourcePath(normalizedPath);
+                if (FileSystem::Exist(contentCandidate)) return contentCandidate;
             }
         }
 

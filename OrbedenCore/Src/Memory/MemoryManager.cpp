@@ -337,120 +337,164 @@ uint32 LinearAllocator::GetCapacity() const
     return capacity;
 }
 
-//创建固定块池
-PoolAllocator::PoolAllocator(uint32 size, uint32 count, uint32 alignment)
+//创建连续Chunk槽位分配器
+ChunkSlotAllocator::ChunkSlotAllocator(uint32 size, uint32 count, uint32 alignment)
 {
     Initialize(size, count, alignment);
 }
 
-//销毁固定块池
-PoolAllocator::~PoolAllocator()
+//销毁连续Chunk槽位分配器
+ChunkSlotAllocator::~ChunkSlotAllocator()
 {
     Release();
 }
 
 //释放内部缓冲区
-void PoolAllocator::Release()
+void ChunkSlotAllocator::Release()
 {
     if (buffer)
     {
         Memory::GetHeapAllocator()->Deallocate(buffer);
     }
 
+    if (aliveSlots)
+    {
+        Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(aliveSlots));
+    }
+
     buffer = nullptr;
-    blockSize = 0;
-    blockStride = 0;
-    blockAlignment = 0;
-    blockCount = 0;
-    freeCount = 0;
+    aliveSlots = nullptr;
+    slotSize = 0;
+    slotStride = 0;
+    slotAlignment = 0;
+    slotCount = 0;
+    aliveCount = 0;
     freeList = nullptr;
 }
 
-//初始化固定块池
-void PoolAllocator::Initialize(uint32 size, uint32 count, uint32 alignment)
+//获取槽位索引
+uint32 ChunkSlotAllocator::GetSlotIndex(std::byte* address) const
+{
+    assert(buffer);
+    assert(address);
+    assert(Contains(address));
+
+    uint32 offset = static_cast<uint32>(address - buffer);
+    assert(slotStride > 0);
+    assert(offset % slotStride == 0);
+    return offset / slotStride;
+}
+
+//初始化连续Chunk槽位
+void ChunkSlotAllocator::Initialize(uint32 size, uint32 count, uint32 alignment)
 {
     Release();
     if (size == 0 || count == 0) return;
 
     uint32 finalAlignment = NormalizeAlignment(alignment);
+    if (finalAlignment < static_cast<uint32>(alignof(FreeSlot)))
+    {
+        finalAlignment = static_cast<uint32>(alignof(FreeSlot));
+    }
+
     assert(IsPowerOfTwo(finalAlignment));
 
-    uint32 minBlockSize = static_cast<uint32>(sizeof(FreeBlock));
-    blockSize = (size > minBlockSize) ? size : minBlockSize;
-    blockAlignment = finalAlignment;
-    blockStride = AlignUp(blockSize, finalAlignment);
-    blockCount = count;
+    uint32 minSlotSize = static_cast<uint32>(sizeof(FreeSlot));
+    slotSize = (size > minSlotSize) ? size : minSlotSize;
+    slotAlignment = finalAlignment;
+    slotStride = AlignUp(slotSize, finalAlignment);
+    slotCount = count;
 
-    uint32 totalSize = blockStride * blockCount;
+    uint32 totalSize = slotStride * slotCount;
     buffer = static_cast<std::byte*>(Memory::GetHeapAllocator()->Allocate(totalSize, finalAlignment));
+    aliveSlots = static_cast<uint8*>(Memory::GetHeapAllocator()->Allocate(slotCount, static_cast<uint32>(alignof(uint8))));
 
     Reset();
 }
 
-//分配一个固定块
-void* PoolAllocator::Allocate(uint32 size, uint32 alignment, bool)
+//分配一个槽位
+void* ChunkSlotAllocator::AllocateSlot()
 {
-    if (size > blockSize) return nullptr;
-    if (alignment > 0) assert(IsPowerOfTwo(alignment));
-    if (alignment > blockAlignment) return nullptr;
     if (!freeList) return nullptr;
 
-    FreeBlock* block = freeList;
-    freeList = block->next;
-    freeCount--;
-    return block;
+    FreeSlot* slot = freeList;
+    freeList = slot->next;
+
+    uint32 slotIndex = GetSlotIndex(reinterpret_cast<std::byte*>(slot));
+    assert(aliveSlots[slotIndex] == 0);
+    aliveSlots[slotIndex] = 1;
+    aliveCount++;
+    return slot;
 }
 
-//释放一个固定块
-void PoolAllocator::Deallocate(std::byte* addr, uint32, bool)
+//释放一个槽位
+void ChunkSlotAllocator::DeallocateSlot(void* address)
 {
-    if (!addr) return;
+    if (!address) return;
     assert(buffer);
 
-    std::byte* end = buffer + blockStride * blockCount;
-    assert(addr >= buffer && addr < end);
-    assert(static_cast<uint32>(addr - buffer) % blockStride == 0);
-    assert(freeCount < blockCount);
+    std::byte* addr = static_cast<std::byte*>(address);
+    uint32 slotIndex = GetSlotIndex(addr);
+    assert(aliveSlots[slotIndex] != 0);
+    assert(aliveCount > 0);
 
-    FreeBlock* block = reinterpret_cast<FreeBlock*>(addr);
-    block->next = freeList;
-    freeList = block;
-    freeCount++;
+    aliveSlots[slotIndex] = 0;
+    aliveCount--;
+
+    FreeSlot* slot = reinterpret_cast<FreeSlot*>(addr);
+    slot->next = freeList;
+    freeList = slot;
 }
 
-//重置固定块池
-void PoolAllocator::Reset()
+//重置所有槽位
+void ChunkSlotAllocator::Reset()
 {
     freeList = nullptr;
-    freeCount = blockCount;
+    aliveCount = 0;
 
-    for (uint32 i = 0; i < blockCount; i++)
+    for (uint32 i = 0; i < slotCount; i++)
     {
-        FreeBlock* block = reinterpret_cast<FreeBlock*>(buffer + blockStride * i);
-        block->next = freeList;
-        freeList = block;
+        aliveSlots[i] = 0;
+
+        FreeSlot* slot = reinterpret_cast<FreeSlot*>(buffer + slotStride * i);
+        slot->next = freeList;
+        freeList = slot;
     }
 }
 
-//获取空闲块数量
-uint32 PoolAllocator::GetFreeCount() const
+//获取槽位数量
+uint32 ChunkSlotAllocator::GetSlotCount() const
 {
-    return freeCount;
+    return slotCount;
 }
 
-//获取块数量
-uint32 PoolAllocator::GetBlockCount() const
+//获取存活槽位数量
+uint32 ChunkSlotAllocator::GetAliveCount() const
 {
-    return blockCount;
+    return aliveCount;
 }
 
-//判断地址是否属于当前池
-bool PoolAllocator::Contains(std::byte* addr) const
+//判断地址是否属于当前Chunk
+bool ChunkSlotAllocator::Contains(void* address) const
 {
-    if (!buffer || !addr) return false;
+    if (!buffer || !address) return false;
 
-    std::byte* end = buffer + blockStride * blockCount;
+    std::byte* addr = static_cast<std::byte*>(address);
+    std::byte* end = buffer + slotStride * slotCount;
     return addr >= buffer && addr < end;
+}
+
+//按槽位顺序遍历存活地址
+void ChunkSlotAllocator::VisitAliveSlots(ChunkSlotVisitorFunction visitor, void* userData) const
+{
+    if (!visitor || !buffer || !aliveSlots) return;
+
+    for (uint32 i = 0; i < slotCount; i++)
+    {
+        if (!aliveSlots[i]) continue;
+
+        visitor(buffer + slotStride * i, userData);
+    }
 }
 
 //临时使用堆分配，后续再按尺寸分桶

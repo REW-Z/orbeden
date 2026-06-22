@@ -92,8 +92,8 @@ copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86\nethost.d
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
+dotnet build "$(ProjectDir)..\ExampleProject\Script\ExampleGame.csproj" -c "$(Configuration)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -120,8 +120,8 @@ copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x86\nethost.d
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
+dotnet build "$(ProjectDir)..\ExampleProject\Script\ExampleGame.csproj" -c "$(Configuration)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -146,8 +146,8 @@ copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64\nethost.d
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
+dotnet build "$(ProjectDir)..\ExampleProject\Script\ExampleGame.csproj" -c "$(Configuration)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -174,12 +174,11 @@ copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\dotnet\lib\win-x64\nethost.d
 copy /Y "$(ProjectDir)..\OrbedenCore\Src\Runtime\Managed\OrbedenCore.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-dotnet build "$(ProjectDir)..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
-if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\ExampleProject" "$(TargetDir)ExampleProject\"</Command>
+dotnet build "$(ProjectDir)..\ExampleProject\Script\ExampleGame.csproj" -c "$(Configuration)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Src\ExampleWorldRuntime.cpp" />
     <ClCompile Include="Src\game_main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -191,21 +190,23 @@ if exist "$(ProjectDir)..\ExampleProject" xcopy /E /I /Y "$(ProjectDir)..\Exampl
   </ItemGroup>
   <ItemGroup>
     <None Include="..\ExampleProject\ExampleProject.oeproj" />
-    <None Include="..\ExampleProject\Worlds\example_world.world" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\cube.obj" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\cube.mtl" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\ground.obj" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\ground.mtl" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Shaders\blinn_phong_shadow.vert.glsl" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Shaders\blinn_phong_shadow.frag.glsl" />
-    <None Include="..\ExampleProject\Resources\Examples\World\Textures\sky_blue.png" />
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\shadow_depth.vert.glsl" />
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\shadow_depth.frag.glsl" />
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.vert.glsl" />
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.frag.glsl" />
-    <None Include="..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj" />
-    <None Include="..\ExampleProject\Scripts\ExampleGame\GuiOverlay.cs" />
-    <None Include="..\ExampleProject\Scripts\ExampleGame\SampleBehaviour.cs" />
+    <None Include="..\ExampleProject\World\example_world.world" />
+    <None Include="..\ExampleProject\Resource\Mesh\cube.obj" />
+    <None Include="..\ExampleProject\Resource\Material\cube.mtl" />
+    <None Include="..\ExampleProject\Resource\Mesh\ground.obj" />
+    <None Include="..\ExampleProject\Resource\Material\ground.mtl" />
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.vert.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.frag.glsl" />
+    <None Include="..\ExampleProject\Resource\Texture\sky_blue.png" />
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.vert.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.frag.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\skybox.vert.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\skybox.frag.glsl" />
+    <None Include="..\ExampleProject\Script\ExampleGame.csproj" />
+    <None Include="..\ExampleProject\Script\Directory.Build.props" />
+    <None Include="..\ExampleProject\Script\GuiOverlay.cs" />
+    <None Include="..\ExampleProject\Script\SampleBehaviour.cs" />
+    <None Include="..\ExampleProject\Managed\.gitignore" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

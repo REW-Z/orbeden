@@ -12,4 +12,3 @@ void main()
     vec4 position = u_ViewProjection * vec4(a_Position, 1.0);
     gl_Position = position.xyww;
 }
-

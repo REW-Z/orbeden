@@ -22,8 +22,8 @@ public sealed class SpaceComponent : Component
     /// <summary>父级 Ens。</summary>
     public Ens parent
     {
-        get => new(SpaceComponentBind.GetParent(Ens.Id));
-        set => SpaceComponentBind.SetParent(Ens.Id, value.Id);
+        get => Ens.FromId(SpaceComponentBind.GetParent(Ens.Id));
+        set => SpaceComponentBind.SetParent(Ens.Id, value != null ? value.Id : EnsId.Null);
     }
 
     /// <summary>本地位置。</summary>

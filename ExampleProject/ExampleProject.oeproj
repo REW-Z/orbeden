@@ -1,1 +1,1 @@
-<OrbedenProject version="1" name="ExampleProject" startupWorld="Worlds/example_world.world" resourceRoot="Resources" />
+<OrbedenProject version="1" name="ExampleProject" startupWorld="World/example_world.world" resourceRoot="Resource" scriptRoot="Script" managedRoot="Managed" />

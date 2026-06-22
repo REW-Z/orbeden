@@ -8,7 +8,7 @@
 
 namespace
 {
-    constexpr uint32 ObjectPoolPageBlockCount = 64;
+	constexpr uint32 TypeObjectChunkSlotCount = 64;//每个TypeObjectChunk的槽位数量
 
     struct ObjectRuntime
     {
@@ -27,16 +27,147 @@ namespace
     }
 }
 
-//对象池页
-class ObjectPoolPage
+//某个Type的一段连续对象存储
+class TypeObjectChunk
 {
 public:
-    PoolAllocator allocator;
-    ObjectPoolPage* next = nullptr;
+    ChunkSlotAllocator allocator;
+    TypeObjectChunk* next = nullptr;
 
-    ObjectPoolPage(uint32 size, uint32 count, uint32 alignment)
+    TypeObjectChunk(uint32 size, uint32 count, uint32 alignment)
         : allocator(size, count, alignment)
     {
+    }
+
+    //判断Chunk是否还有空槽位
+    bool HasFreeSlot() const
+    {
+        return allocator.GetAliveCount() < allocator.GetSlotCount();
+    }
+};
+
+//某个Type的所有连续对象Chunk
+class TypeObjectStorage
+{
+private:
+    TypeObjectChunk* headChunk = nullptr;
+    TypeObjectChunk* tailChunk = nullptr;
+    uint32 aliveObjectCount = 0;
+
+public:
+    TypeObjectStorage() = default;
+    TypeObjectStorage(const TypeObjectStorage&) = delete;
+    TypeObjectStorage& operator=(const TypeObjectStorage&) = delete;
+
+    ~TypeObjectStorage()
+    {
+        Release();
+    }
+
+    //分配一个同类型对象槽位
+    void* Allocate(uint32 objectSize, uint32 objectAlignment)
+    {
+        TypeObjectChunk* chunk = headChunk;
+        while (chunk)
+        {
+            if (chunk->HasFreeSlot())
+            {
+                void* memory = chunk->allocator.AllocateSlot();
+                if (memory)
+                {
+                    aliveObjectCount++;
+                    return memory;
+                }
+            }
+
+            chunk = chunk->next;
+        }
+
+		//没有空槽位，创建新的Chunk
+        TypeObjectChunk* newChunk = NEW(TypeObjectChunk)TypeObjectChunk(objectSize, TypeObjectChunkSlotCount, objectAlignment);
+        if (tailChunk)
+        {
+            tailChunk->next = newChunk;
+        }
+        else
+        {
+            headChunk = newChunk;
+        }
+
+        tailChunk = newChunk;
+        void* memory = newChunk->allocator.AllocateSlot();
+        assert(memory);
+        aliveObjectCount++;
+        return memory;
+    }
+
+    //释放一个同类型对象槽位
+    bool Deallocate(std::byte* address)
+    {
+        if (!address) return false;
+
+        TypeObjectChunk* chunk = headChunk;
+        while (chunk)
+        {
+            if (chunk->allocator.Contains(address))
+            {
+                chunk->allocator.DeallocateSlot(address);
+                assert(aliveObjectCount > 0);
+                aliveObjectCount--;
+                return true;
+            }
+
+            chunk = chunk->next;
+        }
+
+        return false;
+    }
+
+    //释放所有对象Chunk
+    void Release()
+    {
+        TypeObjectChunk* chunk = headChunk;
+        while (chunk)
+        {
+            TypeObjectChunk* next = chunk->next;
+            DELETE(chunk);
+            chunk = next;
+        }
+
+        headChunk = nullptr;
+        tailChunk = nullptr;
+        aliveObjectCount = 0;
+    }
+
+    //获取存活对象数量
+    uint32 GetAliveObjectCount() const
+    {
+        return aliveObjectCount;
+    }
+
+    //按Chunk和槽位顺序遍历存活对象
+    void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
+    {
+        if (!visitor) return;
+
+        struct VisitorContext
+        {
+            ObjectVisitorFunction callback = nullptr;
+            void* data = nullptr;
+        };
+
+        VisitorContext context{ visitor, userData };
+        TypeObjectChunk* chunk = headChunk;
+        while (chunk)
+        {
+            chunk->allocator.VisitAliveSlots([](void* address, void* contextData)
+            {
+                VisitorContext* visitorContext = static_cast<VisitorContext*>(contextData);
+                visitorContext->callback(reinterpret_cast<Object*>(address), visitorContext->data);
+            }, &context);
+
+            chunk = chunk->next;
+        }
     }
 };
 
@@ -198,6 +329,7 @@ Object* Type::CreateObject()
 void Type::DestroyObject(Object* object)
 {
     if (!object || !destructor) return;
+    if (object->GetWorld()) return;
 
     destructor(object);
 }
@@ -205,26 +337,13 @@ void Type::DestroyObject(Object* object)
 //分配对象内存
 void* Type::AllocateMemory()
 {
-    void* memory = tailPage ? tailPage->allocator.Allocate(objectSize, objectAlignment) : nullptr;
-    if (!memory)
+    if (!objectStorage)
     {
-        ObjectPoolPage* page = NEW(ObjectPoolPage)ObjectPoolPage(objectSize, ObjectPoolPageBlockCount, objectAlignment);
-
-        if (tailPage)
-        {
-            tailPage->next = page;
-        }
-        else
-        {
-            headPage = page;
-        }
-
-        tailPage = page;
-        memory = page->allocator.Allocate(objectSize, objectAlignment);
+        objectStorage = NEW(TypeObjectStorage)TypeObjectStorage();
     }
 
+    void* memory = objectStorage->Allocate(objectSize, objectAlignment);
     assert(memory);
-    activeObjectCount++;
     return memory;
 }
 
@@ -232,42 +351,35 @@ void* Type::AllocateMemory()
 void Type::DeallocateMemory(std::byte* address)
 {
     if (!address) return;
+    assert(objectStorage);
+    if (!objectStorage) return;
 
-    ObjectPoolPage* page = headPage;
-    while (page)
+    bool deallocated = objectStorage->Deallocate(address);
+    assert(deallocated);
+
+    if (deallocated && objectStorage->GetAliveObjectCount() == 0)
     {
-        if (page->allocator.Contains(address))
-        {
-            page->allocator.Deallocate(address);
-            assert(activeObjectCount > 0);
-            activeObjectCount--;
-
-            if (activeObjectCount == 0)
-            {
-                ReleaseStorage();
-            }
-            return;
-        }
-
-        page = page->next;
+        ReleaseStorage();
     }
-
-    assert(false);
 }
 
-//释放对象池
+//释放当前类型对象存储
 void Type::ReleaseStorage()
 {
-    ObjectPoolPage* page = headPage;
-    while (page)
+    if (objectStorage)
     {
-        ObjectPoolPage* next = page->next;
-        DELETE(page);
-        page = next;
+        assert(objectStorage->GetAliveObjectCount() == 0);
     }
 
-    headPage = nullptr;
-    tailPage = nullptr;
+    DELETE(objectStorage);
+}
+
+//访问当前类型的所有存活对象
+void Type::VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
+{
+    if (!objectStorage) return;
+
+    objectStorage->VisitLiveObjects(visitor, userData);
 }
 
 OBJECT_TYPE_IMPLEMENT_ROOT(Object)
@@ -401,6 +513,7 @@ Object* Object::CreateInstance(Type* type, const std::string& instancePath)
 bool Object::DeleteInstance(Object* object)
 {
     if (!object) return false;
+    if (object->GetWorld()) return false;
 
     ObjectRuntime& runtime = GetObjectRuntime();
     runtime.objectByPath.erase(object->GetInstanceId().GetPath());

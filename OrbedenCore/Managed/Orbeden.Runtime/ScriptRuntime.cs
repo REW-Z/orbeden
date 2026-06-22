@@ -64,7 +64,7 @@ public static unsafe class ScriptRuntime
             ScriptBehaviour? behaviour = Activator.CreateInstance(type) as ScriptBehaviour;
             if (behaviour == null) return 0;
 
-            behaviour.Ens = new Ens(ens);
+            behaviour.Ens = Ens.FromId(ens);
             ulong handle = nextBehaviourHandle++;
             if (handle == 0) handle = nextBehaviourHandle++;
             behaviours[handle] = behaviour;

@@ -10,8 +10,8 @@
 
 namespace
 {
-    constexpr const char* ShadowDepthShaderKey = "Resources/Engine/Shaders/shadow_depth";
-    constexpr const char* SkyboxShaderKey = "Resources/Engine/Shaders/skybox";
+    constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth";
+    constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox";
 
     vector3 Add(const vector3& a, const vector3& b)
     {

@@ -6,19 +6,18 @@
 #include <type_traits>
 
 class Object;
-class ObjectPoolPage;
 class Type;
+class TypeObjectStorage;
 class World;
-
 namespace Reflection
 {
-    struct FieldInfo;
-    struct MethodInfo;
+	struct FieldInfo;
+	struct MethodInfo;
 }
-
 typedef uint32 TypeId;
 typedef Object* (*ObjectConstructorFunction)();
 typedef void (*ObjectDestructorFunction)(Object* object);
+typedef void (*ObjectVisitorFunction)(Object* object, void* userData);
 
 //字符串ID
 class StringId
@@ -54,17 +53,18 @@ class Type
     friend class Object;
 
 private:
-    TypeId id = 0;
+    TypeId id = 0;//运行时临时ID（依赖静态初始化顺序）
     uint64 mask = 0;
     const char* name = nullptr;
     Type* baseType = nullptr;
     uint32 objectSize = 0;
     uint32 objectAlignment = 0;
-    uint32 activeObjectCount = 0;
     ObjectConstructorFunction constructor = nullptr;
     ObjectDestructorFunction destructor = nullptr;
-    ObjectPoolPage* headPage = nullptr;
-    ObjectPoolPage* tailPage = nullptr;
+    TypeObjectStorage* objectStorage = nullptr;
+
+    //访问当前类型的所有存活对象
+    void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const;
 
 public:
     Type(const char* typeName, Type* base, uint32 size, uint32 alignment, ObjectConstructorFunction ctor, ObjectDestructorFunction dtor);
@@ -116,8 +116,25 @@ public:
     //释放对象内存
     void DeallocateMemory(std::byte* address);
 
-    //释放对象池
+    //释放当前类型对象存储
     void ReleaseStorage();
+
+    //遍历当前类型的所有存活对象
+    template<typename TVisitor>
+    void ForEachLiveObject(TVisitor&& visitor) const
+    {
+        struct VisitorContext
+        {
+            TVisitor& callback;
+        };
+
+        VisitorContext context{ visitor };
+        VisitLiveObjects([](Object* object, void* userData)
+        {
+            VisitorContext* visitorContext = static_cast<VisitorContext*>(userData);
+            visitorContext->callback(object);
+        }, &context);
+    }
 };
 
 //声明对象类型

@@ -23,4 +23,3 @@ void main()
     v_LightSpacePosition = u_LightViewProjection * worldPosition;
     gl_Position = u_ViewProjection * worldPosition;
 }
-

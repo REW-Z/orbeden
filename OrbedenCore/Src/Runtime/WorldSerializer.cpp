@@ -359,7 +359,7 @@ namespace
     }
 
     //递归写入 Ens 层级
-    void WriteEns(std::ostream& output, Ens ens, int depth)
+    void WriteEns(std::ostream& output, Ens& ens, int depth)
     {
         SpaceComponent* space = ens.Space();
         if (!space) return;
@@ -382,10 +382,13 @@ namespace
         EnsId child = space->firstChild;
         while (!child.IsNull())
         {
-            Ens childEns = Ens::FromEns(ens.GetWorld(), child);
-            SpaceComponent* childSpace = childEns.Space();
+            Ens* childEns = ens.GetWorld() ? ens.GetWorld()->GetEns(child) : nullptr;
+            SpaceComponent* childSpace = childEns ? childEns->Space() : nullptr;
             EnsId nextChild = childSpace ? childSpace->next : EnsId();
-            WriteEns(output, childEns, depth + 1);
+            if (childEns)
+            {
+                WriteEns(output, *childEns, depth + 1);
+            }
             child = nextChild;
         }
 
@@ -458,7 +461,7 @@ namespace
     }
 
     //读取组件节点并应用字段
-    bool ReadComponent(XmlReader& reader, World& world, Ens ens, const XmlToken& startToken)
+    bool ReadComponent(XmlReader& reader, World& world, Ens& ens, const XmlToken& startToken)
     {
         (void)world;
 
@@ -530,22 +533,22 @@ namespace
     }
 
     //读取 Ens 节点并递归读取子级
-    bool ReadEns(XmlReader& reader, World& world, Ens parent, const XmlToken& startToken)
+    bool ReadEns(XmlReader& reader, World& world, Ens* parent, const XmlToken& startToken)
     {
         //先创建 Ens，再通过嵌套结构恢复父子关系
         const std::string& stableId = GetAttribute(startToken, "stableId");
         const std::string& name = GetAttribute(startToken, "name");
-        Ens ens = stableId.empty() ? world.CreateEns(name.empty() ? "Ens" : name) : world.CreateEnsWithStableId(stableId, name.empty() ? "Ens" : name);
-        if (!ens.IsValid())
+        Ens* ens = stableId.empty() ? world.CreateEns(name.empty() ? "Ens" : name) : world.CreateEnsWithStableId(stableId, name.empty() ? "Ens" : name);
+        if (!ens)
         {
             LogSerializerError("World XML failed to create Ens.");
             if (!startToken.emptyElement) reader.SkipElement(startToken.name);
             return false;
         }
 
-        if (parent.IsValid())
+        if (parent)
         {
-            ens.SetParent(parent);
+            ens->SetParent(parent);
         }
 
         if (startToken.emptyElement) return true;
@@ -561,7 +564,7 @@ namespace
 
             if (token.kind == XmlTokenKind::StartElement && token.name == "Component")
             {
-                if (!ReadComponent(reader, world, ens, token))
+                if (!ReadComponent(reader, world, *ens, token))
                 {
                     return false;
                 }
@@ -602,7 +605,7 @@ namespace
 
             if (token.kind == XmlTokenKind::StartElement && token.name == "Ens")
             {
-                if (!ReadEns(reader, world, Ens(), token))
+                if (!ReadEns(reader, world, nullptr, token))
                 {
                     return false;
                 }
@@ -647,7 +650,7 @@ namespace
     //扫描World中所有组件的资源Ref字段
     void LoadWorldResourceRefs(World& world)
     {
-        world.ForEachEns([&world](Ens ens)
+        world.ForEachEns([&world](Ens& ens)
             {
                 for (TypeId typeId : ens.GetComponentTypes())
                 {
@@ -724,9 +727,9 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
     output << "<World version=\"1\">\n";
 
-    world.ForEachEns([&output](Ens ens)
+    world.ForEachEns([&output](Ens& ens)
         {
-            if (ens.GetParent().IsValid()) return;
+            if (ens.GetParent()) return;
             WriteEns(output, ens, 1);
         });
 

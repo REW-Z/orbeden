@@ -1,6 +1,7 @@
 #include "Runtime/EnsId.h"
 
 #include "Runtime/Ens.h"
+#include "Runtime/World.h"
 
 OBJECT_TYPE_IMPLEMENT(Component, Object)
 
@@ -21,9 +22,10 @@ bool EnsId::operator!=(const EnsId& other) const
 }
 
 //获取所属Ens
-Ens Component::GetEns() const
+Ens* Component::GetEns() const
 {
-    return Ens::FromEns(GetWorld(), owner);
+    World* world = GetWorld();
+    return world ? world->GetEns(owner) : nullptr;
 }
 
 //获取所属句柄

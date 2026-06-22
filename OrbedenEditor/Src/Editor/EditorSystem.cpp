@@ -6,7 +6,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Ens.h"
-#include "Runtime/ProjectContext.h"
+#include "Runtime/ContentContext.h"
 #include "Runtime/Object/SpaceComponent.h"
 
 #include <algorithm>
@@ -219,6 +219,16 @@ const std::string& EditorSystem::GetProjectRoot() const
     return project.GetProjectRoot();
 }
 
+std::string EditorSystem::GetProjectScriptRootPath() const
+{
+    return project.GetScriptRootPath();
+}
+
+std::string EditorSystem::GetProjectManagedRootPath() const
+{
+    return project.GetManagedRootPath();
+}
+
 std::string EditorSystem::GetStartupWorldPath() const
 {
     return project.GetStartupWorldPath();
@@ -268,26 +278,29 @@ void EditorSystem::RegisterBuiltInPanels()
 
 void EditorSystem::EnsureEditorCamera(World& world)
 {
-    Ens cameraEns = world.IsAlive(editorCameraEns) ? Ens::FromEns(&world, editorCameraEns) : Ens();
-    if (!cameraEns.IsValid())
+    Ens* cameraEns = world.GetEns(editorCameraEns);
+    if (!cameraEns)
     {
         cameraEns = world.FindEns(StringId(EditorCameraId));
     }
-    if (!cameraEns.IsValid())
+    if (!cameraEns)
     {
         cameraEns = world.CreateEnsWithStableId(EditorCameraId, "EditorCamera");
-        if (SpaceComponent* space = cameraEns.Space())
+        if (cameraEns)
         {
-            space->localPosition = { 5.0f, 3.2f, 7.0f };
-            space->localScale = { 1.0f, 1.0f, 1.0f };
+            if (SpaceComponent* space = cameraEns->Space())
+            {
+                space->localPosition = { 5.0f, 3.2f, 7.0f };
+                space->localScale = { 1.0f, 1.0f, 1.0f };
+            }
         }
     }
-    if (!cameraEns.IsValid()) return;
+    if (!cameraEns) return;
 
-    Camera* camera = cameraEns.GetComponent<Camera>();
+    Camera* camera = cameraEns->GetComponent<Camera>();
     if (!camera)
     {
-        camera = cameraEns.AddComponent<Camera>();
+        camera = cameraEns->AddComponent<Camera>();
     }
     if (camera)
     {
@@ -300,11 +313,11 @@ void EditorSystem::EnsureEditorCamera(World& world)
         camera->clearColor = { 0.62f, 0.78f, 0.96f, 1.0f };
     }
 
-    if (SpaceComponent* space = cameraEns.Space())
+    if (SpaceComponent* space = cameraEns->Space())
     {
         space->localRotation = MakeYawPitchRotation(cameraYaw, cameraPitch);
     }
-    editorCameraEns = cameraEns.GetEns();
+    editorCameraEns = cameraEns->GetId();
 }
 
 void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
@@ -394,19 +407,24 @@ void EditorSystem::SaveCurrentWorld()
     }
 
     World& world = app.GetWorld();
-    Ens cameraEns = world.IsAlive(editorCameraEns) ? Ens::FromEns(&world, editorCameraEns) : world.FindEns(StringId(EditorCameraId));
-    bool hadEditorCamera = cameraEns.IsValid();
+    Ens* cameraEns = world.GetEns(editorCameraEns);
+    if (!cameraEns)
+    {
+        cameraEns = world.FindEns(StringId(EditorCameraId));
+    }
+
+    bool hadEditorCamera = cameraEns != nullptr;
     vector3 editorCameraPosition;
     quaternion editorCameraRotation;
     if (hadEditorCamera)
     {
-        if (SpaceComponent* space = cameraEns.Space())
+        if (SpaceComponent* space = cameraEns->Space())
         {
             editorCameraPosition = space->localPosition;
             editorCameraRotation = space->localRotation;
         }
 
-        cameraEns.Destroy();
+        cameraEns->Destroy();
         editorCameraEns = EnsId();
     }
 
@@ -433,7 +451,7 @@ void EditorSystem::TryAutoLoadExampleProject()
     autoLoadAttempted = true;
 
 #if !defined(NDEBUG)
-    std::string exampleProject = ProjectContext::FindProjectRoot("ExampleProject", executablePath);
+    std::string exampleProject = ContentContext::FindProjectRoot("ExampleProject", executablePath);
     if (exampleProject.empty())
     {
         Log::Warning("Editor Debug auto-load skipped: ExampleProject was not found.");
@@ -516,10 +534,9 @@ void EditorSystem::DrawManagedSceneGizmos()
     World& world = app.GetWorld();
     SpaceComponent* space = world.GetSpaceComponent(editorCameraEns);
     Camera* camera = nullptr;
-    if (world.IsAlive(editorCameraEns))
+    if (Ens* cameraEns = world.GetEns(editorCameraEns))
     {
-        Ens cameraEns = Ens::FromEns(&world, editorCameraEns);
-        camera = cameraEns.GetComponent<Camera>();
+        camera = cameraEns->GetComponent<Camera>();
     }
     if (!space || !camera || !camera->enabled) return;
 

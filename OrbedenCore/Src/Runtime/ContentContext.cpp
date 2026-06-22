@@ -1,4 +1,4 @@
-#include "Runtime/ProjectContext.h"
+#include "Runtime/ContentContext.h"
 
 #include "FileSystem/FileSystem.h"
 
@@ -7,16 +7,16 @@
 
 namespace
 {
-    struct ProjectContextRuntime
+    struct ContentContextRuntime
     {
     public:
-        std::string projectRoot;
-        std::string resourceRoot = "Resources";
+        std::string contentRoot;
+        std::string resourceRoot = "Resource";
     };
 
-    ProjectContextRuntime& GetRuntime()
+    ContentContextRuntime& GetRuntime()
     {
-        static ProjectContextRuntime runtime;
+        static ContentContextRuntime runtime;
         return runtime;
     }
 
@@ -78,67 +78,68 @@ namespace
     }
 }
 
-void ProjectContext::SetProjectRoot(const std::string& root, const std::string& resourceRoot)
+void ContentContext::SetContentRoot(const std::string& root, const std::string& resourceRoot)
 {
-    ProjectContextRuntime& runtime = GetRuntime();
-    runtime.projectRoot = NormalizePath(AbsolutePath(root));
-    runtime.resourceRoot = NormalizePath(std::filesystem::path(resourceRoot.empty() ? "Resources" : resourceRoot));
+    ContentContextRuntime& runtime = GetRuntime();
+    runtime.contentRoot = NormalizePath(AbsolutePath(root));
+    runtime.resourceRoot = NormalizePath(std::filesystem::path(resourceRoot.empty() ? "Resource" : resourceRoot));
 }
 
-void ProjectContext::Clear()
+void ContentContext::Clear()
 {
-    ProjectContextRuntime& runtime = GetRuntime();
-    runtime.projectRoot.clear();
-    runtime.resourceRoot = "Resources";
+    ContentContextRuntime& runtime = GetRuntime();
+    runtime.contentRoot.clear();
+    runtime.resourceRoot = "Resource";
 }
 
-bool ProjectContext::HasProject()
+bool ContentContext::HasContentRoot()
 {
-    return !GetRuntime().projectRoot.empty();
+    return !GetRuntime().contentRoot.empty();
 }
 
-const std::string& ProjectContext::GetProjectRoot()
+const std::string& ContentContext::GetContentRoot()
 {
-    return GetRuntime().projectRoot;
+    return GetRuntime().contentRoot;
 }
 
-const std::string& ProjectContext::GetResourceRoot()
+const std::string& ContentContext::GetResourceRoot()
 {
     return GetRuntime().resourceRoot;
 }
 
-std::string ProjectContext::ResolveProjectPath(const std::string& path)
+std::string ContentContext::ResolveContentPath(const std::string& path)
 {
     std::filesystem::path filePath(path);
     if (filePath.is_absolute()) return NormalizePath(filePath);
 
-    const ProjectContextRuntime& runtime = GetRuntime();
-    if (runtime.projectRoot.empty()) return NormalizePath(filePath);
+    const ContentContextRuntime& runtime = GetRuntime();
+    if (runtime.contentRoot.empty()) return NormalizePath(filePath);
 
-    return NormalizePath(std::filesystem::path(runtime.projectRoot) / filePath);
+    return NormalizePath(std::filesystem::path(runtime.contentRoot) / filePath);
 }
 
-std::string ProjectContext::ResolveResourcePath(const std::string& path)
+std::string ContentContext::ResolveResourcePath(const std::string& path)
 {
     std::string normalizedPath = NormalizePath(std::filesystem::path(path));
-    const ProjectContextRuntime& runtime = GetRuntime();
-    if (runtime.projectRoot.empty()) return normalizedPath;
+    const ContentContextRuntime& runtime = GetRuntime();
+    if (runtime.contentRoot.empty()) return normalizedPath;
 
-    if (normalizedPath == "Resources")
+    if (normalizedPath == runtime.resourceRoot)
     {
-        return NormalizePath(std::filesystem::path(runtime.projectRoot) / runtime.resourceRoot);
+        return NormalizePath(std::filesystem::path(runtime.contentRoot) / runtime.resourceRoot);
     }
 
-    if (StartsWith(normalizedPath, "Resources/"))
+    std::string resourcePrefix = runtime.resourceRoot + "/";
+    if (StartsWith(normalizedPath, resourcePrefix))
     {
-        std::string relativeResource = normalizedPath.substr(10);
-        return NormalizePath(std::filesystem::path(runtime.projectRoot) / runtime.resourceRoot / relativeResource);
+        std::string relativeResource = normalizedPath.substr(resourcePrefix.size());
+        return NormalizePath(std::filesystem::path(runtime.contentRoot) / runtime.resourceRoot / relativeResource);
     }
 
-    return ResolveProjectPath(normalizedPath);
+    return ResolveContentPath(normalizedPath);
 }
 
-std::string ProjectContext::FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath)
+std::string ContentContext::FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath)
 {
     if (projectDirectoryName.empty()) return std::string();
 

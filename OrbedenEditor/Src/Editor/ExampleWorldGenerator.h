@@ -10,6 +10,9 @@ namespace ExampleWorldGenerator
     //判断项目是否使用内置示例 World 生成器
     bool IsExampleProject(const std::string& projectName);
 
+    //生成示例项目的资源、脚本和 World 文件
+    bool GenerateProjectFiles(const std::string& projectRoot);
+
     //生成示例 World 文件
     bool GenerateWorldFile(const std::string& projectRoot, const std::string& startupWorld);
 

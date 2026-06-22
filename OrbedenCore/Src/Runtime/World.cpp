@@ -1,5 +1,6 @@
 #include "Runtime/World.h"
 
+#include "Memory/MemoryManager.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/SpaceComponent.h"
 
@@ -14,12 +15,35 @@ namespace
         static World* currentWorld = nullptr;
         return currentWorld;
     }
+}
 
-    //生成组件映射Key
-    uint64 GetComponentKey(EnsId ens, Type* type)
+//查找组件稀疏集
+ComponentStorage* World::FindComponentStorage(Type* type) const
+{
+    if (!type || type->GetId() >= componentStorages.size()) return nullptr;
+
+    ComponentStorage* storage = componentStorages[type->GetId()];
+    return storage && storage->GetType() == type ? storage : nullptr;
+}
+
+//获取或创建组件稀疏集
+ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
+{
+    if (!type || !type->Is(Component::StaticType())) return nullptr;
+
+    TypeId typeId = type->GetId();
+    if (typeId >= componentStorages.size())
     {
-        return (static_cast<uint64>(ens.id) << 32) | static_cast<uint64>(type->GetId());
+        componentStorages.resize(static_cast<usize>(typeId) + 1, nullptr);
     }
+
+    ComponentStorage*& storage = componentStorages[typeId];
+    if (!storage)
+    {
+        storage = NEW(ComponentStorage)ComponentStorage(this, type);
+    }
+
+    return storage;
 }
 
 //获取当前活动世界
@@ -50,12 +74,9 @@ void World::Clear()
 {
     ReleaseSceneResourceRefs();
 
-    for (uint32 index = 0; index < enses.size(); ++index)
+    while (!liveEns.empty())
     {
-        const Ens& storedEns = enses[index];
-        if (!storedEns.alive) continue;
-
-        DestroyEns(storedEns.ens);
+        DestroyEns(liveEns.back()->GetId());
     }
 
     //再销毁独立世界对象
@@ -63,20 +84,28 @@ void World::Clear()
     {
         Object* object = ownedObjects.back();
         ownedObjects.pop_back();
+        object->SetWorld(nullptr);
         Object::DeleteInstance(object);
     }
 
-    enses.clear();
+    //所有Ens销毁后释放空的组件稀疏集
+    for (ComponentStorage*& storage : componentStorages)
+    {
+        assert(!storage || storage->GetCount() == 0);
+        DELETE(storage);
+    }
+
+    ensSlots.clear();
+    liveEns.clear();
     freeEnsIds.clear();
-    componentByEnsAndType.clear();
-    componentsByType.clear();
+    componentStorages.clear();
     renderSettings = RenderSettings();
     nextEnsIndex = 1;
     nextRuntimeObjectIndex = 1;
 }
 
 //创建Ens
-Ens World::CreateEns(const std::string& name)
+Ens* World::CreateEns(const std::string& name)
 {
     std::string instancePath;
     do
@@ -88,65 +117,87 @@ Ens World::CreateEns(const std::string& name)
 }
 
 //使用稳定ID创建Ens
-Ens World::CreateEnsWithStableId(const std::string& stableId, const std::string& name)
+Ens* World::CreateEnsWithStableId(const std::string& stableId, const std::string& name)
 {
     if (stableId.empty()) return CreateEns(name);
-    if (Object::FindObject(StringId(stableId))) return Ens();
+    if (Object::FindObject(StringId(stableId))) return nullptr;
 
     return CreateEnsInternal(name, stableId);
 }
 
 //使用指定稳定ID创建Ens
-Ens World::CreateEnsInternal(const std::string& name, const std::string& stableId)
+Ens* World::CreateEnsInternal(const std::string& name, const std::string& stableId)
 {
     //分配Ens句柄
     EnsId value;
+    EnsSlot* slot = nullptr;
     Ens* storedEns = nullptr;
     if (!freeEnsIds.empty())
     {
         value.id = freeEnsIds.back();
         freeEnsIds.pop_back();
 
-        value.version = enses[value.id].ens.version + 1;
-        enses[value.id] = Ens(this, value);
-        storedEns = &enses[value.id];
+        slot = &ensSlots[value.id];
+        value.version = slot->version + 1;
+        if (value.version == 0) value.version = 1;
+        slot->version = value.version;
     }
     else
     {
-        value.id = static_cast<uint32>(enses.size());
+        value.id = static_cast<uint32>(ensSlots.size());
         value.version = 1;
-        enses.push_back(Ens(this, value));
-        storedEns = &enses.back();
+        ensSlots.push_back(EnsSlot());
+        slot = &ensSlots.back();
+        slot->version = value.version;
     }
 
-    storedEns->alive = true;
+    storedEns = NEW(Ens)Ens(this, value);
+    slot->value = storedEns;
+    slot->denseIndex = static_cast<uint32>(liveEns.size());
+    liveEns.push_back(storedEns);
 
     Object* object = Object::CreateInstance(SpaceComponent::StaticType(), stableId);
     SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
     if (!space)
     {
         storedEns->alive = false;
-        storedEns->name.clear();
-        storedEns->componentMask = 0;
-        storedEns->componentTypes.clear();
-        storedEns->space = nullptr;
+        liveEns.pop_back();
+        slot->value = nullptr;
+        slot->denseIndex = EnsId::InvalidId;
+        storedEns->~Ens();
+        Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
         freeEnsIds.push_back(value.id);
         if (object)
         {
             Object::DeleteInstance(object);
         }
-        return Ens();
+        return nullptr;
     }
 
     space->SetWorld(this);
     space->SetEnsId(value);
 
+    ComponentStorage* spaceStorage = GetOrCreateComponentStorage(SpaceComponent::StaticType());
+    bool spaceAdded = spaceStorage && spaceStorage->Add(value, space);
+    assert(spaceAdded);
+    if (!spaceAdded)
+    {
+        space->SetEnsId(EnsId());
+        space->SetWorld(nullptr);
+        Object::DeleteInstance(space);
+        storedEns->alive = false;
+        liveEns.pop_back();
+        slot->value = nullptr;
+        slot->denseIndex = EnsId::InvalidId;
+        storedEns->~Ens();
+        Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
+        freeEnsIds.push_back(value.id);
+        return nullptr;
+    }
+
     storedEns->name = name;
-    storedEns->space = space;
     storedEns->AddComponentType(SpaceComponent::StaticType());
-    componentByEnsAndType[GetComponentKey(value, SpaceComponent::StaticType())] = space;
-    componentsByType[SpaceComponent::StaticType()->GetId()].push_back(space);
-    return Ens(this, value);
+    return storedEns;
 }
 
 //销毁Ens
@@ -155,7 +206,7 @@ bool World::DestroyEns(EnsId ens)
     Ens* storedEns = GetEns(ens);
     if (!storedEns) return false;
 
-    SpaceComponent* space = storedEns->space;
+    SpaceComponent* space = GetSpaceComponent(ens);
     if (!space) return false;
 
     //先解除子级关系
@@ -182,45 +233,54 @@ bool World::DestroyEns(EnsId ens)
         }
     }
 
-    //注销空间组件
-    componentByEnsAndType.erase(GetComponentKey(ens, SpaceComponent::StaticType()));
+    //注销并销毁空间组件
+    ComponentStorage* spaceStorage = FindComponentStorage(SpaceComponent::StaticType());
+    Component* removedSpace = spaceStorage ? spaceStorage->Remove(ens) : nullptr;
+    assert(removedSpace == space);
+    space->SetEnsId(EnsId());
+    space->SetWorld(nullptr);
+    bool spaceDeleted = Object::DeleteInstance(space);
+    assert(spaceDeleted);
 
-    auto componentListIt = componentsByType.find(SpaceComponent::StaticType()->GetId());
-    if (componentListIt != componentsByType.end())
+    storedEns->alive = false;
+
+    EnsSlot& slot = ensSlots[ens.id];
+    assert(slot.denseIndex < liveEns.size());
+    assert(liveEns[slot.denseIndex] == storedEns);
+
+    //从紧凑存活列表中移除，并修正换入Ens的索引
+    Ens* movedEns = liveEns.back();
+    liveEns[slot.denseIndex] = movedEns;
+    liveEns.pop_back();
+    if (movedEns != storedEns)
     {
-        List<Component*>& componentList = componentListIt->second;
-        componentList.erase(std::remove(componentList.begin(), componentList.end(), space), componentList.end());
-        if (componentList.empty())
-        {
-            componentsByType.erase(componentListIt);
-        }
+        ensSlots[movedEns->GetId().id].denseIndex = slot.denseIndex;
     }
 
-    Object::DeleteInstance(space);
+    slot.value = nullptr;
+    slot.denseIndex = EnsId::InvalidId;
+    storedEns->~Ens();
+    Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
 
-    storedEns->name.clear();
-    storedEns->componentMask = 0;
-    storedEns->componentTypes.clear();
-    storedEns->space = nullptr;
-    storedEns->alive = false;
     freeEnsIds.push_back(ens.id);
     return true;
 }
 
-//获取World内部Ens数据
+//获取World持有的唯一Ens实例
 Ens* World::GetEns(EnsId ens)
 {
     if (ens.IsNull()) return nullptr;
-    if (ens.id >= enses.size()) return nullptr;
+    if (ens.id >= ensSlots.size()) return nullptr;
 
-    Ens& storedEns = enses[ens.id];
-    if (!storedEns.alive) return nullptr;
-    if (storedEns.ens.version != ens.version) return nullptr;
+    EnsSlot& slot = ensSlots[ens.id];
+    if (!slot.value) return nullptr;
+    if (slot.version != ens.version) return nullptr;
+    if (!slot.value->alive) return nullptr;
 
-    return &storedEns;
+    return slot.value;
 }
 
-//获取World内部Ens数据
+//获取World持有的唯一Ens实例
 const Ens* World::GetEns(EnsId ens) const
 {
     return const_cast<World*>(this)->GetEns(ens);
@@ -235,8 +295,11 @@ bool World::IsAlive(EnsId ens) const
 //获取空间组件
 SpaceComponent* World::GetSpaceComponent(EnsId ens) const
 {
-    const Ens* storedEns = GetEns(ens);
-    return storedEns ? storedEns->space : nullptr;
+    if (!IsAlive(ens)) return nullptr;
+
+    ComponentStorage* storage = FindComponentStorage(SpaceComponent::StaticType());
+    Component* component = storage ? storage->Get(ens) : nullptr;
+    return component ? component->Cast<SpaceComponent>() : nullptr;
 }
 
 //设置父级
@@ -294,10 +357,10 @@ void World::SetParent(EnsId child, EnsId parent)
 }
 
 //获取父级
-Ens World::GetParent(EnsId child) const
+Ens* World::GetParent(EnsId child) const
 {
     SpaceComponent* space = GetSpaceComponent(child);
-    return space ? Ens(const_cast<World*>(this), space->parent) : Ens();
+    return space ? const_cast<World*>(this)->GetEns(space->parent) : nullptr;
 }
 
 //添加组件
@@ -326,8 +389,17 @@ Component* World::AddComponent(EnsId ens, Type* type)
     component->SetWorld(this);
     component->SetEnsId(ens);
 
-    componentByEnsAndType[GetComponentKey(ens, type)] = component;
-    componentsByType[type->GetId()].push_back(component);
+    ComponentStorage* storage = GetOrCreateComponentStorage(type);
+    bool added = storage && storage->Add(ens, component);
+    assert(added);
+    if (!added)
+    {
+        component->SetEnsId(EnsId());
+        component->SetWorld(nullptr);
+        Object::DeleteInstance(component);
+        return nullptr;
+    }
+
     Ens* storedEns = GetEns(ens);
     if (storedEns) storedEns->AddComponentType(type);
     component->OnAttach();
@@ -337,14 +409,10 @@ Component* World::AddComponent(EnsId ens, Type* type)
 //获取组件
 Component* World::GetComponent(EnsId ens, Type* type) const
 {
-    if (!type) return nullptr;
-    if (type == SpaceComponent::StaticType()) return GetSpaceComponent(ens);
-    if (!IsAlive(ens)) return nullptr;
+    if (!type || !IsAlive(ens)) return nullptr;
 
-    auto it = componentByEnsAndType.find(GetComponentKey(ens, type));
-    if (it == componentByEnsAndType.end()) return nullptr;
-
-    return it->second;
+    ComponentStorage* storage = FindComponentStorage(type);
+    return storage ? storage->Get(ens) : nullptr;
 }
 
 //移除组件
@@ -353,31 +421,24 @@ bool World::RemoveComponent(EnsId ens, Type* type)
     SpaceComponent* space = GetSpaceComponent(ens);
     if (!space || !type || type == SpaceComponent::StaticType()) return false;
 
-    auto componentIt = componentByEnsAndType.find(GetComponentKey(ens, type));
-    if (componentIt == componentByEnsAndType.end()) return false;
+    ComponentStorage* storage = FindComponentStorage(type);
+    Component* component = storage ? storage->Get(ens) : nullptr;
+    if (!component) return false;
 
     //先执行卸载回调
-    Component* component = componentIt->second;
     component->OnDetach();
 
     //再移除索引和对象
-    componentByEnsAndType.erase(componentIt);
-
-    auto typeListIt = componentsByType.find(type->GetId());
-    if (typeListIt != componentsByType.end())
-    {
-        List<Component*>& componentList = typeListIt->second;
-        componentList.erase(std::remove(componentList.begin(), componentList.end(), component), componentList.end());
-        if (componentList.empty())
-        {
-            componentsByType.erase(typeListIt);
-        }
-    }
+    Component* removedComponent = storage->Remove(ens);
+    assert(removedComponent == component);
 
     Ens* storedEns = GetEns(ens);
     if (storedEns) storedEns->RemoveComponentType(type);
-    Object::DeleteInstance(component);
-    return true;
+    component->SetEnsId(EnsId());
+    component->SetWorld(nullptr);
+    bool deleted = Object::DeleteInstance(component);
+    assert(deleted);
+    return deleted;
 }
 
 //创建世界内对象
@@ -419,6 +480,7 @@ bool World::DestroyObject(Object* object)
     if (it == ownedObjects.end()) return false;
 
     ownedObjects.erase(it);
+    object->SetWorld(nullptr);
     return Object::DeleteInstance(object);
 }
 
@@ -444,13 +506,25 @@ void World::ReleaseSceneResourceRefs()
 }
 
 //按稳定ID查找Ens
-Ens World::FindEns(const StringId& id) const
+Ens* World::FindEns(const StringId& id) const
 {
     Object* object = Object::FindObject(id);
     SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
-    if (!space) return Ens();
-    if (space->GetWorld() != this) return Ens();
-    if (!IsAlive(space->GetEnsId())) return Ens();
+    if (!space) return nullptr;
+    if (space->GetWorld() != this) return nullptr;
 
-    return Ens(const_cast<World*>(this), space->GetEnsId());
+    return const_cast<World*>(this)->GetEns(space->GetEnsId());
+}
+
+//遍历所有存活的Ens
+void World::VisitEns(EnsVisitorFunction visitor, void* userData) const
+{
+    if (!visitor) return;
+
+    for (Ens* ens : liveEns)
+    {
+        if (!ens || !ens->alive) continue;
+
+        visitor(ens, userData);
+    }
 }

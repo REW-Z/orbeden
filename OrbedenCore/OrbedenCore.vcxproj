@@ -149,11 +149,12 @@
     <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h" />
     <ClInclude Include="Src\Runtime\Object\Camera.h" />
     <ClInclude Include="Src\Runtime\Object\DirectionalLight.h" />
+    <ClInclude Include="Src\Runtime\ComponentStorage.h" />
     <ClInclude Include="Src\Runtime\Ens.h" />
     <ClInclude Include="Src\Runtime\EnsId.h" />
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
     <ClInclude Include="Src\Runtime\Object\Object.h" />
-    <ClInclude Include="Src\Runtime\ProjectContext.h" />
+    <ClInclude Include="Src\Runtime\ContentContext.h" />
     <ClInclude Include="Src\Runtime\Reflection.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
@@ -210,11 +211,12 @@
     <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp" />
     <ClCompile Include="Src\Runtime\Object\Camera.cpp" />
     <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp" />
+    <ClCompile Include="Src\Runtime\ComponentStorage.cpp" />
     <ClCompile Include="Src\Runtime\Ens.cpp" />
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Object\Object.cpp" />
-    <ClCompile Include="Src\Runtime\ProjectContext.cpp" />
+    <ClCompile Include="Src\Runtime\ContentContext.cpp" />
     <ClCompile Include="Src\Runtime\Reflection.cpp" />
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
     <ClCompile Include="Src\Runtime\ResourceManager.cpp" />

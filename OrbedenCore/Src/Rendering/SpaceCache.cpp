@@ -33,11 +33,11 @@ void SpaceCache::Update(World& currentWorld)
     world = &currentWorld;
     DetectTransformChanges(currentWorld);
 
-    currentWorld.ForEachEns([this](Ens ens)
+    currentWorld.ForEachEns([this](Ens& ens)
     {
-        if (ens.GetParent().IsValid()) return;
+        if (ens.GetParent()) return;
 
-        UpdateNodeRecursive(ens.GetEns(), matrix4x4(), quaternion(), false);
+        UpdateNodeRecursive(ens.GetId(), matrix4x4(), quaternion(), false);
     });
 }
 
@@ -50,7 +50,7 @@ matrix4x4 SpaceCache::GetWorldMatrix(EnsId ens) const
 //检测 public local 字段变更并标记脏状态
 void SpaceCache::DetectTransformChanges(World& currentWorld)
 {
-    currentWorld.ForEachEns([this](Ens ens)
+    currentWorld.ForEachEns([this](Ens& ens)
     {
         SpaceComponent* space = ens.Space();
         if (!space) return;
@@ -65,7 +65,7 @@ void SpaceCache::DetectTransformChanges(World& currentWorld)
         {
             if (!space->transformDirty)
             {
-                MarkDirtyRecursive(ens.GetEns());
+                MarkDirtyRecursive(ens.GetId());
             }
         }
     });
