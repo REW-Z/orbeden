@@ -3,6 +3,7 @@
 #include "Runtime/Object/Object.h"
 
 class Ens;
+class World;
 
 //底层对象句柄
 struct EnsId
@@ -26,20 +27,22 @@ class Component : public Object
     OBJECT_TYPE_DECLARE(Component)
 
 private:
+    friend class World;
+
     EnsId owner;
+
+    //设置所属句柄
+    void SetEnsId(EnsId value);
 
 public:
     Component() = default;
     virtual ~Component() = default;
 
     //获取所属Ens
-    Ens GetEns() const;
+    Ens* GetEns() const;
 
     //获取所属句柄
     EnsId GetEnsId() const;
-
-    //设置所属句柄
-    void SetEnsId(EnsId value);
 
     //挂载时调用
     virtual void OnAttach() {}

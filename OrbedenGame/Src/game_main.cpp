@@ -5,15 +5,10 @@
 #include "Profiler/Profiler.h"
 #include "Runtime/Managed/ManagedRuntimeOverlay.h"
 #include "Runtime/Managed/ScriptSystem.h"
-#include "Runtime/ProjectContext.h"
+#include "Runtime/ContentContext.h"
 
 #include <filesystem>
 #include <string>
-
-namespace examples
-{
-    void InitializeExampleWorldRuntime(Application& app);
-}
 
 namespace
 {
@@ -47,11 +42,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::string exampleProject = ProjectContext::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
+    std::string exampleProject = ContentContext::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
     if (!exampleProject.empty())
     {
-        ProjectContext::SetProjectRoot(exampleProject);
-        std::string worldPath = (std::filesystem::path(exampleProject) / "Worlds/example_world.world").lexically_normal().generic_string();
+        ContentContext::SetContentRoot(exampleProject, "Resource");
+        std::string worldPath = (std::filesystem::path(exampleProject) / "World/example_world.world").lexically_normal().generic_string();
         app.LoadWorld(worldPath);
     }
     else
@@ -59,15 +54,15 @@ int main(int argc, char** argv)
         Log::Warning("Game startup warning: ExampleProject was not found.");
     }
 
-    examples::InitializeExampleWorldRuntime(app);
-
     std::filesystem::path executableDirectory = GetExecutableDirectory(argc > 0 ? argv[0] : "");
     std::filesystem::path managedDirectory = executableDirectory / "Managed";
 
     ScriptSystem scriptSystem;
     ScriptSystemConfig scriptConfig;
     scriptConfig.runtimeConfigPath = (executableDirectory / "OrbedenCore.runtimeconfig.json").lexically_normal().generic_string();
-    scriptConfig.managedDirectory = managedDirectory.lexically_normal().generic_string();
+    scriptConfig.managedDirectory = exampleProject.empty()
+        ? managedDirectory.lexically_normal().generic_string()
+        : (std::filesystem::path(exampleProject) / "Managed").lexically_normal().generic_string();
     scriptConfig.runtimeAssemblyPath = (managedDirectory / "Orbeden.Runtime.dll").lexically_normal().generic_string();
     scriptConfig.componentAssemblyPath = scriptConfig.runtimeAssemblyPath;
     if (scriptSystem.Initialize(scriptConfig))
@@ -77,7 +72,9 @@ int main(int argc, char** argv)
 
     ManagedRuntimeOverlay managedOverlay;
     ManagedRuntimeOverlayConfig managedConfig;
-    managedConfig.userAssemblyPath = (managedDirectory / "ExampleGame.dll").lexically_normal().generic_string();
+    managedConfig.userAssemblyPath = exampleProject.empty()
+        ? (managedDirectory / "ExampleGame.dll").lexically_normal().generic_string()
+        : (std::filesystem::path(exampleProject) / "Managed" / "ExampleGame.dll").lexically_normal().generic_string();
     managedConfig.userTypeName = "ExampleGame.GuiOverlay, ExampleGame";
     managedConfig.userMethodName = "OnGui";
     if (managedOverlay.Initialize(scriptSystem, managedConfig))

@@ -66,4 +66,3 @@ void main()
     vec3 color = ambient + direct * (1.0 - shadow);
     FragColor = vec4(color, 1.0);
 }
-

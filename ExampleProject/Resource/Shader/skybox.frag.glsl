@@ -10,4 +10,3 @@ void main()
 {
     FragColor = texture(u_SkyboxTexture, v_TexCoord);
 }
-

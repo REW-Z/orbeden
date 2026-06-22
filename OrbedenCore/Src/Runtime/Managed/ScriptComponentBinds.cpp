@@ -13,11 +13,11 @@
 
 namespace
 {
-    // 获取当前 World 中的 Ens 封装。
-    Ens GetScriptEns(EnsId ens)
+    // 获取当前 World 中的唯一 Ens 实例。
+    Ens* GetScriptEns(EnsId ens)
     {
         World* world = World::CurrentWorld();
-        return world ? Ens::FromEns(world, ens) : Ens();
+        return world ? world->GetEns(ens) : nullptr;
     }
 
     // 获取当前 World 中的 SpaceComponent。
@@ -45,8 +45,9 @@ namespace
     // 读取 Ens 名称到 UTF-8 缓冲区。
     int32 CORECLR_DELEGATE_CALLTYPE ScriptEnsGetName(EnsId ens, uint8* buffer, int32 bufferSize)
     {
-        Ens value = GetScriptEns(ens);
-        const std::string& name = value.GetName();
+        Ens* value = GetScriptEns(ens);
+        static const std::string emptyName;
+        const std::string& name = value ? value->GetName() : emptyName;
         int32 byteCount = static_cast<int32>(name.size());
         if (buffer && bufferSize > 0 && byteCount > 0)
         {
@@ -60,8 +61,8 @@ namespace
     // 写入 Ens 名称。
     void CORECLR_DELEGATE_CALLTYPE ScriptEnsSetName(EnsId ens, const uint8* text, int32 length)
     {
-        Ens value = GetScriptEns(ens);
-        if (!value.IsValid()) return;
+        Ens* value = GetScriptEns(ens);
+        if (!value) return;
 
         std::string name;
         if (text && length > 0)
@@ -69,7 +70,7 @@ namespace
             name.assign(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
         }
 
-        value.SetName(name);
+        value->SetName(name);
     }
 
     // 判断 Ens 是否拥有 SpaceComponent。

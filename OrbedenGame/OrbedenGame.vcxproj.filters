@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Src\ExampleWorldRuntime.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Src\game_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -22,49 +19,55 @@
     <None Include="..\ExampleProject\ExampleProject.oeproj">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Worlds\example_world.world">
+    <None Include="..\ExampleProject\World\example_world.world">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\cube.obj">
+    <None Include="..\ExampleProject\Resource\Mesh\cube.obj">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\cube.mtl">
+    <None Include="..\ExampleProject\Resource\Material\cube.mtl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\ground.obj">
+    <None Include="..\ExampleProject\Resource\Mesh\ground.obj">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Meshes\ground.mtl">
+    <None Include="..\ExampleProject\Resource\Material\ground.mtl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Shaders\blinn_phong_shadow.vert.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.vert.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Shaders\blinn_phong_shadow.frag.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.frag.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Examples\World\Textures\sky_blue.png">
+    <None Include="..\ExampleProject\Resource\Texture\sky_blue.png">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\shadow_depth.vert.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.vert.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\shadow_depth.frag.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.frag.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.vert.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\skybox.vert.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resources\Engine\Shaders\skybox.frag.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\skybox.frag.glsl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Scripts\ExampleGame\ExampleGame.csproj">
+    <None Include="..\ExampleProject\Script\ExampleGame.csproj">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Scripts\ExampleGame\GuiOverlay.cs">
+    <None Include="..\ExampleProject\Script\Directory.Build.props">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Scripts\ExampleGame\SampleBehaviour.cs">
+    <None Include="..\ExampleProject\Script\GuiOverlay.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Script\SampleBehaviour.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\Managed\.gitignore">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

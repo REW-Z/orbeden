@@ -1,18 +1,32 @@
+using System.Collections.Generic;
+
 namespace Orbeden;
 
-/// <summary>托管侧 Ens 句柄包装。</summary>
-public readonly struct Ens : IEquatable<Ens>
+/// <summary>托管侧 Ens 代理，Native Ens 本体由 World 唯一持有。</summary>
+public sealed class Ens : IEquatable<Ens>
 {
     /// <summary>空 Ens。</summary>
     public static readonly Ens Null = new(EnsId.Null);
 
+    private static readonly Dictionary<EnsId, Ens> cache = [];
+
     /// <summary>底层 EnsId。</summary>
     public EnsId Id { get; }
 
-    /// <summary>创建 Ens 包装。</summary>
-    public Ens(EnsId id)
+    private Ens(EnsId id)
     {
         Id = id;
+    }
+
+    /// <summary>通过 EnsId 获取托管代理。</summary>
+    internal static Ens FromId(EnsId id)
+    {
+        if (id.IsNull) return Null;
+        if (cache.TryGetValue(id, out Ens? value)) return value;
+
+        value = new(id);
+        cache[id] = value;
+        return value;
     }
 
     /// <summary>判断 Ens 是否仍然有效。</summary>
@@ -58,9 +72,9 @@ public readonly struct Ens : IEquatable<Ens>
     }
 
     /// <summary>判断两个 Ens 是否相同。</summary>
-    public bool Equals(Ens other)
+    public bool Equals(Ens? other)
     {
-        return Id.Equals(other.Id);
+        return other != null && Id.Equals(other.Id);
     }
 
     /// <summary>判断两个 Ens 是否相同。</summary>

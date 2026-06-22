@@ -39,12 +39,12 @@ void EnsViewPanel::DrawPanel()
     }
 
     List<EnsId> roots;
-    world.ForEachEns([&roots](Ens ens)
+    world.ForEachEns([&roots](Ens& ens)
     {
-        Ens parent = ens.GetParent();
-        if (!parent.IsValid())
+        Ens* parent = ens.GetParent();
+        if (!parent)
         {
-            roots.push_back(ens.GetEns());
+            roots.push_back(ens.GetId());
         }
     });
 
@@ -65,7 +65,9 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
 {
     if (!world.IsAlive(ens)) return;
 
-    Ens ensObject = Ens::FromEns(&world, ens);
+    Ens* ensObject = world.GetEns(ens);
+    if (!ensObject) return;
+
     SpaceComponent* space = world.GetSpaceComponent(ens);
     bool hasChildren = space && !space->firstChild.IsNull();
 
@@ -83,7 +85,7 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
         flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
     }
 
-    std::string label = ensObject.GetName();
+    std::string label = ensObject->GetName();
     label += "##";
     label += std::to_string(ens.id);
     label += "_";

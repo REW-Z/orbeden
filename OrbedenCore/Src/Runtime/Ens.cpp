@@ -6,9 +6,9 @@
 #include <algorithm>
 #include <cassert>
 
-//创建Ens封装
+//创建World持有的唯一Ens实例
 Ens::Ens(World* ownerWorld, EnsId value)
-    : world(ownerWorld), ens(value)
+    : world(ownerWorld), ens(value), alive(true)
 {
 }
 
@@ -40,39 +40,17 @@ bool Ens::HasComponentType(Type* type) const
     return std::find(componentTypes.begin(), componentTypes.end(), type->GetId()) != componentTypes.end();
 }
 
-//创建Ens
-Ens Ens::Create(const std::string& name)
-{
-    World* currentWorld = World::CurrentWorld();
-    assert(currentWorld);
-    return currentWorld ? currentWorld->CreateEns(name) : Ens();
-}
-
-//从句柄创建Ens封装
-Ens Ens::FromEns(EnsId value)
-{
-    return FromEns(World::CurrentWorld(), value);
-}
-
-//从指定世界和句柄创建Ens封装
-Ens Ens::FromEns(World* ownerWorld, EnsId value)
-{
-    return Ens(ownerWorld, value);
-}
-
 //销毁Ens
 void Ens::Destroy()
 {
     if (!world) return;
     world->DestroyEns(ens);
-    world = nullptr;
-    ens = EnsId();
 }
 
 //判断是否有效
 bool Ens::IsValid() const
 {
-    return world && world->IsAlive(ens);
+    return alive && world && world->GetEns(ens) == this;
 }
 
 //获取所属世界
@@ -81,8 +59,8 @@ World* Ens::GetWorld() const
     return world;
 }
 
-//获取底层句柄
-EnsId Ens::GetEns() const
+//获取底层ID
+EnsId Ens::GetId() const
 {
     return ens;
 }
@@ -90,54 +68,34 @@ EnsId Ens::GetEns() const
 //获取空间组件
 SpaceComponent* Ens::Space() const
 {
-    const Ens* storedEns = world ? world->GetEns(ens) : nullptr;
-    return storedEns ? storedEns->space : nullptr;
+    return world ? world->GetSpaceComponent(ens) : nullptr;
 }
 
 //获取名称
 const std::string& Ens::GetName() const
 {
-    static const std::string emptyName;
-    const Ens* storedEns = world ? world->GetEns(ens) : nullptr;
-
-    return storedEns ? storedEns->name : emptyName;
+    return name;
 }
 
 //设置名称
 void Ens::SetName(const std::string& name)
 {
-    Ens* storedEns = world ? world->GetEns(ens) : nullptr;
-    if (storedEns) storedEns->name = name;
+    this->name = name;
 }
 
-//获取位置
-vector3 Ens::GetLocalPosition() const
-{
-    SpaceComponent* space = Space();
-    return space ? space->localPosition : vector3();
-}
-
-//设置位置
-void Ens::SetLocalPosition(const vector3& position)
-{
-    SpaceComponent* space = Space();
-    if (!space) return;
-
-    space->localPosition = position;
-}
 
 //设置父级
-void Ens::SetParent(Ens parent)
+void Ens::SetParent(Ens* parent)
 {
     if (!world) return;
-    if (parent.GetWorld() && parent.GetWorld() != world) return;
-    world->SetParent(ens, parent.GetEns());
+    if (parent && parent->GetWorld() != world) return;
+    world->SetParent(ens, parent ? parent->GetId() : EnsId());
 }
 
 //获取父级
-Ens Ens::GetParent() const
+Ens* Ens::GetParent() const
 {
-    return world ? world->GetParent(ens) : Ens();
+    return world ? world->GetParent(ens) : nullptr;
 }
 
 //添加组件
@@ -161,15 +119,11 @@ bool Ens::RemoveComponent(Type* type)
 //判断是否拥有组件
 bool Ens::HasComponent(Type* type) const
 {
-    const Ens* storedEns = world ? world->GetEns(ens) : nullptr;
-    return storedEns && storedEns->HasComponentType(type);
+    return HasComponentType(type);
 }
 
 //获取组件类型列表
 const List<TypeId>& Ens::GetComponentTypes() const
 {
-    static const List<TypeId> emptyTypes;
-
-    const Ens* storedEns = world ? world->GetEns(ens) : nullptr;
-    return storedEns ? storedEns->componentTypes : emptyTypes;
+    return componentTypes;
 }

@@ -4,7 +4,7 @@ namespace Orbeden;
 public abstract class ScriptBehaviour
 {
     /// <summary>脚本所属 Ens。</summary>
-    public Ens Ens { get; internal set; } = new Ens(EnsId.Null);
+    public Ens Ens { get; internal set; } = Ens.Null;
 
     /// <summary>脚本所属 EnsId。</summary>
     public EnsId EnsId => Ens.Id;

@@ -175,6 +175,8 @@ static List<MethodInfo> ParseMethods(string body, string className)
     var index = 0;
     foreach (Match match in methodRegex.Matches(cleanBody))
     {
+        if (GetAccessAt(cleanBody, match.Index) != "public") continue;
+
         var returnType = NormalizeType(match.Groups["ret"].Value);
         var name = match.Groups["name"].Value;
 
@@ -202,6 +204,20 @@ static List<MethodInfo> ParseMethods(string body, string className)
     }
 
     return methods;
+}
+
+//获取类体指定位置的方法访问级别
+static string GetAccessAt(string body, int index)
+{
+    var access = "private";
+    var accessRegex = new Regex(@"^\s*(?<access>public|private|protected)\s*:", RegexOptions.Multiline);
+    foreach (Match match in accessRegex.Matches(body))
+    {
+        if (match.Index >= index) break;
+        access = match.Groups["access"].Value;
+    }
+
+    return access;
 }
 
 //解析方法参数列表

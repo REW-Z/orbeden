@@ -9,4 +9,3 @@ void main()
 {
     gl_Position = u_LightViewProjection * u_Model * vec4(a_Position, 1.0);
 }
-

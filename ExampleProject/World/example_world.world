@@ -14,7 +14,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resources/Examples/World/Meshes/cube.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/cube.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -32,7 +32,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resources/Examples/World/Meshes/ground.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/ground.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />

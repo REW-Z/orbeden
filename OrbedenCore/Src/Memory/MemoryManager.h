@@ -119,52 +119,62 @@ public:
     uint32 GetCapacity() const;
 };
 
-class PoolAllocator
+typedef void (*ChunkSlotVisitorFunction)(void* address, void* userData);
+
+//连续Chunk固定槽位分配器，支持复用Slot并按顺序遍历存活Slot
+class ChunkSlotAllocator
 {
 private:
-    struct FreeBlock
+    struct FreeSlot
     {
-        FreeBlock* next = nullptr;
+        FreeSlot* next = nullptr;
     };
 
     std::byte* buffer = nullptr;
-    uint32 blockSize = 0;
-    uint32 blockStride = 0;
-    uint32 blockAlignment = 0;
-    uint32 blockCount = 0;
-    uint32 freeCount = 0;
-    FreeBlock* freeList = nullptr;
+    uint8* aliveSlots = nullptr;
+    uint32 slotSize = 0;
+    uint32 slotStride = 0;
+    uint32 slotAlignment = 0;
+    uint32 slotCount = 0;
+    uint32 aliveCount = 0;
+    FreeSlot* freeList = nullptr;
 
     //释放内部缓冲区
     void Release();
 
-public:
-    PoolAllocator() = default;
-    PoolAllocator(uint32 size, uint32 count, uint32 alignment = 0);
-    PoolAllocator(const PoolAllocator&) = delete;
-    PoolAllocator& operator=(const PoolAllocator&) = delete;
-    ~PoolAllocator();
+    //获取槽位索引
+    uint32 GetSlotIndex(std::byte* address) const;
 
-    //初始化固定块池
+public:
+    ChunkSlotAllocator() = default;
+    ChunkSlotAllocator(uint32 size, uint32 count, uint32 alignment = 0);
+    ChunkSlotAllocator(const ChunkSlotAllocator&) = delete;
+    ChunkSlotAllocator& operator=(const ChunkSlotAllocator&) = delete;
+    ~ChunkSlotAllocator();
+
+    //初始化连续Chunk槽位
     void Initialize(uint32 size, uint32 count, uint32 alignment = 0);
 
-    //分配一个固定块
-    void* Allocate(uint32 size = 0, uint32 alignment = 0, bool isArray = false);
+    //分配一个槽位
+    void* AllocateSlot();
 
-    //释放一个固定块
-    void Deallocate(std::byte* addr, uint32 alignment = 0, bool isArray = false);
+    //释放一个槽位
+    void DeallocateSlot(void* address);
 
-    //重置固定块池
+    //重置所有槽位
     void Reset();
 
-    //获取空闲块数量
-    uint32 GetFreeCount() const;
+    //获取槽位数量
+    uint32 GetSlotCount() const;
 
-    //获取块数量
-    uint32 GetBlockCount() const;
+    //获取存活槽位数量
+    uint32 GetAliveCount() const;
 
-    //判断地址是否属于当前池
-    bool Contains(std::byte* addr) const;
+    //判断地址是否属于当前Chunk
+    bool Contains(void* address) const;
+
+    //按槽位顺序遍历存活地址
+    void VisitAliveSlots(ChunkSlotVisitorFunction visitor, void* userData) const;
 };
 
 class SlabAllocator

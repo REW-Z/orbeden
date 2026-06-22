@@ -4,7 +4,7 @@
 #include "Editor/ExampleWorldGenerator.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
-#include "Runtime/ProjectContext.h"
+#include "Runtime/ContentContext.h"
 #include "Runtime/ResourceManager.h"
 
 #include <cctype>
@@ -104,6 +104,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     std::string parsedName = GetAttribute(content, "name");
     std::string parsedStartupWorld = GetAttribute(content, "startupWorld");
     std::string parsedResourceRoot = GetAttribute(content, "resourceRoot");
+    std::string parsedScriptRoot = GetAttribute(content, "scriptRoot");
+    std::string parsedManagedRoot = GetAttribute(content, "managedRoot");
     if (parsedStartupWorld.empty())
     {
         lastError = "Project file is missing startupWorld: " + projectFile;
@@ -113,13 +115,22 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
 
     std::string parsedProjectRoot = NormalizePath(std::filesystem::absolute(filePath.parent_path()));
     if (parsedName.empty()) parsedName = filePath.parent_path().filename().string();
-    if (parsedResourceRoot.empty()) parsedResourceRoot = "Resources";
-    std::string worldPath = NormalizePath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
-
+    if (parsedResourceRoot.empty()) parsedResourceRoot = "Resource";
+    if (parsedScriptRoot.empty()) parsedScriptRoot = "Script";
+    if (parsedManagedRoot.empty()) parsedManagedRoot = "Managed";
     bool useExampleWorldGenerator = ExampleWorldGenerator::IsExampleProject(parsedName);
-    if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateWorldFile(parsedProjectRoot, parsedStartupWorld))
+    if (useExampleWorldGenerator)
     {
-        lastError = "Example project world generation failed: " + worldPath;
+        parsedStartupWorld = "World/example_world.world";
+        parsedResourceRoot = "Resource";
+        parsedScriptRoot = "Script";
+        parsedManagedRoot = "Managed";
+    }
+
+    std::string worldPath = NormalizePath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
+    if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateProjectFiles(parsedProjectRoot))
+    {
+        lastError = "Example project generation failed: " + parsedProjectRoot;
         Log::Error(lastError.c_str());
         return false;
     }
@@ -132,7 +143,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
 
     app.GetWorld().Clear();
     ResourceManager::Shutdown();
-    ProjectContext::SetProjectRoot(parsedProjectRoot, parsedResourceRoot);
+    ContentContext::SetContentRoot(parsedProjectRoot, parsedResourceRoot);
 
     bool loaded = app.LoadWorld(worldPath);
     if (renderSystem)
@@ -143,6 +154,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     projectRoot = parsedProjectRoot;
     projectName = parsedName;
     resourceRoot = parsedResourceRoot;
+    scriptRoot = parsedScriptRoot;
+    managedRoot = parsedManagedRoot;
     startupWorld = parsedStartupWorld;
     lastError.clear();
 
@@ -199,6 +212,18 @@ const std::string& EditorProject::GetProjectRoot() const
 const std::string& EditorProject::GetProjectName() const
 {
     return projectName;
+}
+
+std::string EditorProject::GetScriptRootPath() const
+{
+    if (projectRoot.empty() || scriptRoot.empty()) return std::string();
+    return NormalizePath(std::filesystem::path(projectRoot) / scriptRoot);
+}
+
+std::string EditorProject::GetManagedRootPath() const
+{
+    if (projectRoot.empty() || managedRoot.empty()) return std::string();
+    return NormalizePath(std::filesystem::path(projectRoot) / managedRoot);
 }
 
 std::string EditorProject::GetStartupWorldPath() const

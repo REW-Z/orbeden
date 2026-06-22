@@ -11,7 +11,9 @@ private:
     Application& app;
     std::string projectRoot;
     std::string projectName;
-    std::string resourceRoot = "Resources";
+    std::string resourceRoot = "Resource";
+    std::string scriptRoot = "Script";
+    std::string managedRoot = "Managed";
     std::string startupWorld;
     std::string lastError;
 
@@ -32,6 +34,12 @@ public:
 
     //获取当前项目名
     const std::string& GetProjectName() const;
+
+    //获取项目脚本根目录
+    std::string GetScriptRootPath() const;
+
+    //获取项目托管输出目录
+    std::string GetManagedRootPath() const;
 
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;

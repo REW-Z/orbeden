@@ -69,6 +69,12 @@ public:
     //获取当前项目根目录
     const std::string& GetProjectRoot() const;
 
+    //获取项目脚本根目录
+    std::string GetProjectScriptRootPath() const;
+
+    //获取项目托管输出目录
+    std::string GetProjectManagedRootPath() const;
+
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;
 

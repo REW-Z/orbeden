@@ -32,20 +32,6 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 Component.SetEnsId 方法
-    static Reflection::Value Invoke_Component_SetEnsId_1(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        EnsId arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetEnsId(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
     //调用 Component.OnAttach 方法
     static Reflection::Value Invoke_Component_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
     {
@@ -857,7 +843,6 @@ namespace Reflection
         RegisterTypeMethods(Component::StaticType(),
             {
                 MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
-                MethodInfo("SetEnsId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Component_SetEnsId_1),
                 MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_2),
                 MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_3),
             });

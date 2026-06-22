@@ -85,8 +85,8 @@ namespace examples
         World* previousWorld = World::CurrentWorld();
         World::SetCurrentWorld(&world);
 
-        Ens ens = world.CreateEnsWithStableId("world://examples/reflection_ens", "ReflectionEns");
-        SpaceComponent* space = ens.Space();
+        Ens* ens = world.CreateEnsWithStableId("world://examples/reflection_ens", "ReflectionEns");
+        SpaceComponent* space = ens ? ens->Space() : nullptr;
         if (!space)
         {
             Log::Error("反射示例创建 Ens 失败");
@@ -112,8 +112,8 @@ namespace examples
         }
 
         //Ens 名称已经是运行时记录，不再作为 SpaceComponent 字段反射
-        ens.SetName("新名称");
-        std::string nameLine = "Ens 名称写入后: " + ens.GetName();
+        ens->SetName("新名称");
+        std::string nameLine = "Ens 名称写入后: " + ens->GetName();
         Log::Info(nameLine.c_str());
 
         //通过反射值写入 vector3 字段
