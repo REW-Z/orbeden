@@ -20,6 +20,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"
 
+class AssetPipelineObjectFactory
+{
+public:
+    static Object* Create(Type* type, const std::string& instancePath)
+    {
+        return Object::CreateResourceInstance(type, instancePath);
+    }
+};
+
 namespace
 {
     struct VertexKey
@@ -211,14 +220,19 @@ namespace
         T* existing = found ? found->Cast<T>() : nullptr;
         if (existing)
         {
-            ResourceManager::RegisterObject(normalizedKey, existing);
-            return existing;
+            return ResourceManager::RegisterObject(normalizedKey, existing) ? existing : nullptr;
         }
 
-        T* object = Object::CreateInstance<T>(normalizedKey);
+        Object* created = AssetPipelineObjectFactory::Create(T::StaticType(), normalizedKey);
+        T* object = created ? created->Cast<T>() : nullptr;
         if (!object) return nullptr;
 
-        ResourceManager::RegisterObject(normalizedKey, object);
+        if (!ResourceManager::RegisterObject(normalizedKey, object))
+        {
+            Object::DeleteInstance(object);
+            return nullptr;
+        }
+
         return object;
     }
 

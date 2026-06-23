@@ -46,6 +46,41 @@ ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
     return storage;
 }
 
+//生成世界运行时对象ID
+std::string World::AllocateRuntimeObjectPath()
+{
+    std::string instancePath;
+    do
+    {
+        instancePath = "world://runtime/" + std::to_string(nextRuntimeObjectIndex++);
+    } while (Object::FindObject(StringId(instancePath)));
+
+    return instancePath;
+}
+
+//接收世界拥有的运行时对象
+bool World::AddOwnedObject(Object* object)
+{
+    if (!object) return false;
+    if (object->GetWorld() != this) return false;
+    if (object->GetOwnership() != Object::Ownership::WorldOwned) return false;
+    if (object->Is(Component::StaticType())) return false;
+    if (std::find(ownedObjects.begin(), ownedObjects.end(), object) != ownedObjects.end()) return true;
+
+    ownedObjects.push_back(object);
+    return true;
+}
+
+//摘除世界拥有的运行时对象
+bool World::RemoveOwnedObject(Object* object)
+{
+    auto it = std::find(ownedObjects.begin(), ownedObjects.end(), object);
+    if (it == ownedObjects.end()) return false;
+
+    ownedObjects.erase(it);
+    return true;
+}
+
 //获取当前活动世界
 World* World::CurrentWorld()
 {
@@ -85,7 +120,8 @@ void World::Clear()
         Object* object = ownedObjects.back();
         ownedObjects.pop_back();
         object->SetWorld(nullptr);
-        Object::DeleteInstance(object);
+        object->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(object);
     }
 
     //所有Ens销毁后释放空的组件稀疏集
@@ -156,7 +192,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     slot->denseIndex = static_cast<uint32>(liveEns.size());
     liveEns.push_back(storedEns);
 
-    Object* object = Object::CreateInstance(SpaceComponent::StaticType(), stableId);
+    Object* object = Object::CreateRawInstance(SpaceComponent::StaticType(), stableId);
     SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
     if (!space)
     {
@@ -169,12 +205,13 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
         freeEnsIds.push_back(value.id);
         if (object)
         {
-            Object::DeleteInstance(object);
+            Object::DestroyDetachedInstance(object);
         }
         return nullptr;
     }
 
     space->SetWorld(this);
+    space->SetOwnership(Object::Ownership::WorldOwned);
     space->SetEnsId(value);
 
     ComponentStorage* spaceStorage = GetOrCreateComponentStorage(SpaceComponent::StaticType());
@@ -184,7 +221,8 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     {
         space->SetEnsId(EnsId());
         space->SetWorld(nullptr);
-        Object::DeleteInstance(space);
+        space->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(space);
         storedEns->alive = false;
         liveEns.pop_back();
         slot->value = nullptr;
@@ -239,7 +277,8 @@ bool World::DestroyEns(EnsId ens)
     assert(removedSpace == space);
     space->SetEnsId(EnsId());
     space->SetWorld(nullptr);
-    bool spaceDeleted = Object::DeleteInstance(space);
+    space->SetOwnership(Object::Ownership::None);
+    bool spaceDeleted = Object::DestroyDetachedInstance(space);
     assert(spaceDeleted);
 
     storedEns->alive = false;
@@ -375,18 +414,19 @@ Component* World::AddComponent(EnsId ens, Type* type)
 
     //创建并注册组件
     std::string instancePath = space->GetInstanceId().GetPath() + "/" + type->GetName();
-    Object* object = Object::CreateInstance(type, instancePath);
+    Object* object = Object::CreateRawInstance(type, instancePath);
     Component* component = object ? object->Cast<Component>() : nullptr;
     if (!component)
     {
         if (object)
         {
-            Object::DeleteInstance(object);
+            Object::DestroyDetachedInstance(object);
         }
         return nullptr;
     }
 
     component->SetWorld(this);
+    component->SetOwnership(Object::Ownership::WorldOwned);
     component->SetEnsId(ens);
 
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
@@ -396,7 +436,8 @@ Component* World::AddComponent(EnsId ens, Type* type)
     {
         component->SetEnsId(EnsId());
         component->SetWorld(nullptr);
-        Object::DeleteInstance(component);
+        component->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(component);
         return nullptr;
     }
 
@@ -436,52 +477,10 @@ bool World::RemoveComponent(EnsId ens, Type* type)
     if (storedEns) storedEns->RemoveComponentType(type);
     component->SetEnsId(EnsId());
     component->SetWorld(nullptr);
-    bool deleted = Object::DeleteInstance(component);
+    component->SetOwnership(Object::Ownership::None);
+    bool deleted = Object::DestroyDetachedInstance(component);
     assert(deleted);
     return deleted;
-}
-
-//创建世界内对象
-Object* World::CreateObject(Type* type, const std::string& stableId)
-{
-    if (!type) return nullptr;
-    if (type->Is(Component::StaticType())) return nullptr;
-
-    //确定稳定ID
-    std::string instancePath = stableId;
-    if (instancePath.empty())
-    {
-        do
-        {
-            instancePath = "world://runtime/" + std::to_string(nextRuntimeObjectIndex++);
-        } while (Object::FindObject(StringId(instancePath)));
-    }
-    else if (Object::FindObject(StringId(instancePath)))
-    {
-        return nullptr;
-    }
-
-    //创建并登记对象
-    Object* object = Object::CreateInstance(type, instancePath);
-    if (!object) return nullptr;
-
-    object->SetWorld(this);
-    ownedObjects.push_back(object);
-    return object;
-}
-
-//销毁世界内对象
-bool World::DestroyObject(Object* object)
-{
-    if (!object || object->GetWorld() != this) return false;
-    if (object->Is(Component::StaticType())) return false;
-
-    auto it = std::find(ownedObjects.begin(), ownedObjects.end(), object);
-    if (it == ownedObjects.end()) return false;
-
-    ownedObjects.erase(it);
-    object->SetWorld(nullptr);
-    return Object::DeleteInstance(object);
 }
 
 //增加一个场景资源引用

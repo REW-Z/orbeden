@@ -1,8 +1,12 @@
 #include "Runtime/Object/Object.h"
 
+#include "Log/Log.h"
 #include "Memory/MemoryManager.h"
+#include "Runtime/EnsId.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/World.h"
 
+#include <algorithm>
 #include <cassert>
 #include <unordered_map>
 
@@ -16,7 +20,8 @@ namespace
         List<Type*> types;
         std::unordered_map<std::string, Type*> typeByName;
         std::unordered_map<std::string, Object*> objectByPath;
-        uint64 nextObjectIndex = 1;
+        List<Object*> orphanObjects;
+        uint64 nextOrphanObjectIndex = 1;
     };
 
     //获取对象运行时注册表
@@ -475,30 +480,18 @@ Object* Object::FindObject(const StringId& id)
     return it->second;
 }
 
-//创建对象
-Object* Object::CreateInstance(Type* type, const std::string& instancePath)
+//创建指定ID的未归属对象
+Object* Object::CreateRawInstance(Type* type, const std::string& instancePath)
 {
-    if (!type) return nullptr;
+    if (!type || instancePath.empty()) return nullptr;
 
     ObjectRuntime& runtime = GetObjectRuntime();
-
-    std::string finalPath = instancePath;
-    if (finalPath.empty())
-    {
-        do
-        {
-            finalPath = std::string(type->GetName()) + "_" + std::to_string(runtime.nextObjectIndex++);
-        } while (runtime.objectByPath.find(finalPath) != runtime.objectByPath.end());
-    }
-    else if (runtime.objectByPath.find(finalPath) != runtime.objectByPath.end())
-    {
-        return nullptr;
-    }
+    if (runtime.objectByPath.find(instancePath) != runtime.objectByPath.end()) return nullptr;
 
     Object* object = type->CreateObject();
     if (!object) return nullptr;
 
-    object->SetInstanceId(StringId(finalPath));
+    object->SetInstanceId(StringId(instancePath));
     if (!object->GetInstanceId().IsValid())
     {
         type->DestroyObject(object);
@@ -509,8 +502,68 @@ Object* Object::CreateInstance(Type* type, const std::string& instancePath)
     return object;
 }
 
-//销毁对象
-bool Object::DeleteInstance(Object* object)
+//创建运行时对象并自动归属当前World或孤儿表
+Object* Object::CreateRuntimeInstance(Type* type)
+{
+    if (!type) return nullptr;
+    if (type->Is(Component::StaticType()))
+    {
+        Log::Error("Component must be created by Ens::AddComponent.");
+        return nullptr;
+    }
+
+    World* world = World::CurrentWorld();
+    if (world)
+    {
+        Object* object = CreateRawInstance(type, world->AllocateRuntimeObjectPath());
+        if (!object) return nullptr;
+
+        object->SetWorld(world);
+        object->SetOwnership(Ownership::WorldOwned);
+        if (!world->AddOwnedObject(object))
+        {
+            object->SetWorld(nullptr);
+            object->SetOwnership(Ownership::None);
+            DestroyDetachedInstance(object);
+            return nullptr;
+        }
+
+        return object;
+    }
+
+    ObjectRuntime& runtime = GetObjectRuntime();
+    std::string instancePath;
+    do
+    {
+        instancePath = "orphan://runtime/" + std::to_string(runtime.nextOrphanObjectIndex++);
+    } while (runtime.objectByPath.find(instancePath) != runtime.objectByPath.end());
+
+    Object* object = CreateRawInstance(type, instancePath);
+    if (!object) return nullptr;
+
+    object->SetOwnership(Ownership::OrphanOwned);
+    runtime.orphanObjects.push_back(object);
+    return object;
+}
+
+//创建待注册资源对象
+Object* Object::CreateResourceInstance(Type* type, const std::string& instancePath)
+{
+    if (!type) return nullptr;
+    if (type->Is(Component::StaticType()))
+    {
+        Log::Error("Component cannot be created as a resource object.");
+        return nullptr;
+    }
+
+    Object* object = CreateRawInstance(type, instancePath);
+    if (!object) return nullptr;
+
+    return object;
+}
+
+//销毁已经从所有者摘除的对象
+bool Object::DestroyDetachedInstance(Object* object)
 {
     if (!object) return false;
     if (object->GetWorld()) return false;
@@ -519,12 +572,91 @@ bool Object::DeleteInstance(Object* object)
     runtime.objectByPath.erase(object->GetInstanceId().GetPath());
 
     Type* type = object->GetType();
+    object->SetInstanceId(StringId());
+    object->SetOwnership(Ownership::None);
     type->DestroyObject(object);
     return true;
+}
+
+//销毁对象
+bool Object::DeleteInstance(Object* object)
+{
+    if (!object) return false;
+
+    switch (object->GetOwnership())
+    {
+    case Ownership::WorldOwned:
+        if (object->Is(Component::StaticType()))
+        {
+            Log::Error("Component must be destroyed by Ens::RemoveComponent or World::DestroyEns.");
+            return false;
+        }
+        if (!object->GetWorld())
+        {
+            return false;
+        }
+        if (!object->GetWorld()->RemoveOwnedObject(object))
+        {
+            return false;
+        }
+
+        object->SetWorld(nullptr);
+        object->SetOwnership(Ownership::None);
+        return DestroyDetachedInstance(object);
+
+    case Ownership::OrphanOwned:
+    {
+        ObjectRuntime& runtime = GetObjectRuntime();
+        auto it = std::find(runtime.orphanObjects.begin(), runtime.orphanObjects.end(), object);
+        if (it != runtime.orphanObjects.end())
+        {
+            runtime.orphanObjects.erase(it);
+        }
+
+        object->SetOwnership(Ownership::None);
+        return DestroyDetachedInstance(object);
+    }
+
+    case Ownership::ResourceOwned:
+        Log::Error("Resource object must be released by ResourceManager.");
+        return false;
+
+    case Ownership::None:
+        return DestroyDetachedInstance(object);
+    }
+
+    return false;
+}
+
+//释放所有孤儿对象
+void Object::ReleaseOrphanInstances()
+{
+    ObjectRuntime& runtime = GetObjectRuntime();
+    while (!runtime.orphanObjects.empty())
+    {
+        Object* object = runtime.orphanObjects.back();
+        runtime.orphanObjects.pop_back();
+        if (!object) continue;
+
+        object->SetOwnership(Ownership::None);
+        DestroyDetachedInstance(object);
+    }
 }
 
 //设置所属世界
 void Object::SetWorld(World* world)
 {
     ownerWorld = world;
+}
+
+//设置所有权
+void Object::SetOwnership(Ownership value)
+{
+    ownership = value;
+}
+
+//获取所有权
+Object::Ownership Object::GetOwnership() const
+{
+    return ownership;
 }

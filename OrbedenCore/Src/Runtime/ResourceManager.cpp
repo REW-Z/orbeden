@@ -72,7 +72,7 @@ namespace
     ResourceManager::ResourceRecord* EnsureRegistered(Type* type, const std::string& key)
     {
         std::string normalizedKey = ResourceManager::NormalizeKey(key);
-        if (normalizedKey.empty() || StartsWith(normalizedKey, "world://")) return nullptr;
+        if (normalizedKey.empty() || StartsWith(normalizedKey, "world://") || StartsWith(normalizedKey, "orphan://")) return nullptr;
 
         ResourceManager::ResourceRecord* record = FindRecordMutable(normalizedKey);
         if (!record)
@@ -157,7 +157,11 @@ void ResourceManager::ReleaseZeroRef()
                 continue;
             }
 
-            Object::DeleteInstance(record.object);
+            if (record.object)
+            {
+                record.object->SetOwnership(Object::Ownership::None);
+                Object::DestroyDetachedInstance(record.object);
+            }
             it = records.erase(it);
             removed = true;
         }
@@ -176,7 +180,11 @@ void ResourceManager::Shutdown()
             Log::Warning(("Resource is still referenced during shutdown: " + record.key).c_str());
         }
 
-        Object::DeleteInstance(record.object);
+        if (record.object)
+        {
+            record.object->SetOwnership(Object::Ownership::None);
+            Object::DestroyDetachedInstance(record.object);
+        }
     }
 
     records.clear();
@@ -187,13 +195,33 @@ bool ResourceManager::RegisterObject(const std::string& key, Object* object)
 {
     std::string normalizedKey = NormalizeKey(key);
     if (normalizedKey.empty() || !object) return false;
+    if (StartsWith(normalizedKey, "world://") || StartsWith(normalizedKey, "orphan://")) return false;
+    if (object->GetWorld()) return false;
+    if (object->GetOwnership() == Object::Ownership::WorldOwned || object->GetOwnership() == Object::Ownership::OrphanOwned)
+    {
+        Log::Error(("Cannot register runtime-owned object as resource: " + normalizedKey).c_str());
+        return false;
+    }
+    if (object->GetInstanceId().GetPath() != normalizedKey)
+    {
+        Log::Error(("Resource object id does not match key: " + normalizedKey).c_str());
+        return false;
+    }
 
     auto& records = GetResourceRuntime().records;
     auto it = records.find(normalizedKey);
     if (it != records.end())
     {
-        return it->second.object == object;
+        bool sameObject = it->second.object == object;
+        if (sameObject)
+        {
+            object->SetOwnership(Object::Ownership::ResourceOwned);
+        }
+
+        return sameObject;
     }
+
+    object->SetOwnership(Object::Ownership::ResourceOwned);
 
     ResourceRecord record;
     record.key = normalizedKey;
