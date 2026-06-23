@@ -440,17 +440,6 @@ public sealed class SampleBehaviour : ScriptBehaviour
         }
     }
 
-    template<typename T>
-    T* GetOrCreateWorldObject(World& world, const std::string& id)
-    {
-        Object* found = Object::FindObject(StringId(id));
-        if (found)
-        {
-            return found->Cast<T>();
-        }
-
-        return world.CreateObject<T>(id);
-    }
 }
 
 //判断项目是否使用内置示例 World 生成器
@@ -615,7 +604,11 @@ void ExampleWorldGenerator::ApplyRuntimeEnvironment(Application& app)
     AssignShaderToMeshMaterials(groundMesh, shader);
 
     World& world = app.GetWorld();
-    Skybox* skybox = GetOrCreateWorldObject<Skybox>(world, "world://examples/world/skybox");
+    Skybox* skybox = world.renderSettings.skybox.Get();
+    if (!skybox)
+    {
+        skybox = Object::CreateInstance<Skybox>();
+    }
     if (!skybox) return;
 
     skybox->right.Set(skyTexture);

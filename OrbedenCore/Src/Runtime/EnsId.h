@@ -24,7 +24,7 @@ public:
 //组件基类
 class Component : public Object
 {
-    OBJECT_TYPE_DECLARE(Component)
+    OBJECT_TYPE_DECLARE_BASE(Component)
 
 private:
     friend class World;
@@ -35,9 +35,6 @@ private:
     void SetEnsId(EnsId value);
 
 public:
-    Component() = default;
-    virtual ~Component() = default;
-
     //获取所属Ens
     Ens* GetEns() const;
 

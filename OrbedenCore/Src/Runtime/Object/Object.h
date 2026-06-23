@@ -6,9 +6,11 @@
 #include <type_traits>
 
 class Object;
+class Component;
 class Type;
 class TypeObjectStorage;
 class World;
+class AssetPipelineObjectFactory;
 namespace Reflection
 {
 	struct FieldInfo;
@@ -138,8 +140,37 @@ public:
 };
 
 //声明对象类型
+#define OBJECT_TYPE_DECLARE_ROOT(CLASS) \
+    friend class ReflectionGeneratedAccess; \
+protected: \
+    CLASS() = default; \
+    virtual ~CLASS() = default; \
+public: \
+    static Type type; \
+    static Type* StaticType(); \
+    virtual Type* GetType() const; \
+    static Object* ConstructObject(); \
+    static void DestructObject(Object* object);
+
+//声明可派生对象类型
+#define OBJECT_TYPE_DECLARE_BASE(CLASS) \
+    friend class ReflectionGeneratedAccess; \
+protected: \
+    CLASS() = default; \
+    ~CLASS() override = default; \
+public: \
+    static Type type; \
+    static Type* StaticType(); \
+    virtual Type* GetType() const; \
+    static Object* ConstructObject(); \
+    static void DestructObject(Object* object);
+
+//声明叶子对象类型
 #define OBJECT_TYPE_DECLARE(CLASS) \
     friend class ReflectionGeneratedAccess; \
+private: \
+    CLASS() = default; \
+    ~CLASS() override = default; \
 public: \
     static Type type; \
     static Type* StaticType(); \
@@ -171,21 +202,47 @@ public: \
 //基础对象
 class Object
 {
-    OBJECT_TYPE_DECLARE(Object)
+    OBJECT_TYPE_DECLARE_ROOT(Object)
 
 private:
+    enum class Ownership
+    {
+        None,
+        WorldOwned,
+        OrphanOwned,
+        ResourceOwned,
+    };
+
     StringId instanceId;
     World* ownerWorld = nullptr;
+    Ownership ownership = Ownership::None;
 
     friend class World;
+    friend class ResourceManager;
+    friend class AssetPipelineObjectFactory;
 
     //设置所属世界
     void SetWorld(World* world);
 
-public:
-    Object() = default;
-    virtual ~Object() = default;
+    //设置所有权
+    void SetOwnership(Ownership value);
 
+    //获取所有权
+    Ownership GetOwnership() const;
+
+    //创建指定ID的未归属对象
+    static Object* CreateRawInstance(Type* type, const std::string& instancePath);
+
+    //创建运行时对象并自动归属当前World或孤儿表
+    static Object* CreateRuntimeInstance(Type* type);
+
+    //创建资源对象
+    static Object* CreateResourceInstance(Type* type, const std::string& instancePath);
+
+    //销毁已经从所有者摘除的对象
+    static bool DestroyDetachedInstance(Object* object);
+
+public:
     //获取实例ID
     const StringId& GetInstanceId() const;
 
@@ -232,19 +289,19 @@ public:
     //查找对象
     static Object* FindObject(const StringId& id);
 
-    //创建对象
-    static Object* CreateInstance(Type* type, const std::string& instancePath = "");
-
-    //创建对象
+    //创建运行时对象
     template<typename T>
-    static T* CreateInstance(const std::string& instancePath = "")
+    static T* CreateInstance()
     {
         static_assert(std::is_base_of_v<Object, T>);
-        return static_cast<T*>(CreateInstance(T::StaticType(), instancePath));
+        return static_cast<T*>(CreateRuntimeInstance(T::StaticType()));
     }
 
     //销毁对象
     static bool DeleteInstance(Object* object);
+
+    //释放所有孤儿对象
+    static void ReleaseOrphanInstances();
 };
 
 //对象软引用

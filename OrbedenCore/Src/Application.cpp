@@ -6,6 +6,7 @@
 #include "Log/Log.h"
 #include "Platform/InputManager.h"
 #include "Rendering/RenderSystem.h"
+#include "Runtime/Object/Object.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
@@ -255,6 +256,7 @@ void Application::Quit()
     SetWindow(nullptr);
     world.Clear();
     ResourceManager::Shutdown();
+    Object::ReleaseOrphanInstances();
 
     if (World::CurrentWorld() == &world)
     {

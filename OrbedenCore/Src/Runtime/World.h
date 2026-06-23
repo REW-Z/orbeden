@@ -11,6 +11,7 @@
 class World
 {
     friend class Ens;
+    friend class Object;
 
 private:
     //Ens ID槽位，保存版本和紧凑列表索引
@@ -26,7 +27,7 @@ private:
     List<uint32> freeEnsIds;//等待复用的EnsId槽位
 
     List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
-    List<Object*> ownedObjects;
+	List<Object*> ownedObjects;//world拥有的运行时对象
     List<std::string> sceneResourceRefs;
     uint64 nextEnsIndex = 1;
     uint64 nextRuntimeObjectIndex = 1;
@@ -42,6 +43,15 @@ private:
 
     //遍历所有存活的Ens
     void VisitEns(EnsVisitorFunction visitor, void* userData) const;
+
+    //生成世界运行时对象ID
+    std::string AllocateRuntimeObjectPath();
+
+    //接收世界拥有的运行时对象
+    bool AddOwnedObject(Object* object);
+
+    //摘除世界拥有的运行时对象
+    bool RemoveOwnedObject(Object* object);
 
 public:
     RenderSettings renderSettings;
@@ -95,20 +105,6 @@ public:
 
     //移除组件
     bool RemoveComponent(EnsId ens, Type* type);
-
-    //创建世界内对象
-    Object* CreateObject(Type* type, const std::string& stableId = "");
-
-    //创建世界内对象
-    template<typename T>
-    T* CreateObject(const std::string& stableId = "")
-    {
-        static_assert(std::is_base_of_v<Object, T>);
-        return static_cast<T*>(CreateObject(T::StaticType(), stableId));
-    }
-
-    //销毁世界内对象
-    bool DestroyObject(Object* object);
 
     //增加一个场景资源引用
     bool AddSceneResourceRef(Type* type, const std::string& key);
