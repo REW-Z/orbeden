@@ -46,16 +46,50 @@ ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
     return storage;
 }
 
-//生成世界运行时对象ID
-std::string World::AllocateRuntimeObjectPath()
+//生成Ens对象ID
+std::string World::AllocateEnsObjectPath()
 {
     std::string instancePath;
     do
     {
-        instancePath = "world://runtime/" + std::to_string(nextRuntimeObjectIndex++);
+        instancePath = "world://ens/" + Object::GenerateUuidText();
     } while (Object::FindObject(StringId(instancePath)));
 
     return instancePath;
+}
+
+//生成未命名Ens的名称
+std::string World::ResolveEnsName(const std::string& name) const
+{
+    if (!name.empty()) return name;
+
+    auto nameExists = [this](const std::string& value)
+        {
+            for (Ens* ens : liveEns)
+            {
+                if (ens && ens->alive && ens->name == value) return true;
+            }
+
+            return false;
+        };
+
+    constexpr const char* baseName = "Unnamed";
+    if (!nameExists(baseName)) return baseName;
+
+    uint32 index = 1;
+    std::string resolvedName;
+    do
+    {
+        resolvedName = std::string(baseName) + "(" + std::to_string(index++) + ")";
+    } while (nameExists(resolvedName));
+
+    return resolvedName;
+}
+
+//生成世界运行时对象ID
+std::string World::AllocateRuntimeObjectPath(Type* type)
+{
+    return Object::CreateRuntimeInstancePath("world://runtime", type);
 }
 
 //接收世界拥有的运行时对象
@@ -136,20 +170,12 @@ void World::Clear()
     freeEnsIds.clear();
     componentStorages.clear();
     renderSettings = RenderSettings();
-    nextEnsIndex = 1;
-    nextRuntimeObjectIndex = 1;
 }
 
 //创建Ens
 Ens* World::CreateEns(const std::string& name)
 {
-    std::string instancePath;
-    do
-    {
-        instancePath = "world://ens/" + std::to_string(nextEnsIndex++);
-    } while (Object::FindObject(StringId(instancePath)));
-
-    return CreateEnsInternal(name, instancePath);
+    return CreateEnsInternal(ResolveEnsName(name), AllocateEnsObjectPath());
 }
 
 //使用稳定ID创建Ens
@@ -158,7 +184,7 @@ Ens* World::CreateEnsWithStableId(const std::string& stableId, const std::string
     if (stableId.empty()) return CreateEns(name);
     if (Object::FindObject(StringId(stableId))) return nullptr;
 
-    return CreateEnsInternal(name, stableId);
+    return CreateEnsInternal(ResolveEnsName(name), stableId);
 }
 
 //使用指定稳定ID创建Ens

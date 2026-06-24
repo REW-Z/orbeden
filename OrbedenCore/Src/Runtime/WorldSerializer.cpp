@@ -538,7 +538,7 @@ namespace
         //先创建 Ens，再通过嵌套结构恢复父子关系
         const std::string& stableId = GetAttribute(startToken, "stableId");
         const std::string& name = GetAttribute(startToken, "name");
-        Ens* ens = stableId.empty() ? world.CreateEns(name.empty() ? "Ens" : name) : world.CreateEnsWithStableId(stableId, name.empty() ? "Ens" : name);
+        Ens* ens = stableId.empty() ? world.CreateEns(name) : world.CreateEnsWithStableId(stableId, name);
         if (!ens)
         {
             LogSerializerError("World XML failed to create Ens.");

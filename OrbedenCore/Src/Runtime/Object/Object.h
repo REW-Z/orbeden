@@ -233,6 +233,12 @@ private:
     //创建指定ID的未归属对象
     static Object* CreateRawInstance(Type* type, const std::string& instancePath);
 
+    //生成UUID文本
+    static std::string GenerateUuidText();
+
+    //生成运行时对象ID
+    static std::string CreateRuntimeInstancePath(const std::string& prefix, Type* type);
+
     //创建运行时对象并自动归属当前World或孤儿表
     static Object* CreateRuntimeInstance(Type* type);
 
