@@ -7,7 +7,11 @@
 #include "Runtime/World.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <iomanip>
+#include <random>
+#include <sstream>
 #include <unordered_map>
 
 namespace
@@ -21,7 +25,6 @@ namespace
         std::unordered_map<std::string, Type*> typeByName;
         std::unordered_map<std::string, Object*> objectByPath;
         List<Object*> orphanObjects;
-        uint64 nextOrphanObjectIndex = 1;
     };
 
     //获取对象运行时注册表
@@ -29,6 +32,15 @@ namespace
     {
         static ObjectRuntime runtime;
         return runtime;
+    }
+
+    //生成随机64位值
+    uint64 GenerateRandom64()
+    {
+        static std::random_device seed;
+        static std::mt19937_64 random(seed());
+        static std::uniform_int_distribution<uint64> distribution;
+        return distribution(random);
     }
 }
 
@@ -502,6 +514,51 @@ Object* Object::CreateRawInstance(Type* type, const std::string& instancePath)
     return object;
 }
 
+//生成UUID文本
+std::string Object::GenerateUuidText()
+{
+    std::array<uint8, 16> bytes{};
+    for (usize offset = 0; offset < bytes.size(); offset += 8)
+    {
+        uint64 value = GenerateRandom64();
+        for (usize index = 0; index < 8; ++index)
+        {
+            bytes[offset + index] = static_cast<uint8>((value >> ((7 - index) * 8)) & 0xff);
+        }
+    }
+
+    bytes[6] = static_cast<uint8>((bytes[6] & 0x0f) | 0x40);
+    bytes[8] = static_cast<uint8>((bytes[8] & 0x3f) | 0x80);
+
+    std::ostringstream stream;
+    stream << std::hex << std::setfill('0');
+    for (usize index = 0; index < bytes.size(); ++index)
+    {
+        if (index == 4 || index == 6 || index == 8 || index == 10)
+        {
+            stream << '-';
+        }
+
+        stream << std::setw(2) << static_cast<uint32>(bytes[index]);
+    }
+
+    return stream.str();
+}
+
+//生成运行时对象ID
+std::string Object::CreateRuntimeInstancePath(const std::string& prefix, Type* type)
+{
+    if (prefix.empty() || !type) return std::string();
+
+    std::string instancePath;
+    do
+    {
+        instancePath = prefix + "/" + type->GetName() + "/" + GenerateUuidText();
+    } while (Object::FindObject(StringId(instancePath)));
+
+    return instancePath;
+}
+
 //创建运行时对象并自动归属当前World或孤儿表
 Object* Object::CreateRuntimeInstance(Type* type)
 {
@@ -515,7 +572,7 @@ Object* Object::CreateRuntimeInstance(Type* type)
     World* world = World::CurrentWorld();
     if (world)
     {
-        Object* object = CreateRawInstance(type, world->AllocateRuntimeObjectPath());
+        Object* object = CreateRawInstance(type, world->AllocateRuntimeObjectPath(type));
         if (!object) return nullptr;
 
         object->SetWorld(world);
@@ -531,18 +588,12 @@ Object* Object::CreateRuntimeInstance(Type* type)
         return object;
     }
 
-    ObjectRuntime& runtime = GetObjectRuntime();
-    std::string instancePath;
-    do
-    {
-        instancePath = "orphan://runtime/" + std::to_string(runtime.nextOrphanObjectIndex++);
-    } while (runtime.objectByPath.find(instancePath) != runtime.objectByPath.end());
-
+    std::string instancePath = CreateRuntimeInstancePath("orphan://runtime", type);
     Object* object = CreateRawInstance(type, instancePath);
     if (!object) return nullptr;
 
     object->SetOwnership(Ownership::OrphanOwned);
-    runtime.orphanObjects.push_back(object);
+    GetObjectRuntime().orphanObjects.push_back(object);
     return object;
 }
 

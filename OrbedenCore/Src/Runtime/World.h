@@ -28,9 +28,7 @@ private:
 
     List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
 	List<Object*> ownedObjects;//world拥有的运行时对象
-    List<std::string> sceneResourceRefs;
-    uint64 nextEnsIndex = 1;
-    uint64 nextRuntimeObjectIndex = 1;
+    List<std::string> sceneResourceRefs;//world持有的外部资源引用
 
     //使用指定稳定ID创建Ens
     Ens* CreateEnsInternal(const std::string& name, const std::string& stableId);
@@ -44,8 +42,14 @@ private:
     //遍历所有存活的Ens
     void VisitEns(EnsVisitorFunction visitor, void* userData) const;
 
+    //生成Ens对象ID
+    std::string AllocateEnsObjectPath();
+
+    //生成未命名Ens的名称
+    std::string ResolveEnsName(const std::string& name) const;
+
     //生成世界运行时对象ID
-    std::string AllocateRuntimeObjectPath();
+    std::string AllocateRuntimeObjectPath(Type* type);
 
     //接收世界拥有的运行时对象
     bool AddOwnedObject(Object* object);
@@ -68,10 +72,10 @@ public:
     static void SetCurrentWorld(World* world);
 
     //创建Ens
-    Ens* CreateEns(const std::string& name = "Ens");
+    Ens* CreateEns(const std::string& name = "");
 
     //使用稳定ID创建Ens
-    Ens* CreateEnsWithStableId(const std::string& stableId, const std::string& name = "Ens");
+    Ens* CreateEnsWithStableId(const std::string& stableId, const std::string& name = "");
 
     //清空世界运行时对象
     void Clear();
