@@ -9,6 +9,18 @@ ComponentStorage::ComponentStorage(World* world, Type* type)
     assert(ownerWorld);
     assert(componentType);
     assert(componentType->Is(Component::StaticType()));
+    componentChunk = componentType->CreateWorldObjectChunk();
+    assert(componentChunk);
+}
+
+//释放当前组件稀疏集
+ComponentStorage::~ComponentStorage()
+{
+    assert(componentCount == 0);
+    if (componentType)
+    {
+        componentType->DestroyWorldObjectChunk(componentChunk);
+    }
 }
 
 //获取组件类型
@@ -17,13 +29,10 @@ Type* ComponentStorage::GetType() const
     return componentType;
 }
 
-//登记Ens拥有的组件
-bool ComponentStorage::Add(EnsId owner, Component* component)
+//创建Ens拥有的组件
+Component* ComponentStorage::Create(EnsId owner, const std::string& instancePath)
 {
-    if (owner.IsNull() || !component) return false;
-    if (component->GetType() != componentType) return false;
-    if (component->GetWorld() != ownerWorld) return false;
-    if (component->GetEnsId() != owner) return false;
+    if (owner.IsNull() || instancePath.empty()) return nullptr;
 
     if (owner.id >= sparseSlots.size())
     {
@@ -31,13 +40,27 @@ bool ComponentStorage::Add(EnsId owner, Component* component)
     }
 
     SparseSlot& slot = sparseSlots[owner.id];
-    if (slot.denseIndex != EnsId::InvalidId) return false;
+    if (slot.component) return nullptr;
 
-    slot.denseIndex = static_cast<uint32>(components.size());
+    Object* object = Object::CreateRawInstance(componentType, instancePath, componentChunk);
+    Component* component = object ? object->Cast<Component>() : nullptr;
+    if (!component)
+    {
+        if (object)
+        {
+            Object::DestroyDetachedInstance(object);
+        }
+
+        return nullptr;
+    }
+
+    component->SetWorld(ownerWorld);
+    component->SetOwnership(Object::Ownership::WorldOwned);
+    component->SetEnsId(owner);
+    slot.component = component;
     slot.ensVersion = owner.version;
-    owners.push_back(owner);
-    components.push_back(component);
-    return true;
+    componentCount++;
+    return component;
 }
 
 //查找Ens拥有的组件
@@ -46,12 +69,10 @@ Component* ComponentStorage::Get(EnsId owner) const
     if (owner.IsNull() || owner.id >= sparseSlots.size()) return nullptr;
 
     const SparseSlot& slot = sparseSlots[owner.id];
-    if (slot.denseIndex == EnsId::InvalidId) return nullptr;
+    if (!slot.component) return nullptr;
     if (slot.ensVersion != owner.version) return nullptr;
-    if (slot.denseIndex >= components.size()) return nullptr;
-    if (owners[slot.denseIndex] != owner) return nullptr;
 
-    return components[slot.denseIndex];
+    return slot.component;
 }
 
 //移除并返回Ens拥有的组件
@@ -61,28 +82,37 @@ Component* ComponentStorage::Remove(EnsId owner)
     if (!component) return nullptr;
 
     SparseSlot& slot = sparseSlots[owner.id];
-    uint32 removeIndex = slot.denseIndex;
-    uint32 lastIndex = static_cast<uint32>(components.size() - 1);
-
-    //用末尾元素填补空位并修正其稀疏索引
-    if (removeIndex != lastIndex)
-    {
-        EnsId movedOwner = owners[lastIndex];
-        owners[removeIndex] = movedOwner;
-        components[removeIndex] = components[lastIndex];
-        sparseSlots[movedOwner.id].denseIndex = removeIndex;
-    }
-
-    owners.pop_back();
-    components.pop_back();
-    slot.denseIndex = EnsId::InvalidId;
+    slot.component = nullptr;
     slot.ensVersion = 0;
+    assert(componentCount > 0);
+    componentCount--;
     return component;
 }
 
 //获取存活组件数量
 uint32 ComponentStorage::GetCount() const
 {
-    assert(owners.size() == components.size());
-    return static_cast<uint32>(components.size());
+    return componentCount;
+}
+
+//遍历当前Chunk中的组件
+void ComponentStorage::VisitComponents(ComponentVisitorFunction visitor, void* userData) const
+{
+    if (!visitor) return;
+
+    struct VisitorContext
+    {
+        ComponentVisitorFunction callback = nullptr;
+        void* data = nullptr;
+    };
+
+    VisitorContext context{ visitor, userData };
+    componentType->VisitChunkObjects(componentChunk, [](Object* object, void* contextData)
+    {
+        VisitorContext* visitorContext = static_cast<VisitorContext*>(contextData);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (!component) return;
+
+        visitorContext->callback(component, visitorContext->data);
+    }, &context);
 }

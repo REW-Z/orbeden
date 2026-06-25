@@ -16,7 +16,7 @@
 
 namespace
 {
-	constexpr uint32 TypeObjectChunkSlotCount = 64;//每个TypeObjectChunk的槽位数量
+	constexpr uint32 ObjectChunkSlotCount = 64;//每个对象Chunk的槽位数量
 
     struct ObjectRuntime
     {
@@ -44,14 +44,28 @@ namespace
     }
 }
 
-//某个Type的一段连续对象存储
-class TypeObjectChunk
+//对象Chunk接口
+class IChunk
+{
+public:
+    virtual void* Allocate(uint32 objectSize, uint32 objectAlignment) = 0;
+    virtual bool Deallocate(std::byte* address) = 0;
+    virtual uint32 GetAliveObjectCount() const = 0;
+    virtual void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const = 0;
+    virtual void DestroyChunk() = 0;
+
+protected:
+    ~IChunk() = default;
+};
+
+//一段连续对象槽位
+class ObjectChunkBlock
 {
 public:
     ChunkSlotAllocator allocator;
-    TypeObjectChunk* next = nullptr;
+    ObjectChunkBlock* next = nullptr;
 
-    TypeObjectChunk(uint32 size, uint32 count, uint32 alignment)
+    ObjectChunkBlock(uint32 size, uint32 count, uint32 alignment)
         : allocator(size, count, alignment)
     {
     }
@@ -63,28 +77,37 @@ public:
     }
 };
 
-//某个Type的所有连续对象Chunk
-class TypeObjectStorage
+//基于连续槽位块的对象Chunk
+class ObjectChunkBase : public IChunk
 {
 private:
-    TypeObjectChunk* headChunk = nullptr;
-    TypeObjectChunk* tailChunk = nullptr;
+    ObjectChunkBlock* headChunk = nullptr;
+    ObjectChunkBlock* tailChunk = nullptr;
     uint32 aliveObjectCount = 0;
+    uint32 objectSize = 0;
+    uint32 objectAlignment = 0;
 
 public:
-    TypeObjectStorage() = default;
-    TypeObjectStorage(const TypeObjectStorage&) = delete;
-    TypeObjectStorage& operator=(const TypeObjectStorage&) = delete;
+    ObjectChunkBase(uint32 size, uint32 alignment)
+        : objectSize(size), objectAlignment(alignment)
+    {
+    }
 
-    ~TypeObjectStorage()
+    ObjectChunkBase(const ObjectChunkBase&) = delete;
+    ObjectChunkBase& operator=(const ObjectChunkBase&) = delete;
+
+    ~ObjectChunkBase()
     {
         Release();
     }
 
     //分配一个同类型对象槽位
-    void* Allocate(uint32 objectSize, uint32 objectAlignment)
+    void* Allocate(uint32 size, uint32 alignment) override
     {
-        TypeObjectChunk* chunk = headChunk;
+        assert(size == objectSize);
+        assert(alignment == objectAlignment);
+
+        ObjectChunkBlock* chunk = headChunk;
         while (chunk)
         {
             if (chunk->HasFreeSlot())
@@ -101,7 +124,7 @@ public:
         }
 
 		//没有空槽位，创建新的Chunk
-        TypeObjectChunk* newChunk = NEW(TypeObjectChunk)TypeObjectChunk(objectSize, TypeObjectChunkSlotCount, objectAlignment);
+        ObjectChunkBlock* newChunk = NEW(ObjectChunkBlock)ObjectChunkBlock(objectSize, ObjectChunkSlotCount, objectAlignment);
         if (tailChunk)
         {
             tailChunk->next = newChunk;
@@ -119,11 +142,11 @@ public:
     }
 
     //释放一个同类型对象槽位
-    bool Deallocate(std::byte* address)
+    bool Deallocate(std::byte* address) override
     {
         if (!address) return false;
 
-        TypeObjectChunk* chunk = headChunk;
+        ObjectChunkBlock* chunk = headChunk;
         while (chunk)
         {
             if (chunk->allocator.Contains(address))
@@ -143,10 +166,10 @@ public:
     //释放所有对象Chunk
     void Release()
     {
-        TypeObjectChunk* chunk = headChunk;
+        ObjectChunkBlock* chunk = headChunk;
         while (chunk)
         {
-            TypeObjectChunk* next = chunk->next;
+            ObjectChunkBlock* next = chunk->next;
             DELETE(chunk);
             chunk = next;
         }
@@ -157,13 +180,13 @@ public:
     }
 
     //获取存活对象数量
-    uint32 GetAliveObjectCount() const
+    uint32 GetAliveObjectCount() const override
     {
         return aliveObjectCount;
     }
 
     //按Chunk和槽位顺序遍历存活对象
-    void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
+    void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const override
     {
         if (!visitor) return;
 
@@ -174,7 +197,7 @@ public:
         };
 
         VisitorContext context{ visitor, userData };
-        TypeObjectChunk* chunk = headChunk;
+        ObjectChunkBlock* chunk = headChunk;
         while (chunk)
         {
             chunk->allocator.VisitAliveSlots([](void* address, void* contextData)
@@ -185,6 +208,38 @@ public:
 
             chunk = chunk->next;
         }
+    }
+};
+
+//通用对象Chunk
+class CommonObjectChunk : public ObjectChunkBase
+{
+public:
+    CommonObjectChunk(uint32 size, uint32 alignment)
+        : ObjectChunkBase(size, alignment)
+    {
+    }
+
+    void DestroyChunk() override
+    {
+        CommonObjectChunk* self = this;
+        DELETE(self);
+    }
+};
+
+//World拥有的对象Chunk
+class WorldOwnObjectChunk : public ObjectChunkBase
+{
+public:
+    WorldOwnObjectChunk(uint32 size, uint32 alignment)
+        : ObjectChunkBase(size, alignment)
+    {
+    }
+
+    void DestroyChunk() override
+    {
+        WorldOwnObjectChunk* self = this;
+        DELETE(self);
     }
 };
 
@@ -336,10 +391,57 @@ const Reflection::MethodInfo* Type::GetMethod(const std::string& methodName) con
     return Reflection::FindMethod(const_cast<Type*>(this), methodName);
 }
 
-//创建对象实例
-Object* Type::CreateObject()
+//获取或创建通用对象Chunk
+IChunk* Type::GetOrCreateCommonChunk()
 {
-    return constructor ? constructor() : nullptr;
+    if (!commonChunk)
+    {
+        commonChunk = NEW(CommonObjectChunk)CommonObjectChunk(objectSize, objectAlignment);
+    }
+
+    return commonChunk;
+}
+
+//创建World拥有的对象Chunk
+IChunk* Type::CreateWorldObjectChunk()
+{
+    IChunk* chunk = NEW(WorldOwnObjectChunk)WorldOwnObjectChunk(objectSize, objectAlignment);
+    worldChunks.push_back(chunk);
+    return chunk;
+}
+
+//销毁World拥有的对象Chunk
+void Type::DestroyWorldObjectChunk(IChunk*& chunk)
+{
+    if (!chunk) return;
+
+    assert(chunk->GetAliveObjectCount() == 0);
+    worldChunks.erase(std::remove(worldChunks.begin(), worldChunks.end(), chunk), worldChunks.end());
+    chunk->DestroyChunk();
+    chunk = nullptr;
+}
+
+//访问指定Chunk中的存活对象
+void Type::VisitChunkObjects(IChunk* chunk, ObjectVisitorFunction visitor, void* userData) const
+{
+    if (!chunk) return;
+
+    chunk->VisitLiveObjects(visitor, userData);
+}
+
+//创建对象实例
+Object* Type::CreateObject(IChunk* chunk)
+{
+    if (!constructor) return nullptr;
+
+    IChunk* allocationChunk = chunk ? chunk : GetOrCreateCommonChunk();
+    Object* object = constructor(allocationChunk);
+    if (object)
+    {
+        object->allocationChunk = allocationChunk;
+    }
+
+    return object;
 }
 
 //销毁对象实例
@@ -348,33 +450,32 @@ void Type::DestroyObject(Object* object)
     if (!object || !destructor) return;
     if (object->GetWorld()) return;
 
+    IChunk* allocationChunk = object->allocationChunk;
+    std::byte* address = reinterpret_cast<std::byte*>(object);
     destructor(object);
+    DeallocateMemory(allocationChunk, address);
 }
 
 //分配对象内存
-void* Type::AllocateMemory()
+void* Type::AllocateMemory(IChunk* chunk)
 {
-    if (!objectStorage)
-    {
-        objectStorage = NEW(TypeObjectStorage)TypeObjectStorage();
-    }
-
-    void* memory = objectStorage->Allocate(objectSize, objectAlignment);
+    IChunk* allocationChunk = chunk ? chunk : GetOrCreateCommonChunk();
+    void* memory = allocationChunk->Allocate(objectSize, objectAlignment);
     assert(memory);
     return memory;
 }
 
 //释放对象内存
-void Type::DeallocateMemory(std::byte* address)
+void Type::DeallocateMemory(IChunk* chunk, std::byte* address)
 {
     if (!address) return;
-    assert(objectStorage);
-    if (!objectStorage) return;
+    assert(chunk);
+    if (!chunk) return;
 
-    bool deallocated = objectStorage->Deallocate(address);
+    bool deallocated = chunk->Deallocate(address);
     assert(deallocated);
 
-    if (deallocated && objectStorage->GetAliveObjectCount() == 0)
+    if (deallocated && chunk == commonChunk && commonChunk->GetAliveObjectCount() == 0)
     {
         ReleaseStorage();
     }
@@ -383,20 +484,28 @@ void Type::DeallocateMemory(std::byte* address)
 //释放当前类型对象存储
 void Type::ReleaseStorage()
 {
-    if (objectStorage)
+    if (commonChunk)
     {
-        assert(objectStorage->GetAliveObjectCount() == 0);
+        assert(commonChunk->GetAliveObjectCount() == 0);
+        commonChunk->DestroyChunk();
+        commonChunk = nullptr;
     }
-
-    DELETE(objectStorage);
 }
 
 //访问当前类型的所有存活对象
 void Type::VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
 {
-    if (!objectStorage) return;
+    if (commonChunk)
+    {
+        commonChunk->VisitLiveObjects(visitor, userData);
+    }
 
-    objectStorage->VisitLiveObjects(visitor, userData);
+    for (IChunk* chunk : worldChunks)
+    {
+        if (!chunk) continue;
+
+        chunk->VisitLiveObjects(visitor, userData);
+    }
 }
 
 OBJECT_TYPE_IMPLEMENT_ROOT(Object)
@@ -493,14 +602,14 @@ Object* Object::FindObject(const StringId& id)
 }
 
 //创建指定ID的未归属对象
-Object* Object::CreateRawInstance(Type* type, const std::string& instancePath)
+Object* Object::CreateRawInstance(Type* type, const std::string& instancePath, IChunk* chunk)
 {
     if (!type || instancePath.empty()) return nullptr;
 
     ObjectRuntime& runtime = GetObjectRuntime();
     if (runtime.objectByPath.find(instancePath) != runtime.objectByPath.end()) return nullptr;
 
-    Object* object = type->CreateObject();
+    Object* object = type->CreateObject(chunk);
     if (!object) return nullptr;
 
     object->SetInstanceId(StringId(instancePath));

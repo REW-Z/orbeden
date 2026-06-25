@@ -28,6 +28,7 @@ class Component : public Object
 
 private:
     friend class World;
+    friend class ComponentStorage;
 
     EnsId owner;
 

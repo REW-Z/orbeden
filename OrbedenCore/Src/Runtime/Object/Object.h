@@ -8,16 +8,17 @@
 class Object;
 class Component;
 class Type;
-class TypeObjectStorage;
+class IChunk;
 class World;
 class AssetPipelineObjectFactory;
+class ComponentStorage;
 namespace Reflection
 {
 	struct FieldInfo;
 	struct MethodInfo;
 }
 typedef uint32 TypeId;
-typedef Object* (*ObjectConstructorFunction)();
+typedef Object* (*ObjectConstructorFunction)(IChunk* chunk);
 typedef void (*ObjectDestructorFunction)(Object* object);
 typedef void (*ObjectVisitorFunction)(Object* object, void* userData);
 
@@ -53,6 +54,7 @@ public:
 class Type
 {
     friend class Object;
+    friend class ComponentStorage;
 
 private:
     TypeId id = 0;//运行时临时ID（依赖静态初始化顺序）
@@ -63,10 +65,23 @@ private:
     uint32 objectAlignment = 0;
     ObjectConstructorFunction constructor = nullptr;
     ObjectDestructorFunction destructor = nullptr;
-    TypeObjectStorage* objectStorage = nullptr;
+    IChunk* commonChunk = nullptr;
+    List<IChunk*> worldChunks;
 
     //访问当前类型的所有存活对象
     void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const;
+
+    //获取或创建通用对象Chunk
+    IChunk* GetOrCreateCommonChunk();
+
+    //创建World拥有的对象Chunk
+    IChunk* CreateWorldObjectChunk();
+
+    //销毁World拥有的对象Chunk
+    void DestroyWorldObjectChunk(IChunk*& chunk);
+
+    //访问指定Chunk中的存活对象
+    void VisitChunkObjects(IChunk* chunk, ObjectVisitorFunction visitor, void* userData) const;
 
 public:
     Type(const char* typeName, Type* base, uint32 size, uint32 alignment, ObjectConstructorFunction ctor, ObjectDestructorFunction dtor);
@@ -107,16 +122,16 @@ public:
     const Reflection::MethodInfo* GetMethod(const std::string& methodName) const;
 
     //创建对象实例
-    Object* CreateObject();
+    Object* CreateObject(IChunk* chunk = nullptr);
 
     //销毁对象实例
     void DestroyObject(Object* object);
 
     //分配对象内存
-    void* AllocateMemory();
+    void* AllocateMemory(IChunk* chunk);
 
     //释放对象内存
-    void DeallocateMemory(std::byte* address);
+    void DeallocateMemory(IChunk* chunk, std::byte* address);
 
     //释放当前类型对象存储
     void ReleaseStorage();
@@ -149,7 +164,7 @@ public: \
     static Type type; \
     static Type* StaticType(); \
     virtual Type* GetType() const; \
-    static Object* ConstructObject(); \
+    static Object* ConstructObject(IChunk* chunk); \
     static void DestructObject(Object* object);
 
 //声明可派生对象类型
@@ -162,7 +177,7 @@ public: \
     static Type type; \
     static Type* StaticType(); \
     virtual Type* GetType() const; \
-    static Object* ConstructObject(); \
+    static Object* ConstructObject(IChunk* chunk); \
     static void DestructObject(Object* object);
 
 //声明叶子对象类型
@@ -175,7 +190,7 @@ public: \
     static Type type; \
     static Type* StaticType(); \
     virtual Type* GetType() const; \
-    static Object* ConstructObject(); \
+    static Object* ConstructObject(IChunk* chunk); \
     static void DestructObject(Object* object);
 
 //实现根对象类型
@@ -183,16 +198,16 @@ public: \
     Type CLASS::type(#CLASS, nullptr, sizeof(CLASS), alignof(CLASS), CLASS::ConstructObject, CLASS::DestructObject); \
     Type* CLASS::StaticType() { return &CLASS::type; } \
     Type* CLASS::GetType() const { return &CLASS::type; } \
-    Object* CLASS::ConstructObject() { return new (CLASS::type.AllocateMemory()) CLASS(); } \
-    void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); CLASS::type.DeallocateMemory(reinterpret_cast<std::byte*>(instance)); }
+    Object* CLASS::ConstructObject(IChunk* chunk) { return new (CLASS::type.AllocateMemory(chunk)) CLASS(); } \
+    void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); }
 
 //实现派生对象类型
 #define OBJECT_TYPE_IMPLEMENT(CLASS, BASE) \
     Type CLASS::type(#CLASS, BASE::StaticType(), sizeof(CLASS), alignof(CLASS), CLASS::ConstructObject, CLASS::DestructObject); \
     Type* CLASS::StaticType() { return &CLASS::type; } \
     Type* CLASS::GetType() const { return &CLASS::type; } \
-    Object* CLASS::ConstructObject() { return new (CLASS::type.AllocateMemory()) CLASS(); } \
-    void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); CLASS::type.DeallocateMemory(reinterpret_cast<std::byte*>(instance)); }
+    Object* CLASS::ConstructObject(IChunk* chunk) { return new (CLASS::type.AllocateMemory(chunk)) CLASS(); } \
+    void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); }
 
 //对象类型宏  
 #define is_type(CLASS) ->Is(CLASS::StaticType())
@@ -216,10 +231,13 @@ private:
     StringId instanceId;
     World* ownerWorld = nullptr;
     Ownership ownership = Ownership::None;
+    IChunk* allocationChunk = nullptr;
 
     friend class World;
     friend class ResourceManager;
     friend class AssetPipelineObjectFactory;
+    friend class ComponentStorage;
+    friend class Type;
 
     //设置所属世界
     void SetWorld(World* world);
@@ -231,7 +249,7 @@ private:
     Ownership GetOwnership() const;
 
     //创建指定ID的未归属对象
-    static Object* CreateRawInstance(Type* type, const std::string& instancePath);
+    static Object* CreateRawInstance(Type* type, const std::string& instancePath, IChunk* chunk = nullptr);
 
     //生成UUID文本
     static std::string GenerateUuidText();

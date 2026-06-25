@@ -2,6 +2,8 @@
 
 #include "Runtime/EnsId.h"
 
+typedef void (*ComponentVisitorFunction)(Component* component, void* userData);
+
 //单个Component类型在一个World中的稀疏集索引
 class ComponentStorage
 {
@@ -9,26 +11,30 @@ private:
     //EnsId槽位到紧凑数组位置的映射
     struct SparseSlot
     {
-        uint32 denseIndex = EnsId::InvalidId;
+        Component* component = nullptr;
         uint32 ensVersion = 0;
     };
 
     World* ownerWorld = nullptr;
     Type* componentType = nullptr;
+    IChunk* componentChunk = nullptr;
     List<SparseSlot> sparseSlots;
-    List<EnsId> owners;
-    List<Component*> components;
+    uint32 componentCount = 0;
+
+    //遍历当前Chunk中的组件
+    void VisitComponents(ComponentVisitorFunction visitor, void* userData) const;
 
 public:
     ComponentStorage(World* world, Type* type);
     ComponentStorage(const ComponentStorage&) = delete;
     ComponentStorage& operator=(const ComponentStorage&) = delete;
+    ~ComponentStorage();
 
     //获取组件类型
     Type* GetType() const;
 
-    //登记Ens拥有的组件
-    bool Add(EnsId owner, Component* component);
+    //创建Ens拥有的组件
+    Component* Create(EnsId owner, const std::string& instancePath);
 
     //查找Ens拥有的组件
     Component* Get(EnsId owner) const;
@@ -43,9 +49,16 @@ public:
     template<typename TVisitor>
     void ForEach(TVisitor&& visitor) const
     {
-        for (Component* component : components)
+        struct VisitorContext
         {
-            visitor(component);
-        }
+            TVisitor& callback;
+        };
+
+        VisitorContext context{ visitor };
+        VisitComponents([](Component* component, void* userData)
+        {
+            VisitorContext* visitorContext = static_cast<VisitorContext*>(userData);
+            visitorContext->callback(component);
+        }, &context);
     }
 };
