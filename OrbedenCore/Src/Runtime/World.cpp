@@ -218,37 +218,11 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     slot->denseIndex = static_cast<uint32>(liveEns.size());
     liveEns.push_back(storedEns);
 
-    Object* object = Object::CreateRawInstance(SpaceComponent::StaticType(), stableId);
-    SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
+    ComponentStorage* spaceStorage = GetOrCreateComponentStorage(SpaceComponent::StaticType());
+    Component* spaceComponent = spaceStorage ? spaceStorage->Create(value, stableId) : nullptr;
+    SpaceComponent* space = spaceComponent ? spaceComponent->Cast<SpaceComponent>() : nullptr;
     if (!space)
     {
-        storedEns->alive = false;
-        liveEns.pop_back();
-        slot->value = nullptr;
-        slot->denseIndex = EnsId::InvalidId;
-        storedEns->~Ens();
-        Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
-        freeEnsIds.push_back(value.id);
-        if (object)
-        {
-            Object::DestroyDetachedInstance(object);
-        }
-        return nullptr;
-    }
-
-    space->SetWorld(this);
-    space->SetOwnership(Object::Ownership::WorldOwned);
-    space->SetEnsId(value);
-
-    ComponentStorage* spaceStorage = GetOrCreateComponentStorage(SpaceComponent::StaticType());
-    bool spaceAdded = spaceStorage && spaceStorage->Add(value, space);
-    assert(spaceAdded);
-    if (!spaceAdded)
-    {
-        space->SetEnsId(EnsId());
-        space->SetWorld(nullptr);
-        space->SetOwnership(Object::Ownership::None);
-        Object::DestroyDetachedInstance(space);
         storedEns->alive = false;
         liveEns.pop_back();
         slot->value = nullptr;
@@ -437,38 +411,16 @@ Component* World::AddComponent(EnsId ens, Type* type)
 
     Component* oldComponent = GetComponent(ens, type);
     if (oldComponent) return oldComponent;
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns) return nullptr;
 
     //创建并注册组件
     std::string instancePath = space->GetInstanceId().GetPath() + "/" + type->GetName();
-    Object* object = Object::CreateRawInstance(type, instancePath);
-    Component* component = object ? object->Cast<Component>() : nullptr;
-    if (!component)
-    {
-        if (object)
-        {
-            Object::DestroyDetachedInstance(object);
-        }
-        return nullptr;
-    }
-
-    component->SetWorld(this);
-    component->SetOwnership(Object::Ownership::WorldOwned);
-    component->SetEnsId(ens);
-
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
-    bool added = storage && storage->Add(ens, component);
-    assert(added);
-    if (!added)
-    {
-        component->SetEnsId(EnsId());
-        component->SetWorld(nullptr);
-        component->SetOwnership(Object::Ownership::None);
-        Object::DestroyDetachedInstance(component);
-        return nullptr;
-    }
+    Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
+    if (!component) return nullptr;
 
-    Ens* storedEns = GetEns(ens);
-    if (storedEns) storedEns->AddComponentType(type);
+    storedEns->AddComponentType(type);
     component->OnAttach();
     return component;
 }
