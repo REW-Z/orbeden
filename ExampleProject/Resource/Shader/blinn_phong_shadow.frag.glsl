@@ -7,7 +7,6 @@ in vec4 v_LightSpacePosition;
 
 uniform vec3 u_CameraPosition;
 uniform vec3 u_AmbientColor;
-uniform vec3 u_MaterialAmbient;
 uniform vec3 u_DiffuseColor;
 uniform vec3 u_SpecularColor;
 uniform float u_Shininess;
@@ -61,7 +60,7 @@ void main()
     float specularTerm = pow(max(dot(normal, halfDir), 0.0), specularPower);
     float shadow = SampleShadow();
 
-    vec3 ambient = (u_AmbientColor + u_MaterialAmbient) * albedo;
+    vec3 ambient = u_AmbientColor * albedo;
     vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor) * u_LightColor * u_LightIntensity;
     vec3 color = ambient + direct * (1.0 - shadow);
     FragColor = vec4(color, 1.0);

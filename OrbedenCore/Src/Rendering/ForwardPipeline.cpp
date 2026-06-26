@@ -4,7 +4,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 
 #include <algorithm>
 
@@ -26,11 +26,6 @@ namespace
     vector3 Scale(const vector3& value, float32 scale)
     {
         return { value.x * scale, value.y * scale, value.z * scale };
-    }
-
-    vector3 ToVector3(const color4& value)
-    {
-        return { value.r, value.g, value.b };
     }
 
     bool IsZero(const vector3& value)
@@ -113,8 +108,8 @@ namespace
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
     backend = renderBackend;
-    shadowDepthShader = ResourceManager::Load<MaterialShader>(ShadowDepthShaderKey);
-    skyboxShader = ResourceManager::Load<MaterialShader>(SkyboxShaderKey);
+    shadowDepthShader = ResourceManager::Load<Shader>(ShadowDepthShaderKey);
+    skyboxShader = ResourceManager::Load<Shader>(SkyboxShaderKey);
     if (!shadowDepthShader)
     {
         Log::Error("ForwardPipeline initialize warning: shadow depth shader resource is missing.");
@@ -190,15 +185,11 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
         backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
         backend->SetUniformVector3("u_CameraPosition", camera.position);
-        backend->SetUniformVector3("u_AmbientColor", ToVector3(scene.renderSettings.ambientColor));
-        backend->SetUniformVector3("u_MaterialAmbient", material.ambient);
-        backend->SetUniformVector3("u_DiffuseColor", material.diffuse);
-        backend->SetUniformVector3("u_SpecularColor", material.specular);
-        backend->SetUniformFloat("u_Shininess", material.shininess);
+        backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
         if (mainLight)
         {
             backend->SetUniformVector3("u_LightDirection", mainLight->direction);
-            backend->SetUniformVector3("u_LightColor", mainLight->color);
+            backend->SetUniformColor("u_LightColor", mainLight->color);
             backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
             backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
             backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
@@ -206,23 +197,50 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         else
         {
             backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
-            backend->SetUniformVector3("u_LightColor", { 1.0f, 1.0f, 1.0f });
+            backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
             backend->SetUniformFloat("u_LightIntensity", 0.0f);
             backend->SetUniformFloat("u_ShadowBias", 0.004f);
             backend->SetUniformFloat("u_ShadowStrength", 0.0f);
         }
-        backend->SetUniformInt("u_HasDiffuseTexture", material.hasDiffuseTexture ? 1 : 0);
-        backend->SetUniformInt("u_DiffuseTexture", 0);
-        backend->SetUniformInt("u_ShadowMap", 1);
+
+        for (const GpuMaterialColorBinding& binding : material.colorBindings)
+        {
+            backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
+        }
+
+        for (const GpuMaterialFloatBinding& binding : material.floatBindings)
+        {
+            backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
+        }
+
+        uint32 materialTextureSlot = 0;
+        for (const GpuMaterialTextureBinding& binding : material.textureBindings)
+        {
+            backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(materialTextureSlot));
+            backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+            if (binding.hasTexture)
+            {
+                backend->BindTexture(materialTextureSlot, binding.texture);
+            }
+            else
+            {
+                backend->BindTexture(materialTextureSlot, GpuTextureID());
+            }
+
+            materialTextureSlot++;
+        }
+
+        uint32 shadowTextureSlot = materialTextureSlot;
+        backend->SetUniformInt("u_ShadowMap", static_cast<int32>(shadowTextureSlot));
         backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
         backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
-        if (material.hasDiffuseTexture)
-        {
-            backend->BindTexture(0, material.diffuseTexture);
-        }
         if (shadowReady)
         {
-            backend->BindDepthTexture(1, shadowDepthTexture);
+            backend->BindDepthTexture(shadowTextureSlot, shadowDepthTexture);
+        }
+        else
+        {
+            backend->BindDepthTexture(shadowTextureSlot, GpuDepthTextureID());
         }
 
         backend->BindVertexInput(mesh.vertexInput);

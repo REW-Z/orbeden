@@ -2,11 +2,12 @@
 
 #include "Rendering/Backend/RenderBackend.h"
 #include "Runtime/Object/Material.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/Texture2D.h"
 
+#include <string>
 #include <unordered_map>
 
 //网格上传到 GPU 后持有的缓冲和顶点输入资源。
@@ -30,17 +31,42 @@ public:
     bool IsValid() const { return shaderProgram.IsValid(); }
 };
 
+//材质纹理属性上传后的 GPU 绑定信息。
+struct GpuMaterialTextureBinding
+{
+public:
+    std::string uniformName;
+    std::string presenceUniformName;
+    GpuTextureID texture;
+    bool hasTexture = false;
+};
+
+//材质颜色槽上传后的 GPU 绑定信息。
+struct GpuMaterialColorBinding
+{
+public:
+    std::string uniformName;
+    color4 value;
+};
+
+//材质浮点槽上传后的 GPU 绑定信息。
+struct GpuMaterialFloatBinding
+{
+public:
+    std::string uniformName;
+    float32 value = 0.0f;
+};
+
 //材质上传到 GPU 后持有的 shader、纹理和常量资源。
 struct GpuMaterial
 {
 public:
     GpuShader shader;
-    GpuTextureID diffuseTexture;
-    vector3 ambient;
-    vector3 diffuse = { 1.0f, 1.0f, 1.0f };
-    vector3 specular;
-    float32 shininess = 1.0f;
-    bool hasDiffuseTexture = false;
+    Shader* sourceShader = nullptr;
+    uint64 materialRevision = 0;
+    List<GpuMaterialTextureBinding> textureBindings;
+    List<GpuMaterialColorBinding> colorBindings;
+    List<GpuMaterialFloatBinding> floatBindings;
 
     bool IsValid() const { return shader.IsValid(); }
 };
@@ -53,7 +79,7 @@ private:
     std::unordered_map<Mesh*, GpuMesh> meshes;
     std::unordered_map<Texture2D*, GpuTextureID> textures;
     std::unordered_map<Skybox*, GpuCubeTextureID> skyboxes;
-    std::unordered_map<MaterialShader*, GpuShader> shaders;
+    std::unordered_map<Shader*, GpuShader> shaders;
     std::unordered_map<Material*, GpuMaterial> materials;
 
 public:
@@ -73,7 +99,7 @@ public:
     GpuCubeTextureID GetSkybox(Skybox* skybox);
 
     //获取或上传 shader
-    GpuShader GetShader(MaterialShader* shader);
+    GpuShader GetShader(Shader* shader);
 
     //获取或上传材质
     GpuMaterial GetMaterial(Material* material);

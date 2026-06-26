@@ -6,7 +6,7 @@
 
 #include <string>
 
-//网格子集，对应一个连续索引范围和可选材质
+//子网格
 struct SubMesh
 {
 public:
@@ -16,7 +16,7 @@ public:
     Ref<Material> material;
 };
 
-//CPU网格资源，不持有VAO/VBO等渲染API对象
+//CPU网格资源
 class Mesh : public Object
 {
     OBJECT_TYPE_DECLARE(Mesh)

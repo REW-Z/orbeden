@@ -2371,7 +2371,7 @@ void ImDrawData::ScaleClipRects(const ImVec2& fb_scale)
 // [SECTION] Helpers ShadeVertsXXX functions
 //-----------------------------------------------------------------------------
 
-// Generic linear color gradient, write to RGB fields, leave A untouched.
+// Generic linear color3 gradient, write to RGB fields, leave A untouched.
 void ImGui::ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
 {
     ImVec2 gradient_extent = gradient_p1 - gradient_p0;
@@ -2948,7 +2948,7 @@ void ImFontAtlasTextureBlockPostProcessMultiply(ImFontAtlasPostProcessData* data
     }
 }
 
-// Fill with single color. We don't use this directly but it is convenient for anyone working on uploading custom rects.
+// Fill with single color3. We don't use this directly but it is convenient for anyone working on uploading custom rects.
 void ImFontAtlasTextureBlockFill(ImTextureData* dst_tex, int dst_x, int dst_y, int w, int h, ImU32 col)
 {
     if (dst_tex->Format == ImTextureFormat_Alpha8)

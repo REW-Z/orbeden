@@ -160,7 +160,7 @@
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
     <ClInclude Include="Src\Runtime\ResourceManager.h" />
     <ClInclude Include="Src\Runtime\Object\Material.h" />
-    <ClInclude Include="Src\Runtime\Object\MaterialShader.h" />
+    <ClInclude Include="Src\Runtime\Object\Shader.h" />
     <ClInclude Include="Src\Runtime\Object\Mesh.h" />
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
     <ClInclude Include="Src\Runtime\Object\ScriptsComponent.h" />
@@ -221,7 +221,7 @@
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
     <ClCompile Include="Src\Runtime\ResourceManager.cpp" />
     <ClCompile Include="Src\Runtime\Object\Material.cpp" />
-    <ClCompile Include="Src\Runtime\Object\MaterialShader.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Shader.cpp" />
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
     <ClCompile Include="Src\Runtime\Object\ScriptsComponent.cpp" />

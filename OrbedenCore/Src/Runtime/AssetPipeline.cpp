@@ -13,7 +13,7 @@
 #include "Runtime/ContentContext.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/Material.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Texture2D.h"
 
@@ -31,6 +31,13 @@ public:
 
 namespace
 {
+    constexpr const char* MaterialDiffuseTextureSlot = "u_DiffuseTexture";
+    constexpr const char* MaterialNormalTextureSlot = "u_NormalTexture";
+    constexpr const char* MaterialDiffuseColorSlot = "u_DiffuseColor";
+    constexpr const char* MaterialSpecularColorSlot = "u_SpecularColor";
+    constexpr const char* MaterialEmissionColorSlot = "u_EmissionColor";
+    constexpr const char* MaterialShininessSlot = "u_Shininess";
+
     struct VertexKey
     {
     public:
@@ -363,18 +370,19 @@ namespace
                 std::string command;
                 stream >> command;
 
-                if (command == "Ka" || command == "Kd" || command == "Ks" || command == "Ke")
+                if (command == "Kd" || command == "Ks" || command == "Ke")
                 {
-                    vector3 value;
-                    stream >> value.x >> value.y >> value.z;
-                    if (command == "Ka") currentMaterial->ambient = value;
-                    if (command == "Kd") currentMaterial->diffuse = value;
-                    if (command == "Ks") currentMaterial->specular = value;
-                    if (command == "Ke") currentMaterial->emission = value;
+                    color4 value = { 0.0f, 0.0f, 0.0f, 1.0f };
+                    stream >> value.r >> value.g >> value.b;
+                    if (command == "Kd") currentMaterial->SetColor(MaterialDiffuseColorSlot, value);
+                    if (command == "Ks") currentMaterial->SetColor(MaterialSpecularColorSlot, value);
+                    if (command == "Ke") currentMaterial->SetColor(MaterialEmissionColorSlot, value);
                 }
                 else if (command == "Ns")
                 {
-                    stream >> currentMaterial->shininess;
+                    float32 shininess = 0.0f;
+                    stream >> shininess;
+                    currentMaterial->SetFloat(MaterialShininessSlot, shininess);
                 }
                 else if (command == "shader")
                 {
@@ -400,13 +408,11 @@ namespace
 
                     if (command == "map_Kd")
                     {
-                        currentMaterial->textureDiffuse.SetInstanceId(StringId(textureKey));
-                        currentMaterial->hasDiffuseTexture = true;
+                        currentMaterial->SetTexture(MaterialDiffuseTextureSlot, texture);
                     }
                     else
                     {
-                        currentMaterial->textureBump.SetInstanceId(StringId(textureKey));
-                        currentMaterial->hasBumpTexture = true;
+                        currentMaterial->SetTexture(MaterialNormalTextureSlot, texture);
                     }
 
                     ResourceManager::RegisterDependency(currentMaterialKey, textureKey);
@@ -545,10 +551,10 @@ AssetCollection AssetPipeline::Import_GLSL(std::string path)
     std::string fragmentSource = LoadTextOrError(fragmentPath, collection);
     if (!collection.Succeeded()) return collection;
 
-    MaterialShader* shader = CreateImportedObject<MaterialShader>(sourceKey);
+    Shader* shader = CreateImportedObject<Shader>(sourceKey);
     if (!shader)
     {
-        collection.AddError("Failed to create MaterialShader: " + sourceKey);
+        collection.AddError("Failed to create Shader: " + sourceKey);
         return collection;
     }
 
@@ -557,6 +563,7 @@ AssetCollection AssetPipeline::Import_GLSL(std::string path)
     shader->fragmentPath = fragmentPath;
     shader->vertexSource = vertexSource;
     shader->fragmentSource = fragmentSource;
+    shader->ReflectSlotsFromSource();
     collection.AddObject(sourceKey, shader, true);
     return collection;
 }

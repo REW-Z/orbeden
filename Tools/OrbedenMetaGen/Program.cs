@@ -369,11 +369,10 @@ static bool IsPersistentField(string className, string fieldName)
 
     if (className == "Material")
     {
-        return fieldName is "name" or "ambient" or "diffuse" or "specular" or "emission" or "shininess"
-            or "hasDiffuseTexture" or "hasBumpTexture" or "textureDiffuse" or "textureBump" or "shader";
+        return fieldName is "name" or "shader";
     }
 
-    if (className == "MaterialShader")
+    if (className == "Shader")
     {
         return fieldName is "name" or "vertexPath" or "fragmentPath" or "vertexSource" or "fragmentSource";
     }
@@ -400,6 +399,7 @@ static FieldKindInfo? GetFieldKind(string type)
         "std::string" => new FieldKindInfo("Reflection::FieldKind::String"),
         "StringId" => new FieldKindInfo("Reflection::FieldKind::StringId"),
         "vector3" => new FieldKindInfo("Reflection::FieldKind::Vector3"),
+        "color" => new FieldKindInfo("Reflection::FieldKind::Color"),
         "color4" => new FieldKindInfo("Reflection::FieldKind::Color4"),
         "quaternion" => new FieldKindInfo("Reflection::FieldKind::Quaternion"),
         "EnsId" => new FieldKindInfo("Reflection::FieldKind::EnsId"),
@@ -432,6 +432,7 @@ static ValueKindInfo? GetValueKind(string type)
         "std::string" => new ValueKindInfo("Reflection::ValueKind::String"),
         "StringId" => new ValueKindInfo("Reflection::ValueKind::StringId"),
         "vector3" => new ValueKindInfo("Reflection::ValueKind::Vector3"),
+        "color" => new ValueKindInfo("Reflection::ValueKind::Color"),
         "color4" => new ValueKindInfo("Reflection::ValueKind::Color4"),
         "quaternion" => new ValueKindInfo("Reflection::ValueKind::Quaternion"),
         "EnsId" => new ValueKindInfo("Reflection::ValueKind::EnsId"),
@@ -452,7 +453,7 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/EnsId.h\"");
     output.AppendLine("#include \"Runtime/Object/Object.h\"");
     output.AppendLine("#include \"Runtime/Object/Material.h\"");
-    output.AppendLine("#include \"Runtime/Object/MaterialShader.h\"");
+    output.AppendLine("#include \"Runtime/Object/Shader.h\"");
     output.AppendLine("#include \"Runtime/Object/Mesh.h\"");
     output.AppendLine("#include \"Runtime/Object/Skybox.h\"");
     output.AppendLine("#include \"Runtime/Object/Texture2D.h\"");

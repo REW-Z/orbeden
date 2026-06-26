@@ -2,7 +2,7 @@
 
 #include "Runtime/EnsId.h"
 
-typedef void (*ComponentVisitorFunction)(Component* component, void* userData);
+#include <type_traits>
 
 //单个Component类型在一个World中的稀疏集索引
 class ComponentStorage
@@ -21,8 +21,21 @@ private:
     List<SparseSlot> sparseSlots;
     uint32 componentCount = 0;
 
-    //遍历当前Chunk中的组件
-    void VisitComponents(ComponentVisitorFunction visitor, void* userData) const;
+    //访问Component槽位
+    template<typename TVisitor>
+    static void VisitComponentObject(Object* object, void* userData)
+    {
+        TVisitor* visitor = static_cast<TVisitor*>(userData);
+        (*visitor)(static_cast<Component*>(object));
+    }
+
+    //访问指定Component槽位
+    template<typename TComponent, typename TVisitor>
+    static void VisitTypedComponentObject(Object* object, void* userData)
+    {
+        TVisitor* visitor = static_cast<TVisitor*>(userData);
+        (*visitor)(static_cast<TComponent*>(object));
+    }
 
 public:
     ComponentStorage(World* world, Type* type);
@@ -45,20 +58,19 @@ public:
     //获取存活组件数量
     uint32 GetCount() const;
 
-    //按紧凑数组顺序遍历组件
+    //按Chunk槽位顺序遍历组件
     template<typename TVisitor>
     void ForEach(TVisitor&& visitor) const
     {
-        struct VisitorContext
-        {
-            TVisitor& callback;
-        };
+        using VisitorType = std::remove_reference_t<TVisitor>;
+        componentType->VisitChunkObjects(componentChunk, &ComponentStorage::VisitComponentObject<VisitorType>, &visitor);
+    }
 
-        VisitorContext context{ visitor };
-        VisitComponents([](Component* component, void* userData)
-        {
-            VisitorContext* visitorContext = static_cast<VisitorContext*>(userData);
-            visitorContext->callback(component);
-        }, &context);
+    //按Chunk槽位顺序遍历指定类型组件
+    template<typename TComponent, typename TVisitor>
+    void ForEachTyped(TVisitor&& visitor) const
+    {
+        using VisitorType = std::remove_reference_t<TVisitor>;
+        componentType->VisitChunkObjects(componentChunk, &ComponentStorage::VisitTypedComponentObject<TComponent, VisitorType>, &visitor);
     }
 };

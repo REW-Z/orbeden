@@ -6,7 +6,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Material.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"

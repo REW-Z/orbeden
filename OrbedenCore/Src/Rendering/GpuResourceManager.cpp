@@ -6,6 +6,27 @@ namespace
 {
     constexpr uint32 VertexFloatCount = 11;
     constexpr uint32 VertexStride = VertexFloatCount * sizeof(float32);
+
+    //判断字符串前缀
+    bool StartsWith(const std::string& text, const std::string& prefix)
+    {
+        return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    //判断字符串后缀
+    bool EndsWith(const std::string& text, const std::string& suffix)
+    {
+        return text.size() >= suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
+
+    //按约定从纹理 uniform 名生成是否启用的 bool uniform 名
+    std::string CreateTexturePresenceUniformName(const std::string& textureUniformName)
+    {
+        std::string name = textureUniformName;
+        if (StartsWith(name, "u_")) name.erase(0, 2);
+        if (EndsWith(name, "Texture")) name.erase(name.size() - 7);
+        return "u_Has" + name + "Texture";
+    }
 }
 
 void GpuResourceManager::Initialize(RenderBackend* renderBackend)
@@ -191,7 +212,7 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
     return cubeTexture;
 }
 
-GpuShader GpuResourceManager::GetShader(MaterialShader* shader)
+GpuShader GpuResourceManager::GetShader(Shader* shader)
 {
     if (!backend || !shader) return GpuShader();
 
@@ -218,36 +239,60 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
 {
     if (!backend || !material) return GpuMaterial();
 
-    auto it = materials.find(material);
-    if (it != materials.end()) return it->second;
-
-    MaterialShader* shader = material->shader.Get();
+    Shader* shader = material->shader.Get();
     if (!shader)
     {
         Log::Error("GpuResourceManager material upload failed: shader is missing.");
         return GpuMaterial();
     }
 
+    auto it = materials.find(material);
+    if (it != materials.end() && it->second.sourceShader == shader && it->second.materialRevision == material->GetRevision())
+    {
+        return it->second;
+    }
+
     GpuMaterial gpuMaterial;
+    gpuMaterial.sourceShader = shader;
+    gpuMaterial.materialRevision = material->GetRevision();
     gpuMaterial.shader = GetShader(shader);
-    gpuMaterial.ambient = material->ambient;
-    gpuMaterial.diffuse = material->diffuse;
-    gpuMaterial.specular = material->specular;
-    gpuMaterial.shininess = material->shininess > 0.0f ? material->shininess : 1.0f;
     if (!gpuMaterial.shader.IsValid()) return GpuMaterial();
 
-    if (material->hasDiffuseTexture)
+    for (const ShaderTextureSlot& slot : shader->textureSlots)
     {
-        Texture2D* diffuseTexture = material->textureDiffuse.Get();
-        if (diffuseTexture)
+        if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
+
+        GpuMaterialTextureBinding binding;
+        binding.uniformName = slot.name;
+        binding.presenceUniformName = CreateTexturePresenceUniformName(slot.name);
+        Texture2D* texture = material->GetTexture(slot.name);
+        if (texture)
         {
-            gpuMaterial.diffuseTexture = GetTexture(diffuseTexture);
-            gpuMaterial.hasDiffuseTexture = gpuMaterial.diffuseTexture.IsValid();
+            binding.texture = GetTexture(texture);
+            binding.hasTexture = binding.texture.IsValid();
         }
-        else
+        else if (material->HasTexture(slot.name))
         {
-            Log::Error("GpuResourceManager material texture skipped: diffuse texture is missing.");
+            Log::Error(("GpuResourceManager material texture skipped: texture is missing for " + slot.name).c_str());
         }
+
+        gpuMaterial.textureBindings.push_back(binding);
+    }
+
+    for (const ShaderColorSlot& slot : shader->colorSlots)
+    {
+        GpuMaterialColorBinding binding;
+        binding.uniformName = slot.name;
+        binding.value = material->GetColor(slot.name, slot.defaultValue);
+        gpuMaterial.colorBindings.push_back(binding);
+    }
+
+    for (const ShaderFloatSlot& slot : shader->floatSlots)
+    {
+        GpuMaterialFloatBinding binding;
+        binding.uniformName = slot.name;
+        binding.value = material->GetFloat(slot.name, slot.defaultValue);
+        gpuMaterial.floatBindings.push_back(binding);
     }
 
     materials[material] = gpuMaterial;

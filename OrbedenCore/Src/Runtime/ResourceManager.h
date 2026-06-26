@@ -15,7 +15,7 @@ public:
         Object* object = nullptr;
         Type* type = nullptr;
         uint32 manualRefCount = 0;
-        uint32 sceneRefCount = 0;
+        uint32 worldRefCount = 0;
         uint32 dependencyRefCount = 0;
         List<std::string> dependencies;
     };
@@ -32,14 +32,14 @@ public:
         return object ? object->Cast<T>() : nullptr;
     }
 
-    //加载资源并增加一次场景引用
-    static Object* LoadSceneRef(Type* type, const std::string& key);
+    //加载资源并增加一次World引用
+    static Object* LoadWorldRef(Type* type, const std::string& key);
 
     //释放一次显式引用
     static void Unload(const std::string& key);
 
-    //释放一次场景引用
-    static void ReleaseSceneRef(const std::string& key);
+    //释放一次World引用
+    static void ReleaseWorldRef(const std::string& key);
 
     //释放所有零引用资源
     static void ReleaseZeroRef();
