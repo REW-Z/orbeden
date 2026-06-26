@@ -2,7 +2,7 @@
 
 #include "Defines/types.h"
 
-//轻量向量
+//2维向量
 struct vector2
 {
 public:
@@ -10,7 +10,7 @@ public:
     float32 y = 0.0f;
 };
 
-//轻量向量
+//3维向量
 struct vector3
 {
 public:
@@ -19,7 +19,7 @@ public:
     float32 z = 0.0f;
 };
 
-//轻量颜色
+//颜色
 struct color4
 {
 public:
@@ -29,7 +29,7 @@ public:
     float32 a = 1.0f;
 };
 
-//轻量四元数
+//四元数
 struct quaternion
 {
 public:

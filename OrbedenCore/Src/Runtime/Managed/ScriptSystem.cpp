@@ -330,11 +330,8 @@ void ScriptSystem::Update(World& world, float deltaTime)
     ManagedUpdateBehaviourFn UpdateBehaviour = reinterpret_cast<ManagedUpdateBehaviourFn>(UpdateBehaviourFunction);
 
     // 扫描当前 World 上所有脚本槽位。
-    world.ForEachComponent(ScriptsComponent::StaticType(), [&](Component* component)
+    world.ForEachComponent<ScriptsComponent>([&](ScriptsComponent* scriptsComponent)
         {
-            ScriptsComponent* scriptsComponent = component ? component->Cast<ScriptsComponent>() : nullptr;
-            if (!scriptsComponent) return;
-
             for (ScriptSlot& slot : scriptsComponent->scripts)
             {
                 if (!slot.enabled || slot.assemblyName.empty() || slot.typeName.empty())
@@ -352,7 +349,7 @@ void ScriptSystem::Update(World& world, float deltaTime)
                     slot.managedHandle = CreateBehaviour(
                         reinterpret_cast<const uint8*>(slot.typeName.data()),
                         static_cast<int32>(slot.typeName.size()),
-                        component->GetEnsId());
+                        scriptsComponent->GetEnsId());
                     slot.started = false;
                 }
 

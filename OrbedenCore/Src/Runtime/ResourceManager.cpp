@@ -24,7 +24,7 @@ namespace
     //获取资源总引用数
     uint32 GetTotalRefCount(const ResourceManager::ResourceRecord& record)
     {
-        return record.manualRefCount + record.sceneRefCount + record.dependencyRefCount;
+        return record.manualRefCount + record.worldRefCount + record.dependencyRefCount;
     }
 
     //判断字符串前缀
@@ -109,13 +109,13 @@ Object* ResourceManager::Load(Type* type, const std::string& key)
     return record->object;
 }
 
-//加载资源并增加一次场景引用
-Object* ResourceManager::LoadSceneRef(Type* type, const std::string& key)
+//加载资源并增加一次World引用
+Object* ResourceManager::LoadWorldRef(Type* type, const std::string& key)
 {
     ResourceRecord* record = EnsureRegistered(type, key);
     if (!record) return nullptr;
 
-    record->sceneRefCount++;
+    record->worldRefCount++;
     AddDependencyRefs(*record);
     return record->object;
 }
@@ -130,13 +130,13 @@ void ResourceManager::Unload(const std::string& key)
     ReleaseDependencyRefs(*record);
 }
 
-//释放一次场景引用
-void ResourceManager::ReleaseSceneRef(const std::string& key)
+//释放一次World引用
+void ResourceManager::ReleaseWorldRef(const std::string& key)
 {
     ResourceRecord* record = FindRecordMutable(key);
-    if (!record || record->sceneRefCount == 0) return;
+    if (!record || record->worldRefCount == 0) return;
 
-    record->sceneRefCount--;
+    record->worldRefCount--;
     ReleaseDependencyRefs(*record);
 }
 

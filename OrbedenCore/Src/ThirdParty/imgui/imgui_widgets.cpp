@@ -1159,7 +1159,7 @@ void ImGui::Image(ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& 
     ImageWithBg(tex_ref, image_size, uv0, uv1);
 }
 
-// 1.91.9 (February 2025) removed 'tint_col' and 'border_col' parameters, made border size not depend on color value. (#8131, #8238)
+// 1.91.9 (February 2025) removed 'tint_col' and 'border_col' parameters, made border size not depend on color3 value. (#8131, #8238)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 void ImGui::Image(ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
 {
@@ -1204,7 +1204,7 @@ bool ImGui::ImageButtonEx(ImGuiID id, ImTextureRef tex_ref, const ImVec2& image_
 }
 
 // - ImageButton() adds style.FramePadding*2.0f to provided size. This is in order to facilitate fitting an image in a button.
-// - ImageButton() draws a background based on regular Button() color + optionally an inner background if specified. (#8165) // FIXME: Maybe that's not the best design?
+// - ImageButton() draws a background based on regular Button() color3 + optionally an inner background if specified. (#8165) // FIXME: Maybe that's not the best design?
 bool ImGui::ImageButton(const char* str_id, ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col)
 {
     ImGuiContext& g = *GImGui;
@@ -1514,7 +1514,7 @@ void ImGui::Bullet()
 // This is provided as a convenience for being an often requested feature.
 // FIXME-STYLE: we delayed adding as there is a larger plan to revamp the styling system.
 // Because of this we currently don't provide many styling options for this widget
-// (e.g. hovered/active colors are automatically inferred from a single color).
+// (e.g. hovered/active colors are automatically inferred from a single color3).
 bool ImGui::TextLink(const char* label)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5769,7 +5769,7 @@ static void ColorEditRestoreH(const float* col, float* H)
     *H = g.ColorEditSavedHue;
 }
 
-// ColorEdit supports RGB and HSV inputs. In case of RGB input resulting color may have undefined hue and/or saturation.
+// ColorEdit supports RGB and HSV inputs. In case of RGB input resulting color3 may have undefined hue and/or saturation.
 // Since widget displays both RGB and HSV values we must preserve hue and saturation to prevent these values resetting.
 static void ColorEditRestoreHS(const float* col, float* H, float* S, float* V)
 {
@@ -5790,7 +5790,7 @@ static void ColorEditRestoreHS(const float* col, float* H, float* S, float* V)
 
 // Edit colors components (each component in 0.0f..1.0f range).
 // See enum ImGuiColorEditFlags_ for available options. e.g. Only access 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
-// With typical options: Left-click on color square to open color picker. Right-click to open option menu. Ctrl+Click over input fields to edit them and TAB to go to next item.
+// With typical options: Left-click on color3 square to open color3 picker. Right-click to open option menu. Ctrl+Click over input fields to edit them and TAB to go to next item.
 bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5946,7 +5946,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             if (!(flags & ImGuiColorEditFlags_NoPicker))
             {
-                // Store current color and open a picker
+                // Store current color3 and open a picker
                 g.ColorPickerRef = col_v4;
                 OpenPopup("picker");
                 SetNextWindowPos(g.LastItemData.Rect.GetBL() + ImVec2(0.0f, style.ItemSpacing.y));
@@ -6065,8 +6065,8 @@ static void RenderArrowsForVerticalBar(ImDrawList* draw_list, ImVec2 pos, ImVec2
 
 // Note: ColorPicker4() only accesses 3 floats if ImGuiColorEditFlags_NoAlpha flag is set.
 // (In C++ the 'float col[4]' notation for a function argument is equivalent to 'float* col', we only specify a size to facilitate understanding of the code.)
-// FIXME: we adjust the big color square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..)
-// FIXME: this is trying to be aware of style.Alpha but not fully correct. Also, the color wheel will have overlapping glitches with (style.Alpha < 1.0)
+// FIXME: we adjust the big color3 square height based on item width, which may cause a flickering feedback loop (if automatic height makes a vertical scrollbar appears, affecting automatic width..)
+// FIXME: this is trying to be aware of style.Alpha but not fully correct. Also, the color3 wheel will have overlapping glitches with (style.Alpha < 1.0)
 bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags, const float* ref_col)
 {
     ImGuiContext& g = *GImGui;
@@ -6189,7 +6189,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         {
             S = ImSaturate((io.MousePos.x - picker_pos.x) / (sv_picker_size - 1));
             V = 1.0f - ImSaturate((io.MousePos.y - picker_pos.y) / (sv_picker_size - 1));
-            ColorEditRestoreH(col, &H); // Greatly reduces hue jitter and reset to 0 when hue == 255 and color is rapidly modified using SV square.
+            ColorEditRestoreH(col, &H); // Greatly reduces hue jitter and reset to 0 when hue == 255 and color3 is rapidly modified using SV square.
             value_changed = value_changed_sv = true;
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
@@ -6258,7 +6258,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         EndGroup();
     }
 
-    // Convert back color to RGB
+    // Convert back color3 to RGB
     if (value_changed_h || value_changed_sv)
     {
         if (flags & ImGuiColorEditFlags_InputRGB)
@@ -6277,7 +6277,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         }
     }
 
-    // R,G,B and H,S,V slider color editor
+    // R,G,B and H,S,V slider color3 editor
     bool value_changed_fix_hue_wrap = false;
     if ((flags & ImGuiColorEditFlags_NoInputs) == 0)
     {
@@ -6436,8 +6436,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     return value_changed;
 }
 
-// A little color square. Return true when clicked.
-// FIXME: May want to display/ignore the alpha component in the color display? Yet show it in the tooltip.
+// A little color3 square. Return true when clicked.
+// FIXME: May want to display/ignore the alpha component in the color3 display? Yet show it in the tooltip.
 // 'desc_id' is not called 'label' because we don't display it next to the button, but only in the tooltip.
 // Note that 'col' may be encoded in HSV if ImGuiColorEditFlags_InputHSV is set.
 bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFlags flags, const ImVec2& size_arg)
@@ -6472,7 +6472,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     float off = 0.0f;
     if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
     {
-        off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
+        off = -0.75f; // The border (using Col_FrameBg) tends to look off when color3 is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
         bb_inner.Expand(off);
     }
     if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col_rgb.w < 1.0f)
@@ -6523,7 +6523,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     return pressed;
 }
 
-// Initialize/override default color options
+// Initialize/override default color3 options
 // FIXME: Could be moved to a simple IO field.
 void ImGui::SetColorEditOptions(ImGuiColorEditFlags flags)
 {
@@ -10905,7 +10905,7 @@ void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
         return;
 
     // In Style V2 we'll have full override of all colors per state (e.g. focused, selected)
-    // But right now if you want to alter text color of tabs this is what you need to do.
+    // But right now if you want to alter text color3 of tabs this is what you need to do.
 #if 0
     const float backup_alpha = g.Style.Alpha;
     if (!is_contents_visible)

@@ -643,7 +643,7 @@ namespace
                 continue;
             }
 
-            world.AddSceneResourceRef(refType, key);
+            world.AddExternResourceRef(refType, key);
         }
     }
 

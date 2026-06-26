@@ -7,7 +7,7 @@
 #include "Runtime/EnsId.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Material.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/Texture2D.h"
@@ -20,42 +20,6 @@
 class ReflectionGeneratedAccess
 {
 public:
-    //调用 Component.GetEnsId 方法
-    static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetEnsId();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 Component.OnAttach 方法
-    static Reflection::Value Invoke_Component_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnAttach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Component.OnDetach 方法
-    static Reflection::Value Invoke_Component_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnDetach();
-        success = true;
-        return Reflection::Value();
-    }
-
     //读取 Camera.enabled 字段
     static std::string Get_Camera_enabled(Object* object)
     {
@@ -294,132 +258,6 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
-    //读取 Material.ambient 字段
-    static std::string Get_Material_ambient(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->ambient);
-    }
-
-    //写入 Material.ambient 字段
-    static bool Set_Material_ambient(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->ambient, value);
-    }
-
-    //读取 Material.diffuse 字段
-    static std::string Get_Material_diffuse(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->diffuse);
-    }
-
-    //写入 Material.diffuse 字段
-    static bool Set_Material_diffuse(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->diffuse, value);
-    }
-
-    //读取 Material.specular 字段
-    static std::string Get_Material_specular(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->specular);
-    }
-
-    //写入 Material.specular 字段
-    static bool Set_Material_specular(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->specular, value);
-    }
-
-    //读取 Material.emission 字段
-    static std::string Get_Material_emission(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->emission);
-    }
-
-    //写入 Material.emission 字段
-    static bool Set_Material_emission(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->emission, value);
-    }
-
-    //读取 Material.shininess 字段
-    static std::string Get_Material_shininess(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->shininess);
-    }
-
-    //写入 Material.shininess 字段
-    static bool Set_Material_shininess(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->shininess, value);
-    }
-
-    //读取 Material.hasDiffuseTexture 字段
-    static std::string Get_Material_hasDiffuseTexture(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->hasDiffuseTexture);
-    }
-
-    //写入 Material.hasDiffuseTexture 字段
-    static bool Set_Material_hasDiffuseTexture(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->hasDiffuseTexture, value);
-    }
-
-    //读取 Material.hasBumpTexture 字段
-    static std::string Get_Material_hasBumpTexture(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->hasBumpTexture);
-    }
-
-    //写入 Material.hasBumpTexture 字段
-    static bool Set_Material_hasBumpTexture(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->hasBumpTexture, value);
-    }
-
-    //读取 Material.textureDiffuse 字段
-    static std::string Get_Material_textureDiffuse(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->textureDiffuse);
-    }
-
-    //写入 Material.textureDiffuse 字段
-    static bool Set_Material_textureDiffuse(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->textureDiffuse, value);
-    }
-
-    //读取 Material.textureBump 字段
-    static std::string Get_Material_textureBump(Object* object)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::ToXmlValue(instance->textureBump);
-    }
-
-    //写入 Material.textureBump 字段
-    static bool Set_Material_textureBump(Object* object, const std::string& value)
-    {
-        Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->textureBump, value);
-    }
-
     //读取 Material.shader 字段
     static std::string Get_Material_shader(Object* object)
     {
@@ -434,74 +272,164 @@ public:
         return Reflection::SetFromXmlValue(instance->shader, value);
     }
 
-    //读取 MaterialShader.name 字段
-    static std::string Get_MaterialShader_name(Object* object)
+    //调用 Material.SetTexture 方法
+    static Reflection::Value Invoke_Material_SetTexture_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::ToXmlValue(instance->name);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        StringId arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        instance->SetTexture(arg0, arg1);
+        success = true;
+        return Reflection::Value();
     }
 
-    //写入 MaterialShader.name 字段
-    static bool Set_MaterialShader_name(Object* object, const std::string& value)
+    //调用 Material.HasTexture 方法
+    static Reflection::Value Invoke_Material_HasTexture_1(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::SetFromXmlValue(instance->name, value);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        auto result = instance->HasTexture(arg0);
+        success = true;
+        return Reflection::Value(result);
     }
 
-    //读取 MaterialShader.vertexPath 字段
-    static std::string Get_MaterialShader_vertexPath(Object* object)
+    //调用 Material.ClearTexture 方法
+    static Reflection::Value Invoke_Material_ClearTexture_2(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::ToXmlValue(instance->vertexPath);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->ClearTexture(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
-    //写入 MaterialShader.vertexPath 字段
-    static bool Set_MaterialShader_vertexPath(Object* object, const std::string& value)
+    //调用 Material.SetColor 方法
+    static Reflection::Value Invoke_Material_SetColor_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::SetFromXmlValue(instance->vertexPath, value);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        color4 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        instance->SetColor(arg0, arg1);
+        success = true;
+        return Reflection::Value();
     }
 
-    //读取 MaterialShader.fragmentPath 字段
-    static std::string Get_MaterialShader_fragmentPath(Object* object)
+    //调用 Material.HasColor 方法
+    static Reflection::Value Invoke_Material_HasColor_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::ToXmlValue(instance->fragmentPath);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        auto result = instance->HasColor(arg0);
+        success = true;
+        return Reflection::Value(result);
     }
 
-    //写入 MaterialShader.fragmentPath 字段
-    static bool Set_MaterialShader_fragmentPath(Object* object, const std::string& value)
+    //调用 Material.ClearColor 方法
+    static Reflection::Value Invoke_Material_ClearColor_5(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::SetFromXmlValue(instance->fragmentPath, value);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->ClearColor(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
-    //读取 MaterialShader.vertexSource 字段
-    static std::string Get_MaterialShader_vertexSource(Object* object)
+    //调用 Material.SetFloat 方法
+    static Reflection::Value Invoke_Material_SetFloat_6(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::ToXmlValue(instance->vertexSource);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        float32 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        instance->SetFloat(arg0, arg1);
+        success = true;
+        return Reflection::Value();
     }
 
-    //写入 MaterialShader.vertexSource 字段
-    static bool Set_MaterialShader_vertexSource(Object* object, const std::string& value)
+    //调用 Material.GetFloat 方法
+    static Reflection::Value Invoke_Material_GetFloat_7(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::SetFromXmlValue(instance->vertexSource, value);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        float32 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        auto result = instance->GetFloat(arg0, arg1);
+        success = true;
+        return Reflection::Value(result);
     }
 
-    //读取 MaterialShader.fragmentSource 字段
-    static std::string Get_MaterialShader_fragmentSource(Object* object)
+    //调用 Material.HasFloat 方法
+    static Reflection::Value Invoke_Material_HasFloat_8(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::ToXmlValue(instance->fragmentSource);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        auto result = instance->HasFloat(arg0);
+        success = true;
+        return Reflection::Value(result);
     }
 
-    //写入 MaterialShader.fragmentSource 字段
-    static bool Set_MaterialShader_fragmentSource(Object* object, const std::string& value)
+    //调用 Material.ClearFloat 方法
+    static Reflection::Value Invoke_Material_ClearFloat_9(Object* object, const List<Reflection::Value>& args, bool& success)
     {
-        MaterialShader* instance = static_cast<MaterialShader*>(object);
-        return Reflection::SetFromXmlValue(instance->fragmentSource, value);
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->ClearFloat(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Material.GetRevision 方法
+    static Reflection::Value Invoke_Material_GetRevision_10(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRevision();
+        success = true;
+        return Reflection::Value(result);
     }
 
     //读取 Mesh.name 字段
@@ -518,28 +446,84 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
-    //调用 Object.GetInstanceId 方法
-    static Reflection::Value Invoke_Object_GetInstanceId_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    //读取 Shader.name 字段
+    static std::string Get_Shader_name(Object* object)
     {
-        success = false;
-        Object* instance = static_cast<Object*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetInstanceId();
-        success = true;
-        return Reflection::Value(result);
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::ToXmlValue(instance->name);
     }
 
-    //调用 Object.SetInstanceId 方法
-    static Reflection::Value Invoke_Object_SetInstanceId_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    //写入 Shader.name 字段
+    static bool Set_Shader_name(Object* object, const std::string& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::SetFromXmlValue(instance->name, value);
+    }
+
+    //读取 Shader.vertexPath 字段
+    static std::string Get_Shader_vertexPath(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::ToXmlValue(instance->vertexPath);
+    }
+
+    //写入 Shader.vertexPath 字段
+    static bool Set_Shader_vertexPath(Object* object, const std::string& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::SetFromXmlValue(instance->vertexPath, value);
+    }
+
+    //读取 Shader.fragmentPath 字段
+    static std::string Get_Shader_fragmentPath(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::ToXmlValue(instance->fragmentPath);
+    }
+
+    //写入 Shader.fragmentPath 字段
+    static bool Set_Shader_fragmentPath(Object* object, const std::string& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::SetFromXmlValue(instance->fragmentPath, value);
+    }
+
+    //读取 Shader.vertexSource 字段
+    static std::string Get_Shader_vertexSource(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::ToXmlValue(instance->vertexSource);
+    }
+
+    //写入 Shader.vertexSource 字段
+    static bool Set_Shader_vertexSource(Object* object, const std::string& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::SetFromXmlValue(instance->vertexSource, value);
+    }
+
+    //读取 Shader.fragmentSource 字段
+    static std::string Get_Shader_fragmentSource(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::ToXmlValue(instance->fragmentSource);
+    }
+
+    //写入 Shader.fragmentSource 字段
+    static bool Set_Shader_fragmentSource(Object* object, const std::string& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return Reflection::SetFromXmlValue(instance->fragmentSource, value);
+    }
+
+    //调用 Shader.ReflectSlotsFromSource 方法
+    static Reflection::Value Invoke_Shader_ReflectSlotsFromSource_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
-        Object* instance = static_cast<Object*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
 
-        StringId arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetInstanceId(arg0);
+        instance->ReflectSlotsFromSource();
         success = true;
         return Reflection::Value();
     }
@@ -835,18 +819,6 @@ namespace Reflection
         if (registered) return;
         registered = true;
 
-        RegisterTypeFields(Component::StaticType(),
-            {
-                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(Component::StaticType(),
-            {
-                MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_2),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_3),
-            });
-
         RegisterTypeFields(Camera::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr),
@@ -867,7 +839,7 @@ namespace Reflection
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
                 FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
-                FieldInfo("color", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
+                FieldInfo("color", "color4", Reflection::FieldKind::Color4, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
                 FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr),
                 FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr),
@@ -881,34 +853,27 @@ namespace Reflection
 
         RegisterTypeFields(Material::StaticType(),
             {
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr),
-                FieldInfo("ambient", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Material_ambient, ReflectionGeneratedAccess::Set_Material_ambient, nullptr),
-                FieldInfo("diffuse", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Material_diffuse, ReflectionGeneratedAccess::Set_Material_diffuse, nullptr),
-                FieldInfo("specular", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Material_specular, ReflectionGeneratedAccess::Set_Material_specular, nullptr),
-                FieldInfo("emission", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Material_emission, ReflectionGeneratedAccess::Set_Material_emission, nullptr),
-                FieldInfo("shininess", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Material_shininess, ReflectionGeneratedAccess::Set_Material_shininess, nullptr),
-                FieldInfo("hasDiffuseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Material_hasDiffuseTexture, ReflectionGeneratedAccess::Set_Material_hasDiffuseTexture, nullptr),
-                FieldInfo("hasBumpTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Material_hasBumpTexture, ReflectionGeneratedAccess::Set_Material_hasBumpTexture, nullptr),
-                FieldInfo("textureDiffuse", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_textureDiffuse, ReflectionGeneratedAccess::Set_Material_textureDiffuse, "Texture2D"),
-                FieldInfo("textureBump", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_textureBump, ReflectionGeneratedAccess::Set_Material_textureBump, "Texture2D"),
-                FieldInfo("shader", "Ref<MaterialShader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "MaterialShader"),
+                FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<MaterialFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("shader", "Ref<Shader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "Shader"),
             });
 
         RegisterTypeMethods(Material::StaticType(),
             {
-            });
-
-        RegisterTypeFields(MaterialShader::StaticType(),
-            {
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_MaterialShader_name, ReflectionGeneratedAccess::Set_MaterialShader_name, nullptr),
-                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_MaterialShader_vertexPath, ReflectionGeneratedAccess::Set_MaterialShader_vertexPath, nullptr),
-                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_MaterialShader_fragmentPath, ReflectionGeneratedAccess::Set_MaterialShader_fragmentPath, nullptr),
-                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_MaterialShader_vertexSource, ReflectionGeneratedAccess::Set_MaterialShader_vertexSource, nullptr),
-                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_MaterialShader_fragmentSource, ReflectionGeneratedAccess::Set_MaterialShader_fragmentSource, nullptr),
-            });
-
-        RegisterTypeMethods(MaterialShader::StaticType(),
-            {
+                MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_0),
+                MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_1),
+                MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_2),
+                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color4", Reflection::ValueKind::Color4) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_3),
+                MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_4),
+                MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_5),
+                MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_6),
+                MethodInfo("GetFloat", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_GetFloat_7),
+                MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_8),
+                MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_9),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_GetRevision_10),
             });
 
         RegisterTypeFields(Mesh::StaticType(),
@@ -926,18 +891,6 @@ namespace Reflection
             {
             });
 
-        RegisterTypeFields(Object::StaticType(),
-            {
-                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, false, nullptr, nullptr, nullptr),
-                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(Object::StaticType(),
-            {
-                MethodInfo("GetInstanceId", "StringId", Reflection::ValueKind::StringId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Object_GetInstanceId_0),
-                MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Object_SetInstanceId_1),
-            });
-
         RegisterTypeFields(ScriptsComponent::StaticType(),
             {
                 FieldInfo("scripts", "List<ScriptSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
@@ -945,6 +898,23 @@ namespace Reflection
 
         RegisterTypeMethods(ScriptsComponent::StaticType(),
             {
+            });
+
+        RegisterTypeFields(Shader::StaticType(),
+            {
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr),
+                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr),
+                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr),
+                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr),
+                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr),
+                FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(Shader::StaticType(),
+            {
+                MethodInfo("ReflectSlotsFromSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
             });
 
         RegisterTypeFields(Skybox::StaticType(),

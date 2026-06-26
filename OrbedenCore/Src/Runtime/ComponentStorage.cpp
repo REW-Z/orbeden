@@ -94,25 +94,3 @@ uint32 ComponentStorage::GetCount() const
 {
     return componentCount;
 }
-
-//遍历当前Chunk中的组件
-void ComponentStorage::VisitComponents(ComponentVisitorFunction visitor, void* userData) const
-{
-    if (!visitor) return;
-
-    struct VisitorContext
-    {
-        ComponentVisitorFunction callback = nullptr;
-        void* data = nullptr;
-    };
-
-    VisitorContext context{ visitor, userData };
-    componentType->VisitChunkObjects(componentChunk, [](Object* object, void* contextData)
-    {
-        VisitorContext* visitorContext = static_cast<VisitorContext*>(contextData);
-        Component* component = object ? object->Cast<Component>() : nullptr;
-        if (!component) return;
-
-        visitorContext->callback(component, visitorContext->data);
-    }, &context);
-}

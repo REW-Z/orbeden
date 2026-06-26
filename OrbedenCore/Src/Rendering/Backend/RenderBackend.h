@@ -177,6 +177,7 @@ public:
     virtual void BindCubeTexture(uint32 slot, GpuCubeTextureID id) = 0;
     virtual void SetUniformMatrix4(const char* name, const matrix4x4& value) = 0;
     virtual void SetUniformVector3(const char* name, const vector3& value) = 0;
+    virtual void SetUniformColor(const char* name, const color4& value) = 0;
     virtual void SetUniformColor4(const char* name, const color4& value) = 0;
     virtual void SetUniformInt(const char* name, int32 value) = 0;
     virtual void SetUniformFloat(const char* name, float32 value) = 0;

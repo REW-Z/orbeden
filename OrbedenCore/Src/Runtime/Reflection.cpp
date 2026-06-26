@@ -619,8 +619,22 @@ namespace Reflection
     {
         std::istringstream stream(value);
         color4 parsed;
-        stream >> parsed.r >> parsed.g >> parsed.b >> parsed.a;
+        stream >> parsed.r >> parsed.g >> parsed.b;
         if (stream.fail()) return false;
+
+        stream >> std::ws;
+        if (stream.eof())
+        {
+            parsed.a = 1.0f;
+            target = parsed;
+            return true;
+        }
+
+        stream >> parsed.a;
+        if (stream.fail()) return false;
+
+        stream >> std::ws;
+        if (!stream.eof()) return false;
 
         target = parsed;
         return true;

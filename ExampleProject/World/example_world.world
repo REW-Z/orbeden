@@ -48,7 +48,7 @@
             <Component type="DirectionalLight">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="direction" type="vector3" value="-0.45 -1 -0.35" />
-                <Field name="color" type="vector3" value="1 0.96 0.86" />
+                <Field name="color" type="color" value="1 0.96 0.86" />
                 <Field name="intensity" type="float32" value="1.35" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="shadowBias" type="float32" value="0.004" />

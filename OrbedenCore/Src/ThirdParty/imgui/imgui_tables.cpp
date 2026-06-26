@@ -267,7 +267,7 @@ static const int TABLE_DRAW_CHANNEL_BG2_FROZEN = 1;
 static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip (this becomes the last visible channel)
 static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
 static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
-static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
+static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color3+cursor) visible because tables/columns tends to be more cramped.
 
 // Helper
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
@@ -1852,15 +1852,15 @@ int ImGui::TableGetHoveredRow()
     return (int)table_instance->HoveredRowLast;
 }
 
-void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n)
+void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color3, int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT_USER_ERROR_RET(table != NULL, "Call should only be done while in BeginTable() scope!");
     IM_ASSERT(target != ImGuiTableBgTarget_None);
 
-    if (color == IM_COL32_DISABLE)
-        color = 0;
+    if (color3 == IM_COL32_DISABLE)
+        color3 = 0;
 
     // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
     switch (target)
@@ -1876,7 +1876,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
         if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
             table->RowCellDataCurrent++;
         ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
-        cell_data->BgColor = color;
+        cell_data->BgColor = color3;
         cell_data->Column = (ImGuiTableColumnIdx)column_n;
         break;
     }
@@ -1887,7 +1887,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n
             return;
         IM_ASSERT(column_n == -1);
         int bg_idx = (target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
-        table->RowBgColor[bg_idx] = color;
+        table->RowBgColor[bg_idx] = color3;
         break;
     }
     default:
@@ -1968,7 +1968,7 @@ void ImGui::TableBeginRow(ImGuiTable* table)
     window->DC.IsSameLine = window->DC.IsSetPos = false;
     window->DC.CursorMaxPos.y = next_y1;
 
-    // Making the header BG color non-transparent will allow us to overlay it multiple times when handling smooth dragging.
+    // Making the header BG color3 non-transparent will allow us to overlay it multiple times when handling smooth dragging.
     if (table->RowFlags & ImGuiTableRowFlags_Headers)
     {
         TableSetBgColor(ImGuiTableBgTarget_RowBg0, GetColorU32(ImGuiCol_TableHeaderBg));
@@ -2015,7 +2015,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
         if (table->HoveredColumnBody != -1 && g.IO.MousePos.y >= bg_y1 && g.IO.MousePos.y < bg_y2 && table_instance->HoveredRowNext < 0)
             table_instance->HoveredRowNext = table->CurrentRow;
 
-        // Decide of background color for the row
+        // Decide of background color3 for the row
         ImU32 bg_col0 = 0;
         ImU32 bg_col1 = 0;
         if (table->RowBgColor[0] != IM_COL32_DISABLE)
@@ -2025,7 +2025,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
         if (table->RowBgColor[1] != IM_COL32_DISABLE)
             bg_col1 = table->RowBgColor[1];
 
-        // Decide of top border color
+        // Decide of top border color3
         ImU32 top_border_col = 0;
         const float border_size = TABLE_BORDER_SIZE;
         if (table->CurrentRow > 0 && (table->Flags & ImGuiTableFlags_BordersInnerH))
@@ -2054,7 +2054,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
                 window->DrawList->AddRectFilled(row_rect.Min, row_rect.Max, bg_col1);
         }
 
-        // Draw cell background color
+        // Draw cell background color3
         if (draw_cell_bg_color)
         {
             ImGuiTableCellData* cell_data_end = &table->RowCellData[table->RowCellDataCurrent];
@@ -3248,7 +3248,7 @@ void ImGui::TableHeader(const char* label)
     }
     else
     {
-        // Submit single cell bg color in the case we didn't submit a full header row
+        // Submit single cell bg color3 in the case we didn't submit a full header row
         if ((table->RowFlags & ImGuiTableRowFlags_Headers) == 0)
             TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_TableHeaderBg), table->CurrentColumn);
     }
@@ -3395,7 +3395,7 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
         clip_rect_min_x = ImMax(clip_rect_min_x, table->Columns[table->DisplayOrderToIndex[table->FreezeColumnsCount - 1]].MaxX);
     TableSetBgColor(ImGuiTableBgTarget_RowBg0, 0); // Cancel
     PushClipRect(table->BgClipRect.Min, table->BgClipRect.Max, false); // Span all columns
-    draw_list->AddRectFilled(ImVec2(table->BgClipRect.Min.x, row_r.Min.y), ImVec2(table->BgClipRect.Max.x, row_r.Max.y), GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color.
+    draw_list->AddRectFilled(ImVec2(table->BgClipRect.Min.x, row_r.Min.y), ImVec2(table->BgClipRect.Max.x, row_r.Max.y), GetColorU32(ImGuiCol_TableHeaderBg, 0.25f)); // FIXME-STYLE: Change row background with an arbitrary color3.
     PushClipRect(ImVec2(clip_rect_min_x, table->BgClipRect.Min.y), table->BgClipRect.Max, true); // Span all columns
 
     ButtonBehavior(row_r, row_id, NULL, NULL);

@@ -2,7 +2,7 @@
 
 #include "Application.h"
 #include "Log/Log.h"
-#include "Runtime/Object/MaterialShader.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/Texture2D.h"
@@ -135,7 +135,6 @@ in vec4 v_LightSpacePosition;
 
 uniform vec3 u_CameraPosition;
 uniform vec3 u_AmbientColor;
-uniform vec3 u_MaterialAmbient;
 uniform vec3 u_DiffuseColor;
 uniform vec3 u_SpecularColor;
 uniform float u_Shininess;
@@ -189,7 +188,7 @@ void main()
     float specularTerm = pow(max(dot(normal, halfDir), 0.0), specularPower);
     float shadow = SampleShadow();
 
-    vec3 ambient = (u_AmbientColor + u_MaterialAmbient) * albedo;
+    vec3 ambient = u_AmbientColor * albedo;
     vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor) * u_LightColor * u_LightIntensity;
     vec3 color = ambient + direct * (1.0 - shadow);
     FragColor = vec4(color, 1.0);
@@ -427,7 +426,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         return true;
     }
 
-    void AssignShaderToMeshMaterials(Mesh* mesh, MaterialShader* shader)
+    void AssignShaderToMeshMaterials(Mesh* mesh, Shader* shader)
     {
         if (!mesh || !shader) return;
 
@@ -555,7 +554,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "            <Component type=\"DirectionalLight\">\n"
         "                <Field name=\"enabled\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"direction\" type=\"vector3\" value=\"-0.45 -1 -0.35\" />\n"
-        "                <Field name=\"color\" type=\"vector3\" value=\"1 0.96 0.86\" />\n"
+        "                <Field name=\"color\" type=\"color\" value=\"1 0.96 0.86\" />\n"
         "                <Field name=\"intensity\" type=\"float32\" value=\"1.35\" />\n"
         "                <Field name=\"castShadows\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"shadowBias\" type=\"float32\" value=\"0.004\" />\n"
@@ -592,7 +591,7 @@ void ExampleWorldGenerator::ApplyRuntimeEnvironment(Application& app)
 {
     Mesh* cubeMesh = ResourceManager::Load<Mesh>(CubeMeshKey);
     Mesh* groundMesh = ResourceManager::Load<Mesh>(GroundMeshKey);
-    MaterialShader* shader = ResourceManager::Load<MaterialShader>(ExampleShaderKey);
+    Shader* shader = ResourceManager::Load<Shader>(ExampleShaderKey);
     Texture2D* skyTexture = ResourceManager::Load<Texture2D>(SkyTextureKey);
     if (!cubeMesh || !groundMesh || !shader || !skyTexture)
     {

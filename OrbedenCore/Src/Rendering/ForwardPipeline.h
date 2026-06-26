@@ -9,8 +9,8 @@ class ForwardPipeline
 {
 private:
     RenderBackend* backend = nullptr;
-    MaterialShader* shadowDepthShader = nullptr;
-    MaterialShader* skyboxShader = nullptr;
+    Shader* shadowDepthShader = nullptr;
+    Shader* skyboxShader = nullptr;
     GpuDepthTextureID shadowDepthTexture;
     GpuRenderTargetID shadowRenderTarget;
     GpuMesh skyboxMesh;

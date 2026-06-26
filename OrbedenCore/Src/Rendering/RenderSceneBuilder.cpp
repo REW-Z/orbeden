@@ -15,10 +15,9 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
     spaceCache.Update(world);
 
     float32 aspect = viewportHeight > 0 ? static_cast<float32>(viewportWidth) / static_cast<float32>(viewportHeight) : 1.0f;
-    world.ForEachComponent(Camera::StaticType(), [&](Component* component)
+    world.ForEachComponent<Camera>([&](Camera* camera)
     {
-        Camera* camera = component ? component->Cast<Camera>() : nullptr;
-        if (!camera || !camera->enabled) return;
+        if (!camera->enabled) return;
 
         RenderCamera renderCamera;
         renderCamera.ens = camera->GetEnsId();
@@ -40,10 +39,9 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         return a.depth < b.depth;
     });
 
-    world.ForEachComponent(DirectionalLight::StaticType(), [&](Component* component)
+    world.ForEachComponent<DirectionalLight>([&](DirectionalLight* light)
     {
-        DirectionalLight* light = component ? component->Cast<DirectionalLight>() : nullptr;
-        if (!light || !light->enabled) return;
+        if (!light->enabled) return;
 
         RenderDirectionalLight renderLight;
         renderLight.ens = light->GetEnsId();
@@ -62,10 +60,9 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         scene.directionalLights.push_back(renderLight);
     });
 
-    world.ForEachComponent(StaticMeshRenderer::StaticType(), [&](Component* component)
+    world.ForEachComponent<StaticMeshRenderer>([&](StaticMeshRenderer* renderer)
     {
-        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
-        if (!renderer || !renderer->enabled) return;
+        if (!renderer->enabled) return;
 
         Mesh* mesh = renderer->mesh.Get();
         if (!mesh)

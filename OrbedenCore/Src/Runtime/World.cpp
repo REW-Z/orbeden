@@ -141,7 +141,7 @@ World::~World()
 //清空世界运行时对象
 void World::Clear()
 {
-    ReleaseSceneResourceRefs();
+    ReleaseExternResourceRefs();
 
     while (!liveEns.empty())
     {
@@ -461,25 +461,25 @@ bool World::RemoveComponent(EnsId ens, Type* type)
     return deleted;
 }
 
-//增加一个场景资源引用
-bool World::AddSceneResourceRef(Type* type, const std::string& key)
+//增加一个外部资源引用
+bool World::AddExternResourceRef(Type* type, const std::string& key)
 {
-    Object* object = ResourceManager::LoadSceneRef(type, key);
+    Object* object = ResourceManager::LoadWorldRef(type, key);
     if (!object) return false;
 
-    sceneResourceRefs.push_back(ResourceManager::NormalizeKey(key));
+    externResourceRefs.push_back(ResourceManager::NormalizeKey(key));
     return true;
 }
 
-//释放当前World持有的所有场景资源引用
-void World::ReleaseSceneResourceRefs()
+//释放当前World持有的所有外部资源引用
+void World::ReleaseExternResourceRefs()
 {
-    for (const std::string& key : sceneResourceRefs)
+    for (const std::string& key : externResourceRefs)
     {
-        ResourceManager::ReleaseSceneRef(key);
+        ResourceManager::ReleaseWorldRef(key);
     }
 
-    sceneResourceRefs.clear();
+    externResourceRefs.clear();
 }
 
 //按稳定ID查找Ens

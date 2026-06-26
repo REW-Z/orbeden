@@ -81,7 +81,7 @@
     <ClInclude Include="Src\Runtime\Object\Material.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Object\MaterialShader.h">
+    <ClInclude Include="Src\Runtime\Object\Shader.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\Object\Mesh.h">
@@ -275,7 +275,7 @@
     <ClCompile Include="Src\Runtime\Object\Material.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Object\MaterialShader.cpp">
+    <ClCompile Include="Src\Runtime\Object\Shader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp">
