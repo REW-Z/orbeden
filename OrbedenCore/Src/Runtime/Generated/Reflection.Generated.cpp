@@ -325,7 +325,7 @@ public:
 
         std::string arg0{};
         if (!args[0].TryGet(arg0)) return Reflection::Value();
-        color4 arg1{};
+        color arg1{};
         if (!args[1].TryGet(arg1)) return Reflection::Value();
         instance->SetColor(arg0, arg1);
         success = true;
@@ -828,7 +828,7 @@ namespace Reflection
                 FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr),
                 FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr),
                 FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr),
-                FieldInfo("clearColor", "color4", Reflection::FieldKind::Color4, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr),
+                FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr),
             });
 
         RegisterTypeMethods(Camera::StaticType(),
@@ -839,7 +839,7 @@ namespace Reflection
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
                 FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
-                FieldInfo("color", "color4", Reflection::FieldKind::Color4, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
+                FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
                 FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr),
                 FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr),
@@ -866,7 +866,7 @@ namespace Reflection
                 MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_0),
                 MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_1),
                 MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_2),
-                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color4", Reflection::ValueKind::Color4) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_3),
+                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_3),
                 MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_4),
                 MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_5),
                 MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_6),

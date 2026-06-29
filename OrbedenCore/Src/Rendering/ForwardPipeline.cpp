@@ -10,8 +10,8 @@
 
 namespace
 {
-    constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth";
-    constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox";
+    constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth.orbshader";
+    constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox.orbshader";
 
     vector3 Add(const vector3& a, const vector3& b)
     {
@@ -157,7 +157,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     passDesc.width = camera.viewportWidth;
     passDesc.height = camera.viewportHeight;
     passDesc.clearMode = camera.camera ? camera.camera->clearMode : ClearMode::SolidColor;
-    passDesc.clearColor = camera.camera ? camera.camera->clearColor : color4();
+    passDesc.clearColor = camera.camera ? camera.camera->clearColor : color();
     backend->BeginPass(passDesc);
     backend->SetDepthTest(true);
     backend->SetDepthWrite(true);

@@ -130,7 +130,7 @@ void Material::ClearTexture(const std::string& slotName)
     }
 }
 
-void Material::SetColor(const std::string& slotName, const color4& value)
+void Material::SetColor(const std::string& slotName, const color& value)
 {
     if (slotName.empty()) return;
 
@@ -147,7 +147,7 @@ void Material::SetColor(const std::string& slotName, const color4& value)
     revision++;
 }
 
-color4 Material::GetColor(const std::string& slotName, const color4& defaultValue) const
+color Material::GetColor(const std::string& slotName, const color& defaultValue) const
 {
     const MaterialColorSlot* slot = FindColorSlot(colorSlots, slotName);
     return slot ? slot->value : defaultValue;

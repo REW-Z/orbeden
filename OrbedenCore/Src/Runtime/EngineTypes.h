@@ -20,7 +20,7 @@ public:
 };
 
 //颜色
-struct color4
+struct color
 {
 public:
     float32 r = 0.0f;

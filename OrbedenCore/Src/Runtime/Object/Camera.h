@@ -16,6 +16,6 @@ public:
     float32 depth = 0.0f;
     uint32 drawLayerMask = 0xFFFFFFFFu;
     ClearMode clearMode = ClearMode::SolidColor;
-    color4 clearColor = { 0.1f, 0.12f, 0.16f, 1.0f };
+    color clearColor = { 0.1f, 0.12f, 0.16f, 1.0f };
 };
 

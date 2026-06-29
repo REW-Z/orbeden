@@ -52,7 +52,7 @@ public:
     EnsId ens;
     DirectionalLight* light = nullptr;
     vector3 direction = { -0.35f, -1.0f, -0.45f };
-    color4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    color color = { 1.0f, 1.0f, 1.0f, 1.0f };
     float32 intensity = 1.0f;
     bool castShadows = true;
     float32 shadowBias = 0.004f;

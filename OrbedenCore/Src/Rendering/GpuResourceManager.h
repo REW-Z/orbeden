@@ -46,7 +46,7 @@ struct GpuMaterialColorBinding
 {
 public:
     std::string uniformName;
-    color4 value;
+    color value;
 };
 
 //材质浮点槽上传后的 GPU 绑定信息。

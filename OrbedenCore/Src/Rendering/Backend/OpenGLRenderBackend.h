@@ -49,8 +49,7 @@ public:
     void BindCubeTexture(uint32 slot, GpuCubeTextureID id) override;
     void SetUniformMatrix4(const char* name, const matrix4x4& value) override;
     void SetUniformVector3(const char* name, const vector3& value) override;
-    void SetUniformColor(const char* name, const color4& value) override;
-    void SetUniformColor4(const char* name, const color4& value) override;
+    void SetUniformColor(const char* name, const color& value) override;
     void SetUniformInt(const char* name, int32 value) override;
     void SetUniformFloat(const char* name, float32 value) override;
     void SetDepthTest(bool enabled) override;

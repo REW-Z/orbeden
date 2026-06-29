@@ -21,7 +21,7 @@ struct MaterialColorSlot
 {
 public:
     std::string name;
-    color4 value;
+    color value;
 };
 
 //材质保存的浮点槽，name 使用 GLSL uniform 名
@@ -63,10 +63,10 @@ public:
     void ClearTexture(const std::string& slotName);
 
     //设置材质颜色槽
-    void SetColor(const std::string& slotName, const color4& value);
+    void SetColor(const std::string& slotName, const color& value);
 
     //获取材质颜色槽
-    color4 GetColor(const std::string& slotName, const color4& defaultValue = color4{ 0.0f, 0.0f, 0.0f, 1.0f }) const;
+    color GetColor(const std::string& slotName, const color& defaultValue = color{ 0.0f, 0.0f, 0.0f, 1.0f }) const;
 
     //判断材质颜色槽是否已设置
     bool HasColor(const std::string& slotName) const;

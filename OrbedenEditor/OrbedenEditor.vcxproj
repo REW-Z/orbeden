@@ -220,13 +220,10 @@ dotnet build "$(ProjectDir)..\ExampleProject\Script\ExampleGame.csproj" -c "$(Co
     <None Include="..\ExampleProject\Resource\Material\cube.mtl" />
     <None Include="..\ExampleProject\Resource\Mesh\ground.obj" />
     <None Include="..\ExampleProject\Resource\Material\ground.mtl" />
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.vert.glsl" />
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.frag.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.orbshader" />
     <None Include="..\ExampleProject\Resource\Texture\sky_blue.png" />
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.vert.glsl" />
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.frag.glsl" />
-    <None Include="..\ExampleProject\Resource\Shader\skybox.vert.glsl" />
-    <None Include="..\ExampleProject\Resource\Shader\skybox.frag.glsl" />
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.orbshader" />
+    <None Include="..\ExampleProject\Resource\Shader\skybox.orbshader" />
     <None Include="..\ExampleProject\Script\ExampleGame.csproj" />
     <None Include="..\ExampleProject\Script\Directory.Build.props" />
     <None Include="..\ExampleProject\Script\GuiOverlay.cs" />

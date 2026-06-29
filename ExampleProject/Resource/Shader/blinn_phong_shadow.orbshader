@@ -1,3 +1,31 @@
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+layout(location = 3) in vec3 a_Tangent;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+uniform mat4 u_LightViewProjection;
+
+out vec3 v_WorldPosition;
+out vec3 v_Normal;
+out vec2 v_TexCoord;
+out vec4 v_LightSpacePosition;
+
+void main()
+{
+    vec4 worldPosition = u_Model * vec4(a_Position, 1.0);
+    v_WorldPosition = worldPosition.xyz;
+    v_Normal = mat3(u_Model) * a_Normal;
+    v_TexCoord = a_TexCoord;
+    v_LightSpacePosition = u_LightViewProjection * worldPosition;
+    gl_Position = u_ViewProjection * worldPosition;
+}
+
+--------frag
 #version 430 core
 
 in vec3 v_WorldPosition;
@@ -6,12 +34,12 @@ in vec2 v_TexCoord;
 in vec4 v_LightSpacePosition;
 
 uniform vec3 u_CameraPosition;
-uniform vec3 u_AmbientColor;
-uniform vec3 u_DiffuseColor;
-uniform vec3 u_SpecularColor;
+uniform vec4 u_AmbientColor;
+uniform vec4 u_DiffuseColor;
+uniform vec4 u_SpecularColor;
 uniform float u_Shininess;
 uniform vec3 u_LightDirection;
-uniform vec3 u_LightColor;
+uniform vec4 u_LightColor;
 uniform float u_LightIntensity;
 uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
@@ -44,7 +72,7 @@ float SampleShadow()
 
 void main()
 {
-    vec3 albedo = u_DiffuseColor;
+    vec3 albedo = u_DiffuseColor.rgb;
     if (u_HasDiffuseTexture)
     {
         albedo *= texture(u_DiffuseTexture, v_TexCoord).rgb;
@@ -60,8 +88,8 @@ void main()
     float specularTerm = pow(max(dot(normal, halfDir), 0.0), specularPower);
     float shadow = SampleShadow();
 
-    vec3 ambient = u_AmbientColor * albedo;
-    vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor) * u_LightColor * u_LightIntensity;
+    vec3 ambient = u_AmbientColor.rgb * albedo;
+    vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor.rgb) * u_LightColor.rgb * u_LightIntensity;
     vec3 color = ambient + direct * (1.0 - shadow);
     FragColor = vec4(color, 1.0);
 }

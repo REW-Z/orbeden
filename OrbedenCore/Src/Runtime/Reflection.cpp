@@ -100,9 +100,9 @@ namespace Reflection
     {
     }
 
-    //创建 color4 反射值
-    Value::Value(const color4& value)
-        : kind(ValueKind::Color4), data(value)
+    //创建 color 反射值
+    Value::Value(const color& value)
+        : kind(ValueKind::Color), data(value)
     {
     }
 
@@ -150,7 +150,7 @@ namespace Reflection
         case ValueKind::String: return ToXmlValue(std::get<std::string>(data));
         case ValueKind::StringId: return ToXmlValue(std::get<StringId>(data));
         case ValueKind::Vector3: return ToXmlValue(std::get<vector3>(data));
-        case ValueKind::Color4: return ToXmlValue(std::get<color4>(data));
+        case ValueKind::Color: return ToXmlValue(std::get<color>(data));
         case ValueKind::Quaternion: return ToXmlValue(std::get<quaternion>(data));
         case ValueKind::EnsId: return ToXmlValue(std::get<EnsId>(data));
         case ValueKind::Object:
@@ -226,11 +226,11 @@ namespace Reflection
         return true;
     }
 
-    //尝试读取 color4 值
-    bool Value::TryGet(color4& value) const
+    //尝试读取 color 值
+    bool Value::TryGet(color& value) const
     {
-        if (kind != ValueKind::Color4) return false;
-        value = std::get<color4>(data);
+        if (kind != ValueKind::Color) return false;
+        value = std::get<color>(data);
         return true;
     }
 
@@ -321,9 +321,9 @@ namespace Reflection
             value = Value(parsed);
             return true;
         }
-        case FieldKind::Color4:
+        case FieldKind::Color:
         {
-            color4 parsed;
+            color parsed;
             if (!SetFromXmlValue(parsed, text)) return false;
             value = Value(parsed);
             return true;
@@ -528,8 +528,8 @@ namespace Reflection
         return FormatFloat(value.x) + " " + FormatFloat(value.y) + " " + FormatFloat(value.z);
     }
 
-    //转换 color4 为 XML 文本
-    std::string ToXmlValue(const color4& value)
+    //转换 color 为 XML 文本
+    std::string ToXmlValue(const color& value)
     {
         return FormatFloat(value.r) + " " + FormatFloat(value.g) + " " + FormatFloat(value.b) + " " + FormatFloat(value.a);
     }
@@ -614,23 +614,12 @@ namespace Reflection
         return true;
     }
 
-    //从 XML 文本读取 color4
-    bool SetFromXmlValue(color4& target, const std::string& value)
+    //从 XML 文本读取 color
+    bool SetFromXmlValue(color& target, const std::string& value)
     {
         std::istringstream stream(value);
-        color4 parsed;
-        stream >> parsed.r >> parsed.g >> parsed.b;
-        if (stream.fail()) return false;
-
-        stream >> std::ws;
-        if (stream.eof())
-        {
-            parsed.a = 1.0f;
-            target = parsed;
-            return true;
-        }
-
-        stream >> parsed.a;
+        color parsed;
+        stream >> parsed.r >> parsed.g >> parsed.b >> parsed.a;
         if (stream.fail()) return false;
 
         stream >> std::ws;
