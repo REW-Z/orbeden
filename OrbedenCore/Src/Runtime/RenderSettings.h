@@ -9,6 +9,6 @@ struct RenderSettings
 public:
     Ref<Skybox> skybox;
     bool skyboxEnabled = false;
-    color4 ambientColor = { 0.08f, 0.09f, 0.1f, 1.0f };
+    color ambientColor = { 0.08f, 0.09f, 0.1f, 1.0f };
 };
 

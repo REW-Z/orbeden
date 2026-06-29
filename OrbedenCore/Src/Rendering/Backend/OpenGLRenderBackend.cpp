@@ -482,15 +482,7 @@ void OpenGLRenderBackend::SetUniformVector3(const char* name, const vector3& val
     glUniform3f(location, value.x, value.y, value.z);
 }
 
-void OpenGLRenderBackend::SetUniformColor(const char* name, const color4& value)
-{
-    int32 location = GetUniformLocation(name);
-    if (location < 0) return;
-
-    glUniform3f(location, value.r, value.g, value.b);
-}
-
-void OpenGLRenderBackend::SetUniformColor4(const char* name, const color4& value)
+void OpenGLRenderBackend::SetUniformColor(const char* name, const color& value)
 {
     int32 location = GetUniformLocation(name);
     if (location < 0) return;

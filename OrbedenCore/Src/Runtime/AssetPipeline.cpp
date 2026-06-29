@@ -81,6 +81,9 @@ namespace
         std::string key;
     };
 
+    //读取文本文件，失败时记录错误
+    std::string LoadTextOrError(const std::string& path, AssetCollection& collection);
+
     //判断字符串前缀
     bool StartsWith(const std::string& text, const std::string& prefix)
     {
@@ -162,6 +165,319 @@ namespace
         }
 
         return result;
+    }
+
+    //裁剪字符串两端空白
+    std::string Trim(const std::string& text)
+    {
+        usize begin = 0;
+        while (begin < text.size() && std::isspace(static_cast<unsigned char>(text[begin])))
+        {
+            begin++;
+        }
+
+        usize end = text.size();
+        while (end > begin && std::isspace(static_cast<unsigned char>(text[end - 1])))
+        {
+            end--;
+        }
+
+        return text.substr(begin, end - begin);
+    }
+
+    //判断是否为OrbShader分段头
+    bool ParseOrbShaderStageHeader(const std::string& line, std::string& stage)
+    {
+        stage.clear();
+        usize dashCount = 0;
+        while (dashCount < line.size() && line[dashCount] == '-')
+        {
+            dashCount++;
+        }
+
+        if (dashCount < 6) return false;
+
+        std::string tail = Trim(line.substr(dashCount));
+        std::stringstream stream(tail);
+        stream >> stage;
+        stage = ToLower(stage);
+        return true;
+    }
+
+    //判断是否为当前后端支持的OrbShader分段
+    bool IsSupportedOrbShaderStage(const std::string& stage)
+    {
+        return stage == "vert" || stage == "frag";
+    }
+
+    //判断是否为未来预留的OrbShader分段
+    bool IsReservedOrbShaderStage(const std::string& stage)
+    {
+        return stage == "tesc"
+            || stage == "tese"
+            || stage == "geom"
+            || stage == "comp"
+            || stage == "raygen"
+            || stage == "miss"
+            || stage == "closesthit"
+            || stage == "anyhit"
+            || stage == "intersection"
+            || stage == "callable";
+    }
+
+    //判断是否为合法的 include 指令
+    bool ParseOrbShaderIncludeLine(const std::string& line, std::string& includePath)
+    {
+        includePath.clear();
+
+        std::string trimmed = Trim(line);
+        if (!StartsWith(trimmed, "#include")) return false;
+
+        std::string rest = Trim(trimmed.substr(8));
+        if (rest.size() < 2 || rest.front() != '"' || rest.back() != '"')
+        {
+            return true;
+        }
+
+        includePath = rest.substr(1, rest.size() - 2);
+        return true;
+    }
+
+    //按 OrbShader 规则解析 include 资源路径
+    std::string ResolveOrbShaderPath(const std::string& sourceKey, const std::string& path)
+    {
+        std::string normalizedPath = ResourceManager::NormalizeKey(path);
+        if (StartsWith(normalizedPath, "Resource/")) return normalizedPath;
+
+        std::filesystem::path parent = std::filesystem::path(sourceKey).parent_path();
+        return NormalizePath((parent / normalizedPath).string());
+    }
+
+    //从 include 文本中提取当前分段可见的源码
+    bool ExtractOrbShaderIncludeSource(const std::string& sourceKey, const std::string& source, const std::string& stage, AssetCollection& collection, std::string& stageSource)
+    {
+        stageSource.clear();
+
+        bool hasStageHeader = false;
+        std::string sharedSource;
+        std::string selectedSource;
+        std::string* currentSource = &sharedSource;
+        std::stringstream input(source);
+        std::string line;
+        uint32 lineNumber = 0;
+        while (std::getline(input, line))
+        {
+            lineNumber++;
+
+            std::string lineStage;
+            if (ParseOrbShaderStageHeader(line, lineStage))
+            {
+                hasStageHeader = true;
+                currentSource = nullptr;
+                if (lineStage.empty())
+                {
+                    collection.AddError("OrbShader include stage header is missing a stage name: " + sourceKey + ":" + std::to_string(lineNumber));
+                    return false;
+                }
+
+                if (IsSupportedOrbShaderStage(lineStage))
+                {
+                    currentSource = lineStage == stage ? &selectedSource : nullptr;
+                    continue;
+                }
+
+                if (IsReservedOrbShaderStage(lineStage))
+                {
+                    collection.AddError("OrbShader include stage is reserved but not supported by the current backend: " + lineStage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                }
+                else
+                {
+                    collection.AddError("OrbShader include stage is unknown: " + lineStage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                }
+
+                return false;
+            }
+
+            if (currentSource)
+            {
+                *currentSource += line;
+                *currentSource += '\n';
+            }
+        }
+
+        if (!hasStageHeader)
+        {
+            stageSource = source;
+            return true;
+        }
+
+        stageSource = sharedSource + selectedSource;
+        return true;
+    }
+
+    //展开 OrbShader 的 include 片段
+    bool ExpandOrbShaderIncludes(const std::string& sourceKey, const std::string& stage, const std::string& source, AssetCollection& collection, List<std::string>& includeStack, std::string& expandedSource)
+    {
+        expandedSource.clear();
+        includeStack.push_back(sourceKey);
+
+        std::stringstream input(source);
+        std::string line;
+        uint32 lineNumber = 0;
+        while (std::getline(input, line))
+        {
+            lineNumber++;
+
+            std::string includePath;
+            if (!ParseOrbShaderIncludeLine(line, includePath))
+            {
+                expandedSource += line;
+                expandedSource += '\n';
+                continue;
+            }
+
+            if (includePath.empty() || includePath.front() == '"' || includePath.back() == '"')
+            {
+                collection.AddError("OrbShader include syntax is invalid: " + sourceKey + ":" + std::to_string(lineNumber));
+                includeStack.pop_back();
+                return false;
+            }
+
+            //解析 include 目标
+            std::string includeKey = ResolveOrbShaderPath(sourceKey, includePath);
+            if (std::find(includeStack.begin(), includeStack.end(), includeKey) != includeStack.end())
+            {
+                collection.AddError("OrbShader include cycle detected: " + sourceKey + " -> " + includeKey);
+                includeStack.pop_back();
+                return false;
+            }
+
+            //读取并筛选当前分段可见源码
+            std::string includeText = LoadTextOrError(includeKey, collection);
+            if (!collection.Succeeded())
+            {
+                includeStack.pop_back();
+                return false;
+            }
+
+            std::string includeSource;
+            if (!ExtractOrbShaderIncludeSource(includeKey, includeText, stage, collection, includeSource))
+            {
+                includeStack.pop_back();
+                return false;
+            }
+
+            //递归展开子 include
+            std::string expandedInclude;
+            if (!ExpandOrbShaderIncludes(includeKey, stage, includeSource, collection, includeStack, expandedInclude))
+            {
+                includeStack.pop_back();
+                return false;
+            }
+
+            expandedSource += expandedInclude;
+            if (!expandedInclude.empty() && expandedInclude.back() != '\n')
+            {
+                expandedSource += '\n';
+            }
+        }
+
+        includeStack.pop_back();
+        return true;
+    }
+
+    //解析OrbShader单文件，拆出当前后端支持的GLSL源码
+    bool ParseOrbShaderSource(const std::string& sourceKey, const std::string& source, AssetCollection& collection, std::string& vertexSource, std::string& fragmentSource)
+    {
+        vertexSource.clear();
+        fragmentSource.clear();
+
+        std::string* currentSource = nullptr;
+        bool ignoringInvalidStage = false;
+        bool hasVertex = false;
+        bool hasFragment = false;
+        std::stringstream input(source);
+        std::string line;
+        uint32 lineNumber = 0;
+        while (std::getline(input, line))
+        {
+            lineNumber++;
+
+            std::string stage;
+            if (ParseOrbShaderStageHeader(line, stage))
+            {
+                currentSource = nullptr;
+                ignoringInvalidStage = false;
+                if (stage.empty())
+                {
+                    collection.AddError("OrbShader stage header is missing a stage name: " + sourceKey + ":" + std::to_string(lineNumber));
+                    ignoringInvalidStage = true;
+                    continue;
+                }
+
+                if (IsSupportedOrbShaderStage(stage) && stage == "vert")
+                {
+                    if (hasVertex)
+                    {
+                        collection.AddError("OrbShader duplicate vert stage: " + sourceKey + ":" + std::to_string(lineNumber));
+                        ignoringInvalidStage = true;
+                        continue;
+                    }
+
+                    hasVertex = true;
+                    currentSource = &vertexSource;
+                    continue;
+                }
+
+                if (IsSupportedOrbShaderStage(stage) && stage == "frag")
+                {
+                    if (hasFragment)
+                    {
+                        collection.AddError("OrbShader duplicate frag stage: " + sourceKey + ":" + std::to_string(lineNumber));
+                        ignoringInvalidStage = true;
+                        continue;
+                    }
+
+                    hasFragment = true;
+                    currentSource = &fragmentSource;
+                    continue;
+                }
+
+                if (IsReservedOrbShaderStage(stage))
+                {
+                    collection.AddError("OrbShader stage is reserved but not supported by the current backend: " + stage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                }
+                else
+                {
+                    collection.AddError("OrbShader unknown stage: " + stage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                }
+
+                ignoringInvalidStage = true;
+                continue;
+            }
+
+            if (currentSource)
+            {
+                *currentSource += line;
+                *currentSource += '\n';
+            }
+            else if (!ignoringInvalidStage && !Trim(line).empty())
+            {
+                collection.AddError("OrbShader content appears before a stage header: " + sourceKey + ":" + std::to_string(lineNumber));
+            }
+        }
+
+        if (!hasVertex)
+        {
+            collection.AddError("OrbShader is missing vert stage: " + sourceKey);
+        }
+
+        if (!hasFragment)
+        {
+            collection.AddError("OrbShader is missing frag stage: " + sourceKey);
+        }
+
+        return collection.Succeeded();
     }
 
     //解析OBJ索引，支持负索引
@@ -372,7 +688,7 @@ namespace
 
                 if (command == "Kd" || command == "Ks" || command == "Ke")
                 {
-                    color4 value = { 0.0f, 0.0f, 0.0f, 1.0f };
+                    color value = { 0.0f, 0.0f, 0.0f, 1.0f };
                     stream >> value.r >> value.g >> value.b;
                     if (command == "Kd") currentMaterial->SetColor(MaterialDiffuseColorSlot, value);
                     if (command == "Ks") currentMaterial->SetColor(MaterialSpecularColorSlot, value);
@@ -527,6 +843,11 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
         return Import_OBJ(sourceKey);
     }
 
+    if (extension == ".orbshader")
+    {
+        return Import_ORBSHADER(sourceKey);
+    }
+
     if (FileSystem::Exist(ResolveAssetPath(sourceKey + ".vert.glsl")) && FileSystem::Exist(ResolveAssetPath(sourceKey + ".frag.glsl")))
     {
         return Import_GLSL(sourceKey);
@@ -563,6 +884,50 @@ AssetCollection AssetPipeline::Import_GLSL(std::string path)
     shader->fragmentPath = fragmentPath;
     shader->vertexSource = vertexSource;
     shader->fragmentSource = fragmentSource;
+    shader->ReflectSlotsFromSource();
+    collection.AddObject(sourceKey, shader, true);
+    return collection;
+}
+
+//导入单文件OrbShader
+AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
+{
+    AssetCollection collection;
+    std::string sourceKey = ResourceManager::NormalizeKey(path);
+    collection.sourceKey = sourceKey;
+
+    std::string source = LoadTextOrError(sourceKey, collection);
+    if (!collection.Succeeded()) return collection;
+
+    std::string vertexSource;
+    std::string fragmentSource;
+    if (!ParseOrbShaderSource(sourceKey, source, collection, vertexSource, fragmentSource))
+    {
+        return collection;
+    }
+
+    Shader* shader = CreateImportedObject<Shader>(sourceKey);
+    if (!shader)
+    {
+        collection.AddError("Failed to create Shader: " + sourceKey);
+        return collection;
+    }
+
+    shader->name = Path::GetNameWithOutExtension(sourceKey);
+    shader->vertexPath = sourceKey;
+    shader->fragmentPath = sourceKey;
+    List<std::string> includeStack;
+    if (!ExpandOrbShaderIncludes(sourceKey, "vert", vertexSource, collection, includeStack, shader->vertexSource))
+    {
+        return collection;
+    }
+
+    includeStack.clear();
+    if (!ExpandOrbShaderIncludes(sourceKey, "frag", fragmentSource, collection, includeStack, shader->fragmentSource))
+    {
+        return collection;
+    }
+
     shader->ReflectSlotsFromSource();
     collection.AddObject(sourceKey, shader, true);
     return collection;

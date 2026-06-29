@@ -26,7 +26,7 @@ struct ShaderColorSlot
 public:
     std::string name;
     std::string displayName;
-    color4 defaultValue = { 1.0f, 1.0f, 1.0f, 1.0f };
+    color defaultValue = { 1.0f, 1.0f, 1.0f, 1.0f };
 };
 
 //Shader 暴露给 Material 的浮点槽

@@ -42,6 +42,9 @@ public:
     //导入GLSL着色器源码对
     static AssetCollection Import_GLSL(std::string path);
 
+    //导入单文件OrbShader
+    static AssetCollection Import_ORBSHADER(std::string path);
+
     //导入图片为CPU纹理
     static AssetCollection Import_IMG(std::string path);
 

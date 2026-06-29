@@ -22,7 +22,7 @@ namespace Reflection
         String,
         StringId,
         Vector3,
-        Color4,
+        Color,
         Quaternion,
         EnsId,
         Object,
@@ -41,7 +41,7 @@ namespace Reflection
         StringId,
         ObjectRef,
         Vector3,
-        Color4,
+        Color,
         Quaternion,
         EnsId,
     };
@@ -51,7 +51,7 @@ namespace Reflection
     {
     private:
         ValueKind kind = ValueKind::Empty;
-        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector3, color4, quaternion, EnsId, Object*> data;
+        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector3, color, quaternion, EnsId, Object*> data;
 
     public:
         Value() = default;
@@ -83,8 +83,8 @@ namespace Reflection
         //创建 vector3 反射值
         Value(const vector3& value);
 
-        //创建 color4 反射值
-        Value(const color4& value);
+        //创建 color 反射值
+        Value(const color& value);
 
         //创建 quaternion 反射值
         Value(const quaternion& value);
@@ -128,8 +128,8 @@ namespace Reflection
         //尝试读取 vector3 值
         bool TryGet(vector3& value) const;
 
-        //尝试读取 color4 值
-        bool TryGet(color4& value) const;
+        //尝试读取 color 值
+        bool TryGet(color& value) const;
 
         //尝试读取 quaternion 值
         bool TryGet(quaternion& value) const;
@@ -278,8 +278,8 @@ namespace Reflection
     //转换 vector3 为 XML 文本
     std::string ToXmlValue(const vector3& value);
 
-    //转换 color4 为 XML 文本
-    std::string ToXmlValue(const color4& value);
+    //转换 color 为 XML 文本
+    std::string ToXmlValue(const color& value);
 
     //转换 quaternion 为 XML 文本
     std::string ToXmlValue(const quaternion& value);
@@ -331,8 +331,8 @@ namespace Reflection
     //从 XML 文本读取 vector3
     bool SetFromXmlValue(vector3& target, const std::string& value);
 
-    //从 XML 文本读取 color4
-    bool SetFromXmlValue(color4& target, const std::string& value);
+    //从 XML 文本读取 color
+    bool SetFromXmlValue(color& target, const std::string& value);
 
     //从 XML 文本读取 quaternion
     bool SetFromXmlValue(quaternion& target, const std::string& value);

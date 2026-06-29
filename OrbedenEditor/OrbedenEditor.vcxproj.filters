@@ -97,25 +97,16 @@
     <None Include="..\ExampleProject\Resource\Material\ground.mtl">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.vert.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.frag.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.orbshader">
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\ExampleProject\Resource\Texture\sky_blue.png">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.vert.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.orbshader">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.frag.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\skybox.vert.glsl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\skybox.frag.glsl">
+    <None Include="..\ExampleProject\Resource\Shader\skybox.orbshader">
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\ExampleProject\Script\ExampleGame.csproj">

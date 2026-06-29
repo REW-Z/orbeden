@@ -17,7 +17,7 @@ namespace
 {
     constexpr const char* CubeMeshKey = "Resource/Mesh/cube.obj//Mesh/Main";
     constexpr const char* GroundMeshKey = "Resource/Mesh/ground.obj//Mesh/Main";
-    constexpr const char* ExampleShaderKey = "Resource/Shader/blinn_phong_shadow";
+    constexpr const char* ExampleShaderKey = "Resource/Shader/blinn_phong_shadow.orbshader";
     constexpr const char* SkyTextureKey = "Resource/Texture/sky_blue.png";
 
     constexpr const char* ProjectFileText =
@@ -88,7 +88,7 @@ Ka 0.08 0.06 0.05
 Kd 0.86 0.42 0.20
 Ks 0.55 0.48 0.42
 Ns 48.0
-shader Resource/Shader/blinn_phong_shadow
+shader Resource/Shader/blinn_phong_shadow.orbshader
 )ORB";
 
     constexpr const char* GroundMtlText = R"ORB(newmtl GroundMaterial
@@ -96,7 +96,7 @@ Ka 0.06 0.08 0.06
 Kd 0.38 0.52 0.36
 Ks 0.12 0.16 0.12
 Ns 18.0
-shader Resource/Shader/blinn_phong_shadow
+shader Resource/Shader/blinn_phong_shadow.orbshader
 )ORB";
 
     constexpr const char* BlinnPhongVertexShaderText = R"ORB(#version 430 core
@@ -134,12 +134,12 @@ in vec2 v_TexCoord;
 in vec4 v_LightSpacePosition;
 
 uniform vec3 u_CameraPosition;
-uniform vec3 u_AmbientColor;
-uniform vec3 u_DiffuseColor;
-uniform vec3 u_SpecularColor;
+uniform vec4 u_AmbientColor;
+uniform vec4 u_DiffuseColor;
+uniform vec4 u_SpecularColor;
 uniform float u_Shininess;
 uniform vec3 u_LightDirection;
-uniform vec3 u_LightColor;
+uniform vec4 u_LightColor;
 uniform float u_LightIntensity;
 uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
@@ -172,7 +172,7 @@ float SampleShadow()
 
 void main()
 {
-    vec3 albedo = u_DiffuseColor;
+    vec3 albedo = u_DiffuseColor.rgb;
     if (u_HasDiffuseTexture)
     {
         albedo *= texture(u_DiffuseTexture, v_TexCoord).rgb;
@@ -188,8 +188,8 @@ void main()
     float specularTerm = pow(max(dot(normal, halfDir), 0.0), specularPower);
     float shadow = SampleShadow();
 
-    vec3 ambient = u_AmbientColor * albedo;
-    vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor) * u_LightColor * u_LightIntensity;
+    vec3 ambient = u_AmbientColor.rgb * albedo;
+    vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor.rgb) * u_LightColor.rgb * u_LightIntensity;
     vec3 color = ambient + direct * (1.0 - shadow);
     FragColor = vec4(color, 1.0);
 }
@@ -408,6 +408,27 @@ public sealed class SampleBehaviour : ScriptBehaviour
         return true;
     }
 
+    bool WriteOrbShaderFile(const std::filesystem::path& path, const char* vertexText, const char* fragmentText)
+    {
+        if (path.has_parent_path())
+        {
+            std::filesystem::create_directories(path.parent_path());
+        }
+
+        std::ofstream output(path, std::ios::out | std::ios::trunc);
+        if (!output)
+        {
+            Log::Error(("Example project orbshader file generate failed: " + NormalizePath(path)).c_str());
+            return false;
+        }
+
+        output << "--------vert\n";
+        output << vertexText;
+        output << "\n--------frag\n";
+        output << fragmentText;
+        return true;
+    }
+
     bool WriteBinaryFile(const std::filesystem::path& path, const unsigned char* bytes, std::size_t size)
     {
         if (path.has_parent_path())
@@ -461,12 +482,9 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
     succeeded = WriteTextFile(root / "Resource/Material/ground.mtl", GroundMtlText) && succeeded;
 
     //写入示例和引擎内置 Shader。
-    succeeded = WriteTextFile(root / "Resource/Shader/blinn_phong_shadow.vert.glsl", BlinnPhongVertexShaderText) && succeeded;
-    succeeded = WriteTextFile(root / "Resource/Shader/blinn_phong_shadow.frag.glsl", BlinnPhongFragmentShaderText) && succeeded;
-    succeeded = WriteTextFile(root / "Resource/Shader/shadow_depth.vert.glsl", ShadowDepthVertexShaderText) && succeeded;
-    succeeded = WriteTextFile(root / "Resource/Shader/shadow_depth.frag.glsl", ShadowDepthFragmentShaderText) && succeeded;
-    succeeded = WriteTextFile(root / "Resource/Shader/skybox.vert.glsl", SkyboxVertexShaderText) && succeeded;
-    succeeded = WriteTextFile(root / "Resource/Shader/skybox.frag.glsl", SkyboxFragmentShaderText) && succeeded;
+    succeeded = WriteOrbShaderFile(root / "Resource/Shader/blinn_phong_shadow.orbshader", BlinnPhongVertexShaderText, BlinnPhongFragmentShaderText) && succeeded;
+    succeeded = WriteOrbShaderFile(root / "Resource/Shader/shadow_depth.orbshader", ShadowDepthVertexShaderText, ShadowDepthFragmentShaderText) && succeeded;
+    succeeded = WriteOrbShaderFile(root / "Resource/Shader/skybox.orbshader", SkyboxVertexShaderText, SkyboxFragmentShaderText) && succeeded;
     succeeded = WriteBinaryFile(root / "Resource/Texture/sky_blue.png", SkyBluePngBytes, sizeof(SkyBluePngBytes)) && succeeded;
 
     //写入 C# 示例脚本工程。
@@ -554,7 +572,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "            <Component type=\"DirectionalLight\">\n"
         "                <Field name=\"enabled\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"direction\" type=\"vector3\" value=\"-0.45 -1 -0.35\" />\n"
-        "                <Field name=\"color\" type=\"color\" value=\"1 0.96 0.86\" />\n"
+        "                <Field name=\"color\" type=\"color\" value=\"1 0.96 0.86 1\" />\n"
         "                <Field name=\"intensity\" type=\"float32\" value=\"1.35\" />\n"
         "                <Field name=\"castShadows\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"shadowBias\" type=\"float32\" value=\"0.004\" />\n"
@@ -576,7 +594,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "                <Field name=\"depth\" type=\"float32\" value=\"0\" />\n"
         "                <Field name=\"drawLayerMask\" type=\"uint32\" value=\"4294967295\" />\n"
         "                <Field name=\"clearMode\" type=\"ClearMode\" value=\"2\" />\n"
-        "                <Field name=\"clearColor\" type=\"color4\" value=\"0.62 0.78 0.96 1\" />\n"
+        "                <Field name=\"clearColor\" type=\"color\" value=\"0.62 0.78 0.96 1\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
         "    </Ens>\n"

@@ -175,7 +175,7 @@ namespace
     }
 
     //获取颜色槽默认值
-    color4 GetColorSlotDefault(const std::string& uniformName)
+    color GetColorSlotDefault(const std::string& uniformName)
     {
         if (uniformName == MaterialSpecularColorSlot) return { 0.0f, 0.0f, 0.0f, 1.0f };
         if (uniformName == MaterialEmissionColorSlot) return { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -232,7 +232,7 @@ void Shader::ReflectSlotsFromSource()
     floatSlots.clear();
 
     std::regex samplerRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*sampler2D\\s+([A-Za-z_][A-Za-z0-9_]*)");
-    std::regex colorRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*vec3\\s+([A-Za-z_][A-Za-z0-9_]*)");
+    std::regex colorRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*vec4\\s+([A-Za-z_][A-Za-z0-9_]*)");
     std::regex floatRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*float\\s+([A-Za-z_][A-Za-z0-9_]*)");
 
     auto scanSource = [&](const std::string& source)

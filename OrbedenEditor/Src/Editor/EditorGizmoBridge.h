@@ -12,7 +12,7 @@ public:
     float32 z = 0.0f;
 };
 
-// Editor Gizmo 颜色，布局与 C# Orbeden.color4 一致。
+// Editor Gizmo 颜色，布局与 C# Orbeden.color 一致。
 struct EditorGizmoColor
 {
 public:
