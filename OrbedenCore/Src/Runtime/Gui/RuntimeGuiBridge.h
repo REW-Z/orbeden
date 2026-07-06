@@ -10,6 +10,13 @@ public:
     void* Button = nullptr;
     void* BeginPanel = nullptr;
     void* EndPanel = nullptr;
+    void* Checkbox = nullptr;
+    void* InputInt = nullptr;
+    void* InputFloat = nullptr;
+    void* InputVector3 = nullptr;
+    void* InputText = nullptr;
+    void* BeginComponentBlock = nullptr;
+    void* EndComponentBlock = nullptr;
 };
 
 // Runtime GUI 桥接层，当前由 Dear ImGui 实现。

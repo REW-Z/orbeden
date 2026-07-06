@@ -1,8 +1,22 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/EnsId.h"
 
-// Ens 脚本绑定函数表。
+//World 原生函数表。
+struct WorldBind
+{
+public:
+    void* CreateEns = nullptr;
+    void* CreateEnsWithStableId = nullptr;
+    void* FindEns = nullptr;
+    void* DestroyEns = nullptr;
+
+    //创建 World 函数表。
+    static WorldBind Create();
+};
+
+//Ens 原生函数表。
 struct EnsBind
 {
 public:
@@ -11,12 +25,13 @@ public:
     void* SetName = nullptr;
     void* HasSpaceComponent = nullptr;
     void* HasStaticMeshRenderer = nullptr;
+    void* AddStaticMeshRenderer = nullptr;
 
-    // 创建 Ens 绑定函数表。
+    //创建 Ens 函数表。
     static EnsBind Create();
 };
 
-// SpaceComponent 脚本绑定函数表。
+//SpaceComponent 原生函数表。
 struct SpaceComponentBind
 {
 public:
@@ -31,11 +46,11 @@ public:
     void* GetWorldPosition = nullptr;
     void* GetWorldRotation = nullptr;
 
-    // 创建 SpaceComponent 绑定函数表。
+    //创建 SpaceComponent 函数表。
     static SpaceComponentBind Create();
 };
 
-// StaticMeshRenderer 脚本绑定函数表。
+//StaticMeshRenderer 原生函数表。
 struct StaticMeshRendererBind
 {
 public:
@@ -46,6 +61,6 @@ public:
     void* GetReceiveShadows = nullptr;
     void* SetReceiveShadows = nullptr;
 
-    // 创建 StaticMeshRenderer 绑定函数表。
+    //创建 StaticMeshRenderer 函数表。
     static StaticMeshRendererBind Create();
 };

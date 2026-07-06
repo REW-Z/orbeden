@@ -3,23 +3,11 @@
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
-#include "Runtime/Managed/ManagedRuntimeOverlay.h"
-#include "Runtime/Managed/ScriptSystem.h"
 #include "Runtime/ContentContext.h"
+#include "ScriptModule.h"
 
 #include <filesystem>
 #include <string>
-
-namespace
-{
-    std::filesystem::path GetExecutableDirectory(const char* executablePath)
-    {
-        if (!executablePath || executablePath[0] == '\0') return std::filesystem::current_path();
-
-        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
-        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
-    }
-}
 
 int main(int argc, char** argv)
 {
@@ -54,41 +42,19 @@ int main(int argc, char** argv)
         Log::Warning("Game startup warning: ExampleProject was not found.");
     }
 
-    std::filesystem::path executableDirectory = GetExecutableDirectory(argc > 0 ? argv[0] : "");
-    std::filesystem::path managedDirectory = executableDirectory / "Managed";
-
-    ScriptSystem scriptSystem;
-    ScriptSystemConfig scriptConfig;
-    scriptConfig.runtimeConfigPath = (executableDirectory / "OrbedenCore.runtimeconfig.json").lexically_normal().generic_string();
-    scriptConfig.managedDirectory = exampleProject.empty()
-        ? managedDirectory.lexically_normal().generic_string()
-        : (std::filesystem::path(exampleProject) / "Managed").lexically_normal().generic_string();
-    scriptConfig.runtimeAssemblyPath = (managedDirectory / "Orbeden.Runtime.dll").lexically_normal().generic_string();
-    scriptConfig.componentAssemblyPath = scriptConfig.runtimeAssemblyPath;
-    if (scriptSystem.Initialize(scriptConfig))
+    ScriptModule scriptModule;
+    if (scriptModule.Initialize())
     {
-        app.RegisterSystem(&scriptSystem);
-    }
-
-    ManagedRuntimeOverlay managedOverlay;
-    ManagedRuntimeOverlayConfig managedConfig;
-    managedConfig.userAssemblyPath = exampleProject.empty()
-        ? (managedDirectory / "ExampleGame.dll").lexically_normal().generic_string()
-        : (std::filesystem::path(exampleProject) / "Managed" / "ExampleGame.dll").lexically_normal().generic_string();
-    managedConfig.userTypeName = "ExampleGame.GuiOverlay, ExampleGame";
-    managedConfig.userMethodName = "OnGui";
-    if (managedOverlay.Initialize(scriptSystem, managedConfig))
-    {
+        app.RegisterSystem(&scriptModule);
         if (RenderSystem* renderSystem = app.GetRenderSystem())
         {
-            renderSystem->SetRenderOverlay(&managedOverlay);
+            renderSystem->SetRenderOverlay(&scriptModule);
         }
     }
 
     app.Run();
-    managedOverlay.Shutdown();
-    app.UnregisterSystem(&scriptSystem);
-    scriptSystem.Shutdown();
+    app.UnregisterSystem(&scriptModule);
+    scriptModule.Shutdown();
 
     Profiler::WriteProfileLog();
     Profiler::Clear();

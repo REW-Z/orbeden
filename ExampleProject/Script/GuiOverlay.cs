@@ -1,5 +1,4 @@
-using System.Runtime.InteropServices;
-using Orbeden;
+using OrbedenCore.CSharp;
 
 namespace ExampleGame;
 
@@ -9,15 +8,14 @@ public static class GuiOverlay
     private static int clickCount;
 
     /// <summary>绘制示例运行时 GUI。</summary>
-    [UnmanagedCallersOnly]
-    public static void OnGui()
+    public static void Draw()
     {
         bool visible = GUI.BeginPanel("C# Runtime GUI");
         try
         {
             if (!visible) return;
 
-            GUI.Label("Hello from Orbeden.Runtime");
+            GUI.Label("Hello from OrbedenCore.CSharp");
             if (GUI.Button("Click from C#"))
             {
                 clickCount++;

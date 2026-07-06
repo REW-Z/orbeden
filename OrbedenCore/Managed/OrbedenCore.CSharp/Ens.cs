@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Orbeden;
+namespace OrbedenCore.CSharp;
 
 /// <summary>托管侧 Ens 代理，Native Ens 本体由 World 唯一持有。</summary>
 public sealed class Ens : IEquatable<Ens>
@@ -19,7 +19,7 @@ public sealed class Ens : IEquatable<Ens>
     }
 
     /// <summary>通过 EnsId 获取托管代理。</summary>
-    internal static Ens FromId(EnsId id)
+    public static Ens FromId(EnsId id)
     {
         if (id.IsNull) return Null;
         if (cache.TryGetValue(id, out Ens? value)) return value;
@@ -27,6 +27,24 @@ public sealed class Ens : IEquatable<Ens>
         value = new(id);
         cache[id] = value;
         return value;
+    }
+
+    /// <summary>创建新的 Ens。</summary>
+    public static Ens Create(string name = "")
+    {
+        return FromId(WorldBind.CreateEns(name));
+    }
+
+    /// <summary>使用稳定 ID 创建新的 Ens。</summary>
+    public static Ens CreateWithStableId(string stableId, string name = "")
+    {
+        return FromId(WorldBind.CreateEnsWithStableId(stableId, name));
+    }
+
+    /// <summary>按稳定 ID 查找 Ens。</summary>
+    public static Ens Find(string stableId)
+    {
+        return FromId(WorldBind.FindEns(stableId));
     }
 
     /// <summary>判断 Ens 是否仍然有效。</summary>
@@ -39,6 +57,12 @@ public sealed class Ens : IEquatable<Ens>
         set => EnsBind.SetName(Id, value);
     }
 
+    /// <summary>销毁 Ens。</summary>
+    public bool Destroy()
+    {
+        return WorldBind.DestroyEns(Id);
+    }
+
     /// <summary>空间组件。</summary>
     public SpaceComponent Space => new(this);
 
@@ -47,6 +71,12 @@ public sealed class Ens : IEquatable<Ens>
 
     /// <summary>判断是否拥有 StaticMeshRenderer。</summary>
     public bool HasStaticMeshRenderer => EnsBind.HasStaticMeshRenderer(Id);
+
+    /// <summary>添加静态网格渲染组件。</summary>
+    public StaticMeshRenderer? AddStaticMeshRenderer()
+    {
+        return EnsBind.AddStaticMeshRenderer(Id) ? new StaticMeshRenderer(this) : null;
+    }
 
     /// <summary>获取组件包装。</summary>
     public T? GetComponent<T>() where T : Component

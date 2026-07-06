@@ -4,6 +4,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="OrbedenCore/OrbedenCore.vcxproj" Id="b12e5123-bd9c-4d91-a1ba-879726128c33" />
+  <Project Path="OrbedenCore/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.csproj" Id="c73f4de0-68f3-4c89-bb0e-5208cf911574" />
   <Project Path="OrbedenEditor/OrbedenEditor.vcxproj" Id="3d2f40a3-67c9-4ee0-a524-36f4be99a9f2" />
   <Project Path="OrbedenGame/OrbedenGame.vcxproj" Id="3340dcc9-0392-425b-9b7e-ebacf2df11b6" />
 </Solution>

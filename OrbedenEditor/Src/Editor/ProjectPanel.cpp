@@ -56,6 +56,48 @@ void ProjectPanel::DrawPanel()
         editor.RequestSaveCurrentWorld();
     }
 
+    if (ImGui::Button("Build C#"))
+    {
+        editor.RequestBuildScripts();
+    }
+
+    ImGui::SameLine();
+    if (editor.IsPlaying())
+    {
+        ImGui::BeginDisabled();
+    }
+
+    if (ImGui::Button("Play"))
+    {
+        editor.RequestPlay();
+    }
+
+    if (editor.IsPlaying())
+    {
+        ImGui::EndDisabled();
+    }
+
+    ImGui::SameLine();
+    if (!editor.IsPlaying())
+    {
+        ImGui::BeginDisabled();
+    }
+
+    if (ImGui::Button("Stop"))
+    {
+        editor.RequestStop();
+    }
+
+    if (!editor.IsPlaying())
+    {
+        ImGui::EndDisabled();
+    }
+
+    if (ImGui::Button("Build Player"))
+    {
+        editor.RequestBuildPlayer();
+    }
+
     if (!editor.HasProject())
     {
         ImGui::EndDisabled();

@@ -1,14 +1,21 @@
-using Orbeden;
+using OrbedenCore.CSharp;
 
 namespace ExampleGame;
 
 /// <summary>示例托管脚本行为。</summary>
 public sealed class SampleBehaviour : ScriptBehaviour
 {
+    [SerializeField]
     private vector3 startPosition;
+    [SerializeField]
     private float totalTime;
+    [SerializeField]
     private float elapsedTime;
+    [SerializeField]
     private int reportCount;
+
+    /// <summary>创建示例托管脚本行为。</summary>
+    public SampleBehaviour(Ens ens) : base(ens) {}
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()

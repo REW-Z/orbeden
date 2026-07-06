@@ -15,4 +15,4 @@ Copied files:
 - `lib/win-x86/libnethost.lib`
 - `lib/win-x86/nethost.lib`
 
-`ScriptSystem` links `libnethost.lib` statically and uses `get_hostfxr_path` to find the installed `hostfxr` runtime at process startup.
+`EditorClrHost` links `nethost.lib` and uses `get_hostfxr_path` to find the installed `hostfxr` runtime when the Editor starts.

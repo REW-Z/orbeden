@@ -10,11 +10,15 @@
 #include "Runtime/Object/SpaceComponent.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <filesystem>
 #include <imgui.h>
+#include <sstream>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -128,6 +132,99 @@ namespace
     {
         return ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse;
     }
+
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path);
+        std::ostringstream output;
+        output << input.rdbuf();
+        return output.str();
+    }
+
+    std::string GetXmlTagValue(const std::string& text, const std::string& name)
+    {
+        std::string openTag = "<" + name + ">";
+        std::string closeTag = "</" + name + ">";
+        std::size_t begin = text.find(openTag);
+        if (begin == std::string::npos) return std::string();
+
+        begin += openTag.size();
+        std::size_t end = text.find(closeTag, begin);
+        return end == std::string::npos ? std::string() : text.substr(begin, end - begin);
+    }
+
+    std::string Quote(const std::string& value)
+    {
+        return "\"" + value + "\"";
+    }
+
+    std::string FindFirstCsproj(const std::filesystem::path& directory)
+    {
+        if (!std::filesystem::is_directory(directory)) return std::string();
+
+        List<std::string> projects;
+        std::error_code error;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(directory, error))
+        {
+            if (error) break;
+            if (entry.is_regular_file() && entry.path().extension() == ".csproj")
+            {
+                projects.push_back(NormalizePath(entry.path()));
+            }
+        }
+
+        std::sort(projects.begin(), projects.end());
+        return projects.empty() ? std::string() : projects.front();
+    }
+
+    std::string GetParentDirectory(const std::string& path)
+    {
+        std::filesystem::path value(path);
+        return NormalizePath(value.has_parent_path() ? value.parent_path() : std::filesystem::current_path());
+    }
+
+    bool FileExists(const std::string& path)
+    {
+        return !path.empty() && std::filesystem::exists(std::filesystem::path(path));
+    }
+
+    std::filesystem::path MakeShadowAssemblyPath(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
+    {
+        std::filesystem::create_directories(shadowDirectory);
+
+        auto ticks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        std::string fileName = source.stem().string() + "_inspector_" + std::to_string(ticks) + source.extension().string();
+        return shadowDirectory / fileName;
+    }
+
+    bool CopyManagedFileIfExists(const std::filesystem::path& source, const std::filesystem::path& target)
+    {
+        if (!std::filesystem::exists(source)) return true;
+
+        std::error_code error;
+        std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing, error);
+        return !error;
+    }
+
+    std::string ShadowCopyManagedAssembly(const std::string& assemblyPath, const std::filesystem::path& shadowDirectory)
+    {
+        std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
+        if (!std::filesystem::exists(sourceAssembly)) return std::string();
+
+        std::filesystem::path shadowAssembly = MakeShadowAssemblyPath(sourceAssembly, shadowDirectory);
+        std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
+        std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
+        std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
+        std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
+        if (!CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
+            || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
+            || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
+        {
+            return std::string();
+        }
+
+        return NormalizePath(shadowAssembly);
+    }
 }
 
 EditorSystem::EditorSystem(Application& application, const char* startupExecutablePath)
@@ -144,21 +241,21 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
     std::filesystem::path managedDirectory = executableDirectory / "Managed";
-    ScriptSystemConfig scriptConfig;
-    scriptConfig.runtimeConfigPath = NormalizePath(executableDirectory / "OrbedenCore.runtimeconfig.json");
-    scriptConfig.managedDirectory = NormalizePath(managedDirectory);
-    scriptConfig.runtimeAssemblyPath = NormalizePath(managedDirectory / "Orbeden.Runtime.dll");
-    scriptConfig.componentAssemblyPath = scriptConfig.runtimeAssemblyPath;
-    if (scriptSystem.Initialize(scriptConfig))
+    EditorClrHostConfig clrConfig;
+    clrConfig.runtimeConfigPath = NormalizePath(executableDirectory / "OrbedenEditor.runtimeconfig.json");
+    clrConfig.componentAssemblyPath = NormalizePath(managedDirectory / "Orbeden.Editor.dll");
+    if (clrHost.Initialize(clrConfig))
     {
-        managedOverlay.Initialize(scriptSystem, executablePath);
+        managedOverlay.Initialize(clrHost, executablePath);
     }
 }
 
 EditorSystem::~EditorSystem()
 {
+    playMode.Stop();
+    managedOverlay.UnloadGameAssembly();
     managedOverlay.Shutdown();
-    scriptSystem.Shutdown();
+    clrHost.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
 
     if (RenderSystem* renderSystem = app.GetRenderSystem())
@@ -170,6 +267,7 @@ EditorSystem::~EditorSystem()
 void EditorSystem::Update(World& world, float deltaTime)
 {
     TryAutoLoadExampleProject();
+    playMode.Update(deltaTime);
     UpdateEditorCamera(world, deltaTime);
 }
 
@@ -191,7 +289,9 @@ void EditorSystem::DrawOverlay()
     DrawManagedSceneGizmos();
     DrawProjectDialog();
     panelManager.DrawPanels();
+    managedOverlay.DrawInspector(selection.GetSelectedEns(), GetSelectedEnsStableId());
     managedOverlay.DrawPanels();
+    playMode.DrawGui();
 }
 
 void EditorSystem::RequestOpenProjectDialog()
@@ -202,6 +302,118 @@ void EditorSystem::RequestOpenProjectDialog()
 void EditorSystem::RequestSaveCurrentWorld()
 {
     SaveCurrentWorld();
+}
+
+void EditorSystem::RequestBuildScripts()
+{
+    if (playMode.IsPlaying())
+    {
+        RequestStop();
+    }
+
+    if (!project.HasProject())
+    {
+        projectStatus = "No project is open.";
+        return;
+    }
+
+    std::string csproj = GetProjectScriptProjectPath();
+    if (csproj.empty())
+    {
+        projectStatus = "No C# project found in script root.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string command = "dotnet build " + Quote(csproj) + " -c Debug";
+    if (RunCommand(command, "Build C#"))
+    {
+        RefreshInspectorGameAssembly();
+        projectStatus = "Built C#: " + GetProjectGameAssemblyPath();
+    }
+}
+
+void EditorSystem::RequestPlay()
+{
+    if (playMode.IsPlaying()) return;
+    if (!project.HasProject())
+    {
+        projectStatus = "No project is open.";
+        return;
+    }
+
+    std::string assemblyPath = GetProjectGameAssemblyPath();
+    if (!FileExists(assemblyPath))
+    {
+        projectStatus = "Game DLL is missing. Build C# first: " + assemblyPath;
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".pie";
+    std::string gameModuleType = GetProjectGameModuleTypeName();
+    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, NormalizePath(shadowDirectory)))
+    {
+        projectStatus = playMode.GetLastError();
+        return;
+    }
+
+    managedOverlay.LoadGameAssembly(playMode.GetShadowAssemblyPath(), GetProjectScriptSidecarPath());
+    projectStatus = "Play-In-Editor started.";
+}
+
+void EditorSystem::RequestStop()
+{
+    playMode.Stop();
+    managedOverlay.UnloadGameAssembly();
+    RefreshInspectorGameAssembly();
+    projectStatus = "Play-In-Editor stopped.";
+}
+
+void EditorSystem::RequestBuildPlayer()
+{
+    if (playMode.IsPlaying())
+    {
+        RequestStop();
+    }
+
+    std::string repoRoot = FindRepositoryRoot();
+    if (repoRoot.empty())
+    {
+        projectStatus = "Repository root was not found.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string publishScript = NormalizePath(std::filesystem::path(repoRoot) / "Build/PublishExampleGameAot.ps1");
+    if (!FileExists(publishScript))
+    {
+        projectStatus = "NativeAOT publish script is missing.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string command = "powershell -ExecutionPolicy Bypass -File " + Quote(publishScript) + " -Configuration Debug -Platform x64";
+    if (!RunCommand(command, "Build Player AOT"))
+    {
+        return;
+    }
+
+    std::string msbuild = NormalizePath(std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe"));
+    std::string gameProject = NormalizePath(std::filesystem::path(repoRoot) / "OrbedenGame/OrbedenGame.vcxproj");
+    if (!FileExists(msbuild) || !FileExists(gameProject))
+    {
+        projectStatus = "Build Player failed: MSBuild or OrbedenGame project was not found.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    RunCommand(Quote(msbuild) + " " + Quote(gameProject) + " /p:Configuration=Debug /p:Platform=x64", "Build OrbedenGame");
+}
+
+bool EditorSystem::IsPlaying() const
+{
+    return playMode.IsPlaying();
 }
 
 bool EditorSystem::HasProject() const
@@ -257,6 +469,132 @@ EditorSelection& EditorSystem::GetSelection()
 const EditorSelection& EditorSystem::GetSelection() const
 {
     return selection;
+}
+
+std::string EditorSystem::GetProjectScriptProjectPath() const
+{
+    return FindFirstCsproj(project.GetScriptRootPath());
+}
+
+std::string EditorSystem::GetProjectGameAssemblyName() const
+{
+    std::string csproj = GetProjectScriptProjectPath();
+    if (csproj.empty()) return std::string();
+
+    std::string content = ReadTextFile(std::filesystem::path(csproj));
+    std::string assemblyName = GetXmlTagValue(content, "AssemblyName");
+    if (!assemblyName.empty()) return assemblyName;
+
+    return std::filesystem::path(csproj).stem().string();
+}
+
+std::string EditorSystem::GetProjectGameModuleTypeName() const
+{
+    std::string csproj = GetProjectScriptProjectPath();
+    std::string assemblyName = GetProjectGameAssemblyName();
+    if (csproj.empty() || assemblyName.empty()) return std::string();
+
+    std::string content = ReadTextFile(std::filesystem::path(csproj));
+    std::string rootNamespace = GetXmlTagValue(content, "RootNamespace");
+    if (rootNamespace.empty()) rootNamespace = assemblyName;
+
+    return rootNamespace + ".GameModule, " + assemblyName;
+}
+
+std::string EditorSystem::GetProjectGameAssemblyPath() const
+{
+    std::string assemblyName = GetProjectGameAssemblyName();
+    if (assemblyName.empty()) return std::string();
+
+    return NormalizePath(std::filesystem::path(project.GetManagedRootPath()) / (assemblyName + ".dll"));
+}
+
+std::string EditorSystem::GetProjectScriptSidecarPath() const
+{
+    std::string worldPath = project.GetStartupWorldPath();
+    return worldPath.empty() ? std::string() : worldPath + ".scripts.json";
+}
+
+bool EditorSystem::RefreshInspectorGameAssembly()
+{
+    if (!project.HasProject())
+    {
+        managedOverlay.UnloadGameAssembly();
+        return false;
+    }
+
+    std::string assemblyPath = GetProjectGameAssemblyPath();
+    std::string sidecarPath = GetProjectScriptSidecarPath();
+    if (!FileExists(assemblyPath))
+    {
+        managedOverlay.LoadGameAssembly(std::string(), sidecarPath);
+        return false;
+    }
+
+    std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".inspector";
+    std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory);
+    if (shadowAssemblyPath.empty())
+    {
+        managedOverlay.LoadGameAssembly(std::string(), sidecarPath);
+        projectStatus = "Inspector game assembly shadow copy failed.";
+        Log::Warning(projectStatus.c_str());
+        return false;
+    }
+
+    managedOverlay.LoadGameAssembly(shadowAssemblyPath, sidecarPath);
+    return true;
+}
+
+std::string EditorSystem::GetSelectedEnsStableId() const
+{
+    EnsId selectedEns = selection.GetSelectedEns();
+    if (selectedEns.IsNull()) return std::string();
+
+    SpaceComponent* space = app.GetWorld().GetSpaceComponent(selectedEns);
+    return space ? space->GetInstanceId().GetPath() : std::string();
+}
+
+std::string EditorSystem::FindRepositoryRoot() const
+{
+    List<std::filesystem::path> starts;
+    starts.push_back(GetExecutableDirectory(executablePath));
+    starts.push_back(std::filesystem::current_path());
+    if (project.HasProject())
+    {
+        starts.push_back(std::filesystem::path(project.GetProjectRoot()));
+    }
+
+    for (std::filesystem::path start : starts)
+    {
+        start = std::filesystem::absolute(start);
+        while (!start.empty())
+        {
+            if (std::filesystem::exists(start / "orbeden.slnx"))
+            {
+                return NormalizePath(start);
+            }
+
+            std::filesystem::path parent = start.parent_path();
+            if (parent == start) break;
+            start = parent;
+        }
+    }
+
+    return std::string();
+}
+
+bool EditorSystem::RunCommand(const std::string& command, const char* actionName)
+{
+    int result = std::system(command.c_str());
+    if (result == 0)
+    {
+        projectStatus = std::string(actionName) + " succeeded.";
+        return true;
+    }
+
+    projectStatus = std::string(actionName) + " failed.";
+    Log::Error(projectStatus.c_str());
+    return false;
 }
 
 void EditorSystem::RegisterBuiltInPanels()
@@ -458,6 +796,7 @@ void EditorSystem::TryAutoLoadExampleProject()
         return;
     }
 
+    RequestStop();
     project.LoadProjectFolder(exampleProject);
     if (project.HasProject())
     {
@@ -465,6 +804,7 @@ void EditorSystem::TryAutoLoadExampleProject()
         projectStatus = "Loaded: " + project.GetProjectRoot();
         selection.Clear();
         EnsureEditorCamera(app.GetWorld());
+        RefreshInspectorGameAssembly();
     }
 #endif
 }
@@ -605,6 +945,7 @@ void EditorSystem::DrawProjectDialog()
 
     if (ImGui::Button("Load"))
     {
+        RequestStop();
         if (project.LoadProjectFolder(dialogDirectory))
         {
             dialogError.clear();
@@ -612,6 +953,7 @@ void EditorSystem::DrawProjectDialog()
             projectStatus = "Loaded: " + project.GetProjectRoot();
             selection.Clear();
             EnsureEditorCamera(app.GetWorld());
+            RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
         }
         else

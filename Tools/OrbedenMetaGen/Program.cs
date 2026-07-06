@@ -362,11 +362,6 @@ static bool IsPersistentField(string className, string fieldName)
         return fieldName is "name";
     }
 
-    if (className == "ScriptsComponent")
-    {
-        return false;
-    }
-
     if (className == "Material")
     {
         return fieldName is "name" or "shader";
@@ -457,7 +452,6 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Object/Texture2D.h\"");
     output.AppendLine("#include \"Runtime/Object/Camera.h\"");
     output.AppendLine("#include \"Runtime/Object/DirectionalLight.h\"");
-    output.AppendLine("#include \"Runtime/Object/ScriptsComponent.h\"");
     output.AppendLine("#include \"Runtime/Object/SpaceComponent.h\"");
     output.AppendLine("#include \"Runtime/Object/StaticMeshRenderer.h\"");
     output.AppendLine();

@@ -1,10 +1,10 @@
-namespace Orbeden;
+namespace OrbedenCore.CSharp;
 
 /// <summary>托管组件包装基类。</summary>
 public abstract class Component
 {
     /// <summary>组件所属 Ens。</summary>
-    public Ens Ens { get; }
+    public Ens Ens { get; protected set; }
 
     /// <summary>创建组件包装。</summary>
     protected Component(Ens ens)
