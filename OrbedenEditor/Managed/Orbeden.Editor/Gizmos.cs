@@ -1,7 +1,8 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Orbeden;
+using OrbedenCore.CSharp;
 
 namespace OrbedenEditor;
 
@@ -9,8 +10,8 @@ namespace OrbedenEditor;
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct EditorGizmoApi
 {
-    public delegate* unmanaged<vector3, vector3, color4, void> Line3D;
-    public delegate* unmanaged<vector3, byte*, int, void> Label3D;
+    public delegate* unmanaged[Cdecl]<vector3, vector3, color4, void> Line3D;
+    public delegate* unmanaged[Cdecl]<vector3, byte*, int, void> Label3D;
 }
 #pragma warning restore CS0649
 
@@ -21,17 +22,10 @@ public static unsafe class Gizmos
     private static bool initialized;
 
     //保存 C++ 传入的 Gizmo 函数表
-    internal static void Initialize(IntPtr apiPointer)
+    internal static void Initialize(EditorGizmoApi value)
     {
-        if (apiPointer == IntPtr.Zero)
-        {
-            initialized = false;
-            api = default;
-            return;
-        }
-
-        api = *(EditorGizmoApi*)apiPointer;
-        initialized = true;
+        api = value;
+        initialized = api.Line3D != null;
     }
 
     /// <summary>绘制三维线段。</summary>

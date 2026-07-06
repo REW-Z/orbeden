@@ -1,6 +1,7 @@
 #include "Editor/EditorGizmoBridge.h"
 
-#include <coreclr_delegates.h>
+#include "Runtime/Native/NativeCall.h"
+
 #include <imgui.h>
 
 #include <algorithm>
@@ -51,7 +52,7 @@ namespace
     }
 
     // 绘制三维线段。
-    void CORECLR_DELEGATE_CALLTYPE EditorGizmoLine3D(EditorGizmoVector3 a, EditorGizmoVector3 b, EditorGizmoColor color)
+    void ORBEDEN_NATIVE_CALL EditorGizmoLine3D(EditorGizmoVector3 a, EditorGizmoVector3 b, EditorGizmoColor color)
     {
         if (!CurrentBridge) return;
 
@@ -64,7 +65,7 @@ namespace
     }
 
     // 绘制三维文本标签。
-    void CORECLR_DELEGATE_CALLTYPE EditorGizmoLabel3D(EditorGizmoVector3 position, const uint8* text, int32 length)
+    void ORBEDEN_NATIVE_CALL EditorGizmoLabel3D(EditorGizmoVector3 position, const uint8* text, int32 length)
     {
         if (!CurrentBridge) return;
 

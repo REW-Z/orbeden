@@ -253,17 +253,17 @@ void main()
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" PrivateAssets="all" Private="false" />
+    <Reference Include="OrbedenCore.CSharp">
+      <HintPath>$(OrbedenSdkPath)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
-
-  <Target Name="RemoveRuntimeCopy" AfterTargets="Build">
-    <Delete Files="$(OutputPath)Orbeden.Runtime.dll;$(OutputPath)Orbeden.Runtime.pdb;$(OutputPath)Orbeden.Runtime.deps.json" />
-  </Target>
 </Project>
 )ORB";
 
@@ -272,12 +272,64 @@ void main()
     <OutputPath>$(MSBuildThisFileDirectory)..\Managed\</OutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\Managed\obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <OrbedenSdkPath Condition="'$(OrbedenSdkPath)' == ''">$(MSBuildThisFileDirectory)..\..\OrbedenEditor\Sdk\</OrbedenSdkPath>
   </PropertyGroup>
 </Project>
 )ORB";
 
-    constexpr const char* GuiOverlayText = R"ORB(using System.Runtime.InteropServices;
-using Orbeden;
+    constexpr const char* GameModuleText = R"ORB(using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using OrbedenCore.CSharp;
+
+namespace ExampleGame;
+
+/// <summary>ExampleGame AOT 模块入口。</summary>
+public static class GameModule
+{
+    private static SampleBehaviour? sampleBehaviour;
+
+    /// <summary>初始化游戏模块。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Initialize", CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_Initialize(IntPtr nativeApi)
+    {
+        OrbedenCoreRuntime.Initialize(nativeApi);
+
+        Ens ens = Ens.Find("world://examples/world/cube");
+        if (!ens.IsValid)
+        {
+            ens = Ens.Create("AOT Sample Ens");
+        }
+
+        sampleBehaviour = new SampleBehaviour(ens);
+        sampleBehaviour.InvokeStart();
+    }
+
+    /// <summary>关闭游戏模块。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Shutdown", CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_Shutdown()
+    {
+        sampleBehaviour?.InvokeEnd();
+        sampleBehaviour = null;
+    }
+
+    /// <summary>更新游戏模块。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Update", CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_Update(float deltaTime)
+    {
+        sampleBehaviour?.InvokeUpdate(deltaTime);
+    }
+
+    /// <summary>绘制游戏模块 GUI。</summary>
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_DrawGui", CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_DrawGui()
+    {
+        GuiOverlay.Draw();
+    }
+}
+)ORB";
+
+    constexpr const char* GuiOverlayText = R"ORB(using OrbedenCore.CSharp;
 
 namespace ExampleGame;
 
@@ -287,15 +339,14 @@ public static class GuiOverlay
     private static int clickCount;
 
     /// <summary>绘制示例运行时 GUI。</summary>
-    [UnmanagedCallersOnly]
-    public static void OnGui()
+    public static void Draw()
     {
         bool visible = GUI.BeginPanel("C# Runtime GUI");
         try
         {
             if (!visible) return;
 
-            GUI.Label("Hello from Orbeden.Runtime");
+            GUI.Label("Hello from OrbedenCore.CSharp");
             if (GUI.Button("Click from C#"))
             {
                 clickCount++;
@@ -311,17 +362,24 @@ public static class GuiOverlay
 }
 )ORB";
 
-    constexpr const char* SampleBehaviourText = R"ORB(using Orbeden;
+    constexpr const char* SampleBehaviourText = R"ORB(using OrbedenCore.CSharp;
 
 namespace ExampleGame;
 
 /// <summary>示例托管脚本行为。</summary>
 public sealed class SampleBehaviour : ScriptBehaviour
 {
+    [SerializeField]
     private vector3 startPosition;
+    [SerializeField]
     private float totalTime;
+    [SerializeField]
     private float elapsedTime;
+    [SerializeField]
     private int reportCount;
+
+    /// <summary>创建示例托管脚本行为。</summary>
+    public SampleBehaviour(Ens ens) : base(ens) {}
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
@@ -364,6 +422,15 @@ public sealed class SampleBehaviour : ScriptBehaviour
 
     constexpr const char* ScriptGitIgnoreText = "bin/\nobj/\n";
     constexpr const char* ManagedGitIgnoreText = "*\n!.gitignore\n";
+    constexpr const char* WorldScriptsText = R"ORB({
+  "scripts": [
+    {
+      "stableId": "world://examples/world/cube",
+      "type": "ExampleGame.SampleBehaviour"
+    }
+  ]
+}
+)ORB";
 
     constexpr unsigned char SkyBluePngBytes[] =
     {
@@ -490,10 +557,12 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
     //写入 C# 示例脚本工程。
     succeeded = WriteTextFile(root / "Script/ExampleGame.csproj", ExampleGameProjectText) && succeeded;
     succeeded = WriteTextFile(root / "Script/Directory.Build.props", DirectoryBuildPropsText) && succeeded;
+    succeeded = WriteTextFile(root / "Script/GameModule.cs", GameModuleText) && succeeded;
     succeeded = WriteTextFile(root / "Script/GuiOverlay.cs", GuiOverlayText) && succeeded;
     succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", SampleBehaviourText) && succeeded;
     succeeded = WriteTextFile(root / "Script/.gitignore", ScriptGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "Managed/.gitignore", ManagedGitIgnoreText) && succeeded;
+    succeeded = WriteTextFile(root / "World/example_world.world.scripts.json", WorldScriptsText) && succeeded;
 
     //写入示例 World。
     succeeded = GenerateWorldFile(projectRoot, "World/example_world.world") && succeeded;
@@ -543,9 +612,6 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "                <Field name=\"drawQueue\" type=\"DrawQueue\" value=\"0\" />\n"
         "                <Field name=\"castShadows\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"receiveShadows\" type=\"bool\" value=\"true\" />\n"
-        "            </Component>\n"
-        "            <Component type=\"ScriptsComponent\">\n"
-        "                <Script enabled=\"true\" assembly=\"ExampleGame\" type=\"ExampleGame.SampleBehaviour\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"world://examples/world/ground\" name=\"ExampleGround\">\n"

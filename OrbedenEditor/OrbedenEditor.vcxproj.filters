@@ -24,10 +24,16 @@
     <ClCompile Include="Src\Editor\EditorProject.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EditorPlayMode.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\EditorSelection.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\EditorSystem.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorClrHost.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp">
@@ -53,10 +59,16 @@
     <ClInclude Include="Src\Editor\EditorProject.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorPlayMode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EditorSelection.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorClrHost.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorGizmoBridge.h">
@@ -83,6 +95,9 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\ExampleProject\World\example_world.world">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="..\ExampleProject\World\example_world.world.scripts.json">
       <Filter>资源文件</Filter>
     </None>
     <None Include="..\ExampleProject\Resource\Mesh\cube.obj">
@@ -115,6 +130,9 @@
     <None Include="..\ExampleProject\Script\Directory.Build.props">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="..\ExampleProject\Script\GameModule.cs">
+      <Filter>资源文件</Filter>
+    </None>
     <None Include="..\ExampleProject\Script\GuiOverlay.cs">
       <Filter>资源文件</Filter>
     </None>
@@ -124,6 +142,9 @@
     <None Include="..\ExampleProject\Managed\.gitignore">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="Managed\Orbeden.Editor\EditorGameDomain.cs">
+      <Filter>资源文件</Filter>
+    </None>
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
       <Filter>资源文件</Filter>
     </None>
@@ -131,6 +152,9 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>

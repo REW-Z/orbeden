@@ -1,19 +1,35 @@
 #include "Editor/ManagedEditorOverlay.h"
 
 #include "Log/Log.h"
+#include "Runtime/Native/OrbedenNativeApi.h"
 
 #include <coreclr_delegates.h>
 #include <filesystem>
+#include <vector>
 
 namespace
 {
     using ManagedInitializeEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)(void*);
     using ManagedDrawEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, const uint8*, int32);
+    using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedDrawInspectorFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint32, uint32, const uint8*, int32);
 
     constexpr const char* EditorTypeName = "OrbedenEditor.EditorRuntime, Orbeden.Editor";
     constexpr const char* EditorInitializeMethod = "Initialize";
+    constexpr const char* EditorLoadGameAssemblyMethod = "LoadGameAssembly";
+    constexpr const char* EditorUnloadGameAssemblyMethod = "UnloadGameAssembly";
+    constexpr const char* EditorDrawInspectorMethod = "DrawInspector";
     constexpr const char* EditorDrawPanelsMethod = "DrawPanels";
     constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
+
+    //传给 Editor C# 的原生函数表。
+    struct EditorManagedApi
+    {
+    public:
+        void* nativeApi = nullptr;
+        EditorGizmoApi gizmo;
+    };
 
     // 获取可执行文件所在目录。
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -25,12 +41,12 @@ namespace
     }
 }
 
-bool ManagedEditorOverlay::Initialize(ScriptSystem& runtime, const std::string& executablePath)
+bool ManagedEditorOverlay::Initialize(EditorClrHost& host, const std::string& executablePath)
 {
     if (initialized) return true;
-    if (!runtime.IsInitialized())
+    if (!host.IsInitialized())
     {
-        Log::Warning("ManagedEditorOverlay initialize skipped: ScriptSystem is not initialized.");
+        Log::Warning("ManagedEditorOverlay initialize skipped: EditorClrHost is not initialized.");
         return false;
     }
 
@@ -40,41 +56,74 @@ bool ManagedEditorOverlay::Initialize(ScriptSystem& runtime, const std::string& 
     std::string editorAssemblyPath = (managedDirectory / "Orbeden.Editor.dll").lexically_normal().generic_string();
 
     // 绑定 Editor 托管入口。
-    scriptSystem = &runtime;
+    clrHost = &host;
     ManagedInitializeEditorFn InitializeEditor = nullptr;
-    if (!scriptSystem->BindCSharpFunction(editorAssemblyPath,
+    if (!clrHost->BindFunction(editorAssemblyPath,
         EditorTypeName,
         EditorInitializeMethod,
         reinterpret_cast<void**>(&InitializeEditor)))
     {
         Log::Warning("ManagedEditorOverlay initialize skipped: editor Initialize binding failed.");
-        scriptSystem = nullptr;
+        clrHost = nullptr;
         return false;
     }
 
-    if (!scriptSystem->BindCSharpFunction(editorAssemblyPath,
+    if (!clrHost->BindFunction(editorAssemblyPath,
         EditorTypeName,
         EditorDrawPanelsMethod,
         &DrawPanelsFunction))
     {
         Log::Warning("ManagedEditorOverlay initialize skipped: editor DrawPanels binding failed.");
-        scriptSystem = nullptr;
+        clrHost = nullptr;
         return false;
     }
 
-    if (!scriptSystem->BindCSharpFunction(editorAssemblyPath,
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
+        EditorLoadGameAssemblyMethod,
+        &LoadGameAssemblyFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor LoadGameAssembly binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
+        EditorUnloadGameAssemblyMethod,
+        &UnloadGameAssemblyFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor UnloadGameAssembly binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
+        EditorDrawInspectorMethod,
+        &DrawInspectorFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor DrawInspector binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
+    if (!clrHost->BindFunction(editorAssemblyPath,
         EditorTypeName,
         EditorDrawSceneGizmosMethod,
         &DrawSceneGizmosFunction))
     {
         Log::Warning("ManagedEditorOverlay initialize skipped: editor DrawSceneGizmos binding failed.");
-        scriptSystem = nullptr;
+        clrHost = nullptr;
         return false;
     }
 
-    // 把 Editor Gizmo 原生函数表传给 C#。
-    EditorGizmoApi editorGizmoApi = gizmoBridge.GetApi();
-    InitializeEditor(&editorGizmoApi);
+    // 把 Editor 原生函数表传给 C#。
+    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
+    EditorManagedApi editorApi;
+    editorApi.nativeApi = &nativeApi;
+    editorApi.gizmo = gizmoBridge.GetApi();
+    InitializeEditor(&editorApi);
 
     initialized = true;
     return true;
@@ -84,8 +133,11 @@ void ManagedEditorOverlay::Shutdown()
 {
     DrawPanelsFunction = nullptr;
     DrawSceneGizmosFunction = nullptr;
+    LoadGameAssemblyFunction = nullptr;
+    UnloadGameAssemblyFunction = nullptr;
+    DrawInspectorFunction = nullptr;
     initialized = false;
-    scriptSystem = nullptr;
+    clrHost = nullptr;
 }
 
 void ManagedEditorOverlay::DrawPanels()
@@ -95,6 +147,36 @@ void ManagedEditorOverlay::DrawPanels()
     // 调用 C# Editor panels。
     ManagedDrawEditorFn DrawPanels = reinterpret_cast<ManagedDrawEditorFn>(DrawPanelsFunction);
     DrawPanels();
+}
+
+void ManagedEditorOverlay::LoadGameAssembly(const std::string& assemblyPath, const std::string& sidecarPath)
+{
+    if (!initialized || LoadGameAssemblyFunction == nullptr) return;
+
+    ManagedLoadGameAssemblyFn LoadGameAssembly = reinterpret_cast<ManagedLoadGameAssemblyFn>(LoadGameAssemblyFunction);
+    LoadGameAssembly(reinterpret_cast<const uint8*>(assemblyPath.data()),
+        static_cast<int32>(assemblyPath.size()),
+        reinterpret_cast<const uint8*>(sidecarPath.data()),
+        static_cast<int32>(sidecarPath.size()));
+}
+
+void ManagedEditorOverlay::UnloadGameAssembly()
+{
+    if (!initialized || UnloadGameAssemblyFunction == nullptr) return;
+
+    ManagedUnloadGameAssemblyFn UnloadGameAssembly = reinterpret_cast<ManagedUnloadGameAssemblyFn>(UnloadGameAssemblyFunction);
+    UnloadGameAssembly();
+}
+
+void ManagedEditorOverlay::DrawInspector(EnsId selectedEns, const std::string& stableId)
+{
+    if (!initialized || DrawInspectorFunction == nullptr) return;
+
+    ManagedDrawInspectorFn DrawInspector = reinterpret_cast<ManagedDrawInspectorFn>(DrawInspectorFunction);
+    DrawInspector(selectedEns.id,
+        selectedEns.version,
+        reinterpret_cast<const uint8*>(stableId.data()),
+        static_cast<int32>(stableId.size()));
 }
 
 void ManagedEditorOverlay::DrawSceneGizmos(const matrix4x4& viewProjection, int32 viewportWidth, int32 viewportHeight)

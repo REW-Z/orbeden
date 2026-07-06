@@ -13,7 +13,6 @@
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/DirectionalLight.h"
-#include "Runtime/Object/ScriptsComponent.h"
 #include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 
@@ -888,15 +887,6 @@ namespace Reflection
             });
 
         RegisterTypeMethods(Mesh::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(ScriptsComponent::StaticType(),
-            {
-                FieldInfo("scripts", "List<ScriptSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(ScriptsComponent::StaticType(),
             {
             });
 

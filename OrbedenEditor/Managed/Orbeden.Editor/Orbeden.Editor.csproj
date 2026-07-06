@@ -9,6 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" />
+    <Reference Include="OrbedenCore.CSharp">
+      <HintPath>..\..\Sdk\Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>

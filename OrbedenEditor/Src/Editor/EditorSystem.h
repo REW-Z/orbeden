@@ -6,6 +6,7 @@
 #include "Editor/EnsViewPanel.h"
 #include "Editor/ManagedEditorOverlay.h"
 #include "Editor/PanelManager.h"
+#include "Editor/EditorPlayMode.h"
 #include "Editor/ProjectPanel.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/EnsId.h"
@@ -30,8 +31,9 @@ private:
     PanelManager panelManager;
     ProjectPanel projectPanel;
     EnsViewPanel ensViewPanel;
-    ScriptSystem scriptSystem;
+    EditorClrHost clrHost;
     ManagedEditorOverlay managedOverlay;
+    EditorPlayMode playMode;
     EnsId editorCameraEns;
     float32 cameraYaw = 35.0f;
     float32 cameraPitch = -22.0f;
@@ -59,6 +61,21 @@ public:
 
     //请求保存当前场景
     void RequestSaveCurrentWorld();
+
+    //请求构建当前项目 C# 脚本
+    void RequestBuildScripts();
+
+    //请求进入 Play-In-Editor
+    void RequestPlay();
+
+    //请求停止 Play-In-Editor
+    void RequestStop();
+
+    //请求构建发布版 Player
+    void RequestBuildPlayer();
+
+    //判断是否正在 Play-In-Editor
+    bool IsPlaying() const;
 
     //判断是否已经打开项目
     bool HasProject() const;
@@ -94,6 +111,33 @@ public:
     const EditorSelection& GetSelection() const;
 
 private:
+    //获取当前项目脚本工程路径
+    std::string GetProjectScriptProjectPath() const;
+
+    //获取当前项目游戏程序集名
+    std::string GetProjectGameAssemblyName() const;
+
+    //获取当前项目 GameModule 类型名
+    std::string GetProjectGameModuleTypeName() const;
+
+    //获取当前项目游戏程序集路径
+    std::string GetProjectGameAssemblyPath() const;
+
+    //获取当前 world 脚本 sidecar 路径
+    std::string GetProjectScriptSidecarPath() const;
+
+    //刷新 Inspector 使用的用户游戏程序集
+    bool RefreshInspectorGameAssembly();
+
+    //获取当前选中 Ens 的稳定 ID
+    std::string GetSelectedEnsStableId() const;
+
+    //查找仓库根目录
+    std::string FindRepositoryRoot() const;
+
+    //运行外部命令
+    bool RunCommand(const std::string& command, const char* actionName);
+
     //注册内置编辑器面板
     void RegisterBuiltInPanels();
 

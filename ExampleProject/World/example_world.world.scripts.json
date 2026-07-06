@@ -1,0 +1,8 @@
+{
+  "scripts": [
+    {
+      "stableId": "world://examples/world/cube",
+      "type": "ExampleGame.SampleBehaviour"
+    }
+  ]
+}

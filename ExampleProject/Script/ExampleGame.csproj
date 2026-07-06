@@ -6,15 +6,15 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\OrbedenCore\Managed\Orbeden.Runtime\Orbeden.Runtime.csproj" PrivateAssets="all" Private="false" />
+    <Reference Include="OrbedenCore.CSharp">
+      <HintPath>$(OrbedenSdkPath)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
-
-  <Target Name="RemoveRuntimeCopy" AfterTargets="Build">
-    <Delete Files="$(OutputPath)Orbeden.Runtime.dll;$(OutputPath)Orbeden.Runtime.pdb;$(OutputPath)Orbeden.Runtime.deps.json" />
-  </Target>
 </Project>

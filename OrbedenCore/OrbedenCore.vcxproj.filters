@@ -63,13 +63,13 @@
     <ClInclude Include="Src\Runtime\AssetPipeline.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Managed\ScriptComponentBinds.h">
+    <ClInclude Include="Src\Runtime\Native\NativeCall.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Managed\ScriptSystem.h">
+    <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Managed\ManagedRuntimeOverlay.h">
+    <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h">
@@ -91,9 +91,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\Object\Skybox.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Runtime\Object\ScriptsComponent.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h">
@@ -174,15 +171,6 @@
     <ClInclude Include="Src\ThirdParty\glad\include\glad\gl.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\ThirdParty\dotnet\include\coreclr_delegates.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\ThirdParty\dotnet\include\hostfxr.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\ThirdParty\dotnet\include\nethost.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -257,13 +245,10 @@
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Managed\ScriptComponentBinds.cpp">
+    <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Managed\ScriptSystem.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Runtime\Managed\ManagedRuntimeOverlay.cpp">
+    <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp">
@@ -285,9 +270,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Runtime\Object\ScriptsComponent.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Platform\GlfwWindow.cpp">
@@ -365,58 +347,5 @@
     <ClCompile Include="Src\ThirdParty\imgui\imgui_widgets.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Src\Runtime\Managed\OrbedenCore.runtimeconfig.json">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\Component.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\Ens.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\EnsBind.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\GUI.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\NativeGui.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\Orbeden.Runtime.csproj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\RuntimeTypes.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\ScriptBehaviour.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\ScriptRuntime.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\SpaceComponentBind.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Managed\Orbeden.Runtime\StaticMeshRendererBind.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Src\ThirdParty\dotnet\README.md">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Src\ThirdParty\dotnet\lib\win-x64\nethost.dll">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Src\ThirdParty\dotnet\lib\win-x64\nethost.lib">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Src\ThirdParty\dotnet\lib\win-x86\nethost.dll">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="Src\ThirdParty\dotnet\lib\win-x86\nethost.lib">
-      <Filter>资源文件</Filter>
-    </None>
   </ItemGroup>
 </Project>
