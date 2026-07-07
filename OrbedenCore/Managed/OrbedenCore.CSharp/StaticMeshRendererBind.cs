@@ -10,6 +10,8 @@ internal unsafe struct StaticMeshRendererBindApi
 {
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetEnabled;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetEnabled;
+    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetMesh;
+    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, byte> SetMesh;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetReceiveShadows;
@@ -39,6 +41,35 @@ internal static unsafe class StaticMeshRendererBind
     internal static void SetEnabled(EnsId ens, bool value)
     {
         if (initialized && api.SetEnabled != null) api.SetEnabled(ens, value ? (byte)1 : (byte)0);
+    }
+
+    //读取 mesh
+    internal static string GetMesh(EnsId ens)
+    {
+        if (!initialized || api.GetMesh == null) return string.Empty;
+
+        int requiredBytes = api.GetMesh(ens, null, 0);
+        if (requiredBytes <= 0) return string.Empty;
+
+        byte[] output = new byte[requiredBytes];
+        fixed (byte* outputPointer = output)
+        {
+            int actualBytes = api.GetMesh(ens, outputPointer, output.Length);
+            int length = Math.Clamp(actualBytes, 0, output.Length);
+            return System.Text.Encoding.UTF8.GetString(output, 0, length);
+        }
+    }
+
+    //写入 mesh
+    internal static bool SetMesh(EnsId ens, string key)
+    {
+        if (!initialized || api.SetMesh == null) return false;
+
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(key ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return api.SetMesh(ens, pointer, bytes.Length) != 0;
+        }
     }
 
     //读取 castShadows

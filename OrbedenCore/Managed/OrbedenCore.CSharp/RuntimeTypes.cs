@@ -41,6 +41,22 @@ public struct EnsId : IEquatable<EnsId>
     }
 }
 
+/// <summary>二维向量，布局需要与 C++ 托管桥接结构一致。</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct vector2
+{
+    public float x;
+    public float y;
+
+    /// <summary>创建二维向量。</summary>
+    public vector2(float x, float y)
+    {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+
 /// <summary>三维向量，布局需要与 C++ 托管桥接结构一致。</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct vector3

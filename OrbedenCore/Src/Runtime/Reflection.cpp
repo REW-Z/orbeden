@@ -15,7 +15,7 @@ namespace
     }
 
     //获取或创建指定类型的反射元数据
-    Reflection::TypeInfo& EnsureTypeInfo(Type* type)
+    Reflection::TypeInfo& GetTypeInfoForWrite(Type* type)
     {
         Reflection::TypeInfo& info = GetReflectionRegistry()[type->GetId()];
         info.type = type;
@@ -423,7 +423,7 @@ namespace Reflection
     {
         if (!type) return;
 
-        EnsureTypeInfo(type).fields = fields;
+        GetTypeInfoForWrite(type).fields = fields;
     }
 
     //注册类型方法元数据
@@ -431,7 +431,7 @@ namespace Reflection
     {
         if (!type) return;
 
-        EnsureTypeInfo(type).methods = methods;
+        GetTypeInfoForWrite(type).methods = methods;
     }
 
     //查找类型元数据

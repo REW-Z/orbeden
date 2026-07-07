@@ -63,7 +63,7 @@ public:
     static uint32 GetRefCount(const std::string& key);
 
     //规范化资源Key
-    static std::string NormalizeKey(const std::string& key);
+    static std::string ToResourceKey(const std::string& key);
 
     //获取Key中的主资源路径
     static std::string GetSourceKey(const std::string& key);

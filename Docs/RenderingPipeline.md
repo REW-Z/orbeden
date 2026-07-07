@@ -40,7 +40,7 @@ flowchart TD
     B --> C{有 castShadows 的 DirectionalLight?}
 
     C -- 是 --> D[计算 Light ViewProjection]
-    D --> E[EnsureShadowResources]
+    D --> E[PrepareShadowResources]
     E --> E1[CreateDepthTexture]
     E --> E2[CreateRenderTarget / FBO]
     E --> F[Shadow Pass]

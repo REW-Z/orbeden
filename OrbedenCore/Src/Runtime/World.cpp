@@ -59,7 +59,7 @@ std::string World::AllocateEnsObjectPath()
 }
 
 //生成未命名Ens的名称
-std::string World::ResolveEnsName(const std::string& name) const
+std::string World::GetEnsName(const std::string& name) const
 {
     if (!name.empty()) return name;
 
@@ -175,7 +175,7 @@ void World::Clear()
 //创建Ens
 Ens* World::CreateEns(const std::string& name)
 {
-    return CreateEnsInternal(ResolveEnsName(name), AllocateEnsObjectPath());
+    return CreateEnsInternal(GetEnsName(name), AllocateEnsObjectPath());
 }
 
 //使用稳定ID创建Ens
@@ -184,7 +184,7 @@ Ens* World::CreateEnsWithStableId(const std::string& stableId, const std::string
     if (stableId.empty()) return CreateEns(name);
     if (Object::FindObject(StringId(stableId))) return nullptr;
 
-    return CreateEnsInternal(ResolveEnsName(name), stableId);
+    return CreateEnsInternal(GetEnsName(name), stableId);
 }
 
 //使用指定稳定ID创建Ens
@@ -467,7 +467,7 @@ bool World::AddExternResourceRef(Type* type, const std::string& key)
     Object* object = ResourceManager::LoadWorldRef(type, key);
     if (!object) return false;
 
-    externResourceRefs.push_back(ResourceManager::NormalizeKey(key));
+    externResourceRefs.push_back(ResourceManager::ToResourceKey(key));
     return true;
 }
 

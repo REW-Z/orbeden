@@ -46,6 +46,12 @@ void ProjectPanel::DrawPanel()
     }
 
     ImGui::SameLine();
+    if (ImGui::Button("New Project..."))
+    {
+        editor.RequestNewProjectDialog();
+    }
+
+    ImGui::SameLine();
     if (!editor.HasProject())
     {
         ImGui::BeginDisabled();
@@ -93,6 +99,28 @@ void ProjectPanel::DrawPanel()
         ImGui::EndDisabled();
     }
 
+    ImGui::SetNextItemWidth(180.0f);
+    if (ImGui::BeginCombo("Target Platform", editor.GetSelectedPlayerTargetPlatformName()))
+    {
+        int32 selectedIndex = editor.GetSelectedPlayerTargetPlatformIndex();
+        for (int32 index = 0; index < editor.GetPlayerTargetPlatformCount(); ++index)
+        {
+            bool selected = index == selectedIndex;
+            if (ImGui::Selectable(editor.GetPlayerTargetPlatformName(index), selected))
+            {
+                editor.SetSelectedPlayerTargetPlatformIndex(index);
+            }
+
+            if (selected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+
+        ImGui::EndCombo();
+    }
+
+    ImGui::SameLine();
     if (ImGui::Button("Build Player"))
     {
         editor.RequestBuildPlayer();

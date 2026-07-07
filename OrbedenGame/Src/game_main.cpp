@@ -3,7 +3,7 @@
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Profiler/Profiler.h"
-#include "Runtime/ContentContext.h"
+#include "FileSystem/PathDefines.h"
 #include "ScriptModule.h"
 
 #include <filesystem>
@@ -30,10 +30,10 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::string exampleProject = ContentContext::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
+    std::string exampleProject = PathDefines::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
     if (!exampleProject.empty())
     {
-        ContentContext::SetContentRoot(exampleProject, "Resource");
+        PathDefines::SetProjectRoot(exampleProject, "Resource");
         std::string worldPath = (std::filesystem::path(exampleProject) / "World/example_world.world").lexically_normal().generic_string();
         app.LoadWorld(worldPath);
     }

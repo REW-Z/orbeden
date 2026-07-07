@@ -1,0 +1,85 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "player-windows-x64-clang-cl",
+      "displayName": "Player Windows x64 clang-cl",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/OrbedenGame/Build/windows-x64-clang-cl",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "ORBEDEN_PLAYER_TARGET": "windows-x64"
+      }
+    },
+    {
+      "name": "player-linux-x64-clang",
+      "displayName": "Player Linux x64 clang",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/OrbedenGame/Build/linux-x64-clang",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "ORBEDEN_PLAYER_TARGET": "linux-x64"
+      }
+    },
+    {
+      "name": "player-linux-x64-gcc",
+      "displayName": "Player Linux x64 gcc",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/OrbedenGame/Build/linux-x64-gcc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "ORBEDEN_PLAYER_TARGET": "linux-x64"
+      }
+    },
+    {
+      "name": "player-freebsd-x64-clang",
+      "displayName": "Player FreeBSD x64 clang",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/OrbedenGame/Build/freebsd-x64-clang",
+      "toolchainFile": "${sourceDir}/Build/CMake/Toolchains/FreeBSD-Clang.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ORBEDEN_PLAYER_TARGET": "freebsd-x64"
+      }
+    },
+    {
+      "name": "player-switch",
+      "displayName": "Player Switch",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/OrbedenGame/Build/switch",
+      "toolchainFile": "${sourceDir}/Build/CMake/Toolchains/Switch.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ORBEDEN_PLAYER_TARGET": "switch"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "player-windows-x64-clang-cl",
+      "configurePreset": "player-windows-x64-clang-cl"
+    },
+    {
+      "name": "player-linux-x64-clang",
+      "configurePreset": "player-linux-x64-clang"
+    },
+    {
+      "name": "player-linux-x64-gcc",
+      "configurePreset": "player-linux-x64-gcc"
+    },
+    {
+      "name": "player-freebsd-x64-clang",
+      "configurePreset": "player-freebsd-x64-clang"
+    },
+    {
+      "name": "player-switch",
+      "configurePreset": "player-switch"
+    }
+  ]
+}

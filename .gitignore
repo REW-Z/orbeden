@@ -5,5 +5,11 @@ Legacy/*
 Others/*
 Log/*
 ExampleProject/Aot/*
+OrbedenEditor/Sdk/*
+OrbedenEditor/x64/*
 OrbedenEditor/OrbedenEditor/*
+OrbedenGame/Sdk/*
+OrbedenGame/x64/*
 OrbedenGame/OrbedenGame/*
+OrbedenGame/Build/*
+OrbedenCore/obj/*

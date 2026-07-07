@@ -15,13 +15,13 @@ namespace
     constexpr const char* DrawGuiMethod = "OrbedenGame_DrawGui";
 
     //规范化路径字符串。
-    std::string NormalizePath(const std::filesystem::path& path)
+    std::string ToCleanPath(const std::filesystem::path& path)
     {
         return path.lexically_normal().generic_string();
     }
 
     //创建 shadow copy 目标路径。
-    std::filesystem::path MakeShadowAssemblyPath(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
+    std::filesystem::path CopyAssemblyToShadowCache(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
     {
         std::filesystem::create_directories(shadowDirectory);
 
@@ -60,12 +60,12 @@ bool EditorPlayMode::Start(EditorClrHost& host,
     std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
     if (!std::filesystem::exists(sourceAssembly))
     {
-        lastError = "Game assembly does not exist: " + NormalizePath(sourceAssembly);
+        lastError = "Game assembly does not exist: " + ToCleanPath(sourceAssembly);
         Log::Error(lastError.c_str());
         return false;
     }
 
-    std::filesystem::path shadowAssembly = MakeShadowAssemblyPath(sourceAssembly, std::filesystem::path(shadowDirectory));
+    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, std::filesystem::path(shadowDirectory));
     std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
     std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
     std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
@@ -79,7 +79,7 @@ bool EditorPlayMode::Start(EditorClrHost& host,
         return false;
     }
 
-    shadowAssemblyPath = NormalizePath(shadowAssembly);
+    shadowAssemblyPath = ToCleanPath(shadowAssembly);
     if (!host.BindFunction(shadowAssemblyPath, gameModuleType, InitializeMethod, reinterpret_cast<void**>(&InitializeGame))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, ShutdownMethod, reinterpret_cast<void**>(&ShutdownGame))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&UpdateGame))

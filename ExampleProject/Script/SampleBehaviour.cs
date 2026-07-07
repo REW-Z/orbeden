@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using OrbedenCore.CSharp;
 
 namespace ExampleGame;
@@ -16,6 +17,15 @@ public sealed class SampleBehaviour : ScriptBehaviour
 
     /// <summary>创建示例托管脚本行为。</summary>
     public SampleBehaviour(Ens ens) : base(ens) {}
+
+    /// <summary>应用 world sidecar 中保存的序列化字段。</summary>
+    internal void ApplySerializedValues(IReadOnlyDictionary<string, string> values)
+    {
+        if (ScriptValueReader.TryGetVector3(values, nameof(startPosition), out vector3 startPositionValue)) startPosition = startPositionValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(totalTime), out float totalTimeValue)) totalTime = totalTimeValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(elapsedTime), out float elapsedTimeValue)) elapsedTime = elapsedTimeValue;
+        if (ScriptValueReader.TryGetInt(values, nameof(reportCount), out int reportCountValue)) reportCount = reportCountValue;
+    }
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()

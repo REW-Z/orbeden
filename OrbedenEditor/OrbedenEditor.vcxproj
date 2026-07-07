@@ -185,6 +185,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp" />
     <ClCompile Include="Src\Editor\EnsViewPanel.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorOverlay.cpp" />
+    <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
     <ClCompile Include="Src\Editor\PanelManager.cpp" />
     <ClCompile Include="Src\Editor\ProjectPanel.cpp" />
   </ItemGroup>
@@ -199,6 +200,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\EnsViewPanel.h" />
     <ClInclude Include="Src\Editor\IEditorPanel.h" />
     <ClInclude Include="Src\Editor\ManagedEditorOverlay.h" />
+    <ClInclude Include="Src\Editor\NewProjectGenerator.h" />
     <ClInclude Include="Src\Editor\PanelManager.h" />
     <ClInclude Include="Src\Editor\ProjectPanel.h" />
   </ItemGroup>
@@ -207,6 +209,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
       <Project>{b12e5123-bd9c-4d91-a1ba-879726128c33}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <AdditionalProperties>OrbedenCoreOutputDir=$(ProjectDir)$(Platform)\$(Configuration)\</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

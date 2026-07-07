@@ -56,7 +56,7 @@ namespace
     }
 
     //规范化磁盘路径。
-    std::string NormalizePath(const std::string& path)
+    std::string ToCleanPath(const std::string& path)
     {
         if (path.empty()) return std::string();
         return std::filesystem::absolute(std::filesystem::path(path)).lexically_normal().generic_string();
@@ -193,7 +193,7 @@ bool EditorClrHost::Initialize(const EditorClrHostConfig& config)
     if (IsInitialized()) return true;
 
     lastError.clear();
-    std::string runtimeConfigPath = NormalizePath(config.runtimeConfigPath);
+    std::string runtimeConfigPath = ToCleanPath(config.runtimeConfigPath);
     if (runtimeConfigPath.empty() || !std::filesystem::exists(runtimeConfigPath))
     {
         lastError = "Editor CLR runtimeconfig does not exist: " + runtimeConfigPath;
@@ -273,15 +273,15 @@ bool EditorClrHost::BindFunction(const std::string& assemblyPath,
         return false;
     }
 
-    std::string normalizedAssemblyPath = NormalizePath(assemblyPath);
-    if (!std::filesystem::exists(normalizedAssemblyPath))
+    std::string assemblyFilePath = ToCleanPath(assemblyPath);
+    if (!std::filesystem::exists(assemblyFilePath))
     {
-        lastError = "Editor managed assembly does not exist: " + normalizedAssemblyPath;
+        lastError = "Editor managed assembly does not exist: " + assemblyFilePath;
         Log::Error(lastError.c_str());
         return false;
     }
 
-    string_t assemblyHostPath = ToStringT(normalizedAssemblyPath);
+    string_t assemblyHostPath = ToStringT(assemblyFilePath);
     string_t typeHostName = ToStringT(typeName);
     string_t methodHostName = ToStringT(methodName);
 

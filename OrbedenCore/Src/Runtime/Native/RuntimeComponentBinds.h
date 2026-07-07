@@ -16,6 +16,17 @@ public:
     static WorldBind Create();
 };
 
+//PathDefines 原生函数表。
+struct PathDefinesBind
+{
+public:
+    void* GetProjectRoot = nullptr;
+    void* GetProjectFilePath = nullptr;
+
+    //创建 PathDefines 函数表。
+    static PathDefinesBind Create();
+};
+
 //Ens 原生函数表。
 struct EnsBind
 {
@@ -56,6 +67,8 @@ struct StaticMeshRendererBind
 public:
     void* GetEnabled = nullptr;
     void* SetEnabled = nullptr;
+    void* GetMesh = nullptr;
+    void* SetMesh = nullptr;
     void* GetCastShadows = nullptr;
     void* SetCastShadows = nullptr;
     void* GetReceiveShadows = nullptr;

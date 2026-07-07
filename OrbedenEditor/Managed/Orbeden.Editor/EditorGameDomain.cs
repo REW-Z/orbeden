@@ -146,19 +146,8 @@ internal static class EditorGameDomain
                 return;
             }
 
-            GUI.Label($"Ens: {selectedEns.id}:{selectedEns.version}");
-            if (!string.IsNullOrEmpty(stableId))
-            {
-                GUI.Label(stableId);
-            }
-
-            string name = ens.Name;
-            if (GUI.InputText("Name", ref name))
-            {
-                ens.Name = name;
-            }
-
-            GUI.Label(status);
+            DrawObjectHeader(ens, selectedEns, stableId);
+            DrawInspectorStatus();
             DrawNativeComponents(ens);
             DrawManagedScriptComponents(selectedEns, stableId);
         }
@@ -166,6 +155,30 @@ internal static class EditorGameDomain
         {
             GUI.EndPanel();
         }
+    }
+
+    //绘制选中对象摘要。
+    private static void DrawObjectHeader(Ens ens, EnsId selectedEns, string stableId)
+    {
+        DrawComponentBlock("Selected Ens", () =>
+        {
+            string name = ens.Name;
+            if (GUI.InputText("Name", ref name))
+            {
+                ens.Name = name;
+            }
+
+            GUI.Label($"Runtime Id: {selectedEns.id}:{selectedEns.version}");
+            GUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
+        });
+    }
+
+    //绘制 Inspector 当前脚本程序集状态。
+    private static void DrawInspectorStatus()
+    {
+        if (string.IsNullOrWhiteSpace(status)) return;
+
+        GUI.Label($"C# Assembly: {status}");
     }
 
     //卸载仅用于 Inspector 反射的用户程序集上下文。
@@ -229,7 +242,7 @@ internal static class EditorGameDomain
         string? type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() : null;
         if (string.IsNullOrWhiteSpace(stableId) || string.IsNullOrWhiteSpace(type)) return null;
 
-        ScriptMount mount = new() { StableId = stableId, Type = NormalizeScriptTypeName(type) };
+        ScriptMount mount = new() { StableId = stableId, Type = StripAssemblyName(type) };
         if (!element.TryGetProperty("values", out JsonElement values)) return mount;
         if (values.ValueKind != JsonValueKind.Object) return mount;
 
@@ -287,7 +300,7 @@ internal static class EditorGameDomain
     //绘制原生 C++ 组件块。
     private static void DrawNativeComponents(Ens ens)
     {
-        GUI.Label("Native C++ components");
+        GUI.Label($"Native C++ Components ({GetNativeComponentCount(ens)})");
         if (ens.HasSpaceComponent)
         {
             DrawComponentBlock("C++ SpaceComponent", () =>
@@ -308,6 +321,7 @@ internal static class EditorGameDomain
                 quaternion localRotation = space.localRotation;
                 GUI.Label($"localRotation: {FormatQuaternion(localRotation)}");
                 GUI.Label($"worldPosition: {SerializeVector3(space.worldPosition)}");
+                GUI.Label($"worldRotation: {FormatQuaternion(space.worldRotation)}");
             });
         }
 
@@ -322,6 +336,17 @@ internal static class EditorGameDomain
                 if (GUI.Checkbox("enabled", ref enabled))
                 {
                     renderer.enabled = enabled;
+                }
+
+                Mesh? mesh = renderer.mesh;
+                if (mesh != null && mesh.IsValid)
+                {
+                    GUI.Label($"mesh: {mesh.Key}");
+                    GUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
+                }
+                else
+                {
+                    GUI.Label("mesh: (none)");
                 }
 
                 bool castShadows = renderer.castShadows;
@@ -343,12 +368,21 @@ internal static class EditorGameDomain
         }
     }
 
+    //统计当前对象上的原生组件数量。
+    private static int GetNativeComponentCount(Ens ens)
+    {
+        int count = 0;
+        if (ens.HasSpaceComponent) count++;
+        if (ens.HasStaticMeshRenderer) count++;
+        return count;
+    }
+
     //绘制用户 C# 脚本组件块。
     private static void DrawManagedScriptComponents(EnsId selectedEns, string stableId)
     {
-        GUI.Label("User C# components");
         if (string.IsNullOrEmpty(stableId))
         {
+            GUI.Label("User C# Components (0)");
             GUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
             return;
         }
@@ -358,6 +392,7 @@ internal static class EditorGameDomain
         IReadOnlyList<ScriptBehaviour> runtimeScripts = ScriptRuntimeRegistry.GetScripts(selectedEns);
         HashSet<ScriptBehaviour> drawnRuntimeScripts = [];
 
+        GUI.Label($"User C# Components ({mounts.Count})");
         if (mounts.Count == 0)
         {
             GUI.Label("No C# script components.");
@@ -370,13 +405,14 @@ internal static class EditorGameDomain
             string title = GetShortTypeName(mount.Type);
             DrawComponentBlock($"C# {title}", () =>
             {
+                GUI.Label($"Type: {mount.Type}");
                 if (GUI.Button($"Remove {title}##remove_script_{stableId}_{index}"))
                 {
                     removeIndex = index;
                     return;
                 }
 
-                GUI.Label("Serialized values:");
+                GUI.Label("Serialized Fields");
                 DrawSerializedScriptFields(mount);
                 DrawMatchingRuntimeScripts(stableId, mount, runtimeScripts, drawnRuntimeScripts);
             });
@@ -401,7 +437,7 @@ internal static class EditorGameDomain
     //绘制新增脚本组件控件。
     private static void DrawAddScriptControls(string stableId, List<ScriptMount> mounts)
     {
-        GUI.Label("Add script:");
+        GUI.Label("Available script types");
         foreach (Type type in scriptTypes)
         {
             if (mounts.Any(mount => TypeMatches(mount.Type, type))) continue;
@@ -431,8 +467,8 @@ internal static class EditorGameDomain
     private static void AddScriptMount(string stableId, string typeName)
     {
         Type? type = FindScriptType(typeName);
-        string normalizedTypeName = type != null ? GetScriptTypeName(type) : NormalizeScriptTypeName(typeName);
-        if (string.IsNullOrWhiteSpace(normalizedTypeName)) return;
+        string scriptTypeName = type != null ? GetScriptTypeName(type) : StripAssemblyName(typeName);
+        if (string.IsNullOrWhiteSpace(scriptTypeName)) return;
 
         if (!sidecarScripts.TryGetValue(stableId, out List<ScriptMount>? mounts))
         {
@@ -440,17 +476,17 @@ internal static class EditorGameDomain
             sidecarScripts.Add(stableId, mounts);
         }
 
-        if (mounts.Any(mount => string.Equals(mount.Type, normalizedTypeName, StringComparison.Ordinal)))
+        if (mounts.Any(mount => string.Equals(mount.Type, scriptTypeName, StringComparison.Ordinal)))
         {
             return;
         }
 
-        ScriptMount newMount = new() { StableId = stableId, Type = normalizedTypeName };
+        ScriptMount newMount = new() { StableId = stableId, Type = scriptTypeName };
         if (type != null)
         {
             foreach (FieldInfo field in GetSerializableFields(type))
             {
-                EnsureSerializedValue(newMount, field);
+                GetSerializedValueForField(newMount, field);
             }
         }
 
@@ -484,7 +520,7 @@ internal static class EditorGameDomain
     //绘制一个 sidecar 字段。
     private static void DrawSerializedField(ScriptMount mount, FieldInfo field)
     {
-        ScriptSerializedValue serialized = EnsureSerializedValue(mount, field);
+        ScriptSerializedValue serialized = GetSerializedValueForField(mount, field);
         string label = $"{field.Name}##serialized_{mount.StableId}_{mount.Type}_{field.Name}";
         if (!DrawSerializedValue(label, field.FieldType, serialized, out string newValue)) return;
 
@@ -493,8 +529,8 @@ internal static class EditorGameDomain
         SaveSidecar();
     }
 
-    //确保 sidecar 字段有默认值。
-    private static ScriptSerializedValue EnsureSerializedValue(ScriptMount mount, FieldInfo field)
+    //读取或创建 sidecar 字段默认值。
+    private static ScriptSerializedValue GetSerializedValueForField(ScriptMount mount, FieldInfo field)
     {
         if (mount.Values.TryGetValue(field.Name, out ScriptSerializedValue? value))
         {
@@ -581,7 +617,7 @@ internal static class EditorGameDomain
             ApplySerializedValuesToRuntimeScript(script, stableId);
 
             Type type = script.GetType();
-            GUI.Label("Runtime values:");
+            GUI.Label("Runtime Fields");
             DrawScriptMembers(script, type);
         }
     }
@@ -748,21 +784,21 @@ internal static class EditorGameDomain
     //查找已反射到的脚本类型。
     private static Type? FindScriptType(string typeName)
     {
-        string normalizedTypeName = NormalizeScriptTypeName(typeName);
+        string scriptTypeName = StripAssemblyName(typeName);
         foreach (Type type in scriptTypes)
         {
-            if (TypeMatches(normalizedTypeName, type)) return type;
+            if (TypeMatches(scriptTypeName, type)) return type;
         }
 
-        return gameAssembly?.GetType(normalizedTypeName);
+        return gameAssembly?.GetType(scriptTypeName);
     }
 
     //判断 sidecar 类型名是否匹配反射类型。
     private static bool TypeMatches(string typeName, Type type)
     {
-        string normalizedTypeName = NormalizeScriptTypeName(typeName);
-        return string.Equals(normalizedTypeName, GetScriptTypeName(type), StringComparison.Ordinal)
-            || string.Equals(normalizedTypeName, type.AssemblyQualifiedName, StringComparison.Ordinal);
+        string scriptTypeName = StripAssemblyName(typeName);
+        return string.Equals(scriptTypeName, GetScriptTypeName(type), StringComparison.Ordinal)
+            || string.Equals(scriptTypeName, type.AssemblyQualifiedName, StringComparison.Ordinal);
     }
 
     //获取脚本类型全名。
@@ -774,13 +810,13 @@ internal static class EditorGameDomain
     //获取脚本类型短名。
     private static string GetShortTypeName(string typeName)
     {
-        string normalizedTypeName = NormalizeScriptTypeName(typeName);
-        int index = normalizedTypeName.LastIndexOf('.');
-        return index >= 0 ? normalizedTypeName[(index + 1)..] : normalizedTypeName;
+        string scriptTypeName = StripAssemblyName(typeName);
+        int index = scriptTypeName.LastIndexOf('.');
+        return index >= 0 ? scriptTypeName[(index + 1)..] : scriptTypeName;
     }
 
-    //规范化用户输入的脚本类型名。
-    private static string NormalizeScriptTypeName(string typeName)
+    //去掉用户输入类型名中的程序集后缀。
+    private static string StripAssemblyName(string typeName)
     {
         string value = typeName.Trim();
         int commaIndex = value.IndexOf(',');

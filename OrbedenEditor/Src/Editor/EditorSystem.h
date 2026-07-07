@@ -24,7 +24,9 @@ private:
     std::string dialogError;
     std::string projectStatus;
     char pathBuffer[1024] = {};
+    char newProjectNameBuffer[128] = {};
     bool openProjectDialog = false;
+    bool newProjectDialog = false;
     bool autoLoadAttempted = false;
     bool previousInputEnabled = true;
     EditorSelection selection;
@@ -34,6 +36,7 @@ private:
     EditorClrHost clrHost;
     ManagedEditorOverlay managedOverlay;
     EditorPlayMode playMode;
+    int32 selectedPlayerTargetPlatform = 0;
     EnsId editorCameraEns;
     float32 cameraYaw = 35.0f;
     float32 cameraPitch = -22.0f;
@@ -58,6 +61,9 @@ public:
 
     //请求打开项目选择弹窗
     void RequestOpenProjectDialog();
+
+    //请求打开新建项目弹窗
+    void RequestNewProjectDialog();
 
     //请求保存当前场景
     void RequestSaveCurrentWorld();
@@ -98,6 +104,21 @@ public:
     //获取项目操作状态文本
     const std::string& GetProjectStatusText() const;
 
+    //获取 Player 目标平台数量
+    int32 GetPlayerTargetPlatformCount() const;
+
+    //获取当前 Player 目标平台索引
+    int32 GetSelectedPlayerTargetPlatformIndex() const;
+
+    //获取 Player 目标平台显示名
+    const char* GetPlayerTargetPlatformName(int32 index) const;
+
+    //设置当前 Player 目标平台
+    void SetSelectedPlayerTargetPlatformIndex(int32 index);
+
+    //获取当前 Player 目标平台显示名
+    const char* GetSelectedPlayerTargetPlatformName() const;
+
     //获取当前World
     World& GetWorld();
 
@@ -135,6 +156,9 @@ private:
     //查找仓库根目录
     std::string FindRepositoryRoot() const;
 
+    //查找当前 Editor 可用的 OrbedenCore.CSharp.dll
+    std::string FindRuntimeCSharpDll() const;
+
     //运行外部命令
     bool RunCommand(const std::string& command, const char* actionName);
 
@@ -142,7 +166,7 @@ private:
     void RegisterBuiltInPanels();
 
     //确保编辑器观察相机存在
-    void EnsureEditorCamera(World& world);
+    void CreateEditorCameraIfMissing(World& world);
 
     //使用 GLFW 输入更新编辑器观察相机
     void UpdateEditorCamera(World& world, float deltaTime);
@@ -156,6 +180,9 @@ private:
     //打开项目选择弹窗
     void OpenProjectDialog();
 
+    //打开新建项目弹窗
+    void OpenNewProjectDialog();
+
     //绘制顶部菜单栏
     void DrawMainMenuBar();
 
@@ -164,6 +191,9 @@ private:
 
     //绘制项目文件夹选择弹窗
     void DrawProjectDialog();
+
+    //绘制新建项目弹窗
+    void DrawNewProjectDialog();
 
     //设置路径输入缓存
     void SetDialogDirectory(const std::string& path);

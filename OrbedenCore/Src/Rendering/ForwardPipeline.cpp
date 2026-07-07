@@ -252,7 +252,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->EndPass();
 }
 
-bool ForwardPipeline::EnsureShadowResources()
+bool ForwardPipeline::PrepareShadowResources()
 {
     if (!backend) return false;
     if (shadowDepthTexture.IsValid() && shadowRenderTarget.IsValid()) return true;
@@ -283,7 +283,7 @@ bool ForwardPipeline::EnsureShadowResources()
     return true;
 }
 
-bool ForwardPipeline::EnsureSkyboxMesh()
+bool ForwardPipeline::PrepareSkyboxMesh()
 {
     if (!backend) return false;
     if (skyboxMesh.IsValid()) return true;
@@ -349,7 +349,7 @@ bool ForwardPipeline::EnsureSkyboxMesh()
 
 bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& resources)
 {
-    if (!EnsureShadowResources() || !shadowDepthShader) return false;
+    if (!PrepareShadowResources() || !shadowDepthShader) return false;
 
     GpuShader shader = resources.GetShader(shadowDepthShader);
     if (!shader.IsValid()) return false;
@@ -389,7 +389,7 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     if (!scene.renderSettings.skyboxEnabled || !skyboxShader) return;
 
     Skybox* skybox = scene.renderSettings.skybox.Get();
-    if (!skybox || !EnsureSkyboxMesh()) return;
+    if (!skybox || !PrepareSkyboxMesh()) return;
 
     GpuCubeTextureID cubeTexture = resources.GetSkybox(skybox);
     GpuShader shader = resources.GetShader(skyboxShader);
