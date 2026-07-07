@@ -70,21 +70,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  <PropertyGroup>
+    <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\$(Platform)\$(Configuration)\</OrbedenCoreOutputDir>
+    <OutDir>$(OrbedenCoreOutputDir)</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -162,6 +151,7 @@
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h" />
+    <ClInclude Include="Src\Runtime\Native\RuntimeResourceBinds.h" />
     <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h" />
     <ClInclude Include="Src\Runtime\Object\Camera.h" />
     <ClInclude Include="Src\Runtime\Object\DirectionalLight.h" />
@@ -170,7 +160,7 @@
     <ClInclude Include="Src\Runtime\EnsId.h" />
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
     <ClInclude Include="Src\Runtime\Object\Object.h" />
-    <ClInclude Include="Src\Runtime\ContentContext.h" />
+    <ClInclude Include="Src\FileSystem\PathDefines.h" />
     <ClInclude Include="Src\Runtime\Reflection.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
@@ -219,6 +209,7 @@
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
+    <ClCompile Include="Src\Runtime\Native\RuntimeResourceBinds.cpp" />
     <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp" />
     <ClCompile Include="Src\Runtime\Object\Camera.cpp" />
     <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp" />
@@ -227,7 +218,7 @@
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Object\Object.cpp" />
-    <ClCompile Include="Src\Runtime\ContentContext.cpp" />
+    <ClCompile Include="Src\FileSystem\PathDefines.cpp" />
     <ClCompile Include="Src\Runtime\Reflection.cpp" />
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
     <ClCompile Include="Src\Runtime\ResourceManager.cpp" />

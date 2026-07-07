@@ -16,4 +16,7 @@ public:
     DrawQueue drawQueue = DrawQueue::Opaque;
     bool castShadows = true;
     bool receiveShadows = true;
+
+    //卸载时释放脚本设置的网格资源引用。
+    void OnDetach() override;
 };

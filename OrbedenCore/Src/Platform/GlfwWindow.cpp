@@ -83,7 +83,7 @@ namespace
         keyMap[GLFW_KEY_RIGHT] = KeyEnum::RIGHT;
     }
 
-    bool EnsureGlfw()
+    bool StartGlfw()
     {
         if (glfwInitialized) return true;
 
@@ -168,7 +168,7 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
 {
     Destroy();
 
-    if (!EnsureGlfw()) return false;
+    if (!StartGlfw()) return false;
 
     desc = newDesc;
     glfwDefaultWindowHints();

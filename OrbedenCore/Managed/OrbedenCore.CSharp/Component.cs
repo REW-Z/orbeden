@@ -67,6 +67,13 @@ public sealed class StaticMeshRenderer : Component
         set => StaticMeshRendererBind.SetEnabled(Ens.Id, value);
     }
 
+    /// <summary>渲染使用的 Mesh 资源。</summary>
+    public Mesh? mesh
+    {
+        get => Mesh.FromKey(StaticMeshRendererBind.GetMesh(Ens.Id));
+        set => StaticMeshRendererBind.SetMesh(Ens.Id, value?.Key ?? string.Empty);
+    }
+
     /// <summary>是否投射阴影。</summary>
     public bool castShadows
     {

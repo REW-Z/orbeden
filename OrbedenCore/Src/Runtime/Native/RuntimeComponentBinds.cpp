@@ -1,7 +1,9 @@
 #include "Runtime/Native/RuntimeComponentBinds.h"
 
+#include "FileSystem/PathDefines.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Native/NativeCall.h"
+#include "Runtime/ResourceManager.h"
 #include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
@@ -13,10 +15,23 @@
 namespace
 {
     //从 UTF-8 字节创建字符串。
-    std::string MakeText(const uint8* text, int32 length)
+    std::string ReadUtf8Text(const uint8* text, int32 length)
     {
         if (!text || length <= 0) return std::string();
         return std::string(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
+    }
+
+    //把 UTF-8 字符串写入 C# 提供的缓冲区，并返回完整字节数。
+    int32 CopyText(const std::string& text, uint8* buffer, int32 bufferSize)
+    {
+        int32 byteCount = static_cast<int32>(text.size());
+        if (buffer && bufferSize > 0 && byteCount > 0)
+        {
+            int32 copyCount = std::min(byteCount, bufferSize);
+            std::memcpy(buffer, text.data(), static_cast<size_t>(copyCount));
+        }
+
+        return byteCount;
     }
 
     //获取当前 World 中的唯一 Ens 实例。
@@ -45,7 +60,7 @@ namespace
     EnsId ORBEDEN_NATIVE_CALL NativeWorldCreateEns(const uint8* name, int32 length)
     {
         World* world = World::CurrentWorld();
-        Ens* ens = world ? world->CreateEns(MakeText(name, length)) : nullptr;
+        Ens* ens = world ? world->CreateEns(ReadUtf8Text(name, length)) : nullptr;
         return ens ? ens->GetId() : EnsId();
     }
 
@@ -53,7 +68,7 @@ namespace
     EnsId ORBEDEN_NATIVE_CALL NativeWorldCreateEnsWithStableId(const uint8* stableId, int32 stableIdLength, const uint8* name, int32 nameLength)
     {
         World* world = World::CurrentWorld();
-        Ens* ens = world ? world->CreateEnsWithStableId(MakeText(stableId, stableIdLength), MakeText(name, nameLength)) : nullptr;
+        Ens* ens = world ? world->CreateEnsWithStableId(ReadUtf8Text(stableId, stableIdLength), ReadUtf8Text(name, nameLength)) : nullptr;
         return ens ? ens->GetId() : EnsId();
     }
 
@@ -61,7 +76,7 @@ namespace
     EnsId ORBEDEN_NATIVE_CALL NativeWorldFindEns(const uint8* stableId, int32 stableIdLength)
     {
         World* world = World::CurrentWorld();
-        Ens* ens = world ? world->FindEns(StringId(MakeText(stableId, stableIdLength))) : nullptr;
+        Ens* ens = world ? world->FindEns(StringId(ReadUtf8Text(stableId, stableIdLength))) : nullptr;
         return ens ? ens->GetId() : EnsId();
     }
 
@@ -70,6 +85,18 @@ namespace
     {
         World* world = World::CurrentWorld();
         return world && world->DestroyEns(ens) ? 1 : 0;
+    }
+
+    //读取当前项目根目录。
+    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetProjectRoot(uint8* buffer, int32 bufferSize)
+    {
+        return CopyText(PathDefines::GetProjectRoot(), buffer, bufferSize);
+    }
+
+    //解析项目相对路径。
+    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetProjectFilePath(const uint8* path, int32 length, uint8* buffer, int32 bufferSize)
+    {
+        return CopyText(PathDefines::GetProjectFilePath(ReadUtf8Text(path, length)), buffer, bufferSize);
     }
 
     //判断 Ens 是否有效。
@@ -85,21 +112,14 @@ namespace
         Ens* value = GetNativeEns(ens);
         static const std::string emptyName;
         const std::string& name = value ? value->GetName() : emptyName;
-        int32 byteCount = static_cast<int32>(name.size());
-        if (buffer && bufferSize > 0 && byteCount > 0)
-        {
-            int32 copyCount = std::min(byteCount, bufferSize);
-            std::memcpy(buffer, name.data(), static_cast<size_t>(copyCount));
-        }
-
-        return byteCount;
+        return CopyText(name, buffer, bufferSize);
     }
 
     //写入 Ens 名称。
     void ORBEDEN_NATIVE_CALL NativeEnsSetName(EnsId ens, const uint8* text, int32 length)
     {
         Ens* value = GetNativeEns(ens);
-        if (value) value->SetName(MakeText(text, length));
+        if (value) value->SetName(ReadUtf8Text(text, length));
     }
 
     //判断 Ens 是否拥有 SpaceComponent。
@@ -205,6 +225,37 @@ namespace
         if (renderer) renderer->enabled = value != 0;
     }
 
+    //读取 StaticMeshRenderer.mesh。
+    int32 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetMesh(EnsId ens, uint8* buffer, int32 bufferSize)
+    {
+        StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
+        return CopyText(renderer ? renderer->mesh.GetInstanceId().GetPath() : std::string(), buffer, bufferSize);
+    }
+
+    //写入 StaticMeshRenderer.mesh。
+    uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererSetMesh(EnsId ens, const uint8* key, int32 length)
+    {
+        StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
+        if (!renderer) return 0;
+
+        std::string oldKey = renderer->mesh.GetInstanceId().GetPath();
+        std::string newKey = ResourceManager::ToResourceKey(ReadUtf8Text(key, length));
+        if (oldKey == newKey) return 1;
+
+        if (!newKey.empty())
+        {
+            World* world = renderer->GetWorld();
+            bool loaded = world
+                ? world->AddExternResourceRef(Mesh::StaticType(), newKey)
+                : ResourceManager::LoadWorldRef(Mesh::StaticType(), newKey) != nullptr;
+            if (!loaded) return 0;
+        }
+
+        if (!oldKey.empty()) ResourceManager::ReleaseWorldRef(oldKey);
+        renderer->mesh.SetInstanceId(StringId(newKey));
+        return 1;
+    }
+
     //读取 StaticMeshRenderer.castShadows。
     uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetCastShadows(EnsId ens)
     {
@@ -244,6 +295,14 @@ WorldBind WorldBind::Create()
     return bind;
 }
 
+PathDefinesBind PathDefinesBind::Create()
+{
+    PathDefinesBind bind;
+    bind.GetProjectRoot = reinterpret_cast<void*>(&NativePathDefinesGetProjectRoot);
+    bind.GetProjectFilePath = reinterpret_cast<void*>(&NativePathDefinesGetProjectFilePath);
+    return bind;
+}
+
 EnsBind EnsBind::Create()
 {
     EnsBind bind;
@@ -277,6 +336,8 @@ StaticMeshRendererBind StaticMeshRendererBind::Create()
     StaticMeshRendererBind bind;
     bind.GetEnabled = reinterpret_cast<void*>(&NativeStaticMeshRendererGetEnabled);
     bind.SetEnabled = reinterpret_cast<void*>(&NativeStaticMeshRendererSetEnabled);
+    bind.GetMesh = reinterpret_cast<void*>(&NativeStaticMeshRendererGetMesh);
+    bind.SetMesh = reinterpret_cast<void*>(&NativeStaticMeshRendererSetMesh);
     bind.GetCastShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererGetCastShadows);
     bind.SetCastShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererSetCastShadows);
     bind.GetReceiveShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererGetReceiveShadows);

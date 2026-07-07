@@ -116,8 +116,8 @@ namespace
             || uniformName == "u_ReceiveShadows";
     }
 
-    //从 uniform 名生成编辑器可读名
-    std::string MakeUniformDisplayName(const std::string& uniformName, const std::string& suffix)
+    //从 uniform 名获取编辑器可读名
+    std::string GetUniformDisplayName(const std::string& uniformName, const std::string& suffix)
     {
         std::string text = uniformName;
         if (StartsWith(text, "u_")) text.erase(0, 2);
@@ -158,7 +158,7 @@ namespace
 
         ShaderTextureSlot slot;
         slot.name = uniformName;
-        slot.displayName = MakeUniformDisplayName(uniformName, "Texture");
+        slot.displayName = GetUniformDisplayName(uniformName, "Texture");
         slot.dimension = ShaderTextureDimension::Texture2D;
         slots.push_back(slot);
     }
@@ -189,7 +189,7 @@ namespace
 
         ShaderColorSlot slot;
         slot.name = uniformName;
-        slot.displayName = MakeUniformDisplayName(uniformName, "Color");
+        slot.displayName = GetUniformDisplayName(uniformName, "Color");
         slot.defaultValue = GetColorSlotDefault(uniformName);
         slots.push_back(slot);
     }
@@ -219,7 +219,7 @@ namespace
 
         ShaderFloatSlot slot;
         slot.name = uniformName;
-        slot.displayName = MakeUniformDisplayName(uniformName, std::string());
+        slot.displayName = GetUniformDisplayName(uniformName, std::string());
         slot.defaultValue = GetFloatSlotDefault(uniformName);
         slots.push_back(slot);
     }

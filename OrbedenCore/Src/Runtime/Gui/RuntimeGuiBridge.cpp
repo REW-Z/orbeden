@@ -11,8 +11,8 @@
 
 namespace
 {
-    // 从 C# 传入的 UTF-8 字节创建临时字符串。
-    std::string MakeText(const uint8* text, int32 length)
+    // 从 C# 传入的 UTF-8 字节读取临时字符串。
+    std::string ReadUtf8Text(const uint8* text, int32 length)
     {
         if (!text || length <= 0) return std::string();
         return std::string(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
@@ -21,21 +21,21 @@ namespace
     // 绘制文本标签。
     void ORBEDEN_NATIVE_CALL RuntimeGuiLabel(const uint8* text, int32 length)
     {
-        std::string value = MakeText(text, length);
-        ImGui::TextUnformatted(value.c_str());
+        std::string value = ReadUtf8Text(text, length);
+        ImGui::TextWrapped("%s", value.c_str());
     }
 
     // 绘制按钮并返回是否点击。
     uint8 ORBEDEN_NATIVE_CALL RuntimeGuiButton(const uint8* text, int32 length)
     {
-        std::string value = MakeText(text, length);
+        std::string value = ReadUtf8Text(text, length);
         return ImGui::Button(value.c_str()) ? 1 : 0;
     }
 
     // 开始一个浮动面板。
     uint8 ORBEDEN_NATIVE_CALL RuntimeGuiBeginPanel(const uint8* title, int32 length)
     {
-        std::string value = MakeText(title, length);
+        std::string value = ReadUtf8Text(title, length);
         return ImGui::Begin(value.empty() ? "Managed Panel" : value.c_str()) ? 1 : 0;
     }
 
@@ -48,16 +48,29 @@ namespace
     // 开始绘制组件块。
     void ORBEDEN_NATIVE_CALL RuntimeGuiBeginComponentBlock(const uint8* title, int32 length)
     {
-        std::string value = MakeText(title, length);
+        std::string value = ReadUtf8Text(title, length);
+        if (value.empty())
+        {
+            value = "Component";
+        }
+
         ImGui::Spacing();
-        ImGui::SeparatorText(value.empty() ? "Component" : value.c_str());
-        ImGui::BeginGroup();
+        ImGui::PushID(value.c_str());
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+        ImGui::BeginChild("##component", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        ImGui::TextUnformatted(value.c_str());
+        ImGui::Separator();
     }
 
     // 结束绘制组件块。
     void ORBEDEN_NATIVE_CALL RuntimeGuiEndComponentBlock()
     {
-        ImGui::EndGroup();
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar(2);
+        ImGui::PopID();
         ImGui::Spacing();
     }
 
@@ -67,7 +80,7 @@ namespace
         if (!value) return 0;
 
         bool boolValue = *value != 0;
-        std::string text = MakeText(label, length);
+        std::string text = ReadUtf8Text(label, length);
         bool changed = ImGui::Checkbox(text.c_str(), &boolValue);
         *value = boolValue ? 1 : 0;
         return changed ? 1 : 0;
@@ -78,7 +91,7 @@ namespace
     {
         if (!value) return 0;
 
-        std::string text = MakeText(label, length);
+        std::string text = ReadUtf8Text(label, length);
         return ImGui::InputInt(text.c_str(), value) ? 1 : 0;
     }
 
@@ -87,7 +100,7 @@ namespace
     {
         if (!value) return 0;
 
-        std::string text = MakeText(label, length);
+        std::string text = ReadUtf8Text(label, length);
         return ImGui::InputFloat(text.c_str(), value) ? 1 : 0;
     }
 
@@ -96,7 +109,7 @@ namespace
     {
         if (!value) return 0;
 
-        std::string text = MakeText(label, length);
+        std::string text = ReadUtf8Text(label, length);
         float values[3] = { value->x, value->y, value->z };
         bool changed = ImGui::InputFloat3(text.c_str(), values);
         if (changed)
@@ -114,7 +127,7 @@ namespace
     {
         if (!buffer || bufferSize <= 0) return -1;
 
-        std::string text = MakeText(label, length);
+        std::string text = ReadUtf8Text(label, length);
         buffer[bufferSize - 1] = 0;
         ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<size_t>(bufferSize));
         return static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer)));

@@ -8,9 +8,9 @@
 #include <unordered_map>
 
 #include "FileSystem/FileSystem.h"
+#include "FileSystem/PathDefines.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
-#include "Runtime/ContentContext.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Shader.h"
@@ -101,29 +101,29 @@ namespace
         return text;
     }
 
-    //规范化文件路径
-    std::string NormalizePath(const std::string& path)
+    //整理文件路径。
+    std::string ToCleanPath(const std::string& path)
     {
-        return ResourceManager::NormalizeKey(std::filesystem::path(path).lexically_normal().string());
+        return ResourceManager::ToResourceKey(std::filesystem::path(path).lexically_normal().string());
     }
 
-    //解析实际磁盘路径，保持资源 Key 不变但由宿主内容根决定来源。
-    std::string ResolveAssetPath(const std::string& path)
+    //解析实际磁盘路径，保持资源 Key 不变但由当前项目决定来源。
+    std::string GetAssetFilePath(const std::string& path)
     {
-        std::string normalizedPath = NormalizePath(path);
-        if (FileSystem::Exist(normalizedPath)) return normalizedPath;
+        std::string cleanPath = ToCleanPath(path);
+        if (FileSystem::Exist(cleanPath)) return cleanPath;
 
-        if (ContentContext::HasContentRoot())
+        if (PathDefines::HasProjectRoot())
         {
-            std::string resourceRoot = ContentContext::GetResourceRoot();
-            if (normalizedPath == resourceRoot || StartsWith(normalizedPath, resourceRoot + "/"))
+            std::string resourceRoot = PathDefines::GetResourceRoot();
+            if (cleanPath == resourceRoot || StartsWith(cleanPath, resourceRoot + "/"))
             {
-                std::string contentCandidate = ContentContext::ResolveResourcePath(normalizedPath);
-                if (FileSystem::Exist(contentCandidate)) return contentCandidate;
+                std::string resourceCandidate = PathDefines::GetResourceFilePath(cleanPath);
+                if (FileSystem::Exist(resourceCandidate)) return resourceCandidate;
             }
         }
 
-        return normalizedPath;
+        return cleanPath;
     }
 
     //获取扩展名小写文本
@@ -244,13 +244,13 @@ namespace
     }
 
     //按 OrbShader 规则解析 include 资源路径
-    std::string ResolveOrbShaderPath(const std::string& sourceKey, const std::string& path)
+    std::string GetOrbShaderIncludeKey(const std::string& sourceKey, const std::string& path)
     {
-        std::string normalizedPath = ResourceManager::NormalizeKey(path);
-        if (StartsWith(normalizedPath, "Resource/")) return normalizedPath;
+        std::string includeKey = ResourceManager::ToResourceKey(path);
+        if (StartsWith(includeKey, "Resource/")) return includeKey;
 
         std::filesystem::path parent = std::filesystem::path(sourceKey).parent_path();
-        return NormalizePath((parent / normalizedPath).string());
+        return ToCleanPath((parent / includeKey).string());
     }
 
     //从 include 文本中提取当前分段可见的源码
@@ -344,7 +344,7 @@ namespace
             }
 
             //解析 include 目标
-            std::string includeKey = ResolveOrbShaderPath(sourceKey, includePath);
+            std::string includeKey = GetOrbShaderIncludeKey(sourceKey, includePath);
             if (std::find(includeStack.begin(), includeStack.end(), includeKey) != includeStack.end())
             {
                 collection.AddError("OrbShader include cycle detected: " + sourceKey + " -> " + includeKey);
@@ -481,7 +481,7 @@ namespace
     }
 
     //解析OBJ索引，支持负索引
-    int32 ResolveObjIndex(int32 rawIndex, usize count)
+    int32 ConvertObjIndex(int32 rawIndex, usize count)
     {
         if (rawIndex > 0) return rawIndex - 1;
         if (rawIndex < 0) return static_cast<int32>(count) + rawIndex;
@@ -535,22 +535,22 @@ namespace
     template<typename T>
     T* CreateImportedObject(const std::string& key)
     {
-        std::string normalizedKey = ResourceManager::NormalizeKey(key);
-        Object* loaded = ResourceManager::FindLoaded(normalizedKey);
+        std::string resourceKey = ResourceManager::ToResourceKey(key);
+        Object* loaded = ResourceManager::FindLoaded(resourceKey);
         if (loaded) return loaded->Cast<T>();
 
-        Object* found = Object::FindObject(StringId(normalizedKey));
+        Object* found = Object::FindObject(StringId(resourceKey));
         T* existing = found ? found->Cast<T>() : nullptr;
         if (existing)
         {
-            return ResourceManager::RegisterObject(normalizedKey, existing) ? existing : nullptr;
+            return ResourceManager::RegisterObject(resourceKey, existing) ? existing : nullptr;
         }
 
-        Object* created = AssetPipelineObjectFactory::Create(T::StaticType(), normalizedKey);
+        Object* created = AssetPipelineObjectFactory::Create(T::StaticType(), resourceKey);
         T* object = created ? created->Cast<T>() : nullptr;
         if (!object) return nullptr;
 
-        if (!ResourceManager::RegisterObject(normalizedKey, object))
+        if (!ResourceManager::RegisterObject(resourceKey, object))
         {
             Object::DeleteInstance(object);
             return nullptr;
@@ -562,28 +562,28 @@ namespace
     //导入图片到指定ObjectKey
     Texture2D* ImportImageAsKey(const std::string& filePath, const std::string& objectKey, AssetCollection& collection)
     {
-        std::string normalizedFilePath = ResolveAssetPath(filePath);
-        std::string normalizedObjectKey = ResourceManager::NormalizeKey(objectKey);
-        collection.AddSourceFile(normalizedFilePath);
+        std::string imageFilePath = GetAssetFilePath(filePath);
+        std::string textureKey = ResourceManager::ToResourceKey(objectKey);
+        collection.AddSourceFile(imageFilePath);
 
-        Texture2D* texture = CreateImportedObject<Texture2D>(normalizedObjectKey);
+        Texture2D* texture = CreateImportedObject<Texture2D>(textureKey);
         if (!texture)
         {
-            collection.AddError("Failed to create Texture2D: " + normalizedObjectKey);
+            collection.AddError("Failed to create Texture2D: " + textureKey);
             return nullptr;
         }
 
         int width = 0;
         int height = 0;
         int channels = 0;
-        stbi_uc* pixels = stbi_load(normalizedFilePath.c_str(), &width, &height, &channels, 4);
+        stbi_uc* pixels = stbi_load(imageFilePath.c_str(), &width, &height, &channels, 4);
         if (!pixels)
         {
-            collection.AddError("Image decode failed: " + normalizedFilePath);
+            collection.AddError("Image decode failed: " + imageFilePath);
             return nullptr;
         }
 
-        texture->name = Path::GetNameWithOutExtension(normalizedFilePath);
+        texture->name = Path::GetNameWithOutExtension(imageFilePath);
         texture->width = width;
         texture->height = height;
         texture->channels = 4;
@@ -591,14 +591,14 @@ namespace
         texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
         stbi_image_free(pixels);
 
-        collection.AddObject(normalizedObjectKey, texture, true);
+        collection.AddObject(textureKey, texture, true);
         return texture;
     }
 
     //读取文本文件，失败时记录错误
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection)
     {
-        std::string filePath = ResolveAssetPath(path);
+        std::string filePath = GetAssetFilePath(path);
         if (!FileSystem::Exist(filePath))
         {
             collection.AddError("File does not exist: " + path);
@@ -624,11 +624,11 @@ namespace
             for (const std::string& fileName : SplitWhitespace(rest))
             {
                 std::filesystem::path path = std::filesystem::path(directory) / fileName;
-                files.push_back(NormalizePath(path.string()));
+                files.push_back(ToCleanPath(path.string()));
             }
         }
 
-        std::string defaultMtl = NormalizePath(Path::GetFullNameWithOutExtension(objPath) + ".mtl");
+        std::string defaultMtl = ToCleanPath(Path::GetFullNameWithOutExtension(objPath) + ".mtl");
         if (files.empty() && FileSystem::Exist(defaultMtl))
         {
             files.push_back(defaultMtl);
@@ -755,9 +755,9 @@ namespace
         int32 rawTexcoord = parts.size() > 1 && !parts[1].empty() ? std::stoi(parts[1]) : 0;
         int32 rawNormal = parts.size() > 2 && !parts[2].empty() ? std::stoi(parts[2]) : 0;
 
-        corner.key.position = ResolveObjIndex(rawPosition, positions.size());
-        corner.key.texcoord = ResolveObjIndex(rawTexcoord, texcoords.size());
-        corner.key.normal = ResolveObjIndex(rawNormal, normals.size());
+        corner.key.position = ConvertObjIndex(rawPosition, positions.size());
+        corner.key.texcoord = ConvertObjIndex(rawTexcoord, texcoords.size());
+        corner.key.normal = ConvertObjIndex(rawNormal, normals.size());
 
         if (corner.key.position >= 0 && static_cast<usize>(corner.key.position) < positions.size())
         {
@@ -791,25 +791,25 @@ bool AssetCollection::Succeeded() const
 //记录导入源文件
 void AssetCollection::AddSourceFile(const std::string& path)
 {
-    std::string normalizedPath = ResourceManager::NormalizeKey(path);
-    if (std::find(sourceFiles.begin(), sourceFiles.end(), normalizedPath) != sourceFiles.end()) return;
+    std::string resourceKey = ResourceManager::ToResourceKey(path);
+    if (std::find(sourceFiles.begin(), sourceFiles.end(), resourceKey) != sourceFiles.end()) return;
 
-    sourceFiles.push_back(normalizedPath);
+    sourceFiles.push_back(resourceKey);
 }
 
 //记录导入对象
 void AssetCollection::AddObject(const std::string& key, Object* object, bool isMain)
 {
-    std::string normalizedKey = ResourceManager::NormalizeKey(key);
-    if (std::find(objectKeys.begin(), objectKeys.end(), normalizedKey) == objectKeys.end())
+    std::string objectKey = ResourceManager::ToResourceKey(key);
+    if (std::find(objectKeys.begin(), objectKeys.end(), objectKey) == objectKeys.end())
     {
-        objectKeys.push_back(normalizedKey);
+        objectKeys.push_back(objectKey);
         objects.push_back(object);
     }
 
-    if (isMain && std::find(mainKeys.begin(), mainKeys.end(), normalizedKey) == mainKeys.end())
+    if (isMain && std::find(mainKeys.begin(), mainKeys.end(), objectKey) == mainKeys.end())
     {
-        mainKeys.push_back(normalizedKey);
+        mainKeys.push_back(objectKey);
     }
 }
 
@@ -848,7 +848,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
         return Import_ORBSHADER(sourceKey);
     }
 
-    if (FileSystem::Exist(ResolveAssetPath(sourceKey + ".vert.glsl")) && FileSystem::Exist(ResolveAssetPath(sourceKey + ".frag.glsl")))
+    if (FileSystem::Exist(GetAssetFilePath(sourceKey + ".vert.glsl")) && FileSystem::Exist(GetAssetFilePath(sourceKey + ".frag.glsl")))
     {
         return Import_GLSL(sourceKey);
     }
@@ -863,7 +863,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
 AssetCollection AssetPipeline::Import_GLSL(std::string path)
 {
     AssetCollection collection;
-    std::string sourceKey = ResourceManager::NormalizeKey(path);
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
 
     std::string vertexPath = sourceKey + ".vert.glsl";
@@ -893,7 +893,7 @@ AssetCollection AssetPipeline::Import_GLSL(std::string path)
 AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
 {
     AssetCollection collection;
-    std::string sourceKey = ResourceManager::NormalizeKey(path);
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
 
     std::string source = LoadTextOrError(sourceKey, collection);
@@ -937,7 +937,7 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
 AssetCollection AssetPipeline::Import_IMG(std::string path)
 {
     AssetCollection collection;
-    std::string sourceKey = ResourceManager::NormalizeKey(path);
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
     ImportImageAsKey(sourceKey, sourceKey, collection);
     return collection;
@@ -947,9 +947,9 @@ AssetCollection AssetPipeline::Import_IMG(std::string path)
 AssetCollection AssetPipeline::Import_OBJ(std::string path)
 {
     AssetCollection collection;
-    std::string sourceKey = ResourceManager::NormalizeKey(path);
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
-    std::string objPath = ResolveAssetPath(sourceKey);
+    std::string objPath = GetAssetFilePath(sourceKey);
     collection.AddSourceFile(objPath);
 
     if (!FileSystem::Exist(objPath))

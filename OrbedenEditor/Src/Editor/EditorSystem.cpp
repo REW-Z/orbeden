@@ -1,15 +1,17 @@
 #include "Editor/EditorSystem.h"
 
 #include "Log/Log.h"
+#include "Editor/NewProjectGenerator.h"
 #include "Platform/GlfwWindow.h"
 #include "Platform/InputManager.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Ens.h"
-#include "Runtime/ContentContext.h"
+#include "FileSystem/PathDefines.h"
 #include "Runtime/Object/SpaceComponent.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -28,7 +30,51 @@ namespace
     constexpr float32 Pi = 3.14159265358979323846f;
     constexpr const char* EditorCameraId = "world://editor/camera";
 
-    std::string NormalizePath(const std::filesystem::path& path)
+    struct PlayerTargetPlatformInfo
+    {
+        const char* displayName;
+        const char* scriptName;
+        const char* cmakePreset;
+        const char* cmakeBuildDirectory;
+        const char* aotDirectory;
+    };
+
+    constexpr std::array<PlayerTargetPlatformInfo, 5> PlayerTargetPlatforms =
+    {
+        PlayerTargetPlatformInfo { "Windows x64", "WindowsX64", "player-windows-x64-clang-cl", "windows-x64-clang-cl", "windows-x64" },
+        PlayerTargetPlatformInfo { "Linux x64", "LinuxX64", "player-linux-x64-clang", "linux-x64-clang", "linux-x64-clang" },
+        PlayerTargetPlatformInfo { "Linux x64 GCC", "LinuxX64Gcc", "player-linux-x64-gcc", "linux-x64-gcc", "linux-x64-gcc" },
+        PlayerTargetPlatformInfo { "FreeBSD x64", "FreeBsdX64", "player-freebsd-x64-clang", "freebsd-x64-clang", "freebsd-x64" },
+        PlayerTargetPlatformInfo { "Switch", "Switch", "player-switch", "switch", "switch" },
+    };
+
+    const PlayerTargetPlatformInfo& GetPlayerTargetPlatformInfo(int32 index)
+    {
+        if (index < 0 || index >= static_cast<int32>(PlayerTargetPlatforms.size()))
+        {
+            return PlayerTargetPlatforms[0];
+        }
+
+        return PlayerTargetPlatforms[static_cast<usize>(index)];
+    }
+
+    std::string GetNativeAotLibraryName(const PlayerTargetPlatformInfo& target, const std::string& assemblyName)
+    {
+        if (std::strcmp(target.scriptName, "WindowsX64") == 0)
+        {
+            return assemblyName + ".lib";
+        }
+
+        return "lib" + assemblyName + ".a";
+    }
+
+#if defined(NDEBUG)
+    constexpr const char* BuildConfiguration = "Release";
+#else
+    constexpr const char* BuildConfiguration = "Debug";
+#endif
+
+    std::string ToCleanPath(const std::filesystem::path& path)
     {
         return path.lexically_normal().generic_string();
     }
@@ -77,7 +123,7 @@ namespace
         };
     }
 
-    quaternion MakeYawPitchRotation(float32 yawDegrees, float32 pitchDegrees)
+    quaternion GetYawPitchRotation(float32 yawDegrees, float32 pitchDegrees)
     {
         float32 yaw = yawDegrees * Pi / 180.0f;
         float32 pitch = pitchDegrees * Pi / 180.0f;
@@ -158,6 +204,11 @@ namespace
         return "\"" + value + "\"";
     }
 
+    std::string CMakeDefine(const char* name, const char* type, const std::string& value)
+    {
+        return Quote("-D" + std::string(name) + ":" + type + "=" + value);
+    }
+
     std::string FindFirstCsproj(const std::filesystem::path& directory)
     {
         if (!std::filesystem::is_directory(directory)) return std::string();
@@ -169,7 +220,7 @@ namespace
             if (error) break;
             if (entry.is_regular_file() && entry.path().extension() == ".csproj")
             {
-                projects.push_back(NormalizePath(entry.path()));
+                projects.push_back(ToCleanPath(entry.path()));
             }
         }
 
@@ -180,7 +231,7 @@ namespace
     std::string GetParentDirectory(const std::string& path)
     {
         std::filesystem::path value(path);
-        return NormalizePath(value.has_parent_path() ? value.parent_path() : std::filesystem::current_path());
+        return ToCleanPath(value.has_parent_path() ? value.parent_path() : std::filesystem::current_path());
     }
 
     bool FileExists(const std::string& path)
@@ -188,7 +239,88 @@ namespace
         return !path.empty() && std::filesystem::exists(std::filesystem::path(path));
     }
 
-    std::filesystem::path MakeShadowAssemblyPath(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
+    bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
+    {
+        std::string content = ReadTextFile(std::filesystem::path(csproj));
+        return content.find("Lib\\OrbedenCore.CSharp.dll") != std::string::npos
+            || content.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
+    }
+
+    bool RefreshLocalRuntimeDllReference(const std::string& csproj, const std::string& runtimeDllPath, std::string& outError)
+    {
+        outError.clear();
+        if (!ScriptProjectUsesLocalRuntimeDll(csproj)) return true;
+
+        if (runtimeDllPath.empty() || !std::filesystem::exists(std::filesystem::path(runtimeDllPath)))
+        {
+            outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.CSharp first.";
+            return false;
+        }
+
+        std::filesystem::path target = std::filesystem::path(csproj).parent_path() / "Lib/OrbedenCore.CSharp.dll";
+        std::filesystem::create_directories(target.parent_path());
+
+        std::error_code equivalentError;
+        if (std::filesystem::exists(target) && std::filesystem::equivalent(std::filesystem::path(runtimeDllPath), target, equivalentError))
+        {
+            return true;
+        }
+
+        std::error_code copyError;
+        std::filesystem::copy_file(std::filesystem::path(runtimeDllPath),
+            target,
+            std::filesystem::copy_options::overwrite_existing,
+            copyError);
+        if (!copyError) return true;
+
+        outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
+        return false;
+    }
+
+    std::filesystem::path GetVisualStudioRoot()
+    {
+        return std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community");
+    }
+
+    std::string GetBundledCMakePath()
+    {
+        std::filesystem::path path = GetVisualStudioRoot() / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe";
+        return std::filesystem::exists(path) ? ToCleanPath(path) : std::string();
+    }
+
+    std::string GetBundledNinjaPath()
+    {
+        std::filesystem::path path = GetVisualStudioRoot() / "Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe";
+        return std::filesystem::exists(path) ? ToCleanPath(path) : std::string();
+    }
+
+    std::string GetBundledClangClPath()
+    {
+        const std::array<std::filesystem::path, 3> candidates =
+        {
+            GetVisualStudioRoot() / "VC/Tools/Llvm/bin/clang-cl.exe",
+            GetVisualStudioRoot() / "VC/Tools/Llvm/x64/bin/clang-cl.exe",
+            GetVisualStudioRoot() / "VC/Tools/Llvm/x86/bin/clang-cl.exe",
+        };
+
+        for (const std::filesystem::path& path : candidates)
+        {
+            if (std::filesystem::exists(path))
+            {
+                return ToCleanPath(path);
+            }
+        }
+
+        return std::string();
+    }
+
+    std::string GetCMakeCommand()
+    {
+        std::string bundled = GetBundledCMakePath();
+        return bundled.empty() ? "cmake" : Quote(bundled);
+    }
+
+    std::filesystem::path CopyAssemblyToShadowCache(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
     {
         std::filesystem::create_directories(shadowDirectory);
 
@@ -211,7 +343,7 @@ namespace
         std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
         if (!std::filesystem::exists(sourceAssembly)) return std::string();
 
-        std::filesystem::path shadowAssembly = MakeShadowAssemblyPath(sourceAssembly, shadowDirectory);
+        std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, shadowDirectory);
         std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
         std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
         std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
@@ -223,7 +355,7 @@ namespace
             return std::string();
         }
 
-        return NormalizePath(shadowAssembly);
+        return ToCleanPath(shadowAssembly);
     }
 }
 
@@ -236,14 +368,15 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
-    SetDialogDirectory(NormalizePath(std::filesystem::current_path()));
+    SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
     RegisterBuiltInPanels();
+    CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
 
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
     std::filesystem::path managedDirectory = executableDirectory / "Managed";
     EditorClrHostConfig clrConfig;
-    clrConfig.runtimeConfigPath = NormalizePath(executableDirectory / "OrbedenEditor.runtimeconfig.json");
-    clrConfig.componentAssemblyPath = NormalizePath(managedDirectory / "Orbeden.Editor.dll");
+    clrConfig.runtimeConfigPath = ToCleanPath(executableDirectory / "OrbedenEditor.runtimeconfig.json");
+    clrConfig.componentAssemblyPath = ToCleanPath(managedDirectory / "Orbeden.Editor.dll");
     if (clrHost.Initialize(clrConfig))
     {
         managedOverlay.Initialize(clrHost, executablePath);
@@ -288,6 +421,7 @@ void EditorSystem::DrawOverlay()
     DrawMainMenuBar();
     DrawManagedSceneGizmos();
     DrawProjectDialog();
+    DrawNewProjectDialog();
     panelManager.DrawPanels();
     managedOverlay.DrawInspector(selection.GetSelectedEns(), GetSelectedEnsStableId());
     managedOverlay.DrawPanels();
@@ -297,6 +431,11 @@ void EditorSystem::DrawOverlay()
 void EditorSystem::RequestOpenProjectDialog()
 {
     OpenProjectDialog();
+}
+
+void EditorSystem::RequestNewProjectDialog()
+{
+    OpenNewProjectDialog();
 }
 
 void EditorSystem::RequestSaveCurrentWorld()
@@ -321,6 +460,35 @@ void EditorSystem::RequestBuildScripts()
     if (csproj.empty())
     {
         projectStatus = "No C# project found in script root.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string projectRepairError;
+    if (!NewProjectGenerator::RepairScriptProjectBuildProps(csproj, projectRepairError))
+    {
+        projectStatus = projectRepairError;
+        return;
+    }
+
+    std::string repoRoot = FindRepositoryRoot();
+    if (!repoRoot.empty())
+    {
+        std::filesystem::path coreCSharpProject = std::filesystem::path(repoRoot) / "OrbedenCore/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.csproj";
+        if (std::filesystem::exists(coreCSharpProject))
+        {
+            std::string coreCommand = "dotnet build " + Quote(ToCleanPath(coreCSharpProject)) + " -c Debug";
+            if (!RunCommand(coreCommand, "Build Core C#"))
+            {
+                return;
+            }
+        }
+    }
+
+    std::string runtimeRefreshError;
+    if (!RefreshLocalRuntimeDllReference(csproj, FindRuntimeCSharpDll(), runtimeRefreshError))
+    {
+        projectStatus = runtimeRefreshError;
         Log::Error(projectStatus.c_str());
         return;
     }
@@ -352,7 +520,7 @@ void EditorSystem::RequestPlay()
 
     std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".pie";
     std::string gameModuleType = GetProjectGameModuleTypeName();
-    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, NormalizePath(shadowDirectory)))
+    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory)))
     {
         projectStatus = playMode.GetLastError();
         return;
@@ -377,6 +545,13 @@ void EditorSystem::RequestBuildPlayer()
         RequestStop();
     }
 
+    if (!project.HasProject())
+    {
+        projectStatus = "No project is open.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
     std::string repoRoot = FindRepositoryRoot();
     if (repoRoot.empty())
     {
@@ -385,7 +560,31 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string publishScript = NormalizePath(std::filesystem::path(repoRoot) / "Build/PublishExampleGameAot.ps1");
+    const PlayerTargetPlatformInfo& target = GetPlayerTargetPlatformInfo(selectedPlayerTargetPlatform);
+    if (std::strcmp(target.scriptName, "Switch") == 0)
+    {
+        projectStatus = "Switch Player build requires vendor SDK/RID integration. No DLL fallback was attempted.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string scriptProject = GetProjectScriptProjectPath();
+    if (scriptProject.empty())
+    {
+        projectStatus = "Build Player failed: no C# project found in script root.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string assemblyName = GetProjectGameAssemblyName();
+    if (assemblyName.empty())
+    {
+        projectStatus = "Build Player failed: game assembly name was not found.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string publishScript = ToCleanPath(std::filesystem::path(repoRoot) / "Build/PublishGameAot.ps1");
     if (!FileExists(publishScript))
     {
         projectStatus = "NativeAOT publish script is missing.";
@@ -393,22 +592,59 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string command = "powershell -ExecutionPolicy Bypass -File " + Quote(publishScript) + " -Configuration Debug -Platform x64";
-    if (!RunCommand(command, "Build Player AOT"))
+    std::string publishCommand = "powershell -ExecutionPolicy Bypass -File " + Quote(publishScript)
+        + " -Configuration " + BuildConfiguration
+        + " -TargetPlatform " + target.scriptName
+        + " -ProjectRoot " + Quote(project.GetProjectRoot())
+        + " -ScriptProject " + Quote(scriptProject);
+    if (!RunCommand(publishCommand, "Build Player AOT"))
     {
+        projectStatus = "Build Player AOT failed for " + std::string(target.displayName) + ". Check local NativeAOT packs; no DLL fallback was attempted.";
         return;
     }
 
-    std::string msbuild = NormalizePath(std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/MSBuild.exe"));
-    std::string gameProject = NormalizePath(std::filesystem::path(repoRoot) / "OrbedenGame/OrbedenGame.vcxproj");
-    if (!FileExists(msbuild) || !FileExists(gameProject))
+    std::string aotLibraryName = GetNativeAotLibraryName(target, assemblyName);
+    std::string aotLibraryPath = ToCleanPath(std::filesystem::path(project.GetProjectRoot()) / "Aot" / target.aotDirectory / BuildConfiguration / aotLibraryName);
+    if (!FileExists(aotLibraryPath))
     {
-        projectStatus = "Build Player failed: MSBuild or OrbedenGame project was not found.";
+        projectStatus = "Build Player failed: NativeAOT library was not found: " + aotLibraryPath;
         Log::Error(projectStatus.c_str());
         return;
     }
 
-    RunCommand(Quote(msbuild) + " " + Quote(gameProject) + " /p:Configuration=Debug /p:Platform=x64", "Build OrbedenGame");
+    std::string cmakeCommand = GetCMakeCommand();
+    std::string configureCommand = cmakeCommand + " --preset " + Quote(target.cmakePreset)
+        + " " + CMakeDefine("CMAKE_BUILD_TYPE", "STRING", BuildConfiguration)
+        + " " + CMakeDefine("ORBEDEN_GAME_AOT_LIB", "FILEPATH", aotLibraryPath)
+        + " " + CMakeDefine("ORBEDEN_PROJECT_DIR", "PATH", project.GetProjectRoot());
+    std::string ninjaPath = GetBundledNinjaPath();
+    if (!ninjaPath.empty())
+    {
+        configureCommand += " " + CMakeDefine("CMAKE_MAKE_PROGRAM", "FILEPATH", ninjaPath);
+    }
+    if (std::strcmp(target.scriptName, "WindowsX64") == 0)
+    {
+        std::string clangClPath = GetBundledClangClPath();
+        if (!clangClPath.empty())
+        {
+            configureCommand += " " + CMakeDefine("CMAKE_C_COMPILER", "FILEPATH", clangClPath);
+            configureCommand += " " + CMakeDefine("CMAKE_CXX_COMPILER", "FILEPATH", clangClPath);
+        }
+    }
+    if (!RunCommand(configureCommand, "Configure Player"))
+    {
+        projectStatus = "Configure Player failed for " + std::string(target.displayName) + ". Check CMake, Ninja, toolchain, and GLFW dependencies.";
+        return;
+    }
+
+    std::string buildCommand = cmakeCommand + " --build --preset " + Quote(target.cmakePreset);
+    if (!RunCommand(buildCommand, "Build Player"))
+    {
+        projectStatus = "Build Player failed for " + std::string(target.displayName) + ".";
+        return;
+    }
+
+    projectStatus = "Built Player (" + std::string(target.displayName) + "): OrbedenGame/Build/" + target.cmakeBuildDirectory + "/bin/OrbedenGame";
 }
 
 bool EditorSystem::IsPlaying() const
@@ -449,6 +685,33 @@ std::string EditorSystem::GetStartupWorldPath() const
 const std::string& EditorSystem::GetProjectStatusText() const
 {
     return projectStatus;
+}
+
+int32 EditorSystem::GetPlayerTargetPlatformCount() const
+{
+    return static_cast<int32>(PlayerTargetPlatforms.size());
+}
+
+int32 EditorSystem::GetSelectedPlayerTargetPlatformIndex() const
+{
+    return selectedPlayerTargetPlatform;
+}
+
+const char* EditorSystem::GetPlayerTargetPlatformName(int32 index) const
+{
+    return GetPlayerTargetPlatformInfo(index).displayName;
+}
+
+void EditorSystem::SetSelectedPlayerTargetPlatformIndex(int32 index)
+{
+    if (index < 0 || index >= GetPlayerTargetPlatformCount()) return;
+
+    selectedPlayerTargetPlatform = index;
+}
+
+const char* EditorSystem::GetSelectedPlayerTargetPlatformName() const
+{
+    return GetPlayerTargetPlatformInfo(selectedPlayerTargetPlatform).displayName;
 }
 
 World& EditorSystem::GetWorld()
@@ -506,7 +769,7 @@ std::string EditorSystem::GetProjectGameAssemblyPath() const
     std::string assemblyName = GetProjectGameAssemblyName();
     if (assemblyName.empty()) return std::string();
 
-    return NormalizePath(std::filesystem::path(project.GetManagedRootPath()) / (assemblyName + ".dll"));
+    return ToCleanPath(std::filesystem::path(project.GetManagedRootPath()) / (assemblyName + ".dll"));
 }
 
 std::string EditorSystem::GetProjectScriptSidecarPath() const
@@ -571,12 +834,49 @@ std::string EditorSystem::FindRepositoryRoot() const
         {
             if (std::filesystem::exists(start / "orbeden.slnx"))
             {
-                return NormalizePath(start);
+                return ToCleanPath(start);
             }
 
             std::filesystem::path parent = start.parent_path();
             if (parent == start) break;
             start = parent;
+        }
+    }
+
+    return std::string();
+}
+
+std::string EditorSystem::FindRuntimeCSharpDll() const
+{
+    constexpr const char* RuntimeDllRelativePath = "Sdk/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll";
+
+    List<std::filesystem::path> candidates;
+    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    candidates.push_back(executableDirectory / RuntimeDllRelativePath);
+
+    std::filesystem::path parentDirectory = executableDirectory.parent_path();
+    if (!parentDirectory.empty())
+    {
+        candidates.push_back(parentDirectory / RuntimeDllRelativePath);
+        std::filesystem::path editorDirectory = parentDirectory.parent_path();
+        if (!editorDirectory.empty())
+        {
+            candidates.push_back(editorDirectory / RuntimeDllRelativePath);
+        }
+    }
+
+    std::string repoRoot = FindRepositoryRoot();
+    if (!repoRoot.empty())
+    {
+        candidates.push_back(std::filesystem::path(repoRoot) / "OrbedenEditor" / RuntimeDllRelativePath);
+        candidates.push_back(std::filesystem::path(repoRoot) / "OrbedenGame" / RuntimeDllRelativePath);
+    }
+
+    for (const std::filesystem::path& path : candidates)
+    {
+        if (std::filesystem::exists(path))
+        {
+            return ToCleanPath(path);
         }
     }
 
@@ -614,7 +914,7 @@ void EditorSystem::RegisterBuiltInPanels()
     panelManager.RegisterPanel(ensViewInfo, &ensViewPanel);
 }
 
-void EditorSystem::EnsureEditorCamera(World& world)
+void EditorSystem::CreateEditorCameraIfMissing(World& world)
 {
     Ens* cameraEns = world.GetEns(editorCameraEns);
     if (!cameraEns)
@@ -653,7 +953,7 @@ void EditorSystem::EnsureEditorCamera(World& world)
 
     if (SpaceComponent* space = cameraEns->Space())
     {
-        space->localRotation = MakeYawPitchRotation(cameraYaw, cameraPitch);
+        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
     }
     editorCameraEns = cameraEns->GetId();
 }
@@ -661,7 +961,7 @@ void EditorSystem::EnsureEditorCamera(World& world)
 void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
 {
     (void)deltaTime;
-    EnsureEditorCamera(world);
+    CreateEditorCameraIfMissing(world);
 
     SpaceComponent* space = world.GetSpaceComponent(editorCameraEns);
     GLFWwindow* window = GetGlfwWindow(app);
@@ -732,7 +1032,7 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
         cameraMouseMode = 0;
     }
 
-    space->localRotation = MakeYawPitchRotation(cameraYaw, cameraPitch);
+    space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
 }
 
 void EditorSystem::SaveCurrentWorld()
@@ -769,7 +1069,7 @@ void EditorSystem::SaveCurrentWorld()
     bool saved = project.SaveStartupWorld();
     projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
 
-    EnsureEditorCamera(world);
+    CreateEditorCameraIfMissing(world);
     if (hadEditorCamera)
     {
         if (SpaceComponent* space = world.GetSpaceComponent(editorCameraEns))
@@ -789,7 +1089,7 @@ void EditorSystem::TryAutoLoadExampleProject()
     autoLoadAttempted = true;
 
 #if !defined(NDEBUG)
-    std::string exampleProject = ContentContext::FindProjectRoot("ExampleProject", executablePath);
+    std::string exampleProject = PathDefines::FindProjectRoot("ExampleProject", executablePath);
     if (exampleProject.empty())
     {
         Log::Warning("Editor Debug auto-load skipped: ExampleProject was not found.");
@@ -803,7 +1103,7 @@ void EditorSystem::TryAutoLoadExampleProject()
         SetDialogDirectory(project.GetProjectRoot());
         projectStatus = "Loaded: " + project.GetProjectRoot();
         selection.Clear();
-        EnsureEditorCamera(app.GetWorld());
+        CreateEditorCameraIfMissing(app.GetWorld());
         RefreshInspectorGameAssembly();
     }
 #endif
@@ -816,6 +1116,25 @@ void EditorSystem::OpenProjectDialog()
     if (project.HasProject())
     {
         SetDialogDirectory(project.GetProjectRoot());
+    }
+}
+
+void EditorSystem::OpenNewProjectDialog()
+{
+    newProjectDialog = true;
+    dialogError.clear();
+    if (project.HasProject())
+    {
+        SetDialogDirectory(GetParentDirectory(project.GetProjectRoot()));
+    }
+    else
+    {
+        SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
+    }
+
+    if (newProjectNameBuffer[0] == '\0')
+    {
+        CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
     }
 }
 
@@ -844,6 +1163,11 @@ void EditorSystem::DrawMainMenuBar()
         if (!project.HasProject())
         {
             ImGui::EndDisabled();
+        }
+
+        if (ImGui::Selectable("New...", false))
+        {
+            OpenNewProjectDialog();
         }
 
         if (ImGui::Selectable("Load...", false))
@@ -915,7 +1239,7 @@ void EditorSystem::DrawProjectDialog()
         std::filesystem::path parent = std::filesystem::path(dialogDirectory).parent_path();
         if (!parent.empty())
         {
-            SetDialogDirectory(NormalizePath(parent));
+            SetDialogDirectory(ToCleanPath(parent));
         }
     }
 
@@ -928,7 +1252,7 @@ void EditorSystem::DrawProjectDialog()
         {
             if (ImGui::Selectable(child.c_str()))
             {
-                SetDialogDirectory(NormalizePath(std::filesystem::path(dialogDirectory) / child));
+                SetDialogDirectory(ToCleanPath(std::filesystem::path(dialogDirectory) / child));
             }
         }
     }
@@ -952,7 +1276,7 @@ void EditorSystem::DrawProjectDialog()
             SetDialogDirectory(project.GetProjectRoot());
             projectStatus = "Loaded: " + project.GetProjectRoot();
             selection.Clear();
-            EnsureEditorCamera(app.GetWorld());
+            CreateEditorCameraIfMissing(app.GetWorld());
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
         }
@@ -973,8 +1297,102 @@ void EditorSystem::DrawProjectDialog()
     ImGui::EndPopup();
 }
 
+void EditorSystem::DrawNewProjectDialog()
+{
+    if (newProjectDialog)
+    {
+        ImGui::OpenPopup("New Project");
+        newProjectDialog = false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(640.0f, 500.0f), ImGuiCond_Appearing);
+    if (!ImGui::BeginPopupModal("New Project", nullptr, ImGuiWindowFlags_NoSavedSettings))
+    {
+        return;
+    }
+
+    ImGui::InputText("Parent Path", pathBuffer, sizeof(pathBuffer));
+    dialogDirectory = pathBuffer;
+    ImGui::InputText("Project Name", newProjectNameBuffer, sizeof(newProjectNameBuffer));
+
+    if (ImGui::Button("Up"))
+    {
+        std::filesystem::path parent = std::filesystem::path(dialogDirectory).parent_path();
+        if (!parent.empty())
+        {
+            SetDialogDirectory(ToCleanPath(parent));
+        }
+    }
+
+    ImGui::Separator();
+
+    ImGui::BeginChild("NewProjectDirectoryList", ImVec2(0.0f, 300.0f), true);
+    if (std::filesystem::is_directory(dialogDirectory))
+    {
+        for (const std::string& child : GetChildDirectories(dialogDirectory))
+        {
+            if (ImGui::Selectable(child.c_str()))
+            {
+                SetDialogDirectory(ToCleanPath(std::filesystem::path(dialogDirectory) / child));
+            }
+        }
+    }
+    else
+    {
+        ImGui::TextUnformatted("Parent directory does not exist.");
+    }
+    ImGui::EndChild();
+
+    if (!dialogError.empty())
+    {
+        ImGui::TextWrapped("%s", dialogError.c_str());
+    }
+
+    if (ImGui::Button("Create"))
+    {
+        std::string runtimeDllPath = FindRuntimeCSharpDll();
+        if (runtimeDllPath.empty())
+        {
+            dialogError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.CSharp first.";
+            projectStatus = dialogError;
+        }
+        else
+        {
+            RequestStop();
+
+            std::string projectRoot;
+            std::string error;
+            if (NewProjectGenerator::CreateProject(dialogDirectory, newProjectNameBuffer, runtimeDllPath, projectRoot, error)
+                && project.LoadProjectFolder(projectRoot))
+            {
+                dialogError.clear();
+                SetDialogDirectory(project.GetProjectRoot());
+                projectStatus = "Created project: " + project.GetProjectRoot();
+                selection.Clear();
+                CreateEditorCameraIfMissing(app.GetWorld());
+                RefreshInspectorGameAssembly();
+                ImGui::CloseCurrentPopup();
+            }
+            else
+            {
+                dialogError = !error.empty() ? error : project.GetLastError();
+                projectStatus = dialogError;
+            }
+        }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel"))
+    {
+        dialogError.clear();
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
+}
+
 void EditorSystem::SetDialogDirectory(const std::string& path)
 {
-    dialogDirectory = NormalizePath(std::filesystem::path(path));
+    dialogDirectory = ToCleanPath(std::filesystem::path(path));
     CopyToBuffer(pathBuffer, sizeof(pathBuffer), dialogDirectory);
 }

@@ -28,10 +28,10 @@ public:
 
 private:
     //确保阴影贴图和渲染目标已创建
-    bool EnsureShadowResources();
+    bool PrepareShadowResources();
 
     //确保天空盒 cube mesh 已创建
-    bool EnsureSkyboxMesh();
+    bool PrepareSkyboxMesh();
 
     //绘制阴影深度 pass
     bool RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& resources);

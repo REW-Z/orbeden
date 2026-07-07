@@ -1,22 +1,21 @@
-#include "Runtime/ContentContext.h"
+#include "FileSystem/PathDefines.h"
 
 #include "FileSystem/FileSystem.h"
 
-#include <algorithm>
 #include <filesystem>
 
 namespace
 {
-    struct ContentContextRuntime
+    struct PathDefinesRuntime
     {
     public:
-        std::string contentRoot;
+        std::string projectRoot;
         std::string resourceRoot = "Resource";
     };
 
-    ContentContextRuntime& GetRuntime()
+    PathDefinesRuntime& GetRuntime()
     {
-        static ContentContextRuntime runtime;
+        static PathDefinesRuntime runtime;
         return runtime;
     }
 
@@ -25,7 +24,7 @@ namespace
         return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
     }
 
-    std::string NormalizePath(const std::filesystem::path& path)
+    std::string ToCleanPath(const std::filesystem::path& path)
     {
         std::string value = path.lexically_normal().generic_string();
         while (value.size() > 1 && value.back() == '/')
@@ -45,7 +44,7 @@ namespace
     bool IsProjectRoot(const std::filesystem::path& path, const std::string& projectDirectoryName)
     {
         std::filesystem::path projectFile = path / (projectDirectoryName + ".oeproj");
-        return FileSystem::Exist(NormalizePath(projectFile));
+        return FileSystem::Exist(ToCleanPath(projectFile));
     }
 
     std::string SearchProjectRootFrom(const std::filesystem::path& start, const std::string& projectDirectoryName)
@@ -60,13 +59,13 @@ namespace
         {
             if (IsProjectRoot(current, projectDirectoryName))
             {
-                return NormalizePath(current);
+                return ToCleanPath(current);
             }
 
             std::filesystem::path child = current / projectDirectoryName;
             if (IsProjectRoot(child, projectDirectoryName))
             {
-                return NormalizePath(child);
+                return ToCleanPath(child);
             }
 
             std::filesystem::path parent = current.parent_path();
@@ -78,68 +77,68 @@ namespace
     }
 }
 
-void ContentContext::SetContentRoot(const std::string& root, const std::string& resourceRoot)
+void PathDefines::SetProjectRoot(const std::string& root, const std::string& resourceRoot)
 {
-    ContentContextRuntime& runtime = GetRuntime();
-    runtime.contentRoot = NormalizePath(AbsolutePath(root));
-    runtime.resourceRoot = NormalizePath(std::filesystem::path(resourceRoot.empty() ? "Resource" : resourceRoot));
+    PathDefinesRuntime& runtime = GetRuntime();
+    runtime.projectRoot = ToCleanPath(AbsolutePath(root));
+    runtime.resourceRoot = ToCleanPath(std::filesystem::path(resourceRoot.empty() ? "Resource" : resourceRoot));
 }
 
-void ContentContext::Clear()
+void PathDefines::Clear()
 {
-    ContentContextRuntime& runtime = GetRuntime();
-    runtime.contentRoot.clear();
+    PathDefinesRuntime& runtime = GetRuntime();
+    runtime.projectRoot.clear();
     runtime.resourceRoot = "Resource";
 }
 
-bool ContentContext::HasContentRoot()
+bool PathDefines::HasProjectRoot()
 {
-    return !GetRuntime().contentRoot.empty();
+    return !GetRuntime().projectRoot.empty();
 }
 
-const std::string& ContentContext::GetContentRoot()
+const std::string& PathDefines::GetProjectRoot()
 {
-    return GetRuntime().contentRoot;
+    return GetRuntime().projectRoot;
 }
 
-const std::string& ContentContext::GetResourceRoot()
+const std::string& PathDefines::GetResourceRoot()
 {
     return GetRuntime().resourceRoot;
 }
 
-std::string ContentContext::ResolveContentPath(const std::string& path)
+std::string PathDefines::GetProjectFilePath(const std::string& path)
 {
     std::filesystem::path filePath(path);
-    if (filePath.is_absolute()) return NormalizePath(filePath);
+    if (filePath.is_absolute()) return ToCleanPath(filePath);
 
-    const ContentContextRuntime& runtime = GetRuntime();
-    if (runtime.contentRoot.empty()) return NormalizePath(filePath);
+    const PathDefinesRuntime& runtime = GetRuntime();
+    if (runtime.projectRoot.empty()) return ToCleanPath(filePath);
 
-    return NormalizePath(std::filesystem::path(runtime.contentRoot) / filePath);
+    return ToCleanPath(std::filesystem::path(runtime.projectRoot) / filePath);
 }
 
-std::string ContentContext::ResolveResourcePath(const std::string& path)
+std::string PathDefines::GetResourceFilePath(const std::string& path)
 {
-    std::string normalizedPath = NormalizePath(std::filesystem::path(path));
-    const ContentContextRuntime& runtime = GetRuntime();
-    if (runtime.contentRoot.empty()) return normalizedPath;
+    std::string cleanPath = ToCleanPath(std::filesystem::path(path));
+    const PathDefinesRuntime& runtime = GetRuntime();
+    if (runtime.projectRoot.empty()) return cleanPath;
 
-    if (normalizedPath == runtime.resourceRoot)
+    if (cleanPath == runtime.resourceRoot)
     {
-        return NormalizePath(std::filesystem::path(runtime.contentRoot) / runtime.resourceRoot);
+        return ToCleanPath(std::filesystem::path(runtime.projectRoot) / runtime.resourceRoot);
     }
 
     std::string resourcePrefix = runtime.resourceRoot + "/";
-    if (StartsWith(normalizedPath, resourcePrefix))
+    if (StartsWith(cleanPath, resourcePrefix))
     {
-        std::string relativeResource = normalizedPath.substr(resourcePrefix.size());
-        return NormalizePath(std::filesystem::path(runtime.contentRoot) / runtime.resourceRoot / relativeResource);
+        std::string relativeResource = cleanPath.substr(resourcePrefix.size());
+        return ToCleanPath(std::filesystem::path(runtime.projectRoot) / runtime.resourceRoot / relativeResource);
     }
 
-    return ResolveContentPath(normalizedPath);
+    return GetProjectFilePath(cleanPath);
 }
 
-std::string ContentContext::FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath)
+std::string PathDefines::FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath)
 {
     if (projectDirectoryName.empty()) return std::string();
 

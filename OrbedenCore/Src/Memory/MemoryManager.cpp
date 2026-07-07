@@ -15,7 +15,7 @@ namespace
     }
 
     //获取默认对齐
-    uint32 NormalizeAlignment(uint32 alignment)
+    uint32 GetDefaultAlignment(uint32 alignment)
     {
         return alignment ? alignment : static_cast<uint32>(alignof(std::max_align_t));
     }
@@ -303,7 +303,7 @@ void* LinearAllocator::Allocate(uint32 size, uint32 alignment, bool)
 {
     if (!buffer || size == 0) return nullptr;
 
-    uint32 finalAlignment = NormalizeAlignment(alignment);
+    uint32 finalAlignment = GetDefaultAlignment(alignment);
     assert(IsPowerOfTwo(finalAlignment));
 
     uint32 adjustment = GetAlignmentAdjustment(buffer + offset, finalAlignment);
@@ -391,7 +391,7 @@ void ChunkSlotAllocator::Initialize(uint32 size, uint32 count, uint32 alignment)
     Release();
     if (size == 0 || count == 0) return;
 
-    uint32 finalAlignment = NormalizeAlignment(alignment);
+    uint32 finalAlignment = GetDefaultAlignment(alignment);
     if (finalAlignment < static_cast<uint32>(alignof(FreeSlot)))
     {
         finalAlignment = static_cast<uint32>(alignof(FreeSlot));

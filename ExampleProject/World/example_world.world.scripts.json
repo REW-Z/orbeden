@@ -3,6 +3,32 @@
     {
       "stableId": "world://examples/world/cube",
       "type": "ExampleGame.SampleBehaviour"
+    },
+    {
+      "stableId": "world://examples/world/cube",
+      "type": "ExampleGame.CubeTestBehaviour",
+      "values": {
+        "label": {
+          "type": "string",
+          "value": "Cube sidecar test"
+        },
+        "animateScale": {
+          "type": "bool",
+          "value": "true"
+        },
+        "pulseAmplitude": {
+          "type": "float",
+          "value": "0.18"
+        },
+        "pulseSpeed": {
+          "type": "float",
+          "value": "2.5"
+        },
+        "debugOffset": {
+          "type": "vector3",
+          "value": "0 0 0"
+        }
+      }
     }
   ]
 }

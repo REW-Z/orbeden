@@ -2,9 +2,9 @@
 
 #include "Application.h"
 #include "Editor/ExampleWorldGenerator.h"
+#include "FileSystem/PathDefines.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
-#include "Runtime/ContentContext.h"
 #include "Runtime/ResourceManager.h"
 
 #include <cctype>
@@ -14,7 +14,7 @@
 
 namespace
 {
-    std::string NormalizePath(const std::filesystem::path& path)
+    std::string ToCleanPath(const std::filesystem::path& path)
     {
         return path.lexically_normal().generic_string();
     }
@@ -55,7 +55,7 @@ namespace
         if (!std::filesystem::is_directory(folder)) return std::string();
 
         std::filesystem::path expected = folder / (folder.filename().string() + ".oeproj");
-        if (std::filesystem::exists(expected)) return NormalizePath(expected);
+        if (std::filesystem::exists(expected)) return ToCleanPath(expected);
 
         std::error_code error;
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(folder, error))
@@ -64,7 +64,7 @@ namespace
             if (!entry.is_regular_file()) continue;
             if (entry.path().extension() == ".oeproj")
             {
-                return NormalizePath(entry.path());
+                return ToCleanPath(entry.path());
             }
         }
 
@@ -113,7 +113,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
         return false;
     }
 
-    std::string parsedProjectRoot = NormalizePath(std::filesystem::absolute(filePath.parent_path()));
+    std::string parsedProjectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
     if (parsedName.empty()) parsedName = filePath.parent_path().filename().string();
     if (parsedResourceRoot.empty()) parsedResourceRoot = "Resource";
     if (parsedScriptRoot.empty()) parsedScriptRoot = "Script";
@@ -127,7 +127,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
         parsedManagedRoot = "Managed";
     }
 
-    std::string worldPath = NormalizePath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
+    std::string worldPath = ToCleanPath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
     if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateProjectFiles(parsedProjectRoot))
     {
         lastError = "Example project generation failed: " + parsedProjectRoot;
@@ -143,7 +143,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
 
     app.GetWorld().Clear();
     ResourceManager::Shutdown();
-    ContentContext::SetContentRoot(parsedProjectRoot, parsedResourceRoot);
+    PathDefines::SetProjectRoot(parsedProjectRoot, parsedResourceRoot);
 
     bool loaded = app.LoadWorld(worldPath);
     if (renderSystem)
@@ -217,19 +217,19 @@ const std::string& EditorProject::GetProjectName() const
 std::string EditorProject::GetScriptRootPath() const
 {
     if (projectRoot.empty() || scriptRoot.empty()) return std::string();
-    return NormalizePath(std::filesystem::path(projectRoot) / scriptRoot);
+    return ToCleanPath(std::filesystem::path(projectRoot) / scriptRoot);
 }
 
 std::string EditorProject::GetManagedRootPath() const
 {
     if (projectRoot.empty() || managedRoot.empty()) return std::string();
-    return NormalizePath(std::filesystem::path(projectRoot) / managedRoot);
+    return ToCleanPath(std::filesystem::path(projectRoot) / managedRoot);
 }
 
 std::string EditorProject::GetStartupWorldPath() const
 {
     if (projectRoot.empty() || startupWorld.empty()) return std::string();
-    return NormalizePath(std::filesystem::path(projectRoot) / startupWorld);
+    return ToCleanPath(std::filesystem::path(projectRoot) / startupWorld);
 }
 
 const std::string& EditorProject::GetLastError() const

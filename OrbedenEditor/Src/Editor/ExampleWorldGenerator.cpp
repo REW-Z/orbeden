@@ -287,37 +287,26 @@ namespace ExampleGame;
 /// <summary>ExampleGame AOT 模块入口。</summary>
 public static class GameModule
 {
-    private static SampleBehaviour? sampleBehaviour;
-
     /// <summary>初始化游戏模块。</summary>
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Initialize", CallConvs = [typeof(CallConvCdecl)])]
     public static void OrbedenGame_Initialize(IntPtr nativeApi)
     {
         OrbedenCoreRuntime.Initialize(nativeApi);
-
-        Ens ens = Ens.Find("world://examples/world/cube");
-        if (!ens.IsValid)
-        {
-            ens = Ens.Create("AOT Sample Ens");
-        }
-
-        sampleBehaviour = new SampleBehaviour(ens);
-        sampleBehaviour.InvokeStart();
+        MountedScriptRuntime.Initialize();
     }
 
     /// <summary>关闭游戏模块。</summary>
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Shutdown", CallConvs = [typeof(CallConvCdecl)])]
     public static void OrbedenGame_Shutdown()
     {
-        sampleBehaviour?.InvokeEnd();
-        sampleBehaviour = null;
+        MountedScriptRuntime.Shutdown();
     }
 
     /// <summary>更新游戏模块。</summary>
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Update", CallConvs = [typeof(CallConvCdecl)])]
     public static void OrbedenGame_Update(float deltaTime)
     {
-        sampleBehaviour?.InvokeUpdate(deltaTime);
+        MountedScriptRuntime.Update(deltaTime);
     }
 
     /// <summary>绘制游戏模块 GUI。</summary>
@@ -325,6 +314,259 @@ public static class GameModule
     public static void OrbedenGame_DrawGui()
     {
         GuiOverlay.Draw();
+    }
+}
+)ORB";
+
+    constexpr const char* MountedScriptRuntimeText = R"ORB(using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using OrbedenCore.CSharp;
+
+namespace ExampleGame;
+
+/// <summary>按 world 脚本挂载清单启动用户脚本。</summary>
+internal static class MountedScriptRuntime
+{
+    private sealed class ScriptMount
+    {
+        public string StableId = string.Empty;
+        public string Type = string.Empty;
+        public Dictionary<string, string> Values = [];
+    }
+
+    private static readonly List<ScriptBehaviour> scripts = [];
+
+    /// <summary>读取当前 world 的脚本挂载清单并启动脚本。</summary>
+    public static void Initialize()
+    {
+        Shutdown();
+
+        string sidecarPath = GetStartupWorldSidecarPath();
+        if (string.IsNullOrEmpty(sidecarPath) || !File.Exists(sidecarPath))
+        {
+            Console.WriteLine("MountedScriptRuntime: world script sidecar was not found.");
+            return;
+        }
+
+        foreach (ScriptMount mount in ReadScriptMounts(sidecarPath))
+        {
+            Ens ens = Ens.Find(mount.StableId);
+            if (!ens.IsValid)
+            {
+                Console.WriteLine($"MountedScriptRuntime: missing Ens stableId '{mount.StableId}'.");
+                continue;
+            }
+
+            ScriptBehaviour? script = CreateScript(mount, ens);
+            if (script == null)
+            {
+                Console.WriteLine($"MountedScriptRuntime: unsupported script type '{mount.Type}'.");
+                continue;
+            }
+
+            scripts.Add(script);
+        }
+
+        foreach (ScriptBehaviour script in scripts)
+        {
+            script.InvokeStart();
+        }
+    }
+
+    /// <summary>更新已挂载脚本。</summary>
+    public static void Update(float deltaTime)
+    {
+        foreach (ScriptBehaviour script in scripts)
+        {
+            if (script.Ens.IsValid)
+            {
+                script.InvokeUpdate(deltaTime);
+            }
+        }
+    }
+
+    /// <summary>关闭已挂载脚本。</summary>
+    public static void Shutdown()
+    {
+        for (int index = scripts.Count - 1; index >= 0; index--)
+        {
+            scripts[index].InvokeEnd();
+        }
+
+        scripts.Clear();
+    }
+
+    //创建 AOT 友好的脚本实例，不通过反射构造。
+    private static ScriptBehaviour? CreateScript(ScriptMount mount, Ens ens)
+    {
+        return StripAssemblyName(mount.Type) switch
+        {
+            "ExampleGame.SampleBehaviour" => CreateSampleBehaviour(ens, mount.Values),
+            "ExampleGame.CubeTestBehaviour" => CreateCubeTestBehaviour(ens, mount.Values),
+            _ => null,
+        };
+    }
+
+    //创建示例脚本并写入 sidecar 序列化字段。
+    private static SampleBehaviour CreateSampleBehaviour(Ens ens, IReadOnlyDictionary<string, string> values)
+    {
+        SampleBehaviour script = new(ens);
+        script.ApplySerializedValues(values);
+        return script;
+    }
+
+    //创建 Cube 测试脚本并写入 sidecar 序列化字段。
+    private static CubeTestBehaviour CreateCubeTestBehaviour(Ens ens, IReadOnlyDictionary<string, string> values)
+    {
+        CubeTestBehaviour script = new(ens);
+        script.ApplySerializedValues(values);
+        return script;
+    }
+
+    //获取当前启动 world 对应的脚本 sidecar。
+    private static string GetStartupWorldSidecarPath()
+    {
+        string projectRoot = PathDefines.ProjectRoot;
+        if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot)) return string.Empty;
+
+        string? projectFile = Directory.EnumerateFiles(projectRoot, "*.oeproj", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (string.IsNullOrEmpty(projectFile)) return string.Empty;
+
+        string startupWorld = ReadAttribute(File.ReadAllText(projectFile), "startupWorld");
+        if (string.IsNullOrWhiteSpace(startupWorld)) return string.Empty;
+
+        string worldPath = Path.Combine(projectRoot, startupWorld.Replace('/', Path.DirectorySeparatorChar));
+        return Path.GetFullPath(worldPath) + ".scripts.json";
+    }
+
+    //读取 XML 单行项目文件中的属性。
+    private static string ReadAttribute(string text, string name)
+    {
+        string token = name + "=\"";
+        int start = text.IndexOf(token, StringComparison.Ordinal);
+        if (start < 0) return string.Empty;
+
+        start += token.Length;
+        int end = text.IndexOf('"', start);
+        return end > start ? text[start..end] : string.Empty;
+    }
+
+    //读取 world sidecar 脚本挂载项。
+    private static IEnumerable<ScriptMount> ReadScriptMounts(string sidecarPath)
+    {
+        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(sidecarPath));
+        if (!document.RootElement.TryGetProperty("scripts", out JsonElement scriptsElement)) yield break;
+        if (scriptsElement.ValueKind != JsonValueKind.Array) yield break;
+
+        foreach (JsonElement element in scriptsElement.EnumerateArray())
+        {
+            ScriptMount? mount = ReadScriptMount(element);
+            if (mount != null) yield return mount;
+        }
+    }
+
+    //读取单个脚本挂载项。
+    private static ScriptMount? ReadScriptMount(JsonElement element)
+    {
+        string stableId = element.TryGetProperty("stableId", out JsonElement stableIdElement) ? stableIdElement.GetString() ?? string.Empty : string.Empty;
+        string type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() ?? string.Empty : string.Empty;
+        if (string.IsNullOrWhiteSpace(stableId) || string.IsNullOrWhiteSpace(type)) return null;
+
+        ScriptMount mount = new() { StableId = stableId, Type = StripAssemblyName(type) };
+        if (!element.TryGetProperty("values", out JsonElement valuesElement)) return mount;
+        if (valuesElement.ValueKind != JsonValueKind.Object) return mount;
+
+        foreach (JsonProperty property in valuesElement.EnumerateObject())
+        {
+            mount.Values[property.Name] = ReadSerializedValue(property.Value);
+        }
+
+        return mount;
+    }
+
+    //读取 sidecar 字段值文本。
+    private static string ReadSerializedValue(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty("value", out JsonElement valueElement))
+        {
+            return GetJsonValueText(valueElement);
+        }
+
+        return GetJsonValueText(element);
+    }
+
+    //把 JsonElement 转成可解析文本。
+    private static string GetJsonValueText(JsonElement element)
+    {
+        return element.ValueKind == JsonValueKind.String ? element.GetString() ?? string.Empty : element.GetRawText();
+    }
+
+    //规范化脚本类型名。
+    private static string StripAssemblyName(string typeName)
+    {
+        string value = typeName.Trim();
+        int commaIndex = value.IndexOf(',');
+        return commaIndex >= 0 ? value[..commaIndex].Trim() : value;
+    }
+}
+
+/// <summary>脚本 sidecar 字段值解析工具。</summary>
+internal static class ScriptValueReader
+{
+    /// <summary>读取 string 字段。</summary>
+    public static bool TryGetString(IReadOnlyDictionary<string, string> values, string name, out string value)
+    {
+        if (values.TryGetValue(name, out string? text))
+        {
+            value = text;
+            return true;
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
+    /// <summary>读取 bool 字段。</summary>
+    public static bool TryGetBool(IReadOnlyDictionary<string, string> values, string name, out bool value)
+    {
+        value = false;
+        return values.TryGetValue(name, out string? text) && bool.TryParse(text, out value);
+    }
+
+    /// <summary>读取 int 字段。</summary>
+    public static bool TryGetInt(IReadOnlyDictionary<string, string> values, string name, out int value)
+    {
+        value = 0;
+        return values.TryGetValue(name, out string? text)
+            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    /// <summary>读取 float 字段。</summary>
+    public static bool TryGetFloat(IReadOnlyDictionary<string, string> values, string name, out float value)
+    {
+        value = 0.0f;
+        return values.TryGetValue(name, out string? text)
+            && float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+    }
+
+    /// <summary>读取 vector3 字段。</summary>
+    public static bool TryGetVector3(IReadOnlyDictionary<string, string> values, string name, out vector3 value)
+    {
+        value = new vector3();
+        if (!values.TryGetValue(name, out string? text)) return false;
+
+        string[] parts = text.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3) return false;
+        if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x)) return false;
+        if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y)) return false;
+        if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z)) return false;
+
+        value = new vector3(x, y, z);
+        return true;
     }
 }
 )ORB";
@@ -362,7 +604,8 @@ public static class GuiOverlay
 }
 )ORB";
 
-    constexpr const char* SampleBehaviourText = R"ORB(using OrbedenCore.CSharp;
+    constexpr const char* SampleBehaviourText = R"ORB(using System.Collections.Generic;
+using OrbedenCore.CSharp;
 
 namespace ExampleGame;
 
@@ -380,6 +623,15 @@ public sealed class SampleBehaviour : ScriptBehaviour
 
     /// <summary>创建示例托管脚本行为。</summary>
     public SampleBehaviour(Ens ens) : base(ens) {}
+
+    /// <summary>应用 world sidecar 中保存的序列化字段。</summary>
+    internal void ApplySerializedValues(IReadOnlyDictionary<string, string> values)
+    {
+        if (ScriptValueReader.TryGetVector3(values, nameof(startPosition), out vector3 startPositionValue)) startPosition = startPositionValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(totalTime), out float totalTimeValue)) totalTime = totalTimeValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(elapsedTime), out float elapsedTimeValue)) elapsedTime = elapsedTimeValue;
+        if (ScriptValueReader.TryGetInt(values, nameof(reportCount), out int reportCountValue)) reportCount = reportCountValue;
+    }
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
@@ -420,6 +672,83 @@ public sealed class SampleBehaviour : ScriptBehaviour
 }
 )ORB";
 
+    constexpr const char* CubeTestBehaviourText = R"ORB(using System.Collections.Generic;
+using OrbedenCore.CSharp;
+
+namespace ExampleGame;
+
+/// <summary>挂在示例 Cube 上的脚本组件测试。</summary>
+public sealed class CubeTestBehaviour : ScriptBehaviour
+{
+    [SerializeField]
+    private string label = "Cube script component";
+    [SerializeField]
+    private bool animateScale = true;
+    [SerializeField]
+    private float pulseAmplitude = 0.18f;
+    [SerializeField]
+    private float pulseSpeed = 2.5f;
+    [SerializeField]
+    private vector3 debugOffset = new(0.0f, 0.0f, 0.0f);
+
+    private vector3 baseScale;
+    private float elapsedTime;
+    private int updateCount;
+
+    /// <summary>创建 Cube 脚本组件测试。</summary>
+    public CubeTestBehaviour(Ens ens) : base(ens) {}
+
+    /// <summary>Inspector 中显示当前运行状态。</summary>
+    public string Status => $"{label}: {updateCount} updates";
+
+    /// <summary>应用 world sidecar 中保存的序列化字段。</summary>
+    internal void ApplySerializedValues(IReadOnlyDictionary<string, string> values)
+    {
+        if (ScriptValueReader.TryGetString(values, nameof(label), out string labelValue)) label = labelValue;
+        if (ScriptValueReader.TryGetBool(values, nameof(animateScale), out bool animateScaleValue)) animateScale = animateScaleValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(pulseAmplitude), out float pulseAmplitudeValue)) pulseAmplitude = pulseAmplitudeValue;
+        if (ScriptValueReader.TryGetFloat(values, nameof(pulseSpeed), out float pulseSpeedValue)) pulseSpeed = pulseSpeedValue;
+        if (ScriptValueReader.TryGetVector3(values, nameof(debugOffset), out vector3 debugOffsetValue)) debugOffset = debugOffsetValue;
+    }
+
+    /// <summary>脚本启动时调用。</summary>
+    protected override void OnStart()
+    {
+        baseScale = Ens.Space.localScale;
+        Console.WriteLine($"CubeTestBehaviour start: {label}");
+    }
+
+    /// <summary>脚本每帧更新时调用。</summary>
+    protected override void OnUpdate(float deltaTime)
+    {
+        elapsedTime += deltaTime;
+        updateCount++;
+
+        if (animateScale)
+        {
+            float scale = 1.0f + MathF.Sin(elapsedTime * pulseSpeed) * pulseAmplitude;
+            Ens.Space.localScale = new vector3(baseScale.x * scale, baseScale.y * scale, baseScale.z * scale);
+        }
+
+        if (debugOffset.x != 0.0f || debugOffset.y != 0.0f || debugOffset.z != 0.0f)
+        {
+            vector3 position = Ens.Space.localPosition;
+            position.x += debugOffset.x * deltaTime;
+            position.y += debugOffset.y * deltaTime;
+            position.z += debugOffset.z * deltaTime;
+            Ens.Space.localPosition = position;
+        }
+    }
+
+    /// <summary>脚本结束时调用。</summary>
+    protected override void OnEnd()
+    {
+        Ens.Space.localScale = baseScale;
+        Console.WriteLine($"CubeTestBehaviour end: {label}");
+    }
+}
+)ORB";
+
     constexpr const char* ScriptGitIgnoreText = "bin/\nobj/\n";
     constexpr const char* ManagedGitIgnoreText = "*\n!.gitignore\n";
     constexpr const char* WorldScriptsText = R"ORB({
@@ -427,6 +756,32 @@ public sealed class SampleBehaviour : ScriptBehaviour
     {
       "stableId": "world://examples/world/cube",
       "type": "ExampleGame.SampleBehaviour"
+    },
+    {
+      "stableId": "world://examples/world/cube",
+      "type": "ExampleGame.CubeTestBehaviour",
+      "values": {
+        "label": {
+          "type": "string",
+          "value": "Cube sidecar test"
+        },
+        "animateScale": {
+          "type": "bool",
+          "value": "true"
+        },
+        "pulseAmplitude": {
+          "type": "float",
+          "value": "0.18"
+        },
+        "pulseSpeed": {
+          "type": "float",
+          "value": "2.5"
+        },
+        "debugOffset": {
+          "type": "vector3",
+          "value": "0 0 0"
+        }
+      }
     }
   ]
 }
@@ -452,7 +807,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         0xAE, 0x42, 0x60, 0x82,
     };
 
-    std::string NormalizePath(const std::filesystem::path& path)
+    std::string ToCleanPath(const std::filesystem::path& path)
     {
         return path.lexically_normal().generic_string();
     }
@@ -467,7 +822,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project text file generate failed: " + NormalizePath(path)).c_str());
+            Log::Error(("Example project text file generate failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -485,7 +840,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project orbshader file generate failed: " + NormalizePath(path)).c_str());
+            Log::Error(("Example project orbshader file generate failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -506,7 +861,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project binary file generate failed: " + NormalizePath(path)).c_str());
+            Log::Error(("Example project binary file generate failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -558,8 +913,10 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
     succeeded = WriteTextFile(root / "Script/ExampleGame.csproj", ExampleGameProjectText) && succeeded;
     succeeded = WriteTextFile(root / "Script/Directory.Build.props", DirectoryBuildPropsText) && succeeded;
     succeeded = WriteTextFile(root / "Script/GameModule.cs", GameModuleText) && succeeded;
+    succeeded = WriteTextFile(root / "Script/MountedScriptRuntime.cs", MountedScriptRuntimeText) && succeeded;
     succeeded = WriteTextFile(root / "Script/GuiOverlay.cs", GuiOverlayText) && succeeded;
     succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", SampleBehaviourText) && succeeded;
+    succeeded = WriteTextFile(root / "Script/CubeTestBehaviour.cs", CubeTestBehaviourText) && succeeded;
     succeeded = WriteTextFile(root / "Script/.gitignore", ScriptGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "Managed/.gitignore", ManagedGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "World/example_world.world.scripts.json", WorldScriptsText) && succeeded;
@@ -568,7 +925,7 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
     succeeded = GenerateWorldFile(projectRoot, "World/example_world.world") && succeeded;
     if (succeeded)
     {
-        Log::Info(("Example project generated: " + NormalizePath(root)).c_str());
+        Log::Info(("Example project generated: " + ToCleanPath(root)).c_str());
     }
 
     return succeeded;
@@ -586,7 +943,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
     std::ofstream output(worldPath, std::ios::out | std::ios::trunc);
     if (!output)
     {
-        Log::Error(("Example world generate failed: " + NormalizePath(worldPath)).c_str());
+        Log::Error(("Example world generate failed: " + ToCleanPath(worldPath)).c_str());
         return false;
     }
 
@@ -666,7 +1023,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "    </Ens>\n"
         "</World>\n";
 
-    Log::Info(("Example world generated: " + NormalizePath(worldPath)).c_str());
+    Log::Info(("Example world generated: " + ToCleanPath(worldPath)).c_str());
     return true;
 }
 

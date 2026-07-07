@@ -12,8 +12,8 @@ namespace
 {
     EditorGizmoBridge* CurrentBridge = nullptr;
 
-    // 把 C# UTF-8 字节创建为临时字符串。
-    std::string MakeText(const uint8* text, int32 length)
+    // 把 C# UTF-8 字节读取为临时字符串。
+    std::string ReadUtf8Text(const uint8* text, int32 length)
     {
         if (!text || length <= 0) return std::string();
         return std::string(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
@@ -72,7 +72,7 @@ namespace
         ImVec2 screen;
         if (!ProjectPoint(CurrentBridge->GetViewProjection(), CurrentBridge->GetViewportWidth(), CurrentBridge->GetViewportHeight(), position, screen)) return;
 
-        std::string value = MakeText(text, length);
+        std::string value = ReadUtf8Text(text, length);
         ImGui::GetBackgroundDrawList()->AddText(screen, IM_COL32(255, 245, 180, 255), value.c_str());
     }
 }

@@ -11,7 +11,7 @@
 namespace
 {
     // 初始化控制台 UTF-8 输出。
-    void EnsureUtf8Console()
+    void UseUtf8ConsoleOutput()
     {
         static std::once_flag once;
         std::call_once(once, []()
@@ -29,7 +29,7 @@ namespace
     // 输出日志。
     void Print(const char* level, const char* str)
     {
-        EnsureUtf8Console();
+        UseUtf8ConsoleOutput();
         std::cout << (level != nullptr ? level : "") << (str != nullptr ? str : "") << '\n';
     }
 }

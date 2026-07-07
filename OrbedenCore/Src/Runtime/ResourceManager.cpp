@@ -36,9 +36,9 @@ namespace
     //查找可写资源记录
     ResourceManager::ResourceRecord* FindRecordMutable(const std::string& key)
     {
-        std::string normalizedKey = ResourceManager::NormalizeKey(key);
+        std::string resourceKey = ResourceManager::ToResourceKey(key);
         auto& records = GetResourceRuntime().records;
-        auto it = records.find(normalizedKey);
+        auto it = records.find(resourceKey);
         return it == records.end() ? nullptr : &it->second;
     }
 
@@ -68,29 +68,29 @@ namespace
         }
     }
 
-    //确保资源Key已经被导入并注册
-    ResourceManager::ResourceRecord* EnsureRegistered(Type* type, const std::string& key)
+    //加载资源 Key 对应的资源记录。
+    ResourceManager::ResourceRecord* LoadResourceRecord(Type* type, const std::string& key)
     {
-        std::string normalizedKey = ResourceManager::NormalizeKey(key);
-        if (normalizedKey.empty() || StartsWith(normalizedKey, "world://") || StartsWith(normalizedKey, "orphan://")) return nullptr;
+        std::string resourceKey = ResourceManager::ToResourceKey(key);
+        if (resourceKey.empty() || StartsWith(resourceKey, "world://") || StartsWith(resourceKey, "orphan://")) return nullptr;
 
-        ResourceManager::ResourceRecord* record = FindRecordMutable(normalizedKey);
+        ResourceManager::ResourceRecord* record = FindRecordMutable(resourceKey);
         if (!record)
         {
-            AssetCollection collection = AssetPipeline::ImportSource(ResourceManager::GetSourceKey(normalizedKey));
+            AssetCollection collection = AssetPipeline::ImportSource(ResourceManager::GetSourceKey(resourceKey));
             (void)collection;
-            record = FindRecordMutable(normalizedKey);
+            record = FindRecordMutable(resourceKey);
         }
 
         if (!record)
         {
-            Log::Error(("Resource key is not registered: " + normalizedKey).c_str());
+            Log::Error(("Resource key is not registered: " + resourceKey).c_str());
             return nullptr;
         }
 
         if (type && record->object && !record->object->Is(type))
         {
-            Log::Error(("Resource type mismatch: " + normalizedKey).c_str());
+            Log::Error(("Resource type mismatch: " + resourceKey).c_str());
             return nullptr;
         }
 
@@ -101,7 +101,7 @@ namespace
 //加载资源并增加一次显式引用
 Object* ResourceManager::Load(Type* type, const std::string& key)
 {
-    ResourceRecord* record = EnsureRegistered(type, key);
+    ResourceRecord* record = LoadResourceRecord(type, key);
     if (!record) return nullptr;
 
     record->manualRefCount++;
@@ -112,7 +112,7 @@ Object* ResourceManager::Load(Type* type, const std::string& key)
 //加载资源并增加一次World引用
 Object* ResourceManager::LoadWorldRef(Type* type, const std::string& key)
 {
-    ResourceRecord* record = EnsureRegistered(type, key);
+    ResourceRecord* record = LoadResourceRecord(type, key);
     if (!record) return nullptr;
 
     record->worldRefCount++;
@@ -193,23 +193,23 @@ void ResourceManager::Shutdown()
 //注册导入出来的资源对象
 bool ResourceManager::RegisterObject(const std::string& key, Object* object)
 {
-    std::string normalizedKey = NormalizeKey(key);
-    if (normalizedKey.empty() || !object) return false;
-    if (StartsWith(normalizedKey, "world://") || StartsWith(normalizedKey, "orphan://")) return false;
+    std::string resourceKey = ToResourceKey(key);
+    if (resourceKey.empty() || !object) return false;
+    if (StartsWith(resourceKey, "world://") || StartsWith(resourceKey, "orphan://")) return false;
     if (object->GetWorld()) return false;
     if (object->GetOwnership() == Object::Ownership::WorldOwned || object->GetOwnership() == Object::Ownership::OrphanOwned)
     {
-        Log::Error(("Cannot register runtime-owned object as resource: " + normalizedKey).c_str());
+        Log::Error(("Cannot register runtime-owned object as resource: " + resourceKey).c_str());
         return false;
     }
-    if (object->GetInstanceId().GetPath() != normalizedKey)
+    if (object->GetInstanceId().GetPath() != resourceKey)
     {
-        Log::Error(("Resource object id does not match key: " + normalizedKey).c_str());
+        Log::Error(("Resource object id does not match key: " + resourceKey).c_str());
         return false;
     }
 
     auto& records = GetResourceRuntime().records;
-    auto it = records.find(normalizedKey);
+    auto it = records.find(resourceKey);
     if (it != records.end())
     {
         bool sameObject = it->second.object == object;
@@ -224,10 +224,10 @@ bool ResourceManager::RegisterObject(const std::string& key, Object* object)
     object->SetOwnership(Object::Ownership::ResourceOwned);
 
     ResourceRecord record;
-    record.key = normalizedKey;
+    record.key = resourceKey;
     record.object = object;
     record.type = object->GetType();
-    records[normalizedKey] = record;
+    records[resourceKey] = record;
     return true;
 }
 
@@ -238,13 +238,13 @@ bool ResourceManager::RegisterDependency(const std::string& ownerKey, const std:
     ResourceRecord* dependency = FindRecordMutable(dependencyKey);
     if (!owner || !dependency || owner == dependency) return false;
 
-    std::string normalizedDependency = NormalizeKey(dependencyKey);
-    if (std::find(owner->dependencies.begin(), owner->dependencies.end(), normalizedDependency) != owner->dependencies.end())
+    std::string dependencyResourceKey = ToResourceKey(dependencyKey);
+    if (std::find(owner->dependencies.begin(), owner->dependencies.end(), dependencyResourceKey) != owner->dependencies.end())
     {
         return true;
     }
 
-    owner->dependencies.push_back(normalizedDependency);
+    owner->dependencies.push_back(dependencyResourceKey);
     return true;
 }
 
@@ -268,8 +268,8 @@ uint32 ResourceManager::GetRefCount(const std::string& key)
     return record ? GetTotalRefCount(*record) : 0;
 }
 
-//规范化资源Key
-std::string ResourceManager::NormalizeKey(const std::string& key)
+//转换为资源 Key。
+std::string ResourceManager::ToResourceKey(const std::string& key)
 {
     std::string result = key;
     std::replace(result.begin(), result.end(), '\\', '/');
@@ -285,15 +285,15 @@ std::string ResourceManager::NormalizeKey(const std::string& key)
 //获取Key中的主资源路径
 std::string ResourceManager::GetSourceKey(const std::string& key)
 {
-    std::string normalizedKey = NormalizeKey(key);
-    usize separator = normalizedKey.find("//");
-    return separator == std::string::npos ? normalizedKey : normalizedKey.substr(0, separator);
+    std::string resourceKey = ToResourceKey(key);
+    usize separator = resourceKey.find("//");
+    return separator == std::string::npos ? resourceKey : resourceKey.substr(0, separator);
 }
 
 //获取Key中的子资源ID
 std::string ResourceManager::GetSubId(const std::string& key)
 {
-    std::string normalizedKey = NormalizeKey(key);
-    usize separator = normalizedKey.find("//");
-    return separator == std::string::npos ? std::string() : normalizedKey.substr(separator + 2);
+    std::string resourceKey = ToResourceKey(key);
+    usize separator = resourceKey.find("//");
+    return separator == std::string::npos ? std::string() : resourceKey.substr(separator + 2);
 }

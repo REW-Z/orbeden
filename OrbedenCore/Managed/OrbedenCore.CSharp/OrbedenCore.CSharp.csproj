@@ -6,11 +6,23 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenEditor\Sdk\Managed\OrbedenCore.CSharp\</OutputPath>
+    <EditorSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenEditor\Sdk\Managed\OrbedenCore.CSharp\</EditorSdkOutputPath>
+    <GameSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenGame\Sdk\Managed\OrbedenCore.CSharp\</GameSdkOutputPath>
+    <OutputPath>$(EditorSdkOutputPath)</OutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <NoWarn>$(NoWarn);CS8981</NoWarn>
   </PropertyGroup>
+
+  <Target Name="CopyRuntimeSdkToGame" AfterTargets="Build">
+    <ItemGroup>
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.dll" />
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.pdb" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.pdb')" />
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.deps.json" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.deps.json')" />
+    </ItemGroup>
+    <MakeDir Directories="$(GameSdkOutputPath)" />
+    <Copy SourceFiles="@(RuntimeSdkFiles)" DestinationFolder="$(GameSdkOutputPath)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

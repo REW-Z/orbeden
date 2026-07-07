@@ -46,7 +46,7 @@ private:
     std::string AllocateEnsObjectPath();
 
     //生成未命名Ens的名称
-    std::string ResolveEnsName(const std::string& name) const;
+    std::string GetEnsName(const std::string& name) const;
 
     //生成世界运行时对象ID
     std::string AllocateRuntimeObjectPath(Type* type);
