@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential)]
@@ -13,6 +13,7 @@ internal unsafe struct OrbedenNativeApi
     public EnsBindApi Ens;
     public SpaceComponentBindApi SpaceComponent;
     public StaticMeshRendererBindApi StaticMeshRenderer;
+    public ObjectBindApi Object;
     public MeshBindApi Mesh;
     public MaterialBindApi Material;
     public ShaderBindApi Shader;
@@ -33,6 +34,7 @@ public static unsafe class OrbedenCoreRuntime
             EnsBind.Initialize(default);
             SpaceComponentBind.Initialize(default);
             StaticMeshRendererBind.Initialize(default);
+            ObjectBind.Initialize(default);
             MeshBind.Initialize(default);
             MaterialBind.Initialize(default);
             ShaderBind.Initialize(default);
@@ -46,6 +48,7 @@ public static unsafe class OrbedenCoreRuntime
         EnsBind.Initialize(api.Ens);
         SpaceComponentBind.Initialize(api.SpaceComponent);
         StaticMeshRendererBind.Initialize(api.StaticMeshRenderer);
+        ObjectBind.Initialize(api.Object);
         MeshBind.Initialize(api.Mesh);
         MaterialBind.Initialize(api.Material);
         ShaderBind.Initialize(api.Shader);

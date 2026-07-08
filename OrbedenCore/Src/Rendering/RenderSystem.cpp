@@ -76,6 +76,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     (void)deltaTime;
     if (!initialized || !window) return;
 
+    resources.CollectUnused();
     sceneBuilder.Build(world, spaceCache, framebufferWidth, framebufferHeight, scene);
     backend.BeginFrame();
     if (scene.cameras.empty())

@@ -1,4 +1,4 @@
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>标记私有字段需要显示在 Inspector 中。</summary>
 [AttributeUsage(AttributeTargets.Field)]

@@ -28,7 +28,6 @@ private:
 
     List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
 	List<Object*> ownedObjects;//world拥有的运行时对象
-    List<std::string> externResourceRefs;//world持有的外部资源引用Key
 
     //使用指定稳定ID创建Ens
     Ens* CreateEnsInternal(const std::string& name, const std::string& stableId);
@@ -109,12 +108,6 @@ public:
 
     //移除组件
     bool RemoveComponent(EnsId ens, Type* type);
-
-    //增加一个外部资源引用
-    bool AddExternResourceRef(Type* type, const std::string& key);
-
-    //释放当前World持有的所有外部资源引用
-    void ReleaseExternResourceRefs();
 
     //按稳定ID查找Ens
     Ens* FindEns(const StringId& id) const;

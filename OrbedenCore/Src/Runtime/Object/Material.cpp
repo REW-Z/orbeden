@@ -214,3 +214,8 @@ uint64 Material::GetRevision() const
 {
     return revision;
 }
+
+void Material::TouchRevision()
+{
+    revision++;
+}

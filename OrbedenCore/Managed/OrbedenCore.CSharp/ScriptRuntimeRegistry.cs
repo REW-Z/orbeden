@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>记录当前托管运行态脚本实例，供 Editor CLR Inspector 查询。</summary>
 public static class ScriptRuntimeRegistry

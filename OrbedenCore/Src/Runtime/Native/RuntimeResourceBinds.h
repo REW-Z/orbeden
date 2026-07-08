@@ -2,6 +2,21 @@
 
 #include "Defines/types.h"
 
+//通用对象函数表。
+struct ObjectBind
+{
+public:
+    void* GetInstanceId = nullptr;
+    void* IsAlive = nullptr;
+    void* GetManagedWrapper = nullptr;
+    void* SetManagedWrapper = nullptr;
+    void* Destroy = nullptr;
+    void* UnloadUnusedObjects = nullptr;
+
+    //创建 Object 函数表。
+    static ObjectBind Create();
+};
+
 //Mesh 资源函数表。
 struct MeshBind
 {
@@ -16,6 +31,23 @@ public:
     void* GetSubMeshIndexStart = nullptr;
     void* GetSubMeshIndexCount = nullptr;
     void* GetSubMeshMaterial = nullptr;
+    void* CreateInstance = nullptr;
+    void* SetName = nullptr;
+    void* GetRevision = nullptr;
+    void* GetVertexPositions = nullptr;
+    void* SetVertexPositions = nullptr;
+    void* GetVertexNormals = nullptr;
+    void* SetVertexNormals = nullptr;
+    void* GetVertexTexcoords = nullptr;
+    void* SetVertexTexcoords = nullptr;
+    void* GetVertexTangents = nullptr;
+    void* SetVertexTangents = nullptr;
+    void* GetIndexData = nullptr;
+    void* SetIndexData = nullptr;
+    void* ClearGeometry = nullptr;
+    void* RefreshNormals = nullptr;
+    void* ResizeSubMeshes = nullptr;
+    void* ConfigureSubMesh = nullptr;
 
     //创建 Mesh 函数表。
     static MeshBind Create();
@@ -43,6 +75,7 @@ public:
     void* SetFloat = nullptr;
     void* ClearFloat = nullptr;
     void* GetRevision = nullptr;
+    void* CreateInstance = nullptr;
 
     //创建 Material 函数表。
     static MaterialBind Create();
@@ -69,6 +102,9 @@ public:
     void* GetFloatSlotName = nullptr;
     void* GetFloatSlotDisplayName = nullptr;
     void* GetFloatSlotDefault = nullptr;
+    void* CreateFromSource = nullptr;
+    void* ReplaceSource = nullptr;
+    void* GetRevision = nullptr;
 
     //创建 Shader 函数表。
     static ShaderBind Create();

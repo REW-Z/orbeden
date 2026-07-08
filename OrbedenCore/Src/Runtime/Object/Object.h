@@ -229,6 +229,8 @@ private:
     };
 
     StringId instanceId;
+    int32 objectId = 0;
+    void* managedWrapper = nullptr;
     World* ownerWorld = nullptr;
     Ownership ownership = Ownership::None;
     IChunk* allocationChunk = nullptr;
@@ -269,6 +271,15 @@ private:
 public:
     //获取实例ID
     const StringId& GetInstanceId() const;
+
+    //获取运行时对象ID
+    int32 GetObjectId() const;
+
+    //获取托管包装缓存
+    void* GetManagedWrapper() const;
+
+    //设置托管包装缓存
+    void SetManagedWrapper(void* value);
 
     //设置实例ID
     void SetInstanceId(const StringId& id);
@@ -313,6 +324,15 @@ public:
     //查找对象
     static Object* FindObject(const StringId& id);
 
+    //按运行时对象ID查找对象
+    static Object* FindObjectById(int32 id);
+
+    //判断运行时对象ID是否仍然存活
+    static bool IsObjectAlive(int32 id);
+
+    //从绑定层销毁对象
+    static bool DestroyObjectFromBinding(Object* object);
+
     //创建运行时对象
     template<typename T>
     static T* CreateInstance()
@@ -326,6 +346,15 @@ public:
 
     //释放所有孤儿对象
     static void ReleaseOrphanInstances();
+
+    //判断对象ID是否为运行时对象ID
+    static bool IsRuntimeInstancePath(const std::string& instancePath);
+
+    //判断运行时对象是否允许参与托管生命周期管理
+    static bool IsManagedRuntimeResource(Object* object);
+
+    //释放未使用的对象
+    static uint32 UnloadUnusedObjects(const int32* managedRootIds, int32 count);
 };
 
 //对象软引用

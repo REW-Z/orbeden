@@ -1,4 +1,4 @@
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>托管侧 Ens 代理，Native Ens 本体由 World 唯一持有。</summary>
 public sealed class Ens : IEquatable<Ens>
@@ -64,7 +64,7 @@ public sealed class Ens : IEquatable<Ens>
     }
 
     /// <summary>空间组件。</summary>
-    public SpaceComponent Space => new(this);
+    public SpaceComponent Space => SpaceComponent.FromNative(this, EnsBind.GetSpaceComponent(Id))!;
 
     /// <summary>判断是否拥有 SpaceComponent。</summary>
     public bool HasSpaceComponent => EnsBind.HasSpaceComponent(Id);
@@ -75,7 +75,7 @@ public sealed class Ens : IEquatable<Ens>
     /// <summary>添加静态网格渲染组件。</summary>
     public StaticMeshRenderer? AddStaticMeshRenderer()
     {
-        return EnsBind.AddStaticMeshRenderer(Id) ? new StaticMeshRenderer(this) : null;
+        return StaticMeshRenderer.FromNative(this, EnsBind.AddStaticMeshRenderer(Id));
     }
 
     /// <summary>获取组件包装。</summary>
@@ -83,12 +83,12 @@ public sealed class Ens : IEquatable<Ens>
     {
         if (typeof(T) == typeof(SpaceComponent) && HasSpaceComponent)
         {
-            return (T)(Component)new SpaceComponent(this);
+            return (T?)(Component?)SpaceComponent.FromNative(this, EnsBind.GetSpaceComponent(Id));
         }
 
         if (typeof(T) == typeof(StaticMeshRenderer) && HasStaticMeshRenderer)
         {
-            return (T)(Component)new StaticMeshRenderer(this);
+            return (T?)(Component?)StaticMeshRenderer.FromNative(this, EnsBind.GetStaticMeshRenderer(Id));
         }
 
         return null;

@@ -14,6 +14,7 @@ public:
     EnsBind Ens;
     SpaceComponentBind SpaceComponent;
     StaticMeshRendererBind StaticMeshRenderer;
+    ObjectBind Object;
     MeshBind Mesh;
     MaterialBind Material;
     ShaderBind Shader;

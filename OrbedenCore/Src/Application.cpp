@@ -254,6 +254,7 @@ void Application::Quit()
 {
     ShutdownBuiltInSystems();
     SetWindow(nullptr);
+    Object::UnloadUnusedObjects(nullptr, 0);
     world.Clear();
     ResourceManager::Shutdown();
     Object::ReleaseOrphanInstances();

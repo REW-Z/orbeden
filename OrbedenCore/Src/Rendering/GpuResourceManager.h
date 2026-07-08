@@ -18,6 +18,8 @@ public:
     GpuVertexBufferID vertexBuffer;
     GpuIndexBufferID indexBuffer;
     uint32 indexCount = 0;
+    uint64 meshRevision = 0;
+    std::string sourceKey;
 
     bool IsValid() const { return vertexInput.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
 };
@@ -27,6 +29,8 @@ struct GpuShader
 {
 public:
     GpuShaderProgramID shaderProgram;
+    uint64 shaderRevision = 0;
+    std::string sourceKey;
 
     bool IsValid() const { return shaderProgram.IsValid(); }
 };
@@ -63,7 +67,9 @@ struct GpuMaterial
 public:
     GpuShader shader;
     Shader* sourceShader = nullptr;
+    std::string sourceKey;
     uint64 materialRevision = 0;
+    uint64 shaderRevision = 0;
     List<GpuMaterialTextureBinding> textureBindings;
     List<GpuMaterialColorBinding> colorBindings;
     List<GpuMaterialFloatBinding> floatBindings;
@@ -103,4 +109,7 @@ public:
 
     //获取或上传材质
     GpuMaterial GetMaterial(Material* material);
+
+    //清理 CPU 对象已经销毁的 GPU 缓存
+    void CollectUnused();
 };
