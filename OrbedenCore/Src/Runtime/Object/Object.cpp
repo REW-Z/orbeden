@@ -3,16 +3,25 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Runtime/EnsId.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/Shader.h"
+#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/ResourceManager.h"
 #include "Runtime/World.h"
 
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstring>
 #include <iomanip>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace
 {
@@ -24,7 +33,9 @@ namespace
         List<Type*> types;
         std::unordered_map<std::string, Type*> typeByName;
         std::unordered_map<std::string, Object*> objectByPath;
+        std::unordered_map<int32, Object*> objectById;
         List<Object*> orphanObjects;
+        int32 nextObjectId = 1;
     };
 
     //获取对象运行时注册表
@@ -34,6 +45,25 @@ namespace
         return runtime;
     }
 
+    //判断字符串前缀
+    bool StartsWith(const std::string& text, const char* prefix)
+    {
+        if (!prefix) return false;
+
+        usize prefixLength = std::strlen(prefix);
+        return text.size() >= prefixLength && text.compare(0, prefixLength, prefix) == 0;
+    }
+
+    //移除孤儿对象记录
+    void RemoveOrphanObject(ObjectRuntime& runtime, Object* object)
+    {
+        auto it = std::find(runtime.orphanObjects.begin(), runtime.orphanObjects.end(), object);
+        if (it != runtime.orphanObjects.end())
+        {
+            runtime.orphanObjects.erase(it);
+        }
+    }
+
     //生成随机64位值
     uint64 GenerateRandom64()
     {
@@ -41,6 +71,17 @@ namespace
         static std::mt19937_64 random(seed());
         static std::uniform_int_distribution<uint64> distribution;
         return distribution(random);
+    }
+
+    //分配运行时对象ID
+    int32 AllocateObjectId(ObjectRuntime& runtime)
+    {
+        while (runtime.nextObjectId <= 0 || runtime.objectById.find(runtime.nextObjectId) != runtime.objectById.end())
+        {
+            runtime.nextObjectId++;
+        }
+
+        return runtime.nextObjectId++;
     }
 }
 
@@ -516,6 +557,24 @@ const StringId& Object::GetInstanceId() const
     return instanceId;
 }
 
+//获取运行时对象ID
+int32 Object::GetObjectId() const
+{
+    return objectId;
+}
+
+//获取托管包装缓存
+void* Object::GetManagedWrapper() const
+{
+    return managedWrapper;
+}
+
+//设置托管包装缓存
+void Object::SetManagedWrapper(void* value)
+{
+    managedWrapper = value;
+}
+
 //设置实例ID
 void Object::SetInstanceId(const StringId& id)
 {
@@ -601,6 +660,22 @@ Object* Object::FindObject(const StringId& id)
     return it->second;
 }
 
+//按运行时对象ID查找对象
+Object* Object::FindObjectById(int32 id)
+{
+    if (id <= 0) return nullptr;
+
+    ObjectRuntime& runtime = GetObjectRuntime();
+    auto it = runtime.objectById.find(id);
+    return it == runtime.objectById.end() ? nullptr : it->second;
+}
+
+//判断运行时对象ID是否仍然存活
+bool Object::IsObjectAlive(int32 id)
+{
+    return FindObjectById(id) != nullptr;
+}
+
 //创建指定ID的未归属对象
 Object* Object::CreateRawInstance(Type* type, const std::string& instancePath, IChunk* chunk)
 {
@@ -619,7 +694,9 @@ Object* Object::CreateRawInstance(Type* type, const std::string& instancePath, I
         return nullptr;
     }
 
+    object->objectId = AllocateObjectId(runtime);
     runtime.objectByPath[object->GetInstanceId().GetPath()] = object;
+    runtime.objectById[object->objectId] = object;
     return object;
 }
 
@@ -666,6 +743,24 @@ std::string Object::CreateRuntimeInstancePath(const std::string& prefix, Type* t
     } while (Object::FindObject(StringId(instancePath)));
 
     return instancePath;
+}
+
+//判断对象ID是否为运行时对象ID
+bool Object::IsRuntimeInstancePath(const std::string& instancePath)
+{
+    return StartsWith(instancePath, "world://runtime/")
+        || StartsWith(instancePath, "orphan://runtime/");
+}
+
+//判断运行时对象是否允许参与托管生命周期管理
+bool Object::IsManagedRuntimeResource(Object* object)
+{
+    if (!object) return false;
+    if (!IsRuntimeInstancePath(object->GetInstanceId().GetPath())) return false;
+
+    return object->Is(Mesh::StaticType())
+        || object->Is(Material::StaticType())
+        || object->Is(Shader::StaticType());
 }
 
 //创建运行时对象并自动归属当前World或孤儿表
@@ -730,12 +825,46 @@ bool Object::DestroyDetachedInstance(Object* object)
 
     ObjectRuntime& runtime = GetObjectRuntime();
     runtime.objectByPath.erase(object->GetInstanceId().GetPath());
+    runtime.objectById.erase(object->GetObjectId());
 
     Type* type = object->GetType();
     object->SetInstanceId(StringId());
+    object->objectId = 0;
+    object->SetManagedWrapper(nullptr);
     object->SetOwnership(Ownership::None);
     type->DestroyObject(object);
     return true;
+}
+
+//从绑定层销毁对象
+bool Object::DestroyObjectFromBinding(Object* object)
+{
+    if (!object || !IsObjectAlive(object->GetObjectId())) return false;
+
+    if (Component* component = object->Cast<Component>())
+    {
+        World* world = component->GetWorld();
+        if (!world)
+        {
+            Log::Error("Component destroy failed: component is not attached to a world.");
+            return false;
+        }
+
+        if (component->GetType() == SpaceComponent::StaticType())
+        {
+            Log::Error("SpaceComponent cannot be destroyed directly.");
+            return false;
+        }
+
+        return world->RemoveComponent(component->GetEnsId(), component->GetType());
+    }
+
+    if (object->GetOwnership() == Ownership::ResourceOwned)
+    {
+        return ResourceManager::DestroyObject(object);
+    }
+
+    return DeleteInstance(object);
 }
 
 //销毁对象
@@ -801,6 +930,53 @@ void Object::ReleaseOrphanInstances()
         object->SetOwnership(Ownership::None);
         DestroyDetachedInstance(object);
     }
+}
+
+//释放未使用的对象
+uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
+{
+    ObjectRuntime& runtime = GetObjectRuntime();
+    std::unordered_set<int32> marked;
+
+    //托管包装仍然存活的对象作为根
+    for (int32 index = 0; managedRootIds && index < count; ++index)
+    {
+        ResourceManager::MarkObjectGraph(FindObjectById(managedRootIds[index]), marked);
+    }
+
+    //当前场景显式引用的资源作为根
+    if (World* world = World::CurrentWorld())
+    {
+        ResourceManager::MarkObjectGraph(world->renderSettings.skybox.Get(), marked);
+        world->ForEachComponent<StaticMeshRenderer>([&](StaticMeshRenderer* renderer)
+        {
+            if (renderer) ResourceManager::MarkObjectGraph(renderer->mesh.Get(), marked);
+        });
+    }
+
+    uint32 removedCount = ResourceManager::ReleaseUnmarkedObjects(marked);
+
+    //运行时创建的非组件对象按可达性释放
+    List<Object*> unusedObjects;
+    for (const auto& pair : runtime.objectById)
+    {
+        Object* object = pair.second;
+        if (!object || object->Is(Component::StaticType())) continue;
+        if (object->GetOwnership() == Ownership::ResourceOwned) continue;
+        if (marked.find(object->GetObjectId()) != marked.end()) continue;
+
+        unusedObjects.push_back(object);
+    }
+
+    for (Object* object : unusedObjects)
+    {
+        if (DeleteInstance(object))
+        {
+            removedCount++;
+        }
+    }
+
+    return removedCount;
 }
 
 //设置所属世界

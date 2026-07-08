@@ -1,4 +1,4 @@
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>托管脚本行为基类。</summary>
 public abstract class ScriptBehaviour : Component

@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace OrbedenEditor;
 
@@ -341,7 +341,7 @@ internal static class EditorGameDomain
                 Mesh? mesh = renderer.mesh;
                 if (mesh != null && mesh.IsValid)
                 {
-                    GUI.Label($"mesh: {mesh.Key}");
+                    GUI.Label($"mesh: {mesh.InstanceId}");
                     GUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
                 }
                 else

@@ -1,4 +1,4 @@
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>当前项目路径定义访问。</summary>
 public static class PathDefines

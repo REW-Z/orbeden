@@ -37,6 +37,8 @@ public:
     void* HasSpaceComponent = nullptr;
     void* HasStaticMeshRenderer = nullptr;
     void* AddStaticMeshRenderer = nullptr;
+    void* GetSpaceComponent = nullptr;
+    void* GetStaticMeshRenderer = nullptr;
 
     //创建 Ens 函数表。
     static EnsBind Create();

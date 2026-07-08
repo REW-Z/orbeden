@@ -1,4 +1,4 @@
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>运行时 Immediate GUI API。</summary>
 public static class GUI

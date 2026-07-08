@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential)]
@@ -10,8 +10,8 @@ internal unsafe struct StaticMeshRendererBindApi
 {
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetEnabled;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetEnabled;
-    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetMesh;
-    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, byte> SetMesh;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetMesh;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr, byte> SetMesh;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetReceiveShadows;
@@ -44,32 +44,16 @@ internal static unsafe class StaticMeshRendererBind
     }
 
     //读取 mesh
-    internal static string GetMesh(EnsId ens)
+    internal static IntPtr GetMesh(EnsId ens)
     {
-        if (!initialized || api.GetMesh == null) return string.Empty;
-
-        int requiredBytes = api.GetMesh(ens, null, 0);
-        if (requiredBytes <= 0) return string.Empty;
-
-        byte[] output = new byte[requiredBytes];
-        fixed (byte* outputPointer = output)
-        {
-            int actualBytes = api.GetMesh(ens, outputPointer, output.Length);
-            int length = Math.Clamp(actualBytes, 0, output.Length);
-            return System.Text.Encoding.UTF8.GetString(output, 0, length);
-        }
+        return initialized && api.GetMesh != null ? api.GetMesh(ens) : IntPtr.Zero;
     }
 
     //写入 mesh
-    internal static bool SetMesh(EnsId ens, string key)
+    internal static bool SetMesh(EnsId ens, IntPtr mesh)
     {
         if (!initialized || api.SetMesh == null) return false;
-
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(key ?? string.Empty);
-        fixed (byte* pointer = bytes)
-        {
-            return api.SetMesh(ens, pointer, bytes.Length) != 0;
-        }
+        return api.SetMesh(ens, mesh) != 0;
     }
 
     //读取 castShadows

@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential)]

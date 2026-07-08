@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential)]
@@ -14,7 +14,9 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte> HasSpaceComponent;
     public delegate* unmanaged[Cdecl]<EnsId, byte> HasStaticMeshRenderer;
-    public delegate* unmanaged[Cdecl]<EnsId, byte> AddStaticMeshRenderer;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> AddStaticMeshRenderer;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetSpaceComponent;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetStaticMeshRenderer;
 }
 #pragma warning restore CS0649
 
@@ -87,8 +89,20 @@ internal static unsafe class EnsBind
     }
 
     //添加 StaticMeshRenderer
-    internal static bool AddStaticMeshRenderer(EnsId ens)
+    internal static IntPtr AddStaticMeshRenderer(EnsId ens)
     {
-        return initialized && api.AddStaticMeshRenderer != null && api.AddStaticMeshRenderer(ens) != 0;
+        return initialized && api.AddStaticMeshRenderer != null ? api.AddStaticMeshRenderer(ens) : IntPtr.Zero;
+    }
+
+    //获取 SpaceComponent 指针
+    internal static IntPtr GetSpaceComponent(EnsId ens)
+    {
+        return initialized && api.GetSpaceComponent != null ? api.GetSpaceComponent(ens) : IntPtr.Zero;
+    }
+
+    //获取 StaticMeshRenderer 指针
+    internal static IntPtr GetStaticMeshRenderer(EnsId ens)
+    {
+        return initialized && api.GetStaticMeshRenderer != null ? api.GetStaticMeshRenderer(ens) : IntPtr.Zero;
     }
 }

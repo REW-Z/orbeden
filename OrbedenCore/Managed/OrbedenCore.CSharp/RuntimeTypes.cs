@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 /// <summary>Ens 运行时句柄，布局需要与 C++ EnsId 一致。</summary>
 [StructLayout(LayoutKind.Sequential)]

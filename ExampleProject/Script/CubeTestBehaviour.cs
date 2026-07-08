@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 

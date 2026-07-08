@@ -27,6 +27,26 @@ namespace
         if (EndsWith(name, "Texture")) name.erase(name.size() - 7);
         return "u_Has" + name + "Texture";
     }
+
+    //释放 GPU Mesh 句柄
+    void DeleteGpuMesh(RenderBackend* backend, GpuMesh& mesh)
+    {
+        if (!backend) return;
+
+        backend->DeleteVertexInput(mesh.vertexInput);
+        backend->DeleteVertexBuffer(mesh.vertexBuffer);
+        backend->DeleteIndexBuffer(mesh.indexBuffer);
+        mesh = GpuMesh();
+    }
+
+    //释放 GPU Shader 句柄
+    void DeleteGpuShader(RenderBackend* backend, GpuShader& shader)
+    {
+        if (!backend) return;
+
+        backend->DeleteShaderProgram(shader.shaderProgram);
+        shader = GpuShader();
+    }
 }
 
 void GpuResourceManager::Initialize(RenderBackend* renderBackend)
@@ -40,9 +60,7 @@ void GpuResourceManager::Shutdown()
     {
         for (auto& pair : meshes)
         {
-            backend->DeleteVertexInput(pair.second.vertexInput);
-            backend->DeleteVertexBuffer(pair.second.vertexBuffer);
-            backend->DeleteIndexBuffer(pair.second.indexBuffer);
+            DeleteGpuMesh(backend, pair.second);
         }
 
         for (auto& pair : textures)
@@ -57,7 +75,7 @@ void GpuResourceManager::Shutdown()
 
         for (auto& pair : shaders)
         {
-            backend->DeleteShaderProgram(pair.second.shaderProgram);
+            DeleteGpuShader(backend, pair.second);
         }
     }
 
@@ -74,7 +92,14 @@ GpuMesh GpuResourceManager::GetMesh(Mesh* mesh)
     if (!backend || !mesh) return GpuMesh();
 
     auto it = meshes.find(mesh);
-    if (it != meshes.end()) return it->second;
+    uint64 meshRevision = mesh->GetRevision();
+    if (it != meshes.end())
+    {
+        if (it->second.meshRevision == meshRevision) return it->second;
+
+        DeleteGpuMesh(backend, it->second);
+        meshes.erase(it);
+    }
 
     if (mesh->vertices.empty() || mesh->indices.empty())
     {
@@ -117,6 +142,8 @@ GpuMesh GpuResourceManager::GetMesh(Mesh* mesh)
     gpuMesh.vertexBuffer = backend->CreateVertexBuffer(vertexBufferDesc);
     gpuMesh.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
     gpuMesh.indexCount = static_cast<uint32>(mesh->indices.size());
+    gpuMesh.meshRevision = meshRevision;
+    gpuMesh.sourceKey = mesh->GetInstanceId().GetPath();
 
     GpuVertexInputDesc vertexInputDesc;
     vertexInputDesc.vertexBuffer = gpuMesh.vertexBuffer;
@@ -217,7 +244,14 @@ GpuShader GpuResourceManager::GetShader(Shader* shader)
     if (!backend || !shader) return GpuShader();
 
     auto it = shaders.find(shader);
-    if (it != shaders.end()) return it->second;
+    uint64 shaderRevision = shader->GetRevision();
+    if (it != shaders.end())
+    {
+        if (it->second.shaderRevision == shaderRevision) return it->second;
+
+        DeleteGpuShader(backend, it->second);
+        shaders.erase(it);
+    }
 
     GpuShaderProgramDesc shaderProgramDesc;
     shaderProgramDesc.vertexSource = shader->vertexSource.c_str();
@@ -225,6 +259,8 @@ GpuShader GpuResourceManager::GetShader(Shader* shader)
 
     GpuShader gpuShader;
     gpuShader.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+    gpuShader.shaderRevision = shaderRevision;
+    gpuShader.sourceKey = shader->GetInstanceId().GetPath();
     if (!gpuShader.IsValid())
     {
         Log::Error("GpuResourceManager shader upload failed.");
@@ -247,14 +283,20 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
     }
 
     auto it = materials.find(material);
-    if (it != materials.end() && it->second.sourceShader == shader && it->second.materialRevision == material->GetRevision())
+    uint64 shaderRevision = shader->GetRevision();
+    if (it != materials.end()
+        && it->second.sourceShader == shader
+        && it->second.materialRevision == material->GetRevision()
+        && it->second.shaderRevision == shaderRevision)
     {
         return it->second;
     }
 
     GpuMaterial gpuMaterial;
     gpuMaterial.sourceShader = shader;
+    gpuMaterial.sourceKey = material->GetInstanceId().GetPath();
     gpuMaterial.materialRevision = material->GetRevision();
+    gpuMaterial.shaderRevision = shaderRevision;
     gpuMaterial.shader = GetShader(shader);
     if (!gpuMaterial.shader.IsValid()) return GpuMaterial();
 
@@ -297,4 +339,49 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
 
     materials[material] = gpuMaterial;
     return gpuMaterial;
+}
+
+void GpuResourceManager::CollectUnused()
+{
+    if (!backend) return;
+
+    for (auto it = meshes.begin(); it != meshes.end();)
+    {
+        if (!Object::FindObject(StringId(it->second.sourceKey)))
+        {
+            DeleteGpuMesh(backend, it->second);
+            it = meshes.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    for (auto it = shaders.begin(); it != shaders.end();)
+    {
+        if (!Object::FindObject(StringId(it->second.sourceKey)))
+        {
+            DeleteGpuShader(backend, it->second);
+            it = shaders.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    for (auto it = materials.begin(); it != materials.end();)
+    {
+        bool materialAlive = Object::FindObject(StringId(it->second.sourceKey)) != nullptr;
+        bool shaderAlive = it->second.shader.sourceKey.empty() || Object::FindObject(StringId(it->second.shader.sourceKey)) != nullptr;
+        if (!materialAlive || !shaderAlive)
+        {
+            it = materials.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }

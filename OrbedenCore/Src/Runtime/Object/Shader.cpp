@@ -256,4 +256,22 @@ void Shader::ReflectSlotsFromSource()
 
     scanSource(vertexSource);
     scanSource(fragmentSource);
+    TouchRevision();
+}
+
+void Shader::ReplaceSource(const std::string& vertex, const std::string& fragment)
+{
+    vertexSource = vertex;
+    fragmentSource = fragment;
+    ReflectSlotsFromSource();
+}
+
+uint64 Shader::GetRevision() const
+{
+    return revision;
+}
+
+void Shader::TouchRevision()
+{
+    revision++;
 }

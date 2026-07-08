@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 

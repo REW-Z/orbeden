@@ -280,7 +280,7 @@ void main()
     constexpr const char* GameModuleText = R"ORB(using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 
@@ -324,7 +324,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 
@@ -571,7 +571,7 @@ internal static class ScriptValueReader
 }
 )ORB";
 
-    constexpr const char* GuiOverlayText = R"ORB(using OrbedenCore.CSharp;
+    constexpr const char* GuiOverlayText = R"ORB(using Orbeden;
 
 namespace ExampleGame;
 
@@ -605,7 +605,7 @@ public static class GuiOverlay
 )ORB";
 
     constexpr const char* SampleBehaviourText = R"ORB(using System.Collections.Generic;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 
@@ -673,7 +673,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
 )ORB";
 
     constexpr const char* CubeTestBehaviourText = R"ORB(using System.Collections.Generic;
-using OrbedenCore.CSharp;
+using Orbeden;
 
 namespace ExampleGame;
 

@@ -9,6 +9,7 @@ OrbedenNativeApi OrbedenNativeApi::Create()
     api.Ens = EnsBind::Create();
     api.SpaceComponent = SpaceComponentBind::Create();
     api.StaticMeshRenderer = StaticMeshRendererBind::Create();
+    api.Object = ObjectBind::Create();
     api.Mesh = MeshBind::Create();
     api.Material = MaterialBind::Create();
     api.Shader = ShaderBind::Create();

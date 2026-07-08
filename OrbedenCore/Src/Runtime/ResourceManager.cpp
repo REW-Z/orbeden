@@ -2,6 +2,12 @@
 
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
+#include "Runtime/EnsId.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/Shader.h"
+#include "Runtime/Object/Skybox.h"
+#include "Runtime/Object/Texture2D.h"
 
 #include <algorithm>
 #include <unordered_map>
@@ -21,12 +27,6 @@ namespace
         return runtime;
     }
 
-    //获取资源总引用数
-    uint32 GetTotalRefCount(const ResourceManager::ResourceRecord& record)
-    {
-        return record.manualRefCount + record.worldRefCount + record.dependencyRefCount;
-    }
-
     //判断字符串前缀
     bool StartsWith(const std::string& text, const std::string& prefix)
     {
@@ -42,33 +42,21 @@ namespace
         return it == records.end() ? nullptr : &it->second;
     }
 
-    //递归增加依赖引用
-    void AddDependencyRefs(ResourceManager::ResourceRecord& record)
+    //按对象查找资源记录
+    ResourceManager::ResourceRecord* FindRecordByObject(Object* object)
     {
-        for (const std::string& dependencyKey : record.dependencies)
-        {
-            ResourceManager::ResourceRecord* dependency = FindRecordMutable(dependencyKey);
-            if (!dependency) continue;
+        if (!object) return nullptr;
 
-            dependency->dependencyRefCount++;
-            AddDependencyRefs(*dependency);
+        auto& records = GetResourceRuntime().records;
+        for (auto& pair : records)
+        {
+            if (pair.second.object == object) return &pair.second;
         }
+
+        return nullptr;
     }
 
-    //递归释放依赖引用
-    void ReleaseDependencyRefs(ResourceManager::ResourceRecord& record)
-    {
-        for (const std::string& dependencyKey : record.dependencies)
-        {
-            ResourceManager::ResourceRecord* dependency = FindRecordMutable(dependencyKey);
-            if (!dependency || dependency->dependencyRefCount == 0) continue;
-
-            dependency->dependencyRefCount--;
-            ReleaseDependencyRefs(*dependency);
-        }
-    }
-
-    //加载资源 Key 对应的资源记录。
+    //加载资源 Key 对应的资源记录
     ResourceManager::ResourceRecord* LoadResourceRecord(Type* type, const std::string& key)
     {
         std::string resourceKey = ResourceManager::ToResourceKey(key);
@@ -98,74 +86,11 @@ namespace
     }
 }
 
-//加载资源并增加一次显式引用
+//加载资源对象
 Object* ResourceManager::Load(Type* type, const std::string& key)
 {
     ResourceRecord* record = LoadResourceRecord(type, key);
-    if (!record) return nullptr;
-
-    record->manualRefCount++;
-    AddDependencyRefs(*record);
-    return record->object;
-}
-
-//加载资源并增加一次World引用
-Object* ResourceManager::LoadWorldRef(Type* type, const std::string& key)
-{
-    ResourceRecord* record = LoadResourceRecord(type, key);
-    if (!record) return nullptr;
-
-    record->worldRefCount++;
-    AddDependencyRefs(*record);
-    return record->object;
-}
-
-//释放一次显式引用
-void ResourceManager::Unload(const std::string& key)
-{
-    ResourceRecord* record = FindRecordMutable(key);
-    if (!record || record->manualRefCount == 0) return;
-
-    record->manualRefCount--;
-    ReleaseDependencyRefs(*record);
-}
-
-//释放一次World引用
-void ResourceManager::ReleaseWorldRef(const std::string& key)
-{
-    ResourceRecord* record = FindRecordMutable(key);
-    if (!record || record->worldRefCount == 0) return;
-
-    record->worldRefCount--;
-    ReleaseDependencyRefs(*record);
-}
-
-//释放所有零引用资源
-void ResourceManager::ReleaseZeroRef()
-{
-    auto& records = GetResourceRuntime().records;
-    bool removed = true;
-    while (removed)
-    {
-        removed = false;
-        for (auto it = records.begin(); it != records.end();)
-        {
-            ResourceRecord& record = it->second;
-            if (GetTotalRefCount(record) != 0)
-            {
-                ++it;
-                continue;
-            }
-
-            if (record.object)
-            {
-                record.object->SetOwnership(Object::Ownership::None);
-                Object::DestroyDetachedInstance(record.object);
-            }
-            it = records.erase(it);
-            removed = true;
-        }
-    }
+    return record ? record->object : nullptr;
 }
 
 //释放所有资源，通常在应用退出时调用
@@ -175,11 +100,6 @@ void ResourceManager::Shutdown()
     for (auto& pair : records)
     {
         ResourceRecord& record = pair.second;
-        if (GetTotalRefCount(record) > 0)
-        {
-            Log::Warning(("Resource is still referenced during shutdown: " + record.key).c_str());
-        }
-
         if (record.object)
         {
             record.object->SetOwnership(Object::Ownership::None);
@@ -213,11 +133,7 @@ bool ResourceManager::RegisterObject(const std::string& key, Object* object)
     if (it != records.end())
     {
         bool sameObject = it->second.object == object;
-        if (sameObject)
-        {
-            object->SetOwnership(Object::Ownership::ResourceOwned);
-        }
-
+        if (sameObject) object->SetOwnership(Object::Ownership::ResourceOwned);
         return sameObject;
     }
 
@@ -248,6 +164,94 @@ bool ResourceManager::RegisterDependency(const std::string& ownerKey, const std:
     return true;
 }
 
+//递归标记对象依赖
+void ResourceManager::MarkObjectGraph(Object* object, std::unordered_set<int32>& marked)
+{
+    if (!object || object->Is(Component::StaticType())) return;
+    if (!marked.insert(object->GetObjectId()).second) return;
+
+    if (Mesh* mesh = object->Cast<Mesh>())
+    {
+        for (const SubMesh& subMesh : mesh->subMeshes)
+        {
+            MarkObjectGraph(subMesh.material.Get(), marked);
+        }
+    }
+    else if (Material* material = object->Cast<Material>())
+    {
+        MarkObjectGraph(material->shader.Get(), marked);
+        for (const MaterialTextureSlot& slot : material->textureSlots)
+        {
+            MarkObjectGraph(slot.texture.Get(), marked);
+        }
+    }
+    else if (Skybox* skybox = object->Cast<Skybox>())
+    {
+        MarkObjectGraph(skybox->right.Get(), marked);
+        MarkObjectGraph(skybox->left.Get(), marked);
+        MarkObjectGraph(skybox->top.Get(), marked);
+        MarkObjectGraph(skybox->bottom.Get(), marked);
+        MarkObjectGraph(skybox->front.Get(), marked);
+        MarkObjectGraph(skybox->back.Get(), marked);
+    }
+
+    ResourceRecord* record = FindRecordByObject(object);
+    if (!record) return;
+
+    for (const std::string& dependencyKey : record->dependencies)
+    {
+        MarkObjectGraph(FindLoaded(dependencyKey), marked);
+    }
+}
+
+//释放未被标记的资源对象
+uint32 ResourceManager::ReleaseUnmarkedObjects(const std::unordered_set<int32>& marked)
+{
+    auto& records = GetResourceRuntime().records;
+    uint32 removedCount = 0;
+    bool removed = true;
+
+    while (removed)
+    {
+        removed = false;
+        for (auto it = records.begin(); it != records.end();)
+        {
+            ResourceRecord& record = it->second;
+            Object* object = record.object;
+            if (object && marked.find(object->GetObjectId()) != marked.end())
+            {
+                ++it;
+                continue;
+            }
+
+            if (object)
+            {
+                object->SetOwnership(Object::Ownership::None);
+                Object::DestroyDetachedInstance(object);
+                removedCount++;
+            }
+
+            it = records.erase(it);
+            removed = true;
+        }
+    }
+
+    return removedCount;
+}
+
+//销毁已加载资源对象
+bool ResourceManager::DestroyObject(Object* object)
+{
+    ResourceRecord* record = FindRecordByObject(object);
+    if (!record || !record->object) return false;
+
+    std::string key = record->key;
+    record->object->SetOwnership(Object::Ownership::None);
+    bool destroyed = Object::DestroyDetachedInstance(record->object);
+    GetResourceRuntime().records.erase(key);
+    return destroyed;
+}
+
 //查找已注册资源对象
 Object* ResourceManager::FindLoaded(const std::string& key)
 {
@@ -261,14 +265,7 @@ const ResourceManager::ResourceRecord* ResourceManager::FindRecord(const std::st
     return FindRecordMutable(key);
 }
 
-//获取资源总引用数
-uint32 ResourceManager::GetRefCount(const std::string& key)
-{
-    ResourceRecord* record = FindRecordMutable(key);
-    return record ? GetTotalRefCount(*record) : 0;
-}
-
-//转换为资源 Key。
+//转换为资源 Key
 std::string ResourceManager::ToResourceKey(const std::string& key)
 {
     std::string result = key;

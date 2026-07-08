@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace OrbedenCore.CSharp;
+namespace Orbeden;
 
 internal static unsafe class NativeText
 {

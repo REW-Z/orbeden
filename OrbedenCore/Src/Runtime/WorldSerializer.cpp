@@ -562,7 +562,7 @@ namespace
                 continue;
             }
 
-            world.AddExternResourceRef(refType, key);
+            ResourceManager::Load(refType, key);
         }
     }
 

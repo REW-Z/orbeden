@@ -3,7 +3,6 @@
 #include "FileSystem/PathDefines.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Runtime/ResourceManager.h"
 #include "Runtime/Object/SpaceComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
@@ -135,10 +134,22 @@ namespace
     }
 
     //添加 StaticMeshRenderer。
-    uint8 ORBEDEN_NATIVE_CALL NativeEnsAddStaticMeshRenderer(EnsId ens)
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddStaticMeshRenderer(EnsId ens)
     {
         Ens* value = GetNativeEns(ens);
-        return value && value->AddComponent<StaticMeshRenderer>() ? 1 : 0;
+        return value ? value->AddComponent<StaticMeshRenderer>() : nullptr;
+    }
+
+    //获取 SpaceComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsGetSpaceComponent(EnsId ens)
+    {
+        return GetNativeSpace(ens);
+    }
+
+    //获取 StaticMeshRenderer。
+    void* ORBEDEN_NATIVE_CALL NativeEnsGetStaticMeshRenderer(EnsId ens)
+    {
+        return GetNativeStaticMeshRenderer(ens);
     }
 
     //读取父级 Ens。
@@ -226,33 +237,28 @@ namespace
     }
 
     //读取 StaticMeshRenderer.mesh。
-    int32 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetMesh(EnsId ens, uint8* buffer, int32 bufferSize)
+    void* ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetMesh(EnsId ens)
     {
         StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
-        return CopyText(renderer ? renderer->mesh.GetInstanceId().GetPath() : std::string(), buffer, bufferSize);
+        return renderer ? renderer->mesh.Get() : nullptr;
     }
 
     //写入 StaticMeshRenderer.mesh。
-    uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererSetMesh(EnsId ens, const uint8* key, int32 length)
+    uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererSetMesh(EnsId ens, void* meshPointer)
     {
         StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
         if (!renderer) return 0;
 
-        std::string oldKey = renderer->mesh.GetInstanceId().GetPath();
-        std::string newKey = ResourceManager::ToResourceKey(ReadUtf8Text(key, length));
-        if (oldKey == newKey) return 1;
-
-        if (!newKey.empty())
+        if (!meshPointer)
         {
-            World* world = renderer->GetWorld();
-            bool loaded = world
-                ? world->AddExternResourceRef(Mesh::StaticType(), newKey)
-                : ResourceManager::LoadWorldRef(Mesh::StaticType(), newKey) != nullptr;
-            if (!loaded) return 0;
+            renderer->mesh.SetInstanceId(StringId());
+            return 1;
         }
 
-        if (!oldKey.empty()) ResourceManager::ReleaseWorldRef(oldKey);
-        renderer->mesh.SetInstanceId(StringId(newKey));
+        Mesh* mesh = static_cast<Object*>(meshPointer)->Cast<Mesh>();
+        if (!mesh || Object::FindObjectById(mesh->GetObjectId()) != mesh) return 0;
+
+        renderer->mesh.Set(mesh);
         return 1;
     }
 
@@ -312,6 +318,8 @@ EnsBind EnsBind::Create()
     bind.HasSpaceComponent = reinterpret_cast<void*>(&NativeEnsHasSpaceComponent);
     bind.HasStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsHasStaticMeshRenderer);
     bind.AddStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsAddStaticMeshRenderer);
+    bind.GetSpaceComponent = reinterpret_cast<void*>(&NativeEnsGetSpaceComponent);
+    bind.GetStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsGetStaticMeshRenderer);
     return bind;
 }
 

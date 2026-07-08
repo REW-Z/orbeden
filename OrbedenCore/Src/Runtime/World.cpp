@@ -141,8 +141,6 @@ World::~World()
 //清空世界运行时对象
 void World::Clear()
 {
-    ReleaseExternResourceRefs();
-
     while (!liveEns.empty())
     {
         DestroyEns(liveEns.back()->GetId());
@@ -459,27 +457,6 @@ bool World::RemoveComponent(EnsId ens, Type* type)
     bool deleted = Object::DestroyDetachedInstance(component);
     assert(deleted);
     return deleted;
-}
-
-//增加一个外部资源引用
-bool World::AddExternResourceRef(Type* type, const std::string& key)
-{
-    Object* object = ResourceManager::LoadWorldRef(type, key);
-    if (!object) return false;
-
-    externResourceRefs.push_back(ResourceManager::ToResourceKey(key));
-    return true;
-}
-
-//释放当前World持有的所有外部资源引用
-void World::ReleaseExternResourceRefs()
-{
-    for (const std::string& key : externResourceRefs)
-    {
-        ResourceManager::ReleaseWorldRef(key);
-    }
-
-    externResourceRefs.clear();
 }
 
 //按稳定ID查找Ens

@@ -43,6 +43,9 @@ class Shader : public Object
 {
     OBJECT_TYPE_DECLARE(Shader)
 
+private:
+    uint64 revision = 1;
+
 public:
     std::string name;
     std::string vertexPath;
@@ -55,4 +58,13 @@ public:
 
     //从 GLSL 源码刷新材质槽反射结果
     void ReflectSlotsFromSource();
+
+    //替换 GLSL 源码并刷新反射结果
+    void ReplaceSource(const std::string& vertex, const std::string& fragment);
+
+    //获取 Shader 版本，用于刷新 GPU 缓存
+    uint64 GetRevision() const;
+
+    //标记 Shader 数据已修改
+    void TouchRevision();
 };

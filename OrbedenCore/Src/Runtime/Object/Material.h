@@ -88,4 +88,7 @@ public:
 
     //获取材质版本，用于刷新 GPU 缓存
     uint64 GetRevision() const;
+
+    //标记材质数据已修改
+    void TouchRevision();
 };
