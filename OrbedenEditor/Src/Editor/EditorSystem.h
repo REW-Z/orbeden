@@ -7,6 +7,8 @@
 #include "Editor/ManagedEditorOverlay.h"
 #include "Editor/PanelManager.h"
 #include "Editor/EditorPlayMode.h"
+#include "Editor/InspectorPanel.h"
+#include "Editor/ManagedEditorPanel.h"
 #include "Editor/ProjectPanel.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/EnsId.h"
@@ -33,9 +35,12 @@ private:
     PanelManager panelManager;
     ProjectPanel projectPanel;
     EnsViewPanel ensViewPanel;
+    InspectorPanel inspectorPanel;
+    ManagedEditorPanel managedEditorPanel;
     EditorClrHost clrHost;
     ManagedEditorOverlay managedOverlay;
     EditorPlayMode playMode;
+    EditorCameraState editorCameraState;
     int32 selectedPlayerTargetPlatform = 0;
     EnsId editorCameraEns;
     float32 cameraYaw = 35.0f;
@@ -131,6 +136,15 @@ public:
     //获取编辑器选择状态
     const EditorSelection& GetSelection() const;
 
+    //判断是否是编辑器临时 Ens
+    bool IsEditorTemporaryEns(EnsId ens) const;
+
+    //绘制托管 Inspector 内容
+    void DrawManagedInspectorContent();
+
+    //绘制托管 Editor 面板内容
+    void DrawManagedEditorPanelContent();
+
 private:
     //获取当前项目脚本工程路径
     std::string GetProjectScriptProjectPath() const;
@@ -159,6 +173,9 @@ private:
     //查找当前 Editor 可用的 OrbedenCore.CSharp.dll
     std::string FindRuntimeCSharpDll() const;
 
+    //获取 Play/Inspector 需要复制的托管依赖目录
+    List<std::string> GetManagedDependencyDirectories() const;
+
     //运行外部命令
     bool RunCommand(const std::string& command, const char* actionName);
 
@@ -168,11 +185,26 @@ private:
     //确保编辑器观察相机存在
     void CreateEditorCameraIfMissing(World& world);
 
+    //记录编辑器观察相机状态
+    void CaptureEditorCameraState();
+
+    //应用编辑器观察相机状态
+    void ApplyEditorCameraState(const EditorCameraState& state);
+
+    //移除编辑器观察相机
+    void RemoveEditorCamera(World& world);
+
     //使用 GLFW 输入更新编辑器观察相机
     void UpdateEditorCamera(World& world, float deltaTime);
 
     //保存当前项目启动场景
-    void SaveCurrentWorld();
+    bool SaveCurrentWorld();
+
+    //保存当前编辑器布局
+    void SaveEditorLayout();
+
+    //应用当前项目编辑器布局
+    void ApplyEditorLayout();
 
     //Debug 构建自动加载 ExampleProject
     void TryAutoLoadExampleProject();
@@ -185,6 +217,9 @@ private:
 
     //绘制顶部菜单栏
     void DrawMainMenuBar();
+
+    //绘制顶部播放工具栏
+    void DrawPlayToolbar();
 
     //绘制托管 SceneView Gizmos
     void DrawManagedSceneGizmos();

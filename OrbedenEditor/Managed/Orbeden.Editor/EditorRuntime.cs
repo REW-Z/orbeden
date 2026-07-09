@@ -55,6 +55,13 @@ public static class EditorRuntime
         EditorGameDomain.DrawInspector(new EnsId(ensId, ensVersion), ReadUtf8(stableId, stableIdLength));
     }
 
+    /// <summary>绘制当前选中 Ens 的托管 Inspector 内容。</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe void DrawInspectorContent(uint ensId, uint ensVersion, byte* stableId, int stableIdLength)
+    {
+        EditorGameDomain.DrawInspectorContent(new EnsId(ensId, ensVersion), ReadUtf8(stableId, stableIdLength));
+    }
+
     /// <summary>绘制 C# Editor 面板。</summary>
     [UnmanagedCallersOnly]
     public static void DrawPanels()
@@ -64,18 +71,31 @@ public static class EditorRuntime
         {
             if (!visible) return;
 
-            GUI.Label("Managed editor panel");
-            if (GUI.Button("Editor C# Button"))
-            {
-                panelClickCount++;
-            }
-
-            GUI.Label($"Clicks: {panelClickCount}");
+            DrawEditorPanelContentInternal();
         }
         finally
         {
             GUI.EndPanel();
         }
+    }
+
+    /// <summary>绘制 C# Editor 面板内容。</summary>
+    [UnmanagedCallersOnly]
+    public static void DrawEditorPanelContent()
+    {
+        DrawEditorPanelContentInternal();
+    }
+
+    //绘制 C# Editor 面板内容。
+    private static void DrawEditorPanelContentInternal()
+    {
+        GUI.Label("Managed editor panel");
+        if (GUI.Button("Editor C# Button"))
+        {
+            panelClickCount++;
+        }
+
+        GUI.Label($"Clicks: {panelClickCount}");
     }
 
     /// <summary>绘制 C# SceneView Gizmos。</summary>

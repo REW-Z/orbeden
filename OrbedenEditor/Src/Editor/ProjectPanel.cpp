@@ -52,7 +52,7 @@ void ProjectPanel::DrawPanel()
     }
 
     ImGui::SameLine();
-    if (!editor.HasProject())
+    if (!editor.HasProject() || editor.IsPlaying())
     {
         ImGui::BeginDisabled();
     }
@@ -60,6 +60,16 @@ void ProjectPanel::DrawPanel()
     if (ImGui::Button("Save World"))
     {
         editor.RequestSaveCurrentWorld();
+    }
+
+    if (!editor.HasProject() || editor.IsPlaying())
+    {
+        ImGui::EndDisabled();
+    }
+
+    if (!editor.HasProject())
+    {
+        ImGui::BeginDisabled();
     }
 
     if (ImGui::Button("Build C#"))

@@ -8,8 +8,11 @@
 #include "Runtime/ResourceManager.h"
 
 #include <cctype>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 namespace
@@ -24,6 +27,42 @@ namespace
         std::ifstream input(path);
         std::ostringstream output;
         output << input.rdbuf();
+        return output.str();
+    }
+
+    //写入文本文件。
+    bool WriteTextFile(const std::filesystem::path& path, const std::string& text)
+    {
+        std::ofstream output(path, std::ios::out | std::ios::trunc);
+        if (!output) return false;
+
+        output << text;
+        return true;
+    }
+
+    //转义 XML 属性文本。
+    std::string EscapeXml(const std::string& text)
+    {
+        std::string result;
+        result.reserve(text.size());
+        for (char ch : text)
+        {
+            if (ch == '&') result += "&amp;";
+            else if (ch == '<') result += "&lt;";
+            else if (ch == '>') result += "&gt;";
+            else if (ch == '"') result += "&quot;";
+            else if (ch == '\'') result += "&apos;";
+            else result += ch;
+        }
+
+        return result;
+    }
+
+    //转换浮点数为紧凑文本。
+    std::string ToFloatText(float32 value)
+    {
+        std::ostringstream output;
+        output << std::setprecision(6) << value;
         return output.str();
     }
 
@@ -48,6 +87,204 @@ namespace
         }
 
         return position < text.size() ? text.substr(valueStart, position - valueStart) : std::string();
+    }
+
+    //判断 XML 片段是否包含属性。
+    bool HasAttribute(const std::string& text, const std::string& name)
+    {
+        return text.find(name + "=") != std::string::npos;
+    }
+
+    //读取浮点属性。
+    float32 GetFloatAttribute(const std::string& text, const std::string& name, float32 defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        char* end = nullptr;
+        float result = std::strtof(value.c_str(), &end);
+        return end != value.c_str() ? result : defaultValue;
+    }
+
+    //读取布尔属性。
+    bool GetBoolAttribute(const std::string& text, const std::string& name, bool defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        return value == "true" || value == "1";
+    }
+
+    //读取编辑器布局块。
+    void ReadEditorLayout(const std::string& content, EditorLayoutState& layout)
+    {
+        layout = EditorLayoutState();
+
+        std::size_t layoutStart = content.find("<EditorLayout");
+        if (layoutStart == std::string::npos) return;
+
+        std::size_t layoutEnd = content.find("</EditorLayout>", layoutStart);
+        if (layoutEnd == std::string::npos) return;
+
+        std::string block = content.substr(layoutStart, layoutEnd - layoutStart);
+
+        //读取面板布局。
+        std::size_t panelPosition = 0;
+        while ((panelPosition = block.find("<Panel", panelPosition)) != std::string::npos)
+        {
+            std::size_t panelEnd = block.find('>', panelPosition);
+            if (panelEnd == std::string::npos) break;
+
+            std::string panelToken = block.substr(panelPosition, panelEnd - panelPosition + 1);
+            EditorPanelState panel;
+            panel.id = GetAttribute(panelToken, "id");
+            panel.visible = GetBoolAttribute(panelToken, "visible", true);
+            panel.hasPosition = HasAttribute(panelToken, "x") && HasAttribute(panelToken, "y");
+            panel.hasSize = HasAttribute(panelToken, "width") && HasAttribute(panelToken, "height");
+            panel.position.x = GetFloatAttribute(panelToken, "x", 0.0f);
+            panel.position.y = GetFloatAttribute(panelToken, "y", 0.0f);
+            panel.size.x = GetFloatAttribute(panelToken, "width", 0.0f);
+            panel.size.y = GetFloatAttribute(panelToken, "height", 0.0f);
+            if (!panel.id.empty())
+            {
+                layout.panels.push_back(panel);
+            }
+
+            panelPosition = panelEnd + 1;
+        }
+
+        //读取编辑器相机布局。
+        std::size_t cameraPosition = block.find("<EditorCamera");
+        if (cameraPosition != std::string::npos)
+        {
+            std::size_t cameraEnd = block.find('>', cameraPosition);
+            if (cameraEnd != std::string::npos)
+            {
+                std::string cameraToken = block.substr(cameraPosition, cameraEnd - cameraPosition + 1);
+                layout.editorCamera.hasValue = true;
+                layout.editorCamera.position.x = GetFloatAttribute(cameraToken, "x", layout.editorCamera.position.x);
+                layout.editorCamera.position.y = GetFloatAttribute(cameraToken, "y", layout.editorCamera.position.y);
+                layout.editorCamera.position.z = GetFloatAttribute(cameraToken, "z", layout.editorCamera.position.z);
+                layout.editorCamera.yaw = GetFloatAttribute(cameraToken, "yaw", layout.editorCamera.yaw);
+                layout.editorCamera.pitch = GetFloatAttribute(cameraToken, "pitch", layout.editorCamera.pitch);
+            }
+        }
+    }
+
+    //移除旧编辑器布局块。
+    std::string RemoveEditorLayoutBlock(std::string content)
+    {
+        std::size_t layoutStart = content.find("<EditorLayout");
+        if (layoutStart == std::string::npos) return content;
+
+        std::size_t eraseStart = layoutStart;
+        while (eraseStart > 0 && (content[eraseStart - 1] == ' ' || content[eraseStart - 1] == '\t'))
+        {
+            eraseStart--;
+        }
+        if (eraseStart > 0 && content[eraseStart - 1] == '\n')
+        {
+            eraseStart--;
+            if (eraseStart > 0 && content[eraseStart - 1] == '\r')
+            {
+                eraseStart--;
+            }
+        }
+
+        std::size_t layoutEnd = content.find("</EditorLayout>", layoutStart);
+        if (layoutEnd != std::string::npos)
+        {
+            layoutEnd += std::strlen("</EditorLayout>");
+        }
+        else
+        {
+            layoutEnd = content.find('>', layoutStart);
+            if (layoutEnd == std::string::npos) return content;
+            layoutEnd++;
+        }
+
+        while (layoutEnd < content.size() && (content[layoutEnd] == '\r' || content[layoutEnd] == '\n'))
+        {
+            layoutEnd++;
+        }
+
+        content.erase(eraseStart, layoutEnd - eraseStart);
+        return content;
+    }
+
+    //写出编辑器布局块文本。
+    std::string BuildEditorLayoutBlock(const EditorLayoutState& layout)
+    {
+        std::ostringstream output;
+        output << "    <EditorLayout>\n";
+        for (const EditorPanelState& panel : layout.panels)
+        {
+            output << "        <Panel id=\"" << EscapeXml(panel.id)
+                << "\" visible=\"" << (panel.visible ? "true" : "false")
+                << "\" x=\"" << ToFloatText(panel.position.x)
+                << "\" y=\"" << ToFloatText(panel.position.y)
+                << "\" width=\"" << ToFloatText(panel.size.x)
+                << "\" height=\"" << ToFloatText(panel.size.y)
+                << "\" />\n";
+        }
+
+        if (layout.editorCamera.hasValue)
+        {
+            output << "        <EditorCamera x=\"" << ToFloatText(layout.editorCamera.position.x)
+                << "\" y=\"" << ToFloatText(layout.editorCamera.position.y)
+                << "\" z=\"" << ToFloatText(layout.editorCamera.position.z)
+                << "\" yaw=\"" << ToFloatText(layout.editorCamera.yaw)
+                << "\" pitch=\"" << ToFloatText(layout.editorCamera.pitch)
+                << "\" />\n";
+        }
+
+        output << "    </EditorLayout>\n";
+        return output.str();
+    }
+
+    //写入编辑器布局到项目文件。
+    bool WriteEditorLayoutToProjectFile(const std::filesystem::path& projectFile, const EditorLayoutState& layout)
+    {
+        std::string content = RemoveEditorLayoutBlock(ReadTextFile(projectFile));
+        std::size_t rootStart = content.find("<OrbedenProject");
+        if (rootStart == std::string::npos) return false;
+
+        std::size_t rootEnd = content.find('>', rootStart);
+        if (rootEnd == std::string::npos) return false;
+
+        std::size_t lastRootChar = rootEnd;
+        while (lastRootChar > rootStart && std::isspace(static_cast<unsigned char>(content[lastRootChar - 1])))
+        {
+            lastRootChar--;
+        }
+
+        std::string layoutBlock = BuildEditorLayoutBlock(layout);
+        bool selfClosing = lastRootChar > rootStart && content[lastRootChar - 1] == '/';
+        if (selfClosing)
+        {
+            content.erase(lastRootChar - 1, 1);
+            rootEnd--;
+            std::size_t insertPosition = rootEnd + 1;
+            while (insertPosition < content.size() && (content[insertPosition] == '\r' || content[insertPosition] == '\n'))
+            {
+                content.erase(insertPosition, 1);
+            }
+
+            content.insert(insertPosition, "\n" + layoutBlock + "</OrbedenProject>\n");
+            return WriteTextFile(projectFile, content);
+        }
+
+        std::size_t closePosition = content.rfind("</OrbedenProject>");
+        if (closePosition == std::string::npos) return false;
+
+        std::string insertText = layoutBlock;
+        if (closePosition > 0 && content[closePosition - 1] != '\n')
+        {
+            insertText = "\n" + insertText;
+        }
+
+        content.insert(closePosition, insertText);
+        return WriteTextFile(projectFile, content);
     }
 
     std::string FindProjectFileInFolder(const std::filesystem::path& folder)
@@ -106,6 +343,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     std::string parsedResourceRoot = GetAttribute(content, "resourceRoot");
     std::string parsedScriptRoot = GetAttribute(content, "scriptRoot");
     std::string parsedManagedRoot = GetAttribute(content, "managedRoot");
+    EditorLayoutState parsedLayout;
+    ReadEditorLayout(content, parsedLayout);
     if (parsedStartupWorld.empty())
     {
         lastError = "Project file is missing startupWorld: " + projectFile;
@@ -157,6 +396,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     scriptRoot = parsedScriptRoot;
     managedRoot = parsedManagedRoot;
     startupWorld = parsedStartupWorld;
+    projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
+    editorLayout = parsedLayout;
     lastError.clear();
 
     if (!loaded)
@@ -204,6 +445,85 @@ bool EditorProject::SaveStartupWorld()
     return true;
 }
 
+//重新读取项目启动场景
+bool EditorProject::ReloadStartupWorld()
+{
+    if (!HasProject())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    std::string worldPath = GetStartupWorldPath();
+    if (worldPath.empty())
+    {
+        lastError = "Project startup world is empty.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    RenderSystem* renderSystem = app.GetRenderSystem();
+    if (renderSystem)
+    {
+        renderSystem->PrepareProjectReload();
+    }
+
+    app.GetWorld().Clear();
+    ResourceManager::Shutdown();
+    PathDefines::SetProjectRoot(projectRoot, resourceRoot);
+
+    bool loaded = app.LoadWorld(worldPath);
+    if (renderSystem)
+    {
+        renderSystem->CompleteProjectReload();
+    }
+
+    if (!loaded)
+    {
+        lastError = "Startup world reload failed: " + worldPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    if (ExampleWorldGenerator::IsExampleProject(projectName))
+    {
+        ExampleWorldGenerator::ApplyRuntimeEnvironment(app);
+    }
+
+    lastError.clear();
+    Log::Info(("Startup world reloaded: " + worldPath).c_str());
+    return true;
+}
+
+//保存编辑器布局状态到项目文件
+bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
+{
+    if (!HasProject() || projectFilePath.empty())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    if (!WriteEditorLayoutToProjectFile(std::filesystem::path(projectFilePath), layout))
+    {
+        lastError = "Editor layout save failed: " + projectFilePath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    editorLayout = layout;
+    lastError.clear();
+    return true;
+}
+
+//获取编辑器布局状态
+const EditorLayoutState& EditorProject::GetEditorLayout() const
+{
+    return editorLayout;
+}
+
 const std::string& EditorProject::GetProjectRoot() const
 {
     return projectRoot;
@@ -230,6 +550,12 @@ std::string EditorProject::GetStartupWorldPath() const
 {
     if (projectRoot.empty() || startupWorld.empty()) return std::string();
     return ToCleanPath(std::filesystem::path(projectRoot) / startupWorld);
+}
+
+//获取项目文件完整路径
+const std::string& EditorProject::GetProjectFilePath() const
+{
+    return projectFilePath;
 }
 
 const std::string& EditorProject::GetLastError() const

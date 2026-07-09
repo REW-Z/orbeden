@@ -71,7 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\$(Platform)\$(Configuration)\</OrbedenCoreOutputDir>
+    <OrbedenCoreNativePlatform Condition="'$(Platform)'=='x64'">WindowsX64</OrbedenCoreNativePlatform>
+    <OrbedenCoreNativePlatform Condition="'$(Platform)'=='Win32'">WindowsX86</OrbedenCoreNativePlatform>
+    <OrbedenCoreNativePlatform Condition="'$(OrbedenCoreNativePlatform)'==''">$(Platform)</OrbedenCoreNativePlatform>
+    <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\Sdk\Native\$(OrbedenCoreNativePlatform)\$(Configuration)\</OrbedenCoreOutputDir>
     <OutDir>$(OrbedenCoreOutputDir)</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -96,7 +99,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -107,7 +110,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

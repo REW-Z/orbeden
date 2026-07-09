@@ -4,7 +4,8 @@
 
 ## 总体原则
 
-- **Editor** 使用 Windows 工具链：`OrbedenEditor + OrbedenCore` 由 VS/MSBuild/MSVC 构建。
+- **Editor** 使用 Windows x64 工具链：`OrbedenEditor` 由 VS/MSBuild/MSVC 构建，并链接预构建的 Editor 版 `OrbedenCore.lib`。
+- **Editor 版 Core C++** 手动构建为 MSVC 静态库，当前目标为 WindowsX64，后续可扩展更多宿主平台。
 - **Player** 使用 clang/gcc 工具链：`OrbedenGame + OrbedenCore + Game NativeAOT` 由 CMake/Ninja 构建。
 - **Editor C#** 使用 CLR Assembly：用于 Inspector、Gizmos、Play-In-Editor。
 - **Game C# 测试版** 使用 CLR Assembly：用于 Editor 里反射脚本和 PIE。
@@ -23,7 +24,7 @@ flowchart LR
     subgraph Core["Core: OrbedenCore"]
         CoreCpp["C++ Code\nOrbedenCore/Src"]
         CoreCs["C# Code\nOrbedenCore.CSharp"]
-        CoreMsvcLib["MSVC Lib\nOrbedenEditor/x64/{Config}/OrbedenCore.lib"]
+        CoreMsvcLib["MSVC Lib\nOrbedenEditor/Sdk/Native/WindowsX64/{Config}/OrbedenCore.lib"]
         CorePlayerLib["clang/gcc Lib\nOrbedenGame/Build/{Target}/lib/orbeden_core"]
         CoreSdk["Runtime SDK\nOrbedenCore.CSharp.dll"]
     end
@@ -66,14 +67,38 @@ flowchart LR
 
 | 目标 | 构建方式 | 入口 | 输出 |
 | --- | --- | --- | --- |
-| Core C++ for Editor | MSVC Static Library | VS 解决方案 / Core 工程 | `OrbedenEditor/{Platform}/{Configuration}/OrbedenCore.lib` |
+| Core C++ for Editor | MSVC Static Library | `Build/BuildEditorCore.ps1` / Core 工程 | `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib` |
 | Core C++ for Player | CMake clang/gcc Static Library | Editor `Build Player` | `OrbedenGame/Build/{Target}/lib/orbeden_core.*` |
 | Core C# SDK | Assembly Build | VS 解决方案 / Core C# 工程 | `OrbedenEditor/Sdk/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll`，并同步到 `OrbedenGame/Sdk/Managed/OrbedenCore.CSharp/` |
-| Editor C++ | MSVC Executable | VS 解决方案 / Editor 工程 | `OrbedenEditor/x64/{Configuration}/OrbedenEditor.exe` |
+| Editor C++ | MSVC Executable | VS 解决方案 / Editor 工程 | `OrbedenEditor/x64/{Configuration}/OrbedenEditor.exe`，链接 `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib` |
 | Editor C# | Assembly Build | Editor 工程构建时自动构建 | `OrbedenEditor/x64/{Configuration}/Managed/Orbeden.Editor.dll` |
 | Game C# 测试版 | Assembly Build | Editor `Build C#` | `ExampleProject/Managed/ExampleGame.dll` |
 | Game C# 发布版 | NativeAOT Static Build | Editor `Build Player` | `{ProjectRoot}/Aot/{Target}/{Configuration}/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
 | Player | CMake clang/gcc Executable | Editor `Build Player` | `OrbedenGame/Build/{Target}/bin/OrbedenGame` |
+
+## Editor 版 Core 静态库
+
+Editor 不直接引用 `OrbedenCore.vcxproj`，只链接已经构建好的 WindowsX64 静态库。修改 Editor C++ 时，构建 `OrbedenEditor` 不会重新编译 Core。
+
+修改 Core C++ 后，需要先手动构建 Editor 版 Core：
+
+```powershell
+.\Build\BuildEditorCore.ps1 -Configuration Debug -TargetPlatform WindowsX64
+```
+
+Release 版本：
+
+```powershell
+.\Build\BuildEditorCore.ps1 -Configuration Release -TargetPlatform WindowsX64
+```
+
+输出目录固定为：
+
+```text
+OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib
+```
+
+`OrbedenEditor.vcxproj` 只消费 WindowsX64 版本。后续如果 Editor 需要支持其他宿主平台或架构，应扩展 `Build/BuildEditorCore.ps1` 的 `TargetPlatform` 映射，并在 Editor 工程中增加对应的 native SDK 目录选择。
 
 ## Editor 的 Player 目标平台
 
@@ -137,7 +162,7 @@ flowchart LR
 
 ### 修改 Core C++ 后
 
-如果验证 Editor：构建 VS 解决方案或 `OrbedenEditor`，得到新的 Editor 版 `OrbedenCore.lib`，然后重启 Editor。
+如果验证 Editor：先运行 `Build/BuildEditorCore.ps1` 生成新的 Editor 版 `OrbedenCore.lib`，再构建或启动 `OrbedenEditor`，然后重启 Editor。
 
 如果验证 Player：在 Editor 里选择目标平台并点击 `Build Player`，CMake 会重新构建 Player 版 `OrbedenCore` 并重新链接 Player。
 
@@ -153,7 +178,7 @@ flowchart LR
 
 ### 修改 Editor C++ 后
 
-构建 `OrbedenEditor`，得到新的 `OrbedenEditor.exe`，然后重启 Editor。
+构建 `OrbedenEditor`，得到新的 `OrbedenEditor.exe`，然后重启 Editor。该流程只链接已有的 Editor 版 `OrbedenCore.lib`，不会自动重编 `OrbedenCore`。
 
 ### 修改 Editor C# 后
 

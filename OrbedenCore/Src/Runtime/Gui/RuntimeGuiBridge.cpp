@@ -11,11 +11,36 @@
 
 namespace
 {
+    constexpr float32 MinPanelWidth = 120.0f;
+    constexpr float32 MinPanelHeight = 80.0f;
+
     // 从 C# 传入的 UTF-8 字节读取临时字符串。
     std::string ReadUtf8Text(const uint8* text, int32 length)
     {
         if (!text || length <= 0) return std::string();
         return std::string(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
+    }
+
+    // 将当前 GUI 面板限制在主窗口内。
+    void ClampCurrentPanel()
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        if (!viewport) return;
+
+        ImVec2 size = ImGui::GetWindowSize();
+        size.x = std::clamp(size.x, MinPanelWidth, std::max(MinPanelWidth, viewport->WorkSize.x));
+        size.y = std::clamp(size.y, MinPanelHeight, std::max(MinPanelHeight, viewport->WorkSize.y));
+
+        ImVec2 position = ImGui::GetWindowPos();
+        position.x = std::clamp(position.x,
+            viewport->WorkPos.x,
+            viewport->WorkPos.x + std::max(0.0f, viewport->WorkSize.x - size.x));
+        position.y = std::clamp(position.y,
+            viewport->WorkPos.y,
+            viewport->WorkPos.y + std::max(0.0f, viewport->WorkSize.y - size.y));
+
+        ImGui::SetWindowPos(position, ImGuiCond_Always);
+        ImGui::SetWindowSize(size, ImGuiCond_Always);
     }
 
     // 绘制文本标签。
@@ -36,7 +61,9 @@ namespace
     uint8 ORBEDEN_NATIVE_CALL RuntimeGuiBeginPanel(const uint8* title, int32 length)
     {
         std::string value = ReadUtf8Text(title, length);
-        return ImGui::Begin(value.empty() ? "Managed Panel" : value.c_str()) ? 1 : 0;
+        bool open = ImGui::Begin(value.empty() ? "Managed Panel" : value.c_str());
+        ClampCurrentPanel();
+        return open ? 1 : 0;
     }
 
     // 结束一个浮动面板。

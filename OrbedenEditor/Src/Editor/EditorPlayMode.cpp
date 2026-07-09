@@ -23,11 +23,10 @@ namespace
     //创建 shadow copy 目标路径。
     std::filesystem::path CopyAssemblyToShadowCache(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
     {
-        std::filesystem::create_directories(shadowDirectory);
-
         auto ticks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        std::string fileName = source.stem().string() + "_" + std::to_string(ticks) + source.extension().string();
-        return shadowDirectory / fileName;
+        std::filesystem::path targetDirectory = shadowDirectory / ("run_" + std::to_string(ticks));
+        std::filesystem::create_directories(targetDirectory);
+        return targetDirectory / source.filename();
     }
 
     //复制相关托管文件。
@@ -39,12 +38,47 @@ namespace
         std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing, error);
         return !error;
     }
+
+    //复制目录下的托管依赖文件。
+    bool CopyManagedDirectoryFiles(const std::filesystem::path& sourceDirectory, const std::filesystem::path& targetDirectory)
+    {
+        std::error_code error;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(sourceDirectory, error))
+        {
+            if (error) return false;
+            if (!entry.is_regular_file()) continue;
+
+            std::filesystem::path extension = entry.path().extension();
+            if (extension != ".dll" && extension != ".pdb" && extension != ".json") continue;
+
+            std::filesystem::path target = targetDirectory / entry.path().filename();
+            if (!CopyManagedFileIfExists(entry.path(), target)) return false;
+        }
+
+        return true;
+    }
+
+    //复制额外托管依赖目录。
+    bool CopyManagedDependencyDirectories(const List<std::string>& directories, const std::filesystem::path& targetDirectory)
+    {
+        for (const std::string& directoryText : directories)
+        {
+            if (directoryText.empty()) continue;
+
+            std::filesystem::path directory = std::filesystem::path(directoryText);
+            if (!std::filesystem::is_directory(directory)) continue;
+            if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
+        }
+
+        return true;
+    }
 }
 
 bool EditorPlayMode::Start(EditorClrHost& host,
     const std::string& assemblyPath,
     const std::string& gameModuleType,
-    const std::string& shadowDirectory)
+    const std::string& shadowDirectory,
+    const List<std::string>& managedDependencyDirectories)
 {
     if (playing) return true;
 
@@ -70,7 +104,9 @@ bool EditorPlayMode::Start(EditorClrHost& host,
     std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
     std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
     std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
-    if (!CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
+    if (!CopyManagedDirectoryFiles(sourceAssembly.parent_path(), shadowAssembly.parent_path())
+        || !CopyManagedDependencyDirectories(managedDependencyDirectories, shadowAssembly.parent_path())
+        || !CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
         || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
         || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
     {
@@ -85,7 +121,7 @@ bool EditorPlayMode::Start(EditorClrHost& host,
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&UpdateGame))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&DrawGameGui)))
     {
-        lastError = host.GetLastError();
+        lastError = host.GetLastError() + " Assembly: " + shadowAssemblyPath + " Type: " + gameModuleType;
         ClearBindings();
         return false;
     }
@@ -93,6 +129,7 @@ bool EditorPlayMode::Start(EditorClrHost& host,
     OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
     InitializeGame(&nativeApi);
     playing = true;
+    paused = false;
     Log::Info("Editor Play-In-Editor started.");
     return true;
 }
@@ -110,7 +147,7 @@ void EditorPlayMode::Stop()
 
 void EditorPlayMode::Update(float deltaTime)
 {
-    if (!playing || !UpdateGame) return;
+    if (!playing || paused || !UpdateGame) return;
     UpdateGame(deltaTime);
 }
 
@@ -123,6 +160,24 @@ void EditorPlayMode::DrawGui()
 bool EditorPlayMode::IsPlaying() const
 {
     return playing;
+}
+
+//设置播放暂停状态。
+void EditorPlayMode::SetPaused(bool value)
+{
+    if (!playing)
+    {
+        paused = false;
+        return;
+    }
+
+    paused = value;
+}
+
+//判断播放是否暂停。
+bool EditorPlayMode::IsPaused() const
+{
+    return playing && paused;
 }
 
 const std::string& EditorPlayMode::GetShadowAssemblyPath() const
@@ -142,5 +197,6 @@ void EditorPlayMode::ClearBindings()
     UpdateGame = nullptr;
     DrawGameGui = nullptr;
     playing = false;
+    paused = false;
     shadowAssemblyPath.clear();
 }

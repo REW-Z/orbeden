@@ -39,8 +39,10 @@ void EnsViewPanel::DrawPanel()
     }
 
     List<EnsId> roots;
-    world.ForEachEns([&roots](Ens& ens)
+    world.ForEachEns([&roots, this](Ens& ens)
     {
+        if (editor.IsEditorTemporaryEns(ens.GetId())) return;
+
         Ens* parent = ens.GetParent();
         if (!parent)
         {
@@ -64,6 +66,7 @@ void EnsViewPanel::DrawPanel()
 void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId ens)
 {
     if (!world.IsAlive(ens)) return;
+    if (editor.IsEditorTemporaryEns(ens)) return;
 
     Ens* ensObject = world.GetEns(ens);
     if (!ensObject) return;

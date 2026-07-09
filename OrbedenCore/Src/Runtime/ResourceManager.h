@@ -33,6 +33,9 @@ public:
     //释放所有资源，通常在应用退出时调用
     static void Shutdown();
 
+    //释放指定资源
+    static bool Unload(const std::string& key);
+
     //注册导入出来的资源对象
     static bool RegisterObject(const std::string& key, Object* object);
 

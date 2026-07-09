@@ -17,6 +17,8 @@ private:
     void* LoadGameAssemblyFunction = nullptr;
     void* UnloadGameAssemblyFunction = nullptr;
     void* DrawInspectorFunction = nullptr;
+    void* DrawInspectorContentFunction = nullptr;
+    void* DrawEditorPanelContentFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -37,6 +39,12 @@ public:
 
     // 绘制 C# Inspector。
     void DrawInspector(EnsId selectedEns, const std::string& stableId);
+
+    // 绘制 C# Inspector 内容。
+    void DrawInspectorContent(EnsId selectedEns, const std::string& stableId);
+
+    // 绘制 C# Editor 面板内容。
+    void DrawEditorPanelContent();
 
     // 绘制 C# SceneView Gizmos。
     void DrawSceneGizmos(const matrix4x4& viewProjection, int32 viewportWidth, int32 viewportHeight);

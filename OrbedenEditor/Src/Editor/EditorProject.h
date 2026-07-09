@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Editor/EditorLayoutState.h"
+
 #include <string>
 
 class Application;
@@ -15,6 +17,8 @@ private:
     std::string scriptRoot = "Script";
     std::string managedRoot = "Managed";
     std::string startupWorld;
+    std::string projectFilePath;
+    EditorLayoutState editorLayout;
     std::string lastError;
 
 public:
@@ -28,6 +32,15 @@ public:
 
     //保存当前 World 到项目启动场景
     bool SaveStartupWorld();
+
+    //重新读取项目启动场景
+    bool ReloadStartupWorld();
+
+    //保存编辑器布局状态到项目文件
+    bool SaveEditorLayout(const EditorLayoutState& layout);
+
+    //获取编辑器布局状态
+    const EditorLayoutState& GetEditorLayout() const;
 
     //获取当前项目根目录
     const std::string& GetProjectRoot() const;
@@ -43,6 +56,9 @@ public:
 
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;
+
+    //获取项目文件完整路径
+    const std::string& GetProjectFilePath() const;
 
     //获取最近一次错误
     const std::string& GetLastError() const;

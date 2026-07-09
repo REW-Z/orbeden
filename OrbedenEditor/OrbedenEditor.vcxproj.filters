@@ -42,7 +42,13 @@
     <ClCompile Include="Src\Editor\EnsViewPanel.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\InspectorPanel.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\ManagedEditorOverlay.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\ManagedEditorPanel.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp">
@@ -77,10 +83,19 @@
     <ClInclude Include="Src\Editor\EditorGizmoBridge.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorLayoutState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EnsViewPanel.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\InspectorPanel.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\ManagedEditorOverlay.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ManagedEditorPanel.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\NewProjectGenerator.h">
