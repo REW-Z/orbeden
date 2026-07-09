@@ -20,7 +20,9 @@ namespace
     constexpr const char* EditorLoadGameAssemblyMethod = "LoadGameAssembly";
     constexpr const char* EditorUnloadGameAssemblyMethod = "UnloadGameAssembly";
     constexpr const char* EditorDrawInspectorMethod = "DrawInspector";
+    constexpr const char* EditorDrawInspectorContentMethod = "DrawInspectorContent";
     constexpr const char* EditorDrawPanelsMethod = "DrawPanels";
+    constexpr const char* EditorDrawEditorPanelContentMethod = "DrawEditorPanelContent";
     constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
 
     //传给 Editor C# 的原生函数表。
@@ -80,6 +82,16 @@ bool ManagedEditorOverlay::Initialize(EditorClrHost& host, const std::string& ex
 
     if (!clrHost->BindFunction(editorAssemblyPath,
         EditorTypeName,
+        EditorDrawEditorPanelContentMethod,
+        &DrawEditorPanelContentFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor DrawEditorPanelContent binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
         EditorLoadGameAssemblyMethod,
         &LoadGameAssemblyFunction))
     {
@@ -110,6 +122,16 @@ bool ManagedEditorOverlay::Initialize(EditorClrHost& host, const std::string& ex
 
     if (!clrHost->BindFunction(editorAssemblyPath,
         EditorTypeName,
+        EditorDrawInspectorContentMethod,
+        &DrawInspectorContentFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor DrawInspectorContent binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
         EditorDrawSceneGizmosMethod,
         &DrawSceneGizmosFunction))
     {
@@ -132,10 +154,12 @@ bool ManagedEditorOverlay::Initialize(EditorClrHost& host, const std::string& ex
 void ManagedEditorOverlay::Shutdown()
 {
     DrawPanelsFunction = nullptr;
+    DrawEditorPanelContentFunction = nullptr;
     DrawSceneGizmosFunction = nullptr;
     LoadGameAssemblyFunction = nullptr;
     UnloadGameAssemblyFunction = nullptr;
     DrawInspectorFunction = nullptr;
+    DrawInspectorContentFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -177,6 +201,27 @@ void ManagedEditorOverlay::DrawInspector(EnsId selectedEns, const std::string& s
         selectedEns.version,
         reinterpret_cast<const uint8*>(stableId.data()),
         static_cast<int32>(stableId.size()));
+}
+
+// 绘制 C# Inspector 内容。
+void ManagedEditorOverlay::DrawInspectorContent(EnsId selectedEns, const std::string& stableId)
+{
+    if (!initialized || DrawInspectorContentFunction == nullptr) return;
+
+    ManagedDrawInspectorFn DrawInspectorContent = reinterpret_cast<ManagedDrawInspectorFn>(DrawInspectorContentFunction);
+    DrawInspectorContent(selectedEns.id,
+        selectedEns.version,
+        reinterpret_cast<const uint8*>(stableId.data()),
+        static_cast<int32>(stableId.size()));
+}
+
+// 绘制 C# Editor 面板内容。
+void ManagedEditorOverlay::DrawEditorPanelContent()
+{
+    if (!initialized || DrawEditorPanelContentFunction == nullptr) return;
+
+    ManagedDrawEditorFn DrawEditorPanelContent = reinterpret_cast<ManagedDrawEditorFn>(DrawEditorPanelContentFunction);
+    DrawEditorPanelContent();
 }
 
 void ManagedEditorOverlay::DrawSceneGizmos(const matrix4x4& viewProjection, int32 viewportWidth, int32 viewportHeight)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Defines/types.h"
 #include "Editor/EditorClrHost.h"
 #include "Runtime/Native/NativeCall.h"
 
@@ -19,6 +20,7 @@ private:
     UpdateFn UpdateGame = nullptr;
     DrawGuiFn DrawGameGui = nullptr;
     bool playing = false;
+    bool paused = false;
     std::string shadowAssemblyPath;
     std::string lastError;
 
@@ -27,7 +29,8 @@ public:
     bool Start(EditorClrHost& host,
         const std::string& assemblyPath,
         const std::string& gameModuleType,
-        const std::string& shadowDirectory);
+        const std::string& shadowDirectory,
+        const List<std::string>& managedDependencyDirectories);
 
     //停止 Play-In-Editor。
     void Stop();
@@ -40,6 +43,12 @@ public:
 
     //判断是否正在播放。
     bool IsPlaying() const;
+
+    //设置播放暂停状态。
+    void SetPaused(bool value);
+
+    //判断播放是否暂停。
+    bool IsPaused() const;
 
     //获取 shadow copy 后的程序集路径。
     const std::string& GetShadowAssemblyPath() const;

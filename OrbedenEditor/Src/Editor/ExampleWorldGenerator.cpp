@@ -261,7 +261,7 @@ void main()
   <ItemGroup>
     <Reference Include="OrbedenCore.CSharp">
       <HintPath>$(OrbedenSdkPath)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
-      <Private>false</Private>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
 </Project>
@@ -897,7 +897,11 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
 
     //写入项目描述和资源目录。
     bool succeeded = true;
-    succeeded = WriteTextFile(root / "ExampleProject.oeproj", ProjectFileText) && succeeded;
+    std::filesystem::path projectFile = root / "ExampleProject.oeproj";
+    if (!std::filesystem::exists(projectFile))
+    {
+        succeeded = WriteTextFile(projectFile, ProjectFileText) && succeeded;
+    }
     succeeded = WriteTextFile(root / "Resource/Mesh/cube.obj", CubeObjText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Mesh/ground.obj", GroundObjText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Material/cube.mtl", CubeMtlText) && succeeded;

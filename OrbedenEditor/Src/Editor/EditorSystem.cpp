@@ -20,6 +20,7 @@
 #include <fstream>
 #include <filesystem>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <sstream>
 
 #define GLFW_INCLUDE_NONE
@@ -47,6 +48,65 @@ namespace
         PlayerTargetPlatformInfo { "FreeBSD x64", "FreeBsdX64", "player-freebsd-x64-clang", "freebsd-x64-clang", "freebsd-x64" },
         PlayerTargetPlatformInfo { "Switch", "Switch", "player-switch", "switch", "switch" },
     };
+
+    enum class ToolbarIcon
+    {
+        Play,
+        Pause,
+        Stop,
+    };
+
+    //绘制不依赖字体字符集的工具栏图标按钮。
+    bool DrawToolbarIconButton(const char* id, ToolbarIcon icon, const ImVec2& size)
+    {
+        bool clicked = ImGui::Button(id, size);
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 min = ImGui::GetItemRectMin();
+        ImVec2 max = ImGui::GetItemRectMax();
+        ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+        float32 width = max.x - min.x;
+        float32 height = max.y - min.y;
+        float32 side = std::min(width, height);
+        ImVec2 center = ImVec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+
+        if (icon == ToolbarIcon::Play)
+        {
+            float32 triangleWidth = side * 0.42f;
+            float32 triangleHeight = side * 0.48f;
+            drawList->AddTriangleFilled(
+                ImVec2(center.x - triangleWidth * 0.38f, center.y - triangleHeight * 0.5f),
+                ImVec2(center.x - triangleWidth * 0.38f, center.y + triangleHeight * 0.5f),
+                ImVec2(center.x + triangleWidth * 0.52f, center.y),
+                color);
+        }
+        else if (icon == ToolbarIcon::Pause)
+        {
+            float32 barWidth = side * 0.13f;
+            float32 barHeight = side * 0.48f;
+            float32 gap = side * 0.12f;
+            drawList->AddRectFilled(
+                ImVec2(center.x - gap * 0.5f - barWidth, center.y - barHeight * 0.5f),
+                ImVec2(center.x - gap * 0.5f, center.y + barHeight * 0.5f),
+                color,
+                1.0f);
+            drawList->AddRectFilled(
+                ImVec2(center.x + gap * 0.5f, center.y - barHeight * 0.5f),
+                ImVec2(center.x + gap * 0.5f + barWidth, center.y + barHeight * 0.5f),
+                color,
+                1.0f);
+        }
+        else
+        {
+            float32 squareSize = side * 0.42f;
+            drawList->AddRectFilled(
+                ImVec2(center.x - squareSize * 0.5f, center.y - squareSize * 0.5f),
+                ImVec2(center.x + squareSize * 0.5f, center.y + squareSize * 0.5f),
+                color,
+                1.5f);
+        }
+
+        return clicked;
+    }
 
     const PlayerTargetPlatformInfo& GetPlayerTargetPlatformInfo(int32 index)
     {
@@ -239,6 +299,34 @@ namespace
         return !path.empty() && std::filesystem::exists(std::filesystem::path(path));
     }
 
+    //判断脚本源是否比程序集更新。
+    bool IsProjectScriptBuildOutdated(const std::string& scriptRoot, const std::string& assemblyPath)
+    {
+        if (scriptRoot.empty() || assemblyPath.empty()) return false;
+        std::filesystem::path assembly(assemblyPath);
+        if (!std::filesystem::exists(assembly)) return true;
+
+        std::error_code error;
+        std::filesystem::file_time_type assemblyTime = std::filesystem::last_write_time(assembly, error);
+        if (error) return true;
+
+        std::filesystem::path root(scriptRoot);
+        for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(root, error))
+        {
+            if (error) return true;
+            if (!entry.is_regular_file()) continue;
+
+            std::filesystem::path extension = entry.path().extension();
+            if (extension != ".cs" && extension != ".csproj" && extension != ".props" && extension != ".targets") continue;
+
+            std::filesystem::file_time_type sourceTime = std::filesystem::last_write_time(entry.path(), error);
+            if (error) return true;
+            if (sourceTime > assemblyTime) return true;
+        }
+
+        return false;
+    }
+
     bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
     {
         std::string content = ReadTextFile(std::filesystem::path(csproj));
@@ -322,11 +410,10 @@ namespace
 
     std::filesystem::path CopyAssemblyToShadowCache(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
     {
-        std::filesystem::create_directories(shadowDirectory);
-
         auto ticks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        std::string fileName = source.stem().string() + "_inspector_" + std::to_string(ticks) + source.extension().string();
-        return shadowDirectory / fileName;
+        std::filesystem::path targetDirectory = shadowDirectory / ("inspector_" + std::to_string(ticks));
+        std::filesystem::create_directories(targetDirectory);
+        return targetDirectory / source.filename();
     }
 
     bool CopyManagedFileIfExists(const std::filesystem::path& source, const std::filesystem::path& target)
@@ -338,7 +425,43 @@ namespace
         return !error;
     }
 
-    std::string ShadowCopyManagedAssembly(const std::string& assemblyPath, const std::filesystem::path& shadowDirectory)
+    //复制目录下的托管依赖文件。
+    bool CopyManagedDirectoryFiles(const std::filesystem::path& sourceDirectory, const std::filesystem::path& targetDirectory)
+    {
+        std::error_code error;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(sourceDirectory, error))
+        {
+            if (error) return false;
+            if (!entry.is_regular_file()) continue;
+
+            std::filesystem::path extension = entry.path().extension();
+            if (extension != ".dll" && extension != ".pdb" && extension != ".json") continue;
+
+            std::filesystem::path target = targetDirectory / entry.path().filename();
+            if (!CopyManagedFileIfExists(entry.path(), target)) return false;
+        }
+
+        return true;
+    }
+
+    //复制额外托管依赖目录。
+    bool CopyManagedDependencyDirectories(const List<std::string>& directories, const std::filesystem::path& targetDirectory)
+    {
+        for (const std::string& directoryText : directories)
+        {
+            if (directoryText.empty()) continue;
+
+            std::filesystem::path directory = std::filesystem::path(directoryText);
+            if (!std::filesystem::is_directory(directory)) continue;
+            if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
+        }
+
+        return true;
+    }
+
+    std::string ShadowCopyManagedAssembly(const std::string& assemblyPath,
+        const std::filesystem::path& shadowDirectory,
+        const List<std::string>& managedDependencyDirectories)
     {
         std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
         if (!std::filesystem::exists(sourceAssembly)) return std::string();
@@ -348,7 +471,9 @@ namespace
         std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
         std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
         std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
-        if (!CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
+        if (!CopyManagedDirectoryFiles(sourceAssembly.parent_path(), shadowAssembly.parent_path())
+            || !CopyManagedDependencyDirectories(managedDependencyDirectories, shadowAssembly.parent_path())
+            || !CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
             || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
             || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
         {
@@ -365,6 +490,8 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     , executablePath(startupExecutablePath ? startupExecutablePath : "")
     , projectPanel(*this)
     , ensViewPanel(*this)
+    , inspectorPanel(*this)
+    , managedEditorPanel(*this)
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
@@ -385,6 +512,7 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 
 EditorSystem::~EditorSystem()
 {
+    SaveEditorLayout();
     playMode.Stop();
     managedOverlay.UnloadGameAssembly();
     managedOverlay.Shutdown();
@@ -401,7 +529,10 @@ void EditorSystem::Update(World& world, float deltaTime)
 {
     TryAutoLoadExampleProject();
     playMode.Update(deltaTime);
-    UpdateEditorCamera(world, deltaTime);
+    if (!playMode.IsPlaying())
+    {
+        UpdateEditorCamera(world, deltaTime);
+    }
 }
 
 void EditorSystem::Render(World& world, float deltaTime)
@@ -419,12 +550,14 @@ void EditorSystem::Render(World& world, float deltaTime)
 void EditorSystem::DrawOverlay()
 {
     DrawMainMenuBar();
-    DrawManagedSceneGizmos();
+    DrawPlayToolbar();
+    if (!playMode.IsPlaying())
+    {
+        DrawManagedSceneGizmos();
+    }
     DrawProjectDialog();
     DrawNewProjectDialog();
     panelManager.DrawPanels();
-    managedOverlay.DrawInspector(selection.GetSelectedEns(), GetSelectedEnsStableId());
-    managedOverlay.DrawPanels();
     playMode.DrawGui();
 }
 
@@ -511,6 +644,18 @@ void EditorSystem::RequestPlay()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
+    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetScriptRootPath(), assemblyPath))
+    {
+        RequestBuildScripts();
+        assemblyPath = GetProjectGameAssemblyPath();
+        if (IsProjectScriptBuildOutdated(project.GetScriptRootPath(), assemblyPath))
+        {
+            projectStatus = "C# build failed or output is out of date.";
+            Log::Error(projectStatus.c_str());
+            return;
+        }
+    }
+
     if (!FileExists(assemblyPath))
     {
         projectStatus = "Game DLL is missing. Build C# first: " + assemblyPath;
@@ -518,11 +663,24 @@ void EditorSystem::RequestPlay()
         return;
     }
 
+    SaveEditorLayout();
+    if (!SaveCurrentWorld())
+    {
+        return;
+    }
+
+    RemoveEditorCamera(app.GetWorld());
+    if (selection.GetSelectedEns().IsNull() || !app.GetWorld().IsAlive(selection.GetSelectedEns()) || IsEditorTemporaryEns(selection.GetSelectedEns()))
+    {
+        selection.Clear();
+    }
+
     std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".pie";
     std::string gameModuleType = GetProjectGameModuleTypeName();
-    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory)))
+    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
         projectStatus = playMode.GetLastError();
+        ApplyEditorCameraState(editorCameraState);
         return;
     }
 
@@ -532,8 +690,24 @@ void EditorSystem::RequestPlay()
 
 void EditorSystem::RequestStop()
 {
+    if (!playMode.IsPlaying()) return;
+
     playMode.Stop();
     managedOverlay.UnloadGameAssembly();
+    if (project.HasProject())
+    {
+        if (project.ReloadStartupWorld())
+        {
+            selection.Clear();
+            ApplyEditorCameraState(editorCameraState);
+        }
+        else
+        {
+            projectStatus = project.GetLastError();
+            return;
+        }
+    }
+
     RefreshInspectorGameAssembly();
     projectStatus = "Play-In-Editor stopped.";
 }
@@ -734,6 +908,25 @@ const EditorSelection& EditorSystem::GetSelection() const
     return selection;
 }
 
+//判断是否是编辑器临时 Ens
+bool EditorSystem::IsEditorTemporaryEns(EnsId ens) const
+{
+    const SpaceComponent* space = app.GetWorld().GetSpaceComponent(ens);
+    return space && space->GetInstanceId().GetPath() == EditorCameraId;
+}
+
+//绘制托管 Inspector 内容
+void EditorSystem::DrawManagedInspectorContent()
+{
+    managedOverlay.DrawInspectorContent(selection.GetSelectedEns(), GetSelectedEnsStableId());
+}
+
+//绘制托管 Editor 面板内容
+void EditorSystem::DrawManagedEditorPanelContent()
+{
+    managedOverlay.DrawEditorPanelContent();
+}
+
 std::string EditorSystem::GetProjectScriptProjectPath() const
 {
     return FindFirstCsproj(project.GetScriptRootPath());
@@ -795,7 +988,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
     }
 
     std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".inspector";
-    std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory);
+    std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory, GetManagedDependencyDirectories());
     if (shadowAssemblyPath.empty())
     {
         managedOverlay.LoadGameAssembly(std::string(), sidecarPath);
@@ -883,6 +1076,19 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     return std::string();
 }
 
+//获取 Play/Inspector 需要复制的托管依赖目录
+List<std::string> EditorSystem::GetManagedDependencyDirectories() const
+{
+    List<std::string> directories;
+    std::string runtimeDll = FindRuntimeCSharpDll();
+    if (!runtimeDll.empty())
+    {
+        directories.push_back(ToCleanPath(std::filesystem::path(runtimeDll).parent_path()));
+    }
+
+    return directories;
+}
+
 bool EditorSystem::RunCommand(const std::string& command, const char* actionName)
 {
     int result = std::system(command.c_str());
@@ -912,6 +1118,20 @@ void EditorSystem::RegisterBuiltInPanels()
     ensViewInfo.defaultVisible = true;
     ensViewInfo.defaultSize = { 320.0f, 420.0f };
     panelManager.RegisterPanel(ensViewInfo, &ensViewPanel);
+
+    PanelInfo inspectorInfo;
+    inspectorInfo.id = inspectorPanel.GetPanelId();
+    inspectorInfo.title = inspectorPanel.GetPanelTitle();
+    inspectorInfo.defaultVisible = true;
+    inspectorInfo.defaultSize = { 360.0f, 520.0f };
+    panelManager.RegisterPanel(inspectorInfo, &inspectorPanel);
+
+    PanelInfo managedInfo;
+    managedInfo.id = managedEditorPanel.GetPanelId();
+    managedInfo.title = managedEditorPanel.GetPanelTitle();
+    managedInfo.defaultVisible = true;
+    managedInfo.defaultSize = { 320.0f, 220.0f };
+    panelManager.RegisterPanel(managedInfo, &managedEditorPanel);
 }
 
 void EditorSystem::CreateEditorCameraIfMissing(World& world)
@@ -928,7 +1148,9 @@ void EditorSystem::CreateEditorCameraIfMissing(World& world)
         {
             if (SpaceComponent* space = cameraEns->Space())
             {
-                space->localPosition = { 5.0f, 3.2f, 7.0f };
+                space->localPosition = editorCameraState.hasValue
+                    ? editorCameraState.position
+                    : vector3 { 5.0f, 3.2f, 7.0f };
                 space->localScale = { 1.0f, 1.0f, 1.0f };
             }
         }
@@ -953,9 +1175,85 @@ void EditorSystem::CreateEditorCameraIfMissing(World& world)
 
     if (SpaceComponent* space = cameraEns->Space())
     {
+        if (editorCameraState.hasValue)
+        {
+            cameraYaw = editorCameraState.yaw;
+            cameraPitch = editorCameraState.pitch;
+        }
         space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
     }
     editorCameraEns = cameraEns->GetId();
+}
+
+//记录编辑器观察相机状态
+void EditorSystem::CaptureEditorCameraState()
+{
+    World& world = app.GetWorld();
+    Ens* cameraEns = world.GetEns(editorCameraEns);
+    if (!cameraEns)
+    {
+        cameraEns = world.FindEns(StringId(EditorCameraId));
+    }
+
+    if (!cameraEns)
+    {
+        if (!editorCameraState.hasValue)
+        {
+            editorCameraState.hasValue = true;
+            editorCameraState.yaw = cameraYaw;
+            editorCameraState.pitch = cameraPitch;
+        }
+        return;
+    }
+
+    SpaceComponent* space = cameraEns->Space();
+    if (!space) return;
+
+    editorCameraState.hasValue = true;
+    editorCameraState.position = space->localPosition;
+    editorCameraState.yaw = cameraYaw;
+    editorCameraState.pitch = cameraPitch;
+}
+
+//应用编辑器观察相机状态
+void EditorSystem::ApplyEditorCameraState(const EditorCameraState& state)
+{
+    if (state.hasValue)
+    {
+        editorCameraState = state;
+        cameraYaw = state.yaw;
+        cameraPitch = state.pitch;
+    }
+
+    World& world = app.GetWorld();
+    CreateEditorCameraIfMissing(world);
+    if (!editorCameraState.hasValue) return;
+
+    if (SpaceComponent* space = world.GetSpaceComponent(editorCameraEns))
+    {
+        space->localPosition = editorCameraState.position;
+        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
+        space->localScale = { 1.0f, 1.0f, 1.0f };
+    }
+}
+
+//移除编辑器观察相机
+void EditorSystem::RemoveEditorCamera(World& world)
+{
+    Ens* cameraEns = world.GetEns(editorCameraEns);
+    if (!cameraEns)
+    {
+        cameraEns = world.FindEns(StringId(EditorCameraId));
+    }
+
+    if (cameraEns)
+    {
+        cameraEns->Destroy();
+    }
+
+    editorCameraEns = EnsId();
+    cameraMouseDragging = false;
+    cameraMouseMode = 0;
 }
 
 void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
@@ -1033,54 +1331,77 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
     }
 
     space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
+    editorCameraState.hasValue = true;
+    editorCameraState.position = space->localPosition;
+    editorCameraState.yaw = cameraYaw;
+    editorCameraState.pitch = cameraPitch;
 }
 
-void EditorSystem::SaveCurrentWorld()
+bool EditorSystem::SaveCurrentWorld()
 {
+    if (playMode.IsPlaying())
+    {
+        projectStatus = "Stop Play-In-Editor before saving.";
+        Log::Warning(projectStatus.c_str());
+        return false;
+    }
+
     if (!project.HasProject())
     {
         projectStatus = "No project is open.";
         Log::Warning(projectStatus.c_str());
-        return;
+        return false;
     }
 
     World& world = app.GetWorld();
-    Ens* cameraEns = world.GetEns(editorCameraEns);
-    if (!cameraEns)
-    {
-        cameraEns = world.FindEns(StringId(EditorCameraId));
-    }
-
-    bool hadEditorCamera = cameraEns != nullptr;
-    vector3 editorCameraPosition;
-    quaternion editorCameraRotation;
-    if (hadEditorCamera)
-    {
-        if (SpaceComponent* space = cameraEns->Space())
-        {
-            editorCameraPosition = space->localPosition;
-            editorCameraRotation = space->localRotation;
-        }
-
-        cameraEns->Destroy();
-        editorCameraEns = EnsId();
-    }
+    bool hadEditorCamera = world.GetEns(editorCameraEns) || world.FindEns(StringId(EditorCameraId));
+    CaptureEditorCameraState();
+    RemoveEditorCamera(world);
 
     bool saved = project.SaveStartupWorld();
     projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
 
-    CreateEditorCameraIfMissing(world);
     if (hadEditorCamera)
     {
-        if (SpaceComponent* space = world.GetSpaceComponent(editorCameraEns))
-        {
-            space->localPosition = editorCameraPosition;
-            space->localRotation = editorCameraRotation;
-        }
+        ApplyEditorCameraState(editorCameraState);
     }
 
     cameraMouseDragging = false;
     cameraMouseMode = 0;
+    return saved;
+}
+
+//保存当前编辑器布局
+void EditorSystem::SaveEditorLayout()
+{
+    if (!project.HasProject()) return;
+
+    CaptureEditorCameraState();
+    EditorLayoutState layout;
+    panelManager.WriteLayout(layout);
+    layout.editorCamera = editorCameraState;
+    project.SaveEditorLayout(layout);
+}
+
+//应用当前项目编辑器布局
+void EditorSystem::ApplyEditorLayout()
+{
+    if (!project.HasProject()) return;
+
+    const EditorLayoutState& layout = project.GetEditorLayout();
+    panelManager.ApplyLayout(layout);
+    editorCameraState = layout.editorCamera;
+    if (layout.editorCamera.hasValue)
+    {
+        ApplyEditorCameraState(layout.editorCamera);
+    }
+    else
+    {
+        cameraYaw = editorCameraState.yaw;
+        cameraPitch = editorCameraState.pitch;
+        editorCameraEns = EnsId();
+        CreateEditorCameraIfMissing(app.GetWorld());
+    }
 }
 
 void EditorSystem::TryAutoLoadExampleProject()
@@ -1097,13 +1418,14 @@ void EditorSystem::TryAutoLoadExampleProject()
     }
 
     RequestStop();
+    SaveEditorLayout();
     project.LoadProjectFolder(exampleProject);
     if (project.HasProject())
     {
         SetDialogDirectory(project.GetProjectRoot());
         projectStatus = "Loaded: " + project.GetProjectRoot();
         selection.Clear();
-        CreateEditorCameraIfMissing(app.GetWorld());
+        ApplyEditorLayout();
         RefreshInspectorGameAssembly();
     }
 #endif
@@ -1150,7 +1472,7 @@ void EditorSystem::DrawMainMenuBar()
             ImGui::Separator();
         }
 
-        if (!project.HasProject())
+        if (!project.HasProject() || playMode.IsPlaying())
         {
             ImGui::BeginDisabled();
         }
@@ -1160,7 +1482,7 @@ void EditorSystem::DrawMainMenuBar()
             SaveCurrentWorld();
         }
 
-        if (!project.HasProject())
+        if (!project.HasProject() || playMode.IsPlaying())
         {
             ImGui::EndDisabled();
         }
@@ -1191,6 +1513,91 @@ void EditorSystem::DrawMainMenuBar()
     }
 
     ImGui::EndMainMenuBar();
+}
+
+//绘制顶部播放工具栏
+void EditorSystem::DrawPlayToolbar()
+{
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (!viewport) return;
+
+    constexpr float32 toolbarHeight = 34.0f;
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove;
+
+    bool open = ImGui::BeginViewportSideBar("##EditorPlayToolbar", viewport, ImGuiDir_Up, toolbarHeight, flags);
+    if (open)
+    {
+        float32 buttonWidth = 36.0f;
+        float32 spacing = ImGui::GetStyle().ItemSpacing.x;
+        float32 totalWidth = buttonWidth * 3.0f + spacing * 2.0f;
+        ImGui::SetCursorPosX(std::max(0.0f, (ImGui::GetWindowWidth() - totalWidth) * 0.5f));
+        ImGui::SetCursorPosY(5.0f);
+
+        //播放按钮。
+        bool playDisabled = playMode.IsPlaying();
+        if (playDisabled)
+        {
+            ImGui::BeginDisabled();
+        }
+        if (DrawToolbarIconButton("##play_button", ToolbarIcon::Play, ImVec2(buttonWidth, 24.0f)))
+        {
+            RequestPlay();
+        }
+        if (playDisabled)
+        {
+            ImGui::EndDisabled();
+        }
+
+        ImGui::SameLine();
+
+        //暂停按钮。
+        bool pauseDisabled = !playMode.IsPlaying();
+        bool pauseHighlighted = playMode.IsPaused();
+        if (pauseDisabled)
+        {
+            ImGui::BeginDisabled();
+        }
+        if (pauseHighlighted)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        }
+        if (DrawToolbarIconButton("##pause_button", ToolbarIcon::Pause, ImVec2(buttonWidth, 24.0f)))
+        {
+            playMode.SetPaused(!playMode.IsPaused());
+        }
+        if (pauseHighlighted)
+        {
+            ImGui::PopStyleColor();
+        }
+        if (pauseDisabled)
+        {
+            ImGui::EndDisabled();
+        }
+
+        ImGui::SameLine();
+
+        //停止按钮。
+        bool stopDisabled = !playMode.IsPlaying();
+        if (stopDisabled)
+        {
+            ImGui::BeginDisabled();
+        }
+        if (DrawToolbarIconButton("##stop_button", ToolbarIcon::Stop, ImVec2(buttonWidth, 24.0f)))
+        {
+            RequestStop();
+        }
+        if (stopDisabled)
+        {
+            ImGui::EndDisabled();
+        }
+    }
+
+    ImGui::End();
 }
 
 void EditorSystem::DrawManagedSceneGizmos()
@@ -1270,13 +1677,14 @@ void EditorSystem::DrawProjectDialog()
     if (ImGui::Button("Load"))
     {
         RequestStop();
+        SaveEditorLayout();
         if (project.LoadProjectFolder(dialogDirectory))
         {
             dialogError.clear();
             SetDialogDirectory(project.GetProjectRoot());
             projectStatus = "Loaded: " + project.GetProjectRoot();
             selection.Clear();
-            CreateEditorCameraIfMissing(app.GetWorld());
+            ApplyEditorLayout();
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
         }
@@ -1359,6 +1767,7 @@ void EditorSystem::DrawNewProjectDialog()
         else
         {
             RequestStop();
+            SaveEditorLayout();
 
             std::string projectRoot;
             std::string error;
@@ -1369,7 +1778,7 @@ void EditorSystem::DrawNewProjectDialog()
                 SetDialogDirectory(project.GetProjectRoot());
                 projectStatus = "Created project: " + project.GetProjectRoot();
                 selection.Clear();
-                CreateEditorCameraIfMissing(app.GetWorld());
+                ApplyEditorLayout();
                 RefreshInspectorGameAssembly();
                 ImGui::CloseCurrentPopup();
             }

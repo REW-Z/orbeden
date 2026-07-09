@@ -133,28 +133,34 @@ internal static class EditorGameDomain
         {
             if (!visible) return;
 
-            if (selectedEns.IsNull)
-            {
-                GUI.Label("No Ens selected.");
-                return;
-            }
-
-            Ens ens = Ens.FromId(selectedEns);
-            if (!ens.IsValid)
-            {
-                GUI.Label("Selected Ens is not alive.");
-                return;
-            }
-
-            DrawObjectHeader(ens, selectedEns, stableId);
-            DrawInspectorStatus();
-            DrawNativeComponents(ens);
-            DrawManagedScriptComponents(selectedEns, stableId);
+            DrawInspectorContent(selectedEns, stableId);
         }
         finally
         {
             GUI.EndPanel();
         }
+    }
+
+    /// <summary>绘制选中 Ens 的 Inspector 内容。</summary>
+    public static void DrawInspectorContent(EnsId selectedEns, string stableId)
+    {
+        if (selectedEns.IsNull)
+        {
+            GUI.Label("No Ens selected.");
+            return;
+        }
+
+        Ens ens = Ens.FromId(selectedEns);
+        if (!ens.IsValid)
+        {
+            GUI.Label("Selected Ens is not alive.");
+            return;
+        }
+
+        DrawObjectHeader(ens, selectedEns, stableId);
+        DrawInspectorStatus();
+        DrawNativeComponents(ens);
+        DrawManagedScriptComponents(selectedEns, stableId);
     }
 
     //绘制选中对象摘要。

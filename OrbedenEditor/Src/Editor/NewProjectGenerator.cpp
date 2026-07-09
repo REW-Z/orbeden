@@ -84,6 +84,27 @@ namespace
             || text.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
     }
 
+    bool ReplaceAll(std::string& text, const std::string& oldValue, const std::string& newValue)
+    {
+        bool changed = false;
+        std::size_t position = 0;
+        while ((position = text.find(oldValue, position)) != std::string::npos)
+        {
+            text.replace(position, oldValue.size(), newValue);
+            position += newValue.size();
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    bool EnsureRuntimeReferenceCopyLocal(std::string& text)
+    {
+        if (text.find("OrbedenCore.CSharp") == std::string::npos) return false;
+
+        return ReplaceAll(text, "<Private>false</Private>", "<Private>true</Private>");
+    }
+
     std::string GetProjectFileText(const std::string& projectName)
     {
         return "<OrbedenProject version=\"1\" name=\"" + projectName
@@ -108,7 +129,7 @@ namespace
   <ItemGroup>
     <Reference Include="OrbedenCore.CSharp">
       <HintPath>Lib\OrbedenCore.CSharp.dll</HintPath>
-      <Private>false</Private>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
 </Project>
@@ -306,11 +327,17 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
 
     std::string content = ReadTextFile(projectPath);
     bool hasLateBuildProps = content.find("<MSBuildProjectExtensionsPath>") != std::string::npos;
+    bool changed = EnsureRuntimeReferenceCopyLocal(content);
     if (hasLateBuildProps)
     {
         RemoveElement(content, "OutputPath");
         RemoveElement(content, "BaseIntermediateOutputPath");
         RemoveElement(content, "MSBuildProjectExtensionsPath");
+        changed = true;
+    }
+
+    if (changed)
+    {
         if (!WriteTextFile(projectPath, content, outError)) return false;
     }
 

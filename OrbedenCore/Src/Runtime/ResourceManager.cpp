@@ -110,6 +110,32 @@ void ResourceManager::Shutdown()
     records.clear();
 }
 
+//释放指定资源
+bool ResourceManager::Unload(const std::string& key)
+{
+    std::string resourceKey = ToResourceKey(key);
+    auto& records = GetResourceRuntime().records;
+    auto it = records.find(resourceKey);
+    if (it == records.end()) return false;
+
+    //清理其它资源记录中的依赖关系。
+    for (auto& pair : records)
+    {
+        List<std::string>& dependencies = pair.second.dependencies;
+        dependencies.erase(std::remove(dependencies.begin(), dependencies.end(), resourceKey), dependencies.end());
+    }
+
+    ResourceRecord& record = it->second;
+    if (record.object)
+    {
+        record.object->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(record.object);
+    }
+
+    records.erase(it);
+    return true;
+}
+
 //注册导入出来的资源对象
 bool ResourceManager::RegisterObject(const std::string& key, Object* object)
 {

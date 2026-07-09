@@ -70,6 +70,11 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OrbedenEditorNativePlatform Condition="'$(Platform)'=='x64'">WindowsX64</OrbedenEditorNativePlatform>
+    <OrbedenEditorNativePlatform Condition="'$(OrbedenEditorNativePlatform)'==''">WindowsX64</OrbedenEditorNativePlatform>
+    <OrbedenEditorCoreLibDir>$(ProjectDir)Sdk\Native\$(OrbedenEditorNativePlatform)\$(Configuration)\</OrbedenEditorCoreLibDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -83,8 +88,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
@@ -110,8 +115,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
@@ -135,8 +140,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
@@ -162,8 +167,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
@@ -184,7 +189,9 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp" />
     <ClCompile Include="Src\Editor\EnsViewPanel.cpp" />
+    <ClCompile Include="Src\Editor\InspectorPanel.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorOverlay.cpp" />
+    <ClCompile Include="Src\Editor\ManagedEditorPanel.cpp" />
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
     <ClCompile Include="Src\Editor\PanelManager.cpp" />
     <ClCompile Include="Src\Editor\ProjectPanel.cpp" />
@@ -197,20 +204,15 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\EditorSystem.h" />
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorGizmoBridge.h" />
+    <ClInclude Include="Src\Editor\EditorLayoutState.h" />
     <ClInclude Include="Src\Editor\EnsViewPanel.h" />
+    <ClInclude Include="Src\Editor\InspectorPanel.h" />
     <ClInclude Include="Src\Editor\IEditorPanel.h" />
     <ClInclude Include="Src\Editor\ManagedEditorOverlay.h" />
+    <ClInclude Include="Src\Editor\ManagedEditorPanel.h" />
     <ClInclude Include="Src\Editor\NewProjectGenerator.h" />
     <ClInclude Include="Src\Editor\PanelManager.h" />
     <ClInclude Include="Src\Editor\ProjectPanel.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\OrbedenCore\OrbedenCore.vcxproj">
-      <Project>{b12e5123-bd9c-4d91-a1ba-879726128c33}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
-      <AdditionalProperties>OrbedenCoreOutputDir=$(ProjectDir)$(Platform)\$(Configuration)\</AdditionalProperties>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\ExampleProject\ExampleProject.oeproj" />
