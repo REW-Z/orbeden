@@ -1124,6 +1124,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
         collection.AddWarning("OBJ imported without triangles: " + sourceKey);
     }
 
+    mesh->TouchRevision();
     collection.AddObject(meshKey, mesh, true);
     return collection;
 }
@@ -1168,6 +1169,7 @@ AssetCollection AssetPipeline::Import_AsIndexlessMesh_OBJ(std::string path)
         subMesh.indexStart = 0;
         subMesh.indexCount = static_cast<uint32>(mesh->vertices.size());
         mesh->subMeshes.push_back(subMesh);
+        mesh->TouchRevision();
         break;
     }
 

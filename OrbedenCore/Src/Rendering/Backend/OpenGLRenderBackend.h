@@ -3,6 +3,7 @@
 #include "Rendering/Backend/OpenGLContext.h"
 #include "Rendering/Backend/RenderBackend.h"
 
+#include <string>
 #include <unordered_map>
 
 //OpenGL 渲染后端
@@ -12,10 +13,17 @@ private:
     OpenGLContext context;
     GpuShaderProgramID currentShaderProgram;
     GpuVertexInputID currentVertexInput;
+    uint32 currentTextureSlot = 0;
+    bool depthTestEnabled = false;
+    bool depthWriteEnabled = false;
+    bool blendEnabled = false;
     std::unordered_map<uint32, uint32> renderTargetColorAttachments;
     std::unordered_map<uint32, uint32> indexBufferCounts;
     std::unordered_map<uint32, uint32> vertexInputIndexBuffers;
     std::unordered_map<uint32, uint32> vertexInputIndexCounts;
+    std::unordered_map<uint32, uint32> boundTexture2Ds;
+    std::unordered_map<uint32, uint32> boundCubeTextures;
+    std::unordered_map<uint32, std::unordered_map<std::string, int32>> uniformLocations;
 
 public:
     bool Initialize(IWindow* window) override;
@@ -39,6 +47,7 @@ public:
     void DeleteCubeTexture(GpuCubeTextureID id) override;
     GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) override;
     void DeleteRenderTarget(GpuRenderTargetID id) override;
+    GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const override;
     GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) override;
     void DeleteShaderProgram(GpuShaderProgramID id) override;
 
@@ -54,8 +63,12 @@ public:
     void SetUniformFloat(const char* name, float32 value) override;
     void SetDepthTest(bool enabled) override;
     void SetDepthWrite(bool enabled) override;
+    void SetBlend(bool enabled) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
 
 private:
-    int32 GetUniformLocation(const char* name) const;
+    void ActivateTextureSlot(uint32 slot);
+    void BindTexture2D(uint32 slot, uint32 texture);
+    void InvalidateTexture2D(uint32 texture);
+    int32 GetUniformLocation(const char* name);
 };

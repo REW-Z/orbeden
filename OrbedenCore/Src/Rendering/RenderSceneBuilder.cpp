@@ -7,6 +7,7 @@
 #include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
+#include <cmath>
 
 void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewportWidth, int32 viewportHeight, RenderScene& scene)
 {
@@ -14,7 +15,6 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
     scene.renderSettings = world.renderSettings;
     spaceCache.Update(world);
 
-    float32 aspect = viewportHeight > 0 ? static_cast<float32>(viewportWidth) / static_cast<float32>(viewportHeight) : 1.0f;
     world.ForEachComponent<Camera>([&](Camera* camera)
     {
         if (!camera->enabled) return;
@@ -24,19 +24,39 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
         renderCamera.camera = camera;
         renderCamera.worldMatrix = spaceCache.GetWorldMatrix(renderCamera.ens);
         renderCamera.viewMatrix = RenderMath::Inverse(renderCamera.worldMatrix);
-        renderCamera.projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
+        renderCamera.fieldOfView = camera->fieldOfView;
+        renderCamera.nearPlane = camera->nearPlane;
+        renderCamera.farPlane = camera->farPlane;
+        renderCamera.drawLayerMask = camera->drawLayerMask;
+        renderCamera.clearMode = camera->clearMode;
+        renderCamera.clearColor = camera->clearColor;
+        renderCamera.renderTargetId = { camera->renderTargetId };
+        renderCamera.normalizedViewportX = std::clamp(camera->viewportX, 0.0f, 1.0f);
+        renderCamera.normalizedViewportY = std::clamp(camera->viewportY, 0.0f, 1.0f);
+        renderCamera.normalizedViewportWidth = std::clamp(camera->viewportWidth, 0.0f, 1.0f - renderCamera.normalizedViewportX);
+        renderCamera.normalizedViewportHeight = std::clamp(camera->viewportHeight, 0.0f, 1.0f - renderCamera.normalizedViewportY);
+        renderCamera.viewportX = static_cast<int32>(renderCamera.normalizedViewportX * static_cast<float32>(viewportWidth));
+        renderCamera.viewportY = static_cast<int32>(renderCamera.normalizedViewportY * static_cast<float32>(viewportHeight));
+        renderCamera.viewportWidth = std::max(0, static_cast<int32>(renderCamera.normalizedViewportWidth * static_cast<float32>(viewportWidth)));
+        renderCamera.viewportHeight = std::max(0, static_cast<int32>(renderCamera.normalizedViewportHeight * static_cast<float32>(viewportHeight)));
+        float32 aspect = renderCamera.viewportHeight > 0
+            ? static_cast<float32>(renderCamera.viewportWidth) / static_cast<float32>(renderCamera.viewportHeight)
+            : 1.0f;
+        renderCamera.projectionMatrix = RenderMath::Perspective(renderCamera.fieldOfView, aspect, renderCamera.nearPlane, renderCamera.farPlane);
         renderCamera.viewProjectionMatrix = RenderMath::Mul(renderCamera.projectionMatrix, renderCamera.viewMatrix);
         renderCamera.viewFrustum = RenderMath::BuildFrustum(renderCamera.viewProjectionMatrix);
         renderCamera.position = RenderMath::GetTranslation(renderCamera.worldMatrix);
         renderCamera.depth = camera->depth;
-        renderCamera.viewportWidth = viewportWidth;
-        renderCamera.viewportHeight = viewportHeight;
         scene.cameras.push_back(renderCamera);
     });
 
     std::sort(scene.cameras.begin(), scene.cameras.end(), [](const RenderCamera& a, const RenderCamera& b)
     {
-        return a.depth < b.depth;
+        float32 depthA = std::isfinite(a.depth) ? a.depth : 0.0f;
+        float32 depthB = std::isfinite(b.depth) ? b.depth : 0.0f;
+        if (depthA != depthB) return depthA < depthB;
+        if (a.ens.id != b.ens.id) return a.ens.id < b.ens.id;
+        return a.ens.version < b.ens.version;
     });
 
     world.ForEachComponent<DirectionalLight>([&](DirectionalLight* light)
@@ -71,7 +91,7 @@ void RenderSceneBuilder::Build(World& world, SpaceCache& spaceCache, int32 viewp
             return;
         }
 
-        bounds3 localBounds = RenderMath::CalculateBounds(mesh->vertices);
+        const bounds3& localBounds = mesh->GetLocalBounds();
         if (!localBounds.valid || mesh->indices.empty())
         {
             Log::Error("StaticMeshRenderer render skipped: mesh has no vertices or indices.");

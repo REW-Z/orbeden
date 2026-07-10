@@ -41,6 +41,7 @@ struct GpuMaterialTextureBinding
 public:
     std::string uniformName;
     std::string presenceUniformName;
+    Texture2D* sourceTexture = nullptr;
     GpuTextureID texture;
     bool hasTexture = false;
 };
@@ -81,12 +82,21 @@ public:
 class GpuResourceManager
 {
 private:
+    //GPU 缓存统一记录，保存资源数据和对应 CPU 对象的稳定路径。
+    template<typename T>
+    struct CacheEntry
+    {
+    public:
+        T resource;
+        std::string sourceKey;
+    };
+
     RenderBackend* backend = nullptr;
-    std::unordered_map<Mesh*, GpuMesh> meshes;
-    std::unordered_map<Texture2D*, GpuTextureID> textures;
-    std::unordered_map<Skybox*, GpuCubeTextureID> skyboxes;
-    std::unordered_map<Shader*, GpuShader> shaders;
-    std::unordered_map<Material*, GpuMaterial> materials;
+    std::unordered_map<Mesh*, CacheEntry<GpuMesh>> meshes;
+    std::unordered_map<Texture2D*, CacheEntry<GpuTextureID>> textures;
+    std::unordered_map<Skybox*, CacheEntry<GpuCubeTextureID>> skyboxes;
+    std::unordered_map<Shader*, CacheEntry<GpuShader>> shaders;
+    std::unordered_map<Material*, CacheEntry<GpuMaterial>> materials;
 
 public:
     //初始化资源管理器
@@ -96,7 +106,7 @@ public:
     void Shutdown();
 
     //获取或上传网格
-    GpuMesh GetMesh(Mesh* mesh);
+    const GpuMesh* GetMesh(Mesh* mesh);
 
     //获取或上传纹理
     GpuTextureID GetTexture(Texture2D* texture);
@@ -105,10 +115,10 @@ public:
     GpuCubeTextureID GetSkybox(Skybox* skybox);
 
     //获取或上传 shader
-    GpuShader GetShader(Shader* shader);
+    const GpuShader* GetShader(Shader* shader);
 
     //获取或上传材质
-    GpuMaterial GetMaterial(Material* material);
+    const GpuMaterial* GetMaterial(Material* material);
 
     //清理 CPU 对象已经销毁的 GPU 缓存
     void CollectUnused();

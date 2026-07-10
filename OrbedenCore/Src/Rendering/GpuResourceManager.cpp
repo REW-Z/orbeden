@@ -28,8 +28,15 @@ namespace
         return "u_Has" + name + "Texture";
     }
 
+    //释放普通缓存数据
+    template<typename T>
+    void DeleteGpuResource(RenderBackend*, T& resource)
+    {
+        resource = T();
+    }
+
     //释放 GPU Mesh 句柄
-    void DeleteGpuMesh(RenderBackend* backend, GpuMesh& mesh)
+    void DeleteGpuResource(RenderBackend* backend, GpuMesh& mesh)
     {
         if (!backend) return;
 
@@ -39,13 +46,61 @@ namespace
         mesh = GpuMesh();
     }
 
+    //释放 GPU 纹理句柄
+    void DeleteGpuResource(RenderBackend* backend, GpuTextureID& texture)
+    {
+        if (!backend) return;
+
+        backend->DeleteTexture(texture);
+        texture = GpuTextureID();
+    }
+
+    //释放 GPU 天空盒句柄
+    void DeleteGpuResource(RenderBackend* backend, GpuCubeTextureID& skybox)
+    {
+        if (!backend) return;
+
+        backend->DeleteCubeTexture(skybox);
+        skybox = GpuCubeTextureID();
+    }
+
     //释放 GPU Shader 句柄
-    void DeleteGpuShader(RenderBackend* backend, GpuShader& shader)
+    void DeleteGpuResource(RenderBackend* backend, GpuShader& shader)
     {
         if (!backend) return;
 
         backend->DeleteShaderProgram(shader.shaderProgram);
         shader = GpuShader();
+    }
+
+    //释放整个 GPU 缓存
+    template<typename TCache>
+    void DeleteGpuCache(RenderBackend* backend, TCache& cache)
+    {
+        for (auto& pair : cache)
+        {
+            DeleteGpuResource(backend, pair.second.resource);
+        }
+
+        cache.clear();
+    }
+
+    //清理 CPU 对象已经销毁的 GPU 缓存项
+    template<typename TCache>
+    void CollectUnusedCache(RenderBackend* backend, TCache& cache)
+    {
+        for (auto it = cache.begin(); it != cache.end();)
+        {
+            if (!Object::FindObject(StringId(it->second.sourceKey)))
+            {
+                DeleteGpuResource(backend, it->second.resource);
+                it = cache.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
     }
 }
 
@@ -56,55 +111,32 @@ void GpuResourceManager::Initialize(RenderBackend* renderBackend)
 
 void GpuResourceManager::Shutdown()
 {
-    if (backend)
-    {
-        for (auto& pair : meshes)
-        {
-            DeleteGpuMesh(backend, pair.second);
-        }
-
-        for (auto& pair : textures)
-        {
-            backend->DeleteTexture(pair.second);
-        }
-
-        for (auto& pair : skyboxes)
-        {
-            backend->DeleteCubeTexture(pair.second);
-        }
-
-        for (auto& pair : shaders)
-        {
-            DeleteGpuShader(backend, pair.second);
-        }
-    }
-
-    meshes.clear();
-    textures.clear();
-    skyboxes.clear();
-    shaders.clear();
-    materials.clear();
+    DeleteGpuCache(backend, materials);
+    DeleteGpuCache(backend, meshes);
+    DeleteGpuCache(backend, textures);
+    DeleteGpuCache(backend, skyboxes);
+    DeleteGpuCache(backend, shaders);
     backend = nullptr;
 }
 
-GpuMesh GpuResourceManager::GetMesh(Mesh* mesh)
+const GpuMesh* GpuResourceManager::GetMesh(Mesh* mesh)
 {
-    if (!backend || !mesh) return GpuMesh();
+    if (!backend || !mesh) return nullptr;
 
     auto it = meshes.find(mesh);
     uint64 meshRevision = mesh->GetRevision();
     if (it != meshes.end())
     {
-        if (it->second.meshRevision == meshRevision) return it->second;
+        if (it->second.resource.meshRevision == meshRevision) return &it->second.resource;
 
-        DeleteGpuMesh(backend, it->second);
+        DeleteGpuResource(backend, it->second.resource);
         meshes.erase(it);
     }
 
     if (mesh->vertices.empty() || mesh->indices.empty())
     {
         Log::Error("GpuResourceManager mesh upload failed: mesh has no vertices or indices.");
-        return GpuMesh();
+        return nullptr;
     }
 
     List<float32> vertexData;
@@ -157,11 +189,11 @@ GpuMesh GpuResourceManager::GetMesh(Mesh* mesh)
         backend->DeleteVertexInput(gpuMesh.vertexInput);
         backend->DeleteVertexBuffer(gpuMesh.vertexBuffer);
         backend->DeleteIndexBuffer(gpuMesh.indexBuffer);
-        return GpuMesh();
+        return nullptr;
     }
 
-    meshes[mesh] = gpuMesh;
-    return gpuMesh;
+    meshes[mesh] = { gpuMesh, gpuMesh.sourceKey };
+    return &meshes[mesh].resource;
 }
 
 GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
@@ -169,7 +201,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     if (!backend || !texture) return GpuTextureID();
 
     auto it = textures.find(texture);
-    if (it != textures.end()) return it->second;
+    if (it != textures.end()) return it->second.resource;
 
     GpuTextureDesc textureDesc;
     textureDesc.width = texture->width;
@@ -184,7 +216,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
         return GpuTextureID();
     }
 
-    textures[texture] = textureID;
+    textures[texture] = { textureID, texture->GetInstanceId().GetPath() };
     return textureID;
 }
 
@@ -193,7 +225,7 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
     if (!backend || !skybox) return GpuCubeTextureID();
 
     auto it = skyboxes.find(skybox);
-    if (it != skyboxes.end()) return it->second;
+    if (it != skyboxes.end()) return it->second.resource;
 
     Texture2D* faces[6] =
     {
@@ -235,21 +267,21 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
         return GpuCubeTextureID();
     }
 
-    skyboxes[skybox] = cubeTexture;
+    skyboxes[skybox] = { cubeTexture, skybox->GetInstanceId().GetPath() };
     return cubeTexture;
 }
 
-GpuShader GpuResourceManager::GetShader(Shader* shader)
+const GpuShader* GpuResourceManager::GetShader(Shader* shader)
 {
-    if (!backend || !shader) return GpuShader();
+    if (!backend || !shader) return nullptr;
 
     auto it = shaders.find(shader);
     uint64 shaderRevision = shader->GetRevision();
     if (it != shaders.end())
     {
-        if (it->second.shaderRevision == shaderRevision) return it->second;
+        if (it->second.resource.shaderRevision == shaderRevision) return &it->second.resource;
 
-        DeleteGpuShader(backend, it->second);
+        DeleteGpuResource(backend, it->second.resource);
         shaders.erase(it);
     }
 
@@ -264,32 +296,45 @@ GpuShader GpuResourceManager::GetShader(Shader* shader)
     if (!gpuShader.IsValid())
     {
         Log::Error("GpuResourceManager shader upload failed.");
-        return GpuShader();
+        return nullptr;
     }
 
-    shaders[shader] = gpuShader;
-    return gpuShader;
+    shaders[shader] = { gpuShader, gpuShader.sourceKey };
+    return &shaders[shader].resource;
 }
 
-GpuMaterial GpuResourceManager::GetMaterial(Material* material)
+const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
 {
-    if (!backend || !material) return GpuMaterial();
+    if (!backend || !material) return nullptr;
 
     Shader* shader = material->shader.Get();
     if (!shader)
     {
         Log::Error("GpuResourceManager material upload failed: shader is missing.");
-        return GpuMaterial();
+        return nullptr;
     }
 
     auto it = materials.find(material);
     uint64 shaderRevision = shader->GetRevision();
-    if (it != materials.end()
-        && it->second.sourceShader == shader
-        && it->second.materialRevision == material->GetRevision()
-        && it->second.shaderRevision == shaderRevision)
+    bool textureBindingsCurrent = true;
+    if (it != materials.end())
     {
-        return it->second;
+        for (const GpuMaterialTextureBinding& binding : it->second.resource.textureBindings)
+        {
+            if (material->GetTexture(binding.uniformName) != binding.sourceTexture)
+            {
+                textureBindingsCurrent = false;
+                break;
+            }
+        }
+    }
+    if (it != materials.end()
+        && it->second.resource.sourceShader == shader
+        && it->second.resource.materialRevision == material->GetRevision()
+        && it->second.resource.shaderRevision == shaderRevision
+        && textureBindingsCurrent)
+    {
+        return &it->second.resource;
     }
 
     GpuMaterial gpuMaterial;
@@ -297,8 +342,9 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
     gpuMaterial.sourceKey = material->GetInstanceId().GetPath();
     gpuMaterial.materialRevision = material->GetRevision();
     gpuMaterial.shaderRevision = shaderRevision;
-    gpuMaterial.shader = GetShader(shader);
-    if (!gpuMaterial.shader.IsValid()) return GpuMaterial();
+    const GpuShader* gpuShader = GetShader(shader);
+    if (!gpuShader || !gpuShader->IsValid()) return nullptr;
+    gpuMaterial.shader = *gpuShader;
 
     for (const ShaderTextureSlot& slot : shader->textureSlots)
     {
@@ -308,6 +354,7 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
         binding.uniformName = slot.name;
         binding.presenceUniformName = CreateTexturePresenceUniformName(slot.name);
         Texture2D* texture = material->GetTexture(slot.name);
+        binding.sourceTexture = texture;
         if (texture)
         {
             binding.texture = GetTexture(texture);
@@ -337,51 +384,17 @@ GpuMaterial GpuResourceManager::GetMaterial(Material* material)
         gpuMaterial.floatBindings.push_back(binding);
     }
 
-    materials[material] = gpuMaterial;
-    return gpuMaterial;
+    materials[material] = { gpuMaterial, gpuMaterial.sourceKey };
+    return &materials[material].resource;
 }
 
 void GpuResourceManager::CollectUnused()
 {
     if (!backend) return;
 
-    for (auto it = meshes.begin(); it != meshes.end();)
-    {
-        if (!Object::FindObject(StringId(it->second.sourceKey)))
-        {
-            DeleteGpuMesh(backend, it->second);
-            it = meshes.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    for (auto it = shaders.begin(); it != shaders.end();)
-    {
-        if (!Object::FindObject(StringId(it->second.sourceKey)))
-        {
-            DeleteGpuShader(backend, it->second);
-            it = shaders.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    for (auto it = materials.begin(); it != materials.end();)
-    {
-        bool materialAlive = Object::FindObject(StringId(it->second.sourceKey)) != nullptr;
-        bool shaderAlive = it->second.shader.sourceKey.empty() || Object::FindObject(StringId(it->second.shader.sourceKey)) != nullptr;
-        if (!materialAlive || !shaderAlive)
-        {
-            it = materials.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
+    CollectUnusedCache(backend, materials);
+    CollectUnusedCache(backend, meshes);
+    CollectUnusedCache(backend, textures);
+    CollectUnusedCache(backend, skyboxes);
+    CollectUnusedCache(backend, shaders);
 }

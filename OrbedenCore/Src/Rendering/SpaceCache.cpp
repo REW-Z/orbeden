@@ -30,15 +30,24 @@ namespace
 
 void SpaceCache::Update(World& currentWorld)
 {
+    bool worldChanged = world != &currentWorld;
     world = &currentWorld;
-    DetectTransformChanges(currentWorld);
+    dirtyNodes.clear();
+    DetectTransformChanges(currentWorld, worldChanged);
+    if (dirtyNodes.empty()) return;
 
-    currentWorld.ForEachEns([this](Ens& ens)
+    for (EnsId ens : dirtyNodes)
     {
-        if (ens.GetParent()) return;
+        SpaceComponent* space = currentWorld.GetSpaceComponent(ens);
+        if (!space || (!space->transformDirty && space->transformCacheInitialized)) continue;
 
-        UpdateNodeRecursive(ens.GetId(), matrix4x4(), quaternion(), false);
-    });
+        SpaceComponent* parentSpace = space->parent.IsNull() ? nullptr : currentWorld.GetSpaceComponent(space->parent);
+        if (parentSpace && (parentSpace->transformDirty || !parentSpace->transformCacheInitialized)) continue;
+
+        matrix4x4 parentMatrix = parentSpace ? parentSpace->worldMatrix : matrix4x4();
+        quaternion parentRotation = parentSpace ? parentSpace->worldRotation : quaternion();
+        UpdateNodeRecursive(ens, parentMatrix, parentRotation, false);
+    }
 }
 
 matrix4x4 SpaceCache::GetWorldMatrix(EnsId ens) const
@@ -48,25 +57,36 @@ matrix4x4 SpaceCache::GetWorldMatrix(EnsId ens) const
 }
 
 //检测 public local 字段变更并标记脏状态
-void SpaceCache::DetectTransformChanges(World& currentWorld)
+void SpaceCache::DetectTransformChanges(World& currentWorld, bool forceUpdate)
 {
-    currentWorld.ForEachEns([this](Ens& ens)
+    currentWorld.ForEachEns([this, &currentWorld, forceUpdate](Ens& ens)
     {
         SpaceComponent* space = ens.Space();
         if (!space) return;
 
-        bool changed = !space->transformCacheInitialized ||
+        bool changed = forceUpdate ||
+            !space->transformCacheInitialized ||
             space->cachedParent != space->parent ||
             !Equal(space->cachedLocalPosition, space->localPosition) ||
             !Equal(space->cachedLocalRotation, space->localRotation) ||
             !Equal(space->cachedLocalScale, space->localScale);
 
-        if (changed)
+        if (forceUpdate)
         {
-            if (!space->transformDirty)
-            {
-                MarkDirtyRecursive(ens.GetId());
-            }
+            space->transformDirty = true;
+        }
+        else if (changed && !space->transformDirty)
+        {
+            MarkDirtyRecursive(ens.GetId());
+        }
+
+        bool needsUpdate = changed || space->transformDirty || !space->transformCacheInitialized;
+        if (!needsUpdate) return;
+
+        SpaceComponent* parentSpace = space->parent.IsNull() ? nullptr : currentWorld.GetSpaceComponent(space->parent);
+        if (!parentSpace || (!parentSpace->transformDirty && parentSpace->transformCacheInitialized))
+        {
+            dirtyNodes.push_back(ens.GetId());
         }
     });
 }
@@ -100,27 +120,26 @@ void SpaceCache::UpdateNodeRecursive(EnsId ens, const matrix4x4& parentMatrix, c
     if (!space) return;
 
     bool dirty = parentDirty || space->transformDirty || !space->transformCacheInitialized;
-    if (dirty)
-    {
-        space->localMatrix = RenderMath::TRS(space->localPosition, space->localRotation, space->localScale);
-        space->worldMatrix = space->parent.IsNull() ? space->localMatrix : RenderMath::Mul(parentMatrix, space->localMatrix);
-        space->worldRotation = space->parent.IsNull() ? space->localRotation : Mul(parentRotation, space->localRotation);
-        space->worldPosition = RenderMath::GetTranslation(space->worldMatrix);
+    if (!dirty) return;
 
-        space->cachedLocalPosition = space->localPosition;
-        space->cachedLocalRotation = space->localRotation;
-        space->cachedLocalScale = space->localScale;
-        space->cachedParent = space->parent;
-        space->transformCacheInitialized = true;
-        space->transformDirty = false;
-    }
+    space->localMatrix = RenderMath::TRS(space->localPosition, space->localRotation, space->localScale);
+    space->worldMatrix = space->parent.IsNull() ? space->localMatrix : RenderMath::Mul(parentMatrix, space->localMatrix);
+    space->worldRotation = space->parent.IsNull() ? space->localRotation : Mul(parentRotation, space->localRotation);
+    space->worldPosition = RenderMath::GetTranslation(space->worldMatrix);
+
+    space->cachedLocalPosition = space->localPosition;
+    space->cachedLocalRotation = space->localRotation;
+    space->cachedLocalScale = space->localScale;
+    space->cachedParent = space->parent;
+    space->transformCacheInitialized = true;
+    space->transformDirty = false;
 
     EnsId child = space->firstChild;
     while (!child.IsNull())
     {
         SpaceComponent* childSpace = world->GetSpaceComponent(child);
         EnsId nextChild = childSpace ? childSpace->next : EnsId();
-        UpdateNodeRecursive(child, space->worldMatrix, space->worldRotation, dirty);
+        UpdateNodeRecursive(child, space->worldMatrix, space->worldRotation, true);
         child = nextChild;
     }
 }

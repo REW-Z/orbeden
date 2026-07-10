@@ -112,13 +112,14 @@ public:
     const uint8* faces[6] = {};
 };
 
-//GPU 渲染目标创建描述，当前 v1 用于只有深度附件的 shadow target。
+//GPU 渲染目标创建描述，可创建颜色+深度或纯深度目标。
 struct GpuRenderTargetDesc
 {
 public:
     int32 width = 0;
     int32 height = 0;
     GpuDepthTextureID depthTexture;
+    bool depthOnly = false;
 };
 
 //GPU shader 程序创建描述，描述顶点和片元 shader 源码。
@@ -138,6 +139,8 @@ public:
     GpuRenderTargetID renderTarget;
     ClearMode clearMode = ClearMode::SolidColor;
     color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+    int32 x = 0;
+    int32 y = 0;
 };
 
 //渲染后端抽象
@@ -167,6 +170,7 @@ public:
     virtual void DeleteCubeTexture(GpuCubeTextureID id) = 0;
     virtual GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) = 0;
     virtual void DeleteRenderTarget(GpuRenderTargetID id) = 0;
+    virtual GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const = 0;
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;
 
@@ -182,5 +186,6 @@ public:
     virtual void SetUniformFloat(const char* name, float32 value) = 0;
     virtual void SetDepthTest(bool enabled) = 0;
     virtual void SetDepthWrite(bool enabled) = 0;
+    virtual void SetBlend(bool enabled) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;
 };
