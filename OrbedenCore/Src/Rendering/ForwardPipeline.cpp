@@ -7,11 +7,22 @@
 #include "Runtime/Object/Shader.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace
 {
     constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth.orbshader";
     constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox.orbshader";
+
+    Shader* ResolveBuiltinShader(Ref<Shader>& shader, const char* key)
+    {
+        Shader* result = shader.Get();
+        if (result || !shader.GetInstanceId().IsValid()) return result;
+
+        result = ResourceManager::Load<Shader>(key);
+        shader.Set(result);
+        return result;
+    }
 
     vector3 Add(const vector3& a, const vector3& b)
     {
@@ -108,13 +119,13 @@ namespace
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
     backend = renderBackend;
-    shadowDepthShader = ResourceManager::Load<Shader>(ShadowDepthShaderKey);
-    skyboxShader = ResourceManager::Load<Shader>(SkyboxShaderKey);
-    if (!shadowDepthShader)
+    shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
+    skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
+    if (!shadowDepthShader.Get())
     {
         Log::Error("ForwardPipeline initialize warning: shadow depth shader resource is missing.");
     }
-    if (!skyboxShader)
+    if (!skyboxShader.Get())
     {
         Log::Error("ForwardPipeline initialize warning: skybox shader resource is missing.");
     }
@@ -131,11 +142,24 @@ void ForwardPipeline::Shutdown()
 
     shadowRenderTarget = GpuRenderTargetID();
     shadowDepthTexture = GpuDepthTextureID();
-    shadowDepthShader = nullptr;
-    skyboxShader = nullptr;
-    ResourceManager::Unload(ShadowDepthShaderKey);
-    ResourceManager::Unload(SkyboxShaderKey);
+    shadowDepthShader.Set(nullptr);
+    skyboxShader.Set(nullptr);
+    lightViewProjection = matrix4x4();
+    shadowReady = false;
     backend = nullptr;
+}
+
+void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& resources)
+{
+    shadowReady = false;
+    lightViewProjection = matrix4x4();
+    if (!backend) return;
+
+    const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
+    if (!shadowLight) return;
+
+    lightViewProjection = CalculateLightViewProjection(scene, *shadowLight);
+    shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, resources);
 }
 
 void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& resources)
@@ -145,108 +169,119 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     const RenderCamera& camera = visibleSet.camera;
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
     const RenderDirectionalLight* mainLight = shadowLight ? shadowLight : FindMainLight(scene);
-    matrix4x4 lightViewProjection;
-    bool shadowReady = false;
-    if (shadowLight)
-    {
-        lightViewProjection = CalculateLightViewProjection(scene, *shadowLight);
-        shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, resources);
-    }
 
     RenderPassDesc passDesc;
+    passDesc.x = camera.viewportX;
+    passDesc.y = camera.viewportY;
     passDesc.width = camera.viewportWidth;
     passDesc.height = camera.viewportHeight;
-    passDesc.clearMode = camera.camera ? camera.camera->clearMode : ClearMode::SolidColor;
-    passDesc.clearColor = camera.camera ? camera.camera->clearColor : color();
+    passDesc.renderTarget = camera.renderTarget;
+    passDesc.clearMode = camera.clearMode;
+    passDesc.clearColor = camera.clearColor;
     backend->BeginPass(passDesc);
     backend->SetDepthTest(true);
     backend->SetDepthWrite(true);
+    backend->SetBlend(false);
 
-    RenderSkybox(scene, camera, resources);
-
-    for (const RenderItem& item : visibleSet.items)
+    if (camera.clearMode == ClearMode::SolidColor)
     {
-        GpuMaterial material = resources.GetMaterial(item.material);
-        if (!material.IsValid())
+        RenderSkybox(scene, camera, resources);
+    }
+
+    std::unordered_set<uint32> configuredPrograms;
+    Material* boundMaterial = nullptr;
+    const GpuMaterial* boundGpuMaterial = nullptr;
+    DrawQueue activeQueue = DrawQueue::Opaque;
+    for (const VisibleItem& visibleItem : visibleSet.items)
+    {
+        if (visibleItem.itemIndex >= scene.items.size()) continue;
+        const RenderItem& item = scene.items[visibleItem.itemIndex];
+        if (item.drawQueue != activeQueue)
+        {
+            activeQueue = item.drawQueue;
+            bool transparent = activeQueue == DrawQueue::Transparent;
+            backend->SetDepthWrite(!transparent);
+            backend->SetBlend(transparent);
+            boundMaterial = nullptr;
+            boundGpuMaterial = nullptr;
+        }
+
+        bool materialChanged = boundMaterial != item.material;
+        const GpuMaterial* material = materialChanged ? resources.GetMaterial(item.material) : boundGpuMaterial;
+        if (!material || !material->IsValid())
         {
             Log::Error("ForwardPipeline draw skipped: material GPU resources are invalid.");
             continue;
         }
 
-        GpuMesh mesh = resources.GetMesh(item.mesh);
-        if (!mesh.IsValid())
+        const GpuMesh* mesh = resources.GetMesh(item.mesh);
+        if (!mesh || !mesh->IsValid())
         {
             Log::Error("ForwardPipeline draw skipped: mesh GPU resources are invalid.");
             continue;
         }
 
-        backend->BindShaderProgram(material.shader.shaderProgram);
+        backend->BindShaderProgram(material->shader.shaderProgram);
         backend->SetUniformMatrix4("u_Model", item.localToWorld);
-        backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-        backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
-        backend->SetUniformVector3("u_CameraPosition", camera.position);
-        backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
-        if (mainLight)
+        if (configuredPrograms.insert(material->shader.shaderProgram.id).second)
         {
-            backend->SetUniformVector3("u_LightDirection", mainLight->direction);
-            backend->SetUniformColor("u_LightColor", mainLight->color);
-            backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
-            backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
-            backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
-        }
-        else
-        {
-            backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
-            backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
-            backend->SetUniformFloat("u_LightIntensity", 0.0f);
-            backend->SetUniformFloat("u_ShadowBias", 0.004f);
-            backend->SetUniformFloat("u_ShadowStrength", 0.0f);
-        }
-
-        for (const GpuMaterialColorBinding& binding : material.colorBindings)
-        {
-            backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
-        }
-
-        for (const GpuMaterialFloatBinding& binding : material.floatBindings)
-        {
-            backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
-        }
-
-        uint32 materialTextureSlot = 0;
-        for (const GpuMaterialTextureBinding& binding : material.textureBindings)
-        {
-            backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(materialTextureSlot));
-            backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
-            if (binding.hasTexture)
+            backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+            backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
+            backend->SetUniformVector3("u_CameraPosition", camera.position);
+            backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
+            if (mainLight)
             {
-                backend->BindTexture(materialTextureSlot, binding.texture);
+                backend->SetUniformVector3("u_LightDirection", mainLight->direction);
+                backend->SetUniformColor("u_LightColor", mainLight->color);
+                backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
+                backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
+                backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
             }
             else
             {
-                backend->BindTexture(materialTextureSlot, GpuTextureID());
+                backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
+                backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
+                backend->SetUniformFloat("u_LightIntensity", 0.0f);
+                backend->SetUniformFloat("u_ShadowBias", 0.004f);
+                backend->SetUniformFloat("u_ShadowStrength", 0.0f);
+            }
+        }
+
+        uint32 materialTextureSlot = static_cast<uint32>(material->textureBindings.size());
+        if (materialChanged)
+        {
+            for (const GpuMaterialColorBinding& binding : material->colorBindings)
+            {
+                backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
             }
 
-            materialTextureSlot++;
+            for (const GpuMaterialFloatBinding& binding : material->floatBindings)
+            {
+                backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
+            }
+
+            for (uint32 slot = 0; slot < material->textureBindings.size(); ++slot)
+            {
+                const GpuMaterialTextureBinding& binding = material->textureBindings[slot];
+                backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
+                backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+                backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
+            }
+
+            backend->SetUniformInt("u_ShadowMap", static_cast<int32>(materialTextureSlot));
+            backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
+            backend->BindDepthTexture(materialTextureSlot, shadowReady ? shadowDepthTexture : GpuDepthTextureID());
+            boundMaterial = item.material;
+            boundGpuMaterial = material;
         }
 
-        uint32 shadowTextureSlot = materialTextureSlot;
-        backend->SetUniformInt("u_ShadowMap", static_cast<int32>(shadowTextureSlot));
-        backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
         backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
-        if (shadowReady)
-        {
-            backend->BindDepthTexture(shadowTextureSlot, shadowDepthTexture);
-        }
-        else
-        {
-            backend->BindDepthTexture(shadowTextureSlot, GpuDepthTextureID());
-        }
-
-        backend->BindVertexInput(mesh.vertexInput);
+        backend->BindVertexInput(mesh->vertexInput);
         backend->DrawIndexed(item.indexStart, item.indexCount);
     }
 
+    backend->SetBlend(false);
+    backend->SetDepthWrite(true);
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     backend->EndPass();
@@ -271,6 +306,7 @@ bool ForwardPipeline::PrepareShadowResources()
     targetDesc.width = shadowMapSize;
     targetDesc.height = shadowMapSize;
     targetDesc.depthTexture = shadowDepthTexture;
+    targetDesc.depthOnly = true;
     shadowRenderTarget = backend->CreateRenderTarget(targetDesc);
     if (!shadowRenderTarget.IsValid())
     {
@@ -349,10 +385,11 @@ bool ForwardPipeline::PrepareSkyboxMesh()
 
 bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& resources)
 {
-    if (!PrepareShadowResources() || !shadowDepthShader) return false;
+    Shader* sourceShader = ResolveBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
+    if (!PrepareShadowResources() || !sourceShader) return false;
 
-    GpuShader shader = resources.GetShader(shadowDepthShader);
-    if (!shader.IsValid()) return false;
+    const GpuShader* shader = resources.GetShader(sourceShader);
+    if (!shader || !shader->IsValid()) return false;
 
     RenderPassDesc passDesc;
     passDesc.width = shadowMapSize;
@@ -362,18 +399,21 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     backend->BeginPass(passDesc);
     backend->SetDepthTest(true);
     backend->SetDepthWrite(true);
-    backend->BindShaderProgram(shader.shaderProgram);
+    backend->SetBlend(false);
+    backend->BindShaderProgram(shader->shaderProgram);
     backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
 
+    frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
     for (const RenderItem& item : scene.items)
     {
         if (!item.castShadows) continue;
+        if (!RenderMath::Intersects(lightFrustum, item.worldBounds)) continue;
 
-        GpuMesh mesh = resources.GetMesh(item.mesh);
-        if (!mesh.IsValid()) continue;
+        const GpuMesh* mesh = resources.GetMesh(item.mesh);
+        if (!mesh || !mesh->IsValid()) continue;
 
         backend->SetUniformMatrix4("u_Model", item.localToWorld);
-        backend->BindVertexInput(mesh.vertexInput);
+        backend->BindVertexInput(mesh->vertexInput);
         backend->DrawIndexed(item.indexStart, item.indexCount);
     }
 
@@ -386,14 +426,15 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
 void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& resources)
 {
-    if (!scene.renderSettings.skyboxEnabled || !skyboxShader) return;
+    Shader* sourceShader = ResolveBuiltinShader(skyboxShader, SkyboxShaderKey);
+    if (!scene.renderSettings.skyboxEnabled || !sourceShader) return;
 
     Skybox* skybox = scene.renderSettings.skybox.Get();
     if (!skybox || !PrepareSkyboxMesh()) return;
 
     GpuCubeTextureID cubeTexture = resources.GetSkybox(skybox);
-    GpuShader shader = resources.GetShader(skyboxShader);
-    if (!cubeTexture.IsValid() || !shader.IsValid()) return;
+    const GpuShader* shader = resources.GetShader(sourceShader);
+    if (!cubeTexture.IsValid() || !shader || !shader->IsValid()) return;
 
     matrix4x4 view = camera.viewMatrix;
     view.m[12] = 0.0f;
@@ -403,7 +444,8 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
 
     backend->SetDepthTest(false);
     backend->SetDepthWrite(false);
-    backend->BindShaderProgram(shader.shaderProgram);
+    backend->SetBlend(false);
+    backend->BindShaderProgram(shader->shaderProgram);
     backend->SetUniformMatrix4("u_ViewProjection", viewProjection);
     backend->SetUniformInt("u_SkyboxTexture", 0);
     backend->BindCubeTexture(0, cubeTexture);

@@ -17,5 +17,13 @@ public:
     uint32 drawLayerMask = 0xFFFFFFFFu;
     ClearMode clearMode = ClearMode::SolidColor;
     color clearColor = { 0.1f, 0.12f, 0.16f, 1.0f };
-};
 
+    //归一化 viewport，坐标原点位于渲染目标左下角
+    float32 viewportX = 0.0f;
+    float32 viewportY = 0.0f;
+    float32 viewportWidth = 1.0f;
+    float32 viewportHeight = 1.0f;
+
+    //0 表示绘制到默认窗口帧缓冲；离屏目标由 RenderSystem 在运行时分配
+    uint32 renderTargetId = 0;
+};

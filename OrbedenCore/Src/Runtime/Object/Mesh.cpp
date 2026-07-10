@@ -1,5 +1,6 @@
 #include "Runtime/Object/Mesh.h"
 
+#include <algorithm>
 #include <cmath>
 
 OBJECT_TYPE_IMPLEMENT(Mesh, Object)
@@ -66,6 +67,45 @@ namespace
 uint64 Mesh::GetRevision() const
 {
     return revision;
+}
+
+const bounds3& Mesh::GetLocalBounds() const
+{
+    if (localBoundsRevision == revision) return localBounds;
+
+    localBounds = bounds3();
+    if (!vertices.empty())
+    {
+        vector3 minValue = vertices[0];
+        vector3 maxValue = vertices[0];
+        for (usize index = 1; index < vertices.size(); ++index)
+        {
+            const vector3& point = vertices[index];
+            minValue.x = std::min(minValue.x, point.x);
+            minValue.y = std::min(minValue.y, point.y);
+            minValue.z = std::min(minValue.z, point.z);
+            maxValue.x = std::max(maxValue.x, point.x);
+            maxValue.y = std::max(maxValue.y, point.y);
+            maxValue.z = std::max(maxValue.z, point.z);
+        }
+
+        localBounds.center =
+        {
+            (minValue.x + maxValue.x) * 0.5f,
+            (minValue.y + maxValue.y) * 0.5f,
+            (minValue.z + maxValue.z) * 0.5f,
+        };
+        localBounds.extents =
+        {
+            (maxValue.x - minValue.x) * 0.5f,
+            (maxValue.y - minValue.y) * 0.5f,
+            (maxValue.z - minValue.z) * 0.5f,
+        };
+        localBounds.valid = true;
+    }
+
+    localBoundsRevision = revision;
+    return localBounds;
 }
 
 void Mesh::TouchRevision()

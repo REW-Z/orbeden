@@ -8,6 +8,7 @@ class SpaceCache
 {
 private:
     World* world = nullptr;
+    List<EnsId> dirtyNodes;
 
 public:
     //更新世界矩阵缓存
@@ -18,7 +19,7 @@ public:
 
 private:
     //检测 public local 字段变更并标记脏状态
-    void DetectTransformChanges(World& currentWorld);
+    void DetectTransformChanges(World& currentWorld, bool forceUpdate);
 
     //递归标记子树脏状态
     void MarkDirtyRecursive(EnsId ens);

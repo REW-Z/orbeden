@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/RenderTypes.h"
 #include "Runtime/EngineTypes.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Material.h"
@@ -23,6 +24,8 @@ class Mesh : public Object
 
 private:
     uint64 revision = 1;
+    mutable uint64 localBoundsRevision = 0;
+    mutable bounds3 localBounds;
 
 public:
     std::string name;
@@ -35,6 +38,9 @@ public:
 
     //获取网格版本，用于刷新 GPU 缓存
     uint64 GetRevision() const;
+
+    //获取按网格版本缓存的本地包围盒
+    const bounds3& GetLocalBounds() const;
 
     //标记网格数据已修改
     void TouchRevision();

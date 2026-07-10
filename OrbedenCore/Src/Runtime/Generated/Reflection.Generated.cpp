@@ -131,6 +131,62 @@ public:
         return Reflection::SetFromXmlValue(instance->clearColor, value);
     }
 
+    //读取 Camera.viewportX 字段
+    static std::string Get_Camera_viewportX(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->viewportX);
+    }
+
+    //写入 Camera.viewportX 字段
+    static bool Set_Camera_viewportX(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->viewportX, value);
+    }
+
+    //读取 Camera.viewportY 字段
+    static std::string Get_Camera_viewportY(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->viewportY);
+    }
+
+    //写入 Camera.viewportY 字段
+    static bool Set_Camera_viewportY(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->viewportY, value);
+    }
+
+    //读取 Camera.viewportWidth 字段
+    static std::string Get_Camera_viewportWidth(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->viewportWidth);
+    }
+
+    //写入 Camera.viewportWidth 字段
+    static bool Set_Camera_viewportWidth(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->viewportWidth, value);
+    }
+
+    //读取 Camera.viewportHeight 字段
+    static std::string Get_Camera_viewportHeight(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::ToXmlValue(instance->viewportHeight);
+    }
+
+    //写入 Camera.viewportHeight 字段
+    static bool Set_Camera_viewportHeight(Object* object, const std::string& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return Reflection::SetFromXmlValue(instance->viewportHeight, value);
+    }
+
     //读取 DirectionalLight.enabled 字段
     static std::string Get_DirectionalLight_enabled(Object* object)
     {
@@ -431,6 +487,18 @@ public:
         return Reflection::Value(result);
     }
 
+    //调用 Material.TouchRevision 方法
+    static Reflection::Value Invoke_Material_TouchRevision_11(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->TouchRevision();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Mesh.name 字段
     static std::string Get_Mesh_name(Object* object)
     {
@@ -443,6 +511,68 @@ public:
     {
         Mesh* instance = static_cast<Mesh*>(object);
         return Reflection::SetFromXmlValue(instance->name, value);
+    }
+
+    //调用 Mesh.GetRevision 方法
+    static Reflection::Value Invoke_Mesh_GetRevision_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRevision();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Mesh.TouchRevision 方法
+    static Reflection::Value Invoke_Mesh_TouchRevision_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->TouchRevision();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Mesh.ClearGeometry 方法
+    static Reflection::Value Invoke_Mesh_ClearGeometry_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->ClearGeometry();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Mesh.ResizeSubMeshes 方法
+    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        int32 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        auto result = instance->ResizeSubMeshes(arg0);
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Mesh.RefreshNormals 方法
+    static Reflection::Value Invoke_Mesh_RefreshNormals_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->RefreshNormals();
+        success = true;
+        return Reflection::Value(result);
     }
 
     //读取 Shader.name 字段
@@ -523,6 +653,46 @@ public:
         if (!instance || args.size() != 0) return Reflection::Value();
 
         instance->ReflectSlotsFromSource();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Shader.ReplaceSource 方法
+    static Reflection::Value Invoke_Shader_ReplaceSource_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        std::string arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        std::string arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        instance->ReplaceSource(arg0, arg1);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Shader.GetRevision 方法
+    static Reflection::Value Invoke_Shader_GetRevision_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRevision();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Shader.TouchRevision 方法
+    static Reflection::Value Invoke_Shader_TouchRevision_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->TouchRevision();
         success = true;
         return Reflection::Value();
     }
@@ -737,6 +907,18 @@ public:
         return Reflection::SetFromXmlValue(instance->receiveShadows, value);
     }
 
+    //调用 StaticMeshRenderer.OnDetach 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Texture2D.name 字段
     static std::string Get_Texture2D_name(Object* object)
     {
@@ -828,6 +1010,11 @@ namespace Reflection
                 FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr),
                 FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr),
                 FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr),
+                FieldInfo("viewportX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportX, ReflectionGeneratedAccess::Set_Camera_viewportX, nullptr),
+                FieldInfo("viewportY", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportY, ReflectionGeneratedAccess::Set_Camera_viewportY, nullptr),
+                FieldInfo("viewportWidth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportWidth, ReflectionGeneratedAccess::Set_Camera_viewportWidth, nullptr),
+                FieldInfo("viewportHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportHeight, ReflectionGeneratedAccess::Set_Camera_viewportHeight, nullptr),
+                FieldInfo("renderTargetId", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Camera::StaticType(),
@@ -873,10 +1060,14 @@ namespace Reflection
                 MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_8),
                 MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_9),
                 MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_GetRevision_10),
+                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_TouchRevision_11),
             });
 
         RegisterTypeFields(Mesh::StaticType(),
             {
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
+                FieldInfo("localBoundsRevision", "mutable uint64", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("localBounds", "mutable bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr),
                 FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
@@ -888,10 +1079,16 @@ namespace Reflection
 
         RegisterTypeMethods(Mesh::StaticType(),
             {
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_GetRevision_0),
+                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_TouchRevision_1),
+                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_2),
+                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_3),
+                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_4),
             });
 
         RegisterTypeFields(Shader::StaticType(),
             {
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr),
                 FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr),
                 FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr),
@@ -905,6 +1102,9 @@ namespace Reflection
         RegisterTypeMethods(Shader::StaticType(),
             {
                 MethodInfo("ReflectSlotsFromSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
+                MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_1),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetRevision_2),
+                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_TouchRevision_3),
             });
 
         RegisterTypeFields(Skybox::StaticType(),
@@ -959,6 +1159,7 @@ namespace Reflection
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
             {
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_0),
             });
 
         RegisterTypeFields(Texture2D::StaticType(),

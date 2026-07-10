@@ -482,6 +482,28 @@ namespace
 
         return ToCleanPath(shadowAssembly);
     }
+
+    // GLFW 原生滚轮累积器，避免依赖 ImGui IO 时序
+    static float32 s_scrollDelta = 0.0f;
+    static GLFWscrollfun s_chainedScrollCallback = nullptr;
+    static bool s_scrollCallbackInstalled = false;
+
+    // GLFW 滚轮回调：累积增量并转发给被链回调（ImGui 等）
+    void EditorScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+    {
+        // 防重入：避免 GLFW 回调链中触发无限递归
+        static thread_local bool s_inScrollCallback = false;
+        if (s_inScrollCallback) return;
+        s_inScrollCallback = true;
+
+        s_scrollDelta += static_cast<float32>(yoffset);
+        if (s_chainedScrollCallback)
+        {
+            s_chainedScrollCallback(window, xoffset, yoffset);
+        }
+
+        s_inScrollCallback = false;
+    }
 }
 
 EditorSystem::EditorSystem(Application& application, const char* startupExecutablePath)
@@ -1267,17 +1289,24 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
 
     if (!ImGuiCapturesMouse())
     {
+        // 检测 Alt 键（Alt+左键旋转 / Alt+右键推拉）
+        bool altHeld = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
+                    || glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+
         int32 mode = 0;
-        if (IsMouseDown(window, GLFW_MOUSE_BUTTON_MIDDLE))
+        if (IsMouseDown(window, GLFW_MOUSE_BUTTON_RIGHT))
         {
+            // 右键：旋转（无 Alt）/ 推拉缩放（有 Alt）
+            mode = altHeld ? 3 : 1;
+        }
+        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_MIDDLE))
+        {
+            // 中键：平移
             mode = 2;
         }
-        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_RIGHT))
+        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_LEFT) && altHeld)
         {
-            mode = 3;
-        }
-        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_LEFT))
-        {
+            // Alt + 左键：围绕焦点旋转
             mode = 1;
         }
 
@@ -1293,12 +1322,14 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
                 float32 deltaY = static_cast<float32>(mouseY - previousMouseY);
                 if (mode == 1)
                 {
+                    // 旋转：右键拖拽 或 Alt+左键拖拽
                     cameraYaw -= deltaX * 0.12f;
                     cameraPitch -= deltaY * 0.12f;
                     cameraPitch = std::clamp(cameraPitch, -82.0f, 82.0f);
                 }
                 else if (mode == 2)
                 {
+                    // 平移：中键拖拽
                     constexpr float32 panScale = 0.01f;
                     vector3 right = RightFromYaw(cameraYaw);
                     vector3 up = UpFromYawPitch(cameraYaw, cameraPitch);
@@ -1307,6 +1338,7 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
                 }
                 else if (mode == 3)
                 {
+                    // 推拉缩放：Alt+右键前后拖拽
                     float32 dollyScale = cameraMoveSpeed * 0.01f;
                     vector3 forward = ForwardFromYawPitch(cameraYaw, cameraPitch);
                     space->localPosition = Add(space->localPosition, Scale(forward, -deltaY * dollyScale));
@@ -1322,6 +1354,21 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
         {
             cameraMouseDragging = false;
             cameraMouseMode = 0;
+        }
+
+        // 滚轮前后缩放：GLFW 回调只安装一次，避免每帧重复设置导致递归
+        if (!s_scrollCallbackInstalled)
+        {
+            GLFWscrollfun prevCallback = glfwSetScrollCallback(window, EditorScrollCallback);
+            s_chainedScrollCallback = prevCallback;
+            s_scrollCallbackInstalled = true;
+        }
+
+        if (s_scrollDelta != 0.0f)
+        {
+            vector3 forward = ForwardFromYawPitch(cameraYaw, cameraPitch);
+            space->localPosition = Add(space->localPosition, Scale(forward, s_scrollDelta * cameraMoveSpeed * 0.5f));
+            s_scrollDelta = 0.0f;
         }
     }
     else

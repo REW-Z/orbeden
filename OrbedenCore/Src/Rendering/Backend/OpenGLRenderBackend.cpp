@@ -127,9 +127,21 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
+    glActiveTexture(GL_TEXTURE0);
+
+    currentShaderProgram = GpuShaderProgramID();
+    currentVertexInput = GpuVertexInputID();
+    currentTextureSlot = 0;
+    depthTestEnabled = true;
+    depthWriteEnabled = true;
+    blendEnabled = true;
+    boundTexture2Ds.clear();
+    boundCubeTextures.clear();
+    uniformLocations.clear();
     LogOpenGLError("OpenGLRenderBackend::Initialize");
     return true;
 }
@@ -138,16 +150,28 @@ void OpenGLRenderBackend::Shutdown()
 {
     for (auto& pair : renderTargetColorAttachments)
     {
-        GLuint texture = pair.second;
-        glDeleteTextures(1, &texture);
+        GLuint framebuffer = pair.first;
+        glDeleteFramebuffers(1, &framebuffer);
+        if (pair.second != 0)
+        {
+            GLuint texture = pair.second;
+            glDeleteTextures(1, &texture);
+        }
     }
 
     renderTargetColorAttachments.clear();
     indexBufferCounts.clear();
     vertexInputIndexBuffers.clear();
     vertexInputIndexCounts.clear();
+    boundTexture2Ds.clear();
+    boundCubeTextures.clear();
+    uniformLocations.clear();
     currentVertexInput = GpuVertexInputID();
     currentShaderProgram = GpuShaderProgramID();
+    currentTextureSlot = 0;
+    depthTestEnabled = false;
+    depthWriteEnabled = false;
+    blendEnabled = false;
 }
 
 void OpenGLRenderBackend::BeginFrame()
@@ -161,7 +185,7 @@ void OpenGLRenderBackend::EndFrame()
 void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, desc.renderTarget.id);
-    glViewport(0, 0, desc.width, desc.height);
+    glViewport(desc.x, desc.y, desc.width, desc.height);
 
     GLbitfield clearMask = 0;
     if (desc.clearMode == ClearMode::SolidColor)
@@ -176,7 +200,13 @@ void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
 
     if (clearMask != 0)
     {
+        bool restoreDepthMask = (clearMask & GL_DEPTH_BUFFER_BIT) != 0 && !depthWriteEnabled;
+        if (restoreDepthMask) glDepthMask(GL_TRUE);
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(desc.x, desc.y, desc.width, desc.height);
         glClear(clearMask);
+        glDisable(GL_SCISSOR_TEST);
+        if (restoreDepthMask) glDepthMask(GL_FALSE);
     }
 }
 
@@ -232,7 +262,7 @@ GpuVertexInputID OpenGLRenderBackend::CreateVertexInput(const GpuVertexInputDesc
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 8));
     glEnableVertexAttribArray(3);
 
-    glBindVertexArray(0);
+    glBindVertexArray(currentVertexInput.id);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     vertexInputIndexBuffers[id] = desc.indexBuffer.id;
     vertexInputIndexCounts[id] = indexCountIt->second;
@@ -242,6 +272,12 @@ GpuVertexInputID OpenGLRenderBackend::CreateVertexInput(const GpuVertexInputDesc
 void OpenGLRenderBackend::DeleteVertexInput(GpuVertexInputID id)
 {
     if (!id.IsValid()) return;
+
+    if (currentVertexInput.id == id.id)
+    {
+        glBindVertexArray(0);
+        currentVertexInput = GpuVertexInputID();
+    }
 
     vertexInputIndexBuffers.erase(id.id);
     vertexInputIndexCounts.erase(id.id);
@@ -263,6 +299,7 @@ GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexImage2D(GL_TEXTURE_2D, 0, format, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.pixels);
     glBindTexture(GL_TEXTURE_2D, 0);
+    boundTexture2Ds[currentTextureSlot] = 0;
     return { id };
 }
 
@@ -270,6 +307,7 @@ void OpenGLRenderBackend::DeleteTexture(GpuTextureID id)
 {
     if (!id.IsValid()) return;
 
+    InvalidateTexture2D(id.id);
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
 }
@@ -287,6 +325,7 @@ GpuDepthTextureID OpenGLRenderBackend::CreateDepthTexture(const GpuDepthTextureD
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, desc.width, desc.height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
+    boundTexture2Ds[currentTextureSlot] = 0;
     return { id };
 }
 
@@ -294,6 +333,7 @@ void OpenGLRenderBackend::DeleteDepthTexture(GpuDepthTextureID id)
 {
     if (!id.IsValid()) return;
 
+    InvalidateTexture2D(id.id);
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
 }
@@ -317,6 +357,7 @@ GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc
         if (!desc.faces[face])
         {
             glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+            boundCubeTextures[currentTextureSlot] = 0;
             glDeleteTextures(1, &id);
             return GpuCubeTextureID();
         }
@@ -325,12 +366,18 @@ GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc
     }
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    boundCubeTextures[currentTextureSlot] = 0;
     return { id };
 }
 
 void OpenGLRenderBackend::DeleteCubeTexture(GpuCubeTextureID id)
 {
     if (!id.IsValid()) return;
+
+    for (auto& pair : boundCubeTextures)
+    {
+        if (pair.second == id.id) pair.second = 0;
+    }
 
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
@@ -341,21 +388,32 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     if (!desc.depthTexture.IsValid() || desc.width <= 0 || desc.height <= 0) return GpuRenderTargetID();
 
     GLuint colorTexture = 0;
-    glGenTextures(1, &colorTexture);
-    glBindTexture(GL_TEXTURE_2D, colorTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, desc.width, desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    if (!desc.depthOnly)
+    {
+        glGenTextures(1, &colorTexture);
+        glBindTexture(GL_TEXTURE_2D, colorTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, desc.width, desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        boundTexture2Ds[currentTextureSlot] = 0;
+    }
 
     GLuint id = 0;
     glGenFramebuffers(1, &id);
     glBindFramebuffer(GL_FRAMEBUFFER, id);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, desc.depthTexture.id, 0);
-    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    if (desc.depthOnly)
+    {
+        glDrawBuffer(GL_NONE);
+    }
+    else
+    {
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    }
     glReadBuffer(GL_NONE);
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -364,7 +422,7 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     {
         Log::Error("OpenGL framebuffer creation failed.");
         glDeleteFramebuffers(1, &id);
-        glDeleteTextures(1, &colorTexture);
+        if (colorTexture != 0) glDeleteTextures(1, &colorTexture);
         return GpuRenderTargetID();
     }
 
@@ -383,9 +441,21 @@ void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
     if (it != renderTargetColorAttachments.end())
     {
         GLuint colorTexture = it->second;
-        glDeleteTextures(1, &colorTexture);
+        if (colorTexture != 0)
+        {
+            InvalidateTexture2D(colorTexture);
+            glDeleteTextures(1, &colorTexture);
+        }
         renderTargetColorAttachments.erase(it);
     }
+}
+
+GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID id) const
+{
+    auto it = renderTargetColorAttachments.find(id.id);
+    if (it == renderTargetColorAttachments.end() || it->second == 0) return GpuTextureID();
+
+    return { it->second };
 }
 
 GpuShaderProgramID OpenGLRenderBackend::CreateShaderProgram(const GpuShaderProgramDesc& desc)
@@ -424,46 +494,50 @@ void OpenGLRenderBackend::DeleteShaderProgram(GpuShaderProgramID id)
 {
     if (!id.IsValid()) return;
 
+    if (currentShaderProgram.id == id.id)
+    {
+        glUseProgram(0);
+        currentShaderProgram = GpuShaderProgramID();
+    }
+
     glDeleteProgram(id.id);
-    if (currentShaderProgram.id == id.id) currentShaderProgram = GpuShaderProgramID();
+    uniformLocations.erase(id.id);
 }
 
 void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
 {
+    if (currentShaderProgram.id == id.id) return;
+
     currentShaderProgram = id;
     glUseProgram(id.id);
 }
 
 void OpenGLRenderBackend::BindVertexInput(GpuVertexInputID id)
 {
+    if (currentVertexInput.id == id.id) return;
+
     currentVertexInput = id;
     glBindVertexArray(id.id);
-    if (id.IsValid())
-    {
-        auto it = vertexInputIndexBuffers.find(id.id);
-        if (it != vertexInputIndexBuffers.end())
-        {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, it->second);
-        }
-    }
 }
 
 void OpenGLRenderBackend::BindTexture(uint32 slot, GpuTextureID id)
 {
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, id.id);
+    BindTexture2D(slot, id.id);
 }
 
 void OpenGLRenderBackend::BindDepthTexture(uint32 slot, GpuDepthTextureID id)
 {
-    glActiveTexture(GL_TEXTURE0 + slot);
-    glBindTexture(GL_TEXTURE_2D, id.id);
+    BindTexture2D(slot, id.id);
 }
 
 void OpenGLRenderBackend::BindCubeTexture(uint32 slot, GpuCubeTextureID id)
 {
-    glActiveTexture(GL_TEXTURE0 + slot);
+    auto it = boundCubeTextures.find(slot);
+    if (it != boundCubeTextures.end() && it->second == id.id) return;
+
+    ActivateTextureSlot(slot);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id.id);
+    boundCubeTextures[slot] = id.id;
 }
 
 void OpenGLRenderBackend::SetUniformMatrix4(const char* name, const matrix4x4& value)
@@ -508,6 +582,8 @@ void OpenGLRenderBackend::SetUniformFloat(const char* name, float32 value)
 
 void OpenGLRenderBackend::SetDepthTest(bool enabled)
 {
+    if (depthTestEnabled == enabled) return;
+
     if (enabled)
     {
         glEnable(GL_DEPTH_TEST);
@@ -516,11 +592,32 @@ void OpenGLRenderBackend::SetDepthTest(bool enabled)
     {
         glDisable(GL_DEPTH_TEST);
     }
+
+    depthTestEnabled = enabled;
 }
 
 void OpenGLRenderBackend::SetDepthWrite(bool enabled)
 {
+    if (depthWriteEnabled == enabled) return;
+
     glDepthMask(enabled ? GL_TRUE : GL_FALSE);
+    depthWriteEnabled = enabled;
+}
+
+void OpenGLRenderBackend::SetBlend(bool enabled)
+{
+    if (blendEnabled == enabled) return;
+
+    if (enabled)
+    {
+        glEnable(GL_BLEND);
+    }
+    else
+    {
+        glDisable(GL_BLEND);
+    }
+
+    blendEnabled = enabled;
 }
 
 void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
@@ -547,14 +644,45 @@ void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
         }
     }
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferIt->second);
     const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset);
 }
 
-int32 OpenGLRenderBackend::GetUniformLocation(const char* name) const
+void OpenGLRenderBackend::ActivateTextureSlot(uint32 slot)
+{
+    if (currentTextureSlot == slot) return;
+
+    glActiveTexture(GL_TEXTURE0 + slot);
+    currentTextureSlot = slot;
+}
+
+void OpenGLRenderBackend::BindTexture2D(uint32 slot, uint32 texture)
+{
+    auto it = boundTexture2Ds.find(slot);
+    if (it != boundTexture2Ds.end() && it->second == texture) return;
+
+    ActivateTextureSlot(slot);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    boundTexture2Ds[slot] = texture;
+}
+
+void OpenGLRenderBackend::InvalidateTexture2D(uint32 texture)
+{
+    for (auto& pair : boundTexture2Ds)
+    {
+        if (pair.second == texture) pair.second = 0;
+    }
+}
+
+int32 OpenGLRenderBackend::GetUniformLocation(const char* name)
 {
     if (!currentShaderProgram.IsValid() || !name) return -1;
 
-    return glGetUniformLocation(currentShaderProgram.id, name);
+    auto& locations = uniformLocations[currentShaderProgram.id];
+    auto it = locations.find(name);
+    if (it != locations.end()) return it->second;
+
+    int32 location = glGetUniformLocation(currentShaderProgram.id, name);
+    locations.emplace(name, location);
+    return location;
 }

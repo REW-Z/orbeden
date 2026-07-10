@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/Backend/RenderBackend.h"
 #include "Rendering/RenderTypes.h"
 #include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/RenderSettings.h"
@@ -19,6 +20,20 @@ public:
     frustum viewFrustum;
     vector3 position;
     float32 depth = 0.0f;
+    float32 fieldOfView = 60.0f;
+    float32 nearPlane = 0.1f;
+    float32 farPlane = 1000.0f;
+    uint32 drawLayerMask = 0xFFFFFFFFu;
+    ClearMode clearMode = ClearMode::SolidColor;
+    color clearColor = { 0.1f, 0.12f, 0.16f, 1.0f };
+    RenderTargetID renderTargetId;
+    GpuRenderTargetID renderTarget;
+    float32 normalizedViewportX = 0.0f;
+    float32 normalizedViewportY = 0.0f;
+    float32 normalizedViewportWidth = 1.0f;
+    float32 normalizedViewportHeight = 1.0f;
+    int32 viewportX = 0;
+    int32 viewportY = 0;
     int32 viewportWidth = 0;
     int32 viewportHeight = 0;
 };
@@ -40,7 +55,6 @@ public:
     bounds3 localBounds;
     bounds3 worldBounds;
     vector3 worldPosition;
-    float32 cameraDistance = 0.0f;
     bool castShadows = true;
     bool receiveShadows = true;
 };
@@ -73,12 +87,20 @@ public:
     void Clear();
 };
 
+//单个相机的紧凑可见项
+struct VisibleItem
+{
+public:
+    uint32 itemIndex = 0;
+    float32 cameraDistance = 0.0f;
+};
+
 //单个相机的可见集合
 struct VisibleSet
 {
 public:
     RenderCamera camera;
-    List<RenderItem> items;
+    List<VisibleItem> items;
 
     //清空可见集合
     void Clear();

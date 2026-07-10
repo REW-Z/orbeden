@@ -1,6 +1,32 @@
 #include "Rendering/RenderSystem.h"
 
 #include "Log/Log.h"
+#include "Rendering/RenderMath.h"
+
+#include <algorithm>
+
+namespace
+{
+    void CalculateViewportAxis(float32 normalizedStart, float32 normalizedSize, int32 targetSize, int32& start, int32& size)
+    {
+        if (targetSize <= 0)
+        {
+            start = 0;
+            size = 0;
+            return;
+        }
+
+        start = std::clamp(static_cast<int32>(normalizedStart * static_cast<float32>(targetSize)), 0, targetSize - 1);
+        if (normalizedSize <= 0.0f)
+        {
+            size = 0;
+            return;
+        }
+
+        int32 end = std::clamp(static_cast<int32>((normalizedStart + normalizedSize) * static_cast<float32>(targetSize)), start + 1, targetSize);
+        size = end - start;
+    }
+}
 
 bool RenderSystem::Initialize(IWindow* renderWindow)
 {
@@ -36,6 +62,7 @@ void RenderSystem::Shutdown()
 {
     renderOverlay = nullptr;
     imguiLayer.Shutdown();
+    ReleaseRenderTargets();
     forwardPipeline.Shutdown();
     resources.Shutdown();
     backend.Shutdown();
@@ -53,10 +80,94 @@ void RenderSystem::SetFpsLabelVisible(bool value)
     fpsLabelVisible = value;
 }
 
+RenderTargetID RenderSystem::CreateRenderTarget(int32 width, int32 height)
+{
+    if (!initialized || width <= 0 || height <= 0) return RenderTargetID();
+
+    GpuDepthTextureDesc depthDesc;
+    depthDesc.width = width;
+    depthDesc.height = height;
+    GpuDepthTextureID depthTexture = backend.CreateDepthTexture(depthDesc);
+    if (!depthTexture.IsValid()) return RenderTargetID();
+
+    GpuRenderTargetDesc targetDesc;
+    targetDesc.width = width;
+    targetDesc.height = height;
+    targetDesc.depthTexture = depthTexture;
+    GpuRenderTargetID renderTarget = backend.CreateRenderTarget(targetDesc);
+    if (!renderTarget.IsValid())
+    {
+        backend.DeleteDepthTexture(depthTexture);
+        return RenderTargetID();
+    }
+
+    RenderTargetID id;
+    do
+    {
+        id.id = nextRenderTargetId++;
+        if (nextRenderTargetId == 0) nextRenderTargetId = 1;
+    } while (!id.IsValid() || FindRenderTarget(id));
+
+    renderTargets.push_back({ id, depthTexture, renderTarget, width, height });
+    return id;
+}
+
+bool RenderSystem::ResizeRenderTarget(RenderTargetID id, int32 width, int32 height)
+{
+    ManagedRenderTarget* target = FindRenderTarget(id);
+    if (!target || width <= 0 || height <= 0) return false;
+    if (target->width == width && target->height == height) return true;
+
+    GpuDepthTextureDesc depthDesc;
+    depthDesc.width = width;
+    depthDesc.height = height;
+    GpuDepthTextureID depthTexture = backend.CreateDepthTexture(depthDesc);
+    if (!depthTexture.IsValid()) return false;
+
+    GpuRenderTargetDesc targetDesc;
+    targetDesc.width = width;
+    targetDesc.height = height;
+    targetDesc.depthTexture = depthTexture;
+    GpuRenderTargetID renderTarget = backend.CreateRenderTarget(targetDesc);
+    if (!renderTarget.IsValid())
+    {
+        backend.DeleteDepthTexture(depthTexture);
+        return false;
+    }
+
+    backend.DeleteRenderTarget(target->renderTarget);
+    backend.DeleteDepthTexture(target->depthTexture);
+    target->renderTarget = renderTarget;
+    target->depthTexture = depthTexture;
+    target->width = width;
+    target->height = height;
+    return true;
+}
+
+void RenderSystem::DeleteRenderTarget(RenderTargetID id)
+{
+    auto it = std::find_if(renderTargets.begin(), renderTargets.end(), [id](const ManagedRenderTarget& target)
+    {
+        return target.id == id;
+    });
+    if (it == renderTargets.end()) return;
+
+    backend.DeleteRenderTarget(it->renderTarget);
+    backend.DeleteDepthTexture(it->depthTexture);
+    renderTargets.erase(it);
+}
+
+GpuTextureID RenderSystem::GetRenderTargetTexture(RenderTargetID id) const
+{
+    const ManagedRenderTarget* target = FindRenderTarget(id);
+    return target ? backend.GetRenderTargetColorTexture(target->renderTarget) : GpuTextureID();
+}
+
 void RenderSystem::PrepareProjectReload()
 {
     if (!initialized) return;
 
+    ReleaseRenderTargets();
     forwardPipeline.Shutdown();
     resources.Shutdown();
     warnedMissingCamera = false;
@@ -78,6 +189,7 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     resources.CollectUnused();
     sceneBuilder.Build(world, spaceCache, framebufferWidth, framebufferHeight, scene);
+    ResolveCameraTargets();
     backend.BeginFrame();
     if (scene.cameras.empty())
     {
@@ -100,10 +212,12 @@ void RenderSystem::Render(World& world, float deltaTime)
     }
 
     warnedMissingCamera = false;
+    forwardPipeline.PrepareFrame(scene, resources);
     for (const RenderCamera& camera : scene.cameras)
     {
+        if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
         culler.Cull(scene, camera, visibleSet);
-        sorter.Sort(visibleSet);
+        sorter.Sort(scene, visibleSet);
         forwardPipeline.Render(scene, visibleSet, resources);
     }
     RenderDebugOverlay();
@@ -116,8 +230,75 @@ void RenderSystem::OnWindowResize(int width, int height)
     framebufferHeight = height;
 }
 
+RenderSystem::ManagedRenderTarget* RenderSystem::FindRenderTarget(RenderTargetID id)
+{
+    for (ManagedRenderTarget& target : renderTargets)
+    {
+        if (target.id == id) return &target;
+    }
+
+    return nullptr;
+}
+
+const RenderSystem::ManagedRenderTarget* RenderSystem::FindRenderTarget(RenderTargetID id) const
+{
+    for (const ManagedRenderTarget& target : renderTargets)
+    {
+        if (target.id == id) return &target;
+    }
+
+    return nullptr;
+}
+
+void RenderSystem::ReleaseRenderTargets()
+{
+    for (ManagedRenderTarget& target : renderTargets)
+    {
+        backend.DeleteRenderTarget(target.renderTarget);
+        backend.DeleteDepthTexture(target.depthTexture);
+    }
+
+    renderTargets.clear();
+}
+
+void RenderSystem::ResolveCameraTargets()
+{
+    for (RenderCamera& camera : scene.cameras)
+    {
+        const ManagedRenderTarget* target = FindRenderTarget(camera.renderTargetId);
+        if (camera.renderTargetId.IsValid() && !target)
+        {
+            camera.renderTarget = GpuRenderTargetID();
+            camera.viewportWidth = 0;
+            camera.viewportHeight = 0;
+            continue;
+        }
+
+        int32 targetWidth = target ? target->width : framebufferWidth;
+        int32 targetHeight = target ? target->height : framebufferHeight;
+        camera.renderTarget = target ? target->renderTarget : GpuRenderTargetID();
+
+        CalculateViewportAxis(camera.normalizedViewportX, camera.normalizedViewportWidth, targetWidth, camera.viewportX, camera.viewportWidth);
+        CalculateViewportAxis(camera.normalizedViewportY, camera.normalizedViewportHeight, targetHeight, camera.viewportY, camera.viewportHeight);
+        if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
+
+        float32 aspect = static_cast<float32>(camera.viewportWidth) / static_cast<float32>(camera.viewportHeight);
+        camera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
+        camera.viewProjectionMatrix = RenderMath::Mul(camera.projectionMatrix, camera.viewMatrix);
+        camera.viewFrustum = RenderMath::BuildFrustum(camera.viewProjectionMatrix);
+    }
+}
+
 void RenderSystem::RenderDebugOverlay()
 {
+    if (!imguiLayer.IsInitialized()) return;
+
+    RenderPassDesc passDesc;
+    passDesc.width = framebufferWidth;
+    passDesc.height = framebufferHeight;
+    passDesc.clearMode = ClearMode::None;
+    backend.BeginPass(passDesc);
+
     imguiLayer.BeginFrame();
     if (renderOverlay)
     {
@@ -128,4 +309,5 @@ void RenderSystem::RenderDebugOverlay()
         imguiLayer.DrawFpsLabel();
     }
     imguiLayer.Render();
+    backend.EndPass();
 }

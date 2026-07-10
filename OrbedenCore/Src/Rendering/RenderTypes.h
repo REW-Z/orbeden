@@ -23,6 +23,17 @@ enum class DrawQueue : uint32
     Transparent = 1,
 };
 
+//渲染系统创建的离屏目标句柄，0 表示默认窗口帧缓冲
+struct RenderTargetID
+{
+public:
+    uint32 id = 0;
+
+    bool IsValid() const { return id != 0; }
+    bool operator==(const RenderTargetID& other) const { return id == other.id; }
+    bool operator!=(const RenderTargetID& other) const { return id != other.id; }
+};
+
 //轻量矩阵，按 OpenGL 习惯使用列主序
 struct matrix4x4
 {
@@ -59,4 +70,3 @@ struct frustum
 public:
     plane3 planes[6];
 };
-

@@ -9,11 +9,13 @@ class ForwardPipeline
 {
 private:
     RenderBackend* backend = nullptr;
-    Shader* shadowDepthShader = nullptr;
-    Shader* skyboxShader = nullptr;
+    Ref<Shader> shadowDepthShader;
+    Ref<Shader> skyboxShader;
     GpuDepthTextureID shadowDepthTexture;
     GpuRenderTargetID shadowRenderTarget;
     GpuMesh skyboxMesh;
+    matrix4x4 lightViewProjection;
+    bool shadowReady = false;
     int32 shadowMapSize = 1024;
 
 public:
@@ -22,6 +24,9 @@ public:
 
     //释放管线持有的内置资源
     void Shutdown();
+
+    //准备当前帧共享的阴影资源
+    void PrepareFrame(const RenderScene& scene, GpuResourceManager& resources);
 
     //渲染可见集合
     void Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& resources);
