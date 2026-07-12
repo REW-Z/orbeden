@@ -115,6 +115,17 @@ namespace
         return value == "true" || value == "1";
     }
 
+    //读取整数属性。
+    int32 GetIntAttribute(const std::string& text, const std::string& name, int32 defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        char* end = nullptr;
+        long result = std::strtol(value.c_str(), &end, 10);
+        return end != value.c_str() ? static_cast<int32>(result) : defaultValue;
+    }
+
     //读取编辑器布局块。
     void ReadEditorLayout(const std::string& content, EditorLayoutState& layout)
     {
@@ -127,6 +138,12 @@ namespace
         if (layoutEnd == std::string::npos) return;
 
         std::string block = content.substr(layoutStart, layoutEnd - layoutStart);
+        std::size_t layoutTokenEnd = block.find('>');
+        if (layoutTokenEnd != std::string::npos)
+        {
+            std::string layoutToken = block.substr(0, layoutTokenEnd + 1);
+            layout.dockRoot = GetIntAttribute(layoutToken, "dockRoot", -1);
+        }
 
         //读取面板布局。
         std::size_t panelPosition = 0;
@@ -145,12 +162,33 @@ namespace
             panel.position.y = GetFloatAttribute(panelToken, "y", 0.0f);
             panel.size.x = GetFloatAttribute(panelToken, "width", 0.0f);
             panel.size.y = GetFloatAttribute(panelToken, "height", 0.0f);
+            panel.dockNode = GetIntAttribute(panelToken, "dockNode", -1);
             if (!panel.id.empty())
             {
                 layout.panels.push_back(panel);
             }
 
             panelPosition = panelEnd + 1;
+        }
+
+        //读取停靠树。
+        std::size_t dockPosition = 0;
+        while ((dockPosition = block.find("<DockNode", dockPosition)) != std::string::npos)
+        {
+            std::size_t dockEnd = block.find('>', dockPosition);
+            if (dockEnd == std::string::npos) break;
+
+            std::string dockToken = block.substr(dockPosition, dockEnd - dockPosition + 1);
+            EditorDockNodeState node;
+            node.id = GetIntAttribute(dockToken, "id", 0);
+            node.firstChild = GetIntAttribute(dockToken, "first", -1);
+            node.secondChild = GetIntAttribute(dockToken, "second", -1);
+            node.vertical = GetBoolAttribute(dockToken, "vertical", true);
+            node.ratio = GetFloatAttribute(dockToken, "ratio", 0.5f);
+            node.workspace = GetBoolAttribute(dockToken, "workspace", false);
+            node.activePanel = GetAttribute(dockToken, "active");
+            if (node.id > 0) layout.dockNodes.push_back(node);
+            dockPosition = dockEnd + 1;
         }
 
         //读取编辑器相机布局。
@@ -216,7 +254,7 @@ namespace
     std::string BuildEditorLayoutBlock(const EditorLayoutState& layout)
     {
         std::ostringstream output;
-        output << "    <EditorLayout>\n";
+        output << "    <EditorLayout dockRoot=\"" << layout.dockRoot << "\">\n";
         for (const EditorPanelState& panel : layout.panels)
         {
             output << "        <Panel id=\"" << EscapeXml(panel.id)
@@ -225,6 +263,19 @@ namespace
                 << "\" y=\"" << ToFloatText(panel.position.y)
                 << "\" width=\"" << ToFloatText(panel.size.x)
                 << "\" height=\"" << ToFloatText(panel.size.y)
+                << "\" dockNode=\"" << panel.dockNode
+                << "\" />\n";
+        }
+
+        for (const EditorDockNodeState& node : layout.dockNodes)
+        {
+            output << "        <DockNode id=\"" << node.id
+                << "\" first=\"" << node.firstChild
+                << "\" second=\"" << node.secondChild
+                << "\" vertical=\"" << (node.vertical ? "true" : "false")
+                << "\" ratio=\"" << ToFloatText(node.ratio)
+                << "\" workspace=\"" << (node.workspace ? "true" : "false")
+                << "\" active=\"" << EscapeXml(node.activePanel)
                 << "\" />\n";
         }
 

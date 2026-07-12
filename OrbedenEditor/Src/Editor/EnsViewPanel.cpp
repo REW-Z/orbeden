@@ -31,12 +31,9 @@ void EnsViewPanel::DrawPanel()
 {
     World& world = editor.GetWorld();
     EditorSelection& selection = editor.GetSelection();
+    ImVec2 contentMin = ImGui::GetCursorScreenPos();
 
-    EnsId selectedEns = selection.GetSelectedEns();
-    if (!selectedEns.IsNull() && !world.IsAlive(selectedEns))
-    {
-        selection.Clear();
-    }
+    selection.PruneInvalid(world);
 
     List<EnsId> roots;
     world.ForEachEns([&roots, this](Ens& ens)
@@ -53,12 +50,24 @@ void EnsViewPanel::DrawPanel()
     if (roots.empty())
     {
         ImGui::TextUnformatted("No Ens objects.");
-        return;
+    }
+    else
+    {
+        for (EnsId root : roots)
+        {
+            DrawEnsNode(world, selection, root);
+        }
     }
 
-    for (EnsId root : roots)
+    //普通点击面板空白时清空选择。
+    const ImGuiIO& io = ImGui::GetIO();
+    if (!io.KeyCtrl
+        && io.MousePos.y >= contentMin.y
+        && ImGui::IsWindowHovered()
+        && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
+        && !ImGui::IsAnyItemHovered())
     {
-        DrawEnsNode(world, selection, root);
+        selection.Clear();
     }
 }
 
@@ -95,9 +104,10 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
     label += std::to_string(ens.version);
 
     bool open = ImGui::TreeNodeEx(label.c_str(), flags);
-    if (ImGui::IsItemClicked())
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
     {
-        selection.SelectEns(ens);
+        if (ImGui::GetIO().KeyCtrl) selection.ToggleEns(ens);
+        else selection.SelectEns(ens);
     }
 
     if (open && hasChildren)

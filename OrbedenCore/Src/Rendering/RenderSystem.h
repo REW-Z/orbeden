@@ -112,6 +112,9 @@ public:
     //获取离屏目标颜色纹理
     GpuTextureID GetRenderTargetTexture(RenderTargetID id) const;
 
+    /// <summary>获取仅供当前帧覆盖层只读访问的渲染场景。</summary>
+    const RenderScene& GetCurrentScene() const;
+
     //准备切换项目，释放当前 GPU 上传缓存和内置管线资源
     void PrepareProjectReload();
 

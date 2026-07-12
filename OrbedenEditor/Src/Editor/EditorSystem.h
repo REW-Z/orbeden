@@ -2,6 +2,7 @@
 
 #include "Application.h"
 #include "Editor/EditorSelection.h"
+#include "Editor/EditorSelectionOutline.h"
 #include "Editor/EditorProject.h"
 #include "Editor/EnsViewPanel.h"
 #include "Editor/ManagedEditorOverlay.h"
@@ -32,6 +33,7 @@ private:
     bool autoLoadAttempted = false;
     bool previousInputEnabled = true;
     EditorSelection selection;
+    EditorSelectionOutline selectionOutline;
     PanelManager panelManager;
     ProjectPanel projectPanel;
     EnsViewPanel ensViewPanel;
@@ -50,6 +52,10 @@ private:
     int32 cameraMouseMode = 0;
     double previousMouseX = 0.0;
     double previousMouseY = 0.0;
+    bool sceneSelectionPressed = false;
+    bool sceneSelectionDragged = false;
+    bool sceneSelectionCtrl = false;
+    vector2 sceneSelectionStart = { 0.0f, 0.0f };
 
 public:
     EditorSystem(Application& application, const char* startupExecutablePath);
@@ -196,6 +202,12 @@ private:
 
     //使用 GLFW 输入更新编辑器观察相机
     void UpdateEditorCamera(World& world, float deltaTime);
+
+    /// <summary>处理中央工作区的鼠标选择。</summary>
+    void HandleSceneSelection(const RenderScene& scene);
+
+    /// <summary>拾取鼠标下距离相机最近的场景对象。</summary>
+    EnsId PickSceneEns(const RenderScene& scene, const vector2& screenPosition) const;
 
     //保存当前项目启动场景
     bool SaveCurrentWorld();
