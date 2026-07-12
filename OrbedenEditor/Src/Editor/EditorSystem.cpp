@@ -9,6 +9,7 @@
 #include "Runtime/Ens.h"
 #include "FileSystem/PathDefines.h"
 #include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
 #include <array>
@@ -237,6 +238,18 @@ namespace
     bool ImGuiCapturesMouse()
     {
         return ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse;
+    }
+
+    //判断是否有真实 ImGui 控件正在占用场景点击。
+    bool HasBlockingImGuiActiveItem()
+    {
+        ImGuiContext* context = ImGui::GetCurrentContext();
+        if (!context || context->ActiveId == 0) return false;
+
+        bool windowBackgroundActive = context->ActiveIdWindow
+            && context->ActiveId == context->ActiveIdWindow->MoveId
+            && context->ActiveIdDisabledId == 0;
+        return !windowBackgroundActive;
     }
 
     std::string ReadTextFile(const std::filesystem::path& path)
@@ -535,6 +548,7 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 EditorSystem::~EditorSystem()
 {
     SaveEditorLayout();
+    selectionOutline.Clear();
     playMode.Stop();
     managedOverlay.UnloadGameAssembly();
     managedOverlay.Shutdown();
@@ -573,13 +587,36 @@ void EditorSystem::DrawOverlay()
 {
     DrawMainMenuBar();
     DrawPlayToolbar();
-    if (!playMode.IsPlaying())
-    {
-        DrawManagedSceneGizmos();
-    }
     DrawProjectDialog();
     DrawNewProjectDialog();
+    if (!playMode.IsPlaying()) selection.PruneInvalid(app.GetWorld());
     panelManager.DrawPanels();
+
+    if (!playMode.IsPlaying())
+    {
+        World& world = app.GetWorld();
+        RenderSystem* renderSystem = app.GetRenderSystem();
+        if (renderSystem)
+        {
+            const RenderScene& scene = renderSystem->GetCurrentScene();
+            HandleSceneSelection(scene);
+
+            vector2 workspacePosition;
+            vector2 workspaceSize;
+            if (panelManager.TryGetWorkspaceRect(workspacePosition, workspaceSize))
+            {
+                selectionOutline.Draw(scene, world, editorCameraEns, selection, workspacePosition, workspaceSize);
+            }
+        }
+
+        DrawManagedSceneGizmos();
+    }
+    else
+    {
+        sceneSelectionPressed = false;
+        sceneSelectionDragged = false;
+    }
+
     playMode.DrawGui();
 }
 
@@ -718,6 +755,7 @@ void EditorSystem::RequestStop()
     managedOverlay.UnloadGameAssembly();
     if (project.HasProject())
     {
+        selectionOutline.Clear();
         if (project.ReloadStartupWorld())
         {
             selection.Clear();
@@ -1132,6 +1170,7 @@ void EditorSystem::RegisterBuiltInPanels()
     projectInfo.title = projectPanel.GetPanelTitle();
     projectInfo.defaultVisible = true;
     projectInfo.defaultSize = { 360.0f, 180.0f };
+    projectInfo.defaultDock = PanelDockPlacement::Floating;
     panelManager.RegisterPanel(projectInfo, &projectPanel);
 
     PanelInfo ensViewInfo;
@@ -1139,6 +1178,8 @@ void EditorSystem::RegisterBuiltInPanels()
     ensViewInfo.title = ensViewPanel.GetPanelTitle();
     ensViewInfo.defaultVisible = true;
     ensViewInfo.defaultSize = { 320.0f, 420.0f };
+    ensViewInfo.defaultDock = PanelDockPlacement::Left;
+    ensViewInfo.defaultDockRatio = 0.22f;
     panelManager.RegisterPanel(ensViewInfo, &ensViewPanel);
 
     PanelInfo inspectorInfo;
@@ -1146,6 +1187,8 @@ void EditorSystem::RegisterBuiltInPanels()
     inspectorInfo.title = inspectorPanel.GetPanelTitle();
     inspectorInfo.defaultVisible = true;
     inspectorInfo.defaultSize = { 360.0f, 520.0f };
+    inspectorInfo.defaultDock = PanelDockPlacement::Right;
+    inspectorInfo.defaultDockRatio = 0.25f;
     panelManager.RegisterPanel(inspectorInfo, &inspectorPanel);
 
     PanelInfo managedInfo;
@@ -1153,6 +1196,7 @@ void EditorSystem::RegisterBuiltInPanels()
     managedInfo.title = managedEditorPanel.GetPanelTitle();
     managedInfo.defaultVisible = true;
     managedInfo.defaultSize = { 320.0f, 220.0f };
+    managedInfo.defaultDock = PanelDockPlacement::Floating;
     panelManager.RegisterPanel(managedInfo, &managedEditorPanel);
 }
 
@@ -1287,7 +1331,10 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
     GLFWwindow* window = GetGlfwWindow(app);
     if (!space || !window) return;
 
-    if (!ImGuiCapturesMouse())
+    bool cameraOwnsMouse = cameraMouseDragging
+        || !ImGuiCapturesMouse()
+        || panelManager.IsMouseOverWorkspace();
+    if (cameraOwnsMouse)
     {
         // 检测 Alt 键（Alt+左键旋转 / Alt+右键推拉）
         bool altHeld = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
@@ -1375,6 +1422,7 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
     {
         cameraMouseDragging = false;
         cameraMouseMode = 0;
+        s_scrollDelta = 0.0f;
     }
 
     space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
@@ -1382,6 +1430,206 @@ void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
     editorCameraState.position = space->localPosition;
     editorCameraState.yaw = cameraYaw;
     editorCameraState.pitch = cameraPitch;
+}
+
+/// <summary>处理中央工作区的鼠标选择。</summary>
+void EditorSystem::HandleSceneSelection(const RenderScene& scene)
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    //只在中央工作区捕获一次普通左键点击。
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+    {
+        sceneSelectionPressed = panelManager.IsMouseOverWorkspace()
+            && !io.KeyAlt
+            && !cameraMouseDragging
+            && !HasBlockingImGuiActiveItem();
+        sceneSelectionDragged = false;
+        sceneSelectionCtrl = io.KeyCtrl;
+        sceneSelectionStart = { io.MousePos.x, io.MousePos.y };
+    }
+
+    if (!sceneSelectionPressed) return;
+
+    //超过点击阈值或切入相机操作后取消选择。
+    float32 deltaX = io.MousePos.x - sceneSelectionStart.x;
+    float32 deltaY = io.MousePos.y - sceneSelectionStart.y;
+    if (deltaX * deltaX + deltaY * deltaY > 16.0f
+        || io.KeyAlt
+        || cameraMouseDragging
+        || HasBlockingImGuiActiveItem())
+    {
+        sceneSelectionDragged = true;
+    }
+
+    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) sceneSelectionPressed = false;
+        return;
+    }
+
+    bool shouldPick = !sceneSelectionDragged
+        && panelManager.IsMouseOverWorkspace()
+        && !HasBlockingImGuiActiveItem();
+    sceneSelectionPressed = false;
+    sceneSelectionDragged = false;
+    if (!shouldPick) return;
+
+    EnsId hit = PickSceneEns(scene, { io.MousePos.x, io.MousePos.y });
+    if (sceneSelectionCtrl)
+    {
+        if (!hit.IsNull()) selection.ToggleEns(hit);
+    }
+    else if (!hit.IsNull())
+    {
+        selection.SelectEns(hit);
+    }
+    else
+    {
+        selection.Clear();
+    }
+}
+
+/// <summary>拾取鼠标下距离相机最近的场景对象。</summary>
+EnsId EditorSystem::PickSceneEns(const RenderScene& scene, const vector2& screenPosition) const
+{
+    const RenderCamera* camera = nullptr;
+    for (const RenderCamera& candidate : scene.cameras)
+    {
+        if (candidate.ens == editorCameraEns)
+        {
+            camera = &candidate;
+            break;
+        }
+    }
+    if (!camera || camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return EnsId();
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (!viewport || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f) return EnsId();
+
+    //把 ImGui 逻辑坐标转换为相机 NDC。
+    float32 cameraLeft = viewport->Pos.x + camera->normalizedViewportX * viewport->Size.x;
+    float32 cameraTop = viewport->Pos.y
+        + (1.0f - camera->normalizedViewportY - camera->normalizedViewportHeight) * viewport->Size.y;
+    float32 cameraWidth = camera->normalizedViewportWidth * viewport->Size.x;
+    float32 cameraHeight = camera->normalizedViewportHeight * viewport->Size.y;
+    if (cameraWidth <= 0.0f || cameraHeight <= 0.0f
+        || screenPosition.x < cameraLeft || screenPosition.x > cameraLeft + cameraWidth
+        || screenPosition.y < cameraTop || screenPosition.y > cameraTop + cameraHeight)
+    {
+        return EnsId();
+    }
+
+    float32 ndcX = ((screenPosition.x - cameraLeft) / cameraWidth) * 2.0f - 1.0f;
+    float32 ndcY = 1.0f - ((screenPosition.y - cameraTop) / cameraHeight) * 2.0f;
+    matrix4x4 inverseViewProjection = RenderMath::Inverse(camera->viewProjectionMatrix);
+    vector3 rayOrigin = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
+    vector3 rayEnd = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
+    vector3 rayDelta = {
+        rayEnd.x - rayOrigin.x,
+        rayEnd.y - rayOrigin.y,
+        rayEnd.z - rayOrigin.z
+    };
+    float32 rayLengthSquared = RenderMath::Dot(rayDelta, rayDelta);
+    if (rayLengthSquared <= 0.000001f) return EnsId();
+    float32 rayLength = std::sqrt(rayLengthSquared);
+    vector3 rayDirection = {
+        rayDelta.x / rayLength,
+        rayDelta.y / rayLength,
+        rayDelta.z / rayLength
+    };
+
+    EnsId closestEns;
+    float32 closestDistance = rayLength;
+    for (const RenderItem& item : scene.items)
+    {
+        if ((item.drawLayer & camera->drawLayerMask) == 0 || !item.worldBounds.valid) continue;
+
+        Ens* currentEns = app.GetWorld().GetEns(item.ens);
+        StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
+        Mesh* currentMesh = currentRenderer ? currentRenderer->mesh.Get() : nullptr;
+        if (!currentRenderer || currentRenderer != item.renderer || !currentMesh || currentMesh != item.mesh) continue;
+
+        //先用世界包围盒排除不可能命中的绘制项。
+        float32 boundsMin[3] = {
+            item.worldBounds.center.x - item.worldBounds.extents.x,
+            item.worldBounds.center.y - item.worldBounds.extents.y,
+            item.worldBounds.center.z - item.worldBounds.extents.z
+        };
+        float32 boundsMax[3] = {
+            item.worldBounds.center.x + item.worldBounds.extents.x,
+            item.worldBounds.center.y + item.worldBounds.extents.y,
+            item.worldBounds.center.z + item.worldBounds.extents.z
+        };
+        float32 origin[3] = { rayOrigin.x, rayOrigin.y, rayOrigin.z };
+        float32 direction[3] = { rayDirection.x, rayDirection.y, rayDirection.z };
+        float32 entryDistance = 0.0f;
+        float32 exitDistance = closestDistance;
+        bool intersectsBounds = true;
+        for (int32 axis = 0; axis < 3; ++axis)
+        {
+            if (std::abs(direction[axis]) <= 0.000001f)
+            {
+                if (origin[axis] < boundsMin[axis] || origin[axis] > boundsMax[axis]) intersectsBounds = false;
+                continue;
+            }
+
+            float32 first = (boundsMin[axis] - origin[axis]) / direction[axis];
+            float32 second = (boundsMax[axis] - origin[axis]) / direction[axis];
+            if (first > second) std::swap(first, second);
+            entryDistance = std::max(entryDistance, first);
+            exitDistance = std::min(exitDistance, second);
+            if (entryDistance > exitDistance)
+            {
+                intersectsBounds = false;
+                break;
+            }
+        }
+        if (!intersectsBounds) continue;
+
+        //在世界空间进行双面三角形精确检测，兼容零缩放实例。
+        const List<vector3>& vertices = currentMesh->vertices;
+        const List<uint32>& indices = currentMesh->indices;
+        usize indexStart = static_cast<usize>(item.indexStart);
+        usize indexCount = static_cast<usize>(item.indexCount);
+        if (indexStart > indices.size() || indexCount > indices.size() - indexStart) continue;
+
+        usize indexEnd = indexStart + indexCount;
+        for (usize index = indexStart; index + 2 < indexEnd; index += 3)
+        {
+            uint32 indexA = indices[index];
+            uint32 indexB = indices[index + 1];
+            uint32 indexC = indices[index + 2];
+            if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
+
+            vector3 a = RenderMath::TransformPoint(item.localToWorld, vertices[indexA]);
+            vector3 b = RenderMath::TransformPoint(item.localToWorld, vertices[indexB]);
+            vector3 c = RenderMath::TransformPoint(item.localToWorld, vertices[indexC]);
+            vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
+            vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
+            vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
+            float32 determinant = RenderMath::Dot(edgeAB, crossDirection);
+            if (std::abs(determinant) <= 0.000001f) continue;
+
+            float32 inverseDeterminant = 1.0f / determinant;
+            vector3 toOrigin = { rayOrigin.x - a.x, rayOrigin.y - a.y, rayOrigin.z - a.z };
+            float32 u = RenderMath::Dot(toOrigin, crossDirection) * inverseDeterminant;
+            if (u < 0.0f || u > 1.0f) continue;
+
+            vector3 crossOrigin = RenderMath::Cross(toOrigin, edgeAB);
+            float32 v = RenderMath::Dot(rayDirection, crossOrigin) * inverseDeterminant;
+            if (v < 0.0f || u + v > 1.0f) continue;
+
+            float32 distance = RenderMath::Dot(edgeAC, crossOrigin) * inverseDeterminant;
+            if (distance >= 0.0f && distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestEns = item.ens;
+            }
+        }
+    }
+
+    return closestEns;
 }
 
 bool EditorSystem::SaveCurrentWorld()
@@ -1466,6 +1714,7 @@ void EditorSystem::TryAutoLoadExampleProject()
 
     RequestStop();
     SaveEditorLayout();
+    selectionOutline.Clear();
     project.LoadProjectFolder(exampleProject);
     if (project.HasProject())
     {
@@ -1725,6 +1974,7 @@ void EditorSystem::DrawProjectDialog()
     {
         RequestStop();
         SaveEditorLayout();
+        selectionOutline.Clear();
         if (project.LoadProjectFolder(dialogDirectory))
         {
             dialogError.clear();
@@ -1818,6 +2068,7 @@ void EditorSystem::DrawNewProjectDialog()
 
             std::string projectRoot;
             std::string error;
+            selectionOutline.Clear();
             if (NewProjectGenerator::CreateProject(dialogDirectory, newProjectNameBuffer, runtimeDllPath, projectRoot, error)
                 && project.LoadProjectFolder(projectRoot))
             {

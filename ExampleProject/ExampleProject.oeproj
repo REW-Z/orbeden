@@ -1,9 +1,14 @@
 <OrbedenProject version="1" name="ExampleProject" startupWorld="World/example_world.world" resourceRoot="Resource" scriptRoot="Script" managedRoot="Managed" >
-    <EditorLayout>
-        <Panel id="project" visible="false" x="62" y="60" width="569" height="536" />
-        <Panel id="ens_view" visible="false" x="0" y="54" width="320" height="662" />
-        <Panel id="inspector" visible="false" x="851" y="100" width="429" height="620" />
-        <Panel id="managed_editor" visible="true" x="352" y="276" width="214" height="220" />
-        <EditorCamera x="12.9388" y="5.25883" z="6.83558" yaw="63.92" pitch="-21.16" />
+    <EditorLayout dockRoot="1">
+        <Panel id="project" visible="true" x="1" y="154" width="569" height="512" dockNode="5" />
+        <Panel id="ens_view" visible="true" x="30" y="58" width="320" height="662" dockNode="13" />
+        <Panel id="inspector" visible="true" x="630" y="100" width="429" height="620" dockNode="5" />
+        <Panel id="managed_editor" visible="true" x="643" y="318" width="214" height="220" dockNode="13" />
+        <DockNode id="1" first="13" second="12" vertical="true" ratio="0.22" workspace="false" active="" />
+        <DockNode id="4" first="-1" second="-1" vertical="true" ratio="0.5" workspace="true" active="" />
+        <DockNode id="5" first="-1" second="-1" vertical="true" ratio="0.5" workspace="false" active="project" />
+        <DockNode id="12" first="4" second="5" vertical="true" ratio="0.75" workspace="false" active="" />
+        <DockNode id="13" first="-1" second="-1" vertical="true" ratio="0.5" workspace="false" active="managed_editor" />
+        <EditorCamera x="-13.4973" y="7.09337" z="-2.43332" yaw="-90.04" pitch="-32.8" />
     </EditorLayout>
 </OrbedenProject>

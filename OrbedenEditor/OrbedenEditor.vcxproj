@@ -185,6 +185,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\EditorProject.cpp" />
     <ClCompile Include="Src\Editor\EditorPlayMode.cpp" />
     <ClCompile Include="Src\Editor\EditorSelection.cpp" />
+    <ClCompile Include="Src\Editor\EditorSelectionOutline.cpp" />
     <ClCompile Include="Src\Editor\EditorSystem.cpp" />
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp" />
@@ -201,6 +202,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\EditorProject.h" />
     <ClInclude Include="Src\Editor\EditorPlayMode.h" />
     <ClInclude Include="Src\Editor\EditorSelection.h" />
+    <ClInclude Include="Src\Editor\EditorSelectionOutline.h" />
     <ClInclude Include="Src\Editor\EditorSystem.h" />
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorGizmoBridge.h" />

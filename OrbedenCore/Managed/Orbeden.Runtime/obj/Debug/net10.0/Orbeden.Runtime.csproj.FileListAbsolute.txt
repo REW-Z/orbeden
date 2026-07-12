@@ -1,0 +1,12 @@
+F:\Legacy\MyProjects\orbeden\x64\Debug\Managed\Orbeden.Runtime.deps.json
+F:\Legacy\MyProjects\orbeden\x64\Debug\Managed\Orbeden.Runtime.dll
+F:\Legacy\MyProjects\orbeden\x64\Debug\Managed\Orbeden.Runtime.pdb
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.GeneratedMSBuildEditorConfig.editorconfig
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.AssemblyInfoInputs.cache
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.AssemblyInfo.cs
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.csproj.CoreCompileInputs.cache
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.sourcelink.json
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.dll
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\refint\Orbeden.Runtime.dll
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\Orbeden.Runtime.pdb
+F:\Legacy\MyProjects\orbeden\OrbedenCore\Managed\Orbeden.Runtime\obj\Debug\net10.0\ref\Orbeden.Runtime.dll

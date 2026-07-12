@@ -163,6 +163,12 @@ GpuTextureID RenderSystem::GetRenderTargetTexture(RenderTargetID id) const
     return target ? backend.GetRenderTargetColorTexture(target->renderTarget) : GpuTextureID();
 }
 
+//获取仅供当前帧覆盖层只读访问的渲染场景
+const RenderScene& RenderSystem::GetCurrentScene() const
+{
+    return scene;
+}
+
 void RenderSystem::PrepareProjectReload()
 {
     if (!initialized) return;
