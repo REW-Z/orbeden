@@ -64,7 +64,8 @@ internal static class EditorGameDomain
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly List<Type> scriptTypes = [];
     private static readonly Dictionary<string, List<ScriptMount>> sidecarScripts = [];
-    private static readonly Dictionary<string, string> pendingAddTypes = [];
+    private static readonly Dictionary<string, string> componentSearches = [];
+    private static readonly Dictionary<string, string> selectedAddTypes = [];
     private static readonly HashSet<ScriptBehaviour> runtimeSerializedApplied = [];
     private static GameAssemblyLoadContext? gameContext;
     private static Assembly? gameAssembly;
@@ -77,7 +78,8 @@ internal static class EditorGameDomain
         UnloadReflectionAssembly();
         scriptTypes.Clear();
         sidecarScripts.Clear();
-        pendingAddTypes.Clear();
+        componentSearches.Clear();
+        selectedAddTypes.Clear();
         runtimeSerializedApplied.Clear();
         currentSidecarPath = sidecarPath;
 
@@ -118,7 +120,8 @@ internal static class EditorGameDomain
         UnloadReflectionAssembly();
         scriptTypes.Clear();
         sidecarScripts.Clear();
-        pendingAddTypes.Clear();
+        componentSearches.Clear();
+        selectedAddTypes.Clear();
         runtimeSerializedApplied.Clear();
         currentSidecarPath = string.Empty;
         ScriptRuntimeRegistry.Clear();
@@ -159,8 +162,7 @@ internal static class EditorGameDomain
 
         DrawObjectHeader(ens, selectedEns, stableId);
         DrawInspectorStatus();
-        DrawNativeComponents(ens);
-        DrawManagedScriptComponents(selectedEns, stableId);
+        DrawManagedComponents(ens, selectedEns, stableId);
     }
 
     //绘制选中对象摘要。
@@ -303,13 +305,12 @@ internal static class EditorGameDomain
         }
     }
 
-    //绘制原生 C++ 组件块。
-    private static void DrawNativeComponents(Ens ens)
+    //绘制引擎 Bind 对应的 C# 组件块。
+    private static void DrawBoundComponents(Ens ens, EnsId selectedEns)
     {
-        GUI.Label($"Native C++ Components ({GetNativeComponentCount(ens)})");
         if (ens.HasSpaceComponent)
         {
-            DrawComponentBlock("C++ SpaceComponent", () =>
+            DrawCollapsibleComponentBlock("SpaceComponent", $"bound_{selectedEns.id}_SpaceComponent", false, () =>
             {
                 SpaceComponent space = ens.Space;
                 vector3 localPosition = space.localPosition;
@@ -333,11 +334,9 @@ internal static class EditorGameDomain
 
         if (ens.HasStaticMeshRenderer)
         {
-            DrawComponentBlock("C++ StaticMeshRenderer", () =>
+            StaticMeshRenderer? renderer = ens.GetComponent<StaticMeshRenderer>();
+            if (renderer != null && DrawCollapsibleComponentBlock("StaticMeshRenderer", $"bound_{selectedEns.id}_StaticMeshRenderer", true, () =>
             {
-                StaticMeshRenderer? renderer = ens.GetComponent<StaticMeshRenderer>();
-                if (renderer == null) return;
-
                 bool enabled = renderer.enabled;
                 if (GUI.Checkbox("enabled", ref enabled))
                 {
@@ -366,42 +365,57 @@ internal static class EditorGameDomain
                 {
                     renderer.receiveShadows = receiveShadows;
                 }
-            });
+            }))
+            {
+                Orbeden.Object.Destroy(renderer);
+            }
         }
-        else if (GUI.Button("Add C++ StaticMeshRenderer"))
+
+        DrawBoundComponent(ens.GetComponent<RigidBody>(), selectedEns, component => DrawScriptMembers(component, typeof(RigidBody)));
+        DrawBoundComponent(ens.GetComponent<Collider>(), selectedEns, component => DrawScriptMembers(component, typeof(Collider)));
+        DrawBoundComponent(ens.GetComponent<CharacterController>(), selectedEns, component => DrawScriptMembers(component, typeof(CharacterController)));
+    }
+
+    //绘制一个可移除的引擎 Bind 组件。
+    private static void DrawBoundComponent<T>(T? component, EnsId selectedEns, Action<T> draw) where T : Component
+    {
+        if (component == null) return;
+
+        string typeName = typeof(T).Name;
+        if (DrawCollapsibleComponentBlock(typeName, $"bound_{selectedEns.id}_{typeName}", true, () => draw(component)))
         {
-            ens.AddStaticMeshRenderer();
+            Orbeden.Object.Destroy(component);
         }
     }
 
-    //统计当前对象上的原生组件数量。
-    private static int GetNativeComponentCount(Ens ens)
+    //统计当前对象上的引擎 Bind 组件数量。
+    private static int GetBoundComponentCount(Ens ens)
     {
         int count = 0;
         if (ens.HasSpaceComponent) count++;
         if (ens.HasStaticMeshRenderer) count++;
+        if (ens.HasRigidBody) count++;
+        if (ens.HasCollider) count++;
+        if (ens.HasCharacterController) count++;
         return count;
     }
 
-    //绘制用户 C# 脚本组件块。
-    private static void DrawManagedScriptComponents(EnsId selectedEns, string stableId)
+    //绘制引擎 Bind 和用户脚本组成的 C# 组件列表。
+    private static void DrawManagedComponents(Ens ens, EnsId selectedEns, string stableId)
     {
-        if (string.IsNullOrEmpty(stableId))
-        {
-            GUI.Label("User C# Components (0)");
-            GUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
-            return;
-        }
-
-        sidecarScripts.TryGetValue(stableId, out List<ScriptMount>? mounts);
+        List<ScriptMount>? mounts = null;
+        if (!string.IsNullOrEmpty(stableId)) sidecarScripts.TryGetValue(stableId, out mounts);
         mounts ??= [];
         IReadOnlyList<ScriptBehaviour> runtimeScripts = ScriptRuntimeRegistry.GetScripts(selectedEns);
         HashSet<ScriptBehaviour> drawnRuntimeScripts = [];
 
-        GUI.Label($"User C# Components ({mounts.Count})");
-        if (mounts.Count == 0)
+        GUI.Label($"C# Components ({GetBoundComponentCount(ens) + mounts.Count})");
+        DrawBoundComponents(ens, selectedEns);
+        if (string.IsNullOrEmpty(stableId))
         {
-            GUI.Label("No C# script components.");
+            GUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
+            DrawComponentBlock("Add C# Component", () => DrawAddComponentControls(ens, stableId, mounts));
+            return;
         }
 
         int removeIndex = -1;
@@ -409,19 +423,23 @@ internal static class EditorGameDomain
         {
             ScriptMount mount = mounts[index];
             string title = GetShortTypeName(mount.Type);
-            DrawComponentBlock($"C# {title}", () =>
+            List<ScriptBehaviour> matchingRuntimeScripts = runtimeScripts
+                .Where(script => TypeMatches(mount.Type, script.GetType()))
+                .ToList();
+            foreach (ScriptBehaviour script in matchingRuntimeScripts)
+            {
+                drawnRuntimeScripts.Add(script);
+                ApplySerializedValuesToRuntimeScript(script, stableId);
+            }
+
+            bool removeRequested = DrawCollapsibleComponentBlock(title, $"script_{stableId}_{mount.Type}", true, () =>
             {
                 GUI.Label($"Type: {mount.Type}");
-                if (GUI.Button($"Remove {title}##remove_script_{stableId}_{index}"))
-                {
-                    removeIndex = index;
-                    return;
-                }
-
                 GUI.Label("Serialized Fields");
                 DrawSerializedScriptFields(mount);
-                DrawMatchingRuntimeScripts(stableId, mount, runtimeScripts, drawnRuntimeScripts);
+                DrawMatchingRuntimeScripts(matchingRuntimeScripts);
             });
+            if (removeRequested) removeIndex = index;
         }
 
         if (removeIndex >= 0)
@@ -437,36 +455,102 @@ internal static class EditorGameDomain
         }
 
         DrawUnmatchedRuntimeScripts(stableId, runtimeScripts, drawnRuntimeScripts);
-        DrawComponentBlock("Add C# Script", () => DrawAddScriptControls(stableId, mounts));
+        DrawComponentBlock("Add C# Component", () => DrawAddComponentControls(ens, stableId, mounts));
     }
 
-    //绘制新增脚本组件控件。
-    private static void DrawAddScriptControls(string stableId, List<ScriptMount> mounts)
+    //绘制新增 C# 组件控件。
+    private static void DrawAddComponentControls(Ens ens, string stableId, List<ScriptMount> mounts)
     {
-        GUI.Label("Available script types");
-        foreach (Type type in scriptTypes)
+        List<Type> availableTypes = GetAvailableComponentTypes(ens, stableId, mounts);
+        if (availableTypes.Count == 0)
         {
-            if (mounts.Any(mount => TypeMatches(mount.Type, type))) continue;
+            GUI.Label("No C# component types are available.");
+            return;
+        }
 
-            string typeName = GetScriptTypeName(type);
-            if (GUI.Button($"Add {GetShortTypeName(typeName)}##add_script_{stableId}_{typeName}"))
+        string search = componentSearches.TryGetValue(stableId, out string? searchValue) ? searchValue : string.Empty;
+        string selectedTypeName = selectedAddTypes.TryGetValue(stableId, out string? selectedValue) ? selectedValue : string.Empty;
+        if (!availableTypes.Any(type => string.Equals(GetScriptTypeName(type), selectedTypeName, StringComparison.Ordinal)))
+        {
+            selectedTypeName = string.Empty;
+            selectedAddTypes.Remove(stableId);
+        }
+
+        string preview = string.IsNullOrEmpty(selectedTypeName) ? "Select a C# component" : GetShortTypeName(selectedTypeName);
+        if (GUI.BeginCombo($"Component##add_component_combo_{stableId}", preview))
+        {
+            try
             {
-                AddScriptMount(stableId, typeName);
-                return;
+                if (GUI.InputText($"Search##add_component_search_{stableId}", ref search))
+                {
+                    componentSearches[stableId] = search;
+                }
+
+                bool hasMatch = false;
+                foreach (Type type in availableTypes)
+                {
+                    string typeName = GetScriptTypeName(type);
+                    if (!MatchesComponentSearch(typeName, search)) continue;
+
+                    hasMatch = true;
+                    bool selected = string.Equals(typeName, selectedTypeName, StringComparison.Ordinal);
+                    if (GUI.Selectable($"{GetShortTypeName(typeName)}##add_component_{stableId}_{typeName}", selected))
+                    {
+                        selectedTypeName = typeName;
+                        selectedAddTypes[stableId] = typeName;
+                    }
+                }
+
+                if (!hasMatch) GUI.Label("No matching C# components.");
+            }
+            finally
+            {
+                GUI.EndCombo();
             }
         }
 
-        string pending = pendingAddTypes.TryGetValue(stableId, out string? value) ? value : string.Empty;
-        if (GUI.InputText($"Script type##add_script_type_{stableId}", ref pending))
+        if (GUI.Button($"Add Component##add_component_button_{stableId}") && !string.IsNullOrEmpty(selectedTypeName))
         {
-            pendingAddTypes[stableId] = pending;
+            Type? selectedType = availableTypes.FirstOrDefault(type => string.Equals(GetScriptTypeName(type), selectedTypeName, StringComparison.Ordinal));
+            if (selectedType != null) AddComponent(ens, stableId, selectedType);
+            componentSearches[stableId] = string.Empty;
+            selectedAddTypes.Remove(stableId);
+        }
+    }
+
+    //获取当前可添加的引擎 Bind 与游戏脚本组件类型。
+    private static List<Type> GetAvailableComponentTypes(Ens ens, string stableId, List<ScriptMount> mounts)
+    {
+        List<Type> types = [];
+        if (!ens.HasStaticMeshRenderer) types.Add(typeof(StaticMeshRenderer));
+        if (!ens.HasRigidBody) types.Add(typeof(RigidBody));
+        if (!ens.HasCollider) types.Add(typeof(Collider));
+        if (!ens.HasCharacterController) types.Add(typeof(CharacterController));
+        if (!string.IsNullOrEmpty(stableId))
+        {
+            types.AddRange(scriptTypes.Where(type => !mounts.Any(mount => TypeMatches(mount.Type, type))));
         }
 
-        if (GUI.Button($"Add Script##add_script_button_{stableId}") && !string.IsNullOrWhiteSpace(pending))
-        {
-            AddScriptMount(stableId, pending);
-            pendingAddTypes[stableId] = string.Empty;
-        }
+        types.Sort((left, right) => string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
+        return types;
+    }
+
+    //按托管类型添加引擎 Bind 或游戏脚本组件。
+    private static void AddComponent(Ens ens, string stableId, Type type)
+    {
+        if (type == typeof(StaticMeshRenderer)) ens.AddStaticMeshRenderer();
+        else if (type == typeof(RigidBody)) ens.AddRigidBody();
+        else if (type == typeof(Collider)) ens.AddCollider();
+        else if (type == typeof(CharacterController)) ens.AddCharacterController();
+        else AddScriptMount(stableId, GetScriptTypeName(type));
+    }
+
+    //判断组件类型是否匹配搜索文本。
+    private static bool MatchesComponentSearch(string typeName, string search)
+    {
+        if (string.IsNullOrWhiteSpace(search)) return true;
+        return typeName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
+            || GetShortTypeName(typeName).Contains(search.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     //新增一个 sidecar 脚本组件。
@@ -611,17 +695,10 @@ internal static class EditorGameDomain
     }
 
     //绘制与 sidecar 组件匹配的运行态脚本实例。
-    private static void DrawMatchingRuntimeScripts(string stableId,
-        ScriptMount mount,
-        IReadOnlyList<ScriptBehaviour> runtimeScripts,
-        HashSet<ScriptBehaviour> drawnRuntimeScripts)
+    private static void DrawMatchingRuntimeScripts(IReadOnlyList<ScriptBehaviour> runtimeScripts)
     {
         foreach (ScriptBehaviour script in runtimeScripts)
         {
-            if (!TypeMatches(mount.Type, script.GetType())) continue;
-            drawnRuntimeScripts.Add(script);
-            ApplySerializedValuesToRuntimeScript(script, stableId);
-
             Type type = script.GetType();
             GUI.Label("Runtime Fields");
             DrawScriptMembers(script, type);
@@ -638,7 +715,7 @@ internal static class EditorGameDomain
             if (drawnRuntimeScripts.Contains(script)) continue;
 
             Type type = script.GetType();
-            DrawComponentBlock($"C# {type.Name} (runtime)", () =>
+            DrawCollapsibleComponentBlock($"{type.Name} (runtime)", $"runtime_script_{stableId}_{type.FullName}", false, () =>
             {
                 ApplySerializedValuesToRuntimeScript(script, stableId);
                 DrawScriptMembers(script, type);
@@ -658,6 +735,22 @@ internal static class EditorGameDomain
         {
             GUI.EndComponentBlock();
         }
+    }
+
+    //绘制一个可折叠的 Inspector 组件块。
+    private static bool DrawCollapsibleComponentBlock(string title, string id, bool removable, Action draw)
+    {
+        bool expanded = GUI.BeginCollapsibleComponentBlock(title, id, removable, out bool removeRequested);
+        try
+        {
+            if (expanded && !removeRequested) draw();
+        }
+        finally
+        {
+            GUI.EndComponentBlock();
+        }
+
+        return removeRequested;
     }
 
     //把 sidecar 字段值应用到运行态脚本实例一次。

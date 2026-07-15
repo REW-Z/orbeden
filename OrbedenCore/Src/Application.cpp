@@ -5,6 +5,8 @@
 #include "Application.h"
 #include "Log/Log.h"
 #include "Platform/InputManager.h"
+#include "Physics/PhysicsReflection.h"
+#include "Physics/PhysicsSystem.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Reflection.h"
@@ -73,7 +75,18 @@ bool Application::Initialize()
 
     //注册生成的反射信息，并建立兼容旧静态入口的当前 World
     Reflection::RegisterGeneratedReflection();
+    PhysicsReflection::Register();
     World::SetCurrentWorld(&world);
+
+    physicsSystem = new PhysicsSystem();
+    if (!physicsSystem->Initialize())
+    {
+        delete physicsSystem;
+        physicsSystem = nullptr;
+        World::SetCurrentWorld(nullptr);
+        return false;
+    }
+    RegisterSystem(physicsSystem, EngineSystemUpdateMode::Simulation);
     initialized = true;
     return true;
 }
@@ -118,7 +131,8 @@ void Application::UnregisterSystem(IEngineSystem* system)
 //从 XML 文件读取 World，失败时保留空 World 继续运行
 bool Application::LoadWorld(const std::string& path)
 {
-    Initialize();
+    if (!Initialize()) return false;
+    if (physicsSystem) physicsSystem->ResetWorld();
 
     //读取成功时直接使用反序列化后的 World
     if (WorldSerializer::LoadXml(world, path))
@@ -253,6 +267,7 @@ void Application::RequestQuit()
 void Application::Quit()
 {
     ShutdownBuiltInSystems();
+    ShutdownPhysicsSystem();
     SetWindow(nullptr);
     Object::UnloadUnusedObjects(nullptr, 0);
     world.Clear();
@@ -388,6 +403,12 @@ RenderSystem* Application::GetRenderSystem() const
     return renderSystemActive ? renderSystem : nullptr;
 }
 
+//获取内置 CPU 物理系统
+PhysicsSystem* Application::GetPhysicsSystem() const
+{
+    return physicsSystem;
+}
+
 //派发窗口 resize 到已注册系统
 void Application::OnWindowResize(int32 width, int32 height)
 {
@@ -464,4 +485,15 @@ void Application::ShutdownBuiltInSystems()
 
     delete renderSystem;
     renderSystem = nullptr;
+}
+
+//关闭内置物理系统
+void Application::ShutdownPhysicsSystem()
+{
+    if (!physicsSystem) return;
+
+    UnregisterSystem(physicsSystem);
+    physicsSystem->Shutdown();
+    delete physicsSystem;
+    physicsSystem = nullptr;
 }

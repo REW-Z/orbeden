@@ -1,0 +1,3 @@
+PhysX 5.9.0.6d94eeb9
+Source: PhysX-110.1-omni-and-physx-5.9.0/physx
+Configuration: static CPU-only, CUDA/GPU projects disabled

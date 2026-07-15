@@ -97,6 +97,9 @@ public:
     //设置父级
     void SetParent(EnsId child, EnsId parent);
 
+    //移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾
+    bool MoveEns(EnsId child, EnsId parent, EnsId beforeSibling = EnsId());
+
     //获取父级
     Ens* GetParent(EnsId child) const;
 

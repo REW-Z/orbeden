@@ -140,8 +140,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
@@ -167,8 +167,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022;$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"

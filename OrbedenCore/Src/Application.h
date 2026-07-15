@@ -40,6 +40,7 @@ public:
 };
 
 class RenderSystem;
+class PhysicsSystem;
 
 class Application : public IWindowResizeListener
 {
@@ -48,6 +49,7 @@ private:
     IWindow* window = nullptr;
     List<EngineSystemRegistration> systems;
     RenderSystem* renderSystem = nullptr;
+    PhysicsSystem* physicsSystem = nullptr;
     bool initialized = false;
     bool renderSystemActive = false;
     bool running = false;
@@ -145,6 +147,9 @@ public:
     //获取内置渲染系统，尚未初始化时返回 nullptr
     RenderSystem* GetRenderSystem() const;
 
+    //获取内置 CPU 物理系统，尚未初始化时返回 nullptr
+    PhysicsSystem* GetPhysicsSystem() const;
+
     //派发窗口 resize 到已注册系统
     void OnWindowResize(int32 width, int32 height) override;
 
@@ -164,4 +169,7 @@ private:
 
     //关闭内置系统
     void ShutdownBuiltInSystems();
+
+    //关闭内置物理系统
+    void ShutdownPhysicsSystem();
 };

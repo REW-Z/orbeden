@@ -393,6 +393,72 @@ void World::SetParent(EnsId child, EnsId parent)
     parentSpace->lastChild = child;
 }
 
+//移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾
+bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
+{
+    SpaceComponent* space = GetSpaceComponent(child);
+    if (!space || child == parent || child == beforeSibling) return false;
+    if (!parent.IsNull() && !IsAlive(parent)) return false;
+
+    //插入目标必须与目标父级处于同一层。
+    if (!beforeSibling.IsNull())
+    {
+        SpaceComponent* beforeSpace = GetSpaceComponent(beforeSibling);
+        if (!beforeSpace || beforeSpace->parent != parent) return false;
+    }
+
+    //禁止把节点挂到自己的后代下。
+    EnsId current = parent;
+    while (!current.IsNull())
+    {
+        if (current == child) return false;
+        SpaceComponent* currentSpace = GetSpaceComponent(current);
+        current = currentSpace ? currentSpace->parent : EnsId();
+    }
+
+    SetParent(child, parent);
+    space = GetSpaceComponent(child);
+    if (!space || space->parent != parent) return false;
+
+    //根节点使用 liveEns 的相对顺序，World 序列化和 EnsView 会保持相同顺序。
+    if (parent.IsNull())
+    {
+        Ens* childEns = GetEns(child);
+        Ens* beforeEns = beforeSibling.IsNull() ? nullptr : GetEns(beforeSibling);
+        auto childIt = std::find(liveEns.begin(), liveEns.end(), childEns);
+        if (childIt == liveEns.end()) return false;
+
+        liveEns.erase(childIt);
+        auto beforeIt = beforeEns ? std::find(liveEns.begin(), liveEns.end(), beforeEns) : liveEns.end();
+        liveEns.insert(beforeIt, childEns);
+        for (usize index = 0; index < liveEns.size(); ++index)
+        {
+            ensSlots[liveEns[index]->GetId().id].denseIndex = static_cast<uint32>(index);
+        }
+        return true;
+    }
+
+    //SetParent 已将节点放到新父级末尾，无目标时无需继续调整。
+    if (beforeSibling.IsNull()) return true;
+
+    SpaceComponent* parentSpace = GetSpaceComponent(parent);
+    SpaceComponent* beforeSpace = GetSpaceComponent(beforeSibling);
+    SpaceComponent* previous = GetSpaceComponent(space->prev);
+    if (!parentSpace || !beforeSpace) return false;
+
+    //从末尾摘下，再插到目标兄弟节点之前。
+    if (previous) previous->next = EnsId();
+    parentSpace->lastChild = space->prev;
+
+    SpaceComponent* beforePrevious = GetSpaceComponent(beforeSpace->prev);
+    space->prev = beforeSpace->prev;
+    space->next = beforeSibling;
+    beforeSpace->prev = child;
+    if (beforePrevious) beforePrevious->next = child;
+    else parentSpace->firstChild = child;
+    return true;
+}
+
 //获取父级
 Ens* World::GetParent(EnsId child) const
 {

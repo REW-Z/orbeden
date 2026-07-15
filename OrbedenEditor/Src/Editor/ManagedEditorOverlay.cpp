@@ -4,6 +4,7 @@
 #include "Runtime/Native/OrbedenNativeApi.h"
 
 #include <coreclr_delegates.h>
+#include <array>
 #include <filesystem>
 #include <vector>
 
@@ -14,6 +15,13 @@ namespace
     using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedDrawInspectorFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint32, uint32, const uint8*, int32);
+    using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        uint8*, int32);
 
     constexpr const char* EditorTypeName = "OrbedenEditor.EditorRuntime, Orbeden.Editor";
     constexpr const char* EditorInitializeMethod = "Initialize";
@@ -24,6 +32,7 @@ namespace
     constexpr const char* EditorDrawPanelsMethod = "DrawPanels";
     constexpr const char* EditorDrawEditorPanelContentMethod = "DrawEditorPanelContent";
     constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
+    constexpr const char* EditorPublishGameAotMethod = "PublishGameAot";
 
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
@@ -140,6 +149,16 @@ bool ManagedEditorOverlay::Initialize(EditorClrHost& host, const std::string& ex
         return false;
     }
 
+    if (!clrHost->BindFunction(editorAssemblyPath,
+        EditorTypeName,
+        EditorPublishGameAotMethod,
+        &PublishGameAotFunction))
+    {
+        Log::Warning("ManagedEditorOverlay initialize skipped: editor PublishGameAot binding failed.");
+        clrHost = nullptr;
+        return false;
+    }
+
     // 把 Editor 原生函数表传给 C#。
     OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
     EditorManagedApi editorApi;
@@ -160,6 +179,7 @@ void ManagedEditorOverlay::Shutdown()
     UnloadGameAssemblyFunction = nullptr;
     DrawInspectorFunction = nullptr;
     DrawInspectorContentFunction = nullptr;
+    PublishGameAotFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -233,6 +253,33 @@ void ManagedEditorOverlay::DrawSceneGizmos(const matrix4x4& viewProjection, int3
     ManagedDrawEditorFn DrawSceneGizmos = reinterpret_cast<ManagedDrawEditorFn>(DrawSceneGizmosFunction);
     DrawSceneGizmos();
     gizmoBridge.EndFrame();
+}
+
+bool ManagedEditorOverlay::PublishGameAot(const std::string& repositoryRoot,
+    const std::string& projectRoot,
+    const std::string& scriptProject,
+    const std::string& configuration,
+    const std::string& targetPlatform,
+    std::string& error)
+{
+    error.clear();
+    if (!initialized || PublishGameAotFunction == nullptr)
+    {
+        error = "Editor managed NativeAOT publisher is not initialized.";
+        return false;
+    }
+
+    std::array<uint8, 4096> errorBuffer{};
+    ManagedPublishGameAotFn PublishGameAot = reinterpret_cast<ManagedPublishGameAotFn>(PublishGameAotFunction);
+    uint8 succeeded = PublishGameAot(
+        reinterpret_cast<const uint8*>(repositoryRoot.data()), static_cast<int32>(repositoryRoot.size()),
+        reinterpret_cast<const uint8*>(projectRoot.data()), static_cast<int32>(projectRoot.size()),
+        reinterpret_cast<const uint8*>(scriptProject.data()), static_cast<int32>(scriptProject.size()),
+        reinterpret_cast<const uint8*>(configuration.data()), static_cast<int32>(configuration.size()),
+        reinterpret_cast<const uint8*>(targetPlatform.data()), static_cast<int32>(targetPlatform.size()),
+        errorBuffer.data(), static_cast<int32>(errorBuffer.size()));
+    error = reinterpret_cast<const char*>(errorBuffer.data());
+    return succeeded != 0;
 }
 
 bool ManagedEditorOverlay::IsInitialized() const

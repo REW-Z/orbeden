@@ -72,10 +72,37 @@ public sealed class Ens : IEquatable<Ens>
     /// <summary>判断是否拥有 StaticMeshRenderer。</summary>
     public bool HasStaticMeshRenderer => EnsBind.HasStaticMeshRenderer(Id);
 
+    /// <summary>判断是否拥有 RigidBody。</summary>
+    public bool HasRigidBody => RigidBodyBind.HasComponent(Id);
+
+    /// <summary>判断是否拥有 Collider。</summary>
+    public bool HasCollider => ColliderBind.HasComponent(Id);
+
+    /// <summary>判断是否拥有 CharacterController。</summary>
+    public bool HasCharacterController => CharacterControllerBind.HasComponent(Id);
+
     /// <summary>添加静态网格渲染组件。</summary>
     public StaticMeshRenderer? AddStaticMeshRenderer()
     {
         return StaticMeshRenderer.FromNative(this, EnsBind.AddStaticMeshRenderer(Id));
+    }
+
+    /// <summary>添加刚体组件。</summary>
+    public RigidBody? AddRigidBody()
+    {
+        return RigidBody.FromNative(this, RigidBodyBind.AddComponent(Id));
+    }
+
+    /// <summary>添加碰撞体组件。</summary>
+    public Collider? AddCollider()
+    {
+        return Collider.FromNative(this, ColliderBind.AddComponent(Id));
+    }
+
+    /// <summary>添加角色控制器组件。</summary>
+    public CharacterController? AddCharacterController()
+    {
+        return CharacterController.FromNative(this, CharacterControllerBind.AddComponent(Id));
     }
 
     /// <summary>获取组件包装。</summary>
@@ -89,6 +116,21 @@ public sealed class Ens : IEquatable<Ens>
         if (typeof(T) == typeof(StaticMeshRenderer) && HasStaticMeshRenderer)
         {
             return (T?)(Component?)StaticMeshRenderer.FromNative(this, EnsBind.GetStaticMeshRenderer(Id));
+        }
+
+        if (typeof(T) == typeof(RigidBody) && HasRigidBody)
+        {
+            return (T?)(Component?)RigidBody.FromNative(this, RigidBodyBind.GetComponent(Id));
+        }
+
+        if (typeof(T) == typeof(Collider) && HasCollider)
+        {
+            return (T?)(Component?)Collider.FromNative(this, ColliderBind.GetComponent(Id));
+        }
+
+        if (typeof(T) == typeof(CharacterController) && HasCharacterController)
+        {
+            return (T?)(Component?)CharacterController.FromNative(this, CharacterControllerBind.GetComponent(Id));
         }
 
         return null;
