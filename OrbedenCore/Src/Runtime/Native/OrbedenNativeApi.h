@@ -18,6 +18,10 @@ public:
     MeshBind Mesh;
     MaterialBind Material;
     ShaderBind Shader;
+    RigidBodyBind RigidBody;
+    ColliderBind Collider;
+    CharacterControllerBind CharacterController;
+    RuntimeGuiExtensionApi GuiExtension;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create();

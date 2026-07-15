@@ -13,5 +13,9 @@ OrbedenNativeApi OrbedenNativeApi::Create()
     api.Mesh = MeshBind::Create();
     api.Material = MaterialBind::Create();
     api.Shader = ShaderBind::Create();
+    api.RigidBody = RigidBodyBind::Create();
+    api.Collider = ColliderBind::Create();
+    api.CharacterController = CharacterControllerBind::Create();
+    api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();
     return api;
 }

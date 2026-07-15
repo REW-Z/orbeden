@@ -5,5 +5,7 @@
   </Configurations>
   <Project Path="OrbedenCore/OrbedenCore.vcxproj" Id="b12e5123-bd9c-4d91-a1ba-879726128c33" />
   <Project Path="OrbedenCore/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.csproj" Id="c73f4de0-68f3-4c89-bb0e-5208cf911574" />
+  <Project Path="OrbedenEditor/Managed/Orbeden.Editor/Orbeden.Editor.csproj" />
   <Project Path="OrbedenEditor/OrbedenEditor.vcxproj" Id="3d2f40a3-67c9-4ee0-a524-36f4be99a9f2" />
+  <Project Path="Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" />
 </Solution>

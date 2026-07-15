@@ -549,6 +549,8 @@ EditorSystem::~EditorSystem()
 {
     SaveEditorLayout();
     selectionOutline.Clear();
+    app.SetPaused(false);
+    app.SetSimulationEnabled(false);
     playMode.Stop();
     managedOverlay.UnloadGameAssembly();
     managedOverlay.Shutdown();
@@ -744,6 +746,8 @@ void EditorSystem::RequestPlay()
     }
 
     managedOverlay.LoadGameAssembly(playMode.GetShadowAssemblyPath(), GetProjectScriptSidecarPath());
+    app.SetPaused(false);
+    app.SetSimulationEnabled(true);
     projectStatus = "Play-In-Editor started.";
 }
 
@@ -751,6 +755,8 @@ void EditorSystem::RequestStop()
 {
     if (!playMode.IsPlaying()) return;
 
+    app.SetPaused(false);
+    app.SetSimulationEnabled(false);
     playMode.Stop();
     managedOverlay.UnloadGameAssembly();
     if (project.HasProject())
@@ -818,22 +824,17 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string publishScript = ToCleanPath(std::filesystem::path(repoRoot) / "Build/PublishGameAot.ps1");
-    if (!FileExists(publishScript))
+    std::string publishError;
+    if (!managedOverlay.PublishGameAot(repoRoot,
+        project.GetProjectRoot(),
+        scriptProject,
+        BuildConfiguration,
+        target.scriptName,
+        publishError))
     {
-        projectStatus = "NativeAOT publish script is missing.";
+        projectStatus = "Build Player AOT failed for " + std::string(target.displayName) + ".";
+        if (!publishError.empty()) projectStatus += " " + publishError;
         Log::Error(projectStatus.c_str());
-        return;
-    }
-
-    std::string publishCommand = "powershell -ExecutionPolicy Bypass -File " + Quote(publishScript)
-        + " -Configuration " + BuildConfiguration
-        + " -TargetPlatform " + target.scriptName
-        + " -ProjectRoot " + Quote(project.GetProjectRoot())
-        + " -ScriptProject " + Quote(scriptProject);
-    if (!RunCommand(publishCommand, "Build Player AOT"))
-    {
-        projectStatus = "Build Player AOT failed for " + std::string(target.displayName) + ". Check local NativeAOT packs; no DLL fallback was attempted.";
         return;
     }
 
@@ -1865,6 +1866,7 @@ void EditorSystem::DrawPlayToolbar()
         if (DrawToolbarIconButton("##pause_button", ToolbarIcon::Pause, ImVec2(buttonWidth, 24.0f)))
         {
             playMode.SetPaused(!playMode.IsPaused());
+            app.SetPaused(playMode.IsPaused());
         }
         if (pauseHighlighted)
         {

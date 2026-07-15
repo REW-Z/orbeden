@@ -39,6 +39,30 @@ public static class GUI
         NativeGui.EndComponentBlock();
     }
 
+    /// <summary>开始一个可折叠、可选移除的组件块。</summary>
+    public static bool BeginCollapsibleComponentBlock(string title, string id, bool removable, out bool removeRequested)
+    {
+        return NativeGui.BeginCollapsibleComponentBlock(title, id, removable, out removeRequested);
+    }
+
+    /// <summary>开始一个下拉选择框，返回本帧是否展开。</summary>
+    public static bool BeginCombo(string label, string preview)
+    {
+        return NativeGui.BeginCombo(label, preview);
+    }
+
+    /// <summary>结束当前下拉选择框。</summary>
+    public static void EndCombo()
+    {
+        NativeGui.EndCombo();
+    }
+
+    /// <summary>绘制下拉选择项并返回本帧是否点击。</summary>
+    public static bool Selectable(string label, bool selected = false)
+    {
+        return NativeGui.Selectable(label, selected);
+    }
+
     /// <summary>绘制布尔输入框。</summary>
     public static bool Checkbox(string label, ref bool value)
     {

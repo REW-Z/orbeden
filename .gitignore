@@ -13,3 +13,4 @@ OrbedenGame/x64/*
 OrbedenGame/OrbedenGame/*
 OrbedenGame/Build/*
 OrbedenCore/obj/*
+Build/.cache/*

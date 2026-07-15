@@ -21,17 +21,28 @@ internal unsafe struct RuntimeGuiApi
     public delegate* unmanaged[Cdecl]<byte*, int, void> BeginComponentBlock;
     public delegate* unmanaged[Cdecl]<void> EndComponentBlock;
 }
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct RuntimeGuiExtensionApi
+{
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte, byte*, byte> BeginCollapsibleComponentBlock;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> BeginCombo;
+    public delegate* unmanaged[Cdecl]<void> EndCombo;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> Selectable;
+}
 #pragma warning restore CS0649
 
 internal static unsafe class NativeGui
 {
     private static RuntimeGuiApi api;
+    private static RuntimeGuiExtensionApi extensionApi;
     private static bool initialized;
 
     //保存 C++ 传入的 Runtime GUI 函数表
-    internal static void Initialize(RuntimeGuiApi value)
+    internal static void Initialize(RuntimeGuiApi value, RuntimeGuiExtensionApi extensionValue)
     {
         api = value;
+        extensionApi = extensionValue;
         initialized = api.Label != null;
     }
 
@@ -111,6 +122,87 @@ internal static unsafe class NativeGui
     {
         if (!initialized || api.EndComponentBlock == null) return;
         api.EndComponentBlock();
+    }
+
+    //开始绘制可折叠、可选移除的组件块
+    internal static bool BeginCollapsibleComponentBlock(string? title, string? id, bool removable, out bool removeRequested)
+    {
+        removeRequested = false;
+        if (!initialized) return false;
+        if (extensionApi.BeginCollapsibleComponentBlock == null)
+        {
+            BeginComponentBlock(title);
+            return true;
+        }
+
+        string titleText = title ?? string.Empty;
+        int titleByteCount = Encoding.UTF8.GetByteCount(titleText);
+        Span<byte> titleBytes = titleByteCount <= 1024 ? stackalloc byte[Math.Max(titleByteCount, 1)] : new byte[titleByteCount];
+        Encoding.UTF8.GetBytes(titleText.AsSpan(), titleBytes);
+
+        string idText = id ?? string.Empty;
+        int idByteCount = Encoding.UTF8.GetByteCount(idText);
+        Span<byte> idBytes = idByteCount <= 1024 ? stackalloc byte[Math.Max(idByteCount, 1)] : new byte[idByteCount];
+        Encoding.UTF8.GetBytes(idText.AsSpan(), idBytes);
+
+        byte nativeRemoveRequested = 0;
+        fixed (byte* titlePointer = titleBytes)
+        fixed (byte* idPointer = idBytes)
+        {
+            bool expanded = extensionApi.BeginCollapsibleComponentBlock(titlePointer,
+                titleByteCount,
+                idPointer,
+                idByteCount,
+                removable ? (byte)1 : (byte)0,
+                &nativeRemoveRequested) != 0;
+            removeRequested = nativeRemoveRequested != 0;
+            return expanded;
+        }
+    }
+
+    //开始绘制下拉选择框
+    internal static bool BeginCombo(string? label, string? preview)
+    {
+        if (!initialized || extensionApi.BeginCombo == null) return false;
+
+        string labelText = label ?? string.Empty;
+        int labelByteCount = Encoding.UTF8.GetByteCount(labelText);
+        Span<byte> labelBytes = labelByteCount <= 1024 ? stackalloc byte[Math.Max(labelByteCount, 1)] : new byte[labelByteCount];
+        Encoding.UTF8.GetBytes(labelText.AsSpan(), labelBytes);
+
+        string previewText = preview ?? string.Empty;
+        int previewByteCount = Encoding.UTF8.GetByteCount(previewText);
+        Span<byte> previewBytes = previewByteCount <= 1024 ? stackalloc byte[Math.Max(previewByteCount, 1)] : new byte[previewByteCount];
+        Encoding.UTF8.GetBytes(previewText.AsSpan(), previewBytes);
+
+        fixed (byte* labelPointer = labelBytes)
+        fixed (byte* previewPointer = previewBytes)
+        {
+            return extensionApi.BeginCombo(labelPointer, labelByteCount, previewPointer, previewByteCount) != 0;
+        }
+    }
+
+    //结束当前下拉选择框
+    internal static void EndCombo()
+    {
+        if (!initialized || extensionApi.EndCombo == null) return;
+        extensionApi.EndCombo();
+    }
+
+    //绘制下拉选择项
+    internal static bool Selectable(string? label, bool selected)
+    {
+        if (!initialized || extensionApi.Selectable == null) return false;
+
+        string value = label ?? string.Empty;
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+
+        fixed (byte* pointer = bytes)
+        {
+            return extensionApi.Selectable(pointer, byteCount, selected ? (byte)1 : (byte)0) != 0;
+        }
     }
 
     //绘制布尔输入框

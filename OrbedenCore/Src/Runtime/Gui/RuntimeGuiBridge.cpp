@@ -101,6 +101,61 @@ namespace
         ImGui::Spacing();
     }
 
+    // 开始绘制可折叠、可选移除的组件块。
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiBeginCollapsibleComponentBlock(const uint8* title,
+        int32 titleLength,
+        const uint8* id,
+        int32 idLength,
+        uint8 removable,
+        uint8* removeRequested)
+    {
+        std::string value = ReadUtf8Text(title, titleLength);
+        std::string identity = ReadUtf8Text(id, idLength);
+        if (value.empty()) value = "Component";
+        if (identity.empty()) identity = value;
+        if (removeRequested) *removeRequested = 0;
+
+        ImGui::Spacing();
+        ImGui::PushID(identity.c_str());
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+        ImGui::BeginChild("##component", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+
+        constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+        bool visible = true;
+        bool expanded = removable != 0
+            ? ImGui::CollapsingHeader(value.c_str(), &visible, flags)
+            : ImGui::CollapsingHeader(value.c_str(), flags);
+        if (removeRequested && !visible) *removeRequested = 1;
+        if (expanded) ImGui::Separator();
+        return expanded ? 1 : 0;
+    }
+
+    // 开始绘制下拉选择框。
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiBeginCombo(const uint8* label,
+        int32 labelLength,
+        const uint8* preview,
+        int32 previewLength)
+    {
+        std::string labelText = ReadUtf8Text(label, labelLength);
+        std::string previewText = ReadUtf8Text(preview, previewLength);
+        return ImGui::BeginCombo(labelText.c_str(), previewText.c_str()) ? 1 : 0;
+    }
+
+    // 结束当前下拉选择框。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiEndCombo()
+    {
+        ImGui::EndCombo();
+    }
+
+    // 绘制下拉选择项。
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiSelectable(const uint8* label, int32 length, uint8 selected)
+    {
+        std::string value = ReadUtf8Text(label, length);
+        return ImGui::Selectable(value.c_str(), selected != 0) ? 1 : 0;
+    }
+
     // 绘制布尔输入框。
     uint8 ORBEDEN_NATIVE_CALL RuntimeGuiCheckbox(const uint8* label, int32 length, uint8* value)
     {
@@ -175,5 +230,15 @@ RuntimeGuiApi RuntimeGuiBridge::GetApi()
     api.InputText = reinterpret_cast<void*>(&RuntimeGuiInputText);
     api.BeginComponentBlock = reinterpret_cast<void*>(&RuntimeGuiBeginComponentBlock);
     api.EndComponentBlock = reinterpret_cast<void*>(&RuntimeGuiEndComponentBlock);
+    return api;
+}
+
+RuntimeGuiExtensionApi RuntimeGuiBridge::GetExtensionApi()
+{
+    RuntimeGuiExtensionApi api;
+    api.BeginCollapsibleComponentBlock = reinterpret_cast<void*>(&RuntimeGuiBeginCollapsibleComponentBlock);
+    api.BeginCombo = reinterpret_cast<void*>(&RuntimeGuiBeginCombo);
+    api.EndCombo = reinterpret_cast<void*>(&RuntimeGuiEndCombo);
+    api.Selectable = reinterpret_cast<void*>(&RuntimeGuiSelectable);
     return api;
 }

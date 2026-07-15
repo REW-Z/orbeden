@@ -10,6 +10,7 @@ set(ORBEDEN_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ExampleProject" CACHE PATH 
 set(ORBEDEN_GAME_AOT_LIB "" CACHE FILEPATH "NativeAOT static game library.")
 set(ORBEDEN_GLFW_ROOT "" CACHE PATH "Optional GLFW root for clang/gcc player builds.")
 set(ORBEDEN_PLAYER_TARGET "windows-x64" CACHE STRING "Orbeden player target platform.")
+set(ORBEDEN_PHYSX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/OrbedenCore/Src/ThirdParty/PhysX" CACHE PATH "Orbeden PhysX CPU-only package root.")
 
 if(NOT ORBEDEN_GAME_AOT_LIB)
     message(FATAL_ERROR "ORBEDEN_GAME_AOT_LIB is required. Build the game C# NativeAOT static library first.")
@@ -32,6 +33,11 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/FileSystem/PathDefines.cpp
     OrbedenCore/Src/Log/Log.cpp
     OrbedenCore/Src/Memory/MemoryManager.cpp
+    OrbedenCore/Src/Physics/CharacterControllerComponent.cpp
+    OrbedenCore/Src/Physics/ColliderComponent.cpp
+    OrbedenCore/Src/Physics/PhysicsReflection.cpp
+    OrbedenCore/Src/Physics/PhysicsSystem.cpp
+    OrbedenCore/Src/Physics/RigidBodyComponent.cpp
     OrbedenCore/Src/Platform/DynamicLibrary.cpp
     OrbedenCore/Src/Platform/GlfwWindow.cpp
     OrbedenCore/Src/Platform/InputManager.cpp
@@ -88,11 +94,61 @@ set(ORBEDEN_GAME_SOURCES
 add_library(orbeden_core STATIC ${ORBEDEN_CORE_SOURCES})
 target_include_directories(orbeden_core PUBLIC
     "${ORBEDEN_CORE_DIR}/Src"
+    "${ORBEDEN_PHYSX_ROOT}/include"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/glfw/include"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/glad/include"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/imgui"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/imgui/backends"
 )
+target_compile_definitions(orbeden_core PUBLIC PX_PHYSX_STATIC_LIB DISABLE_CUDA_PHYSX)
+
+if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release)$")
+    message(FATAL_ERROR "PhysX packages are provided for Debug and Release only; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
+endif()
+
+set(_orbeden_physx_names
+    PhysX_static_64
+    PhysXCommon_static_64
+    PhysXFoundation_static_64
+    PhysXExtensions_static_64
+    PhysXPvdSDK_static_64
+    PhysXCooking_static_64
+    PhysXCharacterKinematic_static_64
+    PhysXVehicle_static_64
+)
+
+if(WIN32)
+    set(_orbeden_physx_lib_dir "${ORBEDEN_PHYSX_ROOT}/lib/WindowsX64/${CMAKE_BUILD_TYPE}")
+    foreach(_name IN LISTS _orbeden_physx_names)
+        list(APPEND _orbeden_physx_archives "${_orbeden_physx_lib_dir}/${_name}.lib")
+    endforeach()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(_orbeden_physx_compiler "Clang")
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(_orbeden_physx_compiler "GCC")
+    else()
+        message(FATAL_ERROR "PhysX Linux packages support Clang and GCC only.")
+    endif()
+    set(_orbeden_physx_lib_dir "${ORBEDEN_PHYSX_ROOT}/lib/LinuxX64/${_orbeden_physx_compiler}/${CMAKE_BUILD_TYPE}")
+    foreach(_name IN LISTS _orbeden_physx_names)
+        list(APPEND _orbeden_physx_archives "${_orbeden_physx_lib_dir}/lib${_name}.a")
+    endforeach()
+else()
+    message(FATAL_ERROR "PhysX is currently verified only for Windows x64 and Linux x64: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+foreach(_archive IN LISTS _orbeden_physx_archives)
+    if(NOT EXISTS "${_archive}")
+        message(FATAL_ERROR "PhysX CPU-only static library is missing: ${_archive}")
+    endif()
+endforeach()
+
+if(WIN32)
+    target_link_libraries(orbeden_core PUBLIC ${_orbeden_physx_archives})
+else()
+    target_link_libraries(orbeden_core PUBLIC "$<LINK_GROUP:RESCAN,${_orbeden_physx_archives}>")
+endif()
 
 if(MSVC)
     target_compile_options(orbeden_core PRIVATE /utf-8)
@@ -115,7 +171,7 @@ if(WIN32)
     endif()
 
     target_link_libraries(orbeden_core PUBLIC "${ORBEDEN_GLFW_LIBRARY}" OpenGL::GL)
-    target_link_libraries(orbeden_core PUBLIC gdi32 user32 shell32 advapi32 ole32 uuid dwmapi winmm imm32 version setupapi)
+    target_link_libraries(orbeden_core PUBLIC gdi32 user32 shell32 advapi32 ole32 uuid dwmapi winmm imm32 version setupapi ws2_32)
 else()
     find_package(Threads REQUIRED)
     find_package(glfw3 CONFIG QUIET)
@@ -138,7 +194,7 @@ else()
         target_link_libraries(orbeden_core PUBLIC "${ORBEDEN_GLFW_LIBRARY}")
     endif()
 
-    target_link_libraries(orbeden_core PUBLIC OpenGL::GL Threads::Threads ${CMAKE_DL_LIBS})
+    target_link_libraries(orbeden_core PUBLIC OpenGL::GL Threads::Threads ${CMAKE_DL_LIBS} rt)
 endif()
 
 add_executable(orbeden_game ${ORBEDEN_GAME_SOURCES})

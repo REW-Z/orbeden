@@ -107,10 +107,47 @@ public static class EditorRuntime
         Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
     }
 
+    /// <summary>发布当前项目的 NativeAOT 静态库。</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe byte PublishGameAot(byte* repositoryRoot,
+        int repositoryRootLength,
+        byte* projectRoot,
+        int projectRootLength,
+        byte* scriptProject,
+        int scriptProjectLength,
+        byte* configuration,
+        int configurationLength,
+        byte* targetPlatform,
+        int targetPlatformLength,
+        byte* errorBuffer,
+        int errorBufferSize)
+    {
+        bool succeeded = PlayerBuildPipeline.Publish(
+            ReadUtf8(repositoryRoot, repositoryRootLength),
+            ReadUtf8(projectRoot, projectRootLength),
+            ReadUtf8(scriptProject, scriptProjectLength),
+            ReadUtf8(configuration, configurationLength),
+            ReadUtf8(targetPlatform, targetPlatformLength),
+            out string error);
+        WriteUtf8(errorBuffer, errorBufferSize, error);
+        return succeeded ? (byte)1 : (byte)0;
+    }
+
     //从 C++ 传入的 UTF-8 指针读取字符串。
     private static unsafe string ReadUtf8(byte* text, int length)
     {
         if (text == null || length <= 0) return string.Empty;
         return Encoding.UTF8.GetString(new ReadOnlySpan<byte>(text, length));
+    }
+
+    //把 UTF-8 文本写入 C++ 提供的缓冲区。
+    private static unsafe void WriteUtf8(byte* buffer, int bufferSize, string text)
+    {
+        if (buffer == null || bufferSize <= 0) return;
+
+        Span<byte> output = new(buffer, bufferSize);
+        output.Clear();
+        Encoding.UTF8.GetEncoder().Convert(text.AsSpan(), output[..^1], true, out _, out int bytesUsed, out _);
+        output[bytesUsed] = 0;
     }
 }

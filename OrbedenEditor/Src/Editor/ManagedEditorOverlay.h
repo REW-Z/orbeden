@@ -19,6 +19,7 @@ private:
     void* DrawInspectorFunction = nullptr;
     void* DrawInspectorContentFunction = nullptr;
     void* DrawEditorPanelContentFunction = nullptr;
+    void* PublishGameAotFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -48,6 +49,14 @@ public:
 
     // 绘制 C# SceneView Gizmos。
     void DrawSceneGizmos(const matrix4x4& viewProjection, int32 viewportWidth, int32 viewportHeight);
+
+    // 使用 Editor C# 发布用户游戏 NativeAOT 静态库。
+    bool PublishGameAot(const std::string& repositoryRoot,
+        const std::string& projectRoot,
+        const std::string& scriptProject,
+        const std::string& configuration,
+        const std::string& targetPlatform,
+        std::string& error);
 
     // 判断 Editor 托管覆盖层是否可用。
     bool IsInitialized() const;
