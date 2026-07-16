@@ -1,5 +1,7 @@
 #include "Editor/PanelManager.h"
 
+#include "Log/Log.h"
+
 #include <imgui.h>
 
 #include <algorithm>
@@ -27,30 +29,41 @@ namespace
 }
 
 //注册一个面板实例
-void PanelManager::RegisterPanel(const PanelInfo& info, IEditorPanel* panel)
+bool PanelManager::RegisterPanel(std::unique_ptr<IEditorPanel> panel)
 {
-    if (!panel || !info.id || info.id[0] == '\0') return;
-
-    PanelEntry* oldEntry = FindPanel(info.id);
-    if (oldEntry)
+    if (!panel)
     {
-        oldEntry->info = info;
-        oldEntry->id = info.id;
-        oldEntry->title = info.title ? info.title : info.id;
-        oldEntry->panel = panel;
-        ApplyVisibility(*oldEntry, info.defaultVisible);
-        return;
+        Log::Error("Panel registration failed: panel is null.");
+        return false;
+    }
+
+    const EditorPanelInfo& info = panel->GetPanelInfo();
+    if (info.id.empty())
+    {
+        Log::Error("Panel registration failed: panel id is empty.");
+        return false;
+    }
+    if (FindPanel(info.id.c_str()))
+    {
+        std::string error = "Panel registration failed: duplicate panel id " + info.id + ".";
+        Log::Error(error.c_str());
+        return false;
     }
 
     PanelEntry entry;
     entry.info = info;
-    entry.id = info.id;
-    entry.title = info.title ? info.title : info.id;
-    entry.panel = panel;
+    if (entry.info.title.empty()) entry.info.title = entry.info.id;
+    entry.panel = std::move(panel);
     entry.visible = info.defaultVisible;
     entry.size = info.defaultSize;
-    panels.push_back(entry);
+    panels.push_back(std::move(entry));
+    std::stable_sort(panels.begin(), panels.end(), [](const PanelEntry& left, const PanelEntry& right)
+    {
+        if (left.info.order != right.info.order) return left.info.order < right.info.order;
+        return left.info.id < right.info.id;
+    });
     defaultLayoutPending = true;
+    return true;
 }
 
 //绘制 Views 菜单内容
@@ -65,9 +78,9 @@ void PanelManager::DrawViewsMenu()
     for (PanelEntry& entry : panels)
     {
         bool visible = entry.visible;
-        if (ImGui::Checkbox(entry.title.c_str(), &visible))
+        if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
         {
-            SetPanelVisible(entry.id.c_str(), visible);
+            SetPanelVisible(entry.info.id.c_str(), visible);
         }
     }
 
@@ -140,7 +153,7 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
         entry->dockNode = state.visible && FindDockNode(state.dockNode) ? state.dockNode : -1;
         if (DockNode* node = FindDockNode(entry->dockNode))
         {
-            node->tabs.push_back(entry->id);
+            node->tabs.push_back(entry->info.id);
         }
         if (state.hasPosition)
         {
@@ -184,7 +197,7 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
     for (const PanelEntry& entry : panels)
     {
         EditorPanelState state;
-        state.id = entry.id;
+        state.id = entry.info.id;
         state.visible = entry.visible;
         state.hasPosition = entry.hasPosition;
         state.hasSize = entry.hasSize;
@@ -223,13 +236,13 @@ void PanelManager::SetPanelVisible(const char* id, bool visible)
     if (!visible && entry->dockNode >= 0)
     {
         int32 oldNode = entry->dockNode;
-        RemovePanelFromDock(entry->id);
+        RemovePanelFromDock(entry->info.id);
         CompactDockNode(oldNode);
     }
     ApplyVisibility(*entry, visible);
     if (visible && entry->dockNode < 0 && FindDockNode(dockRoot))
     {
-        DockPanel(entry->id, dockRoot, PanelDockPlacement::Center);
+        DockPanel(entry->info.id, dockRoot, PanelDockPlacement::Center);
     }
 }
 
@@ -255,7 +268,7 @@ PanelManager::PanelEntry* PanelManager::FindPanel(const char* id)
 
     for (PanelEntry& entry : panels)
     {
-        if (entry.id == id) return &entry;
+        if (entry.info.id == id) return &entry;
     }
 
     return nullptr;
@@ -376,7 +389,7 @@ void PanelManager::BuildDefaultDockLayout()
             if (entry.info.defaultDock != placement) continue;
 
             int32 splitNode = centerNode;
-            DockPanel(entry.id, splitNode, placement);
+            DockPanel(entry.info.id, splitNode, placement);
             const DockNode* split = FindDockNode(splitNode);
             if (!split) continue;
             centerNode = split->firstChild == entry.dockNode ? split->secondChild : split->firstChild;
@@ -387,7 +400,7 @@ void PanelManager::BuildDefaultDockLayout()
     {
         if (entry.info.defaultDock == PanelDockPlacement::Center)
         {
-            DockPanel(entry.id, centerNode, PanelDockPlacement::Center);
+            DockPanel(entry.info.id, centerNode, PanelDockPlacement::Center);
         }
     }
 
@@ -564,9 +577,9 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             if (!entry || !entry->visible) continue;
             if (drewTab) ImGui::SameLine();
 
-            bool selected = node.activePanel == entry->id;
-            std::string tabLabel = entry->title + "###DockTab" + entry->id;
-            float32 tabWidth = ImGui::CalcTextSize(entry->title.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f + 10.0f;
+            bool selected = node.activePanel == entry->info.id;
+            std::string tabLabel = entry->info.title + "###DockTab" + entry->info.id;
+            float32 tabWidth = ImGui::CalcTextSize(entry->info.title.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f + 10.0f;
             if (selected)
             {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_TabSelected));
@@ -576,20 +589,20 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             if (selected) ImGui::PopStyleColor(2);
             if (tabClicked)
             {
-                node.activePanel = entry->id;
+                node.activePanel = entry->info.id;
             }
-            std::string popupId = "DockTabContext##" + entry->id;
+            std::string popupId = "DockTabContext##" + entry->info.id;
             if (ImGui::BeginPopupContextItem(popupId.c_str()))
             {
                 if (ImGui::MenuItem("Float")) floatActive = true;
-                if (ImGui::MenuItem("Close")) closePanel = entry->id;
+                if (ImGui::MenuItem("Close")) closePanel = entry->info.id;
                 ImGui::EndPopup();
             }
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
             {
-                draggedPanel = entry->id;
-                ImGui::SetDragDropPayload(PanelDragPayload, entry->id.c_str(), entry->id.size() + 1);
-                ImGui::TextUnformatted(entry->title.c_str());
+                draggedPanel = entry->info.id;
+                ImGui::SetDragDropPayload(PanelDragPayload, entry->info.id.c_str(), entry->info.id.size() + 1);
+                ImGui::TextUnformatted(entry->info.title.c_str());
                 ImGui::EndDragDropSource();
             }
             drewTab = true;
@@ -651,7 +664,7 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         if (entry)
         {
             pendingFloat.pending = true;
-            pendingFloat.panelId = entry->id;
+            pendingFloat.panelId = entry->info.id;
             pendingFloat.position = { position.x + 30.0f, position.y + 30.0f };
         }
     }
@@ -733,7 +746,7 @@ void PanelManager::ApplyPendingCommands()
         if (entry)
         {
             int32 oldNode = entry->dockNode;
-            RemovePanelFromDock(entry->id);
+            RemovePanelFromDock(entry->info.id);
             CompactDockNode(oldNode);
             entry->hasPosition = true;
             entry->position = pendingFloat.position;
@@ -783,7 +796,7 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
     if (entry.hasPosition) ImGui::SetNextWindowPos(ToImVec2(entry.position), ImGuiCond_Always);
 
     bool visible = entry.visible;
-    std::string windowTitle = entry.title + "###Panel" + entry.id;
+    std::string windowTitle = entry.info.title + "###Panel" + entry.info.id;
     constexpr ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoMove |
@@ -804,17 +817,17 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
     }
     if (open)
     {
-        std::string dockButtonId = "Dock###FloatDock" + entry.id;
+        std::string dockButtonId = "Dock###FloatDock" + entry.info.id;
         if (ImGui::SmallButton(dockButtonId.c_str()))
         {
             int32 target = FindBestDockTarget(dockRoot);
-            if (target >= 0) DockPanel(entry.id, target, PanelDockPlacement::Center);
+            if (target >= 0) DockPanel(entry.info.id, target, PanelDockPlacement::Center);
         }
         if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
-            draggedPanel = entry.id;
-            ImGui::SetDragDropPayload(PanelDragPayload, entry.id.c_str(), entry.id.size() + 1);
-            ImGui::Text("Dock %s", entry.title.c_str());
+            draggedPanel = entry.info.id;
+            ImGui::SetDragDropPayload(PanelDragPayload, entry.info.id.c_str(), entry.info.id.size() + 1);
+            ImGui::Text("Dock %s", entry.info.title.c_str());
             ImGui::EndDragDropSource();
         }
         ImGui::SameLine();

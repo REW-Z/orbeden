@@ -1,32 +1,11 @@
 #pragma once
 
 #include "Editor/EditorLayoutState.h"
-#include "Editor/IEditorPanel.h"
+#include "Editor/Panels/IEditorPanel.h"
 #include "Runtime/EngineTypes.h"
 
+#include <memory>
 #include <string>
-
-enum class PanelDockPlacement
-{
-    Center,
-    Left,
-    Right,
-    Top,
-    Bottom,
-    Floating
-};
-
-//面板注册信息。
-struct PanelInfo
-{
-public:
-    const char* id = "";
-    const char* title = "";
-    bool defaultVisible = true;
-    vector2 defaultSize = { 320.0f, 240.0f };
-    PanelDockPlacement defaultDock = PanelDockPlacement::Center;
-    float32 defaultDockRatio = 0.25f;
-};
 
 //编辑器浮动面板管理器。
 class PanelManager
@@ -35,10 +14,8 @@ private:
     struct PanelEntry
     {
     public:
-        PanelInfo info;
-        std::string id;
-        std::string title;
-        IEditorPanel* panel = nullptr;
+        EditorPanelInfo info;
+        std::unique_ptr<IEditorPanel> panel;
         bool visible = false;
         bool hasPosition = false;
         bool hasSize = false;
@@ -98,7 +75,7 @@ private:
 
 public:
     //注册一个面板实例
-    void RegisterPanel(const PanelInfo& info, IEditorPanel* panel);
+    bool RegisterPanel(std::unique_ptr<IEditorPanel> panel);
 
     //绘制 Views 菜单内容
     void DrawViewsMenu();

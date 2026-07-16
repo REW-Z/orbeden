@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Editor/IEditorPanel.h"
+#include "Editor/Panels/IEditorPanel.h"
 #include "Defines/types.h"
 #include "Runtime/EnsId.h"
 
-class EditorSelection;
+class EditorScene;
 class EditorSystem;
 struct EnsId;
 class World;
@@ -23,23 +23,21 @@ private:
     };
 
     EditorSystem& editor;
+    EditorPanelInfo info;
     PendingMove pendingMove;
 
 public:
     explicit EnsViewPanel(EditorSystem& owner);
 
-    //获取面板稳定ID
-    const char* GetPanelId() const override;
-
-    //获取面板显示标题
-    const char* GetPanelTitle() const override;
+    //获取面板信息
+    const EditorPanelInfo& GetPanelInfo() const override;
 
     //绘制面板内容
     void DrawPanel() override;
 
 private:
     //绘制单个Ens节点
-    void DrawEnsNode(World& world, EditorSelection& selection, EnsId ens, const List<EnsId>& roots);
+    void DrawEnsNode(World& world, EditorScene& sceneEditor, EnsId ens, const List<EnsId>& roots);
 
     //处理节点上的拖拽投放区域
     void DrawNodeDropTarget(World& world, EnsId target, const List<EnsId>& roots);

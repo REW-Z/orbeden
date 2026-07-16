@@ -7,8 +7,8 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>Editor CLR 中的用户游戏程序集域。</summary>
-internal static class EditorGameDomain
+/// <summary>显示当前 Ens 及其原生和脚本组件。</summary>
+internal sealed class InspectorPanel : EditorPanel
 {
     private sealed class GameAssemblyLoadContext : AssemblyLoadContext
     {
@@ -61,19 +61,46 @@ internal static class EditorGameDomain
         public string Value { get; set; } = string.Empty;
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private static readonly List<Type> scriptTypes = [];
-    private static readonly Dictionary<string, List<ScriptMount>> sidecarScripts = [];
-    private static readonly Dictionary<string, string> componentSearches = [];
-    private static readonly Dictionary<string, string> selectedAddTypes = [];
-    private static readonly HashSet<ScriptBehaviour> runtimeSerializedApplied = [];
-    private static GameAssemblyLoadContext? gameContext;
-    private static Assembly? gameAssembly;
-    private static string status = "Game assembly is not loaded.";
-    private static string currentSidecarPath = string.Empty;
+    private readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly List<Type> scriptTypes = [];
+    private readonly Dictionary<string, List<ScriptMount>> sidecarScripts = [];
+    private readonly Dictionary<string, string> componentSearches = [];
+    private readonly Dictionary<string, string> selectedAddTypes = [];
+    private readonly HashSet<ScriptBehaviour> runtimeSerializedApplied = [];
+    private GameAssemblyLoadContext? gameContext;
+    private Assembly? gameAssembly;
+    private string status = "Game assembly is not loaded.";
+    private string currentSidecarPath = string.Empty;
+
+    public override EditorPanelInfo Info => new(
+        "inspector",
+        "Inspector",
+        true,
+        new vector2(360.0f, 520.0f),
+        PanelDockPlacement.Right,
+        0.25f,
+        300);
+
+    /// <summary>加载 Inspector 使用的游戏程序集和 sidecar。</summary>
+    public override void OnGameAssemblyLoaded(string assemblyPath, string sidecarPath)
+    {
+        LoadGameAssembly(assemblyPath, sidecarPath);
+    }
+
+    /// <summary>卸载 Inspector 使用的游戏程序集和 sidecar。</summary>
+    public override void OnGameAssemblyUnloaded()
+    {
+        UnloadGameAssembly();
+    }
+
+    /// <summary>绘制 Inspector 内容。</summary>
+    public override void Draw(EditorPanelContext context)
+    {
+        DrawContent(context.SelectedEns, context.SelectedStableId);
+    }
 
     /// <summary>加载用户游戏程序集和脚本挂载清单。</summary>
-    public static void LoadGameAssembly(string assemblyPath, string sidecarPath)
+    private void LoadGameAssembly(string assemblyPath, string sidecarPath)
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
@@ -115,7 +142,7 @@ internal static class EditorGameDomain
     }
 
     /// <summary>清空用户游戏程序集引用和运行态脚本记录。</summary>
-    public static void UnloadGameAssembly()
+    private void UnloadGameAssembly()
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
@@ -128,24 +155,8 @@ internal static class EditorGameDomain
         status = "Game assembly is not loaded.";
     }
 
-    /// <summary>绘制选中 Ens 的 Inspector。</summary>
-    public static void DrawInspector(EnsId selectedEns, string stableId)
-    {
-        bool visible = GUI.BeginPanel("Inspector");
-        try
-        {
-            if (!visible) return;
-
-            DrawInspectorContent(selectedEns, stableId);
-        }
-        finally
-        {
-            GUI.EndPanel();
-        }
-    }
-
-    /// <summary>绘制选中 Ens 的 Inspector 内容。</summary>
-    public static void DrawInspectorContent(EnsId selectedEns, string stableId)
+    //绘制选中 Ens 的 Inspector 内容。
+    private void DrawContent(EnsId selectedEns, string stableId)
     {
         if (selectedEns.IsNull)
         {
@@ -166,7 +177,7 @@ internal static class EditorGameDomain
     }
 
     //绘制选中对象摘要。
-    private static void DrawObjectHeader(Ens ens, EnsId selectedEns, string stableId)
+    private void DrawObjectHeader(Ens ens, EnsId selectedEns, string stableId)
     {
         DrawComponentBlock("Selected Ens", () =>
         {
@@ -182,7 +193,7 @@ internal static class EditorGameDomain
     }
 
     //绘制 Inspector 当前脚本程序集状态。
-    private static void DrawInspectorStatus()
+    private void DrawInspectorStatus()
     {
         if (string.IsNullOrWhiteSpace(status)) return;
 
@@ -190,7 +201,7 @@ internal static class EditorGameDomain
     }
 
     //卸载仅用于 Inspector 反射的用户程序集上下文。
-    private static void UnloadReflectionAssembly()
+    private void UnloadReflectionAssembly()
     {
         gameAssembly = null;
         if (gameContext == null) return;
@@ -200,7 +211,7 @@ internal static class EditorGameDomain
     }
 
     //读取可加载类型，忽略坏类型。
-    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    private IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {
         try
         {
@@ -213,7 +224,7 @@ internal static class EditorGameDomain
     }
 
     //读取 world sidecar 脚本挂载清单。
-    private static void LoadSidecar(string sidecarPath)
+    private void LoadSidecar(string sidecarPath)
     {
         if (string.IsNullOrWhiteSpace(sidecarPath) || !File.Exists(sidecarPath)) return;
 
@@ -244,7 +255,7 @@ internal static class EditorGameDomain
     }
 
     //读取单个 sidecar 脚本挂载项。
-    private static ScriptMount? ReadScriptMount(JsonElement element)
+    private ScriptMount? ReadScriptMount(JsonElement element)
     {
         string? stableId = element.TryGetProperty("stableId", out JsonElement stableIdElement) ? stableIdElement.GetString() : null;
         string? type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() : null;
@@ -263,7 +274,7 @@ internal static class EditorGameDomain
     }
 
     //读取一个序列化字段值。
-    private static ScriptSerializedValue ReadSerializedValue(JsonElement element)
+    private ScriptSerializedValue ReadSerializedValue(JsonElement element)
     {
         if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty("value", out JsonElement valueElement))
         {
@@ -275,13 +286,13 @@ internal static class EditorGameDomain
     }
 
     //把 JsonElement 转成可编辑文本。
-    private static string GetJsonValueText(JsonElement element)
+    private string GetJsonValueText(JsonElement element)
     {
         return element.ValueKind == JsonValueKind.String ? element.GetString() ?? string.Empty : element.GetRawText();
     }
 
     //保存 world sidecar 脚本挂载清单。
-    private static void SaveSidecar()
+    private void SaveSidecar()
     {
         if (string.IsNullOrWhiteSpace(currentSidecarPath)) return;
 
@@ -306,7 +317,7 @@ internal static class EditorGameDomain
     }
 
     //绘制引擎 Bind 对应的 C# 组件块。
-    private static void DrawBoundComponents(Ens ens, EnsId selectedEns)
+    private void DrawBoundComponents(Ens ens, EnsId selectedEns)
     {
         if (ens.HasSpaceComponent)
         {
@@ -377,7 +388,7 @@ internal static class EditorGameDomain
     }
 
     //绘制一个可移除的引擎 Bind 组件。
-    private static void DrawBoundComponent<T>(T? component, EnsId selectedEns, Action<T> draw) where T : Component
+    private void DrawBoundComponent<T>(T? component, EnsId selectedEns, Action<T> draw) where T : Component
     {
         if (component == null) return;
 
@@ -389,7 +400,7 @@ internal static class EditorGameDomain
     }
 
     //统计当前对象上的引擎 Bind 组件数量。
-    private static int GetBoundComponentCount(Ens ens)
+    private int GetBoundComponentCount(Ens ens)
     {
         int count = 0;
         if (ens.HasSpaceComponent) count++;
@@ -401,7 +412,7 @@ internal static class EditorGameDomain
     }
 
     //绘制引擎 Bind 和用户脚本组成的 C# 组件列表。
-    private static void DrawManagedComponents(Ens ens, EnsId selectedEns, string stableId)
+    private void DrawManagedComponents(Ens ens, EnsId selectedEns, string stableId)
     {
         List<ScriptMount>? mounts = null;
         if (!string.IsNullOrEmpty(stableId)) sidecarScripts.TryGetValue(stableId, out mounts);
@@ -459,7 +470,7 @@ internal static class EditorGameDomain
     }
 
     //绘制新增 C# 组件控件。
-    private static void DrawAddComponentControls(Ens ens, string stableId, List<ScriptMount> mounts)
+    private void DrawAddComponentControls(Ens ens, string stableId, List<ScriptMount> mounts)
     {
         List<Type> availableTypes = GetAvailableComponentTypes(ens, stableId, mounts);
         if (availableTypes.Count == 0)
@@ -519,7 +530,7 @@ internal static class EditorGameDomain
     }
 
     //获取当前可添加的引擎 Bind 与游戏脚本组件类型。
-    private static List<Type> GetAvailableComponentTypes(Ens ens, string stableId, List<ScriptMount> mounts)
+    private List<Type> GetAvailableComponentTypes(Ens ens, string stableId, List<ScriptMount> mounts)
     {
         List<Type> types = [];
         if (!ens.HasStaticMeshRenderer) types.Add(typeof(StaticMeshRenderer));
@@ -536,7 +547,7 @@ internal static class EditorGameDomain
     }
 
     //按托管类型添加引擎 Bind 或游戏脚本组件。
-    private static void AddComponent(Ens ens, string stableId, Type type)
+    private void AddComponent(Ens ens, string stableId, Type type)
     {
         if (type == typeof(StaticMeshRenderer)) ens.AddStaticMeshRenderer();
         else if (type == typeof(RigidBody)) ens.AddRigidBody();
@@ -546,7 +557,7 @@ internal static class EditorGameDomain
     }
 
     //判断组件类型是否匹配搜索文本。
-    private static bool MatchesComponentSearch(string typeName, string search)
+    private bool MatchesComponentSearch(string typeName, string search)
     {
         if (string.IsNullOrWhiteSpace(search)) return true;
         return typeName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
@@ -554,7 +565,7 @@ internal static class EditorGameDomain
     }
 
     //新增一个 sidecar 脚本组件。
-    private static void AddScriptMount(string stableId, string typeName)
+    private void AddScriptMount(string stableId, string typeName)
     {
         Type? type = FindScriptType(typeName);
         string scriptTypeName = type != null ? GetScriptTypeName(type) : StripAssemblyName(typeName);
@@ -585,7 +596,7 @@ internal static class EditorGameDomain
     }
 
     //绘制 sidecar 中一个脚本组件的字段。
-    private static void DrawSerializedScriptFields(ScriptMount mount)
+    private void DrawSerializedScriptFields(ScriptMount mount)
     {
         Type? type = FindScriptType(mount.Type);
         if (type == null)
@@ -608,7 +619,7 @@ internal static class EditorGameDomain
     }
 
     //绘制一个 sidecar 字段。
-    private static void DrawSerializedField(ScriptMount mount, FieldInfo field)
+    private void DrawSerializedField(ScriptMount mount, FieldInfo field)
     {
         ScriptSerializedValue serialized = GetSerializedValueForField(mount, field);
         string label = $"{field.Name}##serialized_{mount.StableId}_{mount.Type}_{field.Name}";
@@ -620,7 +631,7 @@ internal static class EditorGameDomain
     }
 
     //读取或创建 sidecar 字段默认值。
-    private static ScriptSerializedValue GetSerializedValueForField(ScriptMount mount, FieldInfo field)
+    private ScriptSerializedValue GetSerializedValueForField(ScriptMount mount, FieldInfo field)
     {
         if (mount.Values.TryGetValue(field.Name, out ScriptSerializedValue? value))
         {
@@ -642,7 +653,7 @@ internal static class EditorGameDomain
     }
 
     //绘制可序列化字段值。
-    private static bool DrawSerializedValue(string label, Type type, ScriptSerializedValue serialized, out string newValue)
+    private bool DrawSerializedValue(string label, Type type, ScriptSerializedValue serialized, out string newValue)
     {
         newValue = serialized.Value;
         if (type == typeof(bool))
@@ -695,7 +706,7 @@ internal static class EditorGameDomain
     }
 
     //绘制与 sidecar 组件匹配的运行态脚本实例。
-    private static void DrawMatchingRuntimeScripts(IReadOnlyList<ScriptBehaviour> runtimeScripts)
+    private void DrawMatchingRuntimeScripts(IReadOnlyList<ScriptBehaviour> runtimeScripts)
     {
         foreach (ScriptBehaviour script in runtimeScripts)
         {
@@ -706,7 +717,7 @@ internal static class EditorGameDomain
     }
 
     //绘制没有 sidecar 挂载清单的运行态脚本实例。
-    private static void DrawUnmatchedRuntimeScripts(string stableId,
+    private void DrawUnmatchedRuntimeScripts(string stableId,
         IReadOnlyList<ScriptBehaviour> runtimeScripts,
         HashSet<ScriptBehaviour> drawnRuntimeScripts)
     {
@@ -724,7 +735,7 @@ internal static class EditorGameDomain
     }
 
     //绘制一个 Inspector 组件块。
-    private static void DrawComponentBlock(string title, Action draw)
+    private void DrawComponentBlock(string title, Action draw)
     {
         GUI.BeginComponentBlock(title);
         try
@@ -738,7 +749,7 @@ internal static class EditorGameDomain
     }
 
     //绘制一个可折叠的 Inspector 组件块。
-    private static bool DrawCollapsibleComponentBlock(string title, string id, bool removable, Action draw)
+    private bool DrawCollapsibleComponentBlock(string title, string id, bool removable, Action draw)
     {
         bool expanded = GUI.BeginCollapsibleComponentBlock(title, id, removable, out bool removeRequested);
         try
@@ -754,7 +765,7 @@ internal static class EditorGameDomain
     }
 
     //把 sidecar 字段值应用到运行态脚本实例一次。
-    private static void ApplySerializedValuesToRuntimeScript(ScriptBehaviour script, string stableId)
+    private void ApplySerializedValuesToRuntimeScript(ScriptBehaviour script, string stableId)
     {
         if (string.IsNullOrEmpty(stableId)) return;
         if (!runtimeSerializedApplied.Add(script)) return;
@@ -773,7 +784,7 @@ internal static class EditorGameDomain
     }
 
     //绘制脚本字段和属性。
-    private static void DrawScriptMembers(object instance, Type type)
+    private void DrawScriptMembers(object instance, Type type)
     {
         foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
@@ -795,7 +806,7 @@ internal static class EditorGameDomain
     }
 
     //获取可序列化字段。
-    private static IEnumerable<FieldInfo> GetSerializableFields(Type type)
+    private IEnumerable<FieldInfo> GetSerializableFields(Type type)
     {
         List<Type> chain = [];
         for (Type? current = type; current != null && current != typeof(ScriptBehaviour) && current != typeof(Component); current = current.BaseType)
@@ -817,7 +828,7 @@ internal static class EditorGameDomain
     }
 
     //判断字段是否显示。
-    private static bool ShouldShowField(FieldInfo field)
+    private bool ShouldShowField(FieldInfo field)
     {
         if (field.IsStatic) return false;
         if (field.GetCustomAttribute<HideInInspectorAttribute>() != null) return false;
@@ -825,7 +836,7 @@ internal static class EditorGameDomain
     }
 
     //判断属性是否显示。
-    private static bool ShouldShowProperty(PropertyInfo property)
+    private bool ShouldShowProperty(PropertyInfo property)
     {
         if (property.GetIndexParameters().Length != 0) return false;
         if (property.GetCustomAttribute<HideInInspectorAttribute>() != null) return false;
@@ -833,7 +844,7 @@ internal static class EditorGameDomain
     }
 
     //绘制基础值。
-    private static void DrawValue(string name, Type type, object? value, Action<object?> setValue)
+    private void DrawValue(string name, Type type, object? value, Action<object?> setValue)
     {
         if (type == typeof(bool))
         {
@@ -874,14 +885,14 @@ internal static class EditorGameDomain
     }
 
     //查找 sidecar 脚本组件。
-    private static ScriptMount? FindScriptMount(string stableId, Type type)
+    private ScriptMount? FindScriptMount(string stableId, Type type)
     {
         if (!sidecarScripts.TryGetValue(stableId, out List<ScriptMount>? mounts)) return null;
         return mounts.FirstOrDefault(mount => TypeMatches(mount.Type, type));
     }
 
     //查找已反射到的脚本类型。
-    private static Type? FindScriptType(string typeName)
+    private Type? FindScriptType(string typeName)
     {
         string scriptTypeName = StripAssemblyName(typeName);
         foreach (Type type in scriptTypes)
@@ -893,7 +904,7 @@ internal static class EditorGameDomain
     }
 
     //判断 sidecar 类型名是否匹配反射类型。
-    private static bool TypeMatches(string typeName, Type type)
+    private bool TypeMatches(string typeName, Type type)
     {
         string scriptTypeName = StripAssemblyName(typeName);
         return string.Equals(scriptTypeName, GetScriptTypeName(type), StringComparison.Ordinal)
@@ -901,13 +912,13 @@ internal static class EditorGameDomain
     }
 
     //获取脚本类型全名。
-    private static string GetScriptTypeName(Type type)
+    private string GetScriptTypeName(Type type)
     {
         return type.FullName ?? type.Name;
     }
 
     //获取脚本类型短名。
-    private static string GetShortTypeName(string typeName)
+    private string GetShortTypeName(string typeName)
     {
         string scriptTypeName = StripAssemblyName(typeName);
         int index = scriptTypeName.LastIndexOf('.');
@@ -915,7 +926,7 @@ internal static class EditorGameDomain
     }
 
     //去掉用户输入类型名中的程序集后缀。
-    private static string StripAssemblyName(string typeName)
+    private string StripAssemblyName(string typeName)
     {
         string value = typeName.Trim();
         int commaIndex = value.IndexOf(',');
@@ -923,7 +934,7 @@ internal static class EditorGameDomain
     }
 
     //获取字段类型序列化名。
-    private static string GetValueTypeName(Type type)
+    private string GetValueTypeName(Type type)
     {
         if (type == typeof(bool)) return "bool";
         if (type == typeof(int)) return "int";
@@ -934,7 +945,7 @@ internal static class EditorGameDomain
     }
 
     //获取字段默认序列化值。
-    private static string GetDefaultSerializedValue(Type type)
+    private string GetDefaultSerializedValue(Type type)
     {
         if (type == typeof(bool)) return "false";
         if (type == typeof(int)) return "0";
@@ -945,7 +956,7 @@ internal static class EditorGameDomain
     }
 
     //把文本反序列化成字段值。
-    private static bool TryConvertSerializedValue(Type type, string text, out object? value)
+    private bool TryConvertSerializedValue(Type type, string text, out object? value)
     {
         value = null;
         if (type == typeof(bool))
@@ -985,7 +996,7 @@ internal static class EditorGameDomain
     }
 
     //解析 vector3 文本。
-    private static vector3 ParseVector3(string text)
+    private vector3 ParseVector3(string text)
     {
         string[] parts = text.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
         float x = parts.Length > 0 && float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float valueX) ? valueX : 0.0f;
@@ -995,13 +1006,13 @@ internal static class EditorGameDomain
     }
 
     //序列化 vector3 文本。
-    private static string SerializeVector3(vector3 value)
+    private string SerializeVector3(vector3 value)
     {
         return string.Format(CultureInfo.InvariantCulture, "{0} {1} {2}", value.x, value.y, value.z);
     }
 
     //格式化 quaternion 文本。
-    private static string FormatQuaternion(quaternion value)
+    private string FormatQuaternion(quaternion value)
     {
         return string.Format(CultureInfo.InvariantCulture, "{0} {1} {2} {3}", value.x, value.y, value.z, value.w);
     }
