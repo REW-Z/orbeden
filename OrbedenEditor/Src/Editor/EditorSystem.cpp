@@ -2,36 +2,24 @@
 
 #include "Log/Log.h"
 #include "Editor/NewProjectGenerator.h"
-#include "Platform/GlfwWindow.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
 #include "Platform/InputManager.h"
-#include "Rendering/RenderMath.h"
-#include "Runtime/Object/Camera.h"
-#include "Runtime/Ens.h"
 #include "FileSystem/PathDefines.h"
-#include "Runtime/Object/SpaceComponent.h"
-#include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <filesystem>
 #include <imgui.h>
-#include <imgui_internal.h>
 #include <sstream>
-
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <utility>
 
 namespace
 {
-    constexpr float32 Pi = 3.14159265358979323846f;
-    constexpr const char* EditorCameraId = "world://editor/camera";
-
     struct PlayerTargetPlatformInfo
     {
         const char* displayName;
@@ -171,85 +159,6 @@ namespace
 
         std::sort(result.begin(), result.end());
         return result;
-    }
-
-    quaternion Mul(const quaternion& a, const quaternion& b)
-    {
-        return
-        {
-            a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
-            a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
-            a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
-            a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-        };
-    }
-
-    quaternion GetYawPitchRotation(float32 yawDegrees, float32 pitchDegrees)
-    {
-        float32 yaw = yawDegrees * Pi / 180.0f;
-        float32 pitch = pitchDegrees * Pi / 180.0f;
-        quaternion yawRotation = { 0.0f, std::sin(yaw * 0.5f), 0.0f, std::cos(yaw * 0.5f) };
-        quaternion pitchRotation = { std::sin(pitch * 0.5f), 0.0f, 0.0f, std::cos(pitch * 0.5f) };
-        return Mul(yawRotation, pitchRotation);
-    }
-
-    vector3 ForwardFromYawPitch(float32 yawDegrees, float32 pitchDegrees)
-    {
-        float32 yaw = yawDegrees * Pi / 180.0f;
-        float32 pitch = pitchDegrees * Pi / 180.0f;
-        float32 cosPitch = std::cos(pitch);
-        return RenderMath::Normalize({ -std::sin(yaw) * cosPitch, std::sin(pitch), -std::cos(yaw) * cosPitch });
-    }
-
-    vector3 RightFromYaw(float32 yawDegrees)
-    {
-        float32 yaw = yawDegrees * Pi / 180.0f;
-        return RenderMath::Normalize({ std::cos(yaw), 0.0f, -std::sin(yaw) });
-    }
-
-    vector3 Add(const vector3& a, const vector3& b)
-    {
-        return { a.x + b.x, a.y + b.y, a.z + b.z };
-    }
-
-    vector3 Scale(const vector3& value, float32 scale)
-    {
-        return { value.x * scale, value.y * scale, value.z * scale };
-    }
-
-    vector3 UpFromYawPitch(float32 yawDegrees, float32 pitchDegrees)
-    {
-        vector3 right = RightFromYaw(yawDegrees);
-        vector3 forward = ForwardFromYawPitch(yawDegrees, pitchDegrees);
-        return RenderMath::Normalize(RenderMath::Cross(right, forward));
-    }
-
-    GLFWwindow* GetGlfwWindow(Application& app)
-    {
-        GlfwWindow* glfwWindow = dynamic_cast<GlfwWindow*>(app.GetWindow());
-        return glfwWindow ? glfwWindow->GetGlfwWindow() : nullptr;
-    }
-
-    bool IsMouseDown(GLFWwindow* window, int button)
-    {
-        return window && glfwGetMouseButton(window, button) == GLFW_PRESS;
-    }
-
-    bool ImGuiCapturesMouse()
-    {
-        return ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse;
-    }
-
-    //判断是否有真实 ImGui 控件正在占用场景点击。
-    bool HasBlockingImGuiActiveItem()
-    {
-        ImGuiContext* context = ImGui::GetCurrentContext();
-        if (!context || context->ActiveId == 0) return false;
-
-        bool windowBackgroundActive = context->ActiveIdWindow
-            && context->ActiveId == context->ActiveIdWindow->MoveId
-            && context->ActiveIdDisabledId == 0;
-        return !windowBackgroundActive;
     }
 
     std::string ReadTextFile(const std::filesystem::path& path)
@@ -496,42 +405,21 @@ namespace
         return ToCleanPath(shadowAssembly);
     }
 
-    // GLFW 原生滚轮累积器，避免依赖 ImGui IO 时序
-    static float32 s_scrollDelta = 0.0f;
-    static GLFWscrollfun s_chainedScrollCallback = nullptr;
-    static bool s_scrollCallbackInstalled = false;
-
-    // GLFW 滚轮回调：累积增量并转发给被链回调（ImGui 等）
-    void EditorScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
-    {
-        // 防重入：避免 GLFW 回调链中触发无限递归
-        static thread_local bool s_inScrollCallback = false;
-        if (s_inScrollCallback) return;
-        s_inScrollCallback = true;
-
-        s_scrollDelta += static_cast<float32>(yoffset);
-        if (s_chainedScrollCallback)
-        {
-            s_chainedScrollCallback(window, xoffset, yoffset);
-        }
-
-        s_inScrollCallback = false;
-    }
 }
 
 EditorSystem::EditorSystem(Application& application, const char* startupExecutablePath)
     : app(application)
     , project(application)
     , executablePath(startupExecutablePath ? startupExecutablePath : "")
-    , projectPanel(*this)
-    , ensViewPanel(*this)
-    , inspectorPanel(*this)
-    , managedEditorPanel(*this)
+    , editorScene(application, panelManager, managedBridge)
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
     SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
-    RegisterBuiltInPanels();
+    for (std::unique_ptr<IEditorPanel>& panel : EditorPanelRegistry::CreatePanels(*this))
+    {
+        panelManager.RegisterPanel(std::move(panel));
+    }
     CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
 
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
@@ -541,19 +429,18 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     clrConfig.componentAssemblyPath = ToCleanPath(managedDirectory / "Orbeden.Editor.dll");
     if (clrHost.Initialize(clrConfig))
     {
-        managedOverlay.Initialize(clrHost, executablePath);
+        managedBridge.Initialize(clrHost, *this, panelManager, editorScene.GetGizmoApi(), executablePath);
     }
 }
 
 EditorSystem::~EditorSystem()
 {
     SaveEditorLayout();
-    selectionOutline.Clear();
     app.SetPaused(false);
     app.SetSimulationEnabled(false);
     playMode.Stop();
-    managedOverlay.UnloadGameAssembly();
-    managedOverlay.Shutdown();
+    managedBridge.UnloadGameAssembly();
+    managedBridge.Shutdown();
     clrHost.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
 
@@ -569,7 +456,7 @@ void EditorSystem::Update(World& world, float deltaTime)
     playMode.Update(deltaTime);
     if (!playMode.IsPlaying())
     {
-        UpdateEditorCamera(world, deltaTime);
+        editorScene.Update(world, deltaTime);
     }
 }
 
@@ -591,32 +478,16 @@ void EditorSystem::DrawOverlay()
     DrawPlayToolbar();
     DrawProjectDialog();
     DrawNewProjectDialog();
-    if (!playMode.IsPlaying()) selection.PruneInvalid(app.GetWorld());
+    if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     panelManager.DrawPanels();
 
     if (!playMode.IsPlaying())
     {
-        World& world = app.GetWorld();
-        RenderSystem* renderSystem = app.GetRenderSystem();
-        if (renderSystem)
-        {
-            const RenderScene& scene = renderSystem->GetCurrentScene();
-            HandleSceneSelection(scene);
-
-            vector2 workspacePosition;
-            vector2 workspaceSize;
-            if (panelManager.TryGetWorkspaceRect(workspacePosition, workspaceSize))
-            {
-                selectionOutline.Draw(scene, world, editorCameraEns, selection, workspacePosition, workspaceSize);
-            }
-        }
-
-        DrawManagedSceneGizmos();
+        editorScene.DrawBackground();
     }
     else
     {
-        sceneSelectionPressed = false;
-        sceneSelectionDragged = false;
+        editorScene.CancelInteraction();
     }
 
     playMode.DrawGui();
@@ -730,22 +601,18 @@ void EditorSystem::RequestPlay()
         return;
     }
 
-    RemoveEditorCamera(app.GetWorld());
-    if (selection.GetSelectedEns().IsNull() || !app.GetWorld().IsAlive(selection.GetSelectedEns()) || IsEditorTemporaryEns(selection.GetSelectedEns()))
-    {
-        selection.Clear();
-    }
+    editorScene.EnterPlayMode(app.GetWorld());
 
     std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".pie";
     std::string gameModuleType = GetProjectGameModuleTypeName();
     if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
         projectStatus = playMode.GetLastError();
-        ApplyEditorCameraState(editorCameraState);
+        editorScene.RestoreCamera(app.GetWorld());
         return;
     }
 
-    managedOverlay.LoadGameAssembly(playMode.GetShadowAssemblyPath(), GetProjectScriptSidecarPath());
+    managedBridge.LoadGameAssembly(playMode.GetShadowAssemblyPath(), GetProjectScriptSidecarPath());
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
     projectStatus = "Play-In-Editor started.";
@@ -758,17 +625,16 @@ void EditorSystem::RequestStop()
     app.SetPaused(false);
     app.SetSimulationEnabled(false);
     playMode.Stop();
-    managedOverlay.UnloadGameAssembly();
+    managedBridge.UnloadGameAssembly();
     if (project.HasProject())
     {
-        selectionOutline.Clear();
         if (project.ReloadStartupWorld())
         {
-            selection.Clear();
-            ApplyEditorCameraState(editorCameraState);
+            editorScene.ExitPlayMode(app.GetWorld());
         }
         else
         {
+            editorScene.ExitPlayMode(app.GetWorld());
             projectStatus = project.GetLastError();
             return;
         }
@@ -825,7 +691,7 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     std::string publishError;
-    if (!managedOverlay.PublishGameAot(repoRoot,
+    if (!managedBridge.PublishGameAot(repoRoot,
         project.GetProjectRoot(),
         scriptProject,
         BuildConfiguration,
@@ -959,33 +825,26 @@ const World& EditorSystem::GetWorld() const
     return app.GetWorld();
 }
 
-EditorSelection& EditorSystem::GetSelection()
+EditorScene& EditorSystem::GetEditorScene()
 {
-    return selection;
+    return editorScene;
 }
 
-const EditorSelection& EditorSystem::GetSelection() const
+const EditorScene& EditorSystem::GetEditorScene() const
 {
-    return selection;
+    return editorScene;
 }
 
-//判断是否是编辑器临时 Ens
-bool EditorSystem::IsEditorTemporaryEns(EnsId ens) const
+//绘制一个托管面板
+void EditorSystem::DrawManagedPanel(int32 handle)
 {
-    const SpaceComponent* space = app.GetWorld().GetSpaceComponent(ens);
-    return space && space->GetInstanceId().GetPath() == EditorCameraId;
+    managedBridge.DrawPanel(handle, editorScene.GetSelectedEns(), editorScene.GetSelectedStableId());
 }
 
-//绘制托管 Inspector 内容
-void EditorSystem::DrawManagedInspectorContent()
+//设置托管面板可见状态
+void EditorSystem::SetManagedPanelVisible(int32 handle, bool visible)
 {
-    managedOverlay.DrawInspectorContent(selection.GetSelectedEns(), GetSelectedEnsStableId());
-}
-
-//绘制托管 Editor 面板内容
-void EditorSystem::DrawManagedEditorPanelContent()
-{
-    managedOverlay.DrawEditorPanelContent();
+    managedBridge.SetPanelVisible(handle, visible);
 }
 
 std::string EditorSystem::GetProjectScriptProjectPath() const
@@ -1036,7 +895,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
 {
     if (!project.HasProject())
     {
-        managedOverlay.UnloadGameAssembly();
+        managedBridge.UnloadGameAssembly();
         return false;
     }
 
@@ -1044,7 +903,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
     std::string sidecarPath = GetProjectScriptSidecarPath();
     if (!FileExists(assemblyPath))
     {
-        managedOverlay.LoadGameAssembly(std::string(), sidecarPath);
+        managedBridge.LoadGameAssembly(std::string(), sidecarPath);
         return false;
     }
 
@@ -1052,23 +911,14 @@ bool EditorSystem::RefreshInspectorGameAssembly()
     std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory, GetManagedDependencyDirectories());
     if (shadowAssemblyPath.empty())
     {
-        managedOverlay.LoadGameAssembly(std::string(), sidecarPath);
+        managedBridge.LoadGameAssembly(std::string(), sidecarPath);
         projectStatus = "Inspector game assembly shadow copy failed.";
         Log::Warning(projectStatus.c_str());
         return false;
     }
 
-    managedOverlay.LoadGameAssembly(shadowAssemblyPath, sidecarPath);
+    managedBridge.LoadGameAssembly(shadowAssemblyPath, sidecarPath);
     return true;
-}
-
-std::string EditorSystem::GetSelectedEnsStableId() const
-{
-    EnsId selectedEns = selection.GetSelectedEns();
-    if (selectedEns.IsNull()) return std::string();
-
-    SpaceComponent* space = app.GetWorld().GetSpaceComponent(selectedEns);
-    return space ? space->GetInstanceId().GetPath() : std::string();
 }
 
 std::string EditorSystem::FindRepositoryRoot() const
@@ -1164,475 +1014,6 @@ bool EditorSystem::RunCommand(const std::string& command, const char* actionName
     return false;
 }
 
-void EditorSystem::RegisterBuiltInPanels()
-{
-    PanelInfo projectInfo;
-    projectInfo.id = projectPanel.GetPanelId();
-    projectInfo.title = projectPanel.GetPanelTitle();
-    projectInfo.defaultVisible = true;
-    projectInfo.defaultSize = { 360.0f, 180.0f };
-    projectInfo.defaultDock = PanelDockPlacement::Floating;
-    panelManager.RegisterPanel(projectInfo, &projectPanel);
-
-    PanelInfo ensViewInfo;
-    ensViewInfo.id = ensViewPanel.GetPanelId();
-    ensViewInfo.title = ensViewPanel.GetPanelTitle();
-    ensViewInfo.defaultVisible = true;
-    ensViewInfo.defaultSize = { 320.0f, 420.0f };
-    ensViewInfo.defaultDock = PanelDockPlacement::Left;
-    ensViewInfo.defaultDockRatio = 0.22f;
-    panelManager.RegisterPanel(ensViewInfo, &ensViewPanel);
-
-    PanelInfo inspectorInfo;
-    inspectorInfo.id = inspectorPanel.GetPanelId();
-    inspectorInfo.title = inspectorPanel.GetPanelTitle();
-    inspectorInfo.defaultVisible = true;
-    inspectorInfo.defaultSize = { 360.0f, 520.0f };
-    inspectorInfo.defaultDock = PanelDockPlacement::Right;
-    inspectorInfo.defaultDockRatio = 0.25f;
-    panelManager.RegisterPanel(inspectorInfo, &inspectorPanel);
-
-    PanelInfo managedInfo;
-    managedInfo.id = managedEditorPanel.GetPanelId();
-    managedInfo.title = managedEditorPanel.GetPanelTitle();
-    managedInfo.defaultVisible = true;
-    managedInfo.defaultSize = { 320.0f, 220.0f };
-    managedInfo.defaultDock = PanelDockPlacement::Floating;
-    panelManager.RegisterPanel(managedInfo, &managedEditorPanel);
-}
-
-void EditorSystem::CreateEditorCameraIfMissing(World& world)
-{
-    Ens* cameraEns = world.GetEns(editorCameraEns);
-    if (!cameraEns)
-    {
-        cameraEns = world.FindEns(StringId(EditorCameraId));
-    }
-    if (!cameraEns)
-    {
-        cameraEns = world.CreateEnsWithStableId(EditorCameraId, "EditorCamera");
-        if (cameraEns)
-        {
-            if (SpaceComponent* space = cameraEns->Space())
-            {
-                space->localPosition = editorCameraState.hasValue
-                    ? editorCameraState.position
-                    : vector3 { 5.0f, 3.2f, 7.0f };
-                space->localScale = { 1.0f, 1.0f, 1.0f };
-            }
-        }
-    }
-    if (!cameraEns) return;
-
-    Camera* camera = cameraEns->GetComponent<Camera>();
-    if (!camera)
-    {
-        camera = cameraEns->AddComponent<Camera>();
-    }
-    if (camera)
-    {
-        camera->enabled = true;
-        camera->fieldOfView = 60.0f;
-        camera->nearPlane = 0.1f;
-        camera->farPlane = 1000.0f;
-        camera->depth = 10000.0f;
-        camera->clearMode = ClearMode::SolidColor;
-        camera->clearColor = { 0.62f, 0.78f, 0.96f, 1.0f };
-    }
-
-    if (SpaceComponent* space = cameraEns->Space())
-    {
-        if (editorCameraState.hasValue)
-        {
-            cameraYaw = editorCameraState.yaw;
-            cameraPitch = editorCameraState.pitch;
-        }
-        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
-    }
-    editorCameraEns = cameraEns->GetId();
-}
-
-//记录编辑器观察相机状态
-void EditorSystem::CaptureEditorCameraState()
-{
-    World& world = app.GetWorld();
-    Ens* cameraEns = world.GetEns(editorCameraEns);
-    if (!cameraEns)
-    {
-        cameraEns = world.FindEns(StringId(EditorCameraId));
-    }
-
-    if (!cameraEns)
-    {
-        if (!editorCameraState.hasValue)
-        {
-            editorCameraState.hasValue = true;
-            editorCameraState.yaw = cameraYaw;
-            editorCameraState.pitch = cameraPitch;
-        }
-        return;
-    }
-
-    SpaceComponent* space = cameraEns->Space();
-    if (!space) return;
-
-    editorCameraState.hasValue = true;
-    editorCameraState.position = space->localPosition;
-    editorCameraState.yaw = cameraYaw;
-    editorCameraState.pitch = cameraPitch;
-}
-
-//应用编辑器观察相机状态
-void EditorSystem::ApplyEditorCameraState(const EditorCameraState& state)
-{
-    if (state.hasValue)
-    {
-        editorCameraState = state;
-        cameraYaw = state.yaw;
-        cameraPitch = state.pitch;
-    }
-
-    World& world = app.GetWorld();
-    CreateEditorCameraIfMissing(world);
-    if (!editorCameraState.hasValue) return;
-
-    if (SpaceComponent* space = world.GetSpaceComponent(editorCameraEns))
-    {
-        space->localPosition = editorCameraState.position;
-        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
-        space->localScale = { 1.0f, 1.0f, 1.0f };
-    }
-}
-
-//移除编辑器观察相机
-void EditorSystem::RemoveEditorCamera(World& world)
-{
-    Ens* cameraEns = world.GetEns(editorCameraEns);
-    if (!cameraEns)
-    {
-        cameraEns = world.FindEns(StringId(EditorCameraId));
-    }
-
-    if (cameraEns)
-    {
-        cameraEns->Destroy();
-    }
-
-    editorCameraEns = EnsId();
-    cameraMouseDragging = false;
-    cameraMouseMode = 0;
-}
-
-void EditorSystem::UpdateEditorCamera(World& world, float deltaTime)
-{
-    (void)deltaTime;
-    CreateEditorCameraIfMissing(world);
-
-    SpaceComponent* space = world.GetSpaceComponent(editorCameraEns);
-    GLFWwindow* window = GetGlfwWindow(app);
-    if (!space || !window) return;
-
-    bool cameraOwnsMouse = cameraMouseDragging
-        || !ImGuiCapturesMouse()
-        || panelManager.IsMouseOverWorkspace();
-    if (cameraOwnsMouse)
-    {
-        // 检测 Alt 键（Alt+左键旋转 / Alt+右键推拉）
-        bool altHeld = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-                    || glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-
-        int32 mode = 0;
-        if (IsMouseDown(window, GLFW_MOUSE_BUTTON_RIGHT))
-        {
-            // 右键：旋转（无 Alt）/ 推拉缩放（有 Alt）
-            mode = altHeld ? 3 : 1;
-        }
-        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_MIDDLE))
-        {
-            // 中键：平移
-            mode = 2;
-        }
-        else if (IsMouseDown(window, GLFW_MOUSE_BUTTON_LEFT) && altHeld)
-        {
-            // Alt + 左键：围绕焦点旋转
-            mode = 1;
-        }
-
-        double mouseX = 0.0;
-        double mouseY = 0.0;
-        glfwGetCursorPos(window, &mouseX, &mouseY);
-
-        if (mode != 0)
-        {
-            if (cameraMouseDragging && cameraMouseMode == mode)
-            {
-                float32 deltaX = static_cast<float32>(mouseX - previousMouseX);
-                float32 deltaY = static_cast<float32>(mouseY - previousMouseY);
-                if (mode == 1)
-                {
-                    // 旋转：右键拖拽 或 Alt+左键拖拽
-                    cameraYaw -= deltaX * 0.12f;
-                    cameraPitch -= deltaY * 0.12f;
-                    cameraPitch = std::clamp(cameraPitch, -82.0f, 82.0f);
-                }
-                else if (mode == 2)
-                {
-                    // 平移：中键拖拽
-                    constexpr float32 panScale = 0.01f;
-                    vector3 right = RightFromYaw(cameraYaw);
-                    vector3 up = UpFromYawPitch(cameraYaw, cameraPitch);
-                    vector3 pan = Add(Scale(right, -deltaX * panScale), Scale(up, deltaY * panScale));
-                    space->localPosition = Add(space->localPosition, pan);
-                }
-                else if (mode == 3)
-                {
-                    // 推拉缩放：Alt+右键前后拖拽
-                    float32 dollyScale = cameraMoveSpeed * 0.01f;
-                    vector3 forward = ForwardFromYawPitch(cameraYaw, cameraPitch);
-                    space->localPosition = Add(space->localPosition, Scale(forward, -deltaY * dollyScale));
-                }
-            }
-
-            cameraMouseDragging = true;
-            cameraMouseMode = mode;
-            previousMouseX = mouseX;
-            previousMouseY = mouseY;
-        }
-        else
-        {
-            cameraMouseDragging = false;
-            cameraMouseMode = 0;
-        }
-
-        // 滚轮前后缩放：GLFW 回调只安装一次，避免每帧重复设置导致递归
-        if (!s_scrollCallbackInstalled)
-        {
-            GLFWscrollfun prevCallback = glfwSetScrollCallback(window, EditorScrollCallback);
-            s_chainedScrollCallback = prevCallback;
-            s_scrollCallbackInstalled = true;
-        }
-
-        if (s_scrollDelta != 0.0f)
-        {
-            vector3 forward = ForwardFromYawPitch(cameraYaw, cameraPitch);
-            space->localPosition = Add(space->localPosition, Scale(forward, s_scrollDelta * cameraMoveSpeed * 0.5f));
-            s_scrollDelta = 0.0f;
-        }
-    }
-    else
-    {
-        cameraMouseDragging = false;
-        cameraMouseMode = 0;
-        s_scrollDelta = 0.0f;
-    }
-
-    space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
-    editorCameraState.hasValue = true;
-    editorCameraState.position = space->localPosition;
-    editorCameraState.yaw = cameraYaw;
-    editorCameraState.pitch = cameraPitch;
-}
-
-/// <summary>处理中央工作区的鼠标选择。</summary>
-void EditorSystem::HandleSceneSelection(const RenderScene& scene)
-{
-    ImGuiIO& io = ImGui::GetIO();
-
-    //只在中央工作区捕获一次普通左键点击。
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-    {
-        sceneSelectionPressed = panelManager.IsMouseOverWorkspace()
-            && !io.KeyAlt
-            && !cameraMouseDragging
-            && !HasBlockingImGuiActiveItem();
-        sceneSelectionDragged = false;
-        sceneSelectionCtrl = io.KeyCtrl;
-        sceneSelectionStart = { io.MousePos.x, io.MousePos.y };
-    }
-
-    if (!sceneSelectionPressed) return;
-
-    //超过点击阈值或切入相机操作后取消选择。
-    float32 deltaX = io.MousePos.x - sceneSelectionStart.x;
-    float32 deltaY = io.MousePos.y - sceneSelectionStart.y;
-    if (deltaX * deltaX + deltaY * deltaY > 16.0f
-        || io.KeyAlt
-        || cameraMouseDragging
-        || HasBlockingImGuiActiveItem())
-    {
-        sceneSelectionDragged = true;
-    }
-
-    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-    {
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) sceneSelectionPressed = false;
-        return;
-    }
-
-    bool shouldPick = !sceneSelectionDragged
-        && panelManager.IsMouseOverWorkspace()
-        && !HasBlockingImGuiActiveItem();
-    sceneSelectionPressed = false;
-    sceneSelectionDragged = false;
-    if (!shouldPick) return;
-
-    EnsId hit = PickSceneEns(scene, { io.MousePos.x, io.MousePos.y });
-    if (sceneSelectionCtrl)
-    {
-        if (!hit.IsNull()) selection.ToggleEns(hit);
-    }
-    else if (!hit.IsNull())
-    {
-        selection.SelectEns(hit);
-    }
-    else
-    {
-        selection.Clear();
-    }
-}
-
-/// <summary>拾取鼠标下距离相机最近的场景对象。</summary>
-EnsId EditorSystem::PickSceneEns(const RenderScene& scene, const vector2& screenPosition) const
-{
-    const RenderCamera* camera = nullptr;
-    for (const RenderCamera& candidate : scene.cameras)
-    {
-        if (candidate.ens == editorCameraEns)
-        {
-            camera = &candidate;
-            break;
-        }
-    }
-    if (!camera || camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return EnsId();
-
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    if (!viewport || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f) return EnsId();
-
-    //把 ImGui 逻辑坐标转换为相机 NDC。
-    float32 cameraLeft = viewport->Pos.x + camera->normalizedViewportX * viewport->Size.x;
-    float32 cameraTop = viewport->Pos.y
-        + (1.0f - camera->normalizedViewportY - camera->normalizedViewportHeight) * viewport->Size.y;
-    float32 cameraWidth = camera->normalizedViewportWidth * viewport->Size.x;
-    float32 cameraHeight = camera->normalizedViewportHeight * viewport->Size.y;
-    if (cameraWidth <= 0.0f || cameraHeight <= 0.0f
-        || screenPosition.x < cameraLeft || screenPosition.x > cameraLeft + cameraWidth
-        || screenPosition.y < cameraTop || screenPosition.y > cameraTop + cameraHeight)
-    {
-        return EnsId();
-    }
-
-    float32 ndcX = ((screenPosition.x - cameraLeft) / cameraWidth) * 2.0f - 1.0f;
-    float32 ndcY = 1.0f - ((screenPosition.y - cameraTop) / cameraHeight) * 2.0f;
-    matrix4x4 inverseViewProjection = RenderMath::Inverse(camera->viewProjectionMatrix);
-    vector3 rayOrigin = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
-    vector3 rayEnd = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
-    vector3 rayDelta = {
-        rayEnd.x - rayOrigin.x,
-        rayEnd.y - rayOrigin.y,
-        rayEnd.z - rayOrigin.z
-    };
-    float32 rayLengthSquared = RenderMath::Dot(rayDelta, rayDelta);
-    if (rayLengthSquared <= 0.000001f) return EnsId();
-    float32 rayLength = std::sqrt(rayLengthSquared);
-    vector3 rayDirection = {
-        rayDelta.x / rayLength,
-        rayDelta.y / rayLength,
-        rayDelta.z / rayLength
-    };
-
-    EnsId closestEns;
-    float32 closestDistance = rayLength;
-    for (const RenderItem& item : scene.items)
-    {
-        if ((item.drawLayer & camera->drawLayerMask) == 0 || !item.worldBounds.valid) continue;
-
-        Ens* currentEns = app.GetWorld().GetEns(item.ens);
-        StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        Mesh* currentMesh = currentRenderer ? currentRenderer->mesh.Get() : nullptr;
-        if (!currentRenderer || currentRenderer != item.renderer || !currentMesh || currentMesh != item.mesh) continue;
-
-        //先用世界包围盒排除不可能命中的绘制项。
-        float32 boundsMin[3] = {
-            item.worldBounds.center.x - item.worldBounds.extents.x,
-            item.worldBounds.center.y - item.worldBounds.extents.y,
-            item.worldBounds.center.z - item.worldBounds.extents.z
-        };
-        float32 boundsMax[3] = {
-            item.worldBounds.center.x + item.worldBounds.extents.x,
-            item.worldBounds.center.y + item.worldBounds.extents.y,
-            item.worldBounds.center.z + item.worldBounds.extents.z
-        };
-        float32 origin[3] = { rayOrigin.x, rayOrigin.y, rayOrigin.z };
-        float32 direction[3] = { rayDirection.x, rayDirection.y, rayDirection.z };
-        float32 entryDistance = 0.0f;
-        float32 exitDistance = closestDistance;
-        bool intersectsBounds = true;
-        for (int32 axis = 0; axis < 3; ++axis)
-        {
-            if (std::abs(direction[axis]) <= 0.000001f)
-            {
-                if (origin[axis] < boundsMin[axis] || origin[axis] > boundsMax[axis]) intersectsBounds = false;
-                continue;
-            }
-
-            float32 first = (boundsMin[axis] - origin[axis]) / direction[axis];
-            float32 second = (boundsMax[axis] - origin[axis]) / direction[axis];
-            if (first > second) std::swap(first, second);
-            entryDistance = std::max(entryDistance, first);
-            exitDistance = std::min(exitDistance, second);
-            if (entryDistance > exitDistance)
-            {
-                intersectsBounds = false;
-                break;
-            }
-        }
-        if (!intersectsBounds) continue;
-
-        //在世界空间进行双面三角形精确检测，兼容零缩放实例。
-        const List<vector3>& vertices = currentMesh->vertices;
-        const List<uint32>& indices = currentMesh->indices;
-        usize indexStart = static_cast<usize>(item.indexStart);
-        usize indexCount = static_cast<usize>(item.indexCount);
-        if (indexStart > indices.size() || indexCount > indices.size() - indexStart) continue;
-
-        usize indexEnd = indexStart + indexCount;
-        for (usize index = indexStart; index + 2 < indexEnd; index += 3)
-        {
-            uint32 indexA = indices[index];
-            uint32 indexB = indices[index + 1];
-            uint32 indexC = indices[index + 2];
-            if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
-
-            vector3 a = RenderMath::TransformPoint(item.localToWorld, vertices[indexA]);
-            vector3 b = RenderMath::TransformPoint(item.localToWorld, vertices[indexB]);
-            vector3 c = RenderMath::TransformPoint(item.localToWorld, vertices[indexC]);
-            vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
-            vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
-            vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
-            float32 determinant = RenderMath::Dot(edgeAB, crossDirection);
-            if (std::abs(determinant) <= 0.000001f) continue;
-
-            float32 inverseDeterminant = 1.0f / determinant;
-            vector3 toOrigin = { rayOrigin.x - a.x, rayOrigin.y - a.y, rayOrigin.z - a.z };
-            float32 u = RenderMath::Dot(toOrigin, crossDirection) * inverseDeterminant;
-            if (u < 0.0f || u > 1.0f) continue;
-
-            vector3 crossOrigin = RenderMath::Cross(toOrigin, edgeAB);
-            float32 v = RenderMath::Dot(rayDirection, crossOrigin) * inverseDeterminant;
-            if (v < 0.0f || u + v > 1.0f) continue;
-
-            float32 distance = RenderMath::Dot(edgeAC, crossOrigin) * inverseDeterminant;
-            if (distance >= 0.0f && distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestEns = item.ens;
-            }
-        }
-    }
-
-    return closestEns;
-}
-
 bool EditorSystem::SaveCurrentWorld()
 {
     if (playMode.IsPlaying())
@@ -1650,20 +1031,13 @@ bool EditorSystem::SaveCurrentWorld()
     }
 
     World& world = app.GetWorld();
-    bool hadEditorCamera = world.GetEns(editorCameraEns) || world.FindEns(StringId(EditorCameraId));
-    CaptureEditorCameraState();
-    RemoveEditorCamera(world);
+    bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
 
     bool saved = project.SaveStartupWorld();
     projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
 
-    if (hadEditorCamera)
-    {
-        ApplyEditorCameraState(editorCameraState);
-    }
-
-    cameraMouseDragging = false;
-    cameraMouseMode = 0;
+    if (hadEditorCamera) editorScene.RestoreCamera(world);
+    editorScene.CancelInteraction();
     return saved;
 }
 
@@ -1672,10 +1046,9 @@ void EditorSystem::SaveEditorLayout()
 {
     if (!project.HasProject()) return;
 
-    CaptureEditorCameraState();
     EditorLayoutState layout;
     panelManager.WriteLayout(layout);
-    layout.editorCamera = editorCameraState;
+    editorScene.WriteLayout(layout);
     project.SaveEditorLayout(layout);
 }
 
@@ -1686,18 +1059,7 @@ void EditorSystem::ApplyEditorLayout()
 
     const EditorLayoutState& layout = project.GetEditorLayout();
     panelManager.ApplyLayout(layout);
-    editorCameraState = layout.editorCamera;
-    if (layout.editorCamera.hasValue)
-    {
-        ApplyEditorCameraState(layout.editorCamera);
-    }
-    else
-    {
-        cameraYaw = editorCameraState.yaw;
-        cameraPitch = editorCameraState.pitch;
-        editorCameraEns = EnsId();
-        CreateEditorCameraIfMissing(app.GetWorld());
-    }
+    editorScene.ApplyLayout(layout, app.GetWorld());
 }
 
 void EditorSystem::TryAutoLoadExampleProject()
@@ -1715,13 +1077,12 @@ void EditorSystem::TryAutoLoadExampleProject()
 
     RequestStop();
     SaveEditorLayout();
-    selectionOutline.Clear();
     project.LoadProjectFolder(exampleProject);
     if (project.HasProject())
     {
+        editorScene.ClearSceneState();
         SetDialogDirectory(project.GetProjectRoot());
         projectStatus = "Loaded: " + project.GetProjectRoot();
-        selection.Clear();
         ApplyEditorLayout();
         RefreshInspectorGameAssembly();
     }
@@ -1898,30 +1259,6 @@ void EditorSystem::DrawPlayToolbar()
     ImGui::End();
 }
 
-void EditorSystem::DrawManagedSceneGizmos()
-{
-    World& world = app.GetWorld();
-    SpaceComponent* space = world.GetSpaceComponent(editorCameraEns);
-    Camera* camera = nullptr;
-    if (Ens* cameraEns = world.GetEns(editorCameraEns))
-    {
-        camera = cameraEns->GetComponent<Camera>();
-    }
-    if (!space || !camera || !camera->enabled) return;
-
-    // 使用当前 EditorCamera 计算 SceneView 的 VP 矩阵。
-    IWindow* window = app.GetWindow();
-    int32 width = window ? window->GetFramebufferWidth() : 0;
-    int32 height = window ? window->GetFramebufferHeight() : 0;
-    float32 aspect = height > 0 ? static_cast<float32>(width) / static_cast<float32>(height) : 1.0f;
-    matrix4x4 worldMatrix = RenderMath::TRS(space->localPosition, space->localRotation, space->localScale);
-    matrix4x4 viewMatrix = RenderMath::Inverse(worldMatrix);
-    matrix4x4 projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
-    matrix4x4 viewProjection = RenderMath::Mul(projectionMatrix, viewMatrix);
-
-    managedOverlay.DrawSceneGizmos(viewProjection, width, height);
-}
-
 void EditorSystem::DrawProjectDialog()
 {
     if (openProjectDialog)
@@ -1976,13 +1313,12 @@ void EditorSystem::DrawProjectDialog()
     {
         RequestStop();
         SaveEditorLayout();
-        selectionOutline.Clear();
         if (project.LoadProjectFolder(dialogDirectory))
         {
+            editorScene.ClearSceneState();
             dialogError.clear();
             SetDialogDirectory(project.GetProjectRoot());
             projectStatus = "Loaded: " + project.GetProjectRoot();
-            selection.Clear();
             ApplyEditorLayout();
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
@@ -2070,14 +1406,13 @@ void EditorSystem::DrawNewProjectDialog()
 
             std::string projectRoot;
             std::string error;
-            selectionOutline.Clear();
             if (NewProjectGenerator::CreateProject(dialogDirectory, newProjectNameBuffer, runtimeDllPath, projectRoot, error)
                 && project.LoadProjectFolder(projectRoot))
             {
+                editorScene.ClearSceneState();
                 dialogError.clear();
                 SetDialogDirectory(project.GetProjectRoot());
                 projectStatus = "Created project: " + project.GetProjectRoot();
-                selection.Clear();
                 ApplyEditorLayout();
                 RefreshInspectorGameAssembly();
                 ImGui::CloseCurrentPopup();

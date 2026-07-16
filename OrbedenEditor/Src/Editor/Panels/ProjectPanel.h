@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Editor/IEditorPanel.h"
+#include "Editor/Panels/IEditorPanel.h"
 
 class EditorSystem;
 
@@ -9,15 +9,13 @@ class ProjectPanel : public IEditorPanel
 {
 private:
     EditorSystem& editor;
+    EditorPanelInfo info;
 
 public:
     explicit ProjectPanel(EditorSystem& owner);
 
-    //获取面板稳定ID
-    const char* GetPanelId() const override;
-
-    //获取面板显示标题
-    const char* GetPanelTitle() const override;
+    //获取面板信息
+    const EditorPanelInfo& GetPanelInfo() const override;
 
     //绘制面板内容
     void DrawPanel() override;

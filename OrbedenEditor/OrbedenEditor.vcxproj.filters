@@ -27,10 +27,7 @@
     <ClCompile Include="Src\Editor\EditorPlayMode.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Editor\EditorSelection.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Editor\EditorSelectionOutline.cpp">
+    <ClCompile Include="Src\Editor\EditorScene.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\EditorSystem.cpp">
@@ -39,19 +36,7 @@
     <ClCompile Include="Src\Editor\EditorClrHost.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Editor\EditorGizmoBridge.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Editor\EnsViewPanel.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Editor\InspectorPanel.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Editor\ManagedEditorOverlay.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Editor\ManagedEditorPanel.cpp">
+    <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp">
@@ -60,7 +45,7 @@
     <ClCompile Include="Src\Editor\PanelManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Editor\ProjectPanel.cpp">
+    <ClCompile Include="Src\Editor\Panels\**\*.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -74,10 +59,7 @@
     <ClInclude Include="Src\Editor\EditorPlayMode.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\EditorSelection.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Editor\EditorSelectionOutline.h">
+    <ClInclude Include="Src\Editor\EditorScene.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorSystem.h">
@@ -86,34 +68,19 @@
     <ClInclude Include="Src\Editor\EditorClrHost.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\EditorGizmoBridge.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Editor\EditorLayoutState.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\EnsViewPanel.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Editor\InspectorPanel.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Editor\ManagedEditorOverlay.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Editor\ManagedEditorPanel.h">
+    <ClInclude Include="Src\Editor\ManagedEditorBridge.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\NewProjectGenerator.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\IEditorPanel.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Src\Editor\PanelManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\ProjectPanel.h">
+    <ClInclude Include="Src\Editor\Panels\**\*.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -169,13 +136,13 @@
     <None Include="..\ExampleProject\Managed\.gitignore">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="Managed\Orbeden.Editor\EditorGameDomain.cs">
-      <Filter>资源文件</Filter>
-    </None>
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
       <Filter>资源文件</Filter>
     </None>
     <None Include="Managed\Orbeden.Editor\Gizmos.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs">
       <Filter>资源文件</Filter>
     </None>
     <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj">

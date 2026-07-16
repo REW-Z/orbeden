@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Orbeden;
@@ -9,102 +8,100 @@ namespace OrbedenEditor;
 /// <summary>Editor 托管入口，由 C++ EditorSystem 调用。</summary>
 public static class EditorRuntime
 {
-    private static int panelClickCount;
-
     [StructLayout(LayoutKind.Sequential)]
     private unsafe struct EditorManagedApi
     {
         public IntPtr NativeApi;
         public EditorGizmoApi Gizmo;
+        public EditorPanelNativeApi Panels;
     }
 
     /// <summary>初始化 Editor 托管桥接。</summary>
     [UnmanagedCallersOnly]
-    public static unsafe void Initialize(IntPtr editorApi)
+    public static unsafe byte Initialize(IntPtr editorApi)
     {
-        if (editorApi == IntPtr.Zero)
+        try
         {
-            OrbedenCoreRuntime.Initialize(IntPtr.Zero);
-            Gizmos.Initialize(default);
-            return;
-        }
+            if (editorApi == IntPtr.Zero)
+            {
+                OrbedenCoreRuntime.Initialize(IntPtr.Zero);
+                Gizmos.Initialize(default);
+                return 0;
+            }
 
-        EditorManagedApi api = *(EditorManagedApi*)editorApi;
-        OrbedenCoreRuntime.Initialize(api.NativeApi);
-        Gizmos.Initialize(api.Gizmo);
+            EditorManagedApi api = *(EditorManagedApi*)editorApi;
+            OrbedenCoreRuntime.Initialize(api.NativeApi);
+            Gizmos.Initialize(api.Gizmo);
+            return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor managed initialization failed: {ex}");
+            return 0;
+        }
     }
 
     /// <summary>加载当前项目的用户游戏程序集。</summary>
     [UnmanagedCallersOnly]
     public static unsafe void LoadGameAssembly(byte* assemblyPath, int assemblyPathLength, byte* sidecarPath, int sidecarPathLength)
     {
-        EditorGameDomain.LoadGameAssembly(ReadUtf8(assemblyPath, assemblyPathLength), ReadUtf8(sidecarPath, sidecarPathLength));
+        EditorPanelRegistry.LoadGameAssembly(
+            ReadUtf8(assemblyPath, assemblyPathLength),
+            ReadUtf8(sidecarPath, sidecarPathLength));
     }
 
     /// <summary>卸载当前用户游戏程序集引用。</summary>
     [UnmanagedCallersOnly]
     public static void UnloadGameAssembly()
     {
-        EditorGameDomain.UnloadGameAssembly();
+        EditorPanelRegistry.UnloadGameAssembly();
     }
 
-    /// <summary>绘制当前选中 Ens 的托管 Inspector。</summary>
+    /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
-    public static unsafe void DrawInspector(uint ensId, uint ensVersion, byte* stableId, int stableIdLength)
+    public static unsafe void DrawPanel(int handle, uint ensId, uint ensVersion, byte* stableId, int stableIdLength)
     {
-        EditorGameDomain.DrawInspector(new EnsId(ensId, ensVersion), ReadUtf8(stableId, stableIdLength));
-    }
-
-    /// <summary>绘制当前选中 Ens 的托管 Inspector 内容。</summary>
-    [UnmanagedCallersOnly]
-    public static unsafe void DrawInspectorContent(uint ensId, uint ensVersion, byte* stableId, int stableIdLength)
-    {
-        EditorGameDomain.DrawInspectorContent(new EnsId(ensId, ensVersion), ReadUtf8(stableId, stableIdLength));
-    }
-
-    /// <summary>绘制 C# Editor 面板。</summary>
-    [UnmanagedCallersOnly]
-    public static void DrawPanels()
-    {
-        bool visible = GUI.BeginPanel("C# Editor Panel");
         try
         {
-            if (!visible) return;
-
-            DrawEditorPanelContentInternal();
+            EditorPanelContext context = new(
+                new EnsId(ensId, ensVersion),
+                ReadUtf8(stableId, stableIdLength));
+            EditorPanelRegistry.DrawPanel(handle, context);
         }
-        finally
+        catch (Exception ex)
         {
-            GUI.EndPanel();
+            Console.Error.WriteLine($"Editor Panel dispatch failed: {ex}");
         }
     }
 
-    /// <summary>绘制 C# Editor 面板内容。</summary>
+    /// <summary>设置指定 C# Editor Panel 可见状态。</summary>
     [UnmanagedCallersOnly]
-    public static void DrawEditorPanelContent()
+    public static void SetPanelVisible(int handle, byte visible)
     {
-        DrawEditorPanelContentInternal();
-    }
-
-    //绘制 C# Editor 面板内容。
-    private static void DrawEditorPanelContentInternal()
-    {
-        GUI.Label("Managed editor panel");
-        if (GUI.Button("Editor C# Button"))
+        try
         {
-            panelClickCount++;
+            EditorPanelRegistry.SetPanelVisible(handle, visible != 0);
         }
-
-        GUI.Label($"Clicks: {panelClickCount}");
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor Panel visibility dispatch failed: {ex}");
+        }
     }
 
-    /// <summary>绘制 C# SceneView Gizmos。</summary>
+    /// <summary>绘制 C# Scene Handles。</summary>
     [UnmanagedCallersOnly]
     public static void DrawSceneGizmos()
     {
-        Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color4(0.95f, 0.25f, 0.20f, 1.0f));
-        Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color4(0.20f, 0.80f, 0.95f, 1.0f));
-        Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
+        try
+        {
+            Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color4(0.95f, 0.25f, 0.20f, 1.0f));
+            Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color4(0.20f, 0.80f, 0.95f, 1.0f));
+            Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor Scene Handles draw failed: {ex}");
+        }
     }
 
     /// <summary>发布当前项目的 NativeAOT 静态库。</summary>

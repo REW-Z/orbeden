@@ -1,0 +1,89 @@
+using System;
+using System.Runtime.InteropServices;
+using Orbeden;
+
+namespace OrbedenEditor;
+
+internal enum PanelDockPlacement
+{
+    Center,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Floating,
+}
+
+/// <summary>Panel 名称和默认布局信息。</summary>
+internal readonly struct EditorPanelInfo
+{
+    public string Id { get; }
+    public string Title { get; }
+    public bool DefaultVisible { get; }
+    public vector2 DefaultSize { get; }
+    public PanelDockPlacement DefaultDock { get; }
+    public float DefaultDockRatio { get; }
+    public int Order { get; }
+
+    /// <summary>创建一份硬编码 Panel 信息。</summary>
+    public EditorPanelInfo(string id,
+        string title,
+        bool defaultVisible,
+        vector2 defaultSize,
+        PanelDockPlacement defaultDock,
+        float defaultDockRatio,
+        int order)
+    {
+        Id = id;
+        Title = title;
+        DefaultVisible = defaultVisible;
+        DefaultSize = defaultSize;
+        DefaultDock = defaultDock;
+        DefaultDockRatio = defaultDockRatio;
+        Order = order;
+    }
+}
+
+/// <summary>当前 Panel 绘制所需的编辑器上下文。</summary>
+internal readonly struct EditorPanelContext
+{
+    public EnsId SelectedEns { get; }
+    public string SelectedStableId { get; }
+
+    /// <summary>创建当前帧 Panel 上下文。</summary>
+    public EditorPanelContext(EnsId selectedEns, string selectedStableId)
+    {
+        SelectedEns = selectedEns;
+        SelectedStableId = selectedStableId;
+    }
+}
+
+/// <summary>C# Editor Panel 基类。</summary>
+internal abstract class EditorPanel
+{
+    public abstract EditorPanelInfo Info { get; }
+
+    /// <summary>绘制 Panel 内容。</summary>
+    public abstract void Draw(EditorPanelContext context);
+
+    /// <summary>Panel 显示时调用。</summary>
+    public virtual void OnShown() { }
+
+    /// <summary>Panel 隐藏时调用。</summary>
+    public virtual void OnHidden() { }
+
+    /// <summary>用户游戏程序集加载时调用。</summary>
+    public virtual void OnGameAssemblyLoaded(string assemblyPath, string sidecarPath) { }
+
+    /// <summary>用户游戏程序集卸载时调用。</summary>
+    public virtual void OnGameAssemblyUnloaded() { }
+}
+
+#pragma warning disable CS0649
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct EditorPanelNativeApi
+{
+    public IntPtr Context;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte> RegisterPanel;
+}
+#pragma warning restore CS0649

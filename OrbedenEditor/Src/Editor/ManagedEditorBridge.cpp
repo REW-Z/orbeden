@@ -1,0 +1,260 @@
+#include "Editor/ManagedEditorBridge.h"
+
+#include "Editor/EditorScene.h"
+#include "Editor/EditorSystem.h"
+#include "Editor/PanelManager.h"
+#include "Editor/Panels/ManagedPanelAdapter.h"
+#include "Log/Log.h"
+#include "Runtime/Native/NativeCall.h"
+#include "Runtime/Native/OrbedenNativeApi.h"
+
+#include <coreclr_delegates.h>
+#include <array>
+#include <filesystem>
+#include <memory>
+#include <utility>
+
+namespace
+{
+    using ManagedInitializeEditorFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(void*);
+    using ManagedDrawPanelFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint32, uint32, const uint8*, int32);
+    using ManagedSetPanelVisibleFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint8);
+    using ManagedDrawEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, const uint8*, int32);
+    using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        const uint8*, int32,
+        uint8*, int32);
+
+    constexpr const char* EditorTypeName = "OrbedenEditor.EditorRuntime, Orbeden.Editor";
+    constexpr const char* EditorInitializeMethod = "Initialize";
+    constexpr const char* EditorDrawPanelMethod = "DrawPanel";
+    constexpr const char* EditorSetPanelVisibleMethod = "SetPanelVisible";
+    constexpr const char* EditorLoadGameAssemblyMethod = "LoadGameAssembly";
+    constexpr const char* EditorUnloadGameAssemblyMethod = "UnloadGameAssembly";
+    constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
+    constexpr const char* EditorPublishGameAotMethod = "PublishGameAot";
+
+    //托管 Panel 注册期间使用的原生上下文。
+    struct ManagedPanelRegistrationContext
+    {
+    public:
+        EditorSystem* editor = nullptr;
+        PanelManager* panelManager = nullptr;
+    };
+
+    //传给 Editor C# 的 Panel 注册函数表。
+    struct EditorPanelNativeApi
+    {
+    public:
+        void* context = nullptr;
+        void* registerPanel = nullptr;
+    };
+
+    //传给 Editor C# 的原生函数表。
+    struct EditorManagedApi
+    {
+    public:
+        void* nativeApi = nullptr;
+        EditorGizmoApi gizmo;
+        EditorPanelNativeApi panels;
+    };
+
+    //获取可执行文件所在目录
+    std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
+    {
+        if (executablePath.empty()) return std::filesystem::current_path();
+
+        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
+        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
+    }
+
+    //复制 C# 传入的 UTF-8 文本
+    std::string ReadUtf8(const uint8* text, int32 length)
+    {
+        if (!text || length <= 0) return std::string();
+        return std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length));
+    }
+
+    //把一个 C# Panel 注册到原生 PanelManager
+    uint8 ORBEDEN_NATIVE_CALL RegisterManagedPanel(void* context,
+        int32 handle,
+        const uint8* id,
+        int32 idLength,
+        const uint8* title,
+        int32 titleLength,
+        uint8 defaultVisible,
+        float32 defaultWidth,
+        float32 defaultHeight,
+        int32 defaultDock,
+        float32 defaultDockRatio,
+        int32 order)
+    {
+        ManagedPanelRegistrationContext* registration = static_cast<ManagedPanelRegistrationContext*>(context);
+        if (!registration || !registration->editor || !registration->panelManager || handle < 0) return 0;
+        if (defaultDock < static_cast<int32>(PanelDockPlacement::Center)
+            || defaultDock > static_cast<int32>(PanelDockPlacement::Floating))
+        {
+            Log::Error("Managed Panel registration failed: invalid default dock placement.");
+            return 0;
+        }
+
+        EditorPanelInfo info;
+        info.id = ReadUtf8(id, idLength);
+        info.title = ReadUtf8(title, titleLength);
+        info.defaultVisible = defaultVisible != 0;
+        info.defaultSize = { defaultWidth, defaultHeight };
+        info.defaultDock = static_cast<PanelDockPlacement>(defaultDock);
+        info.defaultDockRatio = defaultDockRatio;
+        info.order = order;
+        return registration->panelManager->RegisterPanel(
+            std::make_unique<ManagedPanelAdapter>(*registration->editor, std::move(info), handle)) ? 1 : 0;
+    }
+}
+
+bool ManagedEditorBridge::Initialize(EditorClrHost& host,
+    EditorSystem& editor,
+    PanelManager& panelManager,
+    const EditorGizmoApi& gizmoApi,
+    const std::string& executablePath)
+{
+    if (initialized) return true;
+    if (!host.IsInitialized())
+    {
+        Log::Warning("ManagedEditorBridge initialize skipped: EditorClrHost is not initialized.");
+        return false;
+    }
+
+    std::filesystem::path managedDirectory = GetExecutableDirectory(executablePath) / "Managed";
+    std::string editorAssemblyPath = (managedDirectory / "Orbeden.Editor.dll").lexically_normal().generic_string();
+
+    //绑定全部托管入口后再允许注册 Panel
+    clrHost = &host;
+    ManagedInitializeEditorFn initializeEditor = nullptr;
+    if (!clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorInitializeMethod,
+        reinterpret_cast<void**>(&initializeEditor))
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawPanelMethod, &DrawPanelFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSetPanelVisibleMethod, &SetPanelVisibleFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorLoadGameAssemblyMethod, &LoadGameAssemblyFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUnloadGameAssemblyMethod, &UnloadGameAssemblyFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawSceneGizmosMethod, &DrawSceneGizmosFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction))
+    {
+        Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
+        Shutdown();
+        return false;
+    }
+
+    //初始化托管运行时并同步推送 Panel 元数据
+    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
+    ManagedPanelRegistrationContext panelContext { &editor, &panelManager };
+    EditorManagedApi editorApi;
+    editorApi.nativeApi = &nativeApi;
+    editorApi.gizmo = gizmoApi;
+    editorApi.panels.context = &panelContext;
+    editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
+    if (initializeEditor(&editorApi) == 0)
+    {
+        Log::Warning("ManagedEditorBridge initialize failed: managed runtime rejected initialization.");
+        Shutdown();
+        return false;
+    }
+
+    initialized = true;
+    return true;
+}
+
+void ManagedEditorBridge::Shutdown()
+{
+    DrawPanelFunction = nullptr;
+    SetPanelVisibleFunction = nullptr;
+    DrawSceneGizmosFunction = nullptr;
+    LoadGameAssemblyFunction = nullptr;
+    UnloadGameAssemblyFunction = nullptr;
+    PublishGameAotFunction = nullptr;
+    initialized = false;
+    clrHost = nullptr;
+}
+
+void ManagedEditorBridge::DrawPanel(int32 handle, EnsId selectedEns, const std::string& stableId)
+{
+    if (!initialized || !DrawPanelFunction) return;
+
+    ManagedDrawPanelFn drawPanel = reinterpret_cast<ManagedDrawPanelFn>(DrawPanelFunction);
+    drawPanel(handle,
+        selectedEns.id,
+        selectedEns.version,
+        reinterpret_cast<const uint8*>(stableId.data()),
+        static_cast<int32>(stableId.size()));
+}
+
+void ManagedEditorBridge::SetPanelVisible(int32 handle, bool visible)
+{
+    if (!initialized || !SetPanelVisibleFunction) return;
+
+    ManagedSetPanelVisibleFn setPanelVisible = reinterpret_cast<ManagedSetPanelVisibleFn>(SetPanelVisibleFunction);
+    setPanelVisible(handle, visible ? 1 : 0);
+}
+
+void ManagedEditorBridge::LoadGameAssembly(const std::string& assemblyPath, const std::string& sidecarPath)
+{
+    if (!initialized || !LoadGameAssemblyFunction) return;
+
+    ManagedLoadGameAssemblyFn loadGameAssembly = reinterpret_cast<ManagedLoadGameAssemblyFn>(LoadGameAssemblyFunction);
+    loadGameAssembly(reinterpret_cast<const uint8*>(assemblyPath.data()),
+        static_cast<int32>(assemblyPath.size()),
+        reinterpret_cast<const uint8*>(sidecarPath.data()),
+        static_cast<int32>(sidecarPath.size()));
+}
+
+void ManagedEditorBridge::UnloadGameAssembly()
+{
+    if (!initialized || !UnloadGameAssemblyFunction) return;
+
+    ManagedUnloadGameAssemblyFn unloadGameAssembly = reinterpret_cast<ManagedUnloadGameAssemblyFn>(UnloadGameAssemblyFunction);
+    unloadGameAssembly();
+}
+
+void ManagedEditorBridge::DrawSceneGizmos()
+{
+    if (!initialized || !DrawSceneGizmosFunction) return;
+
+    ManagedDrawEditorFn drawSceneGizmos = reinterpret_cast<ManagedDrawEditorFn>(DrawSceneGizmosFunction);
+    drawSceneGizmos();
+}
+
+bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,
+    const std::string& projectRoot,
+    const std::string& scriptProject,
+    const std::string& configuration,
+    const std::string& targetPlatform,
+    std::string& error)
+{
+    error.clear();
+    if (!initialized || !PublishGameAotFunction)
+    {
+        error = "Editor managed NativeAOT publisher is not initialized.";
+        return false;
+    }
+
+    std::array<uint8, 4096> errorBuffer{};
+    ManagedPublishGameAotFn publishGameAot = reinterpret_cast<ManagedPublishGameAotFn>(PublishGameAotFunction);
+    uint8 succeeded = publishGameAot(
+        reinterpret_cast<const uint8*>(repositoryRoot.data()), static_cast<int32>(repositoryRoot.size()),
+        reinterpret_cast<const uint8*>(projectRoot.data()), static_cast<int32>(projectRoot.size()),
+        reinterpret_cast<const uint8*>(scriptProject.data()), static_cast<int32>(scriptProject.size()),
+        reinterpret_cast<const uint8*>(configuration.data()), static_cast<int32>(configuration.size()),
+        reinterpret_cast<const uint8*>(targetPlatform.data()), static_cast<int32>(targetPlatform.size()),
+        errorBuffer.data(), static_cast<int32>(errorBuffer.size()));
+    error = reinterpret_cast<const char*>(errorBuffer.data());
+    return succeeded != 0;
+}
+
+bool ManagedEditorBridge::IsInitialized() const
+{
+    return initialized;
+}

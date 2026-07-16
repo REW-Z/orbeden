@@ -1,6 +1,7 @@
-#include "Editor/ProjectPanel.h"
+#include "Editor/Panels/ProjectPanel.h"
 
 #include "Editor/EditorSystem.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
 
 #include <imgui.h>
 #include <string>
@@ -8,18 +9,18 @@
 ProjectPanel::ProjectPanel(EditorSystem& owner)
     : editor(owner)
 {
+    info.id = "project";
+    info.title = "Project";
+    info.defaultVisible = true;
+    info.defaultSize = { 360.0f, 180.0f };
+    info.defaultDock = PanelDockPlacement::Floating;
+    info.order = 100;
 }
 
-//获取面板稳定ID
-const char* ProjectPanel::GetPanelId() const
+//获取面板信息
+const EditorPanelInfo& ProjectPanel::GetPanelInfo() const
 {
-    return "project";
-}
-
-//获取面板显示标题
-const char* ProjectPanel::GetPanelTitle() const
-{
-    return "Project";
+    return info;
 }
 
 //绘制面板内容
@@ -148,3 +149,5 @@ void ProjectPanel::DrawPanel()
         ImGui::TextWrapped("%s", status.c_str());
     }
 }
+
+ORBEDEN_REGISTER_EDITOR_PANEL(ProjectPanel)

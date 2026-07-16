@@ -3,7 +3,6 @@
         <Panel id="project" visible="true" x="1" y="154" width="569" height="512" dockNode="3" />
         <Panel id="ens_view" visible="true" x="30" y="58" width="320" height="662" dockNode="5" />
         <Panel id="inspector" visible="true" x="630" y="100" width="429" height="620" dockNode="3" />
-        <Panel id="managed_editor" visible="true" x="643" y="318" width="214" height="220" dockNode="11" />
         <DockNode id="1" first="5" second="4" vertical="true" ratio="0.22" workspace="false" active="" />
         <DockNode id="2" first="10" second="11" vertical="false" ratio="0.75" workspace="false" active="" />
         <DockNode id="3" first="-1" second="-1" vertical="true" ratio="0.5" workspace="false" active="inspector" />
@@ -11,6 +10,6 @@
         <DockNode id="5" first="-1" second="-1" vertical="true" ratio="0.5" workspace="false" active="ens_view" />
         <DockNode id="10" first="-1" second="-1" vertical="true" ratio="0.5" workspace="true" active="" />
         <DockNode id="11" first="-1" second="-1" vertical="true" ratio="0.5" workspace="false" active="managed_editor" />
-        <EditorCamera x="-1.81811" y="0.989976" z="11.9229" yaw="0.91998" pitch="-12.16" />
+        <EditorCamera x="-0.704771" y="3.48998" z="16.4817" yaw="0.91998" pitch="-12.16" />
     </EditorLayout>
 </OrbedenProject>

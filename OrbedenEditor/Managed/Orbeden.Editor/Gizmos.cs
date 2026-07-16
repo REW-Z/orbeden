@@ -15,7 +15,7 @@ internal unsafe struct EditorGizmoApi
 }
 #pragma warning restore CS0649
 
-/// <summary>SceneView Gizmo 绘制 API。</summary>
+/// <summary>EditorScene Handle 绘制 API。</summary>
 public static unsafe class Gizmos
 {
     private static EditorGizmoApi api;

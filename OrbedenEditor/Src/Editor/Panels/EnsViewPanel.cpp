@@ -4,9 +4,10 @@
 #include <cstring>
 #include <string>
 
-#include "Editor/EnsViewPanel.h"
-#include "Editor/EditorSelection.h"
+#include "Editor/Panels/EnsViewPanel.h"
+#include "Editor/EditorScene.h"
 #include "Editor/EditorSystem.h"
+#include "Editor/Panels/EditorPanelRegistry.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Ens.h"
 #include "Runtime/EnsId.h"
@@ -118,33 +119,34 @@ namespace
 EnsViewPanel::EnsViewPanel(EditorSystem& owner)
     : editor(owner)
 {
+    info.id = "ens_view";
+    info.title = "EnsView";
+    info.defaultVisible = true;
+    info.defaultSize = { 320.0f, 420.0f };
+    info.defaultDock = PanelDockPlacement::Left;
+    info.defaultDockRatio = 0.22f;
+    info.order = 200;
 }
 
-//获取面板稳定ID
-const char* EnsViewPanel::GetPanelId() const
+//获取面板信息
+const EditorPanelInfo& EnsViewPanel::GetPanelInfo() const
 {
-    return "ens_view";
-}
-
-//获取面板显示标题
-const char* EnsViewPanel::GetPanelTitle() const
-{
-    return "EnsView";
+    return info;
 }
 
 //绘制面板内容
 void EnsViewPanel::DrawPanel()
 {
     World& world = editor.GetWorld();
-    EditorSelection& selection = editor.GetSelection();
+    EditorScene& sceneEditor = editor.GetEditorScene();
     ImVec2 contentMin = ImGui::GetCursorScreenPos();
 
-    selection.PruneInvalid(world);
+    sceneEditor.PruneSelection(world);
 
     List<EnsId> roots;
-    world.ForEachEns([&roots, this](Ens& ens)
+    world.ForEachEns([&roots, &sceneEditor](Ens& ens)
     {
-        if (editor.IsEditorTemporaryEns(ens.GetId())) return;
+        if (sceneEditor.IsTemporaryEns(ens.GetId())) return;
 
         Ens* parent = ens.GetParent();
         if (!parent)
@@ -161,7 +163,7 @@ void EnsViewPanel::DrawPanel()
     {
         for (EnsId root : roots)
         {
-            DrawEnsNode(world, selection, root, roots);
+            DrawEnsNode(world, sceneEditor, root, roots);
         }
     }
 
@@ -175,17 +177,17 @@ void EnsViewPanel::DrawPanel()
         && ImGui::IsMouseClicked(ImGuiMouseButton_Left)
         && !ImGui::IsAnyItemHovered())
     {
-        selection.Clear();
+        sceneEditor.ClearSelection();
     }
 
     ApplyPendingMove(world);
 }
 
 //绘制单个Ens节点
-void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId ens, const List<EnsId>& roots)
+void EnsViewPanel::DrawEnsNode(World& world, EditorScene& sceneEditor, EnsId ens, const List<EnsId>& roots)
 {
     if (!world.IsAlive(ens)) return;
-    if (editor.IsEditorTemporaryEns(ens)) return;
+    if (sceneEditor.IsTemporaryEns(ens)) return;
 
     Ens* ensObject = world.GetEns(ens);
     if (!ensObject) return;
@@ -198,7 +200,7 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
     {
         flags |= ImGuiTreeNodeFlags_DefaultOpen;
     }
-    if (selection.IsSelected(ens))
+    if (sceneEditor.IsSelected(ens))
     {
         flags |= ImGuiTreeNodeFlags_Selected;
     }
@@ -216,8 +218,8 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
     bool open = ImGui::TreeNodeEx(label.c_str(), flags);
     if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
     {
-        if (ImGui::GetIO().KeyCtrl) selection.ToggleEns(ens);
-        else selection.SelectEns(ens);
+        if (ImGui::GetIO().KeyCtrl) sceneEditor.ToggleEns(ens);
+        else sceneEditor.SelectEns(ens);
     }
 
     DrawNodeDropTarget(world, ens, roots);
@@ -233,7 +235,7 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorSelection& selection, EnsId e
         EnsId child = space->firstChild;
         while (!child.IsNull())
         {
-            DrawEnsNode(world, selection, child, roots);
+            DrawEnsNode(world, sceneEditor, child, roots);
 
             SpaceComponent* childSpace = world.GetSpaceComponent(child);
             child = childSpace ? childSpace->next : EnsId();
@@ -341,14 +343,15 @@ void EnsViewPanel::DrawRootDropTarget(World& world)
 //判断移动命令是否有效
 bool EnsViewPanel::CanMoveEns(World& world, EnsId child, EnsId parent, EnsId beforeSibling) const
 {
+    const EditorScene& sceneEditor = editor.GetEditorScene();
     if (!world.IsAlive(child) || child == parent || child == beforeSibling) return false;
-    if (editor.IsEditorTemporaryEns(child)) return false;
-    if (!parent.IsNull() && (!world.IsAlive(parent) || editor.IsEditorTemporaryEns(parent))) return false;
+    if (sceneEditor.IsTemporaryEns(child)) return false;
+    if (!parent.IsNull() && (!world.IsAlive(parent) || sceneEditor.IsTemporaryEns(parent))) return false;
 
     if (!beforeSibling.IsNull())
     {
         SpaceComponent* beforeSpace = world.GetSpaceComponent(beforeSibling);
-        if (!beforeSpace || beforeSpace->parent != parent || editor.IsEditorTemporaryEns(beforeSibling)) return false;
+        if (!beforeSpace || beforeSpace->parent != parent || sceneEditor.IsTemporaryEns(beforeSibling)) return false;
     }
 
     EnsId current = parent;
@@ -385,3 +388,5 @@ void EnsViewPanel::ApplyPendingMove(World& world)
     DecomposeTransform(localMatrix, space->localPosition, space->localRotation, space->localScale);
     space->transformDirty = true;
 }
+
+ORBEDEN_REGISTER_EDITOR_PANEL(EnsViewPanel)
