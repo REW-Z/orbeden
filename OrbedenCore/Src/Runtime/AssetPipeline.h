@@ -51,6 +51,9 @@ public:
     //导入OBJ为复合资源
     static AssetCollection Import_OBJ(std::string path);
 
+    //导入glTF或GLB为复合资源
+    static AssetCollection Import_GLTF(std::string path);
+
     //导入OBJ为非索引Mesh
     static AssetCollection Import_AsIndexlessMesh_OBJ(std::string path);
 };

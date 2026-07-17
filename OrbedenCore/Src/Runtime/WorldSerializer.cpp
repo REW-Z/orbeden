@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "FileSystem/FileSystem.h"
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
@@ -629,13 +630,13 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     Reflection::RegisterGeneratedReflection();
 
     //确保目标目录存在
-    std::filesystem::path filePath(path);
+    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
     if (filePath.has_parent_path())
     {
         std::filesystem::create_directories(filePath.parent_path());
     }
 
-    std::ofstream output(path, std::ios::out | std::ios::trunc);
+    std::ofstream output(filePath, std::ios::out | std::ios::trunc);
     if (!output)
     {
         Log::Error(("Save world XML failed: " + path).c_str());

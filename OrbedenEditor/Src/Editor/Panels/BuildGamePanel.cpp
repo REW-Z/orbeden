@@ -1,4 +1,4 @@
-#include "Editor/Panels/ProjectPanel.h"
+#include "Editor/Panels/BuildGamePanel.h"
 
 #include "Editor/EditorSystem.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
@@ -6,25 +6,25 @@
 #include <imgui.h>
 #include <string>
 
-ProjectPanel::ProjectPanel(EditorSystem& owner)
+BuildGamePanel::BuildGamePanel(EditorSystem& owner)
     : editor(owner)
 {
-    info.id = "project";
-    info.title = "Project";
+    info.id = "build_game";
+    info.title = "Build Game";
     info.defaultVisible = true;
     info.defaultSize = { 360.0f, 180.0f };
     info.defaultDock = PanelDockPlacement::Floating;
-    info.order = 100;
+    info.order = 110;
 }
 
 //获取面板信息
-const EditorPanelInfo& ProjectPanel::GetPanelInfo() const
+const EditorPanelInfo& BuildGamePanel::GetPanelInfo() const
 {
     return info;
 }
 
 //绘制面板内容
-void ProjectPanel::DrawPanel()
+void BuildGamePanel::DrawPanel()
 {
     if (editor.HasProject())
     {
@@ -41,73 +41,14 @@ void ProjectPanel::DrawPanel()
 
     ImGui::Separator();
 
-    if (ImGui::Button("Load Project..."))
-    {
-        editor.RequestOpenProjectDialog();
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button("New Project..."))
-    {
-        editor.RequestNewProjectDialog();
-    }
-
-    ImGui::SameLine();
-    if (!editor.HasProject() || editor.IsPlaying())
-    {
-        ImGui::BeginDisabled();
-    }
-
-    if (ImGui::Button("Save World"))
-    {
-        editor.RequestSaveCurrentWorld();
-    }
-
-    if (!editor.HasProject() || editor.IsPlaying())
-    {
-        ImGui::EndDisabled();
-    }
-
     if (!editor.HasProject())
     {
         ImGui::BeginDisabled();
     }
 
-    if (ImGui::Button("Build C#"))
+    if (ImGui::Button("Build Game C#"))
     {
         editor.RequestBuildScripts();
-    }
-
-    ImGui::SameLine();
-    if (editor.IsPlaying())
-    {
-        ImGui::BeginDisabled();
-    }
-
-    if (ImGui::Button("Play"))
-    {
-        editor.RequestPlay();
-    }
-
-    if (editor.IsPlaying())
-    {
-        ImGui::EndDisabled();
-    }
-
-    ImGui::SameLine();
-    if (!editor.IsPlaying())
-    {
-        ImGui::BeginDisabled();
-    }
-
-    if (ImGui::Button("Stop"))
-    {
-        editor.RequestStop();
-    }
-
-    if (!editor.IsPlaying())
-    {
-        ImGui::EndDisabled();
     }
 
     ImGui::SetNextItemWidth(180.0f);
@@ -150,4 +91,4 @@ void ProjectPanel::DrawPanel()
     }
 }
 
-ORBEDEN_REGISTER_EDITOR_PANEL(ProjectPanel)
+ORBEDEN_REGISTER_EDITOR_PANEL(BuildGamePanel)

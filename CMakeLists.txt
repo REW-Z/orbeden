@@ -99,6 +99,7 @@ target_include_directories(orbeden_core PUBLIC
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/glad/include"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/imgui"
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/imgui/backends"
+    "${ORBEDEN_CORE_DIR}/Src/ThirdParty/cgltf"
 )
 target_compile_definitions(orbeden_core PUBLIC PX_PHYSX_STATIC_LIB DISABLE_CUDA_PHYSX)
 

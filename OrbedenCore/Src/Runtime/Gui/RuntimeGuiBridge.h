@@ -29,6 +29,29 @@ public:
     void* Selectable = nullptr;
 };
 
+// Editor 资源面板使用的增量 GUI 函数表。
+struct RuntimeGuiProjectApi
+{
+public:
+    void* Separator = nullptr;
+    void* SameLine = nullptr;
+    void* BeginTable = nullptr;
+    void* EndTable = nullptr;
+    void* TableSetupColumn = nullptr;
+    void* TableHeadersRow = nullptr;
+    void* TableNextRow = nullptr;
+    void* TableSetColumnIndex = nullptr;
+    void* Selectable = nullptr;
+    void* IsItemDoubleClicked = nullptr;
+    void* BeginPopupContextItem = nullptr;
+    void* BeginPopupContextWindow = nullptr;
+    void* EndPopup = nullptr;
+    void* MenuItem = nullptr;
+    void* SetClipboardText = nullptr;
+    void* BeginDisabled = nullptr;
+    void* EndDisabled = nullptr;
+};
+
 // Runtime GUI 桥接层，当前由 Dear ImGui 实现。
 class RuntimeGuiBridge
 {
@@ -38,4 +61,7 @@ public:
 
     // 获取 Runtime GUI 增量函数表。
     static RuntimeGuiExtensionApi GetExtensionApi();
+
+    // 获取 Project Panel 使用的增量 GUI 函数表。
+    static RuntimeGuiProjectApi GetProjectApi();
 };

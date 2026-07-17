@@ -1,5 +1,6 @@
 #include "Editor/ExampleWorldGenerator.h"
 
+#include "FileSystem/Utf8Path.h"
 #include "Application.h"
 #include "Log/Log.h"
 #include "Runtime/Object/Shader.h"
@@ -809,7 +810,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return path.lexically_normal().generic_string();
+        return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
     bool WriteTextFile(const std::filesystem::path& path, const char* text)
@@ -893,7 +894,7 @@ bool ExampleWorldGenerator::IsExampleProject(const std::string& projectName)
 //生成示例项目的资源、脚本和 World 文件
 bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
 {
-    std::filesystem::path root(projectRoot);
+    std::filesystem::path root = Utf8Path::FromUtf8(projectRoot);
 
     //写入项目描述和资源目录。
     bool succeeded = true;
@@ -938,7 +939,7 @@ bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
 //生成示例 World 文件
 bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, const std::string& startupWorld)
 {
-    std::filesystem::path worldPath = std::filesystem::path(projectRoot) / startupWorld;
+    std::filesystem::path worldPath = Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(startupWorld);
     if (worldPath.has_parent_path())
     {
         std::filesystem::create_directories(worldPath.parent_path());

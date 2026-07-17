@@ -163,4 +163,20 @@ internal static unsafe class EditorPanelRegistry
             }
         }
     }
+
+    /// <summary>向全部 C# Panel 广播资源引用路径变化。</summary>
+    public static void RemapAssetReferences(string oldKey, string newKey, bool prefix)
+    {
+        foreach (EditorPanel panel in panels)
+        {
+            try
+            {
+                panel.OnAssetReferencesRemapped(oldKey, newKey, prefix);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Editor Panel asset remap failed: {panel.GetType().FullName}: {ex}");
+            }
+        }
+    }
 }

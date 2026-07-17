@@ -148,6 +148,9 @@ private:
     //查找当前 Editor 可用的 OrbedenCore.CSharp.dll
     std::string FindRuntimeCSharpDll() const;
 
+    //Debug模式下同步Core C#运行库到当前游戏项目
+    bool SyncProjectRuntimeCSharpDll(std::string& outError) const;
+
     //获取 Play/Inspector 需要复制的托管依赖目录
     List<std::string> GetManagedDependencyDirectories() const;
 

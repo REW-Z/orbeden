@@ -32,6 +32,9 @@ public abstract class Object
     /// <summary>原生对象运行时 ID。</summary>
     public int InstanceId => instanceId;
 
+    /// <summary>资源对象的稳定 Key；运行时临时对象也可能返回运行时路径。</summary>
+    public string ResourceKey => ObjectBind.GetResourceKey(NativePtr);
+
     /// <summary>判断原生对象是否仍然存活。</summary>
     public bool IsAlive => instanceId != 0 && ObjectBind.IsAlive(instanceId);
 

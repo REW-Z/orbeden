@@ -93,6 +93,24 @@ internal sealed class InspectorPanel : EditorPanel
         UnloadGameAssembly();
     }
 
+    /// <summary>同步 sidecar 缓存中的资源对象引用。</summary>
+    public override void OnAssetReferencesRemapped(string oldKey, string newKey, bool prefix)
+    {
+        foreach (List<ScriptMount> mounts in sidecarScripts.Values)
+        {
+            foreach (ScriptMount mount in mounts)
+            {
+                foreach (ScriptSerializedValue value in mount.Values.Values)
+                {
+                    if (!IsSerializedResourceType(value.Type)) continue;
+                    if (TryMapResourceKey(value.Value, oldKey, newKey, prefix, out string mapped)) value.Value = mapped;
+                }
+            }
+        }
+
+        runtimeSerializedApplied.Clear();
+    }
+
     /// <summary>绘制 Inspector 内容。</summary>
     public override void Draw(EditorPanelContext context)
     {
@@ -355,14 +373,14 @@ internal sealed class InspectorPanel : EditorPanel
                 }
 
                 Mesh? mesh = renderer.mesh;
+                if (GUI.ObjectField("mesh", ref mesh))
+                {
+                    renderer.mesh = mesh;
+                }
+
                 if (mesh != null && mesh.IsValid)
                 {
-                    GUI.Label($"mesh: {mesh.InstanceId}");
                     GUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
-                }
-                else
-                {
-                    GUI.Label("mesh: (none)");
                 }
 
                 bool castShadows = renderer.castShadows;
@@ -601,7 +619,7 @@ internal sealed class InspectorPanel : EditorPanel
         Type? type = FindScriptType(mount.Type);
         if (type == null)
         {
-            GUI.Label("Build C# to edit fields.");
+            GUI.Label("Build Game C# to edit fields.");
             return;
         }
 
@@ -698,6 +716,16 @@ internal sealed class InspectorPanel : EditorPanel
             if (!GUI.InputVector3(label, ref typedValue)) return false;
 
             newValue = SerializeVector3(typedValue);
+            return true;
+        }
+
+        if (typeof(Orbeden.Object).IsAssignableFrom(type))
+        {
+            Orbeden.Object? typedValue = GUI.ResolveObjectFieldAsset(type, serialized.Value);
+            string resourceKey = serialized.Value;
+            if (!GUI.ObjectField(label, type, ref typedValue, ref resourceKey)) return false;
+
+            newValue = resourceKey;
             return true;
         }
 
@@ -881,6 +909,13 @@ internal sealed class InspectorPanel : EditorPanel
             return;
         }
 
+        if (typeof(Orbeden.Object).IsAssignableFrom(type))
+        {
+            Orbeden.Object? typedValue = value as Orbeden.Object;
+            if (GUI.ObjectField(name, type, ref typedValue)) setValue(typedValue);
+            return;
+        }
+
         GUI.Label($"{name}: {value ?? type.Name}");
     }
 
@@ -992,7 +1027,38 @@ internal sealed class InspectorPanel : EditorPanel
             return true;
         }
 
+        if (typeof(Orbeden.Object).IsAssignableFrom(type))
+        {
+            value = GUI.ResolveObjectFieldAsset(type, text);
+            return string.IsNullOrEmpty(text) || value != null;
+        }
+
         return false;
+    }
+
+    //判断 sidecar 类型名是否是资源对象。
+    private bool IsSerializedResourceType(string typeName)
+    {
+        string value = StripAssemblyName(typeName);
+        return value is "Orbeden.Mesh" or "Orbeden.Material" or "Orbeden.Shader";
+    }
+
+    //重映射一个 sidecar 资源 Key。
+    private bool TryMapResourceKey(string value, string oldKey, string newKey, bool prefix, out string mapped)
+    {
+        mapped = value;
+        int separator = value.IndexOf("//", StringComparison.Ordinal);
+        string source = separator < 0 ? value : value[..separator];
+        string subId = separator < 0 ? string.Empty : value[separator..];
+        bool matches = string.Equals(source, oldKey, StringComparison.Ordinal);
+        if (!matches && prefix && source.Length > oldKey.Length)
+        {
+            matches = source.StartsWith(oldKey, StringComparison.Ordinal) && source[oldKey.Length] == '/';
+        }
+        if (!matches) return false;
+
+        mapped = string.IsNullOrEmpty(newKey) ? string.Empty : newKey + source[oldKey.Length..] + subId;
+        return mapped != value;
     }
 
     //解析 vector3 文本。

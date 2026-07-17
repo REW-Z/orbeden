@@ -1,5 +1,7 @@
 #include "Platform/DynamicLibrary.h"
 
+#include "FileSystem/Utf8Path.h"
+
 #include <string>
 
 #if defined(_WIN32)
@@ -21,7 +23,7 @@ DynamicLibrary LoadDynamicLibrary(const std::filesystem::path& path)
     std::wstring widePath = path.wstring();
     library.handle = LoadLibraryW(widePath.c_str());
 #else
-    std::string nativePath = path.string();
+    std::string nativePath = Utf8Path::ToUtf8(path);
     library.handle = dlopen(nativePath.c_str(), RTLD_LAZY | RTLD_LOCAL);
 #endif
 

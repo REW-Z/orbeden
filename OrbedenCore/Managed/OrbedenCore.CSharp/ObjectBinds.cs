@@ -17,6 +17,12 @@ internal unsafe struct ObjectBindApi
 }
 
 [StructLayout(LayoutKind.Sequential)]
+internal unsafe struct ObjectExtensionBindApi
+{
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> GetResourceKey;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct MeshBindApi
 {
     public delegate* unmanaged[Cdecl]<byte*, int, IntPtr> Load;
@@ -101,12 +107,14 @@ internal unsafe struct ShaderBindApi
 internal static unsafe class ObjectBind
 {
     private static ObjectBindApi api;
+    private static ObjectExtensionBindApi extensionApi;
     private static bool initialized;
 
     //保存 C++ 传入的 Object 函数表
-    internal static void Initialize(ObjectBindApi value)
+    internal static void Initialize(ObjectBindApi value, ObjectExtensionBindApi extensionValue)
     {
         api = value;
+        extensionApi = extensionValue;
         initialized = api.GetInstanceId != null;
     }
 
@@ -114,6 +122,22 @@ internal static unsafe class ObjectBind
     internal static int GetInstanceId(IntPtr pointer)
     {
         return initialized && pointer != IntPtr.Zero && api.GetInstanceId != null ? api.GetInstanceId(pointer) : 0;
+    }
+
+    //读取对象稳定资源 Key。
+    internal static string GetResourceKey(IntPtr pointer)
+    {
+        if (!initialized || pointer == IntPtr.Zero || extensionApi.GetResourceKey == null) return string.Empty;
+
+        int requiredBytes = extensionApi.GetResourceKey(pointer, null, 0);
+        if (requiredBytes <= 0) return string.Empty;
+
+        Span<byte> bytes = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
+        fixed (byte* output = bytes)
+        {
+            int actualBytes = extensionApi.GetResourceKey(pointer, output, requiredBytes);
+            return Encoding.UTF8.GetString(bytes[..Math.Clamp(actualBytes, 0, requiredBytes)]);
+        }
     }
 
     //判断原生对象是否存活
@@ -301,12 +325,12 @@ internal static unsafe class MeshBind
         int requiredBytes = function(pointer, null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
-        byte[] output = new byte[requiredBytes];
+        Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* outputPointer = output)
         {
             int actualBytes = function(pointer, outputPointer, output.Length);
             int length = Math.Clamp(actualBytes, 0, output.Length);
-            return Encoding.UTF8.GetString(output, 0, length);
+            return Encoding.UTF8.GetString(output[..length]);
         }
     }
 
@@ -318,12 +342,12 @@ internal static unsafe class MeshBind
         int requiredBytes = function(pointer, index, null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
-        byte[] output = new byte[requiredBytes];
+        Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* outputPointer = output)
         {
             int actualBytes = function(pointer, index, outputPointer, output.Length);
             int length = Math.Clamp(actualBytes, 0, output.Length);
-            return Encoding.UTF8.GetString(output, 0, length);
+            return Encoding.UTF8.GetString(output[..length]);
         }
     }
 
@@ -563,12 +587,12 @@ internal static unsafe class MaterialBind
         int requiredBytes = function(pointer, null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
-        byte[] output = new byte[requiredBytes];
+        Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* outputPointer = output)
         {
             int actualBytes = function(pointer, outputPointer, output.Length);
             int length = Math.Clamp(actualBytes, 0, output.Length);
-            return Encoding.UTF8.GetString(output, 0, length);
+            return Encoding.UTF8.GetString(output[..length]);
         }
     }
 
@@ -595,12 +619,12 @@ internal static unsafe class MaterialBind
             int requiredBytes = function(material, slotPointer, slotBytes.Length, null, 0);
             if (requiredBytes <= 0) return string.Empty;
 
-            byte[] output = new byte[requiredBytes];
+            Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
             fixed (byte* outputPointer = output)
             {
                 int actualBytes = function(material, slotPointer, slotBytes.Length, outputPointer, output.Length);
                 int length = Math.Clamp(actualBytes, 0, output.Length);
-                return Encoding.UTF8.GetString(output, 0, length);
+                return Encoding.UTF8.GetString(output[..length]);
             }
         }
     }
@@ -722,12 +746,12 @@ internal static unsafe class ShaderBind
         int requiredBytes = function(pointer, null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
-        byte[] output = new byte[requiredBytes];
+        Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* outputPointer = output)
         {
             int actualBytes = function(pointer, outputPointer, output.Length);
             int length = Math.Clamp(actualBytes, 0, output.Length);
-            return Encoding.UTF8.GetString(output, 0, length);
+            return Encoding.UTF8.GetString(output[..length]);
         }
     }
 
@@ -739,12 +763,12 @@ internal static unsafe class ShaderBind
         int requiredBytes = function(pointer, index, null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
-        byte[] output = new byte[requiredBytes];
+        Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* outputPointer = output)
         {
             int actualBytes = function(pointer, index, outputPointer, output.Length);
             int length = Math.Clamp(actualBytes, 0, output.Length);
-            return Encoding.UTF8.GetString(output, 0, length);
+            return Encoding.UTF8.GetString(output[..length]);
         }
     }
 }

@@ -5,6 +5,7 @@
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "Platform/InputManager.h"
 #include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
 
 #include <algorithm>
 #include <array>
@@ -15,6 +16,7 @@
 #include <fstream>
 #include <filesystem>
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <sstream>
 #include <utility>
 
@@ -125,14 +127,14 @@ namespace
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return path.lexically_normal().generic_string();
+        return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
     {
         if (executablePath.empty()) return std::filesystem::current_path();
 
-        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
+        std::filesystem::path path = std::filesystem::absolute(Utf8Path::FromUtf8(executablePath));
         return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
     }
 
@@ -149,12 +151,12 @@ namespace
     {
         List<std::string> result;
         std::error_code error;
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(directory, error))
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(directory), error))
         {
             if (error) break;
             if (!entry.is_directory()) continue;
 
-            result.push_back(entry.path().filename().string());
+            result.push_back(Utf8Path::ToUtf8(entry.path().filename()));
         }
 
         std::sort(result.begin(), result.end());
@@ -212,27 +214,27 @@ namespace
 
     std::string GetParentDirectory(const std::string& path)
     {
-        std::filesystem::path value(path);
+        std::filesystem::path value = Utf8Path::FromUtf8(path);
         return ToCleanPath(value.has_parent_path() ? value.parent_path() : std::filesystem::current_path());
     }
 
     bool FileExists(const std::string& path)
     {
-        return !path.empty() && std::filesystem::exists(std::filesystem::path(path));
+        return !path.empty() && std::filesystem::exists(Utf8Path::FromUtf8(path));
     }
 
     //判断脚本源是否比程序集更新。
     bool IsProjectScriptBuildOutdated(const std::string& scriptRoot, const std::string& assemblyPath)
     {
         if (scriptRoot.empty() || assemblyPath.empty()) return false;
-        std::filesystem::path assembly(assemblyPath);
+        std::filesystem::path assembly = Utf8Path::FromUtf8(assemblyPath);
         if (!std::filesystem::exists(assembly)) return true;
 
         std::error_code error;
         std::filesystem::file_time_type assemblyTime = std::filesystem::last_write_time(assembly, error);
         if (error) return true;
 
-        std::filesystem::path root(scriptRoot);
+        std::filesystem::path root = Utf8Path::FromUtf8(scriptRoot);
         for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(root, error))
         {
             if (error) return true;
@@ -251,7 +253,7 @@ namespace
 
     bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
     {
-        std::string content = ReadTextFile(std::filesystem::path(csproj));
+        std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
         return content.find("Lib\\OrbedenCore.CSharp.dll") != std::string::npos
             || content.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
     }
@@ -261,23 +263,23 @@ namespace
         outError.clear();
         if (!ScriptProjectUsesLocalRuntimeDll(csproj)) return true;
 
-        if (runtimeDllPath.empty() || !std::filesystem::exists(std::filesystem::path(runtimeDllPath)))
+        if (runtimeDllPath.empty() || !std::filesystem::exists(Utf8Path::FromUtf8(runtimeDllPath)))
         {
-            outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.CSharp first.";
+            outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
             return false;
         }
 
-        std::filesystem::path target = std::filesystem::path(csproj).parent_path() / "Lib/OrbedenCore.CSharp.dll";
+        std::filesystem::path target = Utf8Path::FromUtf8(csproj).parent_path() / "Lib/OrbedenCore.CSharp.dll";
         std::filesystem::create_directories(target.parent_path());
 
         std::error_code equivalentError;
-        if (std::filesystem::exists(target) && std::filesystem::equivalent(std::filesystem::path(runtimeDllPath), target, equivalentError))
+        if (std::filesystem::exists(target) && std::filesystem::equivalent(Utf8Path::FromUtf8(runtimeDllPath), target, equivalentError))
         {
             return true;
         }
 
         std::error_code copyError;
-        std::filesystem::copy_file(std::filesystem::path(runtimeDllPath),
+        std::filesystem::copy_file(Utf8Path::FromUtf8(runtimeDllPath),
             target,
             std::filesystem::copy_options::overwrite_existing,
             copyError);
@@ -373,7 +375,7 @@ namespace
         {
             if (directoryText.empty()) continue;
 
-            std::filesystem::path directory = std::filesystem::path(directoryText);
+            std::filesystem::path directory = Utf8Path::FromUtf8(directoryText);
             if (!std::filesystem::is_directory(directory)) continue;
             if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
         }
@@ -385,7 +387,7 @@ namespace
         const std::filesystem::path& shadowDirectory,
         const List<std::string>& managedDependencyDirectories)
     {
-        std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
+        std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(assemblyPath));
         if (!std::filesystem::exists(sourceAssembly)) return std::string();
 
         std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, shadowDirectory);
@@ -536,20 +538,6 @@ void EditorSystem::RequestBuildScripts()
         return;
     }
 
-    std::string repoRoot = FindRepositoryRoot();
-    if (!repoRoot.empty())
-    {
-        std::filesystem::path coreCSharpProject = std::filesystem::path(repoRoot) / "OrbedenCore/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.csproj";
-        if (std::filesystem::exists(coreCSharpProject))
-        {
-            std::string coreCommand = "dotnet build " + Quote(ToCleanPath(coreCSharpProject)) + " -c Debug";
-            if (!RunCommand(coreCommand, "Build Core C#"))
-            {
-                return;
-            }
-        }
-    }
-
     std::string runtimeRefreshError;
     if (!RefreshLocalRuntimeDllReference(csproj, FindRuntimeCSharpDll(), runtimeRefreshError))
     {
@@ -559,10 +547,10 @@ void EditorSystem::RequestBuildScripts()
     }
 
     std::string command = "dotnet build " + Quote(csproj) + " -c Debug";
-    if (RunCommand(command, "Build C#"))
+    if (RunCommand(command, "Build Game C#"))
     {
         RefreshInspectorGameAssembly();
-        projectStatus = "Built C#: " + GetProjectGameAssemblyPath();
+        projectStatus = "Built Game C#: " + GetProjectGameAssemblyPath();
     }
 }
 
@@ -590,7 +578,7 @@ void EditorSystem::RequestPlay()
 
     if (!FileExists(assemblyPath))
     {
-        projectStatus = "Game DLL is missing. Build C# first: " + assemblyPath;
+        projectStatus = "Game DLL is missing. Build Game C# first: " + assemblyPath;
         Log::Error(projectStatus.c_str());
         return;
     }
@@ -603,7 +591,7 @@ void EditorSystem::RequestPlay()
 
     editorScene.EnterPlayMode(app.GetWorld());
 
-    std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".pie";
+    std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".pie";
     std::string gameModuleType = GetProjectGameModuleTypeName();
     if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
@@ -705,7 +693,11 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     std::string aotLibraryName = GetNativeAotLibraryName(target, assemblyName);
-    std::string aotLibraryPath = ToCleanPath(std::filesystem::path(project.GetProjectRoot()) / "Aot" / target.aotDirectory / BuildConfiguration / aotLibraryName);
+    std::string aotLibraryPath = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot())
+        / "Aot"
+        / target.aotDirectory
+        / BuildConfiguration
+        / Utf8Path::FromUtf8(aotLibraryName));
     if (!FileExists(aotLibraryPath))
     {
         projectStatus = "Build Player failed: NativeAOT library was not found: " + aotLibraryPath;
@@ -857,11 +849,11 @@ std::string EditorSystem::GetProjectGameAssemblyName() const
     std::string csproj = GetProjectScriptProjectPath();
     if (csproj.empty()) return std::string();
 
-    std::string content = ReadTextFile(std::filesystem::path(csproj));
+    std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
     std::string assemblyName = GetXmlTagValue(content, "AssemblyName");
     if (!assemblyName.empty()) return assemblyName;
 
-    return std::filesystem::path(csproj).stem().string();
+    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(csproj).stem());
 }
 
 std::string EditorSystem::GetProjectGameModuleTypeName() const
@@ -870,7 +862,7 @@ std::string EditorSystem::GetProjectGameModuleTypeName() const
     std::string assemblyName = GetProjectGameAssemblyName();
     if (csproj.empty() || assemblyName.empty()) return std::string();
 
-    std::string content = ReadTextFile(std::filesystem::path(csproj));
+    std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
     std::string rootNamespace = GetXmlTagValue(content, "RootNamespace");
     if (rootNamespace.empty()) rootNamespace = assemblyName;
 
@@ -882,7 +874,7 @@ std::string EditorSystem::GetProjectGameAssemblyPath() const
     std::string assemblyName = GetProjectGameAssemblyName();
     if (assemblyName.empty()) return std::string();
 
-    return ToCleanPath(std::filesystem::path(project.GetManagedRootPath()) / (assemblyName + ".dll"));
+    return ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / Utf8Path::FromUtf8(assemblyName + ".dll"));
 }
 
 std::string EditorSystem::GetProjectScriptSidecarPath() const
@@ -907,7 +899,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
         return false;
     }
 
-    std::filesystem::path shadowDirectory = std::filesystem::path(project.GetManagedRootPath()) / ".inspector";
+    std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".inspector";
     std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory, GetManagedDependencyDirectories());
     if (shadowAssemblyPath.empty())
     {
@@ -928,7 +920,7 @@ std::string EditorSystem::FindRepositoryRoot() const
     starts.push_back(std::filesystem::current_path());
     if (project.HasProject())
     {
-        starts.push_back(std::filesystem::path(project.GetProjectRoot()));
+        starts.push_back(Utf8Path::FromUtf8(project.GetProjectRoot()));
     }
 
     for (std::filesystem::path start : starts)
@@ -972,8 +964,8 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     std::string repoRoot = FindRepositoryRoot();
     if (!repoRoot.empty())
     {
-        candidates.push_back(std::filesystem::path(repoRoot) / "OrbedenEditor" / RuntimeDllRelativePath);
-        candidates.push_back(std::filesystem::path(repoRoot) / "OrbedenGame" / RuntimeDllRelativePath);
+        candidates.push_back(Utf8Path::FromUtf8(repoRoot) / "OrbedenEditor" / RuntimeDllRelativePath);
+        candidates.push_back(Utf8Path::FromUtf8(repoRoot) / "OrbedenGame" / RuntimeDllRelativePath);
     }
 
     for (const std::filesystem::path& path : candidates)
@@ -987,6 +979,59 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     return std::string();
 }
 
+//Debug模式下同步Core C#运行库到当前游戏项目
+bool EditorSystem::SyncProjectRuntimeCSharpDll(std::string& outError) const
+{
+    outError.clear();
+#if defined(NDEBUG)
+    return true;
+#else
+    if (!project.HasProject()) return true;
+
+    std::string runtimeDll = FindRuntimeCSharpDll();
+    if (runtimeDll.empty())
+    {
+        outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
+        return false;
+    }
+
+    std::string scriptRoot = project.GetScriptRootPath();
+    if (scriptRoot.empty())
+    {
+        outError = "Project script root is empty.";
+        return false;
+    }
+
+    std::filesystem::path source = Utf8Path::FromUtf8(runtimeDll);
+    std::filesystem::path target = Utf8Path::FromUtf8(scriptRoot) / "Lib/OrbedenCore.CSharp.dll";
+    std::error_code error;
+    if (std::filesystem::exists(target)
+        && std::filesystem::equivalent(source, target, error)
+        && !error)
+    {
+        return true;
+    }
+
+    error.clear();
+    std::filesystem::create_directories(target.parent_path(), error);
+    if (error)
+    {
+        outError = "Create project script Lib directory failed: " + error.message();
+        return false;
+    }
+
+    std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing, error);
+    if (error)
+    {
+        outError = "Copy OrbedenCore.CSharp.dll failed: " + error.message();
+        return false;
+    }
+
+    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(target)).c_str());
+    return true;
+#endif
+}
+
 //获取 Play/Inspector 需要复制的托管依赖目录
 List<std::string> EditorSystem::GetManagedDependencyDirectories() const
 {
@@ -994,7 +1039,7 @@ List<std::string> EditorSystem::GetManagedDependencyDirectories() const
     std::string runtimeDll = FindRuntimeCSharpDll();
     if (!runtimeDll.empty())
     {
-        directories.push_back(ToCleanPath(std::filesystem::path(runtimeDll).parent_path()));
+        directories.push_back(ToCleanPath(Utf8Path::FromUtf8(runtimeDll).parent_path()));
     }
 
     return directories;
@@ -1002,7 +1047,12 @@ List<std::string> EditorSystem::GetManagedDependencyDirectories() const
 
 bool EditorSystem::RunCommand(const std::string& command, const char* actionName)
 {
+#if defined(_WIN32)
+    std::wstring nativeCommand = Utf8Path::FromUtf8(command).wstring();
+    int result = _wsystem(nativeCommand.c_str());
+#else
     int result = std::system(command.c_str());
+#endif
     if (result == 0)
     {
         projectStatus = std::string(actionName) + " succeeded.";
@@ -1083,6 +1133,12 @@ void EditorSystem::TryAutoLoadExampleProject()
         editorScene.ClearSceneState();
         SetDialogDirectory(project.GetProjectRoot());
         projectStatus = "Loaded: " + project.GetProjectRoot();
+        std::string runtimeSyncError;
+        if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
+        {
+            projectStatus += " Core C# sync failed: " + runtimeSyncError;
+            Log::Warning(runtimeSyncError.c_str());
+        }
         ApplyEditorLayout();
         RefreshInspectorGameAssembly();
     }
@@ -1278,7 +1334,7 @@ void EditorSystem::DrawProjectDialog()
 
     if (ImGui::Button("Up"))
     {
-        std::filesystem::path parent = std::filesystem::path(dialogDirectory).parent_path();
+        std::filesystem::path parent = Utf8Path::FromUtf8(dialogDirectory).parent_path();
         if (!parent.empty())
         {
             SetDialogDirectory(ToCleanPath(parent));
@@ -1294,7 +1350,7 @@ void EditorSystem::DrawProjectDialog()
         {
             if (ImGui::Selectable(child.c_str()))
             {
-                SetDialogDirectory(ToCleanPath(std::filesystem::path(dialogDirectory) / child));
+                SetDialogDirectory(ToCleanPath(Utf8Path::FromUtf8(dialogDirectory) / Utf8Path::FromUtf8(child)));
             }
         }
     }
@@ -1319,6 +1375,12 @@ void EditorSystem::DrawProjectDialog()
             dialogError.clear();
             SetDialogDirectory(project.GetProjectRoot());
             projectStatus = "Loaded: " + project.GetProjectRoot();
+            std::string runtimeSyncError;
+            if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
+            {
+                projectStatus += " Core C# sync failed: " + runtimeSyncError;
+                Log::Warning(runtimeSyncError.c_str());
+            }
             ApplyEditorLayout();
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
@@ -1360,7 +1422,7 @@ void EditorSystem::DrawNewProjectDialog()
 
     if (ImGui::Button("Up"))
     {
-        std::filesystem::path parent = std::filesystem::path(dialogDirectory).parent_path();
+        std::filesystem::path parent = Utf8Path::FromUtf8(dialogDirectory).parent_path();
         if (!parent.empty())
         {
             SetDialogDirectory(ToCleanPath(parent));
@@ -1376,7 +1438,7 @@ void EditorSystem::DrawNewProjectDialog()
         {
             if (ImGui::Selectable(child.c_str()))
             {
-                SetDialogDirectory(ToCleanPath(std::filesystem::path(dialogDirectory) / child));
+                SetDialogDirectory(ToCleanPath(Utf8Path::FromUtf8(dialogDirectory) / Utf8Path::FromUtf8(child)));
             }
         }
     }
@@ -1396,7 +1458,7 @@ void EditorSystem::DrawNewProjectDialog()
         std::string runtimeDllPath = FindRuntimeCSharpDll();
         if (runtimeDllPath.empty())
         {
-            dialogError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.CSharp first.";
+            dialogError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
             projectStatus = dialogError;
         }
         else
@@ -1413,6 +1475,12 @@ void EditorSystem::DrawNewProjectDialog()
                 dialogError.clear();
                 SetDialogDirectory(project.GetProjectRoot());
                 projectStatus = "Created project: " + project.GetProjectRoot();
+                std::string runtimeSyncError;
+                if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
+                {
+                    projectStatus += " Core C# sync failed: " + runtimeSyncError;
+                    Log::Warning(runtimeSyncError.c_str());
+                }
                 ApplyEditorLayout();
                 RefreshInspectorGameAssembly();
                 ImGui::CloseCurrentPopup();
@@ -1437,6 +1505,6 @@ void EditorSystem::DrawNewProjectDialog()
 
 void EditorSystem::SetDialogDirectory(const std::string& path)
 {
-    dialogDirectory = ToCleanPath(std::filesystem::path(path));
+    dialogDirectory = ToCleanPath(Utf8Path::FromUtf8(path));
     CopyToBuffer(pathBuffer, sizeof(pathBuffer), dialogDirectory);
 }

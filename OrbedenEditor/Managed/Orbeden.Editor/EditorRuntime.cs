@@ -14,6 +14,7 @@ public static class EditorRuntime
         public IntPtr NativeApi;
         public EditorGizmoApi Gizmo;
         public EditorPanelNativeApi Panels;
+        public EditorAssetNativeApi Assets;
     }
 
     /// <summary>初始化 Editor 托管桥接。</summary>
@@ -26,12 +27,17 @@ public static class EditorRuntime
             {
                 OrbedenCoreRuntime.Initialize(IntPtr.Zero);
                 Gizmos.Initialize(default);
+                EditorAssetsNative.Initialize(default);
+                GUI.SetObjectFieldAssetProvider(null);
                 return 0;
             }
 
             EditorManagedApi api = *(EditorManagedApi*)editorApi;
             OrbedenCoreRuntime.Initialize(api.NativeApi);
             Gizmos.Initialize(api.Gizmo);
+            EditorAssetsNative.Initialize(api.Assets);
+            EditorAssetCatalog.Instance.Refresh();
+            GUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
             return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
         }
         catch (Exception ex)

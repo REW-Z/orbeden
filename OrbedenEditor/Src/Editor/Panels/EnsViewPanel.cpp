@@ -161,10 +161,14 @@ void EnsViewPanel::DrawPanel()
     }
     else
     {
+        ImVec2 itemSpacing = ImGui::GetStyle().ItemSpacing;
+        itemSpacing.y = 0.0f;
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, itemSpacing);
         for (EnsId root : roots)
         {
             DrawEnsNode(world, sceneEditor, root, roots);
         }
+        ImGui::PopStyleVar();
     }
 
     DrawRootDropTarget(world);

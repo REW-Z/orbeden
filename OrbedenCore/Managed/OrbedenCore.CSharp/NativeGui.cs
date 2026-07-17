@@ -9,6 +9,7 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct RuntimeGuiApi
 {
+    //所有字符串参数均为 UTF-8 字节，长度不包含结尾零字符。
     public delegate* unmanaged[Cdecl]<byte*, int, void> Label;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> Button;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPanel;
@@ -30,19 +31,43 @@ internal unsafe struct RuntimeGuiExtensionApi
     public delegate* unmanaged[Cdecl]<void> EndCombo;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> Selectable;
 }
+
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct RuntimeGuiProjectApi
+{
+    public delegate* unmanaged[Cdecl]<void> Separator;
+    public delegate* unmanaged[Cdecl]<void> SameLine;
+    public delegate* unmanaged[Cdecl]<byte*, int, int, byte> BeginTable;
+    public delegate* unmanaged[Cdecl]<void> EndTable;
+    public delegate* unmanaged[Cdecl]<byte*, int, float, byte, void> TableSetupColumn;
+    public delegate* unmanaged[Cdecl]<void> TableHeadersRow;
+    public delegate* unmanaged[Cdecl]<void> TableNextRow;
+    public delegate* unmanaged[Cdecl]<int, void> TableSetColumnIndex;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte, byte> Selectable;
+    public delegate* unmanaged[Cdecl]<byte> IsItemDoubleClicked;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopupContextItem;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopupContextWindow;
+    public delegate* unmanaged[Cdecl]<void> EndPopup;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> MenuItem;
+    public delegate* unmanaged[Cdecl]<byte*, int, void> SetClipboardText;
+    public delegate* unmanaged[Cdecl]<byte, void> BeginDisabled;
+    public delegate* unmanaged[Cdecl]<void> EndDisabled;
+}
 #pragma warning restore CS0649
 
 internal static unsafe class NativeGui
 {
     private static RuntimeGuiApi api;
     private static RuntimeGuiExtensionApi extensionApi;
+    private static RuntimeGuiProjectApi projectApi;
     private static bool initialized;
 
     //保存 C++ 传入的 Runtime GUI 函数表
-    internal static void Initialize(RuntimeGuiApi value, RuntimeGuiExtensionApi extensionValue)
+    internal static void Initialize(RuntimeGuiApi value, RuntimeGuiExtensionApi extensionValue, RuntimeGuiProjectApi projectValue)
     {
         api = value;
         extensionApi = extensionValue;
+        projectApi = projectValue;
         initialized = api.Label != null;
     }
 
@@ -205,6 +230,153 @@ internal static unsafe class NativeGui
         }
     }
 
+    //绘制分隔线。
+    internal static void Separator()
+    {
+        if (initialized && projectApi.Separator != null) projectApi.Separator();
+    }
+
+    //让下一个控件与前一个控件同行。
+    internal static void SameLine()
+    {
+        if (initialized && projectApi.SameLine != null) projectApi.SameLine();
+    }
+
+    //开始一个表格。
+    internal static bool BeginTable(string? id, int columns)
+    {
+        if (!initialized || projectApi.BeginTable == null) return false;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return projectApi.BeginTable(pointer, bytes.Length, columns) != 0;
+        }
+    }
+
+    //结束当前表格。
+    internal static void EndTable()
+    {
+        if (initialized && projectApi.EndTable != null) projectApi.EndTable();
+    }
+
+    //配置一个表格列。
+    internal static void TableSetupColumn(string? label, float width, bool fixedWidth)
+    {
+        if (!initialized || projectApi.TableSetupColumn == null) return;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            projectApi.TableSetupColumn(pointer, bytes.Length, width, fixedWidth ? (byte)1 : (byte)0);
+        }
+    }
+
+    //绘制表头。
+    internal static void TableHeadersRow()
+    {
+        if (initialized && projectApi.TableHeadersRow != null) projectApi.TableHeadersRow();
+    }
+
+    //前进到下一表格行。
+    internal static void TableNextRow()
+    {
+        if (initialized && projectApi.TableNextRow != null) projectApi.TableNextRow();
+    }
+
+    //切换当前表格列。
+    internal static void TableSetColumnIndex(int column)
+    {
+        if (initialized && projectApi.TableSetColumnIndex != null) projectApi.TableSetColumnIndex(column);
+    }
+
+    //绘制支持表格跨列的选择项。
+    internal static bool ProjectSelectable(string? label, bool selected, bool spanAllColumns)
+    {
+        if (!initialized || projectApi.Selectable == null) return Selectable(label, selected);
+
+        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return projectApi.Selectable(pointer,
+                bytes.Length,
+                selected ? (byte)1 : (byte)0,
+                spanAllColumns ? (byte)1 : (byte)0) != 0;
+        }
+    }
+
+    //判断刚绘制的控件是否被双击。
+    internal static bool IsItemDoubleClicked()
+    {
+        return initialized && projectApi.IsItemDoubleClicked != null && projectApi.IsItemDoubleClicked() != 0;
+    }
+
+    //开始刚绘制控件的右键菜单。
+    internal static bool BeginPopupContextItem(string? id)
+    {
+        if (!initialized || projectApi.BeginPopupContextItem == null) return false;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return projectApi.BeginPopupContextItem(pointer, bytes.Length) != 0;
+        }
+    }
+
+    //开始当前窗口空白区域的右键菜单。
+    internal static bool BeginPopupContextWindow(string? id)
+    {
+        if (!initialized || projectApi.BeginPopupContextWindow == null) return false;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return projectApi.BeginPopupContextWindow(pointer, bytes.Length) != 0;
+        }
+    }
+
+    //结束当前右键菜单。
+    internal static void EndPopup()
+    {
+        if (initialized && projectApi.EndPopup != null) projectApi.EndPopup();
+    }
+
+    //绘制右键菜单项。
+    internal static bool MenuItem(string? label, bool enabled)
+    {
+        if (!initialized || projectApi.MenuItem == null) return false;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            return projectApi.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
+        }
+    }
+
+    //写入系统剪贴板。
+    internal static void SetClipboardText(string? text)
+    {
+        if (!initialized || projectApi.SetClipboardText == null) return;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(text ?? string.Empty);
+        fixed (byte* pointer = bytes)
+        {
+            projectApi.SetClipboardText(pointer, bytes.Length);
+        }
+    }
+
+    //开始禁用控件区域。
+    internal static void BeginDisabled(bool disabled)
+    {
+        if (initialized && projectApi.BeginDisabled != null) projectApi.BeginDisabled(disabled ? (byte)1 : (byte)0);
+    }
+
+    //结束禁用控件区域。
+    internal static void EndDisabled()
+    {
+        if (initialized && projectApi.EndDisabled != null) projectApi.EndDisabled();
+    }
+
     //绘制布尔输入框
     internal static bool Checkbox(string? label, ref bool value)
     {
@@ -293,13 +465,30 @@ internal static unsafe class NativeGui
 
         value ??= string.Empty;
         Span<byte> valueBytes = stackalloc byte[256];
-        string clippedValue = value;
-        while (Encoding.UTF8.GetByteCount(clippedValue) >= valueBytes.Length)
+        int maxValueBytes = valueBytes.Length - 1;
+        int valueCharCount = value.Length;
+        if (Encoding.UTF8.GetByteCount(value) > maxValueBytes)
         {
-            clippedValue = clippedValue[..^1];
+            int low = 0;
+            int high = value.Length;
+            while (low < high)
+            {
+                int candidate = low + (high - low + 1) / 2;
+                if (Encoding.UTF8.GetByteCount(value.AsSpan(0, candidate)) <= maxValueBytes) low = candidate;
+                else high = candidate - 1;
+            }
+
+            valueCharCount = low;
+            if (valueCharCount > 0
+                && valueCharCount < value.Length
+                && char.IsHighSurrogate(value[valueCharCount - 1])
+                && char.IsLowSurrogate(value[valueCharCount]))
+            {
+                valueCharCount--;
+            }
         }
 
-        int valueByteCount = Encoding.UTF8.GetBytes(clippedValue.AsSpan(), valueBytes);
+        int valueByteCount = Encoding.UTF8.GetBytes(value.AsSpan(0, valueCharCount), valueBytes);
         valueBytes[valueByteCount] = 0;
 
         fixed (byte* labelPointer = labelBytes)

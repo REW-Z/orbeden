@@ -17,6 +17,16 @@ public:
     static ObjectBind Create();
 };
 
+//通用对象增量函数表。
+struct ObjectExtensionBind
+{
+public:
+    void* GetResourceKey = nullptr;
+
+    //创建 Object 增量函数表。
+    static ObjectExtensionBind Create();
+};
+
 //Mesh 资源函数表。
 struct MeshBind
 {
