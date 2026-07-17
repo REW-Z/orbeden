@@ -24,6 +24,9 @@
     <ClInclude Include="Src\FileSystem\FileSystem.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\FileSystem\Utf8Path.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Log\Log.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -97,6 +100,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\ThirdParty\cgltf\cgltf.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Platform\Window.h">

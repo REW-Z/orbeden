@@ -85,7 +85,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -98,7 +98,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -109,7 +109,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -122,7 +122,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -130,6 +130,7 @@
     <ClInclude Include="Src\Application.h" />
     <ClInclude Include="Src\Defines\types.h" />
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
+    <ClInclude Include="Src\FileSystem\Utf8Path.h" />
     <ClInclude Include="Src\Log\Log.h" />
     <ClInclude Include="Src\Memory\MemoryManager.h" />
     <ClInclude Include="Src\Physics\CharacterControllerComponent.h" />
@@ -192,6 +193,7 @@
     <ClInclude Include="Src\ThirdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="Src\ThirdParty\imgui\imstb_truetype.h" />
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h" />
+    <ClInclude Include="Src\ThirdParty\cgltf\cgltf.h" />
     <ClInclude Include="Src\Runtime\World.h" />
     <ClInclude Include="Src\Runtime\WorldSerializer.h" />
   </ItemGroup>
@@ -254,6 +256,12 @@
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;"
+          UseUtf8Encoding="Always"
+          StdOutEncoding="UTF-8"
+          StdErrEncoding="UTF-8" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

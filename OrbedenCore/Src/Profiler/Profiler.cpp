@@ -1,5 +1,6 @@
 #include "Profiler.h"
 
+#include "FileSystem/Utf8Path.h"
 #include "Memory/MemoryManager.h"
 
 #include <cstring>
@@ -181,13 +182,13 @@ void Profiler::WriteProfileLog(const char* path)
     WriteSampleLog(output, headSample, 0);
 
     //写入日志文件
-    std::filesystem::path filePath(path);
+    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
     if (filePath.has_parent_path())
     {
         std::filesystem::create_directories(filePath.parent_path());
     }
 
-    std::ofstream file(path, std::ios::out);
+    std::ofstream file(filePath, std::ios::out);
     file.write(output.c_str(), static_cast<std::streamsize>(output.size()));
 }
 

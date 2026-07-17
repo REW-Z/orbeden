@@ -77,6 +77,9 @@ internal abstract class EditorPanel
 
     /// <summary>用户游戏程序集卸载时调用。</summary>
     public virtual void OnGameAssemblyUnloaded() { }
+
+    /// <summary>资源路径变化后同步 Panel 内部缓存。</summary>
+    public virtual void OnAssetReferencesRemapped(string oldKey, string newKey, bool prefix) { }
 }
 
 #pragma warning disable CS0649

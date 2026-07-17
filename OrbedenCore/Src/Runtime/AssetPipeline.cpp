@@ -1,14 +1,18 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
+#include <memory>
 #include <sstream>
 #include <utility>
 #include <unordered_map>
 
 #include "FileSystem/FileSystem.h"
 #include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/ResourceManager.h"
@@ -19,6 +23,16 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 class AssetPipelineObjectFactory
 {
@@ -81,6 +95,13 @@ namespace
         std::string key;
     };
 
+    struct GltfTextureImportInfo
+    {
+    public:
+        Texture2D* texture = nullptr;
+        std::string key;
+    };
+
     //读取文本文件，失败时记录错误
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection);
 
@@ -104,7 +125,7 @@ namespace
     //整理文件路径。
     std::string ToCleanPath(const std::string& path)
     {
-        return ResourceManager::ToResourceKey(std::filesystem::path(path).lexically_normal().string());
+        return ResourceManager::ToResourceKey(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).lexically_normal()));
     }
 
     //解析实际磁盘路径，保持资源 Key 不变但由当前项目决定来源。
@@ -129,7 +150,7 @@ namespace
     //获取扩展名小写文本
     std::string GetLowerExtension(const std::string& path)
     {
-        return ToLower(std::filesystem::path(path).extension().string());
+        return ToLower(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).extension()));
     }
 
     //生成可读且稳定的Key片段
@@ -249,8 +270,8 @@ namespace
         std::string includeKey = ResourceManager::ToResourceKey(path);
         if (StartsWith(includeKey, "Resource/")) return includeKey;
 
-        std::filesystem::path parent = std::filesystem::path(sourceKey).parent_path();
-        return ToCleanPath((parent / includeKey).string());
+        std::filesystem::path parent = Utf8Path::FromUtf8(sourceKey).parent_path();
+        return Utf8Path::ToUtf8((parent / Utf8Path::FromUtf8(includeKey)).lexically_normal());
     }
 
     //从 include 文本中提取当前分段可见的源码
@@ -595,6 +616,190 @@ namespace
         return texture;
     }
 
+    //转换cgltf错误码为日志文本
+    const char* GetCgltfResultText(cgltf_result result)
+    {
+        switch (result)
+        {
+        case cgltf_result_success: return "success";
+        case cgltf_result_data_too_short: return "data too short";
+        case cgltf_result_unknown_format: return "unknown format";
+        case cgltf_result_invalid_json: return "invalid JSON";
+        case cgltf_result_invalid_gltf: return "invalid glTF";
+        case cgltf_result_invalid_options: return "invalid options";
+        case cgltf_result_file_not_found: return "file not found";
+        case cgltf_result_io_error: return "I/O error";
+        case cgltf_result_out_of_memory: return "out of memory";
+        case cgltf_result_legacy_gltf: return "legacy glTF 1.x";
+        default: return "unknown error";
+        }
+    }
+
+    //解析glTF相对URI为磁盘路径
+    std::string ResolveGltfFileUri(const std::string& sourcePath, const char* uri)
+    {
+        if (!uri || !uri[0] || StartsWith(uri, "data:") || std::string(uri).find("://") != std::string::npos)
+        {
+            return std::string();
+        }
+
+        std::string decodedUri = uri;
+        decodedUri.resize(cgltf_decode_uri(decodedUri.data()));
+        std::filesystem::path uriPath = Utf8Path::FromUtf8(decodedUri);
+        if (uriPath.is_absolute()) return Utf8Path::ToUtf8(uriPath.lexically_normal());
+
+        return Utf8Path::ToUtf8((Utf8Path::FromUtf8(sourcePath).parent_path() / uriPath).lexically_normal());
+    }
+
+    //解码图片data URI中的Base64内容
+    bool DecodeBase64DataUri(const char* uri, List<uint8>& bytes)
+    {
+        bytes.clear();
+        if (!uri || !StartsWith(uri, "data:")) return false;
+
+        const char* comma = std::strchr(uri, ',');
+        if (!comma) return false;
+
+        std::string header(uri, comma);
+        if (header.size() < 7 || header.compare(header.size() - 7, 7, ";base64") != 0) return false;
+
+        uint32 accumulator = 0;
+        int32 bitCount = 0;
+        for (const char* cursor = comma + 1; *cursor; ++cursor)
+        {
+            unsigned char ch = static_cast<unsigned char>(*cursor);
+            if (ch == '=') break;
+            if (std::isspace(ch)) continue;
+
+            int32 value = -1;
+            if (ch >= 'A' && ch <= 'Z') value = ch - 'A';
+            else if (ch >= 'a' && ch <= 'z') value = ch - 'a' + 26;
+            else if (ch >= '0' && ch <= '9') value = ch - '0' + 52;
+            else if (ch == '+') value = 62;
+            else if (ch == '/') value = 63;
+            if (value < 0) return false;
+
+            accumulator = (accumulator << 6) | static_cast<uint32>(value);
+            bitCount += 6;
+            if (bitCount < 8) continue;
+
+            bitCount -= 8;
+            bytes.push_back(static_cast<uint8>((accumulator >> bitCount) & 0xffu));
+            accumulator = bitCount == 0 ? 0u : accumulator & ((1u << bitCount) - 1u);
+        }
+
+        return !bytes.empty();
+    }
+
+    //从内存图片创建Texture2D资源
+    Texture2D* ImportImageMemoryAsKey(const uint8* data, usize size, const std::string& imageName, const std::string& objectKey, AssetCollection& collection)
+    {
+        std::string textureKey = ResourceManager::ToResourceKey(objectKey);
+        if (!data || size == 0 || size > static_cast<usize>(std::numeric_limits<int>::max()))
+        {
+            collection.AddError("Embedded glTF image data is invalid: " + textureKey);
+            return nullptr;
+        }
+
+        Texture2D* texture = CreateImportedObject<Texture2D>(textureKey);
+        if (!texture)
+        {
+            collection.AddError("Failed to create Texture2D: " + textureKey);
+            return nullptr;
+        }
+
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        stbi_uc* pixels = stbi_load_from_memory(data, static_cast<int>(size), &width, &height, &channels, 4);
+        if (!pixels)
+        {
+            collection.AddError("Embedded glTF image decode failed: " + textureKey);
+            return nullptr;
+        }
+
+        texture->name = imageName;
+        texture->width = width;
+        texture->height = height;
+        texture->channels = 4;
+        texture->format = 4;
+        texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
+        stbi_image_free(pixels);
+
+        collection.AddObject(textureKey, texture);
+        return texture;
+    }
+
+    //按需导入glTF纹理，复用相同的image资源
+    GltfTextureImportInfo GetOrImportGltfTexture(
+        const cgltf_data* data,
+        const cgltf_texture_view& view,
+        const std::string& sourceKey,
+        const std::string& sourcePath,
+        AssetCollection& collection,
+        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures)
+    {
+        if (!view.texture) return {};
+
+        const cgltf_image* image = view.texture->image;
+        if (!image)
+        {
+            if (view.texture->has_basisu)
+            {
+                collection.AddWarning("glTF Basis Universal texture is not supported: " + sourceKey);
+            }
+            else if (view.texture->has_webp)
+            {
+                collection.AddWarning("glTF WebP texture is not supported by stb_image: " + sourceKey);
+            }
+            return {};
+        }
+
+        auto found = importedTextures.find(image);
+        if (found != importedTextures.end()) return found->second;
+
+        usize imageIndex = static_cast<usize>(cgltf_image_index(data, image));
+        std::string fallbackName = "Texture_" + std::to_string(imageIndex);
+        std::string imageName = image->name && image->name[0] ? image->name : fallbackName;
+        std::string textureKey = sourceKey + "//Texture/" + std::to_string(imageIndex) + "_" + SanitizeKeyName(imageName, fallbackName);
+        Texture2D* texture = nullptr;
+
+        if (image->buffer_view)
+        {
+            const uint8* imageData = cgltf_buffer_view_data(image->buffer_view);
+            texture = ImportImageMemoryAsKey(imageData, static_cast<usize>(image->buffer_view->size), imageName, textureKey, collection);
+        }
+        else if (image->uri && StartsWith(image->uri, "data:"))
+        {
+            List<uint8> imageBytes;
+            if (!DecodeBase64DataUri(image->uri, imageBytes))
+            {
+                collection.AddError("Unsupported glTF image data URI: " + textureKey);
+            }
+            else
+            {
+                texture = ImportImageMemoryAsKey(imageBytes.data(), imageBytes.size(), imageName, textureKey, collection);
+            }
+        }
+        else
+        {
+            std::string imagePath = ResolveGltfFileUri(sourcePath, image->uri);
+            if (imagePath.empty())
+            {
+                collection.AddError("Unsupported glTF image URI: " + textureKey);
+            }
+            else
+            {
+                texture = ImportImageAsKey(imagePath, textureKey, collection);
+                if (texture) texture->name = imageName;
+            }
+        }
+
+        GltfTextureImportInfo result = { texture, textureKey };
+        importedTextures[image] = result;
+        return result;
+    }
+
     //读取文本文件，失败时记录错误
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection)
     {
@@ -613,7 +818,7 @@ namespace
     List<std::string> FindMtlFiles(const std::string& objPath)
     {
         List<std::string> files;
-        std::ifstream input(objPath);
+        std::ifstream input(Utf8Path::FromUtf8(objPath));
         std::string directory = Path::GetDirectory(objPath);
         std::string line;
         while (std::getline(input, line))
@@ -623,8 +828,8 @@ namespace
             std::string rest = line.substr(7);
             for (const std::string& fileName : SplitWhitespace(rest))
             {
-                std::filesystem::path path = std::filesystem::path(directory) / fileName;
-                files.push_back(ToCleanPath(path.string()));
+                std::filesystem::path path = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(fileName);
+                files.push_back(Utf8Path::ToUtf8(path.lexically_normal()));
             }
         }
 
@@ -646,7 +851,7 @@ namespace
         {
             collection.AddSourceFile(mtlPath);
 
-            std::ifstream input(mtlPath);
+            std::ifstream input(Utf8Path::FromUtf8(mtlPath));
             if (!input)
             {
                 collection.AddWarning("MTL file failed to open: " + mtlPath);
@@ -716,10 +921,10 @@ namespace
                     stream >> textureFile;
                     if (textureFile.empty()) continue;
 
-                    std::filesystem::path texturePath = std::filesystem::path(directory) / textureFile;
+                    std::filesystem::path texturePath = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(textureFile);
                     std::string textureSuffix = command == "map_Kd" ? "_Diffuse" : "_Bump";
                     std::string textureKey = sourceKey + "//Texture/" + SanitizeKeyName(currentMaterialName + textureSuffix, "Texture");
-                    Texture2D* texture = ImportImageAsKey(texturePath.string(), textureKey, collection);
+                    Texture2D* texture = ImportImageAsKey(Utf8Path::ToUtf8(texturePath), textureKey, collection);
                     if (!texture) continue;
 
                     if (command == "map_Kd")
@@ -779,6 +984,351 @@ namespace
         }
 
         return corner;
+    }
+
+    //导入一个glTF材质并映射到当前材质槽
+    MaterialImportInfo ImportGltfMaterial(
+        const cgltf_data* data,
+        const cgltf_material* sourceMaterial,
+        usize materialIndex,
+        const std::string& sourceKey,
+        const std::string& sourcePath,
+        AssetCollection& collection,
+        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures)
+    {
+        std::string fallbackName = "Material_" + std::to_string(materialIndex);
+        std::string materialName = sourceMaterial->name && sourceMaterial->name[0] ? sourceMaterial->name : fallbackName;
+        std::string materialKey = sourceKey + "//Material/" + std::to_string(materialIndex) + "_" + SanitizeKeyName(materialName, fallbackName);
+        Material* material = CreateImportedObject<Material>(materialKey);
+        if (!material)
+        {
+            collection.AddError("Failed to create Material: " + materialKey);
+            return {};
+        }
+
+        material->name = materialName;
+        material->textureSlots.clear();
+        material->colorSlots.clear();
+        material->floatSlots.clear();
+
+        color diffuseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        color specularColor = { 0.04f, 0.04f, 0.04f, 1.0f };
+        float32 shininess = 32.0f;
+        const cgltf_texture_view* diffuseTexture = nullptr;
+
+        if (sourceMaterial->has_pbr_specular_glossiness)
+        {
+            const cgltf_pbr_specular_glossiness& pbr = sourceMaterial->pbr_specular_glossiness;
+            diffuseColor = { pbr.diffuse_factor[0], pbr.diffuse_factor[1], pbr.diffuse_factor[2], pbr.diffuse_factor[3] };
+            specularColor = { pbr.specular_factor[0], pbr.specular_factor[1], pbr.specular_factor[2], 1.0f };
+            shininess = std::max(1.0f, pbr.glossiness_factor * 128.0f);
+            diffuseTexture = &pbr.diffuse_texture;
+        }
+        else if (sourceMaterial->has_pbr_metallic_roughness)
+        {
+            const cgltf_pbr_metallic_roughness& pbr = sourceMaterial->pbr_metallic_roughness;
+            diffuseColor = { pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
+
+            float32 metallic = std::clamp(static_cast<float32>(pbr.metallic_factor), 0.0f, 1.0f);
+            specularColor.r = 0.04f * (1.0f - metallic) + diffuseColor.r * metallic;
+            specularColor.g = 0.04f * (1.0f - metallic) + diffuseColor.g * metallic;
+            specularColor.b = 0.04f * (1.0f - metallic) + diffuseColor.b * metallic;
+            float32 roughness = std::clamp(static_cast<float32>(pbr.roughness_factor), 0.0f, 1.0f);
+            shininess = std::max(1.0f, (1.0f - roughness) * 128.0f);
+            diffuseTexture = &pbr.base_color_texture;
+        }
+
+        float32 emissionStrength = sourceMaterial->has_emissive_strength
+            ? static_cast<float32>(sourceMaterial->emissive_strength.emissive_strength)
+            : 1.0f;
+        color emissionColor =
+        {
+            sourceMaterial->emissive_factor[0] * emissionStrength,
+            sourceMaterial->emissive_factor[1] * emissionStrength,
+            sourceMaterial->emissive_factor[2] * emissionStrength,
+            1.0f,
+        };
+
+        material->SetColor(MaterialDiffuseColorSlot, diffuseColor);
+        material->SetColor(MaterialSpecularColorSlot, specularColor);
+        material->SetColor(MaterialEmissionColorSlot, emissionColor);
+        material->SetFloat(MaterialShininessSlot, shininess);
+        collection.AddObject(materialKey, material);
+
+        if (diffuseTexture)
+        {
+            GltfTextureImportInfo texture = GetOrImportGltfTexture(data, *diffuseTexture, sourceKey, sourcePath, collection, importedTextures);
+            if (texture.texture)
+            {
+                material->SetTexture(MaterialDiffuseTextureSlot, texture.texture);
+                ResourceManager::RegisterDependency(materialKey, texture.key);
+            }
+        }
+
+        GltfTextureImportInfo normalTexture = GetOrImportGltfTexture(data, sourceMaterial->normal_texture, sourceKey, sourcePath, collection, importedTextures);
+        if (normalTexture.texture)
+        {
+            material->SetTexture(MaterialNormalTextureSlot, normalTexture.texture);
+            ResourceManager::RegisterDependency(materialKey, normalTexture.key);
+        }
+
+        return { material, materialKey };
+    }
+
+    //创建无显式材质primitive使用的默认材质
+    MaterialImportInfo CreateDefaultGltfMaterial(const std::string& sourceKey, AssetCollection& collection)
+    {
+        std::string materialKey = sourceKey + "//Material/Default";
+        Material* material = CreateImportedObject<Material>(materialKey);
+        if (!material)
+        {
+            collection.AddError("Failed to create Material: " + materialKey);
+            return {};
+        }
+
+        material->name = "Default";
+        material->textureSlots.clear();
+        material->colorSlots.clear();
+        material->floatSlots.clear();
+        material->SetColor(MaterialDiffuseColorSlot, { 1.0f, 1.0f, 1.0f, 1.0f });
+        material->SetColor(MaterialSpecularColorSlot, { 0.04f, 0.04f, 0.04f, 1.0f });
+        material->SetColor(MaterialEmissionColorSlot, { 0.0f, 0.0f, 0.0f, 1.0f });
+        material->SetFloat(MaterialShininessSlot, 32.0f);
+        collection.AddObject(materialKey, material);
+        return { material, materialKey };
+    }
+
+    //把glTF primitive追加到引擎Mesh
+    bool AppendGltfPrimitive(
+        const cgltf_primitive& primitive,
+        Mesh& mesh,
+        const std::string& meshKey,
+        const std::unordered_map<const cgltf_material*, MaterialImportInfo>& materials,
+        const MaterialImportInfo& defaultMaterial,
+        AssetCollection& collection,
+        bool& needsNormals,
+        bool& needsTangents)
+    {
+        if (primitive.type != cgltf_primitive_type_triangles
+            && primitive.type != cgltf_primitive_type_triangle_strip
+            && primitive.type != cgltf_primitive_type_triangle_fan)
+        {
+            collection.AddWarning("glTF primitive topology is not supported and was skipped: " + meshKey);
+            return true;
+        }
+
+        const cgltf_accessor* positions = cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
+        if (!positions || positions->type != cgltf_type_vec3)
+        {
+            collection.AddWarning("glTF primitive has no valid POSITION attribute and was skipped: " + meshKey);
+            return true;
+        }
+
+        if (positions->count > static_cast<cgltf_size>(std::numeric_limits<uint32>::max())
+            || mesh.vertices.size() > static_cast<usize>(std::numeric_limits<uint32>::max()) - static_cast<usize>(positions->count))
+        {
+            collection.AddError("glTF mesh exceeds 32-bit vertex limits: " + meshKey);
+            return false;
+        }
+
+        const cgltf_accessor* normals = cgltf_find_accessor(&primitive, cgltf_attribute_type_normal, 0);
+        if (normals && (normals->type != cgltf_type_vec3 || normals->count != positions->count))
+        {
+            collection.AddWarning("glTF NORMAL attribute is invalid and will be rebuilt: " + meshKey);
+            normals = nullptr;
+        }
+
+        const cgltf_accessor* texcoords = cgltf_find_accessor(&primitive, cgltf_attribute_type_texcoord, 0);
+        if (texcoords && (texcoords->type != cgltf_type_vec2 || texcoords->count != positions->count))
+        {
+            collection.AddWarning("glTF TEXCOORD_0 attribute is invalid and was ignored: " + meshKey);
+            texcoords = nullptr;
+        }
+
+        const cgltf_accessor* tangents = cgltf_find_accessor(&primitive, cgltf_attribute_type_tangent, 0);
+        if (tangents && (tangents->type != cgltf_type_vec4 || tangents->count != positions->count))
+        {
+            collection.AddWarning("glTF TANGENT attribute is invalid and will be rebuilt: " + meshKey);
+            tangents = nullptr;
+        }
+
+        List<vector3> primitivePositions(static_cast<usize>(positions->count));
+        List<vector3> primitiveNormals(static_cast<usize>(positions->count));
+        List<vector2> primitiveTexcoords(static_cast<usize>(positions->count));
+        List<vector3> primitiveTangents(static_cast<usize>(positions->count));
+        for (cgltf_size index = 0; index < positions->count; ++index)
+        {
+            cgltf_float values[4] = {};
+            if (!cgltf_accessor_read_float(positions, index, values, 3))
+            {
+                collection.AddError("Failed to read glTF POSITION accessor: " + meshKey);
+                return false;
+            }
+            primitivePositions[static_cast<usize>(index)] = { values[0], values[1], values[2] };
+
+            if (normals)
+            {
+                if (!cgltf_accessor_read_float(normals, index, values, 3))
+                {
+                    collection.AddError("Failed to read glTF NORMAL accessor: " + meshKey);
+                    return false;
+                }
+                primitiveNormals[static_cast<usize>(index)] = { values[0], values[1], values[2] };
+            }
+
+            if (texcoords)
+            {
+                if (!cgltf_accessor_read_float(texcoords, index, values, 2))
+                {
+                    collection.AddError("Failed to read glTF TEXCOORD_0 accessor: " + meshKey);
+                    return false;
+                }
+                primitiveTexcoords[static_cast<usize>(index)] = { values[0], values[1] };
+            }
+
+            if (tangents)
+            {
+                if (!cgltf_accessor_read_float(tangents, index, values, 4))
+                {
+                    collection.AddError("Failed to read glTF TANGENT accessor: " + meshKey);
+                    return false;
+                }
+                primitiveTangents[static_cast<usize>(index)] = { values[0], values[1], values[2] };
+            }
+        }
+
+        List<uint32> sourceIndices;
+        if (primitive.indices)
+        {
+            if (primitive.indices->type != cgltf_type_scalar
+                || (primitive.indices->component_type != cgltf_component_type_r_8u
+                    && primitive.indices->component_type != cgltf_component_type_r_16u
+                    && primitive.indices->component_type != cgltf_component_type_r_32u))
+            {
+                collection.AddError("glTF primitive has an invalid index accessor: " + meshKey);
+                return false;
+            }
+
+            sourceIndices.reserve(static_cast<usize>(primitive.indices->count));
+            for (cgltf_size index = 0; index < primitive.indices->count; ++index)
+            {
+                cgltf_size vertexIndex = cgltf_accessor_read_index(primitive.indices, index);
+                if (vertexIndex >= positions->count)
+                {
+                    collection.AddError("glTF primitive index is out of range: " + meshKey);
+                    return false;
+                }
+                sourceIndices.push_back(static_cast<uint32>(vertexIndex));
+            }
+        }
+        else
+        {
+            sourceIndices.reserve(static_cast<usize>(positions->count));
+            for (uint32 index = 0; index < static_cast<uint32>(positions->count); ++index)
+            {
+                sourceIndices.push_back(index);
+            }
+        }
+
+        List<uint32> triangleIndices;
+        auto addTriangle = [&](uint32 a, uint32 b, uint32 c)
+            {
+                if (a == b || b == c || a == c) return;
+                triangleIndices.push_back(a);
+                triangleIndices.push_back(b);
+                triangleIndices.push_back(c);
+            };
+
+        if (primitive.type == cgltf_primitive_type_triangles)
+        {
+            if (sourceIndices.size() % 3 != 0)
+            {
+                collection.AddWarning("glTF triangle primitive has trailing indices: " + meshKey);
+            }
+            for (usize index = 0; index + 2 < sourceIndices.size(); index += 3)
+            {
+                addTriangle(sourceIndices[index], sourceIndices[index + 1], sourceIndices[index + 2]);
+            }
+        }
+        else if (primitive.type == cgltf_primitive_type_triangle_strip)
+        {
+            for (usize index = 2; index < sourceIndices.size(); ++index)
+            {
+                uint32 a = sourceIndices[index - 2];
+                uint32 b = sourceIndices[index - 1];
+                uint32 c = sourceIndices[index];
+                if ((index & 1u) != 0) std::swap(a, b);
+                addTriangle(a, b, c);
+            }
+        }
+        else
+        {
+            for (usize index = 2; index < sourceIndices.size(); ++index)
+            {
+                addTriangle(sourceIndices[0], sourceIndices[index - 1], sourceIndices[index]);
+            }
+        }
+
+        if (triangleIndices.empty())
+        {
+            collection.AddWarning("glTF primitive contains no triangles: " + meshKey);
+            return true;
+        }
+
+        uint32 vertexOffset = static_cast<uint32>(mesh.vertices.size());
+        uint32 indexStart = static_cast<uint32>(mesh.indices.size());
+        mesh.vertices.insert(mesh.vertices.end(), primitivePositions.begin(), primitivePositions.end());
+        mesh.normals.insert(mesh.normals.end(), primitiveNormals.begin(), primitiveNormals.end());
+        mesh.texcoords.insert(mesh.texcoords.end(), primitiveTexcoords.begin(), primitiveTexcoords.end());
+        mesh.tangents.insert(mesh.tangents.end(), primitiveTangents.begin(), primitiveTangents.end());
+        for (uint32 index : triangleIndices)
+        {
+            mesh.indices.push_back(vertexOffset + index);
+        }
+
+        SubMesh subMesh;
+        subMesh.name = primitive.material && primitive.material->name && primitive.material->name[0]
+            ? primitive.material->name
+            : "Primitive_" + std::to_string(mesh.subMeshes.size());
+        subMesh.indexStart = indexStart;
+        subMesh.indexCount = static_cast<uint32>(mesh.indices.size()) - indexStart;
+
+        MaterialImportInfo materialInfo = defaultMaterial;
+        auto materialIt = materials.find(primitive.material);
+        if (materialIt != materials.end()) materialInfo = materialIt->second;
+        if (materialInfo.material)
+        {
+            subMesh.material.SetInstanceId(StringId(materialInfo.key));
+            ResourceManager::RegisterDependency(meshKey, materialInfo.key);
+        }
+        mesh.subMeshes.push_back(subMesh);
+
+        needsNormals = needsNormals || !normals;
+        needsTangents = needsTangents || !tangents;
+        return true;
+    }
+
+    //按最终三角形索引重建Mesh切线
+    void RebuildMeshTangents(Mesh& mesh)
+    {
+        mesh.tangents.assign(mesh.vertices.size(), {});
+        for (usize index = 0; index + 2 < mesh.indices.size(); index += 3)
+        {
+            uint32 ia = mesh.indices[index];
+            uint32 ib = mesh.indices[index + 1];
+            uint32 ic = mesh.indices[index + 2];
+            vector3 tangent = ComputeTangent(
+                mesh.vertices[ia], mesh.vertices[ib], mesh.vertices[ic],
+                mesh.texcoords[ia], mesh.texcoords[ib], mesh.texcoords[ic]);
+            AddTo(mesh.tangents[ia], tangent);
+            AddTo(mesh.tangents[ib], tangent);
+            AddTo(mesh.tangents[ic], tangent);
+        }
+
+        for (vector3& tangent : mesh.tangents)
+        {
+            tangent = Normalize(tangent);
+        }
     }
 }
 
@@ -841,6 +1391,11 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
     if (extension == ".obj")
     {
         return Import_OBJ(sourceKey);
+    }
+
+    if (extension == ".gltf" || extension == ".glb")
+    {
+        return Import_GLTF(sourceKey);
     }
 
     if (extension == ".orbshader")
@@ -940,6 +1495,149 @@ AssetCollection AssetPipeline::Import_IMG(std::string path)
     std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
     ImportImageAsKey(sourceKey, sourceKey, collection);
+    return collection;
+}
+
+//导入glTF或GLB为复合资源
+AssetCollection AssetPipeline::Import_GLTF(std::string path)
+{
+    AssetCollection collection;
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
+    collection.sourceKey = sourceKey;
+    std::string sourcePath = GetAssetFilePath(sourceKey);
+    collection.AddSourceFile(sourcePath);
+
+    if (!FileSystem::Exist(sourcePath))
+    {
+        collection.AddError("glTF file does not exist: " + sourceKey);
+        return collection;
+    }
+
+    cgltf_options options = {};
+    cgltf_data* rawData = nullptr;
+    cgltf_result result = cgltf_parse_file(&options, sourcePath.c_str(), &rawData);
+    if (result != cgltf_result_success || !rawData)
+    {
+        collection.AddError("glTF parse failed (" + std::string(GetCgltfResultText(result)) + "): " + sourceKey);
+        return collection;
+    }
+
+    std::unique_ptr<cgltf_data, decltype(&cgltf_free)> data(rawData, &cgltf_free);
+    result = cgltf_load_buffers(&options, data.get(), sourcePath.c_str());
+    if (result != cgltf_result_success)
+    {
+        collection.AddError("glTF buffer load failed (" + std::string(GetCgltfResultText(result)) + "): " + sourceKey);
+        return collection;
+    }
+
+    result = cgltf_validate(data.get());
+    if (result != cgltf_result_success)
+    {
+        collection.AddError("glTF validation failed (" + std::string(GetCgltfResultText(result)) + "): " + sourceKey);
+        return collection;
+    }
+
+    for (cgltf_size index = 0; index < data->buffers_count; ++index)
+    {
+        std::string bufferPath = ResolveGltfFileUri(sourcePath, data->buffers[index].uri);
+        if (!bufferPath.empty()) collection.AddSourceFile(bufferPath);
+    }
+
+    if (data->skins_count > 0)
+    {
+        collection.AddWarning("glTF skinning data is not supported by Mesh and was ignored: " + sourceKey);
+    }
+    if (data->animations_count > 0)
+    {
+        collection.AddWarning("glTF animation data is not supported by AssetPipeline and was ignored: " + sourceKey);
+    }
+
+    std::unordered_map<const cgltf_image*, GltfTextureImportInfo> importedTextures;
+    std::unordered_map<const cgltf_material*, MaterialImportInfo> materials;
+    for (cgltf_size index = 0; index < data->materials_count; ++index)
+    {
+        const cgltf_material* sourceMaterial = &data->materials[index];
+        MaterialImportInfo material = ImportGltfMaterial(
+            data.get(), sourceMaterial, static_cast<usize>(index), sourceKey, sourcePath, collection, importedTextures);
+        if (material.material) materials[sourceMaterial] = material;
+    }
+
+    bool needsDefaultMaterial = false;
+    for (cgltf_size meshIndex = 0; meshIndex < data->meshes_count && !needsDefaultMaterial; ++meshIndex)
+    {
+        const cgltf_mesh& sourceMesh = data->meshes[meshIndex];
+        for (cgltf_size primitiveIndex = 0; primitiveIndex < sourceMesh.primitives_count; ++primitiveIndex)
+        {
+            if (!sourceMesh.primitives[primitiveIndex].material)
+            {
+                needsDefaultMaterial = true;
+                break;
+            }
+        }
+    }
+    MaterialImportInfo defaultMaterial = needsDefaultMaterial ? CreateDefaultGltfMaterial(sourceKey, collection) : MaterialImportInfo();
+
+    for (cgltf_size meshIndex = 0; meshIndex < data->meshes_count; ++meshIndex)
+    {
+        const cgltf_mesh& sourceMesh = data->meshes[meshIndex];
+        std::string fallbackName = "Mesh_" + std::to_string(meshIndex);
+        std::string meshName = sourceMesh.name && sourceMesh.name[0] ? sourceMesh.name : fallbackName;
+        std::string meshId = data->meshes_count == 1
+            ? "Main"
+            : std::to_string(meshIndex) + "_" + SanitizeKeyName(meshName, fallbackName);
+        std::string meshKey = sourceKey + "//Mesh/" + meshId;
+        Mesh* mesh = CreateImportedObject<Mesh>(meshKey);
+        if (!mesh)
+        {
+            collection.AddError("Failed to create Mesh: " + meshKey);
+            continue;
+        }
+
+        mesh->name = meshName;
+        mesh->ClearGeometry();
+        bool needsNormals = false;
+        bool needsTangents = false;
+        for (cgltf_size primitiveIndex = 0; primitiveIndex < sourceMesh.primitives_count; ++primitiveIndex)
+        {
+            const cgltf_primitive& primitive = sourceMesh.primitives[primitiveIndex];
+            if (primitive.has_draco_mesh_compression)
+            {
+                collection.AddWarning("glTF Draco-compressed primitive is not supported and was skipped: " + meshKey);
+                continue;
+            }
+            if (primitive.targets_count > 0)
+            {
+                collection.AddWarning("glTF morph targets are not supported and were ignored: " + meshKey);
+            }
+
+            if (!AppendGltfPrimitive(primitive, *mesh, meshKey, materials, defaultMaterial, collection, needsNormals, needsTangents))
+            {
+                break;
+            }
+        }
+
+        if (needsNormals && !mesh->indices.empty() && !mesh->RefreshNormals())
+        {
+            collection.AddError("Failed to rebuild glTF mesh normals: " + meshKey);
+        }
+        if (needsTangents && !mesh->indices.empty())
+        {
+            RebuildMeshTangents(*mesh);
+        }
+        if (mesh->indices.empty())
+        {
+            collection.AddWarning("glTF mesh imported without triangles: " + meshKey);
+        }
+
+        mesh->TouchRevision();
+        collection.AddObject(meshKey, mesh, true);
+    }
+
+    if (data->meshes_count == 0)
+    {
+        collection.AddWarning("glTF contains no meshes: " + sourceKey);
+    }
+
     return collection;
 }
 
@@ -1053,7 +1751,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
             AddTo(mesh->tangents[ic], tangent);
         };
 
-    std::ifstream input(objPath);
+    std::ifstream input(Utf8Path::FromUtf8(objPath));
     std::string line;
     while (std::getline(input, line))
     {

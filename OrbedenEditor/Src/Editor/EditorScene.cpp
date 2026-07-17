@@ -238,10 +238,9 @@ namespace
         ImVec2 screen;
         if (!ProjectGizmoPoint(position, screen)) return;
 
-        std::string value = text && length > 0
-            ? std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length))
-            : std::string();
-        ImGui::GetBackgroundDrawList()->AddText(screen, IM_COL32(255, 245, 180, 255), value.c_str());
+        const char* begin = text && length > 0 ? reinterpret_cast<const char*>(text) : "";
+        const char* end = begin + std::max(length, 0);
+        ImGui::GetBackgroundDrawList()->AddText(screen, IM_COL32(255, 245, 180, 255), begin, end);
     }
 }
 

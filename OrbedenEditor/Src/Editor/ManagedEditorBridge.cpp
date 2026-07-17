@@ -4,12 +4,18 @@
 #include "Editor/EditorSystem.h"
 #include "Editor/PanelManager.h"
 #include "Editor/Panels/ManagedPanelAdapter.h"
+#include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
+#include "Runtime/Reflection.h"
+#include "Runtime/ResourceManager.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/OrbedenNativeApi.h"
 
 #include <coreclr_delegates.h>
+#include <algorithm>
 #include <array>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <utility>
@@ -55,6 +61,16 @@ namespace
         void* registerPanel = nullptr;
     };
 
+    //传给 Editor C# 的资源函数表。
+    struct EditorAssetNativeApi
+    {
+    public:
+        void* context = nullptr;
+        void* getResourceRoot = nullptr;
+        void* canModifyAssets = nullptr;
+        void* remapLiveReferences = nullptr;
+    };
+
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
     {
@@ -62,6 +78,7 @@ namespace
         void* nativeApi = nullptr;
         EditorGizmoApi gizmo;
         EditorPanelNativeApi panels;
+        EditorAssetNativeApi assets;
     };
 
     //获取可执行文件所在目录
@@ -69,7 +86,7 @@ namespace
     {
         if (executablePath.empty()) return std::filesystem::current_path();
 
-        std::filesystem::path path = std::filesystem::absolute(std::filesystem::path(executablePath));
+        std::filesystem::path path = std::filesystem::absolute(Utf8Path::FromUtf8(executablePath));
         return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
     }
 
@@ -78,6 +95,96 @@ namespace
     {
         if (!text || length <= 0) return std::string();
         return std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length));
+    }
+
+    //把 UTF-8 文本复制到托管层提供的缓冲区。
+    int32 CopyUtf8(const std::string& text, uint8* buffer, int32 bufferSize)
+    {
+        int32 required = static_cast<int32>(text.size());
+        if (buffer && bufferSize > 0 && required > 0)
+        {
+            int32 copyLength = std::min(required, bufferSize);
+            std::memcpy(buffer, text.data(), static_cast<usize>(copyLength));
+        }
+
+        return required;
+    }
+
+    //判断资源 Key 是否命中本次路径映射。
+    bool TryMapResourceKey(const std::string& value,
+        const std::string& oldKey,
+        const std::string& newKey,
+        bool prefix,
+        std::string& mapped)
+    {
+        usize separator = value.find("//");
+        std::string source = separator == std::string::npos ? value : value.substr(0, separator);
+        std::string subId = separator == std::string::npos ? std::string() : value.substr(separator);
+        bool matches = source == oldKey;
+        if (!matches && prefix && source.size() > oldKey.size())
+        {
+            matches = source.compare(0, oldKey.size(), oldKey) == 0 && source[oldKey.size()] == '/';
+        }
+        if (!matches) return false;
+
+        if (newKey.empty())
+        {
+            mapped.clear();
+            return true;
+        }
+
+        mapped = newKey + source.substr(oldKey.size()) + subId;
+        return mapped != value;
+    }
+
+    //读取当前资源根目录。
+    int32 ORBEDEN_NATIVE_CALL GetManagedResourceRoot(void*, uint8* buffer, int32 bufferSize)
+    {
+        return CopyUtf8(PathDefines::GetResourceRoot(), buffer, bufferSize);
+    }
+
+    //判断是否允许托管层修改资源。
+    uint8 ORBEDEN_NATIVE_CALL CanModifyManagedAssets(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && editor->HasProject() && !editor->IsPlaying() ? 1 : 0;
+    }
+
+    //重映射全部存活原生对象的 ObjectRef 字段并使资源缓存失效。
+    int32 ORBEDEN_NATIVE_CALL RemapManagedLiveReferences(void*,
+        const uint8* oldKeyText,
+        int32 oldKeyLength,
+        const uint8* newKeyText,
+        int32 newKeyLength,
+        uint8 prefix)
+    {
+        std::string oldKey = ResourceManager::ToResourceKey(ReadUtf8(oldKeyText, oldKeyLength));
+        std::string newKey = ResourceManager::ToResourceKey(ReadUtf8(newKeyText, newKeyLength));
+        if (oldKey.empty()) return 0;
+
+        int32 changed = 0;
+        for (TypeId typeId = 0; typeId < Object::GetTypeCount(); ++typeId)
+        {
+            Type* type = Object::FindType(typeId);
+            if (!type) continue;
+
+            const List<Reflection::FieldInfo>& fields = type->GetFields();
+            type->ForEachLiveObject([&](Object* object)
+            {
+                for (const Reflection::FieldInfo& field : fields)
+                {
+                    if (field.kind != Reflection::FieldKind::ObjectRef || !field.getter || !field.setter) continue;
+
+                    std::string mapped;
+                    if (!TryMapResourceKey(field.GetValueAsString(object), oldKey, newKey, prefix != 0, mapped)) continue;
+                    if (field.SetValueFromString(object, mapped)) changed++;
+                }
+            });
+        }
+
+        //资源源文件已经变化，清空导入缓存并让 Ref 在下次访问时按新 Key 懒加载。
+        ResourceManager::Shutdown();
+        return changed;
     }
 
     //把一个 C# Panel 注册到原生 PanelManager
@@ -130,7 +237,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     }
 
     std::filesystem::path managedDirectory = GetExecutableDirectory(executablePath) / "Managed";
-    std::string editorAssemblyPath = (managedDirectory / "Orbeden.Editor.dll").lexically_normal().generic_string();
+    std::string editorAssemblyPath = Utf8Path::ToUtf8((managedDirectory / "Orbeden.Editor.dll").lexically_normal());
 
     //绑定全部托管入口后再允许注册 Panel
     clrHost = &host;
@@ -157,6 +264,10 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
+    editorApi.assets.context = &editor;
+    editorApi.assets.getResourceRoot = reinterpret_cast<void*>(&GetManagedResourceRoot);
+    editorApi.assets.canModifyAssets = reinterpret_cast<void*>(&CanModifyManagedAssets);
+    editorApi.assets.remapLiveReferences = reinterpret_cast<void*>(&RemapManagedLiveReferences);
     if (initializeEditor(&editorApi) == 0)
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed runtime rejected initialization.");

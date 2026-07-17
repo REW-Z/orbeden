@@ -21,6 +21,8 @@ internal unsafe struct OrbedenNativeApi
     public ColliderBindApi Collider;
     public CharacterControllerBindApi CharacterController;
     public RuntimeGuiExtensionApi GuiExtension;
+    public RuntimeGuiProjectApi GuiProject;
+    public ObjectExtensionBindApi ObjectExtension;
 }
 #pragma warning restore CS0649
 
@@ -32,13 +34,13 @@ public static unsafe class OrbedenCoreRuntime
     {
         if (nativeApi == IntPtr.Zero)
         {
-            NativeGui.Initialize(default, default);
+            NativeGui.Initialize(default, default, default);
             WorldBind.Initialize(default);
             PathDefinesBind.Initialize(default);
             EnsBind.Initialize(default);
             SpaceComponentBind.Initialize(default);
             StaticMeshRendererBind.Initialize(default);
-            ObjectBind.Initialize(default);
+            ObjectBind.Initialize(default, default);
             MeshBind.Initialize(default);
             MaterialBind.Initialize(default);
             ShaderBind.Initialize(default);
@@ -49,13 +51,13 @@ public static unsafe class OrbedenCoreRuntime
         }
 
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
-        NativeGui.Initialize(api.Gui, api.GuiExtension);
+        NativeGui.Initialize(api.Gui, api.GuiExtension, api.GuiProject);
         WorldBind.Initialize(api.World);
         PathDefinesBind.Initialize(api.PathDefines);
         EnsBind.Initialize(api.Ens);
         SpaceComponentBind.Initialize(api.SpaceComponent);
         StaticMeshRendererBind.Initialize(api.StaticMeshRenderer);
-        ObjectBind.Initialize(api.Object);
+        ObjectBind.Initialize(api.Object, api.ObjectExtension);
         MeshBind.Initialize(api.Mesh);
         MaterialBind.Initialize(api.Material);
         ShaderBind.Initialize(api.Shader);

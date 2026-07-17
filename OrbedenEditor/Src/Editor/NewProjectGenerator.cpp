@@ -1,5 +1,6 @@
 #include "Editor/NewProjectGenerator.h"
 
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 
 #include <cctype>
@@ -11,7 +12,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return path.lexically_normal().generic_string();
+        return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
     bool IsProjectNameChar(char ch)
@@ -249,7 +250,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    std::filesystem::path parentPath(parentDirectory);
+    std::filesystem::path parentPath = Utf8Path::FromUtf8(parentDirectory);
     if (!std::filesystem::is_directory(parentPath))
     {
         outError = "Parent directory does not exist: " + parentDirectory;
@@ -257,10 +258,10 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    std::filesystem::path runtimePath(runtimeDllPath);
+    std::filesystem::path runtimePath = Utf8Path::FromUtf8(runtimeDllPath);
     if (!std::filesystem::exists(runtimePath))
     {
-        outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.CSharp first: " + runtimeDllPath;
+        outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first: " + runtimeDllPath;
         Log::Error(outError.c_str());
         return false;
     }
@@ -317,7 +318,7 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
 {
     outError.clear();
 
-    std::filesystem::path projectPath(scriptProjectPath);
+    std::filesystem::path projectPath = Utf8Path::FromUtf8(scriptProjectPath);
     if (!std::filesystem::exists(projectPath))
     {
         outError = "Script project does not exist: " + scriptProjectPath;

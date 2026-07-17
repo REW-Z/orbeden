@@ -22,6 +22,8 @@ public:
     ColliderBind Collider;
     CharacterControllerBind CharacterController;
     RuntimeGuiExtensionApi GuiExtension;
+    RuntimeGuiProjectApi GuiProject;
+    ObjectExtensionBind ObjectExtension;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create();

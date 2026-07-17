@@ -122,6 +122,13 @@ namespace
         return object ? object->GetObjectId() : 0;
     }
 
+    //读取对象持有的稳定资源 Key。
+    int32 ORBEDEN_NATIVE_CALL NativeObjectGetResourceKey(void* pointer, uint8* buffer, int32 bufferSize)
+    {
+        Object* object = GetBoundObject(pointer);
+        return object ? CopyText(object->GetInstanceId().GetPath(), buffer, bufferSize) : 0;
+    }
+
     //判断对象是否存活
     uint8 ORBEDEN_NATIVE_CALL NativeObjectIsAlive(int32 instanceId)
     {
@@ -743,6 +750,13 @@ ObjectBind ObjectBind::Create()
     bind.SetManagedWrapper = reinterpret_cast<void*>(&NativeObjectSetManagedWrapper);
     bind.Destroy = reinterpret_cast<void*>(&NativeObjectDestroy);
     bind.UnloadUnusedObjects = reinterpret_cast<void*>(&NativeObjectUnloadUnusedObjects);
+    return bind;
+}
+
+ObjectExtensionBind ObjectExtensionBind::Create()
+{
+    ObjectExtensionBind bind;
+    bind.GetResourceKey = reinterpret_cast<void*>(&NativeObjectGetResourceKey);
     return bind;
 }
 

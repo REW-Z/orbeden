@@ -1,5 +1,6 @@
 #include "Editor/EditorPlayMode.h"
 
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/Native/OrbedenNativeApi.h"
 
@@ -17,7 +18,7 @@ namespace
     //规范化路径字符串。
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return path.lexically_normal().generic_string();
+        return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
     //创建 shadow copy 目标路径。
@@ -65,7 +66,7 @@ namespace
         {
             if (directoryText.empty()) continue;
 
-            std::filesystem::path directory = std::filesystem::path(directoryText);
+            std::filesystem::path directory = Utf8Path::FromUtf8(directoryText);
             if (!std::filesystem::is_directory(directory)) continue;
             if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
         }
@@ -91,7 +92,7 @@ bool EditorPlayMode::Start(EditorClrHost& host,
         return false;
     }
 
-    std::filesystem::path sourceAssembly = std::filesystem::absolute(std::filesystem::path(assemblyPath));
+    std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(assemblyPath));
     if (!std::filesystem::exists(sourceAssembly))
     {
         lastError = "Game assembly does not exist: " + ToCleanPath(sourceAssembly);
@@ -99,7 +100,7 @@ bool EditorPlayMode::Start(EditorClrHost& host,
         return false;
     }
 
-    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, std::filesystem::path(shadowDirectory));
+    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, Utf8Path::FromUtf8(shadowDirectory));
     std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
     std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
     std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");

@@ -3,6 +3,7 @@
 #include "Application.h"
 #include "Editor/ExampleWorldGenerator.h"
 #include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/ResourceManager.h"
@@ -19,7 +20,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return path.lexically_normal().generic_string();
+        return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
     std::string ReadTextFile(const std::filesystem::path& path)
@@ -342,7 +343,8 @@ namespace
     {
         if (!std::filesystem::is_directory(folder)) return std::string();
 
-        std::filesystem::path expected = folder / (folder.filename().string() + ".oeproj");
+        std::string expectedName = Utf8Path::ToUtf8(folder.filename()) + ".oeproj";
+        std::filesystem::path expected = folder / Utf8Path::FromUtf8(expectedName);
         if (std::filesystem::exists(expected)) return ToCleanPath(expected);
 
         std::error_code error;
@@ -367,7 +369,7 @@ EditorProject::EditorProject(Application& application)
 
 bool EditorProject::LoadProjectFolder(const std::string& folder)
 {
-    std::string projectFile = FindProjectFileInFolder(std::filesystem::path(folder));
+    std::string projectFile = FindProjectFileInFolder(Utf8Path::FromUtf8(folder));
     if (projectFile.empty())
     {
         lastError = "Project folder does not contain a .oeproj file: " + folder;
@@ -380,7 +382,7 @@ bool EditorProject::LoadProjectFolder(const std::string& folder)
 
 bool EditorProject::LoadProjectFile(const std::string& projectFile)
 {
-    std::filesystem::path filePath(projectFile);
+    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
     if (!std::filesystem::exists(filePath))
     {
         lastError = "Project file does not exist: " + projectFile;
@@ -404,7 +406,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     }
 
     std::string parsedProjectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
-    if (parsedName.empty()) parsedName = filePath.parent_path().filename().string();
+    if (parsedName.empty()) parsedName = Utf8Path::ToUtf8(filePath.parent_path().filename());
     if (parsedResourceRoot.empty()) parsedResourceRoot = "Resource";
     if (parsedScriptRoot.empty()) parsedScriptRoot = "Script";
     if (parsedManagedRoot.empty()) parsedManagedRoot = "Managed";
@@ -417,7 +419,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
         parsedManagedRoot = "Managed";
     }
 
-    std::string worldPath = ToCleanPath(std::filesystem::path(parsedProjectRoot) / parsedStartupWorld);
+    std::string worldPath = ToCleanPath(Utf8Path::FromUtf8(parsedProjectRoot) / Utf8Path::FromUtf8(parsedStartupWorld));
     if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateProjectFiles(parsedProjectRoot))
     {
         lastError = "Example project generation failed: " + parsedProjectRoot;
@@ -557,7 +559,7 @@ bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
         return false;
     }
 
-    if (!WriteEditorLayoutToProjectFile(std::filesystem::path(projectFilePath), layout))
+    if (!WriteEditorLayoutToProjectFile(Utf8Path::FromUtf8(projectFilePath), layout))
     {
         lastError = "Editor layout save failed: " + projectFilePath;
         Log::Error(lastError.c_str());
@@ -588,19 +590,19 @@ const std::string& EditorProject::GetProjectName() const
 std::string EditorProject::GetScriptRootPath() const
 {
     if (projectRoot.empty() || scriptRoot.empty()) return std::string();
-    return ToCleanPath(std::filesystem::path(projectRoot) / scriptRoot);
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(scriptRoot));
 }
 
 std::string EditorProject::GetManagedRootPath() const
 {
     if (projectRoot.empty() || managedRoot.empty()) return std::string();
-    return ToCleanPath(std::filesystem::path(projectRoot) / managedRoot);
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(managedRoot));
 }
 
 std::string EditorProject::GetStartupWorldPath() const
 {
     if (projectRoot.empty() || startupWorld.empty()) return std::string();
-    return ToCleanPath(std::filesystem::path(projectRoot) / startupWorld);
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(startupWorld));
 }
 
 //获取项目文件完整路径
