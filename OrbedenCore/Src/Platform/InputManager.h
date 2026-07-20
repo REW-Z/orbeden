@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application.h"
 #include "Runtime/EngineTypes.h"
 
 //沿用旧工程输入枚举，方便迁移已有玩法代码
@@ -63,9 +64,12 @@ enum KeyEnum
     UNMAPPED,
 };
 
-class InputManager
+class InputManager : public IEngineSystem
 {
 public:
+    //进入新帧时清理瞬时输入状态
+    void OnBeginFrame() override;
+
     //设置输入系统是否接收平台事件
     static void SetEnabled(bool value);
 

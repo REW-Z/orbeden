@@ -1,14 +1,7 @@
-#include "Editor/ExampleWorldGenerator.h"
+#include "Editor/NewProjectTemplate.h"
 
 #include "FileSystem/Utf8Path.h"
-#include "Application.h"
 #include "Log/Log.h"
-#include "Runtime/Object/Shader.h"
-#include "Runtime/Object/Mesh.h"
-#include "Runtime/Object/Skybox.h"
-#include "Runtime/Object/Texture2D.h"
-#include "Runtime/ResourceManager.h"
-#include "Runtime/World.h"
 
 #include <cstddef>
 #include <filesystem>
@@ -16,14 +9,6 @@
 
 namespace
 {
-    constexpr const char* CubeMeshKey = "Resource/Mesh/cube.obj//Mesh/Main";
-    constexpr const char* GroundMeshKey = "Resource/Mesh/ground.obj//Mesh/Main";
-    constexpr const char* ExampleShaderKey = "Resource/Shader/blinn_phong_shadow.orbshader";
-    constexpr const char* SkyTextureKey = "Resource/Texture/sky_blue.png";
-
-    constexpr const char* ProjectFileText =
-        "<OrbedenProject version=\"1\" name=\"ExampleProject\" startupWorld=\"World/example_world.world\" resourceRoot=\"Resource\" scriptRoot=\"Script\" managedRoot=\"Managed\" />\n";
-
     constexpr const char* CubeObjText = R"ORB(mtllib ../Material/cube.mtl
 o ExampleCube
 v -1.0 -1.0 1.0
@@ -216,6 +201,38 @@ void main()
 }
 )ORB";
 
+    constexpr const char* ShadowCommonText = R"ORB(--------vert
+out vec4 v_LightSpacePosition;
+
+--------frag
+in vec4 v_LightSpacePosition;
+
+uniform sampler2D u_ShadowMap;
+uniform bool u_UseShadowMap;
+uniform bool u_ReceiveShadows;
+uniform float u_ShadowBias;
+uniform float u_ShadowStrength;
+
+float SampleShadow()
+{
+    if (!u_UseShadowMap || !u_ReceiveShadows)
+    {
+        return 0.0;
+    }
+
+    vec3 projected = v_LightSpacePosition.xyz / v_LightSpacePosition.w;
+    projected = projected * 0.5 + 0.5;
+    if (projected.x < 0.0 || projected.x > 1.0 || projected.y < 0.0 || projected.y > 1.0 || projected.z > 1.0)
+    {
+        return 0.0;
+    }
+
+    float closestDepth = texture(u_ShadowMap, projected.xy).r;
+    float currentDepth = projected.z;
+    return currentDepth - u_ShadowBias > closestDepth ? u_ShadowStrength : 0.0;
+}
+)ORB";
+
     constexpr const char* SkyboxVertexShaderText = R"ORB(#version 430 core
 
 layout(location = 0) in vec3 a_Position;
@@ -246,11 +263,11 @@ void main()
 }
 )ORB";
 
-    constexpr const char* ExampleGameProjectText = R"ORB(<Project Sdk="Microsoft.NET.Sdk">
+    constexpr const char* ScriptProjectTemplate = R"ORB(<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>ExampleGame</AssemblyName>
-    <RootNamespace>ExampleGame</RootNamespace>
+    <AssemblyName>{{PROJECT_NAME}}</AssemblyName>
+    <RootNamespace>{{PROJECT_NAME}}</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -261,7 +278,7 @@ void main()
 
   <ItemGroup>
     <Reference Include="OrbedenCore.CSharp">
-      <HintPath>$(OrbedenSdkPath)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
+      <HintPath>Lib\OrbedenCore.CSharp.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>
@@ -273,7 +290,6 @@ void main()
     <OutputPath>$(MSBuildThisFileDirectory)..\Managed\</OutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\Managed\obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
-    <OrbedenSdkPath Condition="'$(OrbedenSdkPath)' == ''">$(MSBuildThisFileDirectory)..\..\OrbedenEditor\Sdk\</OrbedenSdkPath>
   </PropertyGroup>
 </Project>
 )ORB";
@@ -283,9 +299,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Orbeden;
 
-namespace ExampleGame;
+namespace {{PROJECT_NAME}};
 
-/// <summary>ExampleGame AOT 模块入口。</summary>
+/// <summary>{{PROJECT_NAME}} AOT 模块入口。</summary>
 public static class GameModule
 {
     /// <summary>初始化游戏模块。</summary>
@@ -327,7 +343,7 @@ using System.Linq;
 using System.Text.Json;
 using Orbeden;
 
-namespace ExampleGame;
+namespace {{PROJECT_NAME}};
 
 /// <summary>按 world 脚本挂载清单启动用户脚本。</summary>
 internal static class MountedScriptRuntime
@@ -406,8 +422,8 @@ internal static class MountedScriptRuntime
     {
         return StripAssemblyName(mount.Type) switch
         {
-            "ExampleGame.SampleBehaviour" => CreateSampleBehaviour(ens, mount.Values),
-            "ExampleGame.CubeTestBehaviour" => CreateCubeTestBehaviour(ens, mount.Values),
+            "{{PROJECT_NAME}}.SampleBehaviour" => CreateSampleBehaviour(ens, mount.Values),
+            "{{PROJECT_NAME}}.CubeTestBehaviour" => CreateCubeTestBehaviour(ens, mount.Values),
             _ => null,
         };
     }
@@ -574,7 +590,7 @@ internal static class ScriptValueReader
 
     constexpr const char* GuiOverlayText = R"ORB(using Orbeden;
 
-namespace ExampleGame;
+namespace {{PROJECT_NAME}};
 
 /// <summary>示例项目的运行时 GUI。</summary>
 public static class GuiOverlay
@@ -608,7 +624,7 @@ public static class GuiOverlay
     constexpr const char* SampleBehaviourText = R"ORB(using System.Collections.Generic;
 using Orbeden;
 
-namespace ExampleGame;
+namespace {{PROJECT_NAME}};
 
 /// <summary>示例托管脚本行为。</summary>
 public sealed class SampleBehaviour : ScriptBehaviour
@@ -676,7 +692,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
     constexpr const char* CubeTestBehaviourText = R"ORB(using System.Collections.Generic;
 using Orbeden;
 
-namespace ExampleGame;
+namespace {{PROJECT_NAME}};
 
 /// <summary>挂在示例 Cube 上的脚本组件测试。</summary>
 public sealed class CubeTestBehaviour : ScriptBehaviour
@@ -755,12 +771,12 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
     constexpr const char* WorldScriptsText = R"ORB({
   "scripts": [
     {
-      "stableId": "world://examples/world/cube",
-      "type": "ExampleGame.SampleBehaviour"
+      "stableId": "world://{{PROJECT_NAME}}/main/cube",
+      "type": "{{PROJECT_NAME}}.SampleBehaviour"
     },
     {
-      "stableId": "world://examples/world/cube",
-      "type": "ExampleGame.CubeTestBehaviour",
+      "stableId": "world://{{PROJECT_NAME}}/main/cube",
+      "type": "{{PROJECT_NAME}}.CubeTestBehaviour",
       "values": {
         "label": {
           "type": "string",
@@ -813,7 +829,21 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
-    bool WriteTextFile(const std::filesystem::path& path, const char* text)
+    std::string ExpandTemplate(const char* text, const std::string& projectName)
+    {
+        constexpr const char* Token = "{{PROJECT_NAME}}";
+        std::string expanded = text;
+        std::size_t position = 0;
+        while ((position = expanded.find(Token, position)) != std::string::npos)
+        {
+            expanded.replace(position, std::char_traits<char>::length(Token), projectName);
+            position += projectName.size();
+        }
+
+        return expanded;
+    }
+
+    bool WriteTextFile(const std::filesystem::path& path, const std::string& text)
     {
         if (path.has_parent_path())
         {
@@ -823,7 +853,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project text file generate failed: " + ToCleanPath(path)).c_str());
+            Log::Error(("New project text file generation failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -841,7 +871,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project orbshader file generate failed: " + ToCleanPath(path)).c_str());
+            Log::Error(("New project orbshader generation failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -862,7 +892,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         std::ofstream output(path, std::ios::out | std::ios::binary | std::ios::trunc);
         if (!output)
         {
-            Log::Error(("Example project binary file generate failed: " + ToCleanPath(path)).c_str());
+            Log::Error(("New project binary file generation failed: " + ToCleanPath(path)).c_str());
             return false;
         }
 
@@ -870,76 +900,63 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         return true;
     }
 
-    void AssignShaderToMeshMaterials(Mesh* mesh, Shader* shader)
-    {
-        if (!mesh || !shader) return;
-
-        for (SubMesh& subMesh : mesh->subMeshes)
-        {
-            Material* material = subMesh.material.Get();
-            if (!material) continue;
-
-            material->shader.Set(shader);
-        }
-    }
-
 }
 
-//判断项目是否使用内置示例 World 生成器
-bool ExampleWorldGenerator::IsExampleProject(const std::string& projectName)
-{
-    return projectName == "ExampleProject";
-}
+static bool GenerateWorldFile(const std::string& projectRoot, const std::string& projectName);
 
-//生成示例项目的资源、脚本和 World 文件
-bool ExampleWorldGenerator::GenerateProjectFiles(const std::string& projectRoot)
+//生成新项目模板的资源、脚本和 World 文件
+bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
+    const std::string& projectName,
+    std::string& outError)
 {
+    outError.clear();
     std::filesystem::path root = Utf8Path::FromUtf8(projectRoot);
+    std::string projectFileText = "<OrbedenProject version=\"1\" name=\"" + projectName
+        + "\" startupWorld=\"World/main.world\" resourceRoot=\"Resource\" scriptRoot=\"Script\" managedRoot=\"Managed\" />\n";
 
     //写入项目描述和资源目录。
     bool succeeded = true;
-    std::filesystem::path projectFile = root / "ExampleProject.oeproj";
-    if (!std::filesystem::exists(projectFile))
-    {
-        succeeded = WriteTextFile(projectFile, ProjectFileText) && succeeded;
-    }
+    succeeded = WriteTextFile(root / (projectName + ".oeproj"), projectFileText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Mesh/cube.obj", CubeObjText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Mesh/ground.obj", GroundObjText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Material/cube.mtl", CubeMtlText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Material/ground.mtl", GroundMtlText) && succeeded;
 
-    //写入示例和引擎内置 Shader。
+    //写入默认场景和引擎内置 Shader。
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/blinn_phong_shadow.orbshader", BlinnPhongVertexShaderText, BlinnPhongFragmentShaderText) && succeeded;
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/shadow_depth.orbshader", ShadowDepthVertexShaderText, ShadowDepthFragmentShaderText) && succeeded;
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/skybox.orbshader", SkyboxVertexShaderText, SkyboxFragmentShaderText) && succeeded;
+    succeeded = WriteTextFile(root / "Resource/Shader/Builtin/shadow_common.orbinc", ShadowCommonText) && succeeded;
     succeeded = WriteBinaryFile(root / "Resource/Texture/sky_blue.png", SkyBluePngBytes, sizeof(SkyBluePngBytes)) && succeeded;
 
-    //写入 C# 示例脚本工程。
-    succeeded = WriteTextFile(root / "Script/ExampleGame.csproj", ExampleGameProjectText) && succeeded;
+    //写入 C# 默认脚本工程。
+    succeeded = WriteTextFile(root / "Script" / (projectName + ".csproj"), ExpandTemplate(ScriptProjectTemplate, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/Directory.Build.props", DirectoryBuildPropsText) && succeeded;
-    succeeded = WriteTextFile(root / "Script/GameModule.cs", GameModuleText) && succeeded;
-    succeeded = WriteTextFile(root / "Script/MountedScriptRuntime.cs", MountedScriptRuntimeText) && succeeded;
-    succeeded = WriteTextFile(root / "Script/GuiOverlay.cs", GuiOverlayText) && succeeded;
-    succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", SampleBehaviourText) && succeeded;
-    succeeded = WriteTextFile(root / "Script/CubeTestBehaviour.cs", CubeTestBehaviourText) && succeeded;
+    succeeded = WriteTextFile(root / "Script/GameModule.cs", ExpandTemplate(GameModuleText, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Script/MountedScriptRuntime.cs", ExpandTemplate(MountedScriptRuntimeText, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Script/GuiOverlay.cs", ExpandTemplate(GuiOverlayText, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", ExpandTemplate(SampleBehaviourText, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Script/CubeTestBehaviour.cs", ExpandTemplate(CubeTestBehaviourText, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/.gitignore", ScriptGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "Managed/.gitignore", ManagedGitIgnoreText) && succeeded;
-    succeeded = WriteTextFile(root / "World/example_world.world.scripts.json", WorldScriptsText) && succeeded;
+    succeeded = WriteTextFile(root / "World/main.world.scripts.json", ExpandTemplate(WorldScriptsText, projectName)) && succeeded;
 
-    //写入示例 World。
-    succeeded = GenerateWorldFile(projectRoot, "World/example_world.world") && succeeded;
+    //写入默认 World。
+    succeeded = GenerateWorldFile(projectRoot, projectName) && succeeded;
     if (succeeded)
     {
-        Log::Info(("Example project generated: " + ToCleanPath(root)).c_str());
+        Log::Info(("New project template generated: " + ToCleanPath(root)).c_str());
+        return true;
     }
 
-    return succeeded;
+    outError = "Generate new project template failed: " + ToCleanPath(root);
+    return false;
 }
 
-//生成示例 World 文件
-bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, const std::string& startupWorld)
+//生成默认 World 文件
+static bool GenerateWorldFile(const std::string& projectRoot, const std::string& projectName)
 {
-    std::filesystem::path worldPath = Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(startupWorld);
+    std::filesystem::path worldPath = Utf8Path::FromUtf8(projectRoot) / "World/main.world";
     if (worldPath.has_parent_path())
     {
         std::filesystem::create_directories(worldPath.parent_path());
@@ -948,20 +965,22 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
     std::ofstream output(worldPath, std::ios::out | std::ios::trunc);
     if (!output)
     {
-        Log::Error(("Example world generate failed: " + ToCleanPath(worldPath)).c_str());
+        Log::Error(("New project world generation failed: " + ToCleanPath(worldPath)).c_str());
         return false;
     }
+
+    std::string stableIdPrefix = "world://" + projectName + "/main/";
 
     output <<
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<World version=\"1\">\n"
-        "    <Ens stableId=\"world://examples/world/root\" name=\"ExampleSceneRoot\">\n"
+        "    <Ens stableId=\"" << stableIdPrefix << "root\" name=\"SceneRoot\">\n"
         "        <Component type=\"SpaceComponent\">\n"
         "            <Field name=\"localPosition\" type=\"vector3\" value=\"0 0 0\" />\n"
         "            <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
         "            <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"
         "        </Component>\n"
-        "        <Ens stableId=\"world://examples/world/cube\" name=\"ExampleCube\">\n"
+        "        <Ens stableId=\"" << stableIdPrefix << "cube\" name=\"Cube\">\n"
         "            <Component type=\"SpaceComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 1 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
@@ -976,7 +995,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "                <Field name=\"receiveShadows\" type=\"bool\" value=\"true\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
-        "        <Ens stableId=\"world://examples/world/ground\" name=\"ExampleGround\">\n"
+        "        <Ens stableId=\"" << stableIdPrefix << "ground\" name=\"Ground\">\n"
         "            <Component type=\"SpaceComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 0 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
@@ -991,7 +1010,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "                <Field name=\"receiveShadows\" type=\"bool\" value=\"true\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
-        "        <Ens stableId=\"world://examples/world/directional_light\" name=\"ExampleDirectionalLight\">\n"
+        "        <Ens stableId=\"" << stableIdPrefix << "directional_light\" name=\"DirectionalLight\">\n"
         "            <Component type=\"SpaceComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 4 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
@@ -1008,7 +1027,7 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "                <Field name=\"shadowDistance\" type=\"float32\" value=\"24\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
-        "        <Ens stableId=\"world://examples/world/camera\" name=\"ExampleCamera\">\n"
+        "        <Ens stableId=\"" << stableIdPrefix << "camera\" name=\"Camera\">\n"
         "            <Component type=\"SpaceComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"5 3.2 7\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"-0.1819 0.2952 0.0574 0.9362\" />\n"
@@ -1028,41 +1047,6 @@ bool ExampleWorldGenerator::GenerateWorldFile(const std::string& projectRoot, co
         "    </Ens>\n"
         "</World>\n";
 
-    Log::Info(("Example world generated: " + ToCleanPath(worldPath)).c_str());
+    Log::Info(("New project world generated: " + ToCleanPath(worldPath)).c_str());
     return true;
-}
-
-//补齐示例场景的运行时渲染环境
-void ExampleWorldGenerator::ApplyRuntimeEnvironment(Application& app)
-{
-    Mesh* cubeMesh = ResourceManager::Load<Mesh>(CubeMeshKey);
-    Mesh* groundMesh = ResourceManager::Load<Mesh>(GroundMeshKey);
-    Shader* shader = ResourceManager::Load<Shader>(ExampleShaderKey);
-    Texture2D* skyTexture = ResourceManager::Load<Texture2D>(SkyTextureKey);
-    if (!cubeMesh || !groundMesh || !shader || !skyTexture)
-    {
-        Log::Error("Example world runtime environment failed: required resources are missing.");
-        return;
-    }
-
-    AssignShaderToMeshMaterials(cubeMesh, shader);
-    AssignShaderToMeshMaterials(groundMesh, shader);
-
-    World& world = app.GetWorld();
-    Skybox* skybox = world.renderSettings.skybox.Get();
-    if (!skybox)
-    {
-        skybox = Object::CreateInstance<Skybox>();
-    }
-    if (!skybox) return;
-
-    skybox->right.Set(skyTexture);
-    skybox->left.Set(skyTexture);
-    skybox->top.Set(skyTexture);
-    skybox->bottom.Set(skyTexture);
-    skybox->front.Set(skyTexture);
-    skybox->back.Set(skyTexture);
-    world.renderSettings.skybox.Set(skybox);
-    world.renderSettings.skyboxEnabled = true;
-    world.renderSettings.ambientColor = { 0.12f, 0.14f, 0.16f, 1.0f };
 }

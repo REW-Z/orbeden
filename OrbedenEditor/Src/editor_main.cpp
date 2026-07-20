@@ -3,7 +3,6 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
-#include "Profiler/Profiler.h"
 
 int main(int argc, char** argv)
 {
@@ -18,7 +17,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Application app;
+    Application app(ScriptRuntimeMode::CLR);
     app.SetWindow(&window);
     app.SetTargetFrameRate(60);
     app.SetSimulationEnabled(false);
@@ -28,12 +27,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    EditorSystem editorSystem(app, argc > 0 ? argv[0] : "");
-    app.RegisterSystem(&editorSystem, EngineSystemUpdateMode::Frame);
-    app.Run();
-
-    Profiler::WriteProfileLog();
-    Profiler::Clear();
+    {
+        EditorSystem editorSystem(app, argc > 0 ? argv[0] : "");
+        app.Run([&editorSystem](World& world, float deltaTime)
+            {
+                editorSystem.Update(world, deltaTime);
+            });
+    }
+    app.Quit();
 
     Memory::GetHeapAllocator()->Analysis();
 

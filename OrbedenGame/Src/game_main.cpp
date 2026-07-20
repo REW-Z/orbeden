@@ -2,14 +2,100 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
-#include "Profiler/Profiler.h"
 #include "FileSystem/PathDefines.h"
-#include "ScriptModule.h"
+#include "FileSystem/Utf8Path.h"
 
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
 
-int main(int argc, char** argv)
+#if !defined(ORBEDEN_PROJECT_DIR)
+#error ORBEDEN_PROJECT_DIR must identify the project packaged with this player.
+#endif
+
+namespace
+{
+    std::string ToCleanPath(const std::filesystem::path& path)
+    {
+        return Utf8Path::ToUtf8(path.lexically_normal());
+    }
+
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path);
+        std::ostringstream output;
+        output << input.rdbuf();
+        return output.str();
+    }
+
+    std::string GetAttribute(const std::string& text, const std::string& name)
+    {
+        std::string token = name + "=\"";
+        std::size_t start = text.find(token);
+        if (start == std::string::npos) return std::string();
+
+        start += token.size();
+        std::size_t end = text.find('"', start);
+        return end == std::string::npos ? std::string() : text.substr(start, end - start);
+    }
+
+    std::filesystem::path FindProjectFile(const std::filesystem::path& projectRoot)
+    {
+        std::filesystem::path expected = projectRoot / (projectRoot.filename().string() + ".oeproj");
+        if (std::filesystem::is_regular_file(expected)) return expected;
+
+        std::filesystem::path found;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(projectRoot))
+        {
+            if (!entry.is_regular_file() || entry.path().extension() != ".oeproj") continue;
+            if (!found.empty())
+            {
+                Log::Error(("Player project contains multiple .oeproj files: " + ToCleanPath(projectRoot)).c_str());
+                return std::filesystem::path();
+            }
+
+            found = entry.path();
+        }
+
+        return found;
+    }
+
+    bool LoadConfiguredProject(Application& app)
+    {
+        std::filesystem::path projectRoot = Utf8Path::FromUtf8(ORBEDEN_PROJECT_DIR);
+        if (!std::filesystem::is_directory(projectRoot))
+        {
+            Log::Error(("Player project directory does not exist: " + ToCleanPath(projectRoot)).c_str());
+            return false;
+        }
+
+        std::filesystem::path projectFile = FindProjectFile(projectRoot);
+        if (projectFile.empty())
+        {
+            Log::Error(("Player project file was not found: " + ToCleanPath(projectRoot)).c_str());
+            return false;
+        }
+
+        std::string content = ReadTextFile(projectFile);
+        std::string startupWorld = GetAttribute(content, "startupWorld");
+        if (startupWorld.empty())
+        {
+            Log::Error(("Player project is missing startupWorld: " + ToCleanPath(projectFile)).c_str());
+            return false;
+        }
+
+        std::string resourceRoot = GetAttribute(content, "resourceRoot");
+        PathDefines::SetProjectRoot(ToCleanPath(projectRoot), resourceRoot.empty() ? "Resource" : resourceRoot);
+        std::string worldPath = ToCleanPath(projectRoot / Utf8Path::FromUtf8(startupWorld));
+        if (app.LoadWorld(worldPath)) return true;
+
+        Log::Error(("Player startup world load failed: " + worldPath).c_str());
+        return false;
+    }
+}
+
+int main()
 {
     GlfwWindow window;
     WindowDesc windowDesc;
@@ -21,7 +107,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Application app;
+    Application app(ScriptRuntimeMode::AOT);
     app.SetWindow(&window);
     app.SetTargetFrameRate(60);
     if (!app.Initialize())
@@ -30,34 +116,14 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    std::string exampleProject = PathDefines::FindProjectRoot("ExampleProject", argc > 0 ? argv[0] : "");
-    if (!exampleProject.empty())
+    if (!LoadConfiguredProject(app))
     {
-        PathDefines::SetProjectRoot(exampleProject, "Resource");
-        std::string worldPath = (std::filesystem::path(exampleProject) / "World/example_world.world").lexically_normal().generic_string();
-        app.LoadWorld(worldPath);
-    }
-    else
-    {
-        Log::Warning("Game startup warning: ExampleProject was not found.");
-    }
-
-    ScriptModule scriptModule;
-    if (scriptModule.Initialize())
-    {
-        app.RegisterSystem(&scriptModule);
-        if (RenderSystem* renderSystem = app.GetRenderSystem())
-        {
-            renderSystem->SetRenderOverlay(&scriptModule);
-        }
+        app.Quit();
+        return 1;
     }
 
     app.Run();
-    app.UnregisterSystem(&scriptModule);
-    scriptModule.Shutdown();
-
-    Profiler::WriteProfileLog();
-    Profiler::Clear();
+    app.Quit();
 
     Memory::GetHeapAllocator()->Analysis();
 

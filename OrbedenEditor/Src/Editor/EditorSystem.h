@@ -14,7 +14,7 @@
 class ManagedPanelAdapter;
 
 //编辑器主系统，负责项目菜单和编辑器渲染覆盖层。
-class EditorSystem : public IEngineSystem, public IRenderOverlay
+class EditorSystem : public IRenderOverlay
 {
 private:
     Application& app;
@@ -27,7 +27,6 @@ private:
     char newProjectNameBuffer[128] = {};
     bool openProjectDialog = false;
     bool newProjectDialog = false;
-    bool autoLoadAttempted = false;
     bool previousInputEnabled = true;
     PanelManager panelManager;
     EditorClrHost clrHost;
@@ -41,10 +40,7 @@ public:
     ~EditorSystem() override;
 
     //每帧更新编辑器状态
-    void Update(World& world, float deltaTime) override;
-
-    //接入渲染系统的覆盖层
-    void Render(World& world, float deltaTime) override;
+    void Update(World& world, float deltaTime);
 
     //绘制编辑器覆盖层
     void DrawOverlay() override;
@@ -171,9 +167,6 @@ private:
 
     //应用当前项目编辑器布局
     void ApplyEditorLayout();
-
-    //Debug 构建自动加载 ExampleProject
-    void TryAutoLoadExampleProject();
 
     //打开项目选择弹窗
     void OpenProjectDialog();

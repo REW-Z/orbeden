@@ -93,6 +93,12 @@ private:
     void ResolveCameraTargets();
 
 public:
+    //获取资源依赖并初始化窗口渲染后端
+    bool OnInitialize(Application& app) override;
+
+    //关闭并释放渲染系统
+    void OnShutdown() override;
+
     //初始化
     bool Initialize(IWindow* renderWindow);
 

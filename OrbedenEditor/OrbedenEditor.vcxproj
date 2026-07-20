@@ -181,7 +181,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Src\editor_main.cpp" />
-    <ClCompile Include="Src\Editor\ExampleWorldGenerator.cpp" />
+    <ClCompile Include="Src\Editor\NewProjectTemplate.cpp" />
     <ClCompile Include="Src\Editor\EditorProject.cpp" />
     <ClCompile Include="Src\Editor\EditorPlayMode.cpp" />
     <ClCompile Include="Src\Editor\EditorScene.cpp" />
@@ -193,7 +193,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\Panels\**\*.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Src\Editor\ExampleWorldGenerator.h" />
+    <ClInclude Include="Src\Editor\NewProjectTemplate.h" />
     <ClInclude Include="Src\Editor\EditorProject.h" />
     <ClInclude Include="Src\Editor\EditorPlayMode.h" />
     <ClInclude Include="Src\Editor\EditorScene.h" />
@@ -206,23 +206,6 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\Panels\**\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\ExampleProject\ExampleProject.oeproj" />
-    <None Include="..\ExampleProject\World\example_world.world" />
-    <None Include="..\ExampleProject\World\example_world.world.scripts.json" />
-    <None Include="..\ExampleProject\Resource\Mesh\cube.obj" />
-    <None Include="..\ExampleProject\Resource\Material\cube.mtl" />
-    <None Include="..\ExampleProject\Resource\Mesh\ground.obj" />
-    <None Include="..\ExampleProject\Resource\Material\ground.mtl" />
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.orbshader" />
-    <None Include="..\ExampleProject\Resource\Texture\sky_blue.png" />
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.orbshader" />
-    <None Include="..\ExampleProject\Resource\Shader\skybox.orbshader" />
-    <None Include="..\ExampleProject\Script\ExampleGame.csproj" />
-    <None Include="..\ExampleProject\Script\Directory.Build.props" />
-    <None Include="..\ExampleProject\Script\GameModule.cs" />
-    <None Include="..\ExampleProject\Script\GuiOverlay.cs" />
-    <None Include="..\ExampleProject\Script\SampleBehaviour.cs" />
-    <None Include="..\ExampleProject\Managed\.gitignore" />
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs" />
     <None Include="Managed\Orbeden.Editor\Gizmos.cs" />
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />

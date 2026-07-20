@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Application.h"
 #include "Runtime/Object/Object.h"
 
 #include <string>
 #include <unordered_set>
 
 //运行时资源管理器，按资源 Key 保存已加载对象
-class ResourceManager
+class ResourceManager : public IEngineSystem
 {
 public:
     struct ResourceRecord
@@ -17,6 +18,12 @@ public:
         Type* type = nullptr;
         List<std::string> dependencies;
     };
+
+    //建立资源系统所需的文件系统依赖
+    bool OnInitialize(Application& app) override;
+
+    //关闭应用时释放全部资源
+    void OnShutdown() override;
 
     //加载资源对象
     static Object* Load(Type* type, const std::string& key);

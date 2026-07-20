@@ -28,6 +28,12 @@ namespace
     }
 }
 
+//进入新帧时清理瞬时输入状态
+void InputManager::OnBeginFrame()
+{
+    BeginFrame();
+}
+
 //设置输入系统是否接收平台事件
 void InputManager::SetEnabled(bool value)
 {

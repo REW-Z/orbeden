@@ -1,4 +1,5 @@
 #include "Editor/NewProjectGenerator.h"
+#include "Editor/NewProjectTemplate.h"
 
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
@@ -106,37 +107,6 @@ namespace
         return ReplaceAll(text, "<Private>false</Private>", "<Private>true</Private>");
     }
 
-    std::string GetProjectFileText(const std::string& projectName)
-    {
-        return "<OrbedenProject version=\"1\" name=\"" + projectName
-            + "\" startupWorld=\"World/main.world\" resourceRoot=\"Resource\" scriptRoot=\"Script\" managedRoot=\"Managed\" />\n";
-    }
-
-    std::string GetScriptProjectText(const std::string& projectName)
-    {
-        return R"ORB(<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>)ORB" + projectName + R"ORB(</AssemblyName>
-    <RootNamespace>)ORB" + projectName + R"ORB(</RootNamespace>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Reference Include="OrbedenCore.CSharp">
-      <HintPath>Lib\OrbedenCore.CSharp.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
-  </ItemGroup>
-</Project>
-)ORB";
-    }
-
     std::string GetDirectoryBuildPropsText()
     {
         return R"ORB(<Project>
@@ -149,89 +119,6 @@ namespace
 )ORB";
     }
 
-    std::string GetGameModuleText(const std::string& projectName)
-    {
-        return R"ORB(using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Orbeden;
-
-namespace )ORB" + projectName + R"ORB(;
-
-/// <summary>游戏 AOT 模块入口。</summary>
-public static class GameModule
-{
-    /// <summary>初始化游戏模块。</summary>
-    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Initialize", CallConvs = [typeof(CallConvCdecl)])]
-    public static void OrbedenGame_Initialize(IntPtr nativeApi)
-    {
-        OrbedenCoreRuntime.Initialize(nativeApi);
-    }
-
-    /// <summary>关闭游戏模块。</summary>
-    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Shutdown", CallConvs = [typeof(CallConvCdecl)])]
-    public static void OrbedenGame_Shutdown()
-    {
-    }
-
-    /// <summary>更新游戏模块。</summary>
-    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Update", CallConvs = [typeof(CallConvCdecl)])]
-    public static void OrbedenGame_Update(float deltaTime)
-    {
-        _ = deltaTime;
-    }
-
-    /// <summary>绘制游戏模块 GUI。</summary>
-    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_DrawGui", CallConvs = [typeof(CallConvCdecl)])]
-    public static void OrbedenGame_DrawGui()
-    {
-    }
-}
-)ORB";
-    }
-
-    std::string GetDefaultWorldText(const std::string& projectName)
-    {
-        std::string prefix = "world://" + projectName + "/main/";
-        return R"ORB(<?xml version="1.0" encoding="utf-8"?>
-<World version="1">
-    <Ens stableId=")ORB" + prefix + R"ORB(directional_light" name="DirectionalLight">
-        <Component type="SpaceComponent">
-            <Field name="localPosition" type="vector3" value="0 4 0" />
-            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-            <Field name="localScale" type="vector3" value="1 1 1" />
-        </Component>
-        <Component type="DirectionalLight">
-            <Field name="enabled" type="bool" value="true" />
-            <Field name="direction" type="vector3" value="-0.45 -1 -0.35" />
-            <Field name="color" type="color" value="1 0.96 0.86 1" />
-            <Field name="intensity" type="float32" value="1.2" />
-            <Field name="castShadows" type="bool" value="true" />
-            <Field name="shadowBias" type="float32" value="0.004" />
-            <Field name="shadowStrength" type="float32" value="0.45" />
-            <Field name="shadowDistance" type="float32" value="24" />
-        </Component>
-    </Ens>
-    <Ens stableId=")ORB" + prefix + R"ORB(camera" name="Camera">
-        <Component type="SpaceComponent">
-            <Field name="localPosition" type="vector3" value="5 3.2 7" />
-            <Field name="localRotation" type="quaternion" value="-0.1819 0.2952 0.0574 0.9362" />
-            <Field name="localScale" type="vector3" value="1 1 1" />
-        </Component>
-        <Component type="Camera">
-            <Field name="enabled" type="bool" value="true" />
-            <Field name="fieldOfView" type="float32" value="60" />
-            <Field name="nearPlane" type="float32" value="0.1" />
-            <Field name="farPlane" type="float32" value="1000" />
-            <Field name="depth" type="float32" value="0" />
-            <Field name="drawLayerMask" type="uint32" value="4294967295" />
-            <Field name="clearMode" type="ClearMode" value="2" />
-            <Field name="clearColor" type="color" value="0.62 0.78 0.96 1" />
-        </Component>
-    </Ens>
-</World>
-)ORB";
-    }
 }
 
 bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
@@ -298,16 +185,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    bool succeeded = true;
-    succeeded = WriteTextFile(projectRoot / (projectName + ".oeproj"), GetProjectFileText(projectName), outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "World/main.world", GetDefaultWorldText(projectName), outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "World/main.world.scripts.json", "{\n  \"scripts\": []\n}\n", outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "Script" / (projectName + ".csproj"), GetScriptProjectText(projectName), outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "Script/Directory.Build.props", GetDirectoryBuildPropsText(), outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "Script/GameModule.cs", GetGameModuleText(projectName), outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "Script/.gitignore", "bin/\nobj/\n", outError) && succeeded;
-    succeeded = WriteTextFile(projectRoot / "Managed/.gitignore", "*\n!.gitignore\n", outError) && succeeded;
-    if (!succeeded) return false;
+    if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, outError)) return false;
 
     outProjectRoot = ToCleanPath(projectRoot);
     Log::Info(("New project created: " + outProjectRoot).c_str());

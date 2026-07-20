@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ORBEDEN_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ExampleProject" CACHE PATH "Game project directory.")
+set(ORBEDEN_PROJECT_DIR "" CACHE PATH "Game project directory.")
 set(ORBEDEN_GAME_AOT_LIB "" CACHE FILEPATH "NativeAOT static game library.")
 set(ORBEDEN_GLFW_ROOT "" CACHE PATH "Optional GLFW root for clang/gcc player builds.")
 set(ORBEDEN_PLAYER_TARGET "windows-x64" CACHE STRING "Orbeden player target platform.")
@@ -15,6 +15,16 @@ set(ORBEDEN_PHYSX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/OrbedenCore/Src/ThirdParty/P
 if(NOT ORBEDEN_GAME_AOT_LIB)
     message(FATAL_ERROR "ORBEDEN_GAME_AOT_LIB is required. Build the game C# NativeAOT static library first.")
 endif()
+
+if(NOT ORBEDEN_PROJECT_DIR)
+    message(FATAL_ERROR "ORBEDEN_PROJECT_DIR is required. Build Player from an open Editor project.")
+endif()
+
+get_filename_component(ORBEDEN_PROJECT_DIR "${ORBEDEN_PROJECT_DIR}" ABSOLUTE)
+if(NOT IS_DIRECTORY "${ORBEDEN_PROJECT_DIR}")
+    message(FATAL_ERROR "ORBEDEN_PROJECT_DIR does not exist: ${ORBEDEN_PROJECT_DIR}")
+endif()
+file(TO_CMAKE_PATH "${ORBEDEN_PROJECT_DIR}" ORBEDEN_PROJECT_DIR)
 
 if(NOT EXISTS "${ORBEDEN_GAME_AOT_LIB}")
     message(FATAL_ERROR "NativeAOT game library was not found: ${ORBEDEN_GAME_AOT_LIB}")
@@ -53,6 +63,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/RenderSystem.cpp
     OrbedenCore/Src/Rendering/SceneCuller.cpp
     OrbedenCore/Src/Rendering/SpaceCache.cpp
+    OrbedenCore/Src/Scripting/ScriptSystem.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp
     OrbedenCore/Src/Runtime/Ens.cpp
@@ -88,7 +99,6 @@ set(ORBEDEN_CORE_SOURCES
 
 set(ORBEDEN_GAME_SOURCES
     OrbedenGame/Src/game_main.cpp
-    OrbedenGame/Src/ScriptModule.cpp
 )
 
 add_library(orbeden_core STATIC ${ORBEDEN_CORE_SOURCES})
@@ -102,6 +112,7 @@ target_include_directories(orbeden_core PUBLIC
     "${ORBEDEN_CORE_DIR}/Src/ThirdParty/cgltf"
 )
 target_compile_definitions(orbeden_core PUBLIC PX_PHYSX_STATIC_LIB DISABLE_CUDA_PHYSX)
+target_compile_definitions(orbeden_core PRIVATE ORBEDEN_PLAYER)
 
 if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release)$")
     message(FATAL_ERROR "PhysX packages are provided for Debug and Release only; CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
@@ -205,6 +216,7 @@ target_include_directories(orbeden_game PRIVATE
     "${ORBEDEN_CORE_DIR}/Src"
 )
 target_link_libraries(orbeden_game PRIVATE orbeden_core "${ORBEDEN_GAME_AOT_LIB}")
+target_compile_definitions(orbeden_game PRIVATE ORBEDEN_PROJECT_DIR="${ORBEDEN_PROJECT_DIR}")
 
 if(MSVC)
     target_compile_options(orbeden_game PRIVATE /utf-8)

@@ -18,7 +18,7 @@
     <ClCompile Include="Src\editor_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Editor\ExampleWorldGenerator.cpp">
+    <ClCompile Include="Src\Editor\NewProjectTemplate.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Editor\EditorProject.cpp">
@@ -50,7 +50,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Src\Editor\ExampleWorldGenerator.h">
+    <ClInclude Include="Src\Editor\NewProjectTemplate.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorProject.h">
@@ -85,57 +85,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\ExampleProject\ExampleProject.oeproj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\World\example_world.world">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\World\example_world.world.scripts.json">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Mesh\cube.obj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Material\cube.mtl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Mesh\ground.obj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Material\ground.mtl">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\blinn_phong_shadow.orbshader">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Texture\sky_blue.png">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\shadow_depth.orbshader">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Resource\Shader\skybox.orbshader">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Script\ExampleGame.csproj">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Script\Directory.Build.props">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Script\GameModule.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Script\GuiOverlay.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Script\SampleBehaviour.cs">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="..\ExampleProject\Managed\.gitignore">
-      <Filter>资源文件</Filter>
-    </None>
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
       <Filter>资源文件</Filter>
     </None>

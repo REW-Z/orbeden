@@ -115,7 +115,7 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 
 5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Resource/`、`World/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
-> 当前 `Build Player` 尚未自动复制项目文件和资源，`game_main.cpp` 仍固定加载 ExampleProject；真正的一键项目打包仍需接入 `ORBEDEN_PROJECT_DIR` 和资源复制。
+> 当前 `Build Player` 会通过 `ORBEDEN_PROJECT_DIR` 绑定 Editor 中打开的项目，Player 从该项目的 `.oeproj` 读取启动 World；项目文件和资源仍未自动复制到发布目录。
 
 ## 核心工程文件职责
 
@@ -275,7 +275,7 @@ FreeBSD 和 Switch 当前明确不支持 PhysX：仓库没有经过验证的上�
 
 ### 原生物理接口
 
-`Application::GetPhysicsSystem()` 返回内建 `PhysicsSystem`。C++ 端现有高层能力包括：
+`Application::GetSystem<PhysicsSystem>()` 返回内建 `PhysicsSystem`。C++ 端现有高层能力包括：
 
 - `RigidBodyComponent`：Static、Dynamic、Kinematic、质量、阻尼、重力、CCD 和轴锁定。
 - `ColliderComponent`：Box、Sphere、Capsule、ConvexMesh、TriangleMesh、Trigger、材质和 layer/mask。
@@ -332,7 +332,7 @@ Debug Editor 仅支持 Windows x64，测试流程不使用 NativeAOT 静态库�
 
 ```mermaid
 flowchart LR
-    GameCs["ExampleProject/Script"] --> GameDll["ExampleProject/Managed/ExampleGame.dll"]
+    GameCs["{ProjectRoot}/Script"] --> GameDll["{ProjectRoot}/Managed/{ProjectName}.dll"]
     CoreSdk["OrbedenCore.CSharp.dll"] -.-> GameDll
     CoreSdk -.-> EditorDll["Orbeden.Editor.dll"]
     EditorExe["OrbedenEditor.exe"] -.-> EditorDll
@@ -403,7 +403,7 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 脚本挂载和默认序列化字段保存在 world sidecar，例如：
 
 ```text
-ExampleProject/World/example_world.world.scripts.json
+{ProjectRoot}/World/main.world.scripts.json
 ```
 
 只改字段值不需要重新构建 C++ 或 C#。新增、删除或重命名脚本类型后，需要先 `Build Game C#`，让 Editor 重新反射最新的 Game Assembly。

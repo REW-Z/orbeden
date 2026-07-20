@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application.h"
 #include "Defines/types.h"
 
 #include <chrono>
@@ -19,7 +20,7 @@ public:
 };
 
 //性能剖析器
-class Profiler
+class Profiler : public IEngineSystem
 {
 private:
     static ProfileSample* currentSample;
@@ -27,6 +28,9 @@ private:
     static ProfileSample* tailSample;
 
 public:
+    //应用关闭时写出并清空采样数据
+    void OnShutdown() override;
+
     //开始采样
     static ProfileSample* StartSample(const char* name);
 

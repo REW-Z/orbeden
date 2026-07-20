@@ -3,15 +3,18 @@
 #include <thread>
 
 #include "Application.h"
+#include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
-#include "Platform/InputManager.h"
 #include "Physics/PhysicsReflection.h"
 #include "Physics/PhysicsSystem.h"
+#include "Platform/InputManager.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
+#include "Scripting/ScriptSystem.h"
 
 namespace
 {
@@ -62,13 +65,19 @@ namespace
     }
 }
 
+//创建使用指定脚本运行时的应用
+Application::Application(ScriptRuntimeMode mode)
+    : scriptRuntimeMode(mode)
+{
+}
+
 //释放应用持有的运行时状态
 Application::~Application()
 {
     Quit();
 }
 
-//初始化反射元数据并设置当前 World
+//初始化反射元数据、当前 World 和全部内置系统
 bool Application::Initialize()
 {
     if (initialized) return true;
@@ -78,61 +87,84 @@ bool Application::Initialize()
     PhysicsReflection::Register();
     World::SetCurrentWorld(&world);
 
-    physicsSystem = new PhysicsSystem();
-    if (!physicsSystem->Initialize())
+    //所有 Core 系统集中在这里声明，依赖仍由各系统通过 GetSystem 创建
+    if (!GetSystem<Profiler>()
+        || !GetSystem<FileSystem>()
+        || !GetSystem<InputManager>()
+        || !GetSystem<ResourceManager>()
+        || !GetSystem<PhysicsSystem>()
+        || !GetSystem<RenderSystem>()
+        || !GetSystem<ScriptSystem>())
     {
-        delete physicsSystem;
-        physicsSystem = nullptr;
+        ShutdownSystems();
         World::SetCurrentWorld(nullptr);
         return false;
     }
-    RegisterSystem(physicsSystem, EngineSystemUpdateMode::Simulation);
+
     initialized = true;
     return true;
 }
 
-//注册参与 Update/FixedUpdate 的运行时系统
-void Application::RegisterSystem(IEngineSystem* system)
+//查找已经创建的系统
+IEngineSystem* Application::FindSystem(std::type_index type) const
 {
-    RegisterSystem(system, EngineSystemUpdateMode::Simulation);
-}
-
-//使用指定更新模式注册系统
-void Application::RegisterSystem(IEngineSystem* system, EngineSystemUpdateMode updateMode)
-{
-    if (!system) return;
-
-    //避免重复注册同一个系统实例
-    auto it = std::find_if(systems.begin(), systems.end(), [system](const EngineSystemRegistration& registration)
-        {
-            return registration.system == system;
-        });
-    if (it != systems.end())
+    for (const EngineSystemEntry& entry : systems)
     {
-        it->updateMode = updateMode;
-        return;
+        if (entry.type == type) return entry.system.get();
     }
 
-    EngineSystemRegistration registration;
-    registration.system = system;
-    registration.updateMode = updateMode;
-    systems.push_back(registration);
+    return nullptr;
 }
 
-//移除运行时系统
-void Application::UnregisterSystem(IEngineSystem* system)
+//接收新系统并执行统一初始化
+IEngineSystem* Application::CreateSystem(std::type_index type, std::unique_ptr<IEngineSystem> system)
 {
-    systems.erase(std::remove_if(systems.begin(), systems.end(), [system](const EngineSystemRegistration& registration)
-        {
-            return registration.system == system;
-        }), systems.end());
+    if (shuttingDown)
+    {
+        Log::Error(("Cannot create engine system during shutdown: " + std::string(type.name())).c_str());
+        return nullptr;
+    }
+
+    if (std::find(initializingSystems.begin(), initializingSystems.end(), type) != initializingSystems.end())
+    {
+        Log::Error(("Circular engine system dependency: " + std::string(type.name())).c_str());
+        return nullptr;
+    }
+
+    //系统初始化期间允许通过 GetSystem 递归创建依赖
+    initializingSystems.push_back(type);
+    bool succeeded = system->OnInitialize(*this);
+    initializingSystems.pop_back();
+    if (!succeeded)
+    {
+        system->OnShutdown();
+        Log::Error(("Engine system initialize failed: " + std::string(type.name())).c_str());
+        return nullptr;
+    }
+
+    IEngineSystem* result = system.get();
+    systems.emplace_back(type, std::move(system));
+    return result;
+}
+
+//逆序关闭并销毁全部系统
+void Application::ShutdownSystems()
+{
+    shuttingDown = true;
+    while (!systems.empty())
+    {
+        systems.back().system->OnShutdown();
+        systems.pop_back();
+    }
+    initializingSystems.clear();
+    shuttingDown = false;
 }
 
 //从 XML 文件读取 World，失败时保留空 World 继续运行
 bool Application::LoadWorld(const std::string& path)
 {
     if (!Initialize()) return false;
-    if (physicsSystem) physicsSystem->ResetWorld();
+    if (PhysicsSystem* physicsSystem = GetSystem<PhysicsSystem>()) physicsSystem->ResetWorld();
 
     //读取成功时直接使用反序列化后的 World
     if (WorldSerializer::LoadXml(world, path))
@@ -152,10 +184,17 @@ bool Application::SaveWorld(const std::string& path) const
     return WorldSerializer::SaveXml(world, path);
 }
 
-//推进一帧应用逻辑，包含 FixedUpdate 补帧和 Update
-void Application::Tick(float deltaTime)
+//推进一帧应用逻辑，并在系统 Update 后调用宿主帧回调
+void Application::Tick(float deltaTime, const std::function<void(World&, float)>& frameCallback)
 {
-    Initialize();
+    if (!Initialize()) return;
+
+    //系统先清理上一帧状态，再由窗口轮询并写入本帧平台事件
+    usize beginSystemCount = systems.size();
+    for (usize index = 0; index < beginSystemCount; index++)
+    {
+        systems[index].system->OnBeginFrame();
+    }
     BeginFrame();
 
     //防御外部宿主传入异常时间
@@ -164,7 +203,7 @@ void Application::Tick(float deltaTime)
         deltaTime = 0.0f;
     }
 
-    //Simulation 可被外部宿主关闭，Frame 系统仍会继续更新。
+    //Simulation 可被外部宿主关闭，帧回调和渲染仍会继续运行
     bool runSimulation = simulationEnabled && !paused;
     if (runSimulation)
     {
@@ -174,10 +213,10 @@ void Application::Tick(float deltaTime)
         uint32 fixedStepCount = 0;
         while (fixedAccumulator >= fixedDeltaTime && fixedStepCount < maxFixedStepsPerFrame)
         {
-            for (const EngineSystemRegistration& registration : systems)
+            usize fixedSystemCount = systems.size();
+            for (usize index = 0; index < fixedSystemCount; index++)
             {
-                if (registration.updateMode != EngineSystemUpdateMode::Simulation) continue;
-                if (registration.system) registration.system->FixedUpdate(world, fixedDeltaTime);
+                systems[index].system->FixedUpdate(world, fixedDeltaTime);
             }
 
             fixedAccumulator -= fixedDeltaTime;
@@ -190,11 +229,10 @@ void Application::Tick(float deltaTime)
             fixedAccumulator = 0.0f;
         }
 
-        //每帧调用一次普通 Update
-        for (const EngineSystemRegistration& registration : systems)
+        usize updateSystemCount = systems.size();
+        for (usize index = 0; index < updateSystemCount; index++)
         {
-            if (registration.updateMode != EngineSystemUpdateMode::Simulation) continue;
-            if (registration.system) registration.system->Update(world, deltaTime);
+            systems[index].system->Update(world, deltaTime);
         }
     }
     else
@@ -202,29 +240,25 @@ void Application::Tick(float deltaTime)
         fixedAccumulator = 0.0f;
     }
 
-    //Frame 系统不属于 Simulation，可用于工具宿主、UI 和外部每帧逻辑。
-    for (const EngineSystemRegistration& registration : systems)
+    //宿主逻辑不属于 Simulation，Editor 停止播放时仍然需要更新
+    if (frameCallback)
     {
-        if (registration.updateMode != EngineSystemUpdateMode::Frame) continue;
-        if (registration.system) registration.system->Update(world, deltaTime);
+        frameCallback(world, deltaTime);
     }
 
-    //渲染前按需唤起内置系统，避免启动阶段提前创建后端
-    InitBuiltInSystems();
-
-    //渲染不属于 Simulation 暂停范围，窗口仍可刷新画面
-    for (const EngineSystemRegistration& registration : systems)
+    usize renderSystemCount = systems.size();
+    for (usize index = 0; index < renderSystemCount; index++)
     {
-        if (registration.system) registration.system->Render(world, deltaTime);
+        systems[index].system->Render(world, deltaTime);
     }
 
     EndFrame();
 }
 
 //进入主循环，直到请求退出
-void Application::Run()
+void Application::Run(const std::function<void(World&, float)>& frameCallback)
 {
-    Initialize();
+    if (!Initialize()) return;
 
     running = true;
     quitRequested = false;
@@ -239,7 +273,7 @@ void Application::Run()
         std::chrono::duration<float> elapsed = frameStartTime - previousTime;
         previousTime = frameStartTime;
 
-        Tick(elapsed.count());
+        Tick(elapsed.count(), frameCallback);
 
         //显式设置目标帧率时，先低 CPU 等待，再短暂 yield 对齐目标时间
         if (targetFrameRate > 0)
@@ -266,21 +300,20 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
-    ShutdownBuiltInSystems();
-    ShutdownPhysicsSystem();
+    running = false;
+    quitRequested = true;
+    initialized = false;
+
+    ShutdownSystems();
     SetWindow(nullptr);
     Object::UnloadUnusedObjects(nullptr, 0);
     world.Clear();
-    ResourceManager::Shutdown();
     Object::ReleaseOrphanInstances();
 
     if (World::CurrentWorld() == &world)
     {
         World::SetCurrentWorld(nullptr);
     }
-
-    running = false;
-    quitRequested = true;
 }
 
 //判断应用主循环是否仍在运行
@@ -374,7 +407,8 @@ void Application::SetWindow(IWindow* newWindow)
 {
     if (window == newWindow) return;
 
-    ShutdownBuiltInSystems();
+    RenderSystem* renderSystem = initialized ? GetSystem<RenderSystem>() : nullptr;
+    if (renderSystem) renderSystem->Shutdown();
 
     if (window)
     {
@@ -382,13 +416,17 @@ void Application::SetWindow(IWindow* newWindow)
     }
 
     window = newWindow;
+    if (!window) return;
 
-    if (window)
+    window->SetResizeListener(this);
+    OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
+
+    //运行中切换窗口时立即重建渲染后端
+    if (renderSystem && (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL || !renderSystem->Initialize(window)))
     {
-        window->SetResizeListener(this);
-        OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
+        Log::Error("Application window does not provide a supported graphics API.");
+        RequestQuit();
     }
-
 }
 
 //获取当前绑定窗口
@@ -397,32 +435,25 @@ IWindow* Application::GetWindow() const
     return window;
 }
 
-//获取内置渲染系统
-RenderSystem* Application::GetRenderSystem() const
+//获取脚本运行时入口来源
+ScriptRuntimeMode Application::GetScriptRuntimeMode() const
 {
-    return renderSystemActive ? renderSystem : nullptr;
+    return scriptRuntimeMode;
 }
 
-//获取内置 CPU 物理系统
-PhysicsSystem* Application::GetPhysicsSystem() const
-{
-    return physicsSystem;
-}
-
-//派发窗口 resize 到已注册系统
+//派发窗口 resize 到已创建系统
 void Application::OnWindowResize(int32 width, int32 height)
 {
-    for (const EngineSystemRegistration& registration : systems)
+    usize systemCount = systems.size();
+    for (usize index = 0; index < systemCount; index++)
     {
-        if (registration.system) registration.system->OnWindowResize(width, height);
+        systems[index].system->OnWindowResize(width, height);
     }
 }
 
-//帧开始钩子，处理输入清理和窗口事件
+//帧开始钩子，处理窗口事件
 void Application::BeginFrame()
 {
-    InputManager::BeginFrame();
-
     if (!window) return;
 
     window->PollEvents();
@@ -444,56 +475,5 @@ void Application::EndFrame()
 //判断主循环是否继续运行
 bool Application::ShouldKeepRunning() const
 {
-    return running && !quitRequested && (!window || !window->ShouldClose());
-}
-
-//初始化内置系统
-bool Application::InitBuiltInSystems()
-{
-    if (!window) return true;
-    if (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL) return true;
-    if (renderSystemActive) return true;
-
-    if (!renderSystem)
-    {
-        renderSystem = new RenderSystem();
-    }
-
-    if (!renderSystem->Initialize(window))
-    {
-        Log::Error("Application built-in RenderSystem initialize failed.");
-        delete renderSystem;
-        renderSystem = nullptr;
-        return false;
-    }
-
-    RegisterSystem(renderSystem);
-    renderSystem->OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
-    renderSystemActive = true;
-    return true;
-}
-
-//关闭内置系统
-void Application::ShutdownBuiltInSystems()
-{
-    if (renderSystemActive && renderSystem)
-    {
-        UnregisterSystem(renderSystem);
-        renderSystem->Shutdown();
-        renderSystemActive = false;
-    }
-
-    delete renderSystem;
-    renderSystem = nullptr;
-}
-
-//关闭内置物理系统
-void Application::ShutdownPhysicsSystem()
-{
-    if (!physicsSystem) return;
-
-    UnregisterSystem(physicsSystem);
-    physicsSystem->Shutdown();
-    delete physicsSystem;
-    physicsSystem = nullptr;
+    return running && !quitRequested && window && !window->ShouldClose();
 }

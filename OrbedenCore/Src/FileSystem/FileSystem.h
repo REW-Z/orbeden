@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application.h"
 #include "Defines/types.h"
 
 #include <atomic>
@@ -152,7 +153,7 @@ private:
 };
 
 //文件系统
-class FileSystem
+class FileSystem : public IEngineSystem
 {
 public:
     enum class IOSLIB

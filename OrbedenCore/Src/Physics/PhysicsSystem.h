@@ -27,6 +27,12 @@ public:
     PhysicsSystem& operator=(const PhysicsSystem&) = delete;
     ~PhysicsSystem() override;
 
+    //创建并初始化物理系统
+    bool OnInitialize(Application& app) override;
+
+    //关闭并释放物理系统
+    void OnShutdown() override;
+
     //创建 PhysX Foundation、Scene、Cooking 和 CCT 状态
     bool Initialize();
 
