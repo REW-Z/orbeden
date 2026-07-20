@@ -1,7 +1,6 @@
 #include "Editor/EditorProject.h"
 
 #include "Application.h"
-#include "Editor/ExampleWorldGenerator.h"
 #include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
@@ -410,24 +409,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     if (parsedResourceRoot.empty()) parsedResourceRoot = "Resource";
     if (parsedScriptRoot.empty()) parsedScriptRoot = "Script";
     if (parsedManagedRoot.empty()) parsedManagedRoot = "Managed";
-    bool useExampleWorldGenerator = ExampleWorldGenerator::IsExampleProject(parsedName);
-    if (useExampleWorldGenerator)
-    {
-        parsedStartupWorld = "World/example_world.world";
-        parsedResourceRoot = "Resource";
-        parsedScriptRoot = "Script";
-        parsedManagedRoot = "Managed";
-    }
-
     std::string worldPath = ToCleanPath(Utf8Path::FromUtf8(parsedProjectRoot) / Utf8Path::FromUtf8(parsedStartupWorld));
-    if (useExampleWorldGenerator && !ExampleWorldGenerator::GenerateProjectFiles(parsedProjectRoot))
-    {
-        lastError = "Example project generation failed: " + parsedProjectRoot;
-        Log::Error(lastError.c_str());
-        return false;
-    }
-
-    RenderSystem* renderSystem = app.GetRenderSystem();
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
         renderSystem->PrepareProjectReload();
@@ -458,11 +441,6 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
         lastError = "Project loaded, but startup world failed: " + worldPath;
         Log::Error(lastError.c_str());
         return false;
-    }
-
-    if (useExampleWorldGenerator)
-    {
-        ExampleWorldGenerator::ApplyRuntimeEnvironment(app);
     }
 
     Log::Info(("Project loaded: " + projectName).c_str());
@@ -516,7 +494,7 @@ bool EditorProject::ReloadStartupWorld()
         return false;
     }
 
-    RenderSystem* renderSystem = app.GetRenderSystem();
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
         renderSystem->PrepareProjectReload();
@@ -537,11 +515,6 @@ bool EditorProject::ReloadStartupWorld()
         lastError = "Startup world reload failed: " + worldPath;
         Log::Error(lastError.c_str());
         return false;
-    }
-
-    if (ExampleWorldGenerator::IsExampleProject(projectName))
-    {
-        ExampleWorldGenerator::ApplyRuntimeEnvironment(app);
     }
 
     lastError.clear();

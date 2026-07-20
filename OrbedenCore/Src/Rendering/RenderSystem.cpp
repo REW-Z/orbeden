@@ -2,6 +2,7 @@
 
 #include "Log/Log.h"
 #include "Rendering/RenderMath.h"
+#include "Runtime/ResourceManager.h"
 
 #include <algorithm>
 
@@ -30,6 +31,33 @@ namespace
         int32 end = std::clamp(static_cast<int32>((normalizedStart + normalizedSize) * static_cast<float32>(targetSize)), start + 1, targetSize);
         size = end - start;
     }
+}
+
+//获取资源依赖并初始化窗口渲染后端
+bool RenderSystem::OnInitialize(Application& app)
+{
+    if (!app.GetSystem<ResourceManager>()) return false;
+
+    IWindow* renderWindow = app.GetWindow();
+    if (!renderWindow)
+    {
+        Log::Error("RenderSystem initialize failed: window is missing.");
+        return false;
+    }
+    if (renderWindow->GetGraphicsApi() != WindowGraphicsApi::OpenGL)
+    {
+        Log::Error("RenderSystem initialize failed: graphics API is not supported.");
+        return false;
+    }
+
+    return Initialize(renderWindow);
+}
+
+//关闭并释放渲染系统
+void RenderSystem::OnShutdown()
+{
+    Shutdown();
+    renderOverlay = nullptr;
 }
 
 bool RenderSystem::Initialize(IWindow* renderWindow)
@@ -71,9 +99,6 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
 
 void RenderSystem::Shutdown()
 {
-    //覆盖层由外部持有，关闭时只解除引用，不负责删除对象。
-    renderOverlay = nullptr;
-
     //按照使用依赖的逆序释放 UI、离屏目标、管线、缓存和后端。
     imguiLayer.Shutdown();
     ReleaseRenderTargets();

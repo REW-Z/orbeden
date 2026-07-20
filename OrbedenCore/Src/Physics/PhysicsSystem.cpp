@@ -969,6 +969,19 @@ PhysicsSystem::~PhysicsSystem()
     impl = nullptr;
 }
 
+//创建并初始化物理系统
+bool PhysicsSystem::OnInitialize(Application& app)
+{
+    (void)app;
+    return Initialize();
+}
+
+//关闭并释放物理系统
+void PhysicsSystem::OnShutdown()
+{
+    Shutdown();
+}
+
 //创建 PhysX Foundation、Scene、Cooking 和 CCT 状态
 bool PhysicsSystem::Initialize()
 {

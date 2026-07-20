@@ -1,15 +1,28 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <typeindex>
+#include <utility>
 
 #include "Platform/Window.h"
 #include "Runtime/World.h"
+
+class Application;
 
 class IEngineSystem
 {
 public:
     virtual ~IEngineSystem() = default;
+
+    //系统首次创建时调用，可通过 Application 获取依赖系统
+    virtual bool OnInitialize(Application& app) { return true; }
+
+    //每帧平台事件处理前调用
+    virtual void OnBeginFrame() {}
 
     //固定步长更新，由 Application 按 fixedDeltaTime 补帧调用
     virtual void FixedUpdate(World& world, float fixedDeltaTime) {}
@@ -17,41 +30,47 @@ public:
     //每帧更新，由 Application 每次 Tick 调用一次
     virtual void Update(World& world, float deltaTime) {}
 
-    //渲染更新，在 Simulation/Frame 更新后、窗口 present 前调用
+    //渲染更新，在 Simulation 和宿主帧回调后、窗口 present 前调用
     virtual void Render(World& world, float deltaTime) {}
 
     //窗口 framebuffer 尺寸变化时调用
     virtual void OnWindowResize(int width, int height) {}
+
+    //Application 退出时按创建顺序的逆序调用
+    virtual void OnShutdown() {}
 };
 
-//系统每帧更新模式
-enum class EngineSystemUpdateMode
+//脚本运行时入口来源
+enum class ScriptRuntimeMode
 {
-    Simulation,
-    Frame,
+    AOT,
+    CLR,
 };
-
-//已注册系统记录
-struct EngineSystemRegistration
-{
-public:
-    IEngineSystem* system = nullptr;
-    EngineSystemUpdateMode updateMode = EngineSystemUpdateMode::Simulation;
-};
-
-class RenderSystem;
-class PhysicsSystem;
 
 class Application : public IWindowResizeListener
 {
 private:
+    struct EngineSystemEntry
+    {
+    public:
+        std::type_index type;
+        std::unique_ptr<IEngineSystem> system;
+
+        //保存系统类型和由 Application 拥有的实例
+        EngineSystemEntry(std::type_index systemType, std::unique_ptr<IEngineSystem> systemInstance)
+            : type(systemType)
+            , system(std::move(systemInstance))
+        {
+        }
+    };
+
     World world;
     IWindow* window = nullptr;
-    List<EngineSystemRegistration> systems;
-    RenderSystem* renderSystem = nullptr;
-    PhysicsSystem* physicsSystem = nullptr;
+    List<EngineSystemEntry> systems;
+    List<std::type_index> initializingSystems;
+    ScriptRuntimeMode scriptRuntimeMode;
     bool initialized = false;
-    bool renderSystemActive = false;
+    bool shuttingDown = false;
     bool running = false;
     bool quitRequested = false;
     bool paused = false;
@@ -62,24 +81,20 @@ private:
     float fixedAccumulator = 0.0f;
 
 public:
-    Application() = default;
+    //创建使用指定脚本运行时的应用
+    explicit Application(ScriptRuntimeMode mode);
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;
 
     //释放应用持有的运行时状态
     ~Application();
 
-    //初始化反射元数据并设置当前 World
+    //初始化反射元数据、当前 World 和全部内置系统
     bool Initialize();
 
-    //注册参与 Update/FixedUpdate 的运行时系统
-    void RegisterSystem(IEngineSystem* system);
-
-    //使用指定更新模式注册系统
-    void RegisterSystem(IEngineSystem* system, EngineSystemUpdateMode updateMode);
-
-    //移除运行时系统
-    void UnregisterSystem(IEngineSystem* system);
+    //获取系统，尚未创建时立即创建并初始化
+    template<typename T>
+    T* GetSystem();
 
     //从 XML 文件读取 World，失败时保留空 World 继续运行
     bool LoadWorld(const std::string& path);
@@ -87,11 +102,11 @@ public:
     //将当前 World 写入 XML 文件
     bool SaveWorld(const std::string& path) const;
 
-    //推进一帧应用逻辑，包含 FixedUpdate 补帧和 Update
-    void Tick(float deltaTime);
+    //推进一帧应用逻辑，并在系统 Update 后调用宿主帧回调
+    void Tick(float deltaTime, const std::function<void(World&, float)>& frameCallback = {});
 
     //进入主循环，直到请求退出
-    void Run();
+    void Run(const std::function<void(World&, float)>& frameCallback = {});
 
     //请求主循环在当前帧后退出
     void RequestQuit();
@@ -105,7 +120,7 @@ public:
     //判断应用是否暂停 Simulation 更新
     bool IsPaused() const;
 
-    //设置暂停状态，暂停时仍保留 BeginFrame/EndFrame
+    //设置暂停状态，暂停时仍保留帧生命周期
     void SetPaused(bool value);
 
     //判断 Simulation 更新是否启用
@@ -144,17 +159,14 @@ public:
     //获取当前绑定窗口
     IWindow* GetWindow() const;
 
-    //获取内置渲染系统，尚未初始化时返回 nullptr
-    RenderSystem* GetRenderSystem() const;
+    //获取脚本运行时入口来源
+    ScriptRuntimeMode GetScriptRuntimeMode() const;
 
-    //获取内置 CPU 物理系统，尚未初始化时返回 nullptr
-    PhysicsSystem* GetPhysicsSystem() const;
-
-    //派发窗口 resize 到已注册系统
+    //派发窗口 resize 到已创建系统
     void OnWindowResize(int32 width, int32 height) override;
 
 protected:
-    //帧开始钩子，处理输入清理和窗口事件
+    //帧开始钩子，处理窗口事件
     virtual void BeginFrame();
 
     //帧结束钩子，处理窗口 present
@@ -164,12 +176,28 @@ protected:
     virtual bool ShouldKeepRunning() const;
 
 private:
-    //按需唤起内置系统
-    bool InitBuiltInSystems();
+    //查找已经创建的系统
+    IEngineSystem* FindSystem(std::type_index type) const;
 
-    //关闭内置系统
-    void ShutdownBuiltInSystems();
+    //接收新系统并执行统一初始化
+    IEngineSystem* CreateSystem(std::type_index type, std::unique_ptr<IEngineSystem> system);
 
-    //关闭内置物理系统
-    void ShutdownPhysicsSystem();
+    //逆序关闭并销毁全部系统
+    void ShutdownSystems();
 };
+
+//获取系统，尚未创建时立即创建并初始化
+template<typename T>
+T* Application::GetSystem()
+{
+    static_assert(std::is_base_of_v<IEngineSystem, T>);
+    static_assert(std::is_default_constructible_v<T>);
+
+    std::type_index type = typeid(T);
+    if (IEngineSystem* system = FindSystem(type))
+    {
+        return static_cast<T*>(system);
+    }
+
+    return static_cast<T*>(CreateSystem(type, std::make_unique<T>()));
+}

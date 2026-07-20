@@ -18,6 +18,9 @@
     <ClInclude Include="Src\Application.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Scripting\ScriptSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Defines\types.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -207,6 +210,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Application.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Scripting\ScriptSystem.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\FileSystem\FileSystem.cpp">

@@ -347,7 +347,7 @@ void EditorScene::Update(World& world, float32 deltaTime)
 void EditorScene::DrawBackground()
 {
     World& world = app.GetWorld();
-    RenderSystem* renderSystem = app.GetRenderSystem();
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
         const RenderScene& scene = renderSystem->GetCurrentScene();

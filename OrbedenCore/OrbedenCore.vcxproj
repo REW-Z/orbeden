@@ -154,6 +154,7 @@
     <ClInclude Include="Src\Rendering\RenderScene.h" />
     <ClInclude Include="Src\Rendering\RenderSceneBuilder.h" />
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
+    <ClInclude Include="Src\Scripting\ScriptSystem.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />
     <ClInclude Include="Src\Rendering\SceneCuller.h" />
     <ClInclude Include="Src\Rendering\SpaceCache.h" />
@@ -220,6 +221,7 @@
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
     <ClCompile Include="Src\Rendering\RenderSceneBuilder.cpp" />
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
+    <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
     <ClCompile Include="Src\Rendering\SpaceCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />

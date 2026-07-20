@@ -4,7 +4,6 @@
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "Platform/InputManager.h"
-#include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
 
 #include <algorithm>
@@ -433,6 +432,12 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     {
         managedBridge.Initialize(clrHost, *this, panelManager, editorScene.GetGizmoApi(), executablePath);
     }
+
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        renderSystem->SetRenderOverlay(this);
+        renderSystem->SetFpsLabelVisible(false);
+    }
 }
 
 EditorSystem::~EditorSystem()
@@ -446,7 +451,7 @@ EditorSystem::~EditorSystem()
     clrHost.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
 
-    if (RenderSystem* renderSystem = app.GetRenderSystem())
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
     {
         renderSystem->SetRenderOverlay(nullptr);
     }
@@ -454,23 +459,9 @@ EditorSystem::~EditorSystem()
 
 void EditorSystem::Update(World& world, float deltaTime)
 {
-    TryAutoLoadExampleProject();
-    playMode.Update(deltaTime);
     if (!playMode.IsPlaying())
     {
         editorScene.Update(world, deltaTime);
-    }
-}
-
-void EditorSystem::Render(World& world, float deltaTime)
-{
-    (void)world;
-    (void)deltaTime;
-
-    if (RenderSystem* renderSystem = app.GetRenderSystem())
-    {
-        renderSystem->SetRenderOverlay(this);
-        renderSystem->SetFpsLabelVisible(false);
     }
 }
 
@@ -492,7 +483,10 @@ void EditorSystem::DrawOverlay()
         editorScene.CancelInteraction();
     }
 
-    playMode.DrawGui();
+    if (playMode.IsPlaying())
+    {
+        app.GetSystem<ScriptSystem>()->DrawOverlay();
+    }
 }
 
 void EditorSystem::RequestOpenProjectDialog()
@@ -593,7 +587,10 @@ void EditorSystem::RequestPlay()
 
     std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".pie";
     std::string gameModuleType = GetProjectGameModuleTypeName();
-    if (!playMode.Start(clrHost, assemblyPath, gameModuleType, ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
+    ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
+    if (!scriptSystem
+        || !playMode.Start(*scriptSystem, clrHost, assemblyPath, gameModuleType,
+            ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
         projectStatus = playMode.GetLastError();
         editorScene.RestoreCamera(app.GetWorld());
@@ -1112,39 +1109,6 @@ void EditorSystem::ApplyEditorLayout()
     editorScene.ApplyLayout(layout, app.GetWorld());
 }
 
-void EditorSystem::TryAutoLoadExampleProject()
-{
-    if (autoLoadAttempted) return;
-    autoLoadAttempted = true;
-
-#if !defined(NDEBUG)
-    std::string exampleProject = PathDefines::FindProjectRoot("ExampleProject", executablePath);
-    if (exampleProject.empty())
-    {
-        Log::Warning("Editor Debug auto-load skipped: ExampleProject was not found.");
-        return;
-    }
-
-    RequestStop();
-    SaveEditorLayout();
-    project.LoadProjectFolder(exampleProject);
-    if (project.HasProject())
-    {
-        editorScene.ClearSceneState();
-        SetDialogDirectory(project.GetProjectRoot());
-        projectStatus = "Loaded: " + project.GetProjectRoot();
-        std::string runtimeSyncError;
-        if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
-        {
-            projectStatus += " Core C# sync failed: " + runtimeSyncError;
-            Log::Warning(runtimeSyncError.c_str());
-        }
-        ApplyEditorLayout();
-        RefreshInspectorGameAssembly();
-    }
-#endif
-}
-
 void EditorSystem::OpenProjectDialog()
 {
     openProjectDialog = true;
@@ -1271,7 +1235,7 @@ void EditorSystem::DrawPlayToolbar()
 
         //暂停按钮。
         bool pauseDisabled = !playMode.IsPlaying();
-        bool pauseHighlighted = playMode.IsPaused();
+        bool pauseHighlighted = app.IsPaused();
         if (pauseDisabled)
         {
             ImGui::BeginDisabled();
@@ -1282,8 +1246,7 @@ void EditorSystem::DrawPlayToolbar()
         }
         if (DrawToolbarIconButton("##pause_button", ToolbarIcon::Pause, ImVec2(buttonWidth, 24.0f)))
         {
-            playMode.SetPaused(!playMode.IsPaused());
-            app.SetPaused(playMode.IsPaused());
+            app.SetPaused(!app.IsPaused());
         }
         if (pauseHighlighted)
         {

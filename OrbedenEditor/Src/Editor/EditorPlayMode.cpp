@@ -2,8 +2,6 @@
 
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
-#include "Runtime/Native/OrbedenNativeApi.h"
-
 #include <chrono>
 #include <filesystem>
 #include <sstream>
@@ -75,13 +73,14 @@ namespace
     }
 }
 
-bool EditorPlayMode::Start(EditorClrHost& host,
+bool EditorPlayMode::Start(ScriptSystem& scripts,
+    EditorClrHost& host,
     const std::string& assemblyPath,
     const std::string& gameModuleType,
     const std::string& shadowDirectory,
     const List<std::string>& managedDependencyDirectories)
 {
-    if (playing) return true;
+    if (IsPlaying()) return true;
 
     ClearBindings();
     lastError.clear();
@@ -117,68 +116,43 @@ bool EditorPlayMode::Start(EditorClrHost& host,
     }
 
     shadowAssemblyPath = ToCleanPath(shadowAssembly);
-    if (!host.BindFunction(shadowAssemblyPath, gameModuleType, InitializeMethod, reinterpret_cast<void**>(&InitializeGame))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, ShutdownMethod, reinterpret_cast<void**>(&ShutdownGame))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&UpdateGame))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&DrawGameGui)))
+    ScriptEntryPoints entryPoints;
+    if (!host.BindFunction(shadowAssemblyPath, gameModuleType, InitializeMethod, reinterpret_cast<void**>(&entryPoints.initialize))
+        || !host.BindFunction(shadowAssemblyPath, gameModuleType, ShutdownMethod, reinterpret_cast<void**>(&entryPoints.shutdown))
+        || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&entryPoints.update))
+        || !host.BindFunction(shadowAssemblyPath, gameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui)))
     {
         lastError = host.GetLastError() + " Assembly: " + shadowAssemblyPath + " Type: " + gameModuleType;
         ClearBindings();
         return false;
     }
 
-    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
-    InitializeGame(&nativeApi);
-    playing = true;
-    paused = false;
+    if (!scripts.SetEntryPoints(entryPoints) || !scripts.Initialize())
+    {
+        lastError = "ScriptSystem failed to initialize CLR game entry points.";
+        ClearBindings();
+        return false;
+    }
+
+    scriptSystem = &scripts;
     Log::Info("Editor Play-In-Editor started.");
     return true;
 }
 
 void EditorPlayMode::Stop()
 {
-    if (playing && ShutdownGame)
+    if (IsPlaying())
     {
-        ShutdownGame();
+        scriptSystem->Shutdown();
         Log::Info("Editor Play-In-Editor stopped.");
     }
 
     ClearBindings();
 }
 
-void EditorPlayMode::Update(float deltaTime)
-{
-    if (!playing || paused || !UpdateGame) return;
-    UpdateGame(deltaTime);
-}
-
-void EditorPlayMode::DrawGui()
-{
-    if (!playing || !DrawGameGui) return;
-    DrawGameGui();
-}
-
 bool EditorPlayMode::IsPlaying() const
 {
-    return playing;
-}
-
-//设置播放暂停状态。
-void EditorPlayMode::SetPaused(bool value)
-{
-    if (!playing)
-    {
-        paused = false;
-        return;
-    }
-
-    paused = value;
-}
-
-//判断播放是否暂停。
-bool EditorPlayMode::IsPaused() const
-{
-    return playing && paused;
+    return scriptSystem && scriptSystem->IsInitialized();
 }
 
 const std::string& EditorPlayMode::GetShadowAssemblyPath() const
@@ -193,11 +167,6 @@ const std::string& EditorPlayMode::GetLastError() const
 
 void EditorPlayMode::ClearBindings()
 {
-    InitializeGame = nullptr;
-    ShutdownGame = nullptr;
-    UpdateGame = nullptr;
-    DrawGameGui = nullptr;
-    playing = false;
-    paused = false;
+    scriptSystem = nullptr;
     shadowAssemblyPath.clear();
 }

@@ -12,6 +12,13 @@ ProfileSample* Profiler::currentSample = nullptr;
 ProfileSample* Profiler::headSample = nullptr;
 ProfileSample* Profiler::tailSample = nullptr;
 
+//应用关闭时写出并清空采样数据
+void Profiler::OnShutdown()
+{
+    WriteProfileLog();
+    Clear();
+}
+
 namespace
 {
     //判断采样名是否相同

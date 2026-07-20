@@ -27,6 +27,4 @@ public:
     //把 Resource/... 逻辑路径解析为当前项目的磁盘路径
     static std::string GetResourceFilePath(const std::string& path);
 
-    //从当前目录和可执行文件目录向上查找项目目录
-    static std::string FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath = "");
 };

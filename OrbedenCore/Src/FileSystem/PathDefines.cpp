@@ -1,6 +1,5 @@
 #include "FileSystem/PathDefines.h"
 
-#include "FileSystem/FileSystem.h"
 #include "FileSystem/Utf8Path.h"
 
 #include <filesystem>
@@ -42,40 +41,6 @@ namespace
         return filePath.is_absolute() ? filePath : std::filesystem::absolute(filePath);
     }
 
-    bool IsProjectRoot(const std::filesystem::path& path, const std::string& projectDirectoryName)
-    {
-        std::filesystem::path projectFile = path / (projectDirectoryName + ".oeproj");
-        return FileSystem::Exist(ToCleanPath(projectFile));
-    }
-
-    std::string SearchProjectRootFrom(const std::filesystem::path& start, const std::string& projectDirectoryName)
-    {
-        std::filesystem::path current = start;
-        if (!std::filesystem::is_directory(current))
-        {
-            current = current.parent_path();
-        }
-
-        while (!current.empty())
-        {
-            if (IsProjectRoot(current, projectDirectoryName))
-            {
-                return ToCleanPath(current);
-            }
-
-            std::filesystem::path child = current / projectDirectoryName;
-            if (IsProjectRoot(child, projectDirectoryName))
-            {
-                return ToCleanPath(child);
-            }
-
-            std::filesystem::path parent = current.parent_path();
-            if (parent == current) break;
-            current = parent;
-        }
-
-        return std::string();
-    }
 }
 
 void PathDefines::SetProjectRoot(const std::string& root, const std::string& resourceRoot)
@@ -139,20 +104,4 @@ std::string PathDefines::GetResourceFilePath(const std::string& path)
     }
 
     return GetProjectFilePath(cleanPath);
-}
-
-std::string PathDefines::FindProjectRoot(const std::string& projectDirectoryName, const std::string& executablePath)
-{
-    if (projectDirectoryName.empty()) return std::string();
-
-    std::string found = SearchProjectRootFrom(std::filesystem::current_path(), projectDirectoryName);
-    if (!found.empty()) return found;
-
-    if (!executablePath.empty())
-    {
-        found = SearchProjectRootFrom(AbsolutePath(executablePath), projectDirectoryName);
-        if (!found.empty()) return found;
-    }
-
-    return std::string();
 }

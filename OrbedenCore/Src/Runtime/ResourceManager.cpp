@@ -1,5 +1,6 @@
 #include "Runtime/ResourceManager.h"
 
+#include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/EnsId.h"
@@ -84,6 +85,18 @@ namespace
 
         return record;
     }
+}
+
+//建立资源系统所需的文件系统依赖
+bool ResourceManager::OnInitialize(Application& app)
+{
+    return app.GetSystem<FileSystem>() != nullptr;
+}
+
+//关闭应用时释放全部资源
+void ResourceManager::OnShutdown()
+{
+    Shutdown();
 }
 
 //加载资源对象

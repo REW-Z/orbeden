@@ -1,8 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <OutputPath>$(MSBuildThisFileDirectory)..\Managed\</OutputPath>
-    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\Managed\obj\</BaseIntermediateOutputPath>
-    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
-    <OrbedenSdkPath Condition="'$(OrbedenSdkPath)' == ''">$(MSBuildThisFileDirectory)..\..\OrbedenEditor\Sdk\</OrbedenSdkPath>
-  </PropertyGroup>
-</Project>
