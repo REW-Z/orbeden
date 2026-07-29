@@ -1,14 +1,14 @@
 namespace Orbeden;
 
-/// <summary>当前项目路径定义访问。</summary>
+/// <summary>当前内容路径定义访问。</summary>
 public static class PathDefines
 {
-    /// <summary>当前项目根目录。</summary>
-    public static string ProjectRoot => PathDefinesBind.GetProjectRoot();
+    /// <summary>当前内容根目录。</summary>
+    public static string ContentRoot => PathDefinesBind.GetContentRoot();
 
-    /// <summary>解析项目相对路径。</summary>
-    public static string GetProjectFilePath(string path)
+    /// <summary>解析内容相对路径。</summary>
+    public static string GetContentFilePath(string path)
     {
-        return PathDefinesBind.GetProjectFilePath(path);
+        return PathDefinesBind.GetContentFilePath(path);
     }
 }

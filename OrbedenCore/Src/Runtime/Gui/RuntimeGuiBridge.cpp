@@ -277,7 +277,7 @@ namespace
     }
 
     //绘制支持跨列和双击的选择项。
-    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiProjectSelectable(const uint8* label, int32 length, uint8 selected, uint8 spanAllColumns)
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiTableSelectable(const uint8* label, int32 length, uint8 selected, uint8 spanAllColumns)
     {
         std::string value = ReadUtf8Text(label, length);
         ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
@@ -366,9 +366,9 @@ RuntimeGuiExtensionApi RuntimeGuiBridge::GetExtensionApi()
     return api;
 }
 
-RuntimeGuiProjectApi RuntimeGuiBridge::GetProjectApi()
+RuntimeGuiAdvancedApi RuntimeGuiBridge::GetAdvancedApi()
 {
-    RuntimeGuiProjectApi api;
+    RuntimeGuiAdvancedApi api;
     api.Separator = reinterpret_cast<void*>(&RuntimeGuiSeparator);
     api.SameLine = reinterpret_cast<void*>(&RuntimeGuiSameLine);
     api.BeginTable = reinterpret_cast<void*>(&RuntimeGuiBeginTable);
@@ -377,7 +377,7 @@ RuntimeGuiProjectApi RuntimeGuiBridge::GetProjectApi()
     api.TableHeadersRow = reinterpret_cast<void*>(&RuntimeGuiTableHeadersRow);
     api.TableNextRow = reinterpret_cast<void*>(&RuntimeGuiTableNextRow);
     api.TableSetColumnIndex = reinterpret_cast<void*>(&RuntimeGuiTableSetColumnIndex);
-    api.Selectable = reinterpret_cast<void*>(&RuntimeGuiProjectSelectable);
+    api.Selectable = reinterpret_cast<void*>(&RuntimeGuiTableSelectable);
     api.IsItemDoubleClicked = reinterpret_cast<void*>(&RuntimeGuiIsItemDoubleClicked);
     api.BeginPopupContextItem = reinterpret_cast<void*>(&RuntimeGuiBeginPopupContextItem);
     api.BeginPopupContextWindow = reinterpret_cast<void*>(&RuntimeGuiBeginPopupContextWindow);

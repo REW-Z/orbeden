@@ -218,24 +218,13 @@ const RenderScene& RenderSystem::GetCurrentScene() const
     return scene;
 }
 
-void RenderSystem::PrepareProjectReload()
+void RenderSystem::InvalidateResourceCaches()
 {
     if (!initialized) return;
 
-    //项目切换前释放依赖旧资源的离屏目标、管线资源和上传缓存。
-    ReleaseRenderTargets();
-    forwardPipeline.Shutdown();
-    resources.Shutdown();
-    warnedMissingCamera = false;
-}
-
-void RenderSystem::CompleteProjectReload()
-{
-    if (!initialized) return;
-
-    //项目切换完成后重新绑定当前后端，延迟到下一帧按需上传项目资源。
-    resources.Initialize(&backend);
-    forwardPipeline.Initialize(&backend);
+    //释放依赖旧 CPU 资源的 GPU 状态，后端和离屏目标继续保持有效。
+    forwardPipeline.InvalidateResourceCaches();
+    resources.InvalidateCaches();
     warnedMissingCamera = false;
 }
 

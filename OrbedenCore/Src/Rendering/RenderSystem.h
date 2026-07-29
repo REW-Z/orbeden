@@ -125,11 +125,8 @@ public:
 
     const RenderScene& GetCurrentScene() const;
 
-    //准备切换项目
-    void PrepareProjectReload();
-
-    //项目切换完成后重新初始化内置管线资源
-    void CompleteProjectReload();
+    //使内容资源相关的 GPU 缓存和管线状态失效
+    void InvalidateResourceCaches();
 
     //渲染
     void Render(World& world, float deltaTime) override;

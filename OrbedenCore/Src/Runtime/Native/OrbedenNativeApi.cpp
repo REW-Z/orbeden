@@ -17,7 +17,7 @@ OrbedenNativeApi OrbedenNativeApi::Create()
     api.Collider = ColliderBind::Create();
     api.CharacterController = CharacterControllerBind::Create();
     api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();
-    api.GuiProject = RuntimeGuiBridge::GetProjectApi();
+    api.GuiAdvanced = RuntimeGuiBridge::GetAdvancedApi();
     api.ObjectExtension = ObjectExtensionBind::Create();
     return api;
 }

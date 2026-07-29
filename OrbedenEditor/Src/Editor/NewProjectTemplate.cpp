@@ -447,7 +447,7 @@ internal static class MountedScriptRuntime
     //获取当前启动 world 对应的脚本 sidecar。
     private static string GetStartupWorldSidecarPath()
     {
-        string projectRoot = PathDefines.ProjectRoot;
+        string projectRoot = PathDefines.ContentRoot;
         if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot)) return string.Empty;
 
         string? projectFile = Directory.EnumerateFiles(projectRoot, "*.oeproj", SearchOption.TopDirectoryOnly).FirstOrDefault();

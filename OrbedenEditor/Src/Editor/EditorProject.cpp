@@ -413,18 +413,14 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
-        renderSystem->PrepareProjectReload();
+        renderSystem->InvalidateResourceCaches();
     }
 
     app.GetWorld().Clear();
     ResourceManager::Shutdown();
-    PathDefines::SetProjectRoot(parsedProjectRoot, parsedResourceRoot);
+    PathDefines::SetContentRoot(parsedProjectRoot, parsedResourceRoot);
 
     bool loaded = app.LoadWorld(worldPath);
-    if (renderSystem)
-    {
-        renderSystem->CompleteProjectReload();
-    }
 
     projectRoot = parsedProjectRoot;
     projectName = parsedName;
@@ -497,18 +493,14 @@ bool EditorProject::ReloadStartupWorld()
     RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
-        renderSystem->PrepareProjectReload();
+        renderSystem->InvalidateResourceCaches();
     }
 
     app.GetWorld().Clear();
     ResourceManager::Shutdown();
-    PathDefines::SetProjectRoot(projectRoot, resourceRoot);
+    PathDefines::SetContentRoot(projectRoot, resourceRoot);
 
     bool loaded = app.LoadWorld(worldPath);
-    if (renderSystem)
-    {
-        renderSystem->CompleteProjectReload();
-    }
 
     if (!loaded)
     {

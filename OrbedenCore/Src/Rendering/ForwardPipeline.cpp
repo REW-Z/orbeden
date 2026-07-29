@@ -21,7 +21,7 @@ namespace
         Shader* result = shader.Get();
         if (result || !shader.GetInstanceId().IsValid()) return result;
 
-        //项目切换后引用可能只剩实例 ID，此时按固定资源路径重新加载。
+        //内容资源失效后引用可能只剩实例 ID，此时按固定资源路径重新加载。
         result = ResourceManager::Load<Shader>(key);
         shader.Set(result);
         return result;
@@ -136,23 +136,12 @@ namespace
 
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
-    //记录后端并加载阴影、天空盒所需的内置 shader。
+    //记录后端；内置资源在首次绘制前按当前内容根目录解析。
     backend = renderBackend;
-    shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
-    skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
-
-    //内置 shader 缺失不会阻止系统启动，但对应 pass 会被跳过。
-    if (!shadowDepthShader.Get())
-    {
-        Log::Error("ForwardPipeline initialize warning: shadow depth shader resource is missing.");
-    }
-    if (!skyboxShader.Get())
-    {
-        Log::Error("ForwardPipeline initialize warning: skybox shader resource is missing.");
-    }
+    builtinResourcesInvalidated = true;
 }
 
-void ForwardPipeline::Shutdown()
+void ForwardPipeline::InvalidateResourceCaches()
 {
     //先释放管线直接持有的后端资源。
     if (backend)
@@ -162,13 +151,19 @@ void ForwardPipeline::Shutdown()
         DeleteGpuMesh(backend, skyboxMesh);
     }
 
-    //清空资源引用和当前帧状态，允许后续项目重新初始化。
+    //清空资源引用和当前帧状态，允许后续从新的内容根目录解析。
     shadowRenderTarget = GpuRenderTargetID();
     shadowDepthTexture = GpuDepthTextureID();
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
     lightViewProjection = matrix4x4();
     shadowReady = false;
+    builtinResourcesInvalidated = true;
+}
+
+void ForwardPipeline::Shutdown()
+{
+    InvalidateResourceCaches();
     backend = nullptr;
 }
 
@@ -178,6 +173,8 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
     shadowReady = false;
     lightViewProjection = matrix4x4();
     if (!backend) return;
+
+    ResolveBuiltinResources();
 
     //没有启用阴影的方向光时，不执行阴影资源创建和深度绘制。
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
@@ -328,6 +325,25 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     backend->EndPass();
+}
+
+void ForwardPipeline::ResolveBuiltinResources()
+{
+    if (!builtinResourcesInvalidated) return;
+
+    shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
+    skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
+    builtinResourcesInvalidated = false;
+
+    //内置 shader 缺失不会阻止系统运行，但对应 pass 会被跳过。
+    if (!shadowDepthShader.Get())
+    {
+        Log::Error("ForwardPipeline resource resolve warning: shadow depth shader resource is missing.");
+    }
+    if (!skyboxShader.Get())
+    {
+        Log::Error("ForwardPipeline resource resolve warning: skybox shader resource is missing.");
+    }
 }
 
 bool ForwardPipeline::PrepareShadowResources()

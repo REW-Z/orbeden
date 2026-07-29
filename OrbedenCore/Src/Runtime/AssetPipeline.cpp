@@ -128,13 +128,13 @@ namespace
         return ResourceManager::ToResourceKey(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).lexically_normal()));
     }
 
-    //解析实际磁盘路径，保持资源 Key 不变但由当前项目决定来源。
+    //解析实际磁盘路径，保持资源 Key 不变但由当前内容根目录决定来源。
     std::string GetAssetFilePath(const std::string& path)
     {
         std::string cleanPath = ToCleanPath(path);
         if (FileSystem::Exist(cleanPath)) return cleanPath;
 
-        if (PathDefines::HasProjectRoot())
+        if (PathDefines::HasContentRoot())
         {
             std::string resourceRoot = PathDefines::GetResourceRoot();
             if (cleanPath == resourceRoot || StartsWith(cleanPath, resourceRoot + "/"))

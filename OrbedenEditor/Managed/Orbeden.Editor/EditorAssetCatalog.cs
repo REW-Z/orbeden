@@ -14,7 +14,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
 
     public static EditorAssetCatalog Instance { get; } = new();
 
-    public string ProjectRoot => Path.GetFullPath(PathDefines.ProjectRoot);
+    public string ProjectRoot => Path.GetFullPath(PathDefines.ContentRoot);
     public string ResourceRootKey => NormalizeKey(EditorAssetsNative.GetResourceRoot());
     public string ResourceRootPath => Path.GetFullPath(Path.Combine(ProjectRoot, ResourceRootKey));
 
@@ -38,7 +38,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     public void Refresh()
     {
         assets.Clear();
-        indexedProjectRoot = PathDefines.ProjectRoot;
+        indexedProjectRoot = PathDefines.ContentRoot;
         indexedResourceRoot = EditorAssetsNative.GetResourceRoot();
         if (string.IsNullOrWhiteSpace(indexedProjectRoot)) return;
 
@@ -98,7 +98,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     //检测项目变化并刷新索引。
     private void EnsureCurrentProject()
     {
-        if (!string.Equals(indexedProjectRoot, PathDefines.ProjectRoot, StringComparison.OrdinalIgnoreCase)
+        if (!string.Equals(indexedProjectRoot, PathDefines.ContentRoot, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(indexedResourceRoot, EditorAssetsNative.GetResourceRoot(), StringComparison.OrdinalIgnoreCase))
         {
             Refresh();

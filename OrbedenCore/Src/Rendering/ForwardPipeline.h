@@ -28,12 +28,18 @@ private:
     //当前帧是否已经成功准备阴影资源。
     bool shadowReady = false;
 
+    //内置资源是否需要从当前内容根目录重新解析。
+    bool builtinResourcesInvalidated = true;
+
     //阴影贴图边长；固定尺寸可以避免随窗口变化频繁重建资源。
     int32 shadowMapSize = 1024;
 
 public:
-    //初始化后端引用和管线内置资源。
+    //初始化后端引用并等待首次绘制时解析内置资源。
     void Initialize(RenderBackend* renderBackend);
+
+    //释放资源相关状态并保留当前渲染后端。
+    void InvalidateResourceCaches();
 
     //释放管线持有的所有内置 GPU 资源。
     void Shutdown();
@@ -45,6 +51,9 @@ public:
     void Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& resources);
 
 private:
+    //从当前内容根目录解析管线内置资源。
+    void ResolveBuiltinResources();
+
     //检查后端状态，并确保阴影贴图和渲染目标已经创建。
     bool PrepareShadowResources();
 

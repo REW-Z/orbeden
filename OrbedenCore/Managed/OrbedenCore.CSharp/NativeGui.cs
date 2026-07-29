@@ -33,7 +33,7 @@ internal unsafe struct RuntimeGuiExtensionApi
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct RuntimeGuiProjectApi
+internal unsafe struct RuntimeGuiAdvancedApi
 {
     public delegate* unmanaged[Cdecl]<void> Separator;
     public delegate* unmanaged[Cdecl]<void> SameLine;
@@ -59,15 +59,15 @@ internal static unsafe class NativeGui
 {
     private static RuntimeGuiApi api;
     private static RuntimeGuiExtensionApi extensionApi;
-    private static RuntimeGuiProjectApi projectApi;
+    private static RuntimeGuiAdvancedApi advancedApi;
     private static bool initialized;
 
     //保存 C++ 传入的 Runtime GUI 函数表
-    internal static void Initialize(RuntimeGuiApi value, RuntimeGuiExtensionApi extensionValue, RuntimeGuiProjectApi projectValue)
+    internal static void Initialize(RuntimeGuiApi value, RuntimeGuiExtensionApi extensionValue, RuntimeGuiAdvancedApi advancedValue)
     {
         api = value;
         extensionApi = extensionValue;
-        projectApi = projectValue;
+        advancedApi = advancedValue;
         initialized = api.Label != null;
     }
 
@@ -233,72 +233,72 @@ internal static unsafe class NativeGui
     //绘制分隔线。
     internal static void Separator()
     {
-        if (initialized && projectApi.Separator != null) projectApi.Separator();
+        if (initialized && advancedApi.Separator != null) advancedApi.Separator();
     }
 
     //让下一个控件与前一个控件同行。
     internal static void SameLine()
     {
-        if (initialized && projectApi.SameLine != null) projectApi.SameLine();
+        if (initialized && advancedApi.SameLine != null) advancedApi.SameLine();
     }
 
     //开始一个表格。
     internal static bool BeginTable(string? id, int columns)
     {
-        if (!initialized || projectApi.BeginTable == null) return false;
+        if (!initialized || advancedApi.BeginTable == null) return false;
 
         byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            return projectApi.BeginTable(pointer, bytes.Length, columns) != 0;
+            return advancedApi.BeginTable(pointer, bytes.Length, columns) != 0;
         }
     }
 
     //结束当前表格。
     internal static void EndTable()
     {
-        if (initialized && projectApi.EndTable != null) projectApi.EndTable();
+        if (initialized && advancedApi.EndTable != null) advancedApi.EndTable();
     }
 
     //配置一个表格列。
     internal static void TableSetupColumn(string? label, float width, bool fixedWidth)
     {
-        if (!initialized || projectApi.TableSetupColumn == null) return;
+        if (!initialized || advancedApi.TableSetupColumn == null) return;
 
         byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            projectApi.TableSetupColumn(pointer, bytes.Length, width, fixedWidth ? (byte)1 : (byte)0);
+            advancedApi.TableSetupColumn(pointer, bytes.Length, width, fixedWidth ? (byte)1 : (byte)0);
         }
     }
 
     //绘制表头。
     internal static void TableHeadersRow()
     {
-        if (initialized && projectApi.TableHeadersRow != null) projectApi.TableHeadersRow();
+        if (initialized && advancedApi.TableHeadersRow != null) advancedApi.TableHeadersRow();
     }
 
     //前进到下一表格行。
     internal static void TableNextRow()
     {
-        if (initialized && projectApi.TableNextRow != null) projectApi.TableNextRow();
+        if (initialized && advancedApi.TableNextRow != null) advancedApi.TableNextRow();
     }
 
     //切换当前表格列。
     internal static void TableSetColumnIndex(int column)
     {
-        if (initialized && projectApi.TableSetColumnIndex != null) projectApi.TableSetColumnIndex(column);
+        if (initialized && advancedApi.TableSetColumnIndex != null) advancedApi.TableSetColumnIndex(column);
     }
 
     //绘制支持表格跨列的选择项。
-    internal static bool ProjectSelectable(string? label, bool selected, bool spanAllColumns)
+    internal static bool TableSelectable(string? label, bool selected, bool spanAllColumns)
     {
-        if (!initialized || projectApi.Selectable == null) return Selectable(label, selected);
+        if (!initialized || advancedApi.Selectable == null) return Selectable(label, selected);
 
         byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            return projectApi.Selectable(pointer,
+            return advancedApi.Selectable(pointer,
                 bytes.Length,
                 selected ? (byte)1 : (byte)0,
                 spanAllColumns ? (byte)1 : (byte)0) != 0;
@@ -308,73 +308,73 @@ internal static unsafe class NativeGui
     //判断刚绘制的控件是否被双击。
     internal static bool IsItemDoubleClicked()
     {
-        return initialized && projectApi.IsItemDoubleClicked != null && projectApi.IsItemDoubleClicked() != 0;
+        return initialized && advancedApi.IsItemDoubleClicked != null && advancedApi.IsItemDoubleClicked() != 0;
     }
 
     //开始刚绘制控件的右键菜单。
     internal static bool BeginPopupContextItem(string? id)
     {
-        if (!initialized || projectApi.BeginPopupContextItem == null) return false;
+        if (!initialized || advancedApi.BeginPopupContextItem == null) return false;
 
         byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            return projectApi.BeginPopupContextItem(pointer, bytes.Length) != 0;
+            return advancedApi.BeginPopupContextItem(pointer, bytes.Length) != 0;
         }
     }
 
     //开始当前窗口空白区域的右键菜单。
     internal static bool BeginPopupContextWindow(string? id)
     {
-        if (!initialized || projectApi.BeginPopupContextWindow == null) return false;
+        if (!initialized || advancedApi.BeginPopupContextWindow == null) return false;
 
         byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            return projectApi.BeginPopupContextWindow(pointer, bytes.Length) != 0;
+            return advancedApi.BeginPopupContextWindow(pointer, bytes.Length) != 0;
         }
     }
 
     //结束当前右键菜单。
     internal static void EndPopup()
     {
-        if (initialized && projectApi.EndPopup != null) projectApi.EndPopup();
+        if (initialized && advancedApi.EndPopup != null) advancedApi.EndPopup();
     }
 
     //绘制右键菜单项。
     internal static bool MenuItem(string? label, bool enabled)
     {
-        if (!initialized || projectApi.MenuItem == null) return false;
+        if (!initialized || advancedApi.MenuItem == null) return false;
 
         byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            return projectApi.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
+            return advancedApi.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
         }
     }
 
     //写入系统剪贴板。
     internal static void SetClipboardText(string? text)
     {
-        if (!initialized || projectApi.SetClipboardText == null) return;
+        if (!initialized || advancedApi.SetClipboardText == null) return;
 
         byte[] bytes = Encoding.UTF8.GetBytes(text ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
-            projectApi.SetClipboardText(pointer, bytes.Length);
+            advancedApi.SetClipboardText(pointer, bytes.Length);
         }
     }
 
     //开始禁用控件区域。
     internal static void BeginDisabled(bool disabled)
     {
-        if (initialized && projectApi.BeginDisabled != null) projectApi.BeginDisabled(disabled ? (byte)1 : (byte)0);
+        if (initialized && advancedApi.BeginDisabled != null) advancedApi.BeginDisabled(disabled ? (byte)1 : (byte)0);
     }
 
     //结束禁用控件区域。
     internal static void EndDisabled()
     {
-        if (initialized && projectApi.EndDisabled != null) projectApi.EndDisabled();
+        if (initialized && advancedApi.EndDisabled != null) advancedApi.EndDisabled();
     }
 
     //绘制布尔输入框

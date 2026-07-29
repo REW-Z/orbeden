@@ -8,8 +8,8 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct PathDefinesBindApi
 {
-    public delegate* unmanaged[Cdecl]<byte*, int, int> GetProjectRoot;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, int> GetProjectFilePath;
+    public delegate* unmanaged[Cdecl]<byte*, int, int> GetContentRoot;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, int> GetContentFilePath;
 }
 #pragma warning restore CS0649
 
@@ -22,30 +22,30 @@ internal static unsafe class PathDefinesBind
     internal static void Initialize(PathDefinesBindApi value)
     {
         api = value;
-        initialized = api.GetProjectRoot != null;
+        initialized = api.GetContentRoot != null;
     }
 
-    //读取当前项目根目录
-    internal static string GetProjectRoot()
+    //读取当前内容根目录
+    internal static string GetContentRoot()
     {
-        if (!initialized || api.GetProjectRoot == null) return string.Empty;
+        if (!initialized || api.GetContentRoot == null) return string.Empty;
 
-        int requiredBytes = api.GetProjectRoot(null, 0);
+        int requiredBytes = api.GetContentRoot(null, 0);
         if (requiredBytes <= 0) return string.Empty;
 
         Span<byte> bytes = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
         fixed (byte* pointer = bytes)
         {
-            int actualBytes = api.GetProjectRoot(pointer, requiredBytes);
+            int actualBytes = api.GetContentRoot(pointer, requiredBytes);
             int length = Math.Clamp(actualBytes, 0, requiredBytes);
             return Encoding.UTF8.GetString(bytes[..length]);
         }
     }
 
-    //解析项目相对路径
-    internal static string GetProjectFilePath(string? path)
+    //解析内容相对路径
+    internal static string GetContentFilePath(string? path)
     {
-        if (!initialized || api.GetProjectFilePath == null) return path ?? string.Empty;
+        if (!initialized || api.GetContentFilePath == null) return path ?? string.Empty;
 
         string value = path ?? string.Empty;
         int byteCount = Encoding.UTF8.GetByteCount(value);
@@ -54,13 +54,13 @@ internal static unsafe class PathDefinesBind
 
         fixed (byte* inputPointer = input)
         {
-            int requiredBytes = api.GetProjectFilePath(inputPointer, byteCount, null, 0);
+            int requiredBytes = api.GetContentFilePath(inputPointer, byteCount, null, 0);
             if (requiredBytes <= 0) return string.Empty;
 
             Span<byte> output = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
             fixed (byte* outputPointer = output)
             {
-                int actualBytes = api.GetProjectFilePath(inputPointer, byteCount, outputPointer, requiredBytes);
+                int actualBytes = api.GetContentFilePath(inputPointer, byteCount, outputPointer, requiredBytes);
                 int length = Math.Clamp(actualBytes, 0, requiredBytes);
                 return Encoding.UTF8.GetString(output[..length]);
             }

@@ -163,7 +163,7 @@ internal sealed class ProjectPanel : EditorPanel
     //检测项目切换并重置目录状态。
     private bool EnsureProject()
     {
-        string currentProjectRoot = PathDefines.ProjectRoot;
+        string currentProjectRoot = PathDefines.ContentRoot;
         if (string.IsNullOrWhiteSpace(currentProjectRoot)) return false;
 
         string currentResourceRoot = EditorAssetsNative.GetResourceRoot();
@@ -188,7 +188,7 @@ internal sealed class ProjectPanel : EditorPanel
     {
         watcher?.Dispose();
         watcher = null;
-        if (string.IsNullOrWhiteSpace(PathDefines.ProjectRoot)) return;
+        if (string.IsNullOrWhiteSpace(PathDefines.ContentRoot)) return;
 
         string path = EditorAssetCatalog.Instance.ResourceRootPath;
         if (!Directory.Exists(path)) return;

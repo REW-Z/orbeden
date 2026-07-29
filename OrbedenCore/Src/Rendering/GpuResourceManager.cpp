@@ -112,7 +112,7 @@ void GpuResourceManager::Initialize(RenderBackend* renderBackend)
     backend = renderBackend;
 }
 
-void GpuResourceManager::Shutdown()
+void GpuResourceManager::InvalidateCaches()
 {
     //先释放依赖其他资源的材质，再释放基础网格、纹理和 shader。
     DeleteGpuCache(backend, materials);
@@ -120,6 +120,12 @@ void GpuResourceManager::Shutdown()
     DeleteGpuCache(backend, textures);
     DeleteGpuCache(backend, skyboxes);
     DeleteGpuCache(backend, shaders);
+}
+
+void GpuResourceManager::Shutdown()
+{
+    InvalidateCaches();
+
     //清空后端引用，防止关闭后继续访问 GPU 资源。
     backend = nullptr;
 }

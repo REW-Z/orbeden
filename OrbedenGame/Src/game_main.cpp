@@ -86,7 +86,7 @@ namespace
         }
 
         std::string resourceRoot = GetAttribute(content, "resourceRoot");
-        PathDefines::SetProjectRoot(ToCleanPath(projectRoot), resourceRoot.empty() ? "Resource" : resourceRoot);
+        PathDefines::SetContentRoot(ToCleanPath(projectRoot), resourceRoot.empty() ? "Resource" : resourceRoot);
         std::string worldPath = ToCleanPath(projectRoot / Utf8Path::FromUtf8(startupWorld));
         if (app.LoadWorld(worldPath)) return true;
 
