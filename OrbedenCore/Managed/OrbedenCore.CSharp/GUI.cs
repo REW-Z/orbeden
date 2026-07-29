@@ -192,7 +192,7 @@ public static class GUI
 
     /// <summary>绘制支持跨表格列的选择项。</summary>
     public static bool TableSelectable(string label, bool selected = false, bool spanAllColumns = true)
-        => NativeGui.ProjectSelectable(label, selected, spanAllColumns);
+        => NativeGui.TableSelectable(label, selected, spanAllColumns);
 
     /// <summary>判断刚绘制的控件是否被左键双击。</summary>
     public static bool IsItemDoubleClicked() => NativeGui.IsItemDoubleClicked();

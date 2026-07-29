@@ -113,16 +113,16 @@ namespace
         return world && world->DestroyEns(ens) ? 1 : 0;
     }
 
-    //读取当前项目根目录。
-    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetProjectRoot(uint8* buffer, int32 bufferSize)
+    //读取当前内容根目录。
+    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetContentRoot(uint8* buffer, int32 bufferSize)
     {
-        return CopyText(PathDefines::GetProjectRoot(), buffer, bufferSize);
+        return CopyText(PathDefines::GetContentRoot(), buffer, bufferSize);
     }
 
-    //解析项目相对路径。
-    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetProjectFilePath(const uint8* path, int32 length, uint8* buffer, int32 bufferSize)
+    //解析内容相对路径。
+    int32 ORBEDEN_NATIVE_CALL NativePathDefinesGetContentFilePath(const uint8* path, int32 length, uint8* buffer, int32 bufferSize)
     {
-        return CopyText(PathDefines::GetProjectFilePath(ReadUtf8Text(path, length)), buffer, bufferSize);
+        return CopyText(PathDefines::GetContentFilePath(ReadUtf8Text(path, length)), buffer, bufferSize);
     }
 
     //判断 Ens 是否有效。
@@ -876,8 +876,8 @@ WorldBind WorldBind::Create()
 PathDefinesBind PathDefinesBind::Create()
 {
     PathDefinesBind bind;
-    bind.GetProjectRoot = reinterpret_cast<void*>(&NativePathDefinesGetProjectRoot);
-    bind.GetProjectFilePath = reinterpret_cast<void*>(&NativePathDefinesGetProjectFilePath);
+    bind.GetContentRoot = reinterpret_cast<void*>(&NativePathDefinesGetContentRoot);
+    bind.GetContentFilePath = reinterpret_cast<void*>(&NativePathDefinesGetContentFilePath);
     return bind;
 }
 

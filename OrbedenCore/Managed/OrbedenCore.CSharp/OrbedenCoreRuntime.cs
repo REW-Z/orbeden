@@ -21,7 +21,7 @@ internal unsafe struct OrbedenNativeApi
     public ColliderBindApi Collider;
     public CharacterControllerBindApi CharacterController;
     public RuntimeGuiExtensionApi GuiExtension;
-    public RuntimeGuiProjectApi GuiProject;
+    public RuntimeGuiAdvancedApi GuiAdvanced;
     public ObjectExtensionBindApi ObjectExtension;
 }
 #pragma warning restore CS0649
@@ -51,7 +51,7 @@ public static unsafe class OrbedenCoreRuntime
         }
 
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
-        NativeGui.Initialize(api.Gui, api.GuiExtension, api.GuiProject);
+        NativeGui.Initialize(api.Gui, api.GuiExtension, api.GuiAdvanced);
         WorldBind.Initialize(api.World);
         PathDefinesBind.Initialize(api.PathDefines);
         EnsBind.Initialize(api.Ens);

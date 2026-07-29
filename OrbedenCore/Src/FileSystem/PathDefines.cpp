@@ -9,7 +9,7 @@ namespace
     struct PathDefinesRuntime
     {
     public:
-        std::string projectRoot;
+        std::string contentRoot;
         std::string resourceRoot = "Resource";
     };
 
@@ -43,28 +43,28 @@ namespace
 
 }
 
-void PathDefines::SetProjectRoot(const std::string& root, const std::string& resourceRoot)
+void PathDefines::SetContentRoot(const std::string& root, const std::string& resourceRoot)
 {
     PathDefinesRuntime& runtime = GetRuntime();
-    runtime.projectRoot = ToCleanPath(AbsolutePath(root));
+    runtime.contentRoot = ToCleanPath(AbsolutePath(root));
     runtime.resourceRoot = ToCleanPath(Utf8Path::FromUtf8(resourceRoot.empty() ? "Resource" : resourceRoot));
 }
 
 void PathDefines::Clear()
 {
     PathDefinesRuntime& runtime = GetRuntime();
-    runtime.projectRoot.clear();
+    runtime.contentRoot.clear();
     runtime.resourceRoot = "Resource";
 }
 
-bool PathDefines::HasProjectRoot()
+bool PathDefines::HasContentRoot()
 {
-    return !GetRuntime().projectRoot.empty();
+    return !GetRuntime().contentRoot.empty();
 }
 
-const std::string& PathDefines::GetProjectRoot()
+const std::string& PathDefines::GetContentRoot()
 {
-    return GetRuntime().projectRoot;
+    return GetRuntime().contentRoot;
 }
 
 const std::string& PathDefines::GetResourceRoot()
@@ -72,36 +72,36 @@ const std::string& PathDefines::GetResourceRoot()
     return GetRuntime().resourceRoot;
 }
 
-std::string PathDefines::GetProjectFilePath(const std::string& path)
+std::string PathDefines::GetContentFilePath(const std::string& path)
 {
     std::filesystem::path filePath = Utf8Path::FromUtf8(path);
     if (filePath.is_absolute()) return ToCleanPath(filePath);
 
     const PathDefinesRuntime& runtime = GetRuntime();
-    if (runtime.projectRoot.empty()) return ToCleanPath(filePath);
+    if (runtime.contentRoot.empty()) return ToCleanPath(filePath);
 
-    return ToCleanPath(Utf8Path::FromUtf8(runtime.projectRoot) / filePath);
+    return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot) / filePath);
 }
 
 std::string PathDefines::GetResourceFilePath(const std::string& path)
 {
     std::string cleanPath = ToCleanPath(Utf8Path::FromUtf8(path));
     const PathDefinesRuntime& runtime = GetRuntime();
-    if (runtime.projectRoot.empty()) return cleanPath;
+    if (runtime.contentRoot.empty()) return cleanPath;
 
     if (cleanPath == runtime.resourceRoot)
     {
-        return ToCleanPath(Utf8Path::FromUtf8(runtime.projectRoot) / Utf8Path::FromUtf8(runtime.resourceRoot));
+        return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot) / Utf8Path::FromUtf8(runtime.resourceRoot));
     }
 
     std::string resourcePrefix = runtime.resourceRoot + "/";
     if (StartsWith(cleanPath, resourcePrefix))
     {
         std::string relativeResource = cleanPath.substr(resourcePrefix.size());
-        return ToCleanPath(Utf8Path::FromUtf8(runtime.projectRoot)
+        return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot)
             / Utf8Path::FromUtf8(runtime.resourceRoot)
             / Utf8Path::FromUtf8(relativeResource));
     }
 
-    return GetProjectFilePath(cleanPath);
+    return GetContentFilePath(cleanPath);
 }

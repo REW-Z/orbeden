@@ -20,8 +20,8 @@ public:
 struct PathDefinesBind
 {
 public:
-    void* GetProjectRoot = nullptr;
-    void* GetProjectFilePath = nullptr;
+    void* GetContentRoot = nullptr;
+    void* GetContentFilePath = nullptr;
 
     //创建 PathDefines 函数表。
     static PathDefinesBind Create();

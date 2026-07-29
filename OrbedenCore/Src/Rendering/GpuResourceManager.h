@@ -128,6 +128,9 @@ public:
     //初始化资源管理器并记录渲染后端。
     void Initialize(RenderBackend* renderBackend);
 
+    //释放全部 GPU 缓存并保留当前渲染后端。
+    void InvalidateCaches();
+
     //释放缓存中的所有 GPU 资源并清空索引。
     void Shutdown();
 

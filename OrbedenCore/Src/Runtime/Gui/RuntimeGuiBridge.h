@@ -29,8 +29,8 @@ public:
     void* Selectable = nullptr;
 };
 
-// Editor 资源面板使用的增量 GUI 函数表。
-struct RuntimeGuiProjectApi
+// Runtime GUI 高级控件函数表。
+struct RuntimeGuiAdvancedApi
 {
 public:
     void* Separator = nullptr;
@@ -62,6 +62,6 @@ public:
     // 获取 Runtime GUI 增量函数表。
     static RuntimeGuiExtensionApi GetExtensionApi();
 
-    // 获取 Project Panel 使用的增量 GUI 函数表。
-    static RuntimeGuiProjectApi GetProjectApi();
+    // 获取 Runtime GUI 高级控件函数表。
+    static RuntimeGuiAdvancedApi GetAdvancedApi();
 };
