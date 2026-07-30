@@ -71,11 +71,20 @@ namespace
         void* remapLiveReferences = nullptr;
     };
 
+    //传给 Editor C# 的应用函数表。
+    struct EditorApplicationNativeApi
+    {
+    public:
+        void* context = nullptr;
+        void* requestRepaint = nullptr;
+    };
+
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
     {
     public:
         void* nativeApi = nullptr;
+        EditorApplicationNativeApi application;
         EditorGizmoApi gizmo;
         EditorPanelNativeApi panels;
         EditorAssetNativeApi assets;
@@ -150,8 +159,15 @@ namespace
         return editor && editor->HasProject() && !editor->IsPlaying() ? 1 : 0;
     }
 
+    //请求原生 Editor 重绘。
+    void ORBEDEN_NATIVE_CALL RequestManagedRepaint(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (editor) editor->RequestRepaint();
+    }
+
     //重映射全部存活原生对象的 ObjectRef 字段并使资源缓存失效。
-    int32 ORBEDEN_NATIVE_CALL RemapManagedLiveReferences(void*,
+    int32 ORBEDEN_NATIVE_CALL RemapManagedLiveReferences(void* context,
         const uint8* oldKeyText,
         int32 oldKeyLength,
         const uint8* newKeyText,
@@ -184,6 +200,8 @@ namespace
 
         //资源源文件已经变化，清空导入缓存并让 Ref 在下次访问时按新 Key 懒加载。
         ResourceManager::Shutdown();
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (editor) editor->RequestRepaint();
         return changed;
     }
 
@@ -261,6 +279,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     ManagedPanelRegistrationContext panelContext { &editor, &panelManager };
     EditorManagedApi editorApi;
     editorApi.nativeApi = &nativeApi;
+    editorApi.application.context = &editor;
+    editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);

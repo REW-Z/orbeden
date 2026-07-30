@@ -32,6 +32,12 @@ public:
     //处理 GLFW 事件
     void PollEvents() override;
 
+    //阻塞等待 GLFW 事件
+    void WaitEvents() override;
+
+    //唤醒等待中的 GLFW 事件循环
+    void WakeEventLoop() override;
+
     //提交当前帧显示
     void Present() override;
 

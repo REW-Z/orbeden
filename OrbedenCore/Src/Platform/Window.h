@@ -44,6 +44,12 @@ public:
     //处理平台事件
     virtual void PollEvents() = 0;
 
+    //阻塞等待平台事件
+    virtual void WaitEvents() = 0;
+
+    //唤醒等待中的平台事件循环
+    virtual void WakeEventLoop() = 0;
+
     //提交当前帧显示
     virtual void Present() = 0;
 

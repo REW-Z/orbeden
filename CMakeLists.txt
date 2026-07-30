@@ -59,7 +59,6 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/RenderItemSorter.cpp
     OrbedenCore/Src/Rendering/RenderMath.cpp
     OrbedenCore/Src/Rendering/RenderScene.cpp
-    OrbedenCore/Src/Rendering/RenderSceneBuilder.cpp
     OrbedenCore/Src/Rendering/RenderSystem.cpp
     OrbedenCore/Src/Rendering/SceneCuller.cpp
     OrbedenCore/Src/Rendering/SpaceCache.cpp

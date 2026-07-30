@@ -1,15 +1,23 @@
 #pragma once
 
+#include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/EngineTypes.h"
+
+class RenderScene;
 
 //方向光组件，描述全局平行光和基础阴影参数。
 class DirectionalLight : public Component
 {
     OBJECT_TYPE_DECLARE(DirectionalLight)
 
-public:
+private:
+    friend class RenderScene;
+
     bool enabled = true;
+    RenderSceneHandle renderSceneHandle;
+
+public:
     vector3 direction = { -0.35f, -1.0f, -0.45f };
     color color = { 1.0f, 0.96f, 0.86f, 1.0f };
     float32 intensity = 1.2f;
@@ -17,4 +25,16 @@ public:
     float32 shadowBias = 0.004f;
     float32 shadowStrength = 0.45f;
     float32 shadowDistance = 24.0f;
+
+    //获取启用状态
+    bool GetEnabled() const;
+
+    //设置启用状态并同步渲染场景注册
+    void SetEnabled(bool value);
+
+    //挂载时注册到当前渲染场景
+    void OnAttach() override;
+
+    //卸载时从当前渲染场景注销
+    void OnDetach() override;
 };

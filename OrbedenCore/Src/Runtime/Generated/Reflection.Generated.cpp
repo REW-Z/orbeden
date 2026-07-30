@@ -23,14 +23,17 @@ public:
     static std::string Get_Camera_enabled(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
+        return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
     //写入 Camera.enabled 字段
     static bool Set_Camera_enabled(Object* object, const std::string& value)
     {
         Camera* instance = static_cast<Camera*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //读取 Camera.fieldOfView 字段
@@ -187,18 +190,71 @@ public:
         return Reflection::SetFromXmlValue(instance->viewportHeight, value);
     }
 
+    //调用 Camera.GetEnabled 方法
+    static Reflection::Value Invoke_Camera_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Camera.SetEnabled 方法
+    static Reflection::Value Invoke_Camera_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Camera.OnAttach 方法
+    static Reflection::Value Invoke_Camera_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Camera.OnDetach 方法
+    static Reflection::Value Invoke_Camera_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 DirectionalLight.enabled 字段
     static std::string Get_DirectionalLight_enabled(Object* object)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
+        return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
     //写入 DirectionalLight.enabled 字段
     static bool Set_DirectionalLight_enabled(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //读取 DirectionalLight.direction 字段
@@ -297,6 +353,56 @@ public:
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->shadowDistance, value);
+    }
+
+    //调用 DirectionalLight.GetEnabled 方法
+    static Reflection::Value Invoke_DirectionalLight_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 DirectionalLight.SetEnabled 方法
+    static Reflection::Value Invoke_DirectionalLight_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 DirectionalLight.OnAttach 方法
+    static Reflection::Value Invoke_DirectionalLight_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 DirectionalLight.OnDetach 方法
+    static Reflection::Value Invoke_DirectionalLight_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
     }
 
     //读取 Material.name 字段
@@ -652,9 +758,9 @@ public:
         Shader* instance = static_cast<Shader*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        instance->ReflectSlotsFromSource();
+        auto result = instance->ReflectSlotsFromSource();
         success = true;
-        return Reflection::Value();
+        return Reflection::Value(result);
     }
 
     //调用 Shader.ReplaceSource 方法
@@ -673,8 +779,20 @@ public:
         return Reflection::Value();
     }
 
+    //调用 Shader.GetPassCount 方法
+    static Reflection::Value Invoke_Shader_GetPassCount_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetPassCount();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Shader.GetRevision 方法
-    static Reflection::Value Invoke_Shader_GetRevision_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_GetRevision_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -686,7 +804,7 @@ public:
     }
 
     //调用 Shader.TouchRevision 方法
-    static Reflection::Value Invoke_Shader_TouchRevision_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_TouchRevision_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -785,56 +903,146 @@ public:
     static std::string Get_SpaceComponent_localPosition(Object* object)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->localPosition);
+        return Reflection::ToXmlValue(instance->GetLocalPosition());
     }
 
     //写入 SpaceComponent.localPosition 字段
     static bool Set_SpaceComponent_localPosition(Object* object, const std::string& value)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localPosition, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalPosition(parsedValue);
+        return true;
     }
 
     //读取 SpaceComponent.localRotation 字段
     static std::string Get_SpaceComponent_localRotation(Object* object)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->localRotation);
+        return Reflection::ToXmlValue(instance->GetLocalRotation());
     }
 
     //写入 SpaceComponent.localRotation 字段
     static bool Set_SpaceComponent_localRotation(Object* object, const std::string& value)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localRotation, value);
+        quaternion parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalRotation(parsedValue);
+        return true;
     }
 
     //读取 SpaceComponent.localScale 字段
     static std::string Get_SpaceComponent_localScale(Object* object)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->localScale);
+        return Reflection::ToXmlValue(instance->GetLocalScale());
     }
 
     //写入 SpaceComponent.localScale 字段
     static bool Set_SpaceComponent_localScale(Object* object, const std::string& value)
     {
         SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->localScale, value);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalScale(parsedValue);
+        return true;
+    }
+
+    //调用 SpaceComponent.GetLocalPosition 方法
+    static Reflection::Value Invoke_SpaceComponent_GetLocalPosition_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalPosition();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 SpaceComponent.SetLocalPosition 方法
+    static Reflection::Value Invoke_SpaceComponent_SetLocalPosition_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalPosition(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 SpaceComponent.GetLocalRotation 方法
+    static Reflection::Value Invoke_SpaceComponent_GetLocalRotation_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalRotation();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 SpaceComponent.SetLocalRotation 方法
+    static Reflection::Value Invoke_SpaceComponent_SetLocalRotation_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        quaternion arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalRotation(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 SpaceComponent.GetLocalScale 方法
+    static Reflection::Value Invoke_SpaceComponent_GetLocalScale_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalScale();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 SpaceComponent.SetLocalScale 方法
+    static Reflection::Value Invoke_SpaceComponent_SetLocalScale_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalScale(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
     //读取 StaticMeshRenderer.enabled 字段
     static std::string Get_StaticMeshRenderer_enabled(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
+        return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
     //写入 StaticMeshRenderer.enabled 字段
     static bool Set_StaticMeshRenderer_enabled(Object* object, const std::string& value)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
+        bool parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
     }
 
     //读取 StaticMeshRenderer.mesh 字段
@@ -907,8 +1115,46 @@ public:
         return Reflection::SetFromXmlValue(instance->receiveShadows, value);
     }
 
+    //调用 StaticMeshRenderer.GetEnabled 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 StaticMeshRenderer.SetEnabled 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 StaticMeshRenderer.OnAttach 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
     //调用 StaticMeshRenderer.OnDetach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1003,6 +1249,7 @@ namespace Reflection
         RegisterTypeFields(Camera::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr),
+                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr),
                 FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr),
                 FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr),
@@ -1019,11 +1266,16 @@ namespace Reflection
 
         RegisterTypeMethods(Camera::StaticType(),
             {
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_GetEnabled_0),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_SetEnabled_1),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnAttach_2),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnDetach_3),
             });
 
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
+                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
                 FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
                 FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
@@ -1035,6 +1287,10 @@ namespace Reflection
 
         RegisterTypeMethods(DirectionalLight::StaticType(),
             {
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_GetEnabled_0),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_SetEnabled_1),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_2),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_3),
             });
 
         RegisterTypeFields(Material::StaticType(),
@@ -1094,6 +1350,7 @@ namespace Reflection
                 FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr),
                 FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr),
                 FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr),
+                FieldInfo("passes", "List<ShaderPass>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
@@ -1101,10 +1358,11 @@ namespace Reflection
 
         RegisterTypeMethods(Shader::StaticType(),
             {
-                MethodInfo("ReflectSlotsFromSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
+                MethodInfo("ReflectSlotsFromSource", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
                 MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_1),
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetRevision_2),
-                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_TouchRevision_3),
+                MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_2),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetRevision_3),
+                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_TouchRevision_4),
             });
 
         RegisterTypeFields(Skybox::StaticType(),
@@ -1123,33 +1381,36 @@ namespace Reflection
 
         RegisterTypeFields(SpaceComponent::StaticType(),
             {
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localPosition, ReflectionGeneratedAccess::Set_SpaceComponent_localPosition, nullptr),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_SpaceComponent_localRotation, ReflectionGeneratedAccess::Set_SpaceComponent_localRotation, nullptr),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localScale, ReflectionGeneratedAccess::Set_SpaceComponent_localScale, nullptr),
                 FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
                 FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
                 FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
                 FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
                 FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localPosition, ReflectionGeneratedAccess::Set_SpaceComponent_localPosition, nullptr),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_SpaceComponent_localRotation, ReflectionGeneratedAccess::Set_SpaceComponent_localRotation, nullptr),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localScale, ReflectionGeneratedAccess::Set_SpaceComponent_localScale, nullptr),
                 FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
                 FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
-                FieldInfo("cachedLocalPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
-                FieldInfo("cachedLocalRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
-                FieldInfo("cachedLocalScale", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
-                FieldInfo("cachedParent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
                 FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
                 FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(SpaceComponent::StaticType(),
             {
+                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalPosition_0),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalPosition_1),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalRotation_2),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalRotation_3),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalScale_4),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalScale_5),
             });
 
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr),
+                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh"),
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr),
                 FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr),
@@ -1159,7 +1420,10 @@ namespace Reflection
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
             {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_0),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_0),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_1),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_2),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_3),
             });
 
         RegisterTypeFields(Texture2D::StaticType(),

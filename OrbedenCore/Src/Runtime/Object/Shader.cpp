@@ -225,11 +225,18 @@ namespace
     }
 }
 
-void Shader::ReflectSlotsFromSource()
+bool Shader::ReflectSlotsFromSource()
 {
     textureSlots.clear();
     colorSlots.clear();
     floatSlots.clear();
+    if (passes.empty())
+    {
+        ShaderPass pass;
+        pass.vertexSource = vertexSource;
+        pass.fragmentSource = fragmentSource;
+        passes.push_back(pass);
+    }
 
     std::regex samplerRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*sampler2D\\s+([A-Za-z_][A-Za-z0-9_]*)");
     std::regex colorRegex("\\buniform\\s+([A-Za-z_][A-Za-z0-9_]*\\s+)*vec4\\s+([A-Za-z_][A-Za-z0-9_]*)");
@@ -254,16 +261,60 @@ void Shader::ReflectSlotsFromSource()
         }
     };
 
-    scanSource(vertexSource);
-    scanSource(fragmentSource);
+    for (const ShaderPass& pass : passes)
+    {
+        scanSource(pass.vertexSource);
+        scanSource(pass.fragmentSource);
+    }
+
+    //同名 uniform 不能同时映射成不同材质槽类型
+    bool valid = true;
+    for (const ShaderTextureSlot& texture : textureSlots)
+    {
+        valid &= !HasColorSlot(colorSlots, texture.name) && !HasFloatSlot(floatSlots, texture.name);
+    }
+    for (const ShaderColorSlot& colorSlot : colorSlots)
+    {
+        valid &= !HasFloatSlot(floatSlots, colorSlot.name);
+    }
+
     TouchRevision();
+    return valid;
 }
 
 void Shader::ReplaceSource(const std::string& vertex, const std::string& fragment)
 {
     vertexSource = vertex;
     fragmentSource = fragment;
+    passes.clear();
+    ShaderPass pass;
+    pass.vertexSource = vertex;
+    pass.fragmentSource = fragment;
+    passes.push_back(pass);
     ReflectSlotsFromSource();
+}
+
+//替换有序 Pass 列表并刷新兼容源码和材质槽
+bool Shader::ReplacePasses(const List<ShaderPass>& value)
+{
+    if (value.empty()) return false;
+
+    passes = value;
+    vertexSource = passes[0].vertexSource;
+    fragmentSource = passes[0].fragmentSource;
+    return ReflectSlotsFromSource();
+}
+
+//获取 Pass 数量
+uint32 Shader::GetPassCount() const
+{
+    return static_cast<uint32>(passes.size());
+}
+
+//获取指定 Pass
+const ShaderPass* Shader::GetPass(uint32 index) const
+{
+    return index < passes.size() ? &passes[index] : nullptr;
 }
 
 uint64 Shader::GetRevision() const

@@ -348,6 +348,7 @@ static bool IsPersistentField(string className, string fieldName)
     if (className == "Object" && (fieldName == "instanceId" || fieldName == "ownerWorld")) return false;
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
+    if (fieldName == "renderSceneHandle") return false;
     if (className == "SpaceComponent")
     {
         return fieldName is "localPosition" or "localRotation" or "localScale";
@@ -465,18 +466,34 @@ static string GenerateCpp(List<ClassInfo> classes)
         //生成字段 getter/setter 和方法 invoker
         foreach (var field in classInfo.Fields.Where(field => field.Persistent))
         {
+            var setterBacked = classInfo.Name == "SpaceComponent"
+                || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
+            var getterExpression = setterBacked
+                ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()"
+                : $"instance->{field.Name}";
             output.AppendLine($"    //读取 {classInfo.Name}.{field.Name} 字段");
             output.AppendLine($"    static std::string Get_{classInfo.Name}_{field.Name}(Object* object)");
             output.AppendLine("    {");
             output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(object);");
-            output.AppendLine($"        return Reflection::ToXmlValue(instance->{field.Name});");
+            output.AppendLine($"        return Reflection::ToXmlValue({getterExpression});");
             output.AppendLine("    }");
             output.AppendLine();
             output.AppendLine($"    //写入 {classInfo.Name}.{field.Name} 字段");
             output.AppendLine($"    static bool Set_{classInfo.Name}_{field.Name}(Object* object, const std::string& value)");
             output.AppendLine("    {");
             output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(object);");
-            output.AppendLine($"        return Reflection::SetFromXmlValue(instance->{field.Name}, value);");
+            if (setterBacked)
+            {
+                var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
+                output.AppendLine($"        {field.Type} parsedValue{{}};");
+                output.AppendLine("        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;");
+                output.AppendLine($"        instance->{setterName}(parsedValue);");
+                output.AppendLine("        return true;");
+            }
+            else
+            {
+                output.AppendLine($"        return Reflection::SetFromXmlValue(instance->{field.Name}, value);");
+            }
             output.AppendLine("    }");
             output.AppendLine();
         }

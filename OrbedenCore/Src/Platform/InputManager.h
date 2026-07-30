@@ -67,9 +67,6 @@ enum KeyEnum
 class InputManager : public IEngineSystem
 {
 public:
-    //进入新帧时清理瞬时输入状态
-    void OnBeginFrame() override;
-
     //设置输入系统是否接收平台事件
     static void SetEnabled(bool value);
 

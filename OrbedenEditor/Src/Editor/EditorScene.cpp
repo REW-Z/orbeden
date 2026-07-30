@@ -294,13 +294,13 @@ void EditorScene::Update(World& world, float32 deltaTime)
                     vector3 pan = Add(
                         Scale(GetRight(cameraYaw), -deltaX * PanScale),
                         Scale(GetUp(cameraYaw, cameraPitch), deltaY * PanScale));
-                    space->localPosition = Add(space->localPosition, pan);
+                    space->SetLocalPosition(Add(space->GetLocalPosition(), pan));
                 }
                 else
                 {
                     vector3 forward = GetForward(cameraYaw, cameraPitch);
-                    space->localPosition = Add(space->localPosition,
-                        Scale(forward, -deltaY * cameraMoveSpeed * 0.01f));
+                    space->SetLocalPosition(Add(space->GetLocalPosition(),
+                        Scale(forward, -deltaY * cameraMoveSpeed * 0.01f)));
                 }
             }
 
@@ -324,8 +324,8 @@ void EditorScene::Update(World& world, float32 deltaTime)
         if (ScrollDelta != 0.0f)
         {
             vector3 forward = GetForward(cameraYaw, cameraPitch);
-            space->localPosition = Add(space->localPosition,
-                Scale(forward, ScrollDelta * cameraMoveSpeed * 0.5f));
+            space->SetLocalPosition(Add(space->GetLocalPosition(),
+                Scale(forward, ScrollDelta * cameraMoveSpeed * 0.5f)));
             ScrollDelta = 0.0f;
         }
     }
@@ -336,9 +336,9 @@ void EditorScene::Update(World& world, float32 deltaTime)
         ScrollDelta = 0.0f;
     }
 
-    space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
+    space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     cameraState.hasValue = true;
-    cameraState.position = space->localPosition;
+    cameraState.position = space->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
 }
@@ -475,9 +475,9 @@ void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
     if (!cameraState.hasValue) return;
     if (SpaceComponent* space = world.GetSpaceComponent(cameraEns))
     {
-        space->localPosition = cameraState.position;
-        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
-        space->localScale = { 1.0f, 1.0f, 1.0f };
+        space->SetLocalPosition(cameraState.position);
+        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+        space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
     }
 }
 
@@ -498,9 +498,9 @@ void EditorScene::RestoreCamera(World& world)
 
     if (SpaceComponent* space = world.GetSpaceComponent(cameraEns))
     {
-        space->localPosition = cameraState.position;
-        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
-        space->localScale = { 1.0f, 1.0f, 1.0f };
+        space->SetLocalPosition(cameraState.position);
+        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+        space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
     }
 }
 
@@ -558,10 +558,10 @@ void EditorScene::CreateEditorCamera(World& world)
         {
             if (SpaceComponent* space = editorCamera->Space())
             {
-                space->localPosition = cameraState.hasValue
+                space->SetLocalPosition(cameraState.hasValue
                     ? cameraState.position
-                    : vector3 { 5.0f, 3.2f, 7.0f };
-                space->localScale = { 1.0f, 1.0f, 1.0f };
+                    : vector3 { 5.0f, 3.2f, 7.0f });
+                space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
             }
         }
     }
@@ -571,7 +571,7 @@ void EditorScene::CreateEditorCamera(World& world)
     if (!camera) camera = editorCamera->AddComponent<Camera>();
     if (camera)
     {
-        camera->enabled = true;
+        camera->SetEnabled(true);
         camera->fieldOfView = 60.0f;
         camera->nearPlane = 0.1f;
         camera->farPlane = 1000.0f;
@@ -587,7 +587,7 @@ void EditorScene::CreateEditorCamera(World& world)
     }
     if (SpaceComponent* space = editorCamera->Space())
     {
-        space->localRotation = GetYawPitchRotation(cameraYaw, cameraPitch);
+        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     }
     cameraEns = editorCamera->GetId();
 }
@@ -611,7 +611,7 @@ void EditorScene::CaptureCameraState(World& world)
     SpaceComponent* space = editorCamera->Space();
     if (!space) return;
     cameraState.hasValue = true;
-    cameraState.position = space->localPosition;
+    cameraState.position = space->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
 }
@@ -721,27 +721,30 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
     vector3 rayDirection = { rayDelta.x / rayLength, rayDelta.y / rayLength, rayDelta.z / rayLength };
     EnsId closestEns;
     float32 closestDistance = rayLength;
-    for (const RenderItem& item : scene.items)
+    for (const RendererEntry& entry : scene.renderers)
     {
-        if ((item.drawLayer & camera->drawLayerMask) == 0 || !item.worldBounds.valid) continue;
+        if (!entry.active) continue;
+        StaticMeshRenderer* renderer = entry.renderer;
+        Mesh* mesh = entry.mesh;
+        if (!renderer || !renderer->GetEnabled() || !mesh) continue;
+        if ((renderer->drawLayer & camera->drawLayerMask) == 0 || !entry.worldBounds.valid) continue;
 
-        Ens* currentEns = app.GetWorld().GetEns(item.ens);
-        StaticMeshRenderer* renderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
-        if (!renderer || renderer != item.renderer || !mesh || mesh != item.mesh) continue;
+        Ens* currentEns = app.GetWorld().GetEns(entry.ens);
+        StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
+        if (currentRenderer != renderer || renderer->mesh.Get() != mesh) continue;
 
         //先用世界包围盒排除不可能命中的绘制项。
         float32 boundsMin[3] =
         {
-            item.worldBounds.center.x - item.worldBounds.extents.x,
-            item.worldBounds.center.y - item.worldBounds.extents.y,
-            item.worldBounds.center.z - item.worldBounds.extents.z,
+            entry.worldBounds.center.x - entry.worldBounds.extents.x,
+            entry.worldBounds.center.y - entry.worldBounds.extents.y,
+            entry.worldBounds.center.z - entry.worldBounds.extents.z,
         };
         float32 boundsMax[3] =
         {
-            item.worldBounds.center.x + item.worldBounds.extents.x,
-            item.worldBounds.center.y + item.worldBounds.extents.y,
-            item.worldBounds.center.z + item.worldBounds.extents.z,
+            entry.worldBounds.center.x + entry.worldBounds.extents.x,
+            entry.worldBounds.center.y + entry.worldBounds.extents.y,
+            entry.worldBounds.center.z + entry.worldBounds.extents.z,
         };
         float32 origin[3] = { rayOrigin.x, rayOrigin.y, rayOrigin.z };
         float32 direction[3] = { rayDirection.x, rayDirection.y, rayDirection.z };
@@ -772,41 +775,45 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
         //在世界空间进行双面三角形精确检测。
         const List<vector3>& vertices = mesh->vertices;
         const List<uint32>& indices = mesh->indices;
-        usize indexStart = static_cast<usize>(item.indexStart);
-        usize indexCount = static_cast<usize>(item.indexCount);
-        if (indexStart > indices.size() || indexCount > indices.size() - indexStart) continue;
-
-        usize indexEnd = indexStart + indexCount;
-        for (usize index = indexStart; index + 2 < indexEnd; index += 3)
+        for (const SubMesh& subMesh : mesh->subMeshes)
         {
-            uint32 indexA = indices[index];
-            uint32 indexB = indices[index + 1];
-            uint32 indexC = indices[index + 2];
-            if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
+            usize indexStart = static_cast<usize>(subMesh.indexStart);
+            usize indexCount = static_cast<usize>(subMesh.indexCount);
+            if (!subMesh.material.Get() || indexCount == 0 ||
+                indexStart > indices.size() || indexCount > indices.size() - indexStart) continue;
 
-            vector3 a = RenderMath::TransformPoint(item.localToWorld, vertices[indexA]);
-            vector3 b = RenderMath::TransformPoint(item.localToWorld, vertices[indexB]);
-            vector3 c = RenderMath::TransformPoint(item.localToWorld, vertices[indexC]);
-            vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
-            vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
-            vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
-            float32 determinant = RenderMath::Dot(edgeAB, crossDirection);
-            if (std::abs(determinant) <= 0.000001f) continue;
-
-            float32 inverseDeterminant = 1.0f / determinant;
-            vector3 toOrigin = { rayOrigin.x - a.x, rayOrigin.y - a.y, rayOrigin.z - a.z };
-            float32 u = RenderMath::Dot(toOrigin, crossDirection) * inverseDeterminant;
-            if (u < 0.0f || u > 1.0f) continue;
-
-            vector3 crossOrigin = RenderMath::Cross(toOrigin, edgeAB);
-            float32 v = RenderMath::Dot(rayDirection, crossOrigin) * inverseDeterminant;
-            if (v < 0.0f || u + v > 1.0f) continue;
-
-            float32 distance = RenderMath::Dot(edgeAC, crossOrigin) * inverseDeterminant;
-            if (distance >= 0.0f && distance < closestDistance)
+            usize indexEnd = indexStart + indexCount - indexCount % 3;
+            for (usize index = indexStart; index + 2 < indexEnd; index += 3)
             {
-                closestDistance = distance;
-                closestEns = item.ens;
+                uint32 indexA = indices[index];
+                uint32 indexB = indices[index + 1];
+                uint32 indexC = indices[index + 2];
+                if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
+
+                vector3 a = RenderMath::TransformPoint(entry.localToWorld, vertices[indexA]);
+                vector3 b = RenderMath::TransformPoint(entry.localToWorld, vertices[indexB]);
+                vector3 c = RenderMath::TransformPoint(entry.localToWorld, vertices[indexC]);
+                vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
+                vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
+                vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
+                float32 determinant = RenderMath::Dot(edgeAB, crossDirection);
+                if (std::abs(determinant) <= 0.000001f) continue;
+
+                float32 inverseDeterminant = 1.0f / determinant;
+                vector3 toOrigin = { rayOrigin.x - a.x, rayOrigin.y - a.y, rayOrigin.z - a.z };
+                float32 u = RenderMath::Dot(toOrigin, crossDirection) * inverseDeterminant;
+                if (u < 0.0f || u > 1.0f) continue;
+
+                vector3 crossOrigin = RenderMath::Cross(toOrigin, edgeAB);
+                float32 v = RenderMath::Dot(rayDirection, crossOrigin) * inverseDeterminant;
+                if (v < 0.0f || u + v > 1.0f) continue;
+
+                float32 distance = RenderMath::Dot(edgeAC, crossOrigin) * inverseDeterminant;
+                if (distance >= 0.0f && distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestEns = entry.ens;
+                }
             }
         }
     }
@@ -901,43 +908,34 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
 
     //按 renderer 实例聚合同一对象的所有有效 SubMesh 范围。
     List<InstanceGroup> groups;
-    std::unordered_map<StaticMeshRenderer*, usize> groupIndices;
-    for (const RenderItem& item : scene.items)
+    for (const RendererEntry& entry : scene.renderers)
     {
-        auto selectionIt = selectionTypes.find(GetEnsKey(item.ens));
+        if (!entry.active) continue;
+        auto selectionIt = selectionTypes.find(GetEnsKey(entry.ens));
         if (selectionIt == selectionTypes.end()) continue;
 
-        Ens* currentEns = world.GetEns(item.ens);
+        Ens* currentEns = world.GetEns(entry.ens);
         StaticMeshRenderer* renderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
         Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
-        if (!renderer || renderer != item.renderer || !mesh || mesh != item.mesh) continue;
-        if ((item.drawLayer & camera->drawLayerMask) == 0) continue;
-        if (!RenderMath::Intersects(camera->viewFrustum, item.worldBounds)) continue;
+        if (!renderer || !renderer->GetEnabled() || renderer != entry.renderer || !mesh || mesh != entry.mesh) continue;
+        if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
+        if (!RenderMath::Intersects(camera->viewFrustum, entry.worldBounds)) continue;
 
-        usize start = static_cast<usize>(item.indexStart);
-        usize count = static_cast<usize>(item.indexCount);
-        if (start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
-        count -= count % 3;
-        if (count == 0) continue;
-
-        auto groupIt = groupIndices.find(item.renderer);
-        if (groupIt == groupIndices.end())
+        InstanceGroup group;
+        group.ens = entry.ens;
+        group.renderer = renderer;
+        group.mesh = mesh;
+        group.localToWorld = entry.localToWorld;
+        group.selectionType = selectionIt->second;
+        for (const SubMesh& subMesh : mesh->subMeshes)
         {
-            InstanceGroup group;
-            group.ens = item.ens;
-            group.renderer = renderer;
-            group.mesh = mesh;
-            group.localToWorld = item.localToWorld;
-            group.selectionType = selectionIt->second;
-            group.ranges.push_back({ item.indexStart, static_cast<uint32>(count) });
-            groupIndices.emplace(item.renderer, groups.size());
-            groups.push_back(group);
+            usize start = static_cast<usize>(subMesh.indexStart);
+            usize count = static_cast<usize>(subMesh.indexCount);
+            if (!subMesh.material.Get() || start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
+            count -= count % 3;
+            if (count > 0) group.ranges.push_back({ subMesh.indexStart, static_cast<uint32>(count) });
         }
-        else
-        {
-            InstanceGroup& group = groups[groupIt->second];
-            if (group.mesh == mesh) group.ranges.push_back({ item.indexStart, static_cast<uint32>(count) });
-        }
+        if (!group.ranges.empty()) groups.push_back(group);
     }
     if (groups.empty()) return;
 
@@ -1311,7 +1309,7 @@ void EditorScene::DrawManagedGizmos()
     SpaceComponent* space = world.GetSpaceComponent(cameraEns);
     Camera* camera = nullptr;
     if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
-    if (!space || !camera || !camera->enabled) return;
+    if (!space || !camera || !camera->GetEnabled()) return;
 
     IWindow* window = app.GetWindow();
     gizmoViewportWidth = window ? window->GetFramebufferWidth() : 0;
@@ -1319,7 +1317,10 @@ void EditorScene::DrawManagedGizmos()
     float32 aspect = gizmoViewportHeight > 0
         ? static_cast<float32>(gizmoViewportWidth) / static_cast<float32>(gizmoViewportHeight)
         : 1.0f;
-    matrix4x4 worldMatrix = RenderMath::TRS(space->localPosition, space->localRotation, space->localScale);
+    matrix4x4 worldMatrix = RenderMath::TRS(
+        space->GetLocalPosition(),
+        space->GetLocalRotation(),
+        space->GetLocalScale());
     matrix4x4 viewMatrix = RenderMath::Inverse(worldMatrix);
     matrix4x4 projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
     gizmoViewProjection = RenderMath::Mul(projectionMatrix, viewMatrix);

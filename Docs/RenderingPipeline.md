@@ -1,14 +1,14 @@
 # Orbeden 渲染管线概览
 
-Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。每帧先从 `World` 提取渲染快照，再为各相机执行裁剪、排序和绘制。
+Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲染组件主动注册到持久 `RenderScene`，每帧增量刷新变换和资源版本，再为各相机执行裁剪、SubMesh 展开、排序和绘制。
 
 ## 核心模块
 
 | 模块 | 职责 |
 | --- | --- |
 | `RenderSystem` | 初始化、帧调度、多相机、Viewport、RenderTarget、Overlay |
-| `SpaceCache` | 按脏节点更新实体世界变换 |
-| `RenderSceneBuilder` | 从 World 提取 Camera、Light、RenderItem |
+| `SpaceCache` | 根据 Transform 通知更新脏子树 |
+| `RenderScene` | 持久维护 Camera、Light、RendererEntry 注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | 不透明/透明队列排序 |
 | `ForwardPipeline` | 阴影、天空盒、Forward Main Pass |
@@ -20,13 +20,13 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。每
 ```mermaid
 flowchart TD
     A["World / ECS"] --> B["CollectUnused\n回收 GPU 缓存"]
-    B --> C["Build RenderScene\n更新变换并提取帧数据"]
+    B --> C["Update RenderScene\n处理注册与变换通知"]
     C --> D["Resolve Camera\nRenderTarget + Viewport"]
     D --> E{"有相机?"}
     E -- 否 --> F["默认窗口清黑"]
     E -- 是 --> G["共享 Shadow Pass\n每帧一次"]
     G --> H["按 Camera.depth 遍历"]
-    H --> I["Cull → Sort → Main Pass"]
+    H --> I["Cull RendererEntry\n→ 展开 RenderItem → Sort → Main Pass"]
     I --> J{"还有相机?"}
     J -- 是 --> H
     J -- 否 --> K["ImGui / Overlay"]
@@ -34,15 +34,18 @@ flowchart TD
     K --> L["Present / Swap Buffers"]
 ```
 
-### 1. 构建帧场景
+### 1. 更新持久场景
 
-`RenderSceneBuilder` 每帧重建逻辑数据：
+`RenderScene` 在绑定 World 时完整收集一次已有组件，后续由 Camera、DirectionalLight 和 StaticMeshRenderer 的 Attach、Detach 与 enabled 变化维护注册：
 
-- `SpaceCache` 检测 position、rotation、scale、parent 变化，只递归更新脏子树。
+- `SpaceComponent` setter 和父级变化通过 `ITransformListener` 通知各 `SpaceCache`，不再每帧扫描所有 Ens。
+- `SpaceCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
 - Camera 生成 View、Projection、ViewProjection 和视锥快照，并按 `depth` 升序排列。
 - DirectionalLight 复制光照与阴影参数。
-- StaticMeshRenderer 按 SubMesh 生成 `RenderItem`。
-- Mesh 本地 AABB 按 Mesh revision 缓存，再转换为世界 AABB。
+- 每个 StaticMeshRenderer 对应一个持久 `RendererEntry`，共享变换、Mesh revision 和世界 AABB。
+- 全局场景不保存扁平 SubMesh 列表；只有相机剔除后的 Renderer 才临时展开 `RenderItem`。
+
+渲染读取期间发生的组件增删会排队到安全阶段执行。`RenderSceneHandle` 带版本，延迟删除不会误删复用槽位中的新组件。
 
 ### 2. Viewport 与 RenderTarget
 
@@ -74,9 +77,10 @@ flowchart LR
 
 裁剪规则：
 
-1. `item.drawLayer & camera.drawLayerMask` 必须非零。
-2. 世界 AABB 必须与相机视锥相交。
-3. 可见集只保存 `itemIndex + cameraDistance`，不复制完整 RenderItem。
+1. `renderer.drawLayer & camera.drawLayerMask` 必须非零。
+2. `RendererEntry.worldBounds` 必须与相机视锥相交。
+3. `VisibleItem` 只保存 `rendererIndex + cameraDistance`。
+4. 剔除完成后，按可见 Renderer 当前的 Mesh/SubMesh 生成相机临时 `RenderItem`。
 
 排序规则：
 
@@ -97,6 +101,8 @@ flowchart TD
     G --> H["DepthTest On\nDepthWrite Off\nBlend On"]
 ```
 
+每个 `RenderItem` 会按 Shader 中的 Pass 声明顺序连续绘制。Pass 可独立配置 `DepthTest`、`DepthWrite`、`Blend` 和 `Cull`；`Auto` 每次从当前 Opaque/Transparent 管线基线解析，不继承前一个 Pass 的状态。
+
 `ClearMode` 含义：
 
 - `SolidColor`：清颜色和深度，并允许绘制天空盒。
@@ -105,11 +111,32 @@ flowchart TD
 
 清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
 
-绘制时，同一 Shader Program 的相机/灯光 Uniform 每个相机只设置一次；Material 未变化时不重复绑定材质参数和纹理。
+绘制时，同一 Shader Program 的相机/灯光 Uniform 每个相机只设置一次。Material 参数会对每个 Pass Program 分别写入。
+
+### 6. OrbShader 多 Pass
+
+旧的单组 `vert/frag` 文件会自动成为名为 `Default` 的 Pass。多 Pass 文件使用以下格式：
+
+```glsl
+--------pass Outline
+depthTest auto
+depthWrite off
+blend auto
+cull front
+--------vert
+// vertex GLSL
+--------frag
+// fragment GLSL
+```
+
+Pass 名称区分大小写且必须唯一；分段和状态关键字不区分大小写。每个 Pass 必须各有一个 `vert` 和 `frag`，状态只能写在 Pass 头与第一个 Shader Stage 之间。支持的值为：
+
+- `depthTest`、`depthWrite`、`blend`：`auto`、`on`、`off`。
+- `cull`：`auto`、`none`、`front`、`back`。
 
 ## GPU 资源缓存
 
-Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU。
+Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU。Shader 的所有 Pass 会作为一个整体编译和缓存，任一 Pass 编译失败都会使整个 Shader 无效。
 
 缓存有效时直接返回；无缓存或版本变化时创建/刷新 GPU 对象。每帧开头的 `CollectUnused` 检查 CPU 对象是否仍存活，不再存活时删除 GPU 对象和缓存项。
 
@@ -122,12 +149,12 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 - 阴影图固定为 `1024 × 1024`，尚未实现 CSM。
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
 - 每个可见 SubMesh 对应一次 `DrawIndexed`，尚未实现 Instancing/Indirect Draw。
-- RenderScene 在同一线程构建并立即消费。
+- RenderScene 在同一线程增量更新并立即消费。
 
 ## 主要源码
 
 - 总调度：`OrbedenCore/Src/Rendering/RenderSystem.cpp`
-- 场景提取：`OrbedenCore/Src/Rendering/RenderSceneBuilder.cpp`
+- 持久场景：`OrbedenCore/Src/Rendering/RenderScene.cpp`
 - 阴影与主 Pass：`OrbedenCore/Src/Rendering/ForwardPipeline.cpp`
 - GPU 缓存：`OrbedenCore/Src/Rendering/GpuResourceManager.cpp`
 - OpenGL Backend：`OrbedenCore/Src/Rendering/Backend/OpenGLRenderBackend.cpp`

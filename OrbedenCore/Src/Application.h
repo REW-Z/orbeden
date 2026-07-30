@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -21,17 +20,11 @@ public:
     //系统首次创建时调用，可通过 Application 获取依赖系统
     virtual bool OnInitialize(Application& app) { return true; }
 
-    //每帧平台事件处理前调用
-    virtual void OnBeginFrame() {}
-
     //固定步长更新，由 Application 按 fixedDeltaTime 补帧调用
     virtual void FixedUpdate(World& world, float fixedDeltaTime) {}
 
     //每帧更新，由 Application 每次 Tick 调用一次
     virtual void Update(World& world, float deltaTime) {}
-
-    //渲染更新，在 Simulation 和宿主帧回调后、窗口 present 前调用
-    virtual void Render(World& world, float deltaTime) {}
 
     //窗口 framebuffer 尺寸变化时调用
     virtual void OnWindowResize(int width, int height) {}
@@ -102,11 +95,14 @@ public:
     //将当前 World 写入 XML 文件
     bool SaveWorld(const std::string& path) const;
 
-    //推进一帧应用逻辑，并在系统 Update 后调用宿主帧回调
-    void Tick(float deltaTime, const std::function<void(World&, float)>& frameCallback = {});
+    //推进一帧 Simulation 逻辑
+    void Tick(float deltaTime);
+
+    //渲染当前 World 并提交窗口显示
+    void RenderFrame(float deltaTime);
 
     //进入主循环，直到请求退出
-    void Run(const std::function<void(World&, float)>& frameCallback = {});
+    void Run();
 
     //请求主循环在当前帧后退出
     void RequestQuit();
@@ -147,6 +143,9 @@ public:
     //设置目标帧率，0 表示不限帧
     void SetTargetFrameRate(uint32 value);
 
+    //等待到当前目标帧的结束时间
+    void WaitForNextFrame(std::chrono::steady_clock::time_point frameStartTime) const;
+
     //获取单帧最多补跑 FixedUpdate 的次数
     uint32 GetMaxFixedStepsPerFrame() const;
 
@@ -165,16 +164,6 @@ public:
     //派发窗口 resize 到已创建系统
     void OnWindowResize(int32 width, int32 height) override;
 
-protected:
-    //帧开始钩子，处理窗口事件
-    virtual void BeginFrame();
-
-    //帧结束钩子，处理窗口 present
-    virtual void EndFrame();
-
-    //判断主循环是否继续运行
-    virtual bool ShouldKeepRunning() const;
-
 private:
     //查找已经创建的系统
     IEngineSystem* FindSystem(std::type_index type) const;
@@ -184,6 +173,9 @@ private:
 
     //逆序关闭并销毁全部系统
     void ShutdownSystems();
+
+    //判断主循环是否继续运行
+    bool ShouldKeepRunning() const;
 };
 
 //获取系统，尚未创建时立即创建并初始化

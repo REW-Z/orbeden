@@ -6,6 +6,6 @@
 class RenderItemSorter
 {
 public:
-    //排序可见项
-    void Sort(const RenderScene& scene, VisibleSet& visibleSet);
+    //排序相机临时绘制项
+    void Sort(VisibleSet& visibleSet);
 };

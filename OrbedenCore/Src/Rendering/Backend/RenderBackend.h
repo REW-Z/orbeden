@@ -187,5 +187,6 @@ public:
     virtual void SetDepthTest(bool enabled) = 0;
     virtual void SetDepthWrite(bool enabled) = 0;
     virtual void SetBlend(bool enabled) = 0;
+    virtual void SetCullMode(CullMode mode) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;
 };

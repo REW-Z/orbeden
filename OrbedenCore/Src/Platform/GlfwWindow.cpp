@@ -244,6 +244,20 @@ void GlfwWindow::PollEvents()
     glfwPollEvents();
 }
 
+//阻塞等待 GLFW 事件
+void GlfwWindow::WaitEvents()
+{
+    if (!window) return;
+
+    glfwWaitEvents();
+}
+
+//唤醒等待中的 GLFW 事件循环
+void GlfwWindow::WakeEventLoop()
+{
+    glfwPostEmptyEvent();
+}
+
 //提交当前帧显示
 void GlfwWindow::Present()
 {

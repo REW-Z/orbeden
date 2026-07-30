@@ -465,6 +465,25 @@ void EditorSystem::Update(World& world, float deltaTime)
     }
 }
 
+//请求编辑器重绘并唤醒事件循环
+void EditorSystem::RequestRepaint()
+{
+    if (repaintRequested.exchange(true, std::memory_order_acq_rel)) return;
+    if (IWindow* window = app.GetWindow()) window->WakeEventLoop();
+}
+
+//获取并清除编辑器重绘请求
+bool EditorSystem::TakeRepaintRequest()
+{
+    return repaintRequested.exchange(false, std::memory_order_acq_rel);
+}
+
+//判断编辑器是否需要连续重绘
+bool EditorSystem::NeedsContinuousRepaint() const
+{
+    return continuousRepaint || (playMode.IsPlaying() && !app.IsPaused());
+}
+
 void EditorSystem::DrawOverlay()
 {
     DrawMainMenuBar();
@@ -487,16 +506,27 @@ void EditorSystem::DrawOverlay()
     {
         app.GetSystem<ScriptSystem>()->DrawOverlay();
     }
+
+    //活跃控件保持连续帧，释放鼠标后再补一帧提交本帧产生的修改
+    continuousRepaint = ImGui::IsAnyItemActive();
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)
+        || ImGui::IsMouseReleased(ImGuiMouseButton_Right)
+        || ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
+    {
+        RequestRepaint();
+    }
 }
 
 void EditorSystem::RequestOpenProjectDialog()
 {
     OpenProjectDialog();
+    RequestRepaint();
 }
 
 void EditorSystem::RequestNewProjectDialog()
 {
     OpenNewProjectDialog();
+    RequestRepaint();
 }
 
 void EditorSystem::RequestSaveCurrentWorld()
@@ -601,6 +631,7 @@ void EditorSystem::RequestPlay()
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
     projectStatus = "Play-In-Editor started.";
+    RequestRepaint();
 }
 
 void EditorSystem::RequestStop()
@@ -627,6 +658,7 @@ void EditorSystem::RequestStop()
 
     RefreshInspectorGameAssembly();
     projectStatus = "Play-In-Editor stopped.";
+    RequestRepaint();
 }
 
 void EditorSystem::RequestBuildPlayer()

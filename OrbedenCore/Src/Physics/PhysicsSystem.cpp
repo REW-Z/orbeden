@@ -921,13 +921,12 @@ public:
 
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
             PxTransform pose = dynamic->getGlobalPose();
-            space->localPosition = FromPx(pose.p);
-            space->localRotation = FromPx(pose.q);
-            space->transformDirty = true;
+            space->SetLocalPosition(FromPx(pose.p));
+            space->SetLocalRotation(FromPx(pose.q));
             body->linearVelocity = FromPx(dynamic->getLinearVelocity());
             body->angularVelocity = FromPx(dynamic->getAngularVelocity());
-            record.lastPosition = space->localPosition;
-            record.lastRotation = space->localRotation;
+            record.lastPosition = space->GetLocalPosition();
+            record.lastRotation = space->GetLocalRotation();
             record.lastPoseValid = true;
         }
     }
@@ -1091,8 +1090,7 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
     SpaceComponent* space = impl->world->GetSpaceComponent(ens);
     if (space)
     {
-        space->localPosition = position;
-        space->transformDirty = true;
+        space->SetLocalPosition(position);
     }
     found->second->lastFootPosition = position;
     found->second->lastPoseValid = true;
@@ -1119,8 +1117,7 @@ bool PhysicsSystem::TeleportCharacter(EnsId ens, const vector3& footPosition)
         SpaceComponent* space = impl->world->GetSpaceComponent(ens);
         if (space)
         {
-            space->localPosition = footPosition;
-            space->transformDirty = true;
+            space->SetLocalPosition(footPosition);
         }
     }
     return true;

@@ -127,6 +127,35 @@ void World::SetCurrentWorld(World* world)
     GetCurrentWorldStorage() = world;
 }
 
+//注册空间变换监听器
+void World::AddTransformListener(ITransformListener* listener)
+{
+    if (!listener) return;
+    if (std::find(transformListeners.begin(), transformListeners.end(), listener) != transformListeners.end()) return;
+
+    transformListeners.push_back(listener);
+}
+
+//注销空间变换监听器
+void World::RemoveTransformListener(ITransformListener* listener)
+{
+    auto it = std::find(transformListeners.begin(), transformListeners.end(), listener);
+    if (it != transformListeners.end()) transformListeners.erase(it);
+}
+
+//通知指定节点及其子树的世界变换失效
+void World::NotifyTransformChanged(EnsId ens)
+{
+    SpaceComponent* space = GetSpaceComponent(ens);
+    if (!space) return;
+
+    space->transformDirty = true;
+    for (ITransformListener* listener : transformListeners)
+    {
+        if (listener) listener->OnTransformChanged(*this, ens);
+    }
+}
+
 //销毁世界及其运行时对象
 World::~World()
 {
@@ -233,6 +262,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
 
     storedEns->name = name;
     storedEns->AddComponentType(SpaceComponent::StaticType());
+    NotifyTransformChanged(value);
     return storedEns;
 }
 
@@ -371,7 +401,11 @@ void World::SetParent(EnsId child, EnsId parent)
     space->prev = EnsId();
     space->next = EnsId();
 
-    if (parent.IsNull()) return;
+    if (parent.IsNull())
+    {
+        NotifyTransformChanged(child);
+        return;
+    }
 
     //挂到新父级末尾
     SpaceComponent* parentSpace = GetSpaceComponent(parent);
@@ -391,6 +425,7 @@ void World::SetParent(EnsId child, EnsId parent)
     }
 
     parentSpace->lastChild = child;
+    NotifyTransformChanged(child);
 }
 
 //移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾

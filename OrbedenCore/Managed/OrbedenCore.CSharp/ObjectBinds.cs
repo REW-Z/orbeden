@@ -98,6 +98,12 @@ internal unsafe struct ShaderBindApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetFloatSlotName;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetFloatSlotDisplayName;
     public delegate* unmanaged[Cdecl]<IntPtr, int, float> GetFloatSlotDefault;
+    public delegate* unmanaged[Cdecl]<IntPtr, int> GetPassCount;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetPassName;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetPassDepthTest;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetPassDepthWrite;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetPassBlend;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetPassCull;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, IntPtr> CreateFromSource;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte> ReplaceSource;
     public delegate* unmanaged[Cdecl]<IntPtr, ulong> GetRevision;
@@ -684,6 +690,24 @@ internal static unsafe class ShaderBind
 
     //读取浮点槽数量
     internal static int GetFloatSlotCount(IntPtr shader) => initialized && shader != IntPtr.Zero ? api.GetFloatSlotCount(shader) : 0;
+
+    //读取 Pass 数量
+    internal static int GetPassCount(IntPtr shader) => initialized && shader != IntPtr.Zero ? api.GetPassCount(shader) : 0;
+
+    //读取 Pass 名称
+    internal static string GetPassName(IntPtr shader, int index) => initialized ? GetString(api.GetPassName, shader, index) : string.Empty;
+
+    //读取 Pass 深度测试状态
+    internal static int GetPassDepthTest(IntPtr shader, int index) => initialized && shader != IntPtr.Zero ? api.GetPassDepthTest(shader, index) : 0;
+
+    //读取 Pass 深度写入状态
+    internal static int GetPassDepthWrite(IntPtr shader, int index) => initialized && shader != IntPtr.Zero ? api.GetPassDepthWrite(shader, index) : 0;
+
+    //读取 Pass 混合状态
+    internal static int GetPassBlend(IntPtr shader, int index) => initialized && shader != IntPtr.Zero ? api.GetPassBlend(shader, index) : 0;
+
+    //读取 Pass 剔除状态
+    internal static int GetPassCull(IntPtr shader, int index) => initialized && shader != IntPtr.Zero ? api.GetPassCull(shader, index) : 0;
 
     //读取纹理槽名称
     internal static string GetTextureSlotName(IntPtr shader, int index) => initialized ? GetString(api.GetTextureSlotName, shader, index) : string.Empty;

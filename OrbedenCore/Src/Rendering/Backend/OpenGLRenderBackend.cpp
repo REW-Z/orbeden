@@ -139,6 +139,7 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     depthTestEnabled = true;
     depthWriteEnabled = true;
     blendEnabled = true;
+    cullMode = CullMode::None;
     boundTexture2Ds.clear();
     boundCubeTextures.clear();
     uniformLocations.clear();
@@ -172,6 +173,7 @@ void OpenGLRenderBackend::Shutdown()
     depthTestEnabled = false;
     depthWriteEnabled = false;
     blendEnabled = false;
+    cullMode = CullMode::None;
 }
 
 void OpenGLRenderBackend::BeginFrame()
@@ -618,6 +620,25 @@ void OpenGLRenderBackend::SetBlend(bool enabled)
     }
 
     blendEnabled = enabled;
+}
+
+//设置正面、背面或关闭三角形剔除
+void OpenGLRenderBackend::SetCullMode(CullMode mode)
+{
+    if (mode == CullMode::Auto) mode = CullMode::None;
+    if (cullMode == mode) return;
+
+    if (mode == CullMode::None)
+    {
+        glDisable(GL_CULL_FACE);
+    }
+    else
+    {
+        glEnable(GL_CULL_FACE);
+        glCullFace(mode == CullMode::Front ? GL_FRONT : GL_BACK);
+    }
+
+    cullMode = mode;
 }
 
 void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
