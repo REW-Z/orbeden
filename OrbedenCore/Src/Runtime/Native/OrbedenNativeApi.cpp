@@ -7,7 +7,7 @@ OrbedenNativeApi OrbedenNativeApi::Create()
     api.World = WorldBind::Create();
     api.PathDefines = PathDefinesBind::Create();
     api.Ens = EnsBind::Create();
-    api.SpaceComponent = SpaceComponentBind::Create();
+    api.TransformComponent = TransformComponentBind::Create();
     api.StaticMeshRenderer = StaticMeshRendererBind::Create();
     api.Object = ObjectBind::Create();
     api.Mesh = MeshBind::Create();

@@ -66,7 +66,7 @@
     <ClInclude Include="Src\Runtime\WorldSerializer.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Object\SpaceComponent.h">
+    <ClInclude Include="Src\Runtime\Object\TransformComponent.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\AssetPipeline.h">
@@ -144,7 +144,7 @@
     <ClInclude Include="Src\Rendering\RenderScene.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Rendering\SpaceCache.h">
+    <ClInclude Include="Src\Rendering\TransformCache.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\SceneCuller.h">
@@ -254,7 +254,7 @@
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Object\SpaceComponent.cpp">
+    <ClCompile Include="Src\Runtime\Object\TransformComponent.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp">
@@ -314,7 +314,7 @@
     <ClCompile Include="Src\Rendering\RenderScene.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Rendering\SpaceCache.cpp">
+    <ClCompile Include="Src\Rendering\TransformCache.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\SceneCuller.cpp">

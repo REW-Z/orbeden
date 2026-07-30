@@ -4,9 +4,9 @@
 #include "Physics/CharacterControllerComponent.h"
 #include "Physics/ColliderComponent.h"
 #include "Physics/RigidBodyComponent.h"
-#include "Rendering/SpaceCache.h"
+#include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 
 #include "PxPhysicsAPI.h"
 #include "characterkinematic/PxBoxController.h"
@@ -73,9 +73,9 @@ namespace
         return std::min(direct, negated) <= epsilon * 4.0f;
     }
 
-    vector3 GetWorldScale(const SpaceComponent& space)
+    vector3 GetWorldScale(const TransformComponent& transform)
     {
-        const float32* m = space.worldMatrix.m;
+        const float32* m = transform.worldMatrix.m;
         return
         {
             std::sqrt(m[0] * m[0] + m[1] * m[1] + m[2] * m[2]),
@@ -309,7 +309,7 @@ public:
     std::unordered_map<uint64, PxConvexMesh*> convexMeshes;
     std::unordered_map<uint64, PxTriangleMesh*> triangleMeshes;
     List<PhysicsEvent> events;
-    SpaceCache spaceCache;
+    TransformCache transformCache;
     World* world = nullptr;
     bool extensionsInitialized = false;
 
@@ -467,7 +467,7 @@ public:
         events.push_back(event);
     }
 
-    uint64 CalculateBodyHash(const ColliderComponent& collider, const RigidBodyComponent* body, const SpaceComponent& space) const
+    uint64 CalculateBodyHash(const ColliderComponent& collider, const RigidBodyComponent* body, const TransformComponent& transform) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(collider.shape));
@@ -481,7 +481,7 @@ public:
         hash = MixFloat(hash, collider.restitution);
         hash = MixHash(hash, collider.collisionLayer);
         hash = MixHash(hash, collider.collisionMask);
-        hash = MixVector(hash, GetWorldScale(space));
+        hash = MixVector(hash, GetWorldScale(transform));
         hash = MixHash(hash, collider.mesh.GetInstanceId().GetHash());
         Mesh* mesh = collider.mesh.Get();
         hash = MixHash(hash, mesh ? mesh->GetRevision() : 0);
@@ -629,10 +629,10 @@ public:
         return shape;
     }
 
-    std::unique_ptr<BodyRecord> CreateBody(ColliderComponent& collider, RigidBodyComponent* body, SpaceComponent& space, uint64 configurationHash)
+    std::unique_ptr<BodyRecord> CreateBody(ColliderComponent& collider, RigidBodyComponent* body, TransformComponent& transform, uint64 configurationHash)
     {
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
-        if (bodyType == PhysicsBodyType::Dynamic && !space.parent.IsNull())
+        if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
         {
             Log::Warning("Dynamic rigid bodies must be root entities; the collider was skipped.");
             return nullptr;
@@ -645,13 +645,13 @@ public:
         record->configurationHash = configurationHash;
         record->bodyType = bodyType;
 
-        PxTransform pose(ToPx(space.worldPosition), ToPx(space.worldRotation));
+        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         PxRigidActor* actor = bodyType == PhysicsBodyType::Static
             ? static_cast<PxRigidActor*>(physics->createRigidStatic(pose))
             : static_cast<PxRigidActor*>(physics->createRigidDynamic(pose));
         if (!actor) return nullptr;
 
-        PxShape* shape = CreateShape(collider, bodyType, GetWorldScale(space));
+        PxShape* shape = CreateShape(collider, bodyType, GetWorldScale(transform));
         if (!shape)
         {
             actor->release();
@@ -683,8 +683,8 @@ public:
         }
 
         scene->addActor(*actor);
-        record->lastPosition = space.worldPosition;
-        record->lastRotation = space.worldRotation;
+        record->lastPosition = transform.worldPosition;
+        record->lastRotation = transform.worldRotation;
         record->lastPoseValid = true;
         return record;
     }
@@ -697,9 +697,9 @@ public:
         record.actor = nullptr;
     }
 
-    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBodyComponent* body, SpaceComponent& space)
+    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBodyComponent* body, TransformComponent& transform)
     {
-        PxTransform pose(ToPx(space.worldPosition), ToPx(space.worldRotation));
+        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         if (record.bodyType == PhysicsBodyType::Static)
         {
             record.actor->setGlobalPose(pose);
@@ -713,7 +713,7 @@ public:
             }
             else
             {
-                if (!record.lastPoseValid || !NearlyEqual(space.worldPosition, record.lastPosition) || !NearlyEqual(space.worldRotation, record.lastRotation))
+                if (!record.lastPoseValid || !NearlyEqual(transform.worldPosition, record.lastPosition) || !NearlyEqual(transform.worldRotation, record.lastRotation))
                 {
                     dynamic->setGlobalPose(pose, true);
                 }
@@ -724,8 +724,8 @@ public:
                 }
             }
         }
-        record.lastPosition = space.worldPosition;
-        record.lastRotation = space.worldRotation;
+        record.lastPosition = transform.worldPosition;
+        record.lastRotation = transform.worldRotation;
         record.lastPoseValid = true;
     }
 
@@ -736,13 +736,13 @@ public:
         {
             if (!collider || !collider->enabled) return;
             Ens* ens = collider->GetEns();
-            SpaceComponent* space = ens ? ens->Space() : nullptr;
+            TransformComponent* transform = ens ? ens->Transform() : nullptr;
             RigidBodyComponent* body = ens ? ens->GetComponent<RigidBodyComponent>() : nullptr;
-            if (!space || (body && !body->enabled)) return;
+            if (!transform || (body && !body->enabled)) return;
 
             uint64 key = EnsKey(collider->GetEnsId());
             seen.insert(key);
-            uint64 hash = CalculateBodyHash(*collider, body, *space);
+            uint64 hash = CalculateBodyHash(*collider, body, *transform);
             auto found = bodies.find(key);
             if (found != bodies.end() && found->second->configurationHash != hash)
             {
@@ -752,11 +752,11 @@ public:
             }
             if (found == bodies.end())
             {
-                std::unique_ptr<BodyRecord> created = CreateBody(*collider, body, *space, hash);
+                std::unique_ptr<BodyRecord> created = CreateBody(*collider, body, *transform, hash);
                 if (created) bodies.emplace(key, std::move(created));
                 return;
             }
-            SyncBodyPoseAndVelocity(*found->second, body, *space);
+            SyncBodyPoseAndVelocity(*found->second, body, *transform);
         });
 
         for (auto it = bodies.begin(); it != bodies.end();)
@@ -785,9 +785,9 @@ public:
         return MixHash(hash, component.collisionMask);
     }
 
-    std::unique_ptr<ControllerRecord> CreateController(CharacterControllerComponent& component, SpaceComponent& space, uint64 configurationHash)
+    std::unique_ptr<ControllerRecord> CreateController(CharacterControllerComponent& component, TransformComponent& transform, uint64 configurationHash)
     {
-        if (!space.parent.IsNull())
+        if (!transform.parent.IsNull())
         {
             Log::Warning("Character controllers must be root entities; the controller was skipped.");
             return nullptr;
@@ -808,7 +808,7 @@ public:
             PxCapsuleControllerDesc desc;
             desc.radius = Positive(component.radius);
             desc.height = Positive(component.height);
-            desc.position = PxExtendedVec3(space.worldPosition.x, space.worldPosition.y + desc.radius + desc.height * 0.5f, space.worldPosition.z);
+            desc.position = PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y + desc.radius + desc.height * 0.5f, transform.worldPosition.z);
             desc.stepOffset = std::max(0.0f, component.stepOffset);
             desc.contactOffset = Positive(component.contactOffset);
             desc.slopeLimit = std::max(0.0f, component.slopeLimit);
@@ -823,7 +823,7 @@ public:
             desc.halfSideExtent = Positive(component.halfExtents.x);
             desc.halfHeight = Positive(component.halfExtents.y);
             desc.halfForwardExtent = Positive(component.halfExtents.z);
-            desc.position = PxExtendedVec3(space.worldPosition.x, space.worldPosition.y + desc.halfHeight, space.worldPosition.z);
+            desc.position = PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y + desc.halfHeight, transform.worldPosition.z);
             desc.stepOffset = std::max(0.0f, component.stepOffset);
             desc.contactOffset = Positive(component.contactOffset);
             desc.slopeLimit = std::max(0.0f, component.slopeLimit);
@@ -836,7 +836,7 @@ public:
         if (!controller) return nullptr;
 
         record->controller = controller;
-        controller->setFootPosition(PxExtendedVec3(space.worldPosition.x, space.worldPosition.y, space.worldPosition.z));
+        controller->setFootPosition(PxExtendedVec3(transform.worldPosition.x, transform.worldPosition.y, transform.worldPosition.z));
         PxRigidDynamic* actor = controller->getActor();
         actor->userData = &record->binding;
         PxShape* controllerShape = nullptr;
@@ -846,7 +846,7 @@ public:
             controllerShape->setSimulationFilterData(filter);
             controllerShape->setQueryFilterData(filter);
         }
-        record->lastFootPosition = space.worldPosition;
+        record->lastFootPosition = transform.worldPosition;
         record->lastPoseValid = true;
         return record;
     }
@@ -867,8 +867,8 @@ public:
         {
             if (!component || !component->enabled) return;
             Ens* ens = component->GetEns();
-            SpaceComponent* space = ens ? ens->Space() : nullptr;
-            if (!space) return;
+            TransformComponent* transform = ens ? ens->Transform() : nullptr;
+            if (!transform) return;
 
             uint64 key = EnsKey(component->GetEnsId());
             seen.insert(key);
@@ -882,16 +882,16 @@ public:
             }
             if (found == controllers.end())
             {
-                std::unique_ptr<ControllerRecord> created = CreateController(*component, *space, hash);
+                std::unique_ptr<ControllerRecord> created = CreateController(*component, *transform, hash);
                 if (created) controllers.emplace(key, std::move(created));
                 return;
             }
 
             ControllerRecord& record = *found->second;
-            if (!record.lastPoseValid || !NearlyEqual(record.lastFootPosition, space->worldPosition))
+            if (!record.lastPoseValid || !NearlyEqual(record.lastFootPosition, transform->worldPosition))
             {
-                record.controller->setFootPosition(PxExtendedVec3(space->worldPosition.x, space->worldPosition.y, space->worldPosition.z));
-                record.lastFootPosition = space->worldPosition;
+                record.controller->setFootPosition(PxExtendedVec3(transform->worldPosition.x, transform->worldPosition.y, transform->worldPosition.z));
+                record.lastFootPosition = transform->worldPosition;
                 record.lastPoseValid = true;
             }
         });
@@ -914,19 +914,19 @@ public:
         {
             BodyRecord& record = *entry.second;
             if (record.bodyType != PhysicsBodyType::Dynamic) continue;
-            SpaceComponent* space = currentWorld.GetSpaceComponent(record.binding.ens);
+            TransformComponent* transform = currentWorld.GetTransformComponent(record.binding.ens);
             Ens* ens = currentWorld.GetEns(record.binding.ens);
             RigidBodyComponent* body = ens ? ens->GetComponent<RigidBodyComponent>() : nullptr;
-            if (!space || !body) continue;
+            if (!transform || !body) continue;
 
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
             PxTransform pose = dynamic->getGlobalPose();
-            space->SetLocalPosition(FromPx(pose.p));
-            space->SetLocalRotation(FromPx(pose.q));
+            transform->SetLocalPosition(FromPx(pose.p));
+            transform->SetLocalRotation(FromPx(pose.q));
             body->linearVelocity = FromPx(dynamic->getLinearVelocity());
             body->angularVelocity = FromPx(dynamic->getAngularVelocity());
-            record.lastPosition = space->GetLocalPosition();
-            record.lastRotation = space->GetLocalRotation();
+            record.lastPosition = transform->GetLocalPosition();
+            record.lastRotation = transform->GetLocalRotation();
             record.lastPoseValid = true;
         }
     }
@@ -936,7 +936,7 @@ public:
         if (!Initialize()) return;
         world = &currentWorld;
         events.clear();
-        spaceCache.Update(currentWorld);
+        transformCache.Update(currentWorld);
         SyncBodies(currentWorld);
         SyncControllers(currentWorld);
         scene->simulate(deltaTime);
@@ -1087,10 +1087,10 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
 
     PxExtendedVec3 foot = found->second->controller->getFootPosition();
     vector3 position = { static_cast<float32>(foot.x), static_cast<float32>(foot.y), static_cast<float32>(foot.z) };
-    SpaceComponent* space = impl->world->GetSpaceComponent(ens);
-    if (space)
+    TransformComponent* transform = impl->world->GetTransformComponent(ens);
+    if (transform)
     {
-        space->SetLocalPosition(position);
+        transform->SetLocalPosition(position);
     }
     found->second->lastFootPosition = position;
     found->second->lastPoseValid = true;
@@ -1114,10 +1114,10 @@ bool PhysicsSystem::TeleportCharacter(EnsId ens, const vector3& footPosition)
     found->second->lastPoseValid = true;
     if (impl->world)
     {
-        SpaceComponent* space = impl->world->GetSpaceComponent(ens);
-        if (space)
+        TransformComponent* transform = impl->world->GetTransformComponent(ens);
+        if (transform)
         {
-            space->SetLocalPosition(footPosition);
+            transform->SetLocalPosition(footPosition);
         }
     }
     return true;

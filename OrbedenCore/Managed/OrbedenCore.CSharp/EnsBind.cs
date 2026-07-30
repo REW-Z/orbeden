@@ -12,10 +12,10 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte> IsAlive;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
-    public delegate* unmanaged[Cdecl]<EnsId, byte> HasSpaceComponent;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> HasTransformComponent;
     public delegate* unmanaged[Cdecl]<EnsId, byte> HasStaticMeshRenderer;
     public delegate* unmanaged[Cdecl]<EnsId, IntPtr> AddStaticMeshRenderer;
-    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetSpaceComponent;
+    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetTransformComponent;
     public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetStaticMeshRenderer;
 }
 #pragma warning restore CS0649
@@ -76,10 +76,10 @@ internal static unsafe class EnsBind
         }
     }
 
-    //判断 Ens 是否拥有 SpaceComponent
-    internal static bool HasSpaceComponent(EnsId ens)
+    //判断 Ens 是否拥有 TransformComponent
+    internal static bool HasTransformComponent(EnsId ens)
     {
-        return initialized && api.HasSpaceComponent != null && api.HasSpaceComponent(ens) != 0;
+        return initialized && api.HasTransformComponent != null && api.HasTransformComponent(ens) != 0;
     }
 
     //判断 Ens 是否拥有 StaticMeshRenderer
@@ -94,10 +94,10 @@ internal static unsafe class EnsBind
         return initialized && api.AddStaticMeshRenderer != null ? api.AddStaticMeshRenderer(ens) : IntPtr.Zero;
     }
 
-    //获取 SpaceComponent 指针
-    internal static IntPtr GetSpaceComponent(EnsId ens)
+    //获取 TransformComponent 指针
+    internal static IntPtr GetTransformComponent(EnsId ens)
     {
-        return initialized && api.GetSpaceComponent != null ? api.GetSpaceComponent(ens) : IntPtr.Zero;
+        return initialized && api.GetTransformComponent != null ? api.GetTransformComponent(ens) : IntPtr.Zero;
     }
 
     //获取 StaticMeshRenderer 指针

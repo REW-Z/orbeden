@@ -6,7 +6,7 @@
 #include "Rendering/ImGuiLayer.h"
 #include "Rendering/RenderItemSorter.h"
 #include "Rendering/SceneCuller.h"
-#include "Rendering/SpaceCache.h"
+#include "Rendering/TransformCache.h"
 
 //渲染覆盖层接口，由渲染系统统一管理 frame 生命周期。
 class IRenderOverlay
@@ -46,8 +46,8 @@ private:
     //ImGui 覆盖层
     ImGuiLayer imguiLayer;
 
-    //缓存实体空间变换
-    SpaceCache spaceCache;
+    //缓存实体变换
+    TransformCache transformCache;
 
     //持久渲染场景
     RenderScene scene;

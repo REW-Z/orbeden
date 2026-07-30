@@ -653,7 +653,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
     {
-        startPosition = Ens.Space.localPosition;
+        startPosition = Ens.Transform.localPosition;
         Console.WriteLine($"SampleBehaviour start: Ens({EnsId.id}, {EnsId.version})");
     }
 
@@ -661,10 +661,10 @@ public sealed class SampleBehaviour : ScriptBehaviour
     protected override void OnUpdate(float deltaTime)
     {
         totalTime += deltaTime;
-        SpaceComponent space = Ens.Space;
+        TransformComponent transform = Ens.Transform;
         vector3 position = startPosition;
         position.y += MathF.Sin(totalTime) * 0.25f;
-        space.localPosition = position;
+        transform.localPosition = position;
 
         StaticMeshRenderer? renderer = Ens.GetComponent<StaticMeshRenderer>();
         if (renderer != null)
@@ -731,7 +731,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
     {
-        baseScale = Ens.Space.localScale;
+        baseScale = Ens.Transform.localScale;
         Console.WriteLine($"CubeTestBehaviour start: {label}");
     }
 
@@ -744,23 +744,23 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
         if (animateScale)
         {
             float scale = 1.0f + MathF.Sin(elapsedTime * pulseSpeed) * pulseAmplitude;
-            Ens.Space.localScale = new vector3(baseScale.x * scale, baseScale.y * scale, baseScale.z * scale);
+            Ens.Transform.localScale = new vector3(baseScale.x * scale, baseScale.y * scale, baseScale.z * scale);
         }
 
         if (debugOffset.x != 0.0f || debugOffset.y != 0.0f || debugOffset.z != 0.0f)
         {
-            vector3 position = Ens.Space.localPosition;
+            vector3 position = Ens.Transform.localPosition;
             position.x += debugOffset.x * deltaTime;
             position.y += debugOffset.y * deltaTime;
             position.z += debugOffset.z * deltaTime;
-            Ens.Space.localPosition = position;
+            Ens.Transform.localPosition = position;
         }
     }
 
     /// <summary>脚本结束时调用。</summary>
     protected override void OnEnd()
     {
-        Ens.Space.localScale = baseScale;
+        Ens.Transform.localScale = baseScale;
         Console.WriteLine($"CubeTestBehaviour end: {label}");
     }
 }
@@ -975,13 +975,13 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<World version=\"1\">\n"
         "    <Ens stableId=\"" << stableIdPrefix << "root\" name=\"SceneRoot\">\n"
-        "        <Component type=\"SpaceComponent\">\n"
+        "        <Component type=\"TransformComponent\">\n"
         "            <Field name=\"localPosition\" type=\"vector3\" value=\"0 0 0\" />\n"
         "            <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
         "            <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"
         "        </Component>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "cube\" name=\"Cube\">\n"
-        "            <Component type=\"SpaceComponent\">\n"
+        "            <Component type=\"TransformComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 1 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
         "                <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"
@@ -996,7 +996,7 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "ground\" name=\"Ground\">\n"
-        "            <Component type=\"SpaceComponent\">\n"
+        "            <Component type=\"TransformComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 0 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
         "                <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"
@@ -1011,7 +1011,7 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "directional_light\" name=\"DirectionalLight\">\n"
-        "            <Component type=\"SpaceComponent\">\n"
+        "            <Component type=\"TransformComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"0 4 0\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"0 0 0 1\" />\n"
         "                <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"
@@ -1028,7 +1028,7 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "camera\" name=\"Camera\">\n"
-        "            <Component type=\"SpaceComponent\">\n"
+        "            <Component type=\"TransformComponent\">\n"
         "                <Field name=\"localPosition\" type=\"vector3\" value=\"5 3.2 7\" />\n"
         "                <Field name=\"localRotation\" type=\"quaternion\" value=\"-0.1819 0.2952 0.0574 0.9362\" />\n"
         "                <Field name=\"localScale\" type=\"vector3\" value=\"1 1 1\" />\n"

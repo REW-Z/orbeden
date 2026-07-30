@@ -21,51 +21,51 @@ public abstract class Component : Object
     }
 }
 
-/// <summary>Ens 空间组件包装。</summary>
-public sealed class SpaceComponent : Component
+/// <summary>Ens 变换组件包装。</summary>
+public sealed class TransformComponent : Component
 {
-    /// <summary>创建空间组件包装。</summary>
-    internal SpaceComponent(Ens ens, IntPtr pointer) : base(ens, pointer) {}
+    /// <summary>创建变换组件包装。</summary>
+    internal TransformComponent(Ens ens, IntPtr pointer) : base(ens, pointer) {}
 
-    //从原生指针获取 SpaceComponent 包装
-    internal static SpaceComponent? FromNative(Ens ens, IntPtr pointer)
+    //从原生指针获取 TransformComponent 包装
+    internal static TransformComponent? FromNative(Ens ens, IntPtr pointer)
     {
-        return Object.FromNative(pointer, value => new SpaceComponent(ens, value));
+        return Object.FromNative(pointer, value => new TransformComponent(ens, value));
     }
 
     /// <summary>父级 Ens。</summary>
     public Ens parent
     {
-        get => Ens.FromId(SpaceComponentBind.GetParent(Ens.Id));
-        set => SpaceComponentBind.SetParent(Ens.Id, value != null ? value.Id : EnsId.Null);
+        get => Ens.FromId(TransformComponentBind.GetParent(Ens.Id));
+        set => TransformComponentBind.SetParent(Ens.Id, value != null ? value.Id : EnsId.Null);
     }
 
     /// <summary>本地位置。</summary>
     public vector3 localPosition
     {
-        get => SpaceComponentBind.GetLocalPosition(Ens.Id);
-        set => SpaceComponentBind.SetLocalPosition(Ens.Id, value);
+        get => TransformComponentBind.GetLocalPosition(Ens.Id);
+        set => TransformComponentBind.SetLocalPosition(Ens.Id, value);
     }
 
     /// <summary>本地旋转。</summary>
     public quaternion localRotation
     {
-        get => SpaceComponentBind.GetLocalRotation(Ens.Id);
-        set => SpaceComponentBind.SetLocalRotation(Ens.Id, value);
+        get => TransformComponentBind.GetLocalRotation(Ens.Id);
+        set => TransformComponentBind.SetLocalRotation(Ens.Id, value);
     }
 
     /// <summary>本地缩放。</summary>
     public vector3 localScale
     {
-        get => SpaceComponentBind.GetLocalScale(Ens.Id);
-        set => SpaceComponentBind.SetLocalScale(Ens.Id, value);
+        get => TransformComponentBind.GetLocalScale(Ens.Id);
+        set => TransformComponentBind.SetLocalScale(Ens.Id, value);
     }
 
     /// <summary>世界位置。</summary>
-    public vector3 worldPosition => SpaceComponentBind.GetWorldPosition(Ens.Id);
+    public vector3 worldPosition => TransformComponentBind.GetWorldPosition(Ens.Id);
 
     /// <summary>世界旋转。</summary>
-    public quaternion worldRotation => SpaceComponentBind.GetWorldRotation(Ens.Id);
+    public quaternion worldRotation => TransformComponentBind.GetWorldRotation(Ens.Id);
 }
 
 /// <summary>静态网格渲染组件包装。</summary>

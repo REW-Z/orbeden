@@ -1,6 +1,6 @@
 #include "Runtime/Ens.h"
 
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/World.h"
 
 #include <algorithm>
@@ -65,10 +65,10 @@ EnsId Ens::GetId() const
     return ens;
 }
 
-//获取空间组件
-SpaceComponent* Ens::Space() const
+//获取变换组件
+TransformComponent* Ens::Transform() const
 {
-    return world ? world->GetSpaceComponent(ens) : nullptr;
+    return world ? world->GetTransformComponent(ens) : nullptr;
 }
 
 //获取名称

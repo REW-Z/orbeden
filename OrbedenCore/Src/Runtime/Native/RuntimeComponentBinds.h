@@ -34,18 +34,18 @@ public:
     void* IsAlive = nullptr;
     void* GetName = nullptr;
     void* SetName = nullptr;
-    void* HasSpaceComponent = nullptr;
+    void* HasTransformComponent = nullptr;
     void* HasStaticMeshRenderer = nullptr;
     void* AddStaticMeshRenderer = nullptr;
-    void* GetSpaceComponent = nullptr;
+    void* GetTransformComponent = nullptr;
     void* GetStaticMeshRenderer = nullptr;
 
     //创建 Ens 函数表。
     static EnsBind Create();
 };
 
-//SpaceComponent 原生函数表。
-struct SpaceComponentBind
+//TransformComponent 原生函数表。
+struct TransformComponentBind
 {
 public:
     void* GetParent = nullptr;
@@ -59,8 +59,8 @@ public:
     void* GetWorldPosition = nullptr;
     void* GetWorldRotation = nullptr;
 
-    //创建 SpaceComponent 函数表。
-    static SpaceComponentBind Create();
+    //创建 TransformComponent 函数表。
+    static TransformComponentBind Create();
 };
 
 //StaticMeshRenderer 原生函数表。

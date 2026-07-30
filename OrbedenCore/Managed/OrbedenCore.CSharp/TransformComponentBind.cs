@@ -6,7 +6,7 @@ namespace Orbeden;
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct SpaceComponentBindApi
+internal unsafe struct TransformComponentBindApi
 {
     public delegate* unmanaged[Cdecl]<EnsId, EnsId> GetParent;
     public delegate* unmanaged[Cdecl]<EnsId, EnsId, void> SetParent;
@@ -21,13 +21,13 @@ internal unsafe struct SpaceComponentBindApi
 }
 #pragma warning restore CS0649
 
-internal static unsafe class SpaceComponentBind
+internal static unsafe class TransformComponentBind
 {
-    private static SpaceComponentBindApi api;
+    private static TransformComponentBindApi api;
     private static bool initialized;
 
-    //保存 C++ 传入的 SpaceComponent 函数表
-    internal static void Initialize(SpaceComponentBindApi value)
+    //保存 C++ 传入的 TransformComponent 函数表
+    internal static void Initialize(TransformComponentBindApi value)
     {
         api = value;
         initialized = api.GetParent != null;

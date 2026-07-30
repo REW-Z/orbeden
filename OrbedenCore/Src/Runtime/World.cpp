@@ -2,7 +2,7 @@
 
 #include "Memory/MemoryManager.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 
 #include <algorithm>
 #include <cassert>
@@ -127,7 +127,7 @@ void World::SetCurrentWorld(World* world)
     GetCurrentWorldStorage() = world;
 }
 
-//注册空间变换监听器
+//注册变换监听器
 void World::AddTransformListener(ITransformListener* listener)
 {
     if (!listener) return;
@@ -136,7 +136,7 @@ void World::AddTransformListener(ITransformListener* listener)
     transformListeners.push_back(listener);
 }
 
-//注销空间变换监听器
+//注销变换监听器
 void World::RemoveTransformListener(ITransformListener* listener)
 {
     auto it = std::find(transformListeners.begin(), transformListeners.end(), listener);
@@ -146,10 +146,10 @@ void World::RemoveTransformListener(ITransformListener* listener)
 //通知指定节点及其子树的世界变换失效
 void World::NotifyTransformChanged(EnsId ens)
 {
-    SpaceComponent* space = GetSpaceComponent(ens);
-    if (!space) return;
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform) return;
 
-    space->transformDirty = true;
+    transform->transformDirty = true;
     for (ITransformListener* listener : transformListeners)
     {
         if (listener) listener->OnTransformChanged(*this, ens);
@@ -245,10 +245,10 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     slot->denseIndex = static_cast<uint32>(liveEns.size());
     liveEns.push_back(storedEns);
 
-    ComponentStorage* spaceStorage = GetOrCreateComponentStorage(SpaceComponent::StaticType());
-    Component* spaceComponent = spaceStorage ? spaceStorage->Create(value, stableId) : nullptr;
-    SpaceComponent* space = spaceComponent ? spaceComponent->Cast<SpaceComponent>() : nullptr;
-    if (!space)
+    ComponentStorage* transformStorage = GetOrCreateComponentStorage(TransformComponent::StaticType());
+    Component* transformComponent = transformStorage ? transformStorage->Create(value, stableId) : nullptr;
+    TransformComponent* transform = transformComponent ? transformComponent->Cast<TransformComponent>() : nullptr;
+    if (!transform)
     {
         storedEns->alive = false;
         liveEns.pop_back();
@@ -261,7 +261,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     }
 
     storedEns->name = name;
-    storedEns->AddComponentType(SpaceComponent::StaticType());
+    storedEns->AddComponentType(TransformComponent::StaticType());
     NotifyTransformChanged(value);
     return storedEns;
 }
@@ -272,15 +272,15 @@ bool World::DestroyEns(EnsId ens)
     Ens* storedEns = GetEns(ens);
     if (!storedEns) return false;
 
-    SpaceComponent* space = GetSpaceComponent(ens);
-    if (!space) return false;
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform) return false;
 
     //先解除子级关系
-    EnsId child = space->firstChild;
+    EnsId child = transform->firstChild;
     while (!child.IsNull())
     {
-        SpaceComponent* childSpace = GetSpaceComponent(child);
-        EnsId nextChild = childSpace ? childSpace->next : EnsId();
+        TransformComponent* childTransform = GetTransformComponent(child);
+        EnsId nextChild = childTransform ? childTransform->next : EnsId();
         SetParent(child, EnsId());
         child = nextChild;
     }
@@ -293,21 +293,21 @@ bool World::DestroyEns(EnsId ens)
     for (TypeId typeId : componentTypes)
     {
         Type* type = Object::FindType(typeId);
-        if (type && type != SpaceComponent::StaticType())
+        if (type && type != TransformComponent::StaticType())
         {
             RemoveComponent(ens, type);
         }
     }
 
-    //注销并销毁空间组件
-    ComponentStorage* spaceStorage = FindComponentStorage(SpaceComponent::StaticType());
-    Component* removedSpace = spaceStorage ? spaceStorage->Remove(ens) : nullptr;
-    assert(removedSpace == space);
-    space->SetEnsId(EnsId());
-    space->SetWorld(nullptr);
-    space->SetOwnership(Object::Ownership::None);
-    bool spaceDeleted = Object::DestroyDetachedInstance(space);
-    assert(spaceDeleted);
+    //注销并销毁变换组件
+    ComponentStorage* transformStorage = FindComponentStorage(TransformComponent::StaticType());
+    Component* removedTransform = transformStorage ? transformStorage->Remove(ens) : nullptr;
+    assert(removedTransform == transform);
+    transform->SetEnsId(EnsId());
+    transform->SetWorld(nullptr);
+    transform->SetOwnership(Object::Ownership::None);
+    bool transformDeleted = Object::DestroyDetachedInstance(transform);
+    assert(transformDeleted);
 
     storedEns->alive = false;
 
@@ -359,21 +359,21 @@ bool World::IsAlive(EnsId ens) const
     return GetEns(ens) != nullptr;
 }
 
-//获取空间组件
-SpaceComponent* World::GetSpaceComponent(EnsId ens) const
+//获取变换组件
+TransformComponent* World::GetTransformComponent(EnsId ens) const
 {
     if (!IsAlive(ens)) return nullptr;
 
-    ComponentStorage* storage = FindComponentStorage(SpaceComponent::StaticType());
+    ComponentStorage* storage = FindComponentStorage(TransformComponent::StaticType());
     Component* component = storage ? storage->Get(ens) : nullptr;
-    return component ? component->Cast<SpaceComponent>() : nullptr;
+    return component ? component->Cast<TransformComponent>() : nullptr;
 }
 
 //设置父级
 void World::SetParent(EnsId child, EnsId parent)
 {
-    SpaceComponent* space = GetSpaceComponent(child);
-    if (!space) return;
+    TransformComponent* transform = GetTransformComponent(child);
+    if (!transform) return;
     if (child == parent) return;
     if (!parent.IsNull() && !IsAlive(parent)) return;
 
@@ -383,23 +383,23 @@ void World::SetParent(EnsId child, EnsId parent)
     {
         if (current == child) return;
 
-        SpaceComponent* currentSpace = GetSpaceComponent(current);
-        current = currentSpace ? currentSpace->parent : EnsId();
+        TransformComponent* currentTransform = GetTransformComponent(current);
+        current = currentTransform ? currentTransform->parent : EnsId();
     }
 
     //从旧父级摘除
-    SpaceComponent* oldParent = GetSpaceComponent(space->parent);
-    SpaceComponent* previous = GetSpaceComponent(space->prev);
-    SpaceComponent* next = GetSpaceComponent(space->next);
+    TransformComponent* oldParent = GetTransformComponent(transform->parent);
+    TransformComponent* previous = GetTransformComponent(transform->prev);
+    TransformComponent* next = GetTransformComponent(transform->next);
 
-    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = space->next;
-    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = space->prev;
-    if (previous) previous->next = space->next;
-    if (next) next->prev = space->prev;
+    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = transform->next;
+    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = transform->prev;
+    if (previous) previous->next = transform->next;
+    if (next) next->prev = transform->prev;
 
-    space->parent = EnsId();
-    space->prev = EnsId();
-    space->next = EnsId();
+    transform->parent = EnsId();
+    transform->prev = EnsId();
+    transform->next = EnsId();
 
     if (parent.IsNull())
     {
@@ -408,12 +408,12 @@ void World::SetParent(EnsId child, EnsId parent)
     }
 
     //挂到新父级末尾
-    SpaceComponent* parentSpace = GetSpaceComponent(parent);
-    if (!parentSpace) return;
+    TransformComponent* parentTransform = GetTransformComponent(parent);
+    if (!parentTransform) return;
 
-    SpaceComponent* lastChild = GetSpaceComponent(parentSpace->lastChild);
-    space->parent = parent;
-    space->prev = parentSpace->lastChild;
+    TransformComponent* lastChild = GetTransformComponent(parentTransform->lastChild);
+    transform->parent = parent;
+    transform->prev = parentTransform->lastChild;
 
     if (lastChild)
     {
@@ -421,25 +421,25 @@ void World::SetParent(EnsId child, EnsId parent)
     }
     else
     {
-        parentSpace->firstChild = child;
+        parentTransform->firstChild = child;
     }
 
-    parentSpace->lastChild = child;
+    parentTransform->lastChild = child;
     NotifyTransformChanged(child);
 }
 
 //移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾
 bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
 {
-    SpaceComponent* space = GetSpaceComponent(child);
-    if (!space || child == parent || child == beforeSibling) return false;
+    TransformComponent* transform = GetTransformComponent(child);
+    if (!transform || child == parent || child == beforeSibling) return false;
     if (!parent.IsNull() && !IsAlive(parent)) return false;
 
     //插入目标必须与目标父级处于同一层。
     if (!beforeSibling.IsNull())
     {
-        SpaceComponent* beforeSpace = GetSpaceComponent(beforeSibling);
-        if (!beforeSpace || beforeSpace->parent != parent) return false;
+        TransformComponent* beforeTransform = GetTransformComponent(beforeSibling);
+        if (!beforeTransform || beforeTransform->parent != parent) return false;
     }
 
     //禁止把节点挂到自己的后代下。
@@ -447,13 +447,13 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
     while (!current.IsNull())
     {
         if (current == child) return false;
-        SpaceComponent* currentSpace = GetSpaceComponent(current);
-        current = currentSpace ? currentSpace->parent : EnsId();
+        TransformComponent* currentTransform = GetTransformComponent(current);
+        current = currentTransform ? currentTransform->parent : EnsId();
     }
 
     SetParent(child, parent);
-    space = GetSpaceComponent(child);
-    if (!space || space->parent != parent) return false;
+    transform = GetTransformComponent(child);
+    if (!transform || transform->parent != parent) return false;
 
     //根节点使用 liveEns 的相对顺序，World 序列化和 EnsView 会保持相同顺序。
     if (parent.IsNull())
@@ -476,37 +476,37 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
     //SetParent 已将节点放到新父级末尾，无目标时无需继续调整。
     if (beforeSibling.IsNull()) return true;
 
-    SpaceComponent* parentSpace = GetSpaceComponent(parent);
-    SpaceComponent* beforeSpace = GetSpaceComponent(beforeSibling);
-    SpaceComponent* previous = GetSpaceComponent(space->prev);
-    if (!parentSpace || !beforeSpace) return false;
+    TransformComponent* parentTransform = GetTransformComponent(parent);
+    TransformComponent* beforeTransform = GetTransformComponent(beforeSibling);
+    TransformComponent* previous = GetTransformComponent(transform->prev);
+    if (!parentTransform || !beforeTransform) return false;
 
     //从末尾摘下，再插到目标兄弟节点之前。
     if (previous) previous->next = EnsId();
-    parentSpace->lastChild = space->prev;
+    parentTransform->lastChild = transform->prev;
 
-    SpaceComponent* beforePrevious = GetSpaceComponent(beforeSpace->prev);
-    space->prev = beforeSpace->prev;
-    space->next = beforeSibling;
-    beforeSpace->prev = child;
+    TransformComponent* beforePrevious = GetTransformComponent(beforeTransform->prev);
+    transform->prev = beforeTransform->prev;
+    transform->next = beforeSibling;
+    beforeTransform->prev = child;
     if (beforePrevious) beforePrevious->next = child;
-    else parentSpace->firstChild = child;
+    else parentTransform->firstChild = child;
     return true;
 }
 
 //获取父级
 Ens* World::GetParent(EnsId child) const
 {
-    SpaceComponent* space = GetSpaceComponent(child);
-    return space ? const_cast<World*>(this)->GetEns(space->parent) : nullptr;
+    TransformComponent* transform = GetTransformComponent(child);
+    return transform ? const_cast<World*>(this)->GetEns(transform->parent) : nullptr;
 }
 
 //添加组件
 Component* World::AddComponent(EnsId ens, Type* type)
 {
-    SpaceComponent* space = GetSpaceComponent(ens);
-    if (!space || !type || !type->Is(Component::StaticType())) return nullptr;
-    if (type == SpaceComponent::StaticType()) return space;
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform || !type || !type->Is(Component::StaticType())) return nullptr;
+    if (type == TransformComponent::StaticType()) return transform;
 
     Component* oldComponent = GetComponent(ens, type);
     if (oldComponent) return oldComponent;
@@ -514,7 +514,7 @@ Component* World::AddComponent(EnsId ens, Type* type)
     if (!storedEns) return nullptr;
 
     //创建并注册组件
-    std::string instancePath = space->GetInstanceId().GetPath() + "/" + type->GetName();
+    std::string instancePath = transform->GetInstanceId().GetPath() + "/" + type->GetName();
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
     Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
     if (!component) return nullptr;
@@ -536,8 +536,8 @@ Component* World::GetComponent(EnsId ens, Type* type) const
 //移除组件
 bool World::RemoveComponent(EnsId ens, Type* type)
 {
-    SpaceComponent* space = GetSpaceComponent(ens);
-    if (!space || !type || type == SpaceComponent::StaticType()) return false;
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform || !type || type == TransformComponent::StaticType()) return false;
 
     ComponentStorage* storage = FindComponentStorage(type);
     Component* component = storage ? storage->Get(ens) : nullptr;
@@ -564,11 +564,11 @@ bool World::RemoveComponent(EnsId ens, Type* type)
 Ens* World::FindEns(const StringId& id) const
 {
     Object* object = Object::FindObject(id);
-    SpaceComponent* space = object ? object->Cast<SpaceComponent>() : nullptr;
-    if (!space) return nullptr;
-    if (space->GetWorld() != this) return nullptr;
+    TransformComponent* transform = object ? object->Cast<TransformComponent>() : nullptr;
+    if (!transform) return nullptr;
+    if (transform->GetWorld() != this) return nullptr;
 
-    return const_cast<World*>(this)->GetEns(space->GetEnsId());
+    return const_cast<World*>(this)->GetEns(transform->GetEnsId());
 }
 
 //遍历所有存活的Ens

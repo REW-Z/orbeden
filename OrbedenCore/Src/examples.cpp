@@ -8,7 +8,7 @@
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -86,15 +86,15 @@ namespace examples
         World::SetCurrentWorld(&world);
 
         Ens* ens = world.CreateEnsWithStableId("world://examples/reflection_ens", "ReflectionEns");
-        SpaceComponent* space = ens ? ens->Space() : nullptr;
-        if (!space)
+        TransformComponent* transform = ens ? ens->Transform() : nullptr;
+        if (!transform)
         {
             Log::Error("反射示例创建 Ens 失败");
             World::SetCurrentWorld(previousWorld);
             return;
         }
 
-        Type* type = space->GetType();
+        Type* type = transform->GetType();
         std::string typeLine = std::string("反射类型: ") + type->GetName();
         Log::Info(typeLine.c_str());
 
@@ -105,13 +105,13 @@ namespace examples
             line += field.persistent ? " persistent=true" : " persistent=false";
             if (field.getter)
             {
-                line += " value=" + field.GetValueAsString(space);
+                line += " value=" + field.GetValueAsString(transform);
             }
 
             Log::Info(line.c_str());
         }
 
-        //Ens 名称已经是运行时记录，不再作为 SpaceComponent 字段反射
+        //Ens 名称已经是运行时记录，不再作为 TransformComponent 字段反射
         ens->SetName("新名称");
         std::string nameLine = "Ens 名称写入后: " + ens->GetName();
         Log::Info(nameLine.c_str());
@@ -125,9 +125,9 @@ namespace examples
             reflectedPosition.y = 2.0f;
             reflectedPosition.z = 3.0f;
 
-            if (positionField->SetValue(space, Reflection::Value(reflectedPosition)))
+            if (positionField->SetValue(transform, Reflection::Value(reflectedPosition)))
             {
-                Reflection::Value value = positionField->GetValue(space);
+                Reflection::Value value = positionField->GetValue(transform);
                 std::string line = "localPosition 字段写入后: " + value.ToString();
                 Log::Info(line.c_str());
             }
@@ -135,9 +135,9 @@ namespace examples
 
         //通过文本写入 vector3 字段
         const Reflection::FieldInfo* scaleField = type->GetField("localScale");
-        if (scaleField && scaleField->SetValueFromString(space, "2 2 2"))
+        if (scaleField && scaleField->SetValueFromString(transform, "2 2 2"))
         {
-            std::string line = "localScale 字段写入后: " + scaleField->GetValueAsString(space);
+            std::string line = "localScale 字段写入后: " + scaleField->GetValueAsString(transform);
             Log::Info(line.c_str());
         }
 
@@ -171,7 +171,7 @@ namespace examples
         if (getEnsIdMethod)
         {
             bool success = false;
-            Reflection::Value value = getEnsIdMethod->Invoke(space, List<Reflection::Value>(), &success);
+            Reflection::Value value = getEnsIdMethod->Invoke(transform, List<Reflection::Value>(), &success);
             if (success)
             {
                 std::string line = "GetEnsId 返回: " + value.ToString();

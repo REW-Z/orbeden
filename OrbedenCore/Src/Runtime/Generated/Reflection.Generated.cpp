@@ -13,7 +13,7 @@
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/DirectionalLight.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 
 class ReflectionGeneratedAccess
@@ -899,135 +899,6 @@ public:
         return Reflection::SetFromXmlValue(instance->back, value);
     }
 
-    //读取 SpaceComponent.localPosition 字段
-    static std::string Get_SpaceComponent_localPosition(Object* object)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->GetLocalPosition());
-    }
-
-    //写入 SpaceComponent.localPosition 字段
-    static bool Set_SpaceComponent_localPosition(Object* object, const std::string& value)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        vector3 parsedValue{};
-        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
-        instance->SetLocalPosition(parsedValue);
-        return true;
-    }
-
-    //读取 SpaceComponent.localRotation 字段
-    static std::string Get_SpaceComponent_localRotation(Object* object)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->GetLocalRotation());
-    }
-
-    //写入 SpaceComponent.localRotation 字段
-    static bool Set_SpaceComponent_localRotation(Object* object, const std::string& value)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        quaternion parsedValue{};
-        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
-        instance->SetLocalRotation(parsedValue);
-        return true;
-    }
-
-    //读取 SpaceComponent.localScale 字段
-    static std::string Get_SpaceComponent_localScale(Object* object)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        return Reflection::ToXmlValue(instance->GetLocalScale());
-    }
-
-    //写入 SpaceComponent.localScale 字段
-    static bool Set_SpaceComponent_localScale(Object* object, const std::string& value)
-    {
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        vector3 parsedValue{};
-        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
-        instance->SetLocalScale(parsedValue);
-        return true;
-    }
-
-    //调用 SpaceComponent.GetLocalPosition 方法
-    static Reflection::Value Invoke_SpaceComponent_GetLocalPosition_0(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetLocalPosition();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 SpaceComponent.SetLocalPosition 方法
-    static Reflection::Value Invoke_SpaceComponent_SetLocalPosition_1(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        vector3 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetLocalPosition(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 SpaceComponent.GetLocalRotation 方法
-    static Reflection::Value Invoke_SpaceComponent_GetLocalRotation_2(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetLocalRotation();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 SpaceComponent.SetLocalRotation 方法
-    static Reflection::Value Invoke_SpaceComponent_SetLocalRotation_3(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        quaternion arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetLocalRotation(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 SpaceComponent.GetLocalScale 方法
-    static Reflection::Value Invoke_SpaceComponent_GetLocalScale_4(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetLocalScale();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 SpaceComponent.SetLocalScale 方法
-    static Reflection::Value Invoke_SpaceComponent_SetLocalScale_5(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        SpaceComponent* instance = static_cast<SpaceComponent*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        vector3 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetLocalScale(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
     //读取 StaticMeshRenderer.enabled 字段
     static std::string Get_StaticMeshRenderer_enabled(Object* object)
     {
@@ -1235,6 +1106,135 @@ public:
         return Reflection::SetFromXmlValue(instance->format, value);
     }
 
+    //读取 TransformComponent.localPosition 字段
+    static std::string Get_TransformComponent_localPosition(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return Reflection::ToXmlValue(instance->GetLocalPosition());
+    }
+
+    //写入 TransformComponent.localPosition 字段
+    static bool Set_TransformComponent_localPosition(Object* object, const std::string& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalPosition(parsedValue);
+        return true;
+    }
+
+    //读取 TransformComponent.localRotation 字段
+    static std::string Get_TransformComponent_localRotation(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return Reflection::ToXmlValue(instance->GetLocalRotation());
+    }
+
+    //写入 TransformComponent.localRotation 字段
+    static bool Set_TransformComponent_localRotation(Object* object, const std::string& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        quaternion parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalRotation(parsedValue);
+        return true;
+    }
+
+    //读取 TransformComponent.localScale 字段
+    static std::string Get_TransformComponent_localScale(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return Reflection::ToXmlValue(instance->GetLocalScale());
+    }
+
+    //写入 TransformComponent.localScale 字段
+    static bool Set_TransformComponent_localScale(Object* object, const std::string& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        vector3 parsedValue{};
+        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetLocalScale(parsedValue);
+        return true;
+    }
+
+    //调用 TransformComponent.GetLocalPosition 方法
+    static Reflection::Value Invoke_TransformComponent_GetLocalPosition_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalPosition();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 TransformComponent.SetLocalPosition 方法
+    static Reflection::Value Invoke_TransformComponent_SetLocalPosition_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalPosition(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 TransformComponent.GetLocalRotation 方法
+    static Reflection::Value Invoke_TransformComponent_GetLocalRotation_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalRotation();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 TransformComponent.SetLocalRotation 方法
+    static Reflection::Value Invoke_TransformComponent_SetLocalRotation_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        quaternion arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalRotation(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 TransformComponent.GetLocalScale 方法
+    static Reflection::Value Invoke_TransformComponent_GetLocalScale_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalScale();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 TransformComponent.SetLocalScale 方法
+    static Reflection::Value Invoke_TransformComponent_SetLocalScale_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalScale(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
 };
 
 namespace Reflection
@@ -1379,34 +1379,6 @@ namespace Reflection
             {
             });
 
-        RegisterTypeFields(SpaceComponent::StaticType(),
-            {
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localPosition, ReflectionGeneratedAccess::Set_SpaceComponent_localPosition, nullptr),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_SpaceComponent_localRotation, ReflectionGeneratedAccess::Set_SpaceComponent_localRotation, nullptr),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_SpaceComponent_localScale, ReflectionGeneratedAccess::Set_SpaceComponent_localScale, nullptr),
-                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
-                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
-                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
-            });
-
-        RegisterTypeMethods(SpaceComponent::StaticType(),
-            {
-                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalPosition_0),
-                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalPosition_1),
-                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalRotation_2),
-                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalRotation_3),
-                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_SpaceComponent_GetLocalScale_4),
-                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_SpaceComponent_SetLocalScale_5),
-            });
-
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr),
@@ -1438,6 +1410,34 @@ namespace Reflection
 
         RegisterTypeMethods(Texture2D::StaticType(),
             {
+            });
+
+        RegisterTypeFields(TransformComponent::StaticType(),
+            {
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localPosition, ReflectionGeneratedAccess::Set_TransformComponent_localPosition, nullptr),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_TransformComponent_localRotation, ReflectionGeneratedAccess::Set_TransformComponent_localRotation, nullptr),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localScale, ReflectionGeneratedAccess::Set_TransformComponent_localScale, nullptr),
+                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
+                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
+                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
+                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
+                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(TransformComponent::StaticType(),
+            {
+                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalPosition_0),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalPosition_1),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalRotation_2),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalRotation_3),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalScale_4),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalScale_5),
             });
 
     }

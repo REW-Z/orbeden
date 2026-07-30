@@ -241,7 +241,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     resources.CollectUnused();
 
     //增量刷新持久场景，并在读取阶段延迟组件结构变化
-    scene.Update(world, spaceCache);
+    scene.Update(world, transformCache);
 
     //根据离屏目标尺寸解析相机 viewport，并重建依赖 viewport 的投影数据。
     ResolveCameraTargets();

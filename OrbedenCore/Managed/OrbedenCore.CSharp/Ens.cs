@@ -63,11 +63,11 @@ public sealed class Ens : IEquatable<Ens>
         return WorldBind.DestroyEns(Id);
     }
 
-    /// <summary>空间组件。</summary>
-    public SpaceComponent Space => SpaceComponent.FromNative(this, EnsBind.GetSpaceComponent(Id))!;
+    /// <summary>变换组件。</summary>
+    public TransformComponent Transform => TransformComponent.FromNative(this, EnsBind.GetTransformComponent(Id))!;
 
-    /// <summary>判断是否拥有 SpaceComponent。</summary>
-    public bool HasSpaceComponent => EnsBind.HasSpaceComponent(Id);
+    /// <summary>判断是否拥有 TransformComponent。</summary>
+    public bool HasTransformComponent => EnsBind.HasTransformComponent(Id);
 
     /// <summary>判断是否拥有 StaticMeshRenderer。</summary>
     public bool HasStaticMeshRenderer => EnsBind.HasStaticMeshRenderer(Id);
@@ -108,9 +108,9 @@ public sealed class Ens : IEquatable<Ens>
     /// <summary>获取组件包装。</summary>
     public T? GetComponent<T>() where T : Component
     {
-        if (typeof(T) == typeof(SpaceComponent) && HasSpaceComponent)
+        if (typeof(T) == typeof(TransformComponent) && HasTransformComponent)
         {
-            return (T?)(Component?)SpaceComponent.FromNative(this, EnsBind.GetSpaceComponent(Id));
+            return (T?)(Component?)TransformComponent.FromNative(this, EnsBind.GetTransformComponent(Id));
         }
 
         if (typeof(T) == typeof(StaticMeshRenderer) && HasStaticMeshRenderer)

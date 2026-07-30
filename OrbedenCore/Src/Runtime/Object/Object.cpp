@@ -6,7 +6,7 @@
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
@@ -850,9 +850,9 @@ bool Object::DestroyObjectFromBinding(Object* object)
             return false;
         }
 
-        if (component->GetType() == SpaceComponent::StaticType())
+        if (component->GetType() == TransformComponent::StaticType())
         {
-            Log::Error("SpaceComponent cannot be destroyed directly.");
+            Log::Error("TransformComponent cannot be destroyed directly.");
             return false;
         }
 

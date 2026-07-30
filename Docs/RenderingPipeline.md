@@ -7,7 +7,7 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | 模块 | 职责 |
 | --- | --- |
 | `RenderSystem` | 初始化、帧调度、多相机、Viewport、RenderTarget、Overlay |
-| `SpaceCache` | 根据 Transform 通知更新脏子树 |
+| `TransformCache` | 根据 Transform 通知更新脏子树 |
 | `RenderScene` | 持久维护 Camera、Light、RendererEntry 注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | 不透明/透明队列排序 |
@@ -38,8 +38,8 @@ flowchart TD
 
 `RenderScene` 在绑定 World 时完整收集一次已有组件，后续由 Camera、DirectionalLight 和 StaticMeshRenderer 的 Attach、Detach 与 enabled 变化维护注册：
 
-- `SpaceComponent` setter 和父级变化通过 `ITransformListener` 通知各 `SpaceCache`，不再每帧扫描所有 Ens。
-- `SpaceCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
+- `TransformComponent` setter 和父级变化通过 `ITransformListener` 通知各 `TransformCache`，不再每帧扫描所有 Ens。
+- `TransformCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
 - Camera 生成 View、Projection、ViewProjection 和视锥快照，并按 `depth` 升序排列。
 - DirectionalLight 复制光照与阴影参数。
 - 每个 StaticMeshRenderer 对应一个持久 `RendererEntry`，共享变换、Mesh revision 和世界 AABB。

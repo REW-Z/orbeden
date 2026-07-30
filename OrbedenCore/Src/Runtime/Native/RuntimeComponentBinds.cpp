@@ -6,7 +6,7 @@
 #include "Physics/RigidBodyComponent.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -43,11 +43,11 @@ namespace
         return world ? world->GetEns(ens) : nullptr;
     }
 
-    //获取当前 World 中的 SpaceComponent。
-    SpaceComponent* GetNativeSpace(EnsId ens)
+    //获取当前 World 中的 TransformComponent。
+    TransformComponent* GetNativeTransform(EnsId ens)
     {
         World* world = World::CurrentWorld();
-        return world ? world->GetSpaceComponent(ens) : nullptr;
+        return world ? world->GetTransformComponent(ens) : nullptr;
     }
 
     //获取当前 World 中的 StaticMeshRenderer。
@@ -148,10 +148,10 @@ namespace
         if (value) value->SetName(ReadUtf8Text(text, length));
     }
 
-    //判断 Ens 是否拥有 SpaceComponent。
-    uint8 ORBEDEN_NATIVE_CALL NativeEnsHasSpaceComponent(EnsId ens)
+    //判断 Ens 是否拥有 TransformComponent。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsHasTransformComponent(EnsId ens)
     {
-        return GetNativeSpace(ens) ? 1 : 0;
+        return GetNativeTransform(ens) ? 1 : 0;
     }
 
     //判断 Ens 是否拥有 StaticMeshRenderer。
@@ -206,10 +206,10 @@ namespace
         return value ? value->AddComponent<CharacterControllerComponent>() : nullptr;
     }
 
-    //获取 SpaceComponent。
-    void* ORBEDEN_NATIVE_CALL NativeEnsGetSpaceComponent(EnsId ens)
+    //获取 TransformComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsGetTransformComponent(EnsId ens)
     {
-        return GetNativeSpace(ens);
+        return GetNativeTransform(ens);
     }
 
     //获取 StaticMeshRenderer。
@@ -237,73 +237,73 @@ namespace
     }
 
     //读取父级 Ens。
-    EnsId ORBEDEN_NATIVE_CALL NativeSpaceGetParent(EnsId ens)
+    EnsId ORBEDEN_NATIVE_CALL NativeTransformGetParent(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->parent : EnsId();
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->parent : EnsId();
     }
 
     //设置父级 Ens。
-    void ORBEDEN_NATIVE_CALL NativeSpaceSetParent(EnsId ens, EnsId parent)
+    void ORBEDEN_NATIVE_CALL NativeTransformSetParent(EnsId ens, EnsId parent)
     {
         World* world = World::CurrentWorld();
         if (world) world->SetParent(ens, parent);
     }
 
     //读取本地位置。
-    vector3 ORBEDEN_NATIVE_CALL NativeSpaceGetLocalPosition(EnsId ens)
+    vector3 ORBEDEN_NATIVE_CALL NativeTransformGetLocalPosition(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->GetLocalPosition() : vector3();
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->GetLocalPosition() : vector3();
     }
 
     //写入本地位置。
-    void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalPosition(EnsId ens, vector3 value)
+    void ORBEDEN_NATIVE_CALL NativeTransformSetLocalPosition(EnsId ens, vector3 value)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->SetLocalPosition(value);
+        TransformComponent* transform = GetNativeTransform(ens);
+        if (transform) transform->SetLocalPosition(value);
     }
 
     //读取本地旋转。
-    quaternion ORBEDEN_NATIVE_CALL NativeSpaceGetLocalRotation(EnsId ens)
+    quaternion ORBEDEN_NATIVE_CALL NativeTransformGetLocalRotation(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->GetLocalRotation() : quaternion();
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->GetLocalRotation() : quaternion();
     }
 
     //写入本地旋转。
-    void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalRotation(EnsId ens, quaternion value)
+    void ORBEDEN_NATIVE_CALL NativeTransformSetLocalRotation(EnsId ens, quaternion value)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->SetLocalRotation(value);
+        TransformComponent* transform = GetNativeTransform(ens);
+        if (transform) transform->SetLocalRotation(value);
     }
 
     //读取本地缩放。
-    vector3 ORBEDEN_NATIVE_CALL NativeSpaceGetLocalScale(EnsId ens)
+    vector3 ORBEDEN_NATIVE_CALL NativeTransformGetLocalScale(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->GetLocalScale() : vector3{ 1.0f, 1.0f, 1.0f };
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->GetLocalScale() : vector3{ 1.0f, 1.0f, 1.0f };
     }
 
     //写入本地缩放。
-    void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalScale(EnsId ens, vector3 value)
+    void ORBEDEN_NATIVE_CALL NativeTransformSetLocalScale(EnsId ens, vector3 value)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->SetLocalScale(value);
+        TransformComponent* transform = GetNativeTransform(ens);
+        if (transform) transform->SetLocalScale(value);
     }
 
     //读取世界位置。
-    vector3 ORBEDEN_NATIVE_CALL NativeSpaceGetWorldPosition(EnsId ens)
+    vector3 ORBEDEN_NATIVE_CALL NativeTransformGetWorldPosition(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->worldPosition : vector3();
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->worldPosition : vector3();
     }
 
     //读取世界旋转。
-    quaternion ORBEDEN_NATIVE_CALL NativeSpaceGetWorldRotation(EnsId ens)
+    quaternion ORBEDEN_NATIVE_CALL NativeTransformGetWorldRotation(EnsId ens)
     {
-        SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->worldRotation : quaternion();
+        TransformComponent* transform = GetNativeTransform(ens);
+        return transform ? transform->worldRotation : quaternion();
     }
 
     //读取 StaticMeshRenderer.enabled。
@@ -887,27 +887,27 @@ EnsBind EnsBind::Create()
     bind.IsAlive = reinterpret_cast<void*>(&NativeEnsIsAlive);
     bind.GetName = reinterpret_cast<void*>(&NativeEnsGetName);
     bind.SetName = reinterpret_cast<void*>(&NativeEnsSetName);
-    bind.HasSpaceComponent = reinterpret_cast<void*>(&NativeEnsHasSpaceComponent);
+    bind.HasTransformComponent = reinterpret_cast<void*>(&NativeEnsHasTransformComponent);
     bind.HasStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsHasStaticMeshRenderer);
     bind.AddStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsAddStaticMeshRenderer);
-    bind.GetSpaceComponent = reinterpret_cast<void*>(&NativeEnsGetSpaceComponent);
+    bind.GetTransformComponent = reinterpret_cast<void*>(&NativeEnsGetTransformComponent);
     bind.GetStaticMeshRenderer = reinterpret_cast<void*>(&NativeEnsGetStaticMeshRenderer);
     return bind;
 }
 
-SpaceComponentBind SpaceComponentBind::Create()
+TransformComponentBind TransformComponentBind::Create()
 {
-    SpaceComponentBind bind;
-    bind.GetParent = reinterpret_cast<void*>(&NativeSpaceGetParent);
-    bind.SetParent = reinterpret_cast<void*>(&NativeSpaceSetParent);
-    bind.GetLocalPosition = reinterpret_cast<void*>(&NativeSpaceGetLocalPosition);
-    bind.SetLocalPosition = reinterpret_cast<void*>(&NativeSpaceSetLocalPosition);
-    bind.GetLocalRotation = reinterpret_cast<void*>(&NativeSpaceGetLocalRotation);
-    bind.SetLocalRotation = reinterpret_cast<void*>(&NativeSpaceSetLocalRotation);
-    bind.GetLocalScale = reinterpret_cast<void*>(&NativeSpaceGetLocalScale);
-    bind.SetLocalScale = reinterpret_cast<void*>(&NativeSpaceSetLocalScale);
-    bind.GetWorldPosition = reinterpret_cast<void*>(&NativeSpaceGetWorldPosition);
-    bind.GetWorldRotation = reinterpret_cast<void*>(&NativeSpaceGetWorldRotation);
+    TransformComponentBind bind;
+    bind.GetParent = reinterpret_cast<void*>(&NativeTransformGetParent);
+    bind.SetParent = reinterpret_cast<void*>(&NativeTransformSetParent);
+    bind.GetLocalPosition = reinterpret_cast<void*>(&NativeTransformGetLocalPosition);
+    bind.SetLocalPosition = reinterpret_cast<void*>(&NativeTransformSetLocalPosition);
+    bind.GetLocalRotation = reinterpret_cast<void*>(&NativeTransformGetLocalRotation);
+    bind.SetLocalRotation = reinterpret_cast<void*>(&NativeTransformSetLocalRotation);
+    bind.GetLocalScale = reinterpret_cast<void*>(&NativeTransformGetLocalScale);
+    bind.SetLocalScale = reinterpret_cast<void*>(&NativeTransformSetLocalScale);
+    bind.GetWorldPosition = reinterpret_cast<void*>(&NativeTransformGetWorldPosition);
+    bind.GetWorldRotation = reinterpret_cast<void*>(&NativeTransformGetWorldRotation);
     return bind;
 }
 
