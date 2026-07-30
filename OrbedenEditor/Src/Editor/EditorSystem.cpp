@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -329,81 +328,6 @@ namespace
     {
         std::string bundled = GetBundledCMakePath();
         return bundled.empty() ? "cmake" : Quote(bundled);
-    }
-
-    std::filesystem::path CopyAssemblyToShadowCache(const std::filesystem::path& source, const std::filesystem::path& shadowDirectory)
-    {
-        auto ticks = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        std::filesystem::path targetDirectory = shadowDirectory / ("inspector_" + std::to_string(ticks));
-        std::filesystem::create_directories(targetDirectory);
-        return targetDirectory / source.filename();
-    }
-
-    bool CopyManagedFileIfExists(const std::filesystem::path& source, const std::filesystem::path& target)
-    {
-        if (!std::filesystem::exists(source)) return true;
-
-        std::error_code error;
-        std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing, error);
-        return !error;
-    }
-
-    //复制目录下的托管依赖文件。
-    bool CopyManagedDirectoryFiles(const std::filesystem::path& sourceDirectory, const std::filesystem::path& targetDirectory)
-    {
-        std::error_code error;
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(sourceDirectory, error))
-        {
-            if (error) return false;
-            if (!entry.is_regular_file()) continue;
-
-            std::filesystem::path extension = entry.path().extension();
-            if (extension != ".dll" && extension != ".pdb" && extension != ".json") continue;
-
-            std::filesystem::path target = targetDirectory / entry.path().filename();
-            if (!CopyManagedFileIfExists(entry.path(), target)) return false;
-        }
-
-        return true;
-    }
-
-    //复制额外托管依赖目录。
-    bool CopyManagedDependencyDirectories(const List<std::string>& directories, const std::filesystem::path& targetDirectory)
-    {
-        for (const std::string& directoryText : directories)
-        {
-            if (directoryText.empty()) continue;
-
-            std::filesystem::path directory = Utf8Path::FromUtf8(directoryText);
-            if (!std::filesystem::is_directory(directory)) continue;
-            if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
-        }
-
-        return true;
-    }
-
-    std::string ShadowCopyManagedAssembly(const std::string& assemblyPath,
-        const std::filesystem::path& shadowDirectory,
-        const List<std::string>& managedDependencyDirectories)
-    {
-        std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(assemblyPath));
-        if (!std::filesystem::exists(sourceAssembly)) return std::string();
-
-        std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, shadowDirectory);
-        std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
-        std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
-        std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");
-        std::filesystem::path shadowDeps = std::filesystem::path(shadowAssembly).replace_extension(".deps.json");
-        if (!CopyManagedDirectoryFiles(sourceAssembly.parent_path(), shadowAssembly.parent_path())
-            || !CopyManagedDependencyDirectories(managedDependencyDirectories, shadowAssembly.parent_path())
-            || !CopyManagedFileIfExists(sourceAssembly, shadowAssembly)
-            || !CopyManagedFileIfExists(sourcePdb, shadowPdb)
-            || !CopyManagedFileIfExists(sourceDeps, shadowDeps))
-        {
-            return std::string();
-        }
-
-        return ToCleanPath(shadowAssembly);
     }
 
 }
@@ -928,17 +852,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
         return false;
     }
 
-    std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".inspector";
-    std::string shadowAssemblyPath = ShadowCopyManagedAssembly(assemblyPath, shadowDirectory, GetManagedDependencyDirectories());
-    if (shadowAssemblyPath.empty())
-    {
-        managedBridge.LoadGameAssembly(std::string(), sidecarPath);
-        projectStatus = "Inspector game assembly shadow copy failed.";
-        Log::Warning(projectStatus.c_str());
-        return false;
-    }
-
-    managedBridge.LoadGameAssembly(shadowAssemblyPath, sidecarPath);
+    managedBridge.LoadGameAssembly(assemblyPath, sidecarPath);
     return true;
 }
 
