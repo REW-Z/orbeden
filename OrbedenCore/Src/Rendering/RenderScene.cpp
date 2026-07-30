@@ -1,10 +1,10 @@
 #include "Rendering/RenderScene.h"
 
 #include "Rendering/RenderMath.h"
-#include "Rendering/SpaceCache.h"
+#include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/Camera.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -123,16 +123,16 @@ void RenderScene::UnbindWorld()
     if (currentRenderScene == this) currentRenderScene = nullptr;
 }
 
-//增量刷新空间状态和组件快照
-void RenderScene::Update(World& currentWorld, SpaceCache& spaceCache)
+//增量刷新变换状态和组件快照
+void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
 {
     if (world != &currentWorld) BindWorld(currentWorld);
     FlushPendingChanges();
     renderSettings = currentWorld.renderSettings;
-    spaceCache.Update(currentWorld);
+    transformCache.Update(currentWorld);
 
     //只刷新收到变换通知的渲染器
-    for (EnsId ens : spaceCache.GetChangedNodes())
+    for (EnsId ens : transformCache.GetChangedNodes())
     {
         Ens* entity = currentWorld.GetEns(ens);
         StaticMeshRenderer* renderer = entity ? entity->GetComponent<StaticMeshRenderer>() : nullptr;
@@ -161,7 +161,7 @@ void RenderScene::Update(World& currentWorld, SpaceCache& spaceCache)
         RenderCamera renderCamera;
         renderCamera.ens = camera->GetEnsId();
         renderCamera.camera = camera;
-        renderCamera.worldMatrix = spaceCache.GetWorldMatrix(renderCamera.ens);
+        renderCamera.worldMatrix = transformCache.GetWorldMatrix(renderCamera.ens);
         renderCamera.viewMatrix = RenderMath::Inverse(renderCamera.worldMatrix);
         renderCamera.fieldOfView = camera->fieldOfView;
         renderCamera.nearPlane = camera->nearPlane;
@@ -529,8 +529,8 @@ void RenderScene::UpdateRenderer(RenderSceneHandle handle, bool updateTransform)
 
     if (updateTransform)
     {
-        SpaceComponent* space = world->GetSpaceComponent(entry.ens);
-        entry.localToWorld = space ? space->worldMatrix : matrix4x4();
+        TransformComponent* transform = world->GetTransformComponent(entry.ens);
+        entry.localToWorld = transform ? transform->worldMatrix : matrix4x4();
     }
 
     if (meshChanged || updateTransform)

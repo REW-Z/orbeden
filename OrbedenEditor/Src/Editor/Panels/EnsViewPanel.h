@@ -9,7 +9,7 @@ class EditorSystem;
 struct EnsId;
 class World;
 
-//Ens视图面板，显示当前World中的空间层级树。
+//Ens视图面板，显示当前World中的场景层级树。
 class EnsViewPanel : public IEditorPanel
 {
 private:

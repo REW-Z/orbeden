@@ -10,7 +10,7 @@
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Object.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -257,9 +257,9 @@ void EditorScene::Update(World& world, float32 deltaTime)
     (void)deltaTime;
     CreateEditorCamera(world);
 
-    SpaceComponent* space = world.GetSpaceComponent(cameraEns);
+    TransformComponent* transform = world.GetTransformComponent(cameraEns);
     GLFWwindow* window = GetGlfwWindow(app);
-    if (!space || !window) return;
+    if (!transform || !window) return;
 
     bool cameraOwnsMouse = cameraMouseDragging
         || !ImGuiCapturesMouse()
@@ -294,12 +294,12 @@ void EditorScene::Update(World& world, float32 deltaTime)
                     vector3 pan = Add(
                         Scale(GetRight(cameraYaw), -deltaX * PanScale),
                         Scale(GetUp(cameraYaw, cameraPitch), deltaY * PanScale));
-                    space->SetLocalPosition(Add(space->GetLocalPosition(), pan));
+                    transform->SetLocalPosition(Add(transform->GetLocalPosition(), pan));
                 }
                 else
                 {
                     vector3 forward = GetForward(cameraYaw, cameraPitch);
-                    space->SetLocalPosition(Add(space->GetLocalPosition(),
+                    transform->SetLocalPosition(Add(transform->GetLocalPosition(),
                         Scale(forward, -deltaY * cameraMoveSpeed * 0.01f)));
                 }
             }
@@ -324,7 +324,7 @@ void EditorScene::Update(World& world, float32 deltaTime)
         if (ScrollDelta != 0.0f)
         {
             vector3 forward = GetForward(cameraYaw, cameraPitch);
-            space->SetLocalPosition(Add(space->GetLocalPosition(),
+            transform->SetLocalPosition(Add(transform->GetLocalPosition(),
                 Scale(forward, ScrollDelta * cameraMoveSpeed * 0.5f)));
             ScrollDelta = 0.0f;
         }
@@ -336,9 +336,9 @@ void EditorScene::Update(World& world, float32 deltaTime)
         ScrollDelta = 0.0f;
     }
 
-    space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+    transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     cameraState.hasValue = true;
-    cameraState.position = space->GetLocalPosition();
+    cameraState.position = transform->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
 }
@@ -445,15 +445,15 @@ bool EditorScene::IsSelected(EnsId ens) const
 std::string EditorScene::GetSelectedStableId() const
 {
     if (activeEns.IsNull()) return std::string();
-    const SpaceComponent* space = app.GetWorld().GetSpaceComponent(activeEns);
-    return space ? space->GetInstanceId().GetPath() : std::string();
+    const TransformComponent* transform = app.GetWorld().GetTransformComponent(activeEns);
+    return transform ? transform->GetInstanceId().GetPath() : std::string();
 }
 
 //判断 Ens 是否属于编辑器临时场景对象。
 bool EditorScene::IsTemporaryEns(EnsId ens) const
 {
-    const SpaceComponent* space = app.GetWorld().GetSpaceComponent(ens);
-    return space && space->GetInstanceId().GetPath() == EditorCameraId;
+    const TransformComponent* transform = app.GetWorld().GetTransformComponent(ens);
+    return transform && transform->GetInstanceId().GetPath() == EditorCameraId;
 }
 
 //把观察相机状态写入布局。
@@ -473,11 +473,11 @@ void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
     CreateEditorCamera(world);
 
     if (!cameraState.hasValue) return;
-    if (SpaceComponent* space = world.GetSpaceComponent(cameraEns))
+    if (TransformComponent* transform = world.GetTransformComponent(cameraEns))
     {
-        space->SetLocalPosition(cameraState.position);
-        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
-        space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
+        transform->SetLocalPosition(cameraState.position);
+        transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+        transform->SetLocalScale({ 1.0f, 1.0f, 1.0f });
     }
 }
 
@@ -496,11 +496,11 @@ void EditorScene::RestoreCamera(World& world)
     CreateEditorCamera(world);
     if (!cameraState.hasValue) return;
 
-    if (SpaceComponent* space = world.GetSpaceComponent(cameraEns))
+    if (TransformComponent* transform = world.GetTransformComponent(cameraEns))
     {
-        space->SetLocalPosition(cameraState.position);
-        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
-        space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
+        transform->SetLocalPosition(cameraState.position);
+        transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+        transform->SetLocalScale({ 1.0f, 1.0f, 1.0f });
     }
 }
 
@@ -556,12 +556,12 @@ void EditorScene::CreateEditorCamera(World& world)
         editorCamera = world.CreateEnsWithStableId(EditorCameraId, "EditorCamera");
         if (editorCamera)
         {
-            if (SpaceComponent* space = editorCamera->Space())
+            if (TransformComponent* transform = editorCamera->Transform())
             {
-                space->SetLocalPosition(cameraState.hasValue
+                transform->SetLocalPosition(cameraState.hasValue
                     ? cameraState.position
                     : vector3 { 5.0f, 3.2f, 7.0f });
-                space->SetLocalScale({ 1.0f, 1.0f, 1.0f });
+                transform->SetLocalScale({ 1.0f, 1.0f, 1.0f });
             }
         }
     }
@@ -585,9 +585,9 @@ void EditorScene::CreateEditorCamera(World& world)
         cameraYaw = cameraState.yaw;
         cameraPitch = cameraState.pitch;
     }
-    if (SpaceComponent* space = editorCamera->Space())
+    if (TransformComponent* transform = editorCamera->Transform())
     {
-        space->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
+        transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     }
     cameraEns = editorCamera->GetId();
 }
@@ -608,10 +608,10 @@ void EditorScene::CaptureCameraState(World& world)
         return;
     }
 
-    SpaceComponent* space = editorCamera->Space();
-    if (!space) return;
+    TransformComponent* transform = editorCamera->Transform();
+    if (!transform) return;
     cameraState.hasValue = true;
-    cameraState.position = space->GetLocalPosition();
+    cameraState.position = transform->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
 }
@@ -863,15 +863,15 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
     }
     for (EnsId ens : selectedEns)
     {
-        SpaceComponent* selectedSpace = world.GetSpaceComponent(ens);
-        if (!selectedSpace) continue;
+        TransformComponent* selectedTransform = world.GetTransformComponent(ens);
+        if (!selectedTransform) continue;
 
-        EnsId child = selectedSpace->firstChild;
+        EnsId child = selectedTransform->firstChild;
         while (!child.IsNull())
         {
             pendingEns.push_back(child);
-            SpaceComponent* childSpace = world.GetSpaceComponent(child);
-            child = childSpace ? childSpace->next : EnsId();
+            TransformComponent* childTransform = world.GetTransformComponent(child);
+            child = childTransform ? childTransform->next : EnsId();
         }
     }
     while (!pendingEns.empty())
@@ -883,15 +883,15 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
         uint64 key = GetEnsKey(ens);
         if (selectionTypes.find(key) != selectionTypes.end()) continue;
         selectionTypes.emplace(key, DescendantSelection);
-        SpaceComponent* space = world.GetSpaceComponent(ens);
-        if (!space) continue;
+        TransformComponent* transform = world.GetTransformComponent(ens);
+        if (!transform) continue;
 
-        EnsId child = space->firstChild;
+        EnsId child = transform->firstChild;
         while (!child.IsNull())
         {
             pendingEns.push_back(child);
-            SpaceComponent* childSpace = world.GetSpaceComponent(child);
-            child = childSpace ? childSpace->next : EnsId();
+            TransformComponent* childTransform = world.GetTransformComponent(child);
+            child = childTransform ? childTransform->next : EnsId();
         }
     }
 
@@ -1306,10 +1306,10 @@ bool EditorScene::ClipLine(ClipPoint& a, ClipPoint& b)
 void EditorScene::DrawManagedGizmos()
 {
     World& world = app.GetWorld();
-    SpaceComponent* space = world.GetSpaceComponent(cameraEns);
+    TransformComponent* transform = world.GetTransformComponent(cameraEns);
     Camera* camera = nullptr;
     if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
-    if (!space || !camera || !camera->GetEnabled()) return;
+    if (!transform || !camera || !camera->GetEnabled()) return;
 
     IWindow* window = app.GetWindow();
     gizmoViewportWidth = window ? window->GetFramebufferWidth() : 0;
@@ -1318,9 +1318,9 @@ void EditorScene::DrawManagedGizmos()
         ? static_cast<float32>(gizmoViewportWidth) / static_cast<float32>(gizmoViewportHeight)
         : 1.0f;
     matrix4x4 worldMatrix = RenderMath::TRS(
-        space->GetLocalPosition(),
-        space->GetLocalRotation(),
-        space->GetLocalScale());
+        transform->GetLocalPosition(),
+        transform->GetLocalRotation(),
+        transform->GetLocalScale());
     matrix4x4 viewMatrix = RenderMath::Inverse(worldMatrix);
     matrix4x4 projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
     gizmoViewProjection = RenderMath::Mul(projectionMatrix, viewMatrix);

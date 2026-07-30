@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "OrbedenCore.CSharp/1.0.0": {
+        "runtime": {
+          "OrbedenCore.CSharp.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "OrbedenCore.CSharp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

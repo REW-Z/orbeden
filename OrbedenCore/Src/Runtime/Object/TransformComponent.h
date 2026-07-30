@@ -4,10 +4,10 @@
 #include "Runtime/EngineTypes.h"
 #include "Runtime/EnsId.h"
 
-//Ens空间组件，保存空间层级和本地变换
-class SpaceComponent : public Component
+//Ens变换组件，保存场景层级和本地变换
+class TransformComponent : public Component
 {
-    OBJECT_TYPE_DECLARE(SpaceComponent)
+    OBJECT_TYPE_DECLARE(TransformComponent)
 
 private:
     vector3 localPosition;
@@ -32,18 +32,18 @@ public:
     //获取本地位置
     const vector3& GetLocalPosition() const;
 
-    //设置本地位置并通知空间缓存
+    //设置本地位置并通知变换缓存
     void SetLocalPosition(const vector3& value);
 
     //获取本地旋转
     const quaternion& GetLocalRotation() const;
 
-    //设置本地旋转并通知空间缓存
+    //设置本地旋转并通知变换缓存
     void SetLocalRotation(const quaternion& value);
 
     //获取本地缩放
     const vector3& GetLocalScale() const;
 
-    //设置本地缩放并通知空间缓存
+    //设置本地缩放并通知变换缓存
     void SetLocalScale(const vector3& value);
 };

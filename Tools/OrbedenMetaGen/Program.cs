@@ -349,7 +349,7 @@ static bool IsPersistentField(string className, string fieldName)
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
     if (fieldName == "renderSceneHandle") return false;
-    if (className == "SpaceComponent")
+    if (className == "TransformComponent")
     {
         return fieldName is "localPosition" or "localRotation" or "localScale";
     }
@@ -454,7 +454,7 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("#include \"Runtime/Object/Texture2D.h\"");
     output.AppendLine("#include \"Runtime/Object/Camera.h\"");
     output.AppendLine("#include \"Runtime/Object/DirectionalLight.h\"");
-    output.AppendLine("#include \"Runtime/Object/SpaceComponent.h\"");
+    output.AppendLine("#include \"Runtime/Object/TransformComponent.h\"");
     output.AppendLine("#include \"Runtime/Object/StaticMeshRenderer.h\"");
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");
@@ -466,7 +466,7 @@ static string GenerateCpp(List<ClassInfo> classes)
         //生成字段 getter/setter 和方法 invoker
         foreach (var field in classInfo.Fields.Where(field => field.Persistent))
         {
-            var setterBacked = classInfo.Name == "SpaceComponent"
+            var setterBacked = classInfo.Name == "TransformComponent"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
             var getterExpression = setterBacked
                 ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()"

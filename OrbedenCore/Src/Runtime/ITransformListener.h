@@ -4,7 +4,7 @@
 
 class World;
 
-//空间变换监听器，接收局部变换和父级变化通知
+//变换监听器，接收局部变换和父级变化通知
 class ITransformListener
 {
 public:

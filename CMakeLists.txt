@@ -61,7 +61,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/RenderScene.cpp
     OrbedenCore/Src/Rendering/RenderSystem.cpp
     OrbedenCore/Src/Rendering/SceneCuller.cpp
-    OrbedenCore/Src/Rendering/SpaceCache.cpp
+    OrbedenCore/Src/Rendering/TransformCache.cpp
     OrbedenCore/Src/Scripting/ScriptSystem.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp
@@ -79,7 +79,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Runtime/Object/Object.cpp
     OrbedenCore/Src/Runtime/Object/Shader.cpp
     OrbedenCore/Src/Runtime/Object/Skybox.cpp
-    OrbedenCore/Src/Runtime/Object/SpaceComponent.cpp
+    OrbedenCore/Src/Runtime/Object/TransformComponent.cpp
     OrbedenCore/Src/Runtime/Object/StaticMeshRenderer.cpp
     OrbedenCore/Src/Runtime/Object/Texture2D.cpp
     OrbedenCore/Src/Runtime/Reflection.cpp

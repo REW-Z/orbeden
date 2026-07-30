@@ -8,7 +8,7 @@
 #include "Runtime/RenderSettings.h"
 
 class Camera;
-class SpaceCache;
+class TransformCache;
 class StaticMeshRenderer;
 class World;
 
@@ -221,8 +221,8 @@ public:
     //解除世界绑定并清空全部持久记录
     void UnbindWorld();
 
-    //增量刷新空间状态和组件快照
-    void Update(World& currentWorld, SpaceCache& spaceCache);
+    //增量刷新变换状态和组件快照
+    void Update(World& currentWorld, TransformCache& transformCache);
 
     //进入不允许修改紧凑列表的读取阶段
     void BeginRead();

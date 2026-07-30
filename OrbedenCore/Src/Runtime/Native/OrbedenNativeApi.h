@@ -12,7 +12,7 @@ public:
     WorldBind World;
     PathDefinesBind PathDefines;
     EnsBind Ens;
-    SpaceComponentBind SpaceComponent;
+    TransformComponentBind TransformComponent;
     StaticMeshRendererBind StaticMeshRenderer;
     ObjectBind Object;
     MeshBind Mesh;

@@ -156,7 +156,7 @@
     <ClInclude Include="Src\Scripting\ScriptSystem.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />
     <ClInclude Include="Src\Rendering\SceneCuller.h" />
-    <ClInclude Include="Src\Rendering\SpaceCache.h" />
+    <ClInclude Include="Src\Rendering\TransformCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
@@ -181,7 +181,7 @@
     <ClInclude Include="Src\Runtime\Object\Mesh.h" />
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
     <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
-    <ClInclude Include="Src\Runtime\Object\SpaceComponent.h" />
+    <ClInclude Include="Src\Runtime\Object\TransformComponent.h" />
     <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
     <ClInclude Include="Src\ThirdParty\glad\include\KHR\khrplatform.h" />
     <ClInclude Include="Src\ThirdParty\glad\include\glad\gl.h" />
@@ -222,7 +222,7 @@
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
     <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
-    <ClCompile Include="Src\Rendering\SpaceCache.cpp" />
+    <ClCompile Include="Src\Rendering\TransformCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
@@ -244,7 +244,7 @@
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
     <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
-    <ClCompile Include="Src\Runtime\Object\SpaceComponent.cpp" />
+    <ClCompile Include="Src\Runtime\Object\TransformComponent.cpp" />
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />
     <ClCompile Include="Src\ThirdParty\glad\src\gl.c" />
     <ClCompile Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.cpp" />

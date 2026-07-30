@@ -8,7 +8,7 @@
 
 class Ens;
 class World;
-class SpaceComponent;
+class TransformComponent;
 
 typedef void (*EnsVisitorFunction)(Ens* ens, void* userData);
 
@@ -55,8 +55,8 @@ public:
     //获取底层ID
     EnsId GetId() const;
 
-    //获取空间组件
-    SpaceComponent* Space() const;
+    //获取变换组件
+    TransformComponent* Transform() const;
 
     //获取名称
     const std::string& GetName() const;

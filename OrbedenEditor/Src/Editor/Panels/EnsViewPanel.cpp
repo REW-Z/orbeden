@@ -11,7 +11,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Ens.h"
 #include "Runtime/EnsId.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/World.h"
 
 namespace
@@ -94,7 +94,7 @@ namespace
         return result;
     }
 
-    //把局部矩阵分解回SpaceComponent使用的TRS字段。
+    //把局部矩阵分解回TransformComponent使用的TRS字段。
     void DecomposeTransform(const matrix4x4& matrix, vector3& position, quaternion& rotation, vector3& scale)
     {
         position = RenderMath::GetTranslation(matrix);
@@ -196,8 +196,8 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorScene& sceneEditor, EnsId ens
     Ens* ensObject = world.GetEns(ens);
     if (!ensObject) return;
 
-    SpaceComponent* space = world.GetSpaceComponent(ens);
-    bool hasChildren = space && !space->firstChild.IsNull();
+    TransformComponent* transform = world.GetTransformComponent(ens);
+    bool hasChildren = transform && !transform->firstChild.IsNull();
 
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
     if (hasChildren)
@@ -236,13 +236,13 @@ void EnsViewPanel::DrawEnsNode(World& world, EditorScene& sceneEditor, EnsId ens
 
     if (open && hasChildren)
     {
-        EnsId child = space->firstChild;
+        EnsId child = transform->firstChild;
         while (!child.IsNull())
         {
             DrawEnsNode(world, sceneEditor, child, roots);
 
-            SpaceComponent* childSpace = world.GetSpaceComponent(child);
-            child = childSpace ? childSpace->next : EnsId();
+            TransformComponent* childTransform = world.GetTransformComponent(child);
+            child = childTransform ? childTransform->next : EnsId();
         }
 
         ImGui::TreePop();
@@ -267,23 +267,23 @@ void EnsViewPanel::DrawNodeDropTarget(World& world, EnsId target, const List<Ens
             ? NodeDropPlacement::Before
             : ratio > 0.75f ? NodeDropPlacement::After : NodeDropPlacement::Child;
 
-        SpaceComponent* targetSpace = world.GetSpaceComponent(target);
+        TransformComponent* targetTransform = world.GetTransformComponent(target);
         EnsId parent;
         EnsId beforeSibling;
         if (placement == NodeDropPlacement::Child)
         {
             parent = target;
         }
-        else if (targetSpace)
+        else if (targetTransform)
         {
-            parent = targetSpace->parent;
+            parent = targetTransform->parent;
             if (placement == NodeDropPlacement::Before)
             {
                 beforeSibling = target;
             }
             else if (!parent.IsNull())
             {
-                beforeSibling = targetSpace->next;
+                beforeSibling = targetTransform->next;
             }
             else
             {
@@ -354,16 +354,16 @@ bool EnsViewPanel::CanMoveEns(World& world, EnsId child, EnsId parent, EnsId bef
 
     if (!beforeSibling.IsNull())
     {
-        SpaceComponent* beforeSpace = world.GetSpaceComponent(beforeSibling);
-        if (!beforeSpace || beforeSpace->parent != parent || sceneEditor.IsTemporaryEns(beforeSibling)) return false;
+        TransformComponent* beforeTransform = world.GetTransformComponent(beforeSibling);
+        if (!beforeTransform || beforeTransform->parent != parent || sceneEditor.IsTemporaryEns(beforeSibling)) return false;
     }
 
     EnsId current = parent;
     while (!current.IsNull())
     {
         if (current == child) return false;
-        SpaceComponent* currentSpace = world.GetSpaceComponent(current);
-        current = currentSpace ? currentSpace->parent : EnsId();
+        TransformComponent* currentTransform = world.GetTransformComponent(current);
+        current = currentTransform ? currentTransform->parent : EnsId();
     }
     return true;
 }
@@ -377,26 +377,26 @@ void EnsViewPanel::ApplyPendingMove(World& world)
     pendingMove.pending = false;
     if (!CanMoveEns(world, move.child, move.parent, move.beforeSibling)) return;
 
-    SpaceComponent* space = world.GetSpaceComponent(move.child);
-    if (!space) return;
+    TransformComponent* transform = world.GetTransformComponent(move.child);
+    if (!transform) return;
 
-    EnsId oldParent = space->parent;
-    matrix4x4 worldMatrix = space->worldMatrix;
+    EnsId oldParent = transform->parent;
+    matrix4x4 worldMatrix = transform->worldMatrix;
     if (!world.MoveEns(move.child, move.parent, move.beforeSibling)) return;
     editor.RequestRepaint();
     if (oldParent == move.parent) return;
 
-    SpaceComponent* parentSpace = move.parent.IsNull() ? nullptr : world.GetSpaceComponent(move.parent);
-    matrix4x4 localMatrix = parentSpace
-        ? RenderMath::Mul(RenderMath::Inverse(parentSpace->worldMatrix), worldMatrix)
+    TransformComponent* parentTransform = move.parent.IsNull() ? nullptr : world.GetTransformComponent(move.parent);
+    matrix4x4 localMatrix = parentTransform
+        ? RenderMath::Mul(RenderMath::Inverse(parentTransform->worldMatrix), worldMatrix)
         : worldMatrix;
     vector3 localPosition;
     quaternion localRotation;
     vector3 localScale;
     DecomposeTransform(localMatrix, localPosition, localRotation, localScale);
-    space->SetLocalPosition(localPosition);
-    space->SetLocalRotation(localRotation);
-    space->SetLocalScale(localScale);
+    transform->SetLocalPosition(localPosition);
+    transform->SetLocalRotation(localRotation);
+    transform->SetLocalScale(localScale);
 }
 
 ORBEDEN_REGISTER_EDITOR_PANEL(EnsViewPanel)

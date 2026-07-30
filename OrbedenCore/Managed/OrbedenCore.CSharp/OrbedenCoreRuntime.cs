@@ -11,7 +11,7 @@ internal unsafe struct OrbedenNativeApi
     public WorldBindApi World;
     public PathDefinesBindApi PathDefines;
     public EnsBindApi Ens;
-    public SpaceComponentBindApi SpaceComponent;
+    public TransformComponentBindApi TransformComponent;
     public StaticMeshRendererBindApi StaticMeshRenderer;
     public ObjectBindApi Object;
     public MeshBindApi Mesh;
@@ -38,7 +38,7 @@ public static unsafe class OrbedenCoreRuntime
             WorldBind.Initialize(default);
             PathDefinesBind.Initialize(default);
             EnsBind.Initialize(default);
-            SpaceComponentBind.Initialize(default);
+            TransformComponentBind.Initialize(default);
             StaticMeshRendererBind.Initialize(default);
             ObjectBind.Initialize(default, default);
             MeshBind.Initialize(default);
@@ -55,7 +55,7 @@ public static unsafe class OrbedenCoreRuntime
         WorldBind.Initialize(api.World);
         PathDefinesBind.Initialize(api.PathDefines);
         EnsBind.Initialize(api.Ens);
-        SpaceComponentBind.Initialize(api.SpaceComponent);
+        TransformComponentBind.Initialize(api.TransformComponent);
         StaticMeshRendererBind.Initialize(api.StaticMeshRenderer);
         ObjectBind.Initialize(api.Object, api.ObjectExtension);
         MeshBind.Initialize(api.Mesh);

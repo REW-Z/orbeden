@@ -29,7 +29,7 @@ private:
 
     List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
 	List<Object*> ownedObjects;//world拥有的运行时对象
-    List<ITransformListener*> transformListeners;//空间变换监听器
+    List<ITransformListener*> transformListeners;//变换监听器
 
     //使用指定稳定ID创建Ens
     Ens* CreateEnsInternal(const std::string& name, const std::string& stableId);
@@ -72,10 +72,10 @@ public:
     //设置当前活动世界
     static void SetCurrentWorld(World* world);
 
-    //注册空间变换监听器
+    //注册变换监听器
     void AddTransformListener(ITransformListener* listener);
 
-    //注销空间变换监听器
+    //注销变换监听器
     void RemoveTransformListener(ITransformListener* listener);
 
     //通知指定节点及其子树的世界变换失效
@@ -102,8 +102,8 @@ public:
     //获取World持有的唯一Ens实例
     const Ens* GetEns(EnsId ens) const;
 
-    //获取空间组件
-    SpaceComponent* GetSpaceComponent(EnsId ens) const;
+    //获取变换组件
+    TransformComponent* GetTransformComponent(EnsId ens) const;
 
     //设置父级
     void SetParent(EnsId child, EnsId parent);

@@ -338,29 +338,29 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制引擎 Bind 对应的 C# 组件块。
     private void DrawBoundComponents(Ens ens, EnsId selectedEns)
     {
-        if (ens.HasSpaceComponent)
+        if (ens.HasTransformComponent)
         {
-            DrawCollapsibleComponentBlock("SpaceComponent", $"bound_{selectedEns.id}_SpaceComponent", false, () =>
+            DrawCollapsibleComponentBlock("TransformComponent", $"bound_{selectedEns.id}_TransformComponent", false, () =>
             {
-                SpaceComponent space = ens.Space;
-                vector3 localPosition = space.localPosition;
+                TransformComponent transform = ens.Transform;
+                vector3 localPosition = transform.localPosition;
                 if (GUI.InputVector3("localPosition", ref localPosition))
                 {
-                    space.localPosition = localPosition;
+                    transform.localPosition = localPosition;
                     EditorApplication.RequestRepaint();
                 }
 
-                vector3 localScale = space.localScale;
+                vector3 localScale = transform.localScale;
                 if (GUI.InputVector3("localScale", ref localScale))
                 {
-                    space.localScale = localScale;
+                    transform.localScale = localScale;
                     EditorApplication.RequestRepaint();
                 }
 
-                quaternion localRotation = space.localRotation;
+                quaternion localRotation = transform.localRotation;
                 GUI.Label($"localRotation: {FormatQuaternion(localRotation)}");
-                GUI.Label($"worldPosition: {SerializeVector3(space.worldPosition)}");
-                GUI.Label($"worldRotation: {FormatQuaternion(space.worldRotation)}");
+                GUI.Label($"worldPosition: {SerializeVector3(transform.worldPosition)}");
+                GUI.Label($"worldRotation: {FormatQuaternion(transform.worldRotation)}");
             });
         }
 
@@ -430,7 +430,7 @@ internal sealed class InspectorPanel : EditorPanel
     private int GetBoundComponentCount(Ens ens)
     {
         int count = 0;
-        if (ens.HasSpaceComponent) count++;
+        if (ens.HasTransformComponent) count++;
         if (ens.HasStaticMeshRenderer) count++;
         if (ens.HasRigidBody) count++;
         if (ens.HasCollider) count++;

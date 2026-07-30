@@ -11,7 +11,7 @@
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
-#include "Runtime/Object/SpaceComponent.h"
+#include "Runtime/Object/TransformComponent.h"
 
 namespace
 {
@@ -332,12 +332,12 @@ namespace
     //递归写入 Ens 层级
     void WriteEns(std::ostream& output, Ens& ens, int depth)
     {
-        SpaceComponent* space = ens.Space();
-        if (!space) return;
+        TransformComponent* transform = ens.Transform();
+        if (!transform) return;
 
         //写入当前 Ens 和它的组件
         WriteIndent(output, depth);
-        output << "<Ens stableId=\"" << EscapeXml(space->GetInstanceId().GetPath()) << "\" name=\""
+        output << "<Ens stableId=\"" << EscapeXml(transform->GetInstanceId().GetPath()) << "\" name=\""
             << EscapeXml(ens.GetName()) << "\">\n";
 
         for (TypeId typeId : ens.GetComponentTypes())
@@ -349,13 +349,13 @@ namespace
             WriteComponent(output, component, depth + 1);
         }
 
-        //按空间组件链表写入子级 Ens
-        EnsId child = space->firstChild;
+        //按变换组件链表写入子级 Ens
+        EnsId child = transform->firstChild;
         while (!child.IsNull())
         {
             Ens* childEns = ens.GetWorld() ? ens.GetWorld()->GetEns(child) : nullptr;
-            SpaceComponent* childSpace = childEns ? childEns->Space() : nullptr;
-            EnsId nextChild = childSpace ? childSpace->next : EnsId();
+            TransformComponent* childTransform = childEns ? childEns->Transform() : nullptr;
+            EnsId nextChild = childTransform ? childTransform->next : EnsId();
             if (childEns)
             {
                 WriteEns(output, *childEns, depth + 1);
@@ -407,8 +407,8 @@ namespace
             return false;
         }
 
-        //空间组件复用 Ens 自带实例，其余组件按类型挂载
-        Component* component = type == SpaceComponent::StaticType() ? ens.Space() : ens.AddComponent(type);
+        //变换组件复用 Ens 自带实例，其余组件按类型挂载
+        Component* component = type == TransformComponent::StaticType() ? ens.Transform() : ens.AddComponent(type);
         if (!component)
         {
             LogSerializerError("World XML failed to create component: " + typeName);
