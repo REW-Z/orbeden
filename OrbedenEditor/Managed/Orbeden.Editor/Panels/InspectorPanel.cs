@@ -20,6 +20,17 @@ internal sealed class InspectorPanel : EditorPanel
             resolver = new AssemblyDependencyResolver(assemblyPath);
         }
 
+        /// <summary>从内存加载程序集，避免锁定构建输出文件。</summary>
+        public Assembly LoadAssemblyFile(string assemblyPath)
+        {
+            using FileStream assemblyStream = File.OpenRead(assemblyPath);
+            string symbolPath = Path.ChangeExtension(assemblyPath, ".pdb");
+            if (!File.Exists(symbolPath)) return LoadFromStream(assemblyStream);
+
+            using FileStream symbolStream = File.OpenRead(symbolPath);
+            return LoadFromStream(assemblyStream, symbolStream);
+        }
+
         /// <summary>解析用户游戏程序集依赖。</summary>
         protected override Assembly? Load(AssemblyName assemblyName)
         {
@@ -30,7 +41,7 @@ internal sealed class InspectorPanel : EditorPanel
             }
 
             string? path = resolver.ResolveAssemblyToPath(assemblyName);
-            return path != null ? LoadFromAssemblyPath(path) : null;
+            return path != null ? LoadAssemblyFile(path) : null;
         }
     }
 
@@ -140,7 +151,7 @@ internal sealed class InspectorPanel : EditorPanel
         try
         {
             gameContext = new GameAssemblyLoadContext(assemblyPath);
-            gameAssembly = gameContext.LoadFromAssemblyPath(Path.GetFullPath(assemblyPath));
+            gameAssembly = gameContext.LoadAssemblyFile(Path.GetFullPath(assemblyPath));
             foreach (Type type in GetLoadableTypes(gameAssembly))
             {
                 if (!type.IsAbstract && typeof(ScriptBehaviour).IsAssignableFrom(type))
