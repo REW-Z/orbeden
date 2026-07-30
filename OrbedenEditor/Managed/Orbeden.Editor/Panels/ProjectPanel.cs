@@ -208,6 +208,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void RequestRefresh(object sender, FileSystemEventArgs args)
     {
         Interlocked.Exchange(ref refreshRequested, 1);
+        EditorApplication.RequestRepaint();
     }
 
     //绘制导航和常用操作栏。

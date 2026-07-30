@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/RenderTypes.h"
 #include "Runtime/EngineTypes.h"
 #include "Runtime/Object/Object.h"
 
@@ -9,6 +10,34 @@
 enum class ShaderTextureDimension
 {
     Texture2D,
+};
+
+//Shader Pass 布尔状态，Auto 表示使用渲染管线基线
+enum class ShaderPassToggle
+{
+    Auto,
+    On,
+    Off,
+};
+
+//Shader Pass 固定功能状态
+struct ShaderPassState
+{
+public:
+    ShaderPassToggle depthTest = ShaderPassToggle::Auto;
+    ShaderPassToggle depthWrite = ShaderPassToggle::Auto;
+    ShaderPassToggle blend = ShaderPassToggle::Auto;
+    CullMode cull = CullMode::Auto;
+};
+
+//Shader 的一个有序绘制 Pass
+struct ShaderPass
+{
+public:
+    std::string name = "Default";
+    ShaderPassState state;
+    std::string vertexSource;
+    std::string fragmentSource;
 };
 
 //Shader 暴露给 Material 的纹理槽
@@ -52,15 +81,25 @@ public:
     std::string fragmentPath;
     std::string vertexSource;
     std::string fragmentSource;
+    List<ShaderPass> passes;
     List<ShaderTextureSlot> textureSlots;
     List<ShaderColorSlot> colorSlots;
     List<ShaderFloatSlot> floatSlots;
 
     //从 GLSL 源码刷新材质槽反射结果
-    void ReflectSlotsFromSource();
+    bool ReflectSlotsFromSource();
 
     //替换 GLSL 源码并刷新反射结果
     void ReplaceSource(const std::string& vertex, const std::string& fragment);
+
+    //替换有序 Pass 列表并刷新兼容源码和材质槽
+    bool ReplacePasses(const List<ShaderPass>& value);
+
+    //获取 Pass 数量
+    uint32 GetPassCount() const;
+
+    //获取指定 Pass
+    const ShaderPass* GetPass(uint32 index) const;
 
     //获取 Shader 版本，用于刷新 GPU 缓存
     uint64 GetRevision() const;

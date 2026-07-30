@@ -112,6 +112,12 @@ public:
     void* GetFloatSlotName = nullptr;
     void* GetFloatSlotDisplayName = nullptr;
     void* GetFloatSlotDefault = nullptr;
+    void* GetPassCount = nullptr;
+    void* GetPassName = nullptr;
+    void* GetPassDepthTest = nullptr;
+    void* GetPassDepthWrite = nullptr;
+    void* GetPassBlend = nullptr;
+    void* GetPassCull = nullptr;
     void* CreateFromSource = nullptr;
     void* ReplaceSource = nullptr;
     void* GetRevision = nullptr;

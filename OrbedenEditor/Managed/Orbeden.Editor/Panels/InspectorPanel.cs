@@ -203,6 +203,7 @@ internal sealed class InspectorPanel : EditorPanel
             if (GUI.InputText("Name", ref name))
             {
                 ens.Name = name;
+                EditorApplication.RequestRepaint();
             }
 
             GUI.Label($"Runtime Id: {selectedEns.id}:{selectedEns.version}");
@@ -346,12 +347,14 @@ internal sealed class InspectorPanel : EditorPanel
                 if (GUI.InputVector3("localPosition", ref localPosition))
                 {
                     space.localPosition = localPosition;
+                    EditorApplication.RequestRepaint();
                 }
 
                 vector3 localScale = space.localScale;
                 if (GUI.InputVector3("localScale", ref localScale))
                 {
                     space.localScale = localScale;
+                    EditorApplication.RequestRepaint();
                 }
 
                 quaternion localRotation = space.localRotation;
@@ -370,12 +373,14 @@ internal sealed class InspectorPanel : EditorPanel
                 if (GUI.Checkbox("enabled", ref enabled))
                 {
                     renderer.enabled = enabled;
+                    EditorApplication.RequestRepaint();
                 }
 
                 Mesh? mesh = renderer.mesh;
                 if (GUI.ObjectField("mesh", ref mesh))
                 {
                     renderer.mesh = mesh;
+                    EditorApplication.RequestRepaint();
                 }
 
                 if (mesh != null && mesh.IsValid)
@@ -387,16 +392,19 @@ internal sealed class InspectorPanel : EditorPanel
                 if (GUI.Checkbox("castShadows", ref castShadows))
                 {
                     renderer.castShadows = castShadows;
+                    EditorApplication.RequestRepaint();
                 }
 
                 bool receiveShadows = renderer.receiveShadows;
                 if (GUI.Checkbox("receiveShadows", ref receiveShadows))
                 {
                     renderer.receiveShadows = receiveShadows;
+                    EditorApplication.RequestRepaint();
                 }
             }))
             {
                 Orbeden.Object.Destroy(renderer);
+                EditorApplication.RequestRepaint();
             }
         }
 
@@ -414,6 +422,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (DrawCollapsibleComponentBlock(typeName, $"bound_{selectedEns.id}_{typeName}", true, () => draw(component)))
         {
             Orbeden.Object.Destroy(component);
+            EditorApplication.RequestRepaint();
         }
     }
 
@@ -480,6 +489,7 @@ internal sealed class InspectorPanel : EditorPanel
             }
 
             SaveSidecar();
+            EditorApplication.RequestRepaint();
             return;
         }
 
@@ -572,6 +582,7 @@ internal sealed class InspectorPanel : EditorPanel
         else if (type == typeof(Collider)) ens.AddCollider();
         else if (type == typeof(CharacterController)) ens.AddCharacterController();
         else AddScriptMount(stableId, GetScriptTypeName(type));
+        EditorApplication.RequestRepaint();
     }
 
     //判断组件类型是否匹配搜索文本。
@@ -646,6 +657,7 @@ internal sealed class InspectorPanel : EditorPanel
         serialized.Type = GetValueTypeName(field.FieldType);
         serialized.Value = newValue;
         SaveSidecar();
+        EditorApplication.RequestRepaint();
     }
 
     //读取或创建 sidecar 字段默认值。
@@ -874,45 +886,52 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制基础值。
     private void DrawValue(string name, Type type, object? value, Action<object?> setValue)
     {
+        //字段写入后请求下一帧刷新场景快照
+        void WriteValue(object? updatedValue)
+        {
+            setValue(updatedValue);
+            EditorApplication.RequestRepaint();
+        }
+
         if (type == typeof(bool))
         {
             bool typedValue = value is bool boolValue && boolValue;
-            if (GUI.Checkbox(name, ref typedValue)) setValue(typedValue);
+            if (GUI.Checkbox(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(int))
         {
             int typedValue = value is int intValue ? intValue : 0;
-            if (GUI.InputInt(name, ref typedValue)) setValue(typedValue);
+            if (GUI.InputInt(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(float))
         {
             float typedValue = value is float floatValue ? floatValue : 0.0f;
-            if (GUI.InputFloat(name, ref typedValue)) setValue(typedValue);
+            if (GUI.InputFloat(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(string))
         {
             string typedValue = value as string ?? string.Empty;
-            if (GUI.InputText(name, ref typedValue)) setValue(typedValue);
+            if (GUI.InputText(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(vector3))
         {
             vector3 typedValue = value is vector3 vectorValue ? vectorValue : new vector3();
-            if (GUI.InputVector3(name, ref typedValue)) setValue(typedValue);
+            if (GUI.InputVector3(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
             Orbeden.Object? typedValue = value as Orbeden.Object;
-            if (GUI.ObjectField(name, type, ref typedValue)) setValue(typedValue);
+            if (GUI.ObjectField(name, type, ref typedValue)) WriteValue(typedValue);
             return;
         }
 

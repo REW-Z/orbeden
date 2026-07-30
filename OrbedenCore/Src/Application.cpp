@@ -184,18 +184,10 @@ bool Application::SaveWorld(const std::string& path) const
     return WorldSerializer::SaveXml(world, path);
 }
 
-//推进一帧应用逻辑，并在系统 Update 后调用宿主帧回调
-void Application::Tick(float deltaTime, const std::function<void(World&, float)>& frameCallback)
+//推进一帧 Simulation 逻辑
+void Application::Tick(float deltaTime)
 {
     if (!Initialize()) return;
-
-    //系统先清理上一帧状态，再由窗口轮询并写入本帧平台事件
-    usize beginSystemCount = systems.size();
-    for (usize index = 0; index < beginSystemCount; index++)
-    {
-        systems[index].system->OnBeginFrame();
-    }
-    BeginFrame();
 
     //防御外部宿主传入异常时间
     if (deltaTime < 0.0f)
@@ -203,11 +195,18 @@ void Application::Tick(float deltaTime, const std::function<void(World&, float)>
         deltaTime = 0.0f;
     }
 
-    //Simulation 可被外部宿主关闭，帧回调和渲染仍会继续运行
+    //Simulation 关闭或暂停时丢弃固定时间积累
     bool runSimulation = simulationEnabled && !paused;
+    if(!runSimulation)
+    {
+        fixedAccumulator = 0.0f;
+    }
     if (runSimulation)
     {
         fixedAccumulator += deltaTime;
+
+
+        /// *** Fixed Update ***
 
         //按固定步长补跑 FixedUpdate，限制单帧最大补帧次数
         uint32 fixedStepCount = 0;
@@ -222,12 +221,14 @@ void Application::Tick(float deltaTime, const std::function<void(World&, float)>
             fixedAccumulator -= fixedDeltaTime;
             fixedStepCount++;
         }
-
         //过慢帧直接丢弃剩余积累，避免长时间追帧
         if (fixedStepCount == maxFixedStepsPerFrame && fixedAccumulator >= fixedDeltaTime)
         {
             fixedAccumulator = 0.0f;
         }
+
+
+        /// *** Update ***
 
         usize updateSystemCount = systems.size();
         for (usize index = 0; index < updateSystemCount; index++)
@@ -235,28 +236,24 @@ void Application::Tick(float deltaTime, const std::function<void(World&, float)>
             systems[index].system->Update(world, deltaTime);
         }
     }
-    else
-    {
-        fixedAccumulator = 0.0f;
-    }
+}
 
-    //宿主逻辑不属于 Simulation，Editor 停止播放时仍然需要更新
-    if (frameCallback)
-    {
-        frameCallback(world, deltaTime);
-    }
+//渲染当前 World 并提交窗口显示
+void Application::RenderFrame(float deltaTime)
+{
+    if (!Initialize() || !window) return;
 
-    usize renderSystemCount = systems.size();
-    for (usize index = 0; index < renderSystemCount; index++)
-    {
-        systems[index].system->Render(world, deltaTime);
-    }
+    RenderSystem* renderSystem = GetSystem<RenderSystem>();
+    if (!renderSystem) return;
 
-    EndFrame();
+    //渲染系统
+    renderSystem->Render(world, deltaTime);
+
+    window->Present();
 }
 
 //进入主循环，直到请求退出
-void Application::Run(const std::function<void(World&, float)>& frameCallback)
+void Application::Run()
 {
     if (!Initialize()) return;
 
@@ -266,26 +263,29 @@ void Application::Run(const std::function<void(World&, float)>& frameCallback)
     using Clock = std::chrono::steady_clock;
     auto previousTime = Clock::now();
 
+    //GameLoop
     while (ShouldKeepRunning())
     {
+        //先清理瞬时输入，再由平台事件写入本帧状态
+        InputManager::BeginFrame();
+        window->PollEvents();
+        if (window->ShouldClose())
+        {
+            RequestQuit();
+            break;
+        }
+
         //计算本帧真实 deltaTime
         auto frameStartTime = Clock::now();
         std::chrono::duration<float> elapsed = frameStartTime - previousTime;
         previousTime = frameStartTime;
 
-        Tick(elapsed.count(), frameCallback);
+        Tick(elapsed.count());
 
-        //显式设置目标帧率时，先低 CPU 等待，再短暂 yield 对齐目标时间
-        if (targetFrameRate > 0)
-        {
-            std::chrono::duration<float> targetFrameTime(1.0f / static_cast<float>(targetFrameRate));
-            auto targetEndTime = frameStartTime + std::chrono::duration_cast<Clock::duration>(targetFrameTime);
-            WaitUntilFrameTime(targetEndTime, targetFrameRate);
-        }
-        else
-        {
-            std::this_thread::yield();
-        }
+        //渲染
+        RenderFrame(elapsed.count());
+
+        WaitForNextFrame(frameStartTime);
     }
 
     running = false;
@@ -388,6 +388,21 @@ void Application::SetTargetFrameRate(uint32 value)
     targetFrameRate = value;
 }
 
+//等待到当前目标帧的结束时间
+void Application::WaitForNextFrame(std::chrono::steady_clock::time_point frameStartTime) const
+{
+    if (targetFrameRate == 0)
+    {
+        std::this_thread::yield();
+        return;
+    }
+
+    std::chrono::duration<float> targetFrameTime(1.0f / static_cast<float>(targetFrameRate));
+    auto targetEndTime = frameStartTime
+        + std::chrono::duration_cast<std::chrono::steady_clock::duration>(targetFrameTime);
+    WaitUntilFrameTime(targetEndTime, targetFrameRate);
+}
+
 //获取单帧最多补跑 FixedUpdate 的次数
 uint32 Application::GetMaxFixedStepsPerFrame() const
 {
@@ -448,27 +463,6 @@ void Application::OnWindowResize(int32 width, int32 height)
     for (usize index = 0; index < systemCount; index++)
     {
         systems[index].system->OnWindowResize(width, height);
-    }
-}
-
-//帧开始钩子，处理窗口事件
-void Application::BeginFrame()
-{
-    if (!window) return;
-
-    window->PollEvents();
-    if (window->ShouldClose())
-    {
-        RequestQuit();
-    }
-}
-
-//帧结束钩子，处理窗口 present
-void Application::EndFrame()
-{
-    if (window)
-    {
-        window->Present();
     }
 }
 

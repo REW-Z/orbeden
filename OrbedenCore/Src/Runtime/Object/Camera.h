@@ -3,13 +3,20 @@
 #include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 
+class RenderScene;
+
 //相机组件，保存渲染视角的公开参数
 class Camera : public Component
 {
     OBJECT_TYPE_DECLARE(Camera)
 
-public:
+private:
+    friend class RenderScene;
+
     bool enabled = true;
+    RenderSceneHandle renderSceneHandle;
+
+public:
     float32 fieldOfView = 60.0f;
     float32 nearPlane = 0.1f;
     float32 farPlane = 1000.0f;
@@ -26,4 +33,16 @@ public:
 
     //0 表示绘制到默认窗口帧缓冲；离屏目标由 RenderSystem 在运行时分配
     uint32 renderTargetId = 0;
+
+    //获取启用状态
+    bool GetEnabled() const;
+
+    //设置启用状态并同步渲染场景注册
+    void SetEnabled(bool value);
+
+    //挂载时注册到当前渲染场景
+    void OnAttach() override;
+
+    //卸载时从当前渲染场景注销
+    void OnDetach() override;
 };

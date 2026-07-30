@@ -254,42 +254,42 @@ namespace
     vector3 ORBEDEN_NATIVE_CALL NativeSpaceGetLocalPosition(EnsId ens)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->localPosition : vector3();
+        return space ? space->GetLocalPosition() : vector3();
     }
 
     //写入本地位置。
     void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalPosition(EnsId ens, vector3 value)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->localPosition = value;
+        if (space) space->SetLocalPosition(value);
     }
 
     //读取本地旋转。
     quaternion ORBEDEN_NATIVE_CALL NativeSpaceGetLocalRotation(EnsId ens)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->localRotation : quaternion();
+        return space ? space->GetLocalRotation() : quaternion();
     }
 
     //写入本地旋转。
     void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalRotation(EnsId ens, quaternion value)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->localRotation = value;
+        if (space) space->SetLocalRotation(value);
     }
 
     //读取本地缩放。
     vector3 ORBEDEN_NATIVE_CALL NativeSpaceGetLocalScale(EnsId ens)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        return space ? space->localScale : vector3{ 1.0f, 1.0f, 1.0f };
+        return space ? space->GetLocalScale() : vector3{ 1.0f, 1.0f, 1.0f };
     }
 
     //写入本地缩放。
     void ORBEDEN_NATIVE_CALL NativeSpaceSetLocalScale(EnsId ens, vector3 value)
     {
         SpaceComponent* space = GetNativeSpace(ens);
-        if (space) space->localScale = value;
+        if (space) space->SetLocalScale(value);
     }
 
     //读取世界位置。
@@ -310,14 +310,14 @@ namespace
     uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetEnabled(EnsId ens)
     {
         StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
-        return renderer && renderer->enabled ? 1 : 0;
+        return renderer && renderer->GetEnabled() ? 1 : 0;
     }
 
     //写入 StaticMeshRenderer.enabled。
     void ORBEDEN_NATIVE_CALL NativeStaticMeshRendererSetEnabled(EnsId ens, uint8 value)
     {
         StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
-        if (renderer) renderer->enabled = value != 0;
+        if (renderer) renderer->SetEnabled(value != 0);
     }
 
     //读取 StaticMeshRenderer.mesh。

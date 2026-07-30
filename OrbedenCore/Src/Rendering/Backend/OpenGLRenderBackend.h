@@ -17,6 +17,7 @@ private:
     bool depthTestEnabled = false;
     bool depthWriteEnabled = false;
     bool blendEnabled = false;
+    CullMode cullMode = CullMode::None;
     std::unordered_map<uint32, uint32> renderTargetColorAttachments;
     std::unordered_map<uint32, uint32> indexBufferCounts;
     std::unordered_map<uint32, uint32> vertexInputIndexBuffers;
@@ -64,6 +65,7 @@ public:
     void SetDepthTest(bool enabled) override;
     void SetDepthWrite(bool enabled) override;
     void SetBlend(bool enabled) override;
+    void SetCullMode(CullMode mode) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
 
 private:

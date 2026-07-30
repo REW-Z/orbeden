@@ -5,8 +5,8 @@
 #include "Rendering/ForwardPipeline.h"
 #include "Rendering/ImGuiLayer.h"
 #include "Rendering/RenderItemSorter.h"
-#include "Rendering/RenderSceneBuilder.h"
 #include "Rendering/SceneCuller.h"
+#include "Rendering/SpaceCache.h"
 
 //渲染覆盖层接口，由渲染系统统一管理 frame 生命周期。
 class IRenderOverlay
@@ -46,12 +46,10 @@ private:
     //ImGui 覆盖层
     ImGuiLayer imguiLayer;
 
-    //帧渲染场景构建  
-    RenderSceneBuilder sceneBuilder;
     //缓存实体空间变换
     SpaceCache spaceCache;
 
-    //当前帧的渲染场景
+    //持久渲染场景
     RenderScene scene;
 
     //剔除器
@@ -128,8 +126,8 @@ public:
     //使内容资源相关的 GPU 缓存和管线状态失效
     void InvalidateResourceCaches();
 
-    //渲染
-    void Render(World& world, float deltaTime) override;
+    //渲染当前世界
+    void Render(World& world, float deltaTime);
 
     //响应窗口尺寸变化
     void OnWindowResize(int width, int height) override;

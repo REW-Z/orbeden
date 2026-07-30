@@ -69,7 +69,10 @@ namespace
     {
         if (!backend) return;
 
-        backend->DeleteShaderProgram(shader.shaderProgram);
+        for (GpuShaderPass& pass : shader.passes)
+        {
+            backend->DeleteShaderProgram(pass.shaderProgram);
+        }
         shader = GpuShader();
     }
 
@@ -318,19 +321,28 @@ const GpuShader* GpuResourceManager::GetShader(Shader* shader)
         shaders.erase(it);
     }
 
-    //使用 CPU shader 的顶点和片元源码创建 GPU program。
-    GpuShaderProgramDesc shaderProgramDesc;
-    shaderProgramDesc.vertexSource = shader->vertexSource.c_str();
-    shaderProgramDesc.fragmentSource = shader->fragmentSource.c_str();
-
-    //创建 program 并记录版本号和资源来源。
+    //按声明顺序创建所有 Pass program。
     GpuShader gpuShader;
-    gpuShader.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
     gpuShader.shaderRevision = shaderRevision;
     gpuShader.sourceKey = shader->GetInstanceId().GetPath();
-    //编译失败时不写入无效缓存项。
+    for (const ShaderPass& sourcePass : shader->passes)
+    {
+        GpuShaderProgramDesc shaderProgramDesc;
+        shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
+        shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
+
+        GpuShaderPass pass;
+        pass.name = sourcePass.name;
+        pass.state = sourcePass.state;
+        pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+        gpuShader.passes.push_back(pass);
+        if (!pass.shaderProgram.IsValid()) break;
+    }
+
+    //任一 Pass 编译失败时释放整组 program，不保留部分可用 Shader。
     if (!gpuShader.IsValid())
     {
+        DeleteGpuResource(backend, gpuShader);
         Log::Error("GpuResourceManager shader upload failed.");
         return nullptr;
     }

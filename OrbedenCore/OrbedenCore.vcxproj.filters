@@ -45,6 +45,9 @@
     <ClInclude Include="Src\Runtime\EnsId.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\ITransformListener.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Ens.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -142,9 +145,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\SpaceCache.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\Rendering\RenderSceneBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\SceneCuller.h">
@@ -315,9 +315,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\SpaceCache.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\Rendering\RenderSceneBuilder.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\SceneCuller.cpp">

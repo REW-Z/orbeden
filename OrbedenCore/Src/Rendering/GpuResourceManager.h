@@ -32,11 +32,20 @@ public:
     bool IsValid() const { return vertexInput.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
 };
 
-//Shader 上传到 GPU 后持有的 program 和版本信息。
-struct GpuShader
+//单个 Shader Pass 上传后的 GPU program 和固定功能状态
+struct GpuShaderPass
 {
 public:
     GpuShaderProgramID shaderProgram;
+    std::string name;
+    ShaderPassState state;
+};
+
+//Shader 上传到 GPU 后持有的有序 Pass 和版本信息
+struct GpuShader
+{
+public:
+    List<GpuShaderPass> passes;
 
     //用于判断 CPU shader 是否需要重新上传的版本号。
     uint64 shaderRevision = 0;
@@ -44,8 +53,16 @@ public:
     //对应 CPU 资源的稳定路径。
     std::string sourceKey;
 
-    //检查 shader program 句柄是否有效。
-    bool IsValid() const { return shaderProgram.IsValid(); }
+    //检查所有 Pass 的 shader program 是否有效
+    bool IsValid() const
+    {
+        if (passes.empty()) return false;
+        for (const GpuShaderPass& pass : passes)
+        {
+            if (!pass.shaderProgram.IsValid()) return false;
+        }
+        return true;
+    }
 };
 
 //材质纹理属性上传后的 GPU 绑定信息。

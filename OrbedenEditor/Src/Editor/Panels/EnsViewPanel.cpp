@@ -383,14 +383,20 @@ void EnsViewPanel::ApplyPendingMove(World& world)
     EnsId oldParent = space->parent;
     matrix4x4 worldMatrix = space->worldMatrix;
     if (!world.MoveEns(move.child, move.parent, move.beforeSibling)) return;
+    editor.RequestRepaint();
     if (oldParent == move.parent) return;
 
     SpaceComponent* parentSpace = move.parent.IsNull() ? nullptr : world.GetSpaceComponent(move.parent);
     matrix4x4 localMatrix = parentSpace
         ? RenderMath::Mul(RenderMath::Inverse(parentSpace->worldMatrix), worldMatrix)
         : worldMatrix;
-    DecomposeTransform(localMatrix, space->localPosition, space->localRotation, space->localScale);
-    space->transformDirty = true;
+    vector3 localPosition;
+    quaternion localRotation;
+    vector3 localScale;
+    DecomposeTransform(localMatrix, localPosition, localRotation, localScale);
+    space->SetLocalPosition(localPosition);
+    space->SetLocalRotation(localRotation);
+    space->SetLocalScale(localScale);
 }
 
 ORBEDEN_REGISTER_EDITOR_PANEL(EnsViewPanel)

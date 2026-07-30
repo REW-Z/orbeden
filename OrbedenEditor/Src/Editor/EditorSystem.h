@@ -9,6 +9,7 @@
 #include "Rendering/RenderSystem.h"
 #include "Runtime/EnsId.h"
 
+#include <atomic>
 #include <string>
 
 class ManagedPanelAdapter;
@@ -34,6 +35,8 @@ private:
     EditorScene editorScene;
     EditorPlayMode playMode;
     int32 selectedPlayerTargetPlatform = 0;
+    std::atomic_bool repaintRequested = true;
+    bool continuousRepaint = false;
 
 public:
     EditorSystem(Application& application, const char* startupExecutablePath);
@@ -41,6 +44,15 @@ public:
 
     //每帧更新编辑器状态
     void Update(World& world, float deltaTime);
+
+    //请求编辑器重绘并唤醒事件循环
+    void RequestRepaint();
+
+    //获取并清除编辑器重绘请求
+    bool TakeRepaintRequest();
+
+    //判断编辑器是否需要连续重绘
+    bool NeedsContinuousRepaint() const;
 
     //绘制编辑器覆盖层
     void DrawOverlay() override;

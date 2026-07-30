@@ -521,6 +521,44 @@ public readonly struct ShaderFloatSlotInfo
     }
 }
 
+/// <summary>Shader Pass 布尔状态。</summary>
+public enum ShaderPassToggle
+{
+    Auto,
+    On,
+    Off,
+}
+
+/// <summary>Shader Pass 三角形剔除模式。</summary>
+public enum ShaderCullMode
+{
+    Auto,
+    None,
+    Front,
+    Back,
+}
+
+/// <summary>Shader Pass 只读信息。</summary>
+public readonly struct ShaderPassInfo
+{
+    public readonly string name;
+    public readonly ShaderPassToggle depthTest;
+    public readonly ShaderPassToggle depthWrite;
+    public readonly ShaderPassToggle blend;
+    public readonly ShaderCullMode cull;
+
+    /// <summary>创建 Shader Pass 信息。</summary>
+    public ShaderPassInfo(string name, ShaderPassToggle depthTest, ShaderPassToggle depthWrite,
+        ShaderPassToggle blend, ShaderCullMode cull)
+    {
+        this.name = name;
+        this.depthTest = depthTest;
+        this.depthWrite = depthWrite;
+        this.blend = blend;
+        this.cull = cull;
+    }
+}
+
 /// <summary>CPU Shader 资源托管包装。</summary>
 public sealed class Shader : Object
 {
@@ -568,10 +606,24 @@ public sealed class Shader : Object
     /// <summary>浮点槽数量。</summary>
     public int floatSlotCount => ShaderBind.GetFloatSlotCount(NativePtr);
 
+    /// <summary>Pass 数量。</summary>
+    public int passCount => ShaderBind.GetPassCount(NativePtr);
+
     /// <summary>替换 GLSL 源码并刷新材质槽反射结果。</summary>
     public bool ReplaceSource(string vertexSource, string fragmentSource)
     {
         return ShaderBind.ReplaceSource(NativePtr, vertexSource, fragmentSource);
+    }
+
+    /// <summary>读取指定 Pass 的只读状态。</summary>
+    public ShaderPassInfo GetPass(int index)
+    {
+        return new ShaderPassInfo(
+            ShaderBind.GetPassName(NativePtr, index),
+            (ShaderPassToggle)ShaderBind.GetPassDepthTest(NativePtr, index),
+            (ShaderPassToggle)ShaderBind.GetPassDepthWrite(NativePtr, index),
+            (ShaderPassToggle)ShaderBind.GetPassBlend(NativePtr, index),
+            (ShaderCullMode)ShaderBind.GetPassCull(NativePtr, index));
     }
 
     /// <summary>读取纹理槽信息。</summary>

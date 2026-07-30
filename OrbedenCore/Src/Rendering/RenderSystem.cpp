@@ -50,12 +50,16 @@ bool RenderSystem::OnInitialize(Application& app)
         return false;
     }
 
-    return Initialize(renderWindow);
+    if (!Initialize(renderWindow)) return false;
+
+    scene.BindWorld(app.GetWorld());
+    return true;
 }
 
 //关闭并释放渲染系统
 void RenderSystem::OnShutdown()
 {
+    scene.UnbindWorld();
     Shutdown();
     renderOverlay = nullptr;
 }
@@ -212,7 +216,7 @@ GpuTextureID RenderSystem::GetRenderTargetTexture(RenderTargetID id) const
     return target ? backend.GetRenderTargetColorTexture(target->renderTarget) : GpuTextureID();
 }
 
-//获取仅供当前帧覆盖层只读访问的渲染场景
+//获取持久渲染场景的只读视图
 const RenderScene& RenderSystem::GetCurrentScene() const
 {
     return scene;
@@ -233,12 +237,15 @@ void RenderSystem::Render(World& world, float deltaTime)
     (void)deltaTime;
     if (!initialized || !window) return;
 
-    //回收已经销毁的 CPU 资源，并从世界构建当前帧的渲染快照。
+    //回收已经销毁的 CPU 资源
     resources.CollectUnused();
-    sceneBuilder.Build(world, spaceCache, framebufferWidth, framebufferHeight, scene);
+
+    //增量刷新持久场景，并在读取阶段延迟组件结构变化
+    scene.Update(world, spaceCache);
 
     //根据离屏目标尺寸解析相机 viewport，并重建依赖 viewport 的投影数据。
     ResolveCameraTargets();
+    scene.BeginRead();
 
     //所有相机共享同一帧的后端 frame 生命周期。
     backend.BeginFrame();
@@ -262,6 +269,7 @@ void RenderSystem::Render(World& world, float deltaTime)
         //即使没有场景相机，也允许调试覆盖层显示诊断信息。
         RenderDebugOverlay();
         backend.EndFrame();
+        scene.EndRead();
         return;
     }
 
@@ -275,13 +283,15 @@ void RenderSystem::Render(World& world, float deltaTime)
         if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
 
         culler.Cull(scene, camera, visibleSet);
-        sorter.Sort(scene, visibleSet);
+        scene.BuildRenderItems(visibleSet);
+        sorter.Sort(visibleSet);
         forwardPipeline.Render(scene, visibleSet, resources);
     }
 
     //场景 pass 完成后绘制覆盖层，并结束本帧后端命令提交。
     RenderDebugOverlay();
     backend.EndFrame();
+    scene.EndRead();
 }
 
 void RenderSystem::OnWindowResize(int width, int height)

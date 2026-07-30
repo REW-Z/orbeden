@@ -5,6 +5,7 @@
 #include "Runtime/Object/Camera.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/Shader.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -51,6 +52,20 @@ namespace
         return RenderMath::Dot(value, value) <= 0.000001f;
     }
 
+    //从 Pass 三态值解析本次绘制的最终布尔状态
+    bool ResolvePassToggle(ShaderPassToggle value, bool baseline)
+    {
+        if (value == ShaderPassToggle::On) return true;
+        if (value == ShaderPassToggle::Off) return false;
+        return baseline;
+    }
+
+    //从 Pass 剔除设置解析最终模式
+    CullMode ResolveCullMode(CullMode value)
+    {
+        return value == CullMode::Auto ? CullMode::None : value;
+    }
+
     //Forward 光照默认使用场景中的第一盏方向光。
     const RenderDirectionalLight* FindMainLight(const RenderScene& scene)
     {
@@ -75,13 +90,13 @@ namespace
         vector3 minValue;
         vector3 maxValue;
 
-        //合并每个有效包围盒的最小点和最大点。
-        for (const RenderItem& item : scene.items)
+        //合并每个有效渲染器包围盒的最小点和最大点。
+        for (const RendererEntry& entry : scene.renderers)
         {
-            if (!item.worldBounds.valid) continue;
+            if (!entry.active || !entry.worldBounds.valid) continue;
 
-            vector3 itemMin = Sub(item.worldBounds.center, item.worldBounds.extents);
-            vector3 itemMax = Add(item.worldBounds.center, item.worldBounds.extents);
+            vector3 itemMin = Sub(entry.worldBounds.center, entry.worldBounds.extents);
+            vector3 itemMax = Add(entry.worldBounds.center, entry.worldBounds.extents);
             if (!hasBounds)
             {
                 minValue = itemMin;
@@ -207,6 +222,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->SetDepthTest(true);
     backend->SetDepthWrite(true);
     backend->SetBlend(false);
+    backend->SetCullMode(CullMode::None);
 
     //仅在 pass 负责清屏时绘制天空盒，避免覆盖保留内容的目标。
     if (camera.clearMode == ClearMode::SolidColor)
@@ -216,29 +232,12 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
 
     //按 shader program 记录全局 uniform，避免同一 pass 内重复写入。
     std::unordered_set<uint32> configuredPrograms;
-    Material* boundMaterial = nullptr;
-    const GpuMaterial* boundGpuMaterial = nullptr;
-    DrawQueue activeQueue = DrawQueue::Opaque;
 
-    //遍历已剔除并排序的绘制项，按材质和队列状态提交绘制。
-    for (const VisibleItem& visibleItem : visibleSet.items)
+    //遍历已剔除并排序的绘制项，同一对象的 Pass 按声明顺序连续提交。
+    for (const RenderItem& item : visibleSet.renderItems)
     {
-        if (visibleItem.itemIndex >= scene.items.size()) continue;
-        const RenderItem& item = scene.items[visibleItem.itemIndex];
-        //切换透明队列时同步深度写入、混合状态，并清除材质绑定缓存。
-        if (item.drawQueue != activeQueue)
-        {
-            activeQueue = item.drawQueue;
-            bool transparent = activeQueue == DrawQueue::Transparent;
-            backend->SetDepthWrite(!transparent);
-            backend->SetBlend(transparent);
-            boundMaterial = nullptr;
-            boundGpuMaterial = nullptr;
-        }
-
-        //材质变化时获取或上传 GPU 材质；无效材质不能提交绘制。
-        bool materialChanged = boundMaterial != item.material;
-        const GpuMaterial* material = materialChanged ? resources.GetMaterial(item.material) : boundGpuMaterial;
+        //获取或上传 GPU 材质；任一 Pass 无效时跳过整个绘制项。
+        const GpuMaterial* material = resources.GetMaterial(item.material);
         if (!material || !material->IsValid())
         {
             Log::Error("ForwardPipeline draw skipped: material GPU resources are invalid.");
@@ -253,51 +252,52 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
             continue;
         }
 
-        //绑定模型矩阵；每个 shader program 首次使用时写入本 pass 的全局参数。
-        backend->BindShaderProgram(material->shader.shaderProgram);
-        backend->SetUniformMatrix4("u_Model", item.localToWorld);
-        if (configuredPrograms.insert(material->shader.shaderProgram.id).second)
+        bool transparent = item.drawQueue == DrawQueue::Transparent;
+        for (const GpuShaderPass& shaderPass : material->shader.passes)
         {
-            //写入相机、环境光以及阴影光源参数。
-            backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-            backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
-            backend->SetUniformVector3("u_CameraPosition", camera.position);
-            backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
-            if (mainLight)
-            {
-                backend->SetUniformVector3("u_LightDirection", mainLight->direction);
-                backend->SetUniformColor("u_LightColor", mainLight->color);
-                backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
-                backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
-                backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
-            }
-            else
-            {
-                //没有方向光时使用关闭光照和阴影的默认值。
-                backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
-                backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
-                backend->SetUniformFloat("u_LightIntensity", 0.0f);
-                backend->SetUniformFloat("u_ShadowBias", 0.004f);
-                backend->SetUniformFloat("u_ShadowStrength", 0.0f);
-            }
-        }
+            //Auto 每次从管线基线解析，绝不继承上一个 Pass 的状态。
+            backend->SetDepthTest(ResolvePassToggle(shaderPass.state.depthTest, true));
+            backend->SetDepthWrite(ResolvePassToggle(shaderPass.state.depthWrite, !transparent));
+            backend->SetBlend(ResolvePassToggle(shaderPass.state.blend, transparent));
+            backend->SetCullMode(ResolveCullMode(shaderPass.state.cull));
+            backend->BindShaderProgram(shaderPass.shaderProgram);
+            backend->SetUniformMatrix4("u_Model", item.localToWorld);
 
-        //材质变化时一次性更新颜色、浮点值、纹理槽和阴影贴图绑定。
-        uint32 materialTextureSlot = static_cast<uint32>(material->textureBindings.size());
-        if (materialChanged)
-        {
-            //更新材质颜色和浮点 uniform。
+            if (configuredPrograms.insert(shaderPass.shaderProgram.id).second)
+            {
+                //写入相机、环境光以及阴影光源参数。
+                backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+                backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
+                backend->SetUniformVector3("u_CameraPosition", camera.position);
+                backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
+                if (mainLight)
+                {
+                    backend->SetUniformVector3("u_LightDirection", mainLight->direction);
+                    backend->SetUniformColor("u_LightColor", mainLight->color);
+                    backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
+                    backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
+                    backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
+                }
+                else
+                {
+                    backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
+                    backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
+                    backend->SetUniformFloat("u_LightIntensity", 0.0f);
+                    backend->SetUniformFloat("u_ShadowBias", 0.004f);
+                    backend->SetUniformFloat("u_ShadowStrength", 0.0f);
+                }
+            }
+
+            //每个 program 都有独立 uniform 状态，因此逐 Pass 写入材质绑定。
             for (const GpuMaterialColorBinding& binding : material->colorBindings)
             {
                 backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
             }
-
             for (const GpuMaterialFloatBinding& binding : material->floatBindings)
             {
                 backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
             }
 
-            //更新材质纹理及其存在标记，并为阴影贴图预留下一个纹理槽。
             for (uint32 slot = 0; slot < material->textureBindings.size(); ++slot)
             {
                 const GpuMaterialTextureBinding& binding = material->textureBindings[slot];
@@ -306,22 +306,21 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
                 backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
             }
 
+            uint32 materialTextureSlot = static_cast<uint32>(material->textureBindings.size());
             backend->SetUniformInt("u_ShadowMap", static_cast<int32>(materialTextureSlot));
             backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
             backend->BindDepthTexture(materialTextureSlot, shadowReady ? shadowDepthTexture : GpuDepthTextureID());
-            boundMaterial = item.material;
-            boundGpuMaterial = material;
+            backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
+            backend->BindVertexInput(mesh->vertexInput);
+            backend->DrawIndexed(item.indexStart, item.indexCount);
         }
-
-        //逐对象设置阴影接收开关并提交子网格索引范围。
-        backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
-        backend->BindVertexInput(mesh->vertexInput);
-        backend->DrawIndexed(item.indexStart, item.indexCount);
     }
 
     //清理 pass 结束时的绑定和状态，避免影响下一个相机或覆盖层。
     backend->SetBlend(false);
     backend->SetDepthWrite(true);
+    backend->SetDepthTest(true);
+    backend->SetCullMode(CullMode::None);
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     backend->EndPass();
@@ -474,23 +473,35 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     backend->SetDepthTest(true);
     backend->SetDepthWrite(true);
     backend->SetBlend(false);
-    backend->BindShaderProgram(shader->shaderProgram);
+    const GpuShaderPass& shaderPass = shader->passes[0];
+    backend->BindShaderProgram(shaderPass.shaderProgram);
     backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
 
     //使用光源视锥剔除不可能投射到阴影贴图中的对象。
     frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
-    for (const RenderItem& item : scene.items)
+    for (const RendererEntry& entry : scene.renderers)
     {
-        if (!item.castShadows) continue;
-        if (!RenderMath::Intersects(lightFrustum, item.worldBounds)) continue;
+        if (!entry.active) continue;
+        StaticMeshRenderer* renderer = entry.renderer;
+        Mesh* sourceMesh = entry.mesh;
+        if (!renderer || !renderer->GetEnabled() || !renderer->castShadows || !sourceMesh) continue;
+        if (!RenderMath::Intersects(lightFrustum, entry.worldBounds)) continue;
 
         //阴影 pass 只需要网格和模型矩阵，不绑定材质纹理。
-        const GpuMesh* mesh = resources.GetMesh(item.mesh);
+        const GpuMesh* mesh = resources.GetMesh(sourceMesh);
         if (!mesh || !mesh->IsValid()) continue;
 
-        backend->SetUniformMatrix4("u_Model", item.localToWorld);
+        backend->SetUniformMatrix4("u_Model", entry.localToWorld);
         backend->BindVertexInput(mesh->vertexInput);
-        backend->DrawIndexed(item.indexStart, item.indexCount);
+        for (const SubMesh& subMesh : sourceMesh->subMeshes)
+        {
+            usize start = static_cast<usize>(subMesh.indexStart);
+            usize count = static_cast<usize>(subMesh.indexCount);
+            if (!subMesh.material.Get() || count == 0 ||
+                start > sourceMesh->indices.size() || count > sourceMesh->indices.size() - start) continue;
+
+            backend->DrawIndexed(subMesh.indexStart, subMesh.indexCount);
+        }
     }
 
     //解除阴影 pass 的绑定，避免深度 shader 泄漏到后续 color pass。
@@ -527,7 +538,8 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     backend->SetDepthTest(false);
     backend->SetDepthWrite(false);
     backend->SetBlend(false);
-    backend->BindShaderProgram(shader->shaderProgram);
+    const GpuShaderPass& shaderPass = shader->passes[0];
+    backend->BindShaderProgram(shaderPass.shaderProgram);
     backend->SetUniformMatrix4("u_ViewProjection", viewProjection);
     backend->SetUniformInt("u_SkyboxTexture", 0);
     backend->BindCubeTexture(0, cubeTexture);

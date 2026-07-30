@@ -23,6 +23,15 @@ enum class DrawQueue : uint32
     Transparent = 1,
 };
 
+//光栅化剔除模式，Auto 由渲染管线解析为基线状态
+enum class CullMode : uint32
+{
+    Auto = 0,
+    None = 1,
+    Front = 2,
+    Back = 3,
+};
+
 //渲染系统创建的离屏目标句柄，0 表示默认窗口帧缓冲
 struct RenderTargetID
 {
@@ -32,6 +41,20 @@ public:
     bool IsValid() const { return id != 0; }
     bool operator==(const RenderTargetID& other) const { return id == other.id; }
     bool operator!=(const RenderTargetID& other) const { return id != other.id; }
+};
+
+//持久渲染场景句柄，版本用于阻止延迟删除命中新复用的槽位
+struct RenderSceneHandle
+{
+public:
+    uint32 id = EnsId::InvalidId;
+    uint32 version = 0;
+
+    //判断句柄是否有效
+    bool IsValid() const { return id != EnsId::InvalidId && version != 0; }
+
+    bool operator==(const RenderSceneHandle& other) const { return id == other.id && version == other.version; }
+    bool operator!=(const RenderSceneHandle& other) const { return !(*this == other); }
 };
 
 //轻量矩阵，按 OpenGL 习惯使用列主序

@@ -698,6 +698,55 @@ namespace
         return slot ? slot->defaultValue : 0.0f;
     }
 
+    //读取 Shader Pass
+    const ShaderPass* GetShaderPass(void* pointer, int32 index)
+    {
+        Shader* shader = GetBoundObject<Shader>(pointer);
+        return shader && index >= 0 ? shader->GetPass(static_cast<uint32>(index)) : nullptr;
+    }
+
+    //读取 Shader Pass 数量
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassCount(void* pointer)
+    {
+        Shader* shader = GetBoundObject<Shader>(pointer);
+        return shader ? static_cast<int32>(shader->GetPassCount()) : 0;
+    }
+
+    //读取 Shader Pass 名称
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassName(void* pointer, int32 index, uint8* buffer, int32 bufferSize)
+    {
+        const ShaderPass* pass = GetShaderPass(pointer, index);
+        return CopyText(pass ? pass->name : std::string(), buffer, bufferSize);
+    }
+
+    //读取 Shader Pass 深度测试状态
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassDepthTest(void* pointer, int32 index)
+    {
+        const ShaderPass* pass = GetShaderPass(pointer, index);
+        return pass ? static_cast<int32>(pass->state.depthTest) : 0;
+    }
+
+    //读取 Shader Pass 深度写入状态
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassDepthWrite(void* pointer, int32 index)
+    {
+        const ShaderPass* pass = GetShaderPass(pointer, index);
+        return pass ? static_cast<int32>(pass->state.depthWrite) : 0;
+    }
+
+    //读取 Shader Pass 混合状态
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassBlend(void* pointer, int32 index)
+    {
+        const ShaderPass* pass = GetShaderPass(pointer, index);
+        return pass ? static_cast<int32>(pass->state.blend) : 0;
+    }
+
+    //读取 Shader Pass 剔除状态
+    int32 ORBEDEN_NATIVE_CALL NativeShaderGetPassCull(void* pointer, int32 index)
+    {
+        const ShaderPass* pass = GetShaderPass(pointer, index);
+        return pass ? static_cast<int32>(pass->state.cull) : 0;
+    }
+
     //创建运行时 Shader
     void* ORBEDEN_NATIVE_CALL NativeShaderCreateFromSource(
         const uint8* name,
@@ -838,6 +887,12 @@ ShaderBind ShaderBind::Create()
     bind.GetFloatSlotName = reinterpret_cast<void*>(&NativeShaderGetFloatSlotName);
     bind.GetFloatSlotDisplayName = reinterpret_cast<void*>(&NativeShaderGetFloatSlotDisplayName);
     bind.GetFloatSlotDefault = reinterpret_cast<void*>(&NativeShaderGetFloatSlotDefault);
+    bind.GetPassCount = reinterpret_cast<void*>(&NativeShaderGetPassCount);
+    bind.GetPassName = reinterpret_cast<void*>(&NativeShaderGetPassName);
+    bind.GetPassDepthTest = reinterpret_cast<void*>(&NativeShaderGetPassDepthTest);
+    bind.GetPassDepthWrite = reinterpret_cast<void*>(&NativeShaderGetPassDepthWrite);
+    bind.GetPassBlend = reinterpret_cast<void*>(&NativeShaderGetPassBlend);
+    bind.GetPassCull = reinterpret_cast<void*>(&NativeShaderGetPassCull);
     bind.CreateFromSource = reinterpret_cast<void*>(&NativeShaderCreateFromSource);
     bind.ReplaceSource = reinterpret_cast<void*>(&NativeShaderReplaceSource);
     bind.GetRevision = reinterpret_cast<void*>(&NativeShaderGetRevision);

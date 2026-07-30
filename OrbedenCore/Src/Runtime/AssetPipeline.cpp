@@ -206,10 +206,11 @@ namespace
         return text.substr(begin, end - begin);
     }
 
-    //判断是否为OrbShader分段头
-    bool ParseOrbShaderStageHeader(const std::string& line, std::string& stage)
+    //解析 OrbShader 分段头及其剩余参数
+    bool ParseOrbShaderHeader(const std::string& line, std::string& directive, std::string& argument)
     {
-        stage.clear();
+        directive.clear();
+        argument.clear();
         usize dashCount = 0;
         while (dashCount < line.size() && line[dashCount] == '-')
         {
@@ -220,9 +221,18 @@ namespace
 
         std::string tail = Trim(line.substr(dashCount));
         std::stringstream stream(tail);
-        stream >> stage;
-        stage = ToLower(stage);
+        stream >> directive;
+        directive = ToLower(directive);
+        std::getline(stream, argument);
+        argument = Trim(argument);
         return true;
+    }
+
+    //判断是否为 OrbShader 分段头
+    bool ParseOrbShaderStageHeader(const std::string& line, std::string& stage)
+    {
+        std::string argument;
+        return ParseOrbShaderHeader(line, stage, argument);
     }
 
     //判断是否为当前后端支持的OrbShader分段
@@ -407,16 +417,64 @@ namespace
         return true;
     }
 
-    //解析OrbShader单文件，拆出当前后端支持的GLSL源码
-    bool ParseOrbShaderSource(const std::string& sourceKey, const std::string& source, AssetCollection& collection, std::string& vertexSource, std::string& fragmentSource)
+    //解析 Shader Pass 三态开关
+    bool ParseShaderPassToggle(const std::string& text, ShaderPassToggle& value)
     {
-        vertexSource.clear();
-        fragmentSource.clear();
+        std::string normalized = ToLower(text);
+        if (normalized == "auto") value = ShaderPassToggle::Auto;
+        else if (normalized == "on") value = ShaderPassToggle::On;
+        else if (normalized == "off") value = ShaderPassToggle::Off;
+        else return false;
+        return true;
+    }
 
+    //解析 Shader Pass 剔除模式
+    bool ParseShaderCullMode(const std::string& text, CullMode& value)
+    {
+        std::string normalized = ToLower(text);
+        if (normalized == "auto") value = CullMode::Auto;
+        else if (normalized == "none") value = CullMode::None;
+        else if (normalized == "front") value = CullMode::Front;
+        else if (normalized == "back") value = CullMode::Back;
+        else return false;
+        return true;
+    }
+
+    //判断文本是否以 Pass 状态关键字开头
+    bool IsShaderPassStateLine(const std::string& line)
+    {
+        std::stringstream stream(Trim(line));
+        std::string key;
+        std::string value;
+        std::string extra;
+        stream >> key >> value >> extra;
+        if (value.empty() || !extra.empty()) return false;
+
+        key = ToLower(key);
+        return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull";
+    }
+
+    //解析 OrbShader 单文件为有序 Pass
+    bool ParseOrbShaderSource(const std::string& sourceKey, const std::string& source, AssetCollection& collection, List<ShaderPass>& passes)
+    {
+        passes.clear();
+
+        ShaderPass* currentPass = nullptr;
         std::string* currentSource = nullptr;
-        bool ignoringInvalidStage = false;
+        List<std::string> passNames;
+        bool explicitPasses = false;
+        bool legacyPass = false;
+        bool stageStarted = false;
         bool hasVertex = false;
         bool hasFragment = false;
+
+        auto validateCurrentPass = [&]()
+        {
+            if (!currentPass) return;
+            if (!hasVertex) collection.AddError("OrbShader pass is missing vert stage: " + currentPass->name + " in " + sourceKey);
+            if (!hasFragment) collection.AddError("OrbShader pass is missing frag stage: " + currentPass->name + " in " + sourceKey);
+        };
+
         std::stringstream input(source);
         std::string line;
         uint32 lineNumber = 0;
@@ -424,78 +482,148 @@ namespace
         {
             lineNumber++;
 
-            std::string stage;
-            if (ParseOrbShaderStageHeader(line, stage))
+            std::string directive;
+            std::string argument;
+            if (ParseOrbShaderHeader(line, directive, argument))
             {
                 currentSource = nullptr;
-                ignoringInvalidStage = false;
-                if (stage.empty())
+                if (directive.empty())
                 {
                     collection.AddError("OrbShader stage header is missing a stage name: " + sourceKey + ":" + std::to_string(lineNumber));
-                    ignoringInvalidStage = true;
                     continue;
                 }
 
-                if (IsSupportedOrbShaderStage(stage) && stage == "vert")
+                if (directive == "pass")
+                {
+                    if (legacyPass)
+                    {
+                        collection.AddError("OrbShader cannot mix implicit and explicit passes: " + sourceKey + ":" + std::to_string(lineNumber));
+                        continue;
+                    }
+                    if (argument.empty())
+                    {
+                        collection.AddError("OrbShader pass header is missing a name: " + sourceKey + ":" + std::to_string(lineNumber));
+                        continue;
+                    }
+                    if (std::find(passNames.begin(), passNames.end(), argument) != passNames.end())
+                    {
+                        collection.AddError("OrbShader duplicate pass name: " + argument + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                        continue;
+                    }
+
+                    validateCurrentPass();
+                    explicitPasses = true;
+                    passNames.push_back(argument);
+                    passes.push_back(ShaderPass());
+                    currentPass = &passes.back();
+                    currentPass->name = argument;
+                    stageStarted = false;
+                    hasVertex = false;
+                    hasFragment = false;
+                    continue;
+                }
+
+                if (IsSupportedOrbShaderStage(directive))
+                {
+                    if (!argument.empty())
+                    {
+                        collection.AddError("OrbShader stage header has unexpected content: " + sourceKey + ":" + std::to_string(lineNumber));
+                        continue;
+                    }
+                    if (!currentPass)
+                    {
+                        if (explicitPasses)
+                        {
+                            collection.AddError("OrbShader stage appears before a pass header: " + sourceKey + ":" + std::to_string(lineNumber));
+                            continue;
+                        }
+
+                        legacyPass = true;
+                        passes.push_back(ShaderPass());
+                        currentPass = &passes.back();
+                    }
+
+                    stageStarted = true;
+                }
+
+                if (directive == "vert")
                 {
                     if (hasVertex)
                     {
                         collection.AddError("OrbShader duplicate vert stage: " + sourceKey + ":" + std::to_string(lineNumber));
-                        ignoringInvalidStage = true;
                         continue;
                     }
 
                     hasVertex = true;
-                    currentSource = &vertexSource;
+                    currentSource = &currentPass->vertexSource;
                     continue;
                 }
 
-                if (IsSupportedOrbShaderStage(stage) && stage == "frag")
+                if (directive == "frag")
                 {
                     if (hasFragment)
                     {
                         collection.AddError("OrbShader duplicate frag stage: " + sourceKey + ":" + std::to_string(lineNumber));
-                        ignoringInvalidStage = true;
                         continue;
                     }
 
                     hasFragment = true;
-                    currentSource = &fragmentSource;
+                    currentSource = &currentPass->fragmentSource;
                     continue;
                 }
 
-                if (IsReservedOrbShaderStage(stage))
+                if (IsReservedOrbShaderStage(directive))
                 {
-                    collection.AddError("OrbShader stage is reserved but not supported by the current backend: " + stage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                    collection.AddError("OrbShader stage is reserved but not supported by the current backend: " + directive + " in " + sourceKey + ":" + std::to_string(lineNumber));
                 }
                 else
                 {
-                    collection.AddError("OrbShader unknown stage: " + stage + " in " + sourceKey + ":" + std::to_string(lineNumber));
+                    collection.AddError("OrbShader unknown stage: " + directive + " in " + sourceKey + ":" + std::to_string(lineNumber));
                 }
-
-                ignoringInvalidStage = true;
                 continue;
             }
 
             if (currentSource)
             {
+                if (explicitPasses && IsShaderPassStateLine(line))
+                {
+                    collection.AddError("OrbShader pass state must appear before the first stage: " + sourceKey + ":" + std::to_string(lineNumber));
+                    continue;
+                }
+
                 *currentSource += line;
                 *currentSource += '\n';
             }
-            else if (!ignoringInvalidStage && !Trim(line).empty())
+            else if (currentPass && explicitPasses && !stageStarted && !Trim(line).empty())
+            {
+                std::stringstream stateStream(Trim(line));
+                std::string key;
+                std::string value;
+                std::string extra;
+                stateStream >> key >> value >> extra;
+                key = ToLower(key);
+                bool valid = extra.empty() && !value.empty();
+                if (key == "depthtest") valid &= ParseShaderPassToggle(value, currentPass->state.depthTest);
+                else if (key == "depthwrite") valid &= ParseShaderPassToggle(value, currentPass->state.depthWrite);
+                else if (key == "blend") valid &= ParseShaderPassToggle(value, currentPass->state.blend);
+                else if (key == "cull") valid &= ParseShaderCullMode(value, currentPass->state.cull);
+                else valid = false;
+
+                if (!valid)
+                {
+                    collection.AddError("OrbShader pass state is invalid: " + sourceKey + ":" + std::to_string(lineNumber));
+                }
+            }
+            else if (!Trim(line).empty())
             {
                 collection.AddError("OrbShader content appears before a stage header: " + sourceKey + ":" + std::to_string(lineNumber));
             }
         }
 
-        if (!hasVertex)
+        validateCurrentPass();
+        if (passes.empty())
         {
-            collection.AddError("OrbShader is missing vert stage: " + sourceKey);
-        }
-
-        if (!hasFragment)
-        {
-            collection.AddError("OrbShader is missing frag stage: " + sourceKey);
+            collection.AddError("OrbShader contains no passes: " + sourceKey);
         }
 
         return collection.Succeeded();
@@ -1437,9 +1565,7 @@ AssetCollection AssetPipeline::Import_GLSL(std::string path)
     shader->name = Path::GetName(sourceKey);
     shader->vertexPath = vertexPath;
     shader->fragmentPath = fragmentPath;
-    shader->vertexSource = vertexSource;
-    shader->fragmentSource = fragmentSource;
-    shader->ReflectSlotsFromSource();
+    shader->ReplaceSource(vertexSource, fragmentSource);
     collection.AddObject(sourceKey, shader, true);
     return collection;
 }
@@ -1454,9 +1580,8 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
     std::string source = LoadTextOrError(sourceKey, collection);
     if (!collection.Succeeded()) return collection;
 
-    std::string vertexSource;
-    std::string fragmentSource;
-    if (!ParseOrbShaderSource(sourceKey, source, collection, vertexSource, fragmentSource))
+    List<ShaderPass> passes;
+    if (!ParseOrbShaderSource(sourceKey, source, collection, passes))
     {
         return collection;
     }
@@ -1471,19 +1596,31 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
     shader->name = Path::GetNameWithOutExtension(sourceKey);
     shader->vertexPath = sourceKey;
     shader->fragmentPath = sourceKey;
-    List<std::string> includeStack;
-    if (!ExpandOrbShaderIncludes(sourceKey, "vert", vertexSource, collection, includeStack, shader->vertexSource))
+    for (ShaderPass& pass : passes)
     {
-        return collection;
+        List<std::string> includeStack;
+        std::string expandedVertex;
+        if (!ExpandOrbShaderIncludes(sourceKey, "vert", pass.vertexSource, collection, includeStack, expandedVertex))
+        {
+            return collection;
+        }
+
+        includeStack.clear();
+        std::string expandedFragment;
+        if (!ExpandOrbShaderIncludes(sourceKey, "frag", pass.fragmentSource, collection, includeStack, expandedFragment))
+        {
+            return collection;
+        }
+
+        pass.vertexSource = std::move(expandedVertex);
+        pass.fragmentSource = std::move(expandedFragment);
     }
 
-    includeStack.clear();
-    if (!ExpandOrbShaderIncludes(sourceKey, "frag", fragmentSource, collection, includeStack, shader->fragmentSource))
+    if (!shader->ReplacePasses(passes))
     {
+        collection.AddError("OrbShader uniform uses conflicting material slot types: " + sourceKey);
         return collection;
     }
-
-    shader->ReflectSlotsFromSource();
     collection.AddObject(sourceKey, shader, true);
     return collection;
 }
