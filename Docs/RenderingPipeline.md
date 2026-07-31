@@ -8,7 +8,7 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | --- | --- |
 | `RenderSystem` | 初始化、帧调度、多相机、Viewport、RenderTarget、Overlay |
 | `TransformCache` | 根据 Transform 通知更新脏子树 |
-| `RenderScene` | 持久维护 Camera、Light、RendererEntry 注册 |
+| `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | 不透明/透明队列排序 |
 | `ForwardPipeline` | 阴影、天空盒、Forward Main Pass |
@@ -19,14 +19,14 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 
 ```mermaid
 flowchart TD
-    A["World / ECS"] --> B["CollectUnused\n回收 GPU 缓存"]
+    A["World / ECS"] --> B["ReleaseDestroyedResources\n释放已销毁对象的 GPU 缓存"]
     B --> C["Update RenderScene\n处理注册与变换通知"]
-    C --> D["Resolve Camera\nRenderTarget + Viewport"]
+    C --> D["Prepare Camera Render Data\nRenderTarget + Viewport"]
     D --> E{"有相机?"}
     E -- 否 --> F["默认窗口清黑"]
     E -- 是 --> G["共享 Shadow Pass\n每帧一次"]
     G --> H["按 Camera.depth 遍历"]
-    H --> I["Cull RendererEntry\n→ 展开 RenderItem → Sort → Main Pass"]
+    H --> I["Cull StaticMeshRenderer\n→ 展开 RenderItem → Sort → Main Pass"]
     I --> J{"还有相机?"}
     J -- 是 --> H
     J -- 否 --> K["ImGui / Overlay"]
@@ -42,10 +42,10 @@ flowchart TD
 - `TransformCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
 - Camera 生成 View、Projection、ViewProjection 和视锥快照，并按 `depth` 升序排列。
 - DirectionalLight 复制光照与阴影参数。
-- 每个 StaticMeshRenderer 对应一个持久 `RendererEntry`，共享变换、Mesh revision 和世界 AABB。
+- `RenderScene` 直接保存 StaticMeshRenderer 指针，变换、Mesh revision 和世界 AABB 缓存在组件自身的运行时状态中。
 - 全局场景不保存扁平 SubMesh 列表；只有相机剔除后的 Renderer 才临时展开 `RenderItem`。
 
-渲染读取期间发生的组件增删会排队到安全阶段执行。`RenderSceneHandle` 带版本，延迟删除不会误删复用槽位中的新组件。
+渲染读取期间发生的组件增删会以组件指针排队到安全阶段执行，避免遍历过程中修改指针列表。
 
 ### 2. Viewport 与 RenderTarget
 
@@ -78,8 +78,8 @@ flowchart LR
 裁剪规则：
 
 1. `renderer.drawLayer & camera.drawLayerMask` 必须非零。
-2. `RendererEntry.worldBounds` 必须与相机视锥相交。
-3. `VisibleItem` 只保存 `rendererIndex + cameraDistance`。
+2. Renderer 运行时缓存的 `worldBounds` 必须与相机视锥相交。
+3. `VisibleItem` 只保存 `renderer + cameraDistance`。
 4. 剔除完成后，按可见 Renderer 当前的 Mesh/SubMesh 生成相机临时 `RenderItem`。
 
 排序规则：
@@ -138,7 +138,7 @@ Pass 名称区分大小写且必须唯一；分段和状态关键字不区分大
 
 Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU。Shader 的所有 Pass 会作为一个整体编译和缓存，任一 Pass 编译失败都会使整个 Shader 无效。
 
-缓存有效时直接返回；无缓存或版本变化时创建/刷新 GPU 对象。每帧开头的 `CollectUnused` 检查 CPU 对象是否仍存活，不再存活时删除 GPU 对象和缓存项。
+缓存有效时直接返回；无缓存或版本变化时创建/刷新 GPU 对象。每帧开头的 `ReleaseDestroyedResources` 释放已销毁 CPU 对象对应的 GPU 对象和缓存项。
 
 Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Uniform Location，避免重复 OpenGL 调用。
 

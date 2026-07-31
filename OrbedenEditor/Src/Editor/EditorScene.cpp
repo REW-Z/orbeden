@@ -721,30 +721,33 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
     vector3 rayDirection = { rayDelta.x / rayLength, rayDelta.y / rayLength, rayDelta.z / rayLength };
     EnsId closestEns;
     float32 closestDistance = rayLength;
-    for (const RendererEntry& entry : scene.renderers)
+    for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!entry.active) continue;
-        StaticMeshRenderer* renderer = entry.renderer;
-        Mesh* mesh = entry.mesh;
+        Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
         if (!renderer || !renderer->GetEnabled() || !mesh) continue;
-        if ((renderer->drawLayer & camera->drawLayerMask) == 0 || !entry.worldBounds.valid) continue;
+        if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
 
-        Ens* currentEns = app.GetWorld().GetEns(entry.ens);
+        EnsId rendererEns = renderer->GetEnsId();
+        Ens* currentEns = app.GetWorld().GetEns(rendererEns);
         StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        if (currentRenderer != renderer || renderer->mesh.Get() != mesh) continue;
+        TransformComponent* transform = app.GetWorld().GetTransformComponent(rendererEns);
+        if (currentRenderer != renderer || !transform) continue;
+
+        bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, mesh->GetLocalBounds());
+        if (!worldBounds.valid) continue;
 
         //先用世界包围盒排除不可能命中的绘制项。
         float32 boundsMin[3] =
         {
-            entry.worldBounds.center.x - entry.worldBounds.extents.x,
-            entry.worldBounds.center.y - entry.worldBounds.extents.y,
-            entry.worldBounds.center.z - entry.worldBounds.extents.z,
+            worldBounds.center.x - worldBounds.extents.x,
+            worldBounds.center.y - worldBounds.extents.y,
+            worldBounds.center.z - worldBounds.extents.z,
         };
         float32 boundsMax[3] =
         {
-            entry.worldBounds.center.x + entry.worldBounds.extents.x,
-            entry.worldBounds.center.y + entry.worldBounds.extents.y,
-            entry.worldBounds.center.z + entry.worldBounds.extents.z,
+            worldBounds.center.x + worldBounds.extents.x,
+            worldBounds.center.y + worldBounds.extents.y,
+            worldBounds.center.z + worldBounds.extents.z,
         };
         float32 origin[3] = { rayOrigin.x, rayOrigin.y, rayOrigin.z };
         float32 direction[3] = { rayDirection.x, rayDirection.y, rayDirection.z };
@@ -790,9 +793,9 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
                 uint32 indexC = indices[index + 2];
                 if (indexA >= vertices.size() || indexB >= vertices.size() || indexC >= vertices.size()) continue;
 
-                vector3 a = RenderMath::TransformPoint(entry.localToWorld, vertices[indexA]);
-                vector3 b = RenderMath::TransformPoint(entry.localToWorld, vertices[indexB]);
-                vector3 c = RenderMath::TransformPoint(entry.localToWorld, vertices[indexC]);
+                vector3 a = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexA]);
+                vector3 b = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexB]);
+                vector3 c = RenderMath::TransformPoint(transform->worldMatrix, vertices[indexC]);
                 vector3 edgeAB = { b.x - a.x, b.y - a.y, b.z - a.z };
                 vector3 edgeAC = { c.x - a.x, c.y - a.y, c.z - a.z };
                 vector3 crossDirection = RenderMath::Cross(rayDirection, edgeAC);
@@ -812,7 +815,7 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
                 if (distance >= 0.0f && distance < closestDistance)
                 {
                     closestDistance = distance;
-                    closestEns = entry.ens;
+                    closestEns = rendererEns;
                 }
             }
         }
@@ -908,24 +911,29 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
 
     //按 renderer 实例聚合同一对象的所有有效 SubMesh 范围。
     List<InstanceGroup> groups;
-    for (const RendererEntry& entry : scene.renderers)
+    for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!entry.active) continue;
-        auto selectionIt = selectionTypes.find(GetEnsKey(entry.ens));
+        if (!renderer || !renderer->GetEnabled()) continue;
+
+        EnsId rendererEns = renderer->GetEnsId();
+        auto selectionIt = selectionTypes.find(GetEnsKey(rendererEns));
         if (selectionIt == selectionTypes.end()) continue;
 
-        Ens* currentEns = world.GetEns(entry.ens);
-        StaticMeshRenderer* renderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
-        if (!renderer || !renderer->GetEnabled() || renderer != entry.renderer || !mesh || mesh != entry.mesh) continue;
+        Ens* currentEns = world.GetEns(rendererEns);
+        StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
+        TransformComponent* transform = world.GetTransformComponent(rendererEns);
+        Mesh* mesh = renderer->mesh.Get();
+        if (currentRenderer != renderer || !transform || !mesh) continue;
         if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
-        if (!RenderMath::Intersects(camera->viewFrustum, entry.worldBounds)) continue;
+
+        bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, mesh->GetLocalBounds());
+        if (!RenderMath::Intersects(camera->viewFrustum, worldBounds)) continue;
 
         InstanceGroup group;
-        group.ens = entry.ens;
+        group.ens = rendererEns;
         group.renderer = renderer;
         group.mesh = mesh;
-        group.localToWorld = entry.localToWorld;
+        group.localToWorld = transform->worldMatrix;
         group.selectionType = selectionIt->second;
         for (const SubMesh& subMesh : mesh->subMeshes)
         {

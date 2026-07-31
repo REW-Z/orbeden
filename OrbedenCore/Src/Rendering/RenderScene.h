@@ -8,6 +8,7 @@
 #include "Runtime/RenderSettings.h"
 
 class Camera;
+class Component;
 class TransformCache;
 class StaticMeshRenderer;
 class World;
@@ -48,28 +49,11 @@ public:
     int32 viewportHeight = 0;
 };
 
-//持久渲染器记录，保存剔除前共享的组件、变换和包围盒状态
-struct RendererEntry
-{
-public:
-    RenderSceneHandle handle;
-    EnsId ens;
-    StaticMeshRenderer* renderer = nullptr;
-    Mesh* mesh = nullptr;
-    uint64 meshRevision = 0;
-    bool active = true;
-
-    matrix4x4 localToWorld;
-    bounds3 localBounds;
-    bounds3 worldBounds;
-    vector3 worldPosition;
-};
-
-//相机可见渲染器记录，指向持久 RendererEntry
+//相机可见渲染器记录
 struct VisibleItem
 {
 public:
-    uint32 rendererIndex = 0;
+    StaticMeshRenderer* renderer = nullptr;
     float32 cameraDistance = 0.0f;
 };
 
@@ -130,25 +114,7 @@ public:
 class RenderScene
 {
 private:
-    struct HandleSlot
-    {
-        uint32 version = 0;
-        uint32 denseIndex = EnsId::InvalidId;
-    };
-
-    struct CameraEntry
-    {
-        RenderSceneHandle handle;
-        Camera* camera = nullptr;
-    };
-
-    struct DirectionalLightEntry
-    {
-        RenderSceneHandle handle;
-        DirectionalLight* light = nullptr;
-    };
-
-    enum class EntryType
+    enum class ComponentType
     {
         Camera,
         DirectionalLight,
@@ -157,63 +123,49 @@ private:
 
     struct PendingChange
     {
-        EntryType type = EntryType::Renderer;
+        ComponentType type = ComponentType::Renderer;
         bool add = false;
-        RenderSceneHandle handle;
-        void* component = nullptr;
+        Component* component = nullptr;
     };
 
     World* world = nullptr;
-    List<CameraEntry> cameraEntries;
-    List<DirectionalLightEntry> directionalLightEntries;
-
-    List<HandleSlot> cameraSlots;
-    List<HandleSlot> directionalLightSlots;
-    List<HandleSlot> rendererSlots;
-    List<uint32> freeCameraSlots;
-    List<uint32> freeDirectionalLightSlots;
-    List<uint32> freeRendererSlots;
+    List<Camera*> cameraComponents;
+    List<DirectionalLight*> directionalLightComponents;
     List<PendingChange> pendingChanges;
     uint32 readDepth = 0;
-
-    //分配带版本的场景槽位
-    RenderSceneHandle AllocateHandle(List<HandleSlot>& slots, List<uint32>& freeSlots);
-
-    //释放场景槽位供后续复用
-    void ReleaseHandle(RenderSceneHandle handle, List<HandleSlot>& slots, List<uint32>& freeSlots);
 
     //应用等待安全阶段处理的增删操作
     void FlushPendingChanges();
 
-    //取消尚未进入紧凑列表的注册
-    bool CancelPendingAdd(EntryType type, RenderSceneHandle handle);
+    //取消尚未进入指针列表的注册
+    bool CancelPendingAdd(ComponentType type, Component* component);
 
     //激活相机注册
-    void AddCamera(RenderSceneHandle handle, Camera* camera);
+    void AddCamera(Camera* camera);
 
     //移除相机注册
-    void RemoveCamera(RenderSceneHandle handle);
+    void RemoveCamera(Camera* camera);
 
     //激活方向光注册
-    void AddDirectionalLight(RenderSceneHandle handle, DirectionalLight* light);
+    void AddDirectionalLight(DirectionalLight* light);
 
     //移除方向光注册
-    void RemoveDirectionalLight(RenderSceneHandle handle);
+    void RemoveDirectionalLight(DirectionalLight* light);
 
     //激活渲染器注册
-    void AddRenderer(RenderSceneHandle handle, StaticMeshRenderer* renderer);
+    void AddRenderer(StaticMeshRenderer* renderer);
 
     //移除渲染器注册
-    void RemoveRenderer(RenderSceneHandle handle);
+    void RemoveRenderer(StaticMeshRenderer* renderer);
 
     //刷新指定渲染器的变换和包围盒
-    void UpdateRenderer(RenderSceneHandle handle, bool updateTransform);
+    void UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransform);
 
 public:
     RenderSettings renderSettings;
     List<RenderCamera> cameras;
     List<RenderDirectionalLight> directionalLights;
-    List<RendererEntry> renderers;
+    List<StaticMeshRenderer*> renderers;
 
     //绑定世界并完整收集一次已有渲染组件
     void BindWorld(World& currentWorld);
@@ -224,29 +176,29 @@ public:
     //增量刷新变换状态和组件快照
     void Update(World& currentWorld, TransformCache& transformCache);
 
-    //进入不允许修改紧凑列表的读取阶段
+    //进入不允许修改组件指针列表的读取阶段
     void BeginRead();
 
     //结束读取阶段并应用延迟增删
     void EndRead();
 
     //注册启用的相机组件
-    RenderSceneHandle RegisterCamera(Camera* camera);
+    void RegisterCamera(Camera* camera);
 
     //注销相机组件
-    void UnregisterCamera(RenderSceneHandle handle);
+    void UnregisterCamera(Camera* camera);
 
     //注册启用的方向光组件
-    RenderSceneHandle RegisterDirectionalLight(DirectionalLight* light);
+    void RegisterDirectionalLight(DirectionalLight* light);
 
     //注销方向光组件
-    void UnregisterDirectionalLight(RenderSceneHandle handle);
+    void UnregisterDirectionalLight(DirectionalLight* light);
 
     //注册启用的静态网格渲染器
-    RenderSceneHandle RegisterRenderer(StaticMeshRenderer* renderer);
+    void RegisterRenderer(StaticMeshRenderer* renderer);
 
     //注销静态网格渲染器
-    void UnregisterRenderer(RenderSceneHandle handle);
+    void UnregisterRenderer(StaticMeshRenderer* renderer);
 
     //把相机可见渲染器展开为临时子网格绘制项
     void BuildRenderItems(VisibleSet& visibleSet) const;

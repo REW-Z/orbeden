@@ -12,26 +12,26 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
 
     //先按绘制层过滤，再按相机视锥过滤持久渲染器。
     uint32 layerMask = camera.drawLayerMask;
-    for (usize rendererIndex = 0; rendererIndex < scene.renderers.size(); ++rendererIndex)
+    for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        const RendererEntry& entry = scene.renderers[rendererIndex];
-        if (!entry.active) continue;
-        StaticMeshRenderer* renderer = entry.renderer;
-        if (!renderer || !renderer->GetEnabled() || !entry.mesh || !entry.worldBounds.valid) continue;
+        if (!renderer || !renderer->GetEnabled()) continue;
+
+        const StaticMeshRendererRenderState& state = renderer->renderState;
+        if (!state.mesh || !state.worldBounds.valid) continue;
         if ((renderer->drawLayer & layerMask) == 0) continue;
-        if (!RenderMath::Intersects(camera.viewFrustum, entry.worldBounds)) continue;
+        if (!RenderMath::Intersects(camera.viewFrustum, state.worldBounds)) continue;
 
         //使用对象中心到相机的平方距离，避免排序时进行开方。
         vector3 toItem =
         {
-            entry.worldPosition.x - camera.position.x,
-            entry.worldPosition.y - camera.position.y,
-            entry.worldPosition.z - camera.position.z,
+            state.worldPosition.x - camera.position.x,
+            state.worldPosition.y - camera.position.y,
+            state.worldPosition.z - camera.position.z,
         };
 
-        //记录持久渲染器索引和距离，供可见后 SubMesh 展开使用。
+        //记录渲染器指针和距离，供可见后 SubMesh 展开使用。
         VisibleItem visibleItem;
-        visibleItem.rendererIndex = static_cast<uint32>(rendererIndex);
+        visibleItem.renderer = renderer;
         visibleItem.cameraDistance = RenderMath::Dot(toItem, toItem);
         visibleSet.visibleItems.push_back(visibleItem);
     }

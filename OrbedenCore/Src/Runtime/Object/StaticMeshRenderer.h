@@ -5,6 +5,19 @@
 #include "Runtime/Object/Mesh.h"
 
 class RenderScene;
+class SceneCuller;
+class ForwardPipeline;
+
+//渲染器运行时缓存，避免每个相机重复计算变换和包围盒
+struct StaticMeshRendererRenderState
+{
+    Mesh* mesh = nullptr;
+    uint64 meshRevision = 0;
+    matrix4x4 localToWorld;
+    bounds3 localBounds;
+    bounds3 worldBounds;
+    vector3 worldPosition;
+};
 
 //静态网格渲染组件
 class StaticMeshRenderer : public Component
@@ -13,9 +26,11 @@ class StaticMeshRenderer : public Component
 
 private:
     friend class RenderScene;
+    friend class SceneCuller;
+    friend class ForwardPipeline;
 
     bool enabled = true;
-    RenderSceneHandle renderSceneHandle;
+    StaticMeshRendererRenderState renderState;
 
 public:
     Ref<Mesh> mesh;

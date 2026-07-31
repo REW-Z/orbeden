@@ -240,7 +240,7 @@ struct ImGui_ImplGlfw_Data
 // - Because glfwPollEvents() process all windows and some events may be called outside of it, you will need to register your own callbacks
 //   (passing install_callbacks=false in ImGui_ImplGlfw_InitXXX functions), set the current dear imgui context and then call our callbacks.
 // - Otherwise we may need to store a GLFWWindow* -> ImGuiContext* map and handle this in the backend, adding a little bit of extra complexity to it.
-// FIXME: some shared resources (mouse cursor shape, gamepad) are mishandled when using multi-context.
+// FIXME: some shared gpuResourceManager (mouse cursor shape, gamepad) are mishandled when using multi-context.
 namespace ImGui { extern ImGuiIO& GetIO(ImGuiContext*); }
 static ImGui_ImplGlfw_Data* ImGui_ImplGlfw_GetBackendData()
 {

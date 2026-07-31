@@ -88,7 +88,7 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
         return false;
     }
 
-    resources.Initialize(&backend);
+    gpuResourceManager.Initialize(&backend);
     forwardPipeline.Initialize(&backend);
 
     //ImGui 是可选覆盖层，初始化失败不影响场景渲染。
@@ -107,7 +107,7 @@ void RenderSystem::Shutdown()
     imguiLayer.Shutdown();
     ReleaseRenderTargets();
     forwardPipeline.Shutdown();
-    resources.Shutdown();
+    gpuResourceManager.Shutdown();
     backend.Shutdown();
     initialized = false;
     window = nullptr;
@@ -228,7 +228,7 @@ void RenderSystem::InvalidateResourceCaches()
 
     //释放依赖旧 CPU 资源的 GPU 状态，后端和离屏目标继续保持有效。
     forwardPipeline.InvalidateResourceCaches();
-    resources.InvalidateCaches();
+    gpuResourceManager.InvalidateCaches();
     warnedMissingCamera = false;
 }
 
@@ -237,18 +237,22 @@ void RenderSystem::Render(World& world, float deltaTime)
     (void)deltaTime;
     if (!initialized || !window) return;
 
-    //回收已经销毁的 CPU 资源
-    resources.CollectUnused();
+    //在新一帧读取场景前释放已销毁对象对应的 GPU 资源。
+    gpuResourceManager.ReleaseDestroyedResources();
 
     //增量刷新持久场景，并在读取阶段延迟组件结构变化
     scene.Update(world, transformCache);
 
-    //根据离屏目标尺寸解析相机 viewport，并重建依赖 viewport 的投影数据。
-    ResolveCameraTargets();
+    //根据离屏目标尺寸准备相机 viewport，并重建依赖 viewport 的投影数据。
+    PrepareCameraRenderData();
+
     scene.BeginRead();
 
     //所有相机共享同一帧的后端 frame 生命周期。
     backend.BeginFrame();
+
+
+    //无相机  
     if (scene.cameras.empty())
     {
         //没有相机时只提交一次黑色清屏 pass，避免留下未定义的 framebuffer 内容。
@@ -275,17 +279,17 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     //阴影资源只准备一次，然后由所有相机共享。
     warnedMissingCamera = false;
-    forwardPipeline.PrepareFrame(scene, resources);
+    forwardPipeline.PrepareFrame(scene, gpuResourceManager);
 
     //逐相机执行剔除、排序和 Forward 绘制；无效 viewport 的相机跳过。
     for (const RenderCamera& camera : scene.cameras)
     {
         if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
 
-        culler.Cull(scene, camera, visibleSet);
+        culler.Cull(scene, camera, visibleSet); //剔除
         scene.BuildRenderItems(visibleSet);
-        sorter.Sort(visibleSet);
-        forwardPipeline.Render(scene, visibleSet, resources);
+        sorter.Sort(visibleSet);//排序
+        forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
     }
 
     //场景 pass 完成后绘制覆盖层，并结束本帧后端命令提交。
@@ -335,7 +339,7 @@ void RenderSystem::ReleaseRenderTargets()
     renderTargets.clear();
 }
 
-void RenderSystem::ResolveCameraTargets()
+void RenderSystem::PrepareCameraRenderData()
 {
     for (RenderCamera& camera : scene.cameras)
     {

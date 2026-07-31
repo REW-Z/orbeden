@@ -35,6 +35,7 @@ namespace
         std::unordered_map<std::string, Object*> objectByPath;
         std::unordered_map<int32, Object*> objectById;
         List<Object*> orphanObjects;
+        List<IObjectDestroyListener*> destroyListeners;
         int32 nextObjectId = 1;
     };
 
@@ -630,6 +631,26 @@ uint32 Object::GetTypeCount()
     return static_cast<uint32>(GetObjectRuntime().types.size());
 }
 
+//注册对象销毁监听器
+void Object::AddDestroyListener(IObjectDestroyListener* listener)
+{
+    if (!listener) return;
+
+    List<IObjectDestroyListener*>& listeners = GetObjectRuntime().destroyListeners;
+    if (std::find(listeners.begin(), listeners.end(), listener) == listeners.end())
+    {
+        listeners.push_back(listener);
+    }
+}
+
+//注销对象销毁监听器
+void Object::RemoveDestroyListener(IObjectDestroyListener* listener)
+{
+    List<IObjectDestroyListener*>& listeners = GetObjectRuntime().destroyListeners;
+    auto it = std::find(listeners.begin(), listeners.end(), listener);
+    if (it != listeners.end()) listeners.erase(it);
+}
+
 //查找对象
 Object* Object::FindObject(uint64 hash)
 {
@@ -824,6 +845,14 @@ bool Object::DestroyDetachedInstance(Object* object)
     if (object->GetWorld()) return false;
 
     ObjectRuntime& runtime = GetObjectRuntime();
+
+    //先通知监听者，使外部缓存记录精确的对象身份，再注销并销毁对象。
+    List<IObjectDestroyListener*> listeners = runtime.destroyListeners;
+    for (IObjectDestroyListener* listener : listeners)
+    {
+        if (listener) listener->OnObjectDestroyed(object);
+    }
+
     runtime.objectByPath.erase(object->GetInstanceId().GetPath());
     runtime.objectById.erase(object->GetObjectId());
 

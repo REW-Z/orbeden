@@ -4,18 +4,13 @@
 #include "Runtime/EnsId.h"
 #include "Runtime/EngineTypes.h"
 
-class RenderScene;
-
 //方向光组件，描述全局平行光和基础阴影参数。
 class DirectionalLight : public Component
 {
     OBJECT_TYPE_DECLARE(DirectionalLight)
 
 private:
-    friend class RenderScene;
-
     bool enabled = true;
-    RenderSceneHandle renderSceneHandle;
 
 public:
     vector3 direction = { -0.35f, -1.0f, -0.45f };

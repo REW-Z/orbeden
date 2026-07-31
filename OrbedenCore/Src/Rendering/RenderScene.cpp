@@ -30,39 +30,6 @@ RenderScene* GetRenderScene()
     return currentRenderScene;
 }
 
-//分配带版本的场景槽位
-RenderSceneHandle RenderScene::AllocateHandle(List<HandleSlot>& slots, List<uint32>& freeSlots)
-{
-    RenderSceneHandle handle;
-    if (!freeSlots.empty())
-    {
-        handle.id = freeSlots.back();
-        freeSlots.pop_back();
-        HandleSlot& slot = slots[handle.id];
-        slot.version++;
-        if (slot.version == 0) slot.version = 1;
-        handle.version = slot.version;
-        return handle;
-    }
-
-    handle.id = static_cast<uint32>(slots.size());
-    handle.version = 1;
-    slots.push_back({ handle.version, EnsId::InvalidId });
-    return handle;
-}
-
-//释放场景槽位供后续复用
-void RenderScene::ReleaseHandle(RenderSceneHandle handle, List<HandleSlot>& slots, List<uint32>& freeSlots)
-{
-    if (!handle.IsValid() || handle.id >= slots.size()) return;
-
-    HandleSlot& slot = slots[handle.id];
-    if (slot.version != handle.version) return;
-
-    slot.denseIndex = EnsId::InvalidId;
-    freeSlots.push_back(handle.id);
-}
-
 //绑定世界并完整收集一次已有渲染组件
 void RenderScene::BindWorld(World& currentWorld)
 {
@@ -75,15 +42,15 @@ void RenderScene::BindWorld(World& currentWorld)
     //初次绑定完整收集，后续增删由组件生命周期主动维护
     currentWorld.ForEachComponent<Camera>([this](Camera* camera)
     {
-        if (camera->GetEnabled()) camera->renderSceneHandle = RegisterCamera(camera);
+        if (camera->GetEnabled()) RegisterCamera(camera);
     });
     currentWorld.ForEachComponent<DirectionalLight>([this](DirectionalLight* light)
     {
-        if (light->GetEnabled()) light->renderSceneHandle = RegisterDirectionalLight(light);
+        if (light->GetEnabled()) RegisterDirectionalLight(light);
     });
     currentWorld.ForEachComponent<StaticMeshRenderer>([this](StaticMeshRenderer* renderer)
     {
-        if (renderer->GetEnabled()) renderer->renderSceneHandle = RegisterRenderer(renderer);
+        if (renderer->GetEnabled()) RegisterRenderer(renderer);
     });
 }
 
@@ -91,33 +58,12 @@ void RenderScene::BindWorld(World& currentWorld)
 void RenderScene::UnbindWorld()
 {
     readDepth = 0;
-    FlushPendingChanges();
-
-    for (CameraEntry& entry : cameraEntries)
-    {
-        if (entry.camera) entry.camera->renderSceneHandle = RenderSceneHandle();
-    }
-    for (DirectionalLightEntry& entry : directionalLightEntries)
-    {
-        if (entry.light) entry.light->renderSceneHandle = RenderSceneHandle();
-    }
-    for (RendererEntry& entry : renderers)
-    {
-        if (entry.renderer) entry.renderer->renderSceneHandle = RenderSceneHandle();
-    }
-
     world = nullptr;
-    cameraEntries.clear();
-    directionalLightEntries.clear();
+    cameraComponents.clear();
+    directionalLightComponents.clear();
     renderers.clear();
     cameras.clear();
     directionalLights.clear();
-    cameraSlots.clear();
-    directionalLightSlots.clear();
-    rendererSlots.clear();
-    freeCameraSlots.clear();
-    freeDirectionalLightSlots.clear();
-    freeRendererSlots.clear();
     pendingChanges.clear();
     renderSettings = RenderSettings();
     if (currentRenderScene == this) currentRenderScene = nullptr;
@@ -136,26 +82,26 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     {
         Ens* entity = currentWorld.GetEns(ens);
         StaticMeshRenderer* renderer = entity ? entity->GetComponent<StaticMeshRenderer>() : nullptr;
-        if (renderer && renderer->GetEnabled()) UpdateRenderer(renderer->renderSceneHandle, true);
+        if (renderer && renderer->GetEnabled()) UpdateRenderer(renderer, true);
     }
 
     //Mesh 引用和几何版本可直接修改，因此只做 renderer 级轻量版本检查
-    for (RendererEntry& entry : renderers)
+    for (StaticMeshRenderer* renderer : renderers)
     {
-        if (!entry.active) continue;
-        Mesh* mesh = entry.renderer ? entry.renderer->mesh.Get() : nullptr;
+        if (!renderer || !renderer->GetEnabled()) continue;
+
+        Mesh* mesh = renderer->mesh.Get();
         uint64 revision = mesh ? mesh->GetRevision() : 0;
-        if (mesh != entry.mesh || revision != entry.meshRevision)
+        if (mesh != renderer->renderState.mesh || revision != renderer->renderState.meshRevision)
         {
-            UpdateRenderer(entry.handle, false);
+            UpdateRenderer(renderer, false);
         }
     }
 
-    //相机参数可公开修改，每帧仅刷新已注册相机，不再扫描 World
+    //相机
     cameras.clear();
-    for (const CameraEntry& entry : cameraEntries)
+    for (Camera* camera : cameraComponents)
     {
-        Camera* camera = entry.camera;
         if (!camera || !camera->GetEnabled()) continue;
 
         RenderCamera renderCamera;
@@ -187,11 +133,10 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         return a.ens.version < b.ens.version;
     });
 
-    //方向光同样只刷新已注册组件快照
+    //方向光
     directionalLights.clear();
-    for (const DirectionalLightEntry& entry : directionalLightEntries)
+    for (DirectionalLight* light : directionalLightComponents)
     {
-        DirectionalLight* light = entry.light;
         if (!light || !light->GetEnabled()) continue;
 
         RenderDirectionalLight renderLight;
@@ -212,7 +157,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     }
 }
 
-//进入不允许修改紧凑列表的读取阶段
+//进入不允许修改组件指针列表的读取阶段
 void RenderScene::BeginRead()
 {
     readDepth++;
@@ -228,109 +173,77 @@ void RenderScene::EndRead()
 }
 
 //注册启用的相机组件
-RenderSceneHandle RenderScene::RegisterCamera(Camera* camera)
+void RenderScene::RegisterCamera(Camera* camera)
 {
-    if (!camera || !camera->GetEnabled() || camera->GetWorld() != world) return RenderSceneHandle();
-    if (camera->renderSceneHandle.IsValid()) return camera->renderSceneHandle;
+    if (!camera || !camera->GetEnabled() || camera->GetWorld() != world) return;
 
-    RenderSceneHandle handle = AllocateHandle(cameraSlots, freeCameraSlots);
-    PendingChange change{ EntryType::Camera, true, handle, camera };
-    if (readDepth > 0) pendingChanges.push_back(change);
-    else AddCamera(handle, camera);
-    return handle;
+    if (readDepth > 0) pendingChanges.push_back({ ComponentType::Camera, true, camera });
+    else AddCamera(camera);
 }
 
 //注销相机组件
-void RenderScene::UnregisterCamera(RenderSceneHandle handle)
+void RenderScene::UnregisterCamera(Camera* camera)
 {
-    if (!handle.IsValid()) return;
+    if (!camera) return;
 
     if (readDepth > 0)
     {
-        if (CancelPendingAdd(EntryType::Camera, handle))
-        {
-            ReleaseHandle(handle, cameraSlots, freeCameraSlots);
-            return;
-        }
-        pendingChanges.push_back({ EntryType::Camera, false, handle, nullptr });
+        if (CancelPendingAdd(ComponentType::Camera, camera)) return;
+        pendingChanges.push_back({ ComponentType::Camera, false, camera });
     }
     else
     {
-        RemoveCamera(handle);
+        RemoveCamera(camera);
     }
 }
 
 //注册启用的方向光组件
-RenderSceneHandle RenderScene::RegisterDirectionalLight(DirectionalLight* light)
+void RenderScene::RegisterDirectionalLight(DirectionalLight* light)
 {
-    if (!light || !light->GetEnabled() || light->GetWorld() != world) return RenderSceneHandle();
-    if (light->renderSceneHandle.IsValid()) return light->renderSceneHandle;
+    if (!light || !light->GetEnabled() || light->GetWorld() != world) return;
 
-    RenderSceneHandle handle = AllocateHandle(directionalLightSlots, freeDirectionalLightSlots);
-    PendingChange change{ EntryType::DirectionalLight, true, handle, light };
-    if (readDepth > 0) pendingChanges.push_back(change);
-    else AddDirectionalLight(handle, light);
-    return handle;
+    if (readDepth > 0) pendingChanges.push_back({ ComponentType::DirectionalLight, true, light });
+    else AddDirectionalLight(light);
 }
 
 //注销方向光组件
-void RenderScene::UnregisterDirectionalLight(RenderSceneHandle handle)
+void RenderScene::UnregisterDirectionalLight(DirectionalLight* light)
 {
-    if (!handle.IsValid()) return;
+    if (!light) return;
 
     if (readDepth > 0)
     {
-        if (CancelPendingAdd(EntryType::DirectionalLight, handle))
-        {
-            ReleaseHandle(handle, directionalLightSlots, freeDirectionalLightSlots);
-            return;
-        }
-        pendingChanges.push_back({ EntryType::DirectionalLight, false, handle, nullptr });
+        if (CancelPendingAdd(ComponentType::DirectionalLight, light)) return;
+        pendingChanges.push_back({ ComponentType::DirectionalLight, false, light });
     }
     else
     {
-        RemoveDirectionalLight(handle);
+        RemoveDirectionalLight(light);
     }
 }
 
 //注册启用的静态网格渲染器
-RenderSceneHandle RenderScene::RegisterRenderer(StaticMeshRenderer* renderer)
+void RenderScene::RegisterRenderer(StaticMeshRenderer* renderer)
 {
-    if (!renderer || !renderer->GetEnabled() || renderer->GetWorld() != world) return RenderSceneHandle();
-    if (renderer->renderSceneHandle.IsValid()) return renderer->renderSceneHandle;
+    if (!renderer || !renderer->GetEnabled() || renderer->GetWorld() != world) return;
 
-    RenderSceneHandle handle = AllocateHandle(rendererSlots, freeRendererSlots);
-    PendingChange change{ EntryType::Renderer, true, handle, renderer };
-    if (readDepth > 0) pendingChanges.push_back(change);
-    else AddRenderer(handle, renderer);
-    return handle;
+    if (readDepth > 0) pendingChanges.push_back({ ComponentType::Renderer, true, renderer });
+    else AddRenderer(renderer);
 }
 
 //注销静态网格渲染器
-void RenderScene::UnregisterRenderer(RenderSceneHandle handle)
+void RenderScene::UnregisterRenderer(StaticMeshRenderer* renderer)
 {
-    if (!handle.IsValid()) return;
+    if (!renderer) return;
 
     if (readDepth > 0)
     {
-        if (CancelPendingAdd(EntryType::Renderer, handle))
-        {
-            ReleaseHandle(handle, rendererSlots, freeRendererSlots);
-            return;
-        }
-        if (handle.id < rendererSlots.size())
-        {
-            HandleSlot& slot = rendererSlots[handle.id];
-            if (slot.version == handle.version && slot.denseIndex < renderers.size())
-            {
-                renderers[slot.denseIndex].active = false;
-            }
-        }
-        pendingChanges.push_back({ EntryType::Renderer, false, handle, nullptr });
+        if (CancelPendingAdd(ComponentType::Renderer, renderer)) return;
+        pendingChanges.push_back({ ComponentType::Renderer, false, renderer });
     }
     else
     {
-        RemoveRenderer(handle);
+        RemoveRenderer(renderer);
     }
 }
 
@@ -340,13 +253,12 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
     visibleSet.renderItems.clear();
     for (const VisibleItem& visible : visibleSet.visibleItems)
     {
-        if (visible.rendererIndex >= renderers.size()) continue;
+        StaticMeshRenderer* renderer = visible.renderer;
+        if (!renderer || !renderer->GetEnabled()) continue;
 
-        const RendererEntry& entry = renderers[visible.rendererIndex];
-        if (!entry.active) continue;
-        StaticMeshRenderer* renderer = entry.renderer;
-        Mesh* mesh = entry.mesh;
-        if (!renderer || !renderer->GetEnabled() || !mesh || !entry.localBounds.valid) continue;
+        const StaticMeshRendererRenderState& state = renderer->renderState;
+        Mesh* mesh = state.mesh;
+        if (!mesh || !state.localBounds.valid) continue;
 
         for (uint32 index = 0; index < mesh->subMeshes.size(); ++index)
         {
@@ -359,7 +271,7 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
             if (!material) continue;
 
             RenderItem item;
-            item.ens = entry.ens;
+            item.ens = renderer->GetEnsId();
             item.renderer = renderer;
             item.mesh = mesh;
             item.material = material;
@@ -369,10 +281,10 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
             item.drawLayer = renderer->drawLayer;
             item.drawQueue = renderer->drawQueue;
             item.cameraDistance = visible.cameraDistance;
-            item.localToWorld = entry.localToWorld;
-            item.localBounds = entry.localBounds;
-            item.worldBounds = entry.worldBounds;
-            item.worldPosition = entry.worldPosition;
+            item.localToWorld = state.localToWorld;
+            item.localBounds = state.localBounds;
+            item.worldBounds = state.worldBounds;
+            item.worldPosition = state.worldPosition;
             item.castShadows = renderer->castShadows;
             item.receiveShadows = renderer->receiveShadows;
             visibleSet.renderItems.push_back(item);
@@ -391,153 +303,113 @@ void RenderScene::FlushPendingChanges()
     {
         switch (change.type)
         {
-        case EntryType::Camera:
-            if (change.add) AddCamera(change.handle, static_cast<Camera*>(change.component));
-            else RemoveCamera(change.handle);
+        case ComponentType::Camera:
+            if (change.add) AddCamera(static_cast<Camera*>(change.component));
+            else RemoveCamera(static_cast<Camera*>(change.component));
             break;
-        case EntryType::DirectionalLight:
-            if (change.add) AddDirectionalLight(change.handle, static_cast<DirectionalLight*>(change.component));
-            else RemoveDirectionalLight(change.handle);
+        case ComponentType::DirectionalLight:
+            if (change.add) AddDirectionalLight(static_cast<DirectionalLight*>(change.component));
+            else RemoveDirectionalLight(static_cast<DirectionalLight*>(change.component));
             break;
-        case EntryType::Renderer:
-            if (change.add) AddRenderer(change.handle, static_cast<StaticMeshRenderer*>(change.component));
-            else RemoveRenderer(change.handle);
+        case ComponentType::Renderer:
+            if (change.add) AddRenderer(static_cast<StaticMeshRenderer*>(change.component));
+            else RemoveRenderer(static_cast<StaticMeshRenderer*>(change.component));
             break;
         }
     }
 }
 
-//取消尚未进入紧凑列表的注册
-bool RenderScene::CancelPendingAdd(EntryType type, RenderSceneHandle handle)
+//取消尚未进入指针列表的注册
+bool RenderScene::CancelPendingAdd(ComponentType type, Component* component)
 {
-    auto it = std::find_if(pendingChanges.begin(), pendingChanges.end(), [type, handle](const PendingChange& change)
+    auto newEnd = std::remove_if(pendingChanges.begin(), pendingChanges.end(), [type, component](const PendingChange& change)
     {
-        return change.add && change.type == type && change.handle == handle;
+        return change.add && change.type == type && change.component == component;
     });
-    if (it == pendingChanges.end()) return false;
-
-    pendingChanges.erase(it);
-    return true;
+    bool canceled = newEnd != pendingChanges.end();
+    pendingChanges.erase(newEnd, pendingChanges.end());
+    return canceled;
 }
 
 //激活相机注册
-void RenderScene::AddCamera(RenderSceneHandle handle, Camera* camera)
+void RenderScene::AddCamera(Camera* camera)
 {
-    if (!handle.IsValid() || handle.id >= cameraSlots.size() || !camera) return;
-
-    HandleSlot& slot = cameraSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex != EnsId::InvalidId) return;
-
-    slot.denseIndex = static_cast<uint32>(cameraEntries.size());
-    cameraEntries.push_back({ handle, camera });
+    if (!camera || std::find(cameraComponents.begin(), cameraComponents.end(), camera) != cameraComponents.end()) return;
+    cameraComponents.push_back(camera);
 }
 
 //移除相机注册
-void RenderScene::RemoveCamera(RenderSceneHandle handle)
+void RenderScene::RemoveCamera(Camera* camera)
 {
-    if (!handle.IsValid() || handle.id >= cameraSlots.size()) return;
+    auto it = std::find(cameraComponents.begin(), cameraComponents.end(), camera);
+    if (it == cameraComponents.end()) return;
 
-    HandleSlot& slot = cameraSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex >= cameraEntries.size()) return;
-
-    uint32 index = slot.denseIndex;
-    CameraEntry moved = cameraEntries.back();
-    cameraEntries[index] = moved;
-    cameraEntries.pop_back();
-    if (index < cameraEntries.size()) cameraSlots[moved.handle.id].denseIndex = index;
-    ReleaseHandle(handle, cameraSlots, freeCameraSlots);
+    *it = cameraComponents.back();
+    cameraComponents.pop_back();
 }
 
 //激活方向光注册
-void RenderScene::AddDirectionalLight(RenderSceneHandle handle, DirectionalLight* light)
+void RenderScene::AddDirectionalLight(DirectionalLight* light)
 {
-    if (!handle.IsValid() || handle.id >= directionalLightSlots.size() || !light) return;
-
-    HandleSlot& slot = directionalLightSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex != EnsId::InvalidId) return;
-
-    slot.denseIndex = static_cast<uint32>(directionalLightEntries.size());
-    directionalLightEntries.push_back({ handle, light });
+    if (!light || std::find(directionalLightComponents.begin(), directionalLightComponents.end(), light) != directionalLightComponents.end()) return;
+    directionalLightComponents.push_back(light);
 }
 
 //移除方向光注册
-void RenderScene::RemoveDirectionalLight(RenderSceneHandle handle)
+void RenderScene::RemoveDirectionalLight(DirectionalLight* light)
 {
-    if (!handle.IsValid() || handle.id >= directionalLightSlots.size()) return;
+    auto it = std::find(directionalLightComponents.begin(), directionalLightComponents.end(), light);
+    if (it == directionalLightComponents.end()) return;
 
-    HandleSlot& slot = directionalLightSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex >= directionalLightEntries.size()) return;
-
-    uint32 index = slot.denseIndex;
-    DirectionalLightEntry moved = directionalLightEntries.back();
-    directionalLightEntries[index] = moved;
-    directionalLightEntries.pop_back();
-    if (index < directionalLightEntries.size()) directionalLightSlots[moved.handle.id].denseIndex = index;
-    ReleaseHandle(handle, directionalLightSlots, freeDirectionalLightSlots);
+    *it = directionalLightComponents.back();
+    directionalLightComponents.pop_back();
 }
 
 //激活渲染器注册
-void RenderScene::AddRenderer(RenderSceneHandle handle, StaticMeshRenderer* renderer)
+void RenderScene::AddRenderer(StaticMeshRenderer* renderer)
 {
-    if (!handle.IsValid() || handle.id >= rendererSlots.size() || !renderer) return;
+    if (!renderer || std::find(renderers.begin(), renderers.end(), renderer) != renderers.end()) return;
 
-    HandleSlot& slot = rendererSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex != EnsId::InvalidId) return;
-
-    RendererEntry entry;
-    entry.handle = handle;
-    entry.ens = renderer->GetEnsId();
-    entry.renderer = renderer;
-    slot.denseIndex = static_cast<uint32>(renderers.size());
-    renderers.push_back(entry);
-    UpdateRenderer(handle, true);
+    renderers.push_back(renderer);
+    UpdateRenderer(renderer, true);
 }
 
 //移除渲染器注册
-void RenderScene::RemoveRenderer(RenderSceneHandle handle)
+void RenderScene::RemoveRenderer(StaticMeshRenderer* renderer)
 {
-    if (!handle.IsValid() || handle.id >= rendererSlots.size()) return;
+    auto it = std::find(renderers.begin(), renderers.end(), renderer);
+    if (it == renderers.end()) return;
 
-    HandleSlot& slot = rendererSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex >= renderers.size()) return;
-
-    uint32 index = slot.denseIndex;
-    RendererEntry moved = renderers.back();
-    renderers[index] = moved;
+    *it = renderers.back();
     renderers.pop_back();
-    if (index < renderers.size()) rendererSlots[moved.handle.id].denseIndex = index;
-    ReleaseHandle(handle, rendererSlots, freeRendererSlots);
 }
 
 //刷新指定渲染器的变换和包围盒
-void RenderScene::UpdateRenderer(RenderSceneHandle handle, bool updateTransform)
+void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransform)
 {
-    if (!world || !handle.IsValid() || handle.id >= rendererSlots.size()) return;
+    if (!world || !renderer || renderer->GetWorld() != world) return;
 
-    HandleSlot& slot = rendererSlots[handle.id];
-    if (slot.version != handle.version || slot.denseIndex >= renderers.size()) return;
-
-    RendererEntry& entry = renderers[slot.denseIndex];
-    Mesh* mesh = entry.renderer ? entry.renderer->mesh.Get() : nullptr;
-    bool meshChanged = mesh != entry.mesh || (mesh && mesh->GetRevision() != entry.meshRevision);
+    StaticMeshRendererRenderState& state = renderer->renderState;
+    Mesh* mesh = renderer->mesh.Get();
+    bool meshChanged = mesh != state.mesh || (mesh && mesh->GetRevision() != state.meshRevision);
     if (meshChanged)
     {
-        entry.mesh = mesh;
-        entry.meshRevision = mesh ? mesh->GetRevision() : 0;
-        entry.localBounds = mesh ? mesh->GetLocalBounds() : bounds3();
+        state.mesh = mesh;
+        state.meshRevision = mesh ? mesh->GetRevision() : 0;
+        state.localBounds = mesh ? mesh->GetLocalBounds() : bounds3();
     }
 
     if (updateTransform)
     {
-        TransformComponent* transform = world->GetTransformComponent(entry.ens);
-        entry.localToWorld = transform ? transform->worldMatrix : matrix4x4();
+        TransformComponent* transform = world->GetTransformComponent(renderer->GetEnsId());
+        state.localToWorld = transform ? transform->worldMatrix : matrix4x4();
     }
 
     if (meshChanged || updateTransform)
     {
-        entry.worldBounds = entry.localBounds.valid
-            ? RenderMath::TransformBounds(entry.localToWorld, entry.localBounds)
+        state.worldBounds = state.localBounds.valid
+            ? RenderMath::TransformBounds(state.localToWorld, state.localBounds)
             : bounds3();
-        entry.worldPosition = entry.worldBounds.center;
+        state.worldPosition = state.worldBounds.center;
     }
 }

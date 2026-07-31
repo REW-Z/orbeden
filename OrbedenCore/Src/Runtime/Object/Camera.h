@@ -3,18 +3,13 @@
 #include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 
-class RenderScene;
-
 //相机组件，保存渲染视角的公开参数
 class Camera : public Component
 {
     OBJECT_TYPE_DECLARE(Camera)
 
 private:
-    friend class RenderScene;
-
     bool enabled = true;
-    RenderSceneHandle renderSceneHandle;
 
 public:
     float32 fieldOfView = 60.0f;

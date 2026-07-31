@@ -39,7 +39,7 @@ private:
     //OpenGL 后端
     OpenGLRenderBackend backend;
     //GPU 资源管理器
-    GpuResourceManager resources;
+    GpuResourceManager gpuResourceManager;
 
     //Forward 管线
     ForwardPipeline forwardPipeline;
@@ -87,8 +87,8 @@ private:
     //释放全部离屏渲染目标及其深度资源
     void ReleaseRenderTargets();
 
-    //为当前帧相机解析目标、像素 viewport 和投影相关数据
-    void ResolveCameraTargets();
+    //准备当前帧相机的目标、像素 viewport 和投影数据
+    void PrepareCameraRenderData();
 
 public:
     //获取资源依赖并初始化窗口渲染后端

@@ -23,7 +23,7 @@
 // - Web version of the Demo .... https://pthom.github.io/imgui_explorer (w/ source code browser)
 
 // For FIRST-TIME users having issues compiling/linking/running:
-// please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
+// please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in gpuResourceManager above.
 // Everything else should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
 // Since 1.92, we encourage font loading questions to also be posted in 'Issues'.
 
@@ -1143,7 +1143,7 @@ IMPLEMENTING SUPPORT for ImGuiBackendFlags_RendererHasTextures:
     - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
     - 20+ standalone example applications using e.g. OpenGL/DirectX are provided in the
       examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
-    - The Wiki (https://github.com/ocornut/imgui/wiki) has many resources and links.
+    - The Wiki (https://github.com/ocornut/imgui/wiki) has many gpuResourceManager and links.
     - The Glossary (https://github.com/ocornut/imgui/wiki/Glossary) page also may be useful.
     - Your programming IDE is your friend, find the type or function declaration to find comments
       associated with it.

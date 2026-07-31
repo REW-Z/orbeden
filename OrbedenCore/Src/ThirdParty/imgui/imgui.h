@@ -23,7 +23,7 @@
 // - Web version of the Demo .... https://pthom.github.io/imgui_explorer (w/ source code browser)
 
 // For FIRST-TIME users having issues compiling/linking/running:
-// please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in resources above.
+// please post in https://github.com/ocornut/imgui/discussions if you cannot find a solution in gpuResourceManager above.
 // EVERYTHING ELSE should be asked in 'Issues'! We are building a database of cross-linked knowledge there.
 // Since 1.92, we encourage font loading questions to also be posted in 'Issues'.
 
@@ -3466,7 +3466,7 @@ struct ImDrawData
     ImDrawData()    { Clear(); }
     IMGUI_API void  Clear();
     IMGUI_API void  AddDrawList(ImDrawList* draw_list);     // Helper to add an external draw list into an existing ImDrawData.
-    IMGUI_API void  DeIndexAllBuffers();                    // Helper to convert all buffers from indexed to non-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
+    IMGUI_API void  DeIndexAllBuffers();                    // Helper to convert all buffers from indexed to non-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of gpuResourceManager. Always prefer indexed rendering!
     IMGUI_API void  ScaleClipRects(const ImVec2& fb_scale); // Helper to scale the ClipRect field of each ImDrawCmd. Use if your final output buffer is at a different scale than Dear ImGui expects, or if there is a difference between your window resolution and framebuffer resolution.
 };
 
@@ -3549,7 +3549,7 @@ struct ImTextureData
 
     // Called by Renderer backend
     // - Call SetTexID() and SetStatus() after honoring texture requests. Never modify TexID and Status directly!
-    // - A backend may decide to destroy a texture that we did not request to destroy, which is fine (e.g. freeing resources), but we immediately set the texture back in _WantCreate mode.
+    // - A backend may decide to destroy a texture that we did not request to destroy, which is fine (e.g. freeing gpuResourceManager), but we immediately set the texture back in _WantCreate mode.
     void    SetTexID(ImTextureID tex_id)            { TexID = tex_id; }
     void    SetStatus(ImTextureStatus status)       { Status = status; if (status == ImTextureStatus_Destroyed && !WantDestroyNextFrame && Pixels != nullptr) Status = ImTextureStatus_WantCreate; }
 };
