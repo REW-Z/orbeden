@@ -1249,7 +1249,6 @@ namespace Reflection
         RegisterTypeFields(Camera::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr),
-                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr),
                 FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr),
                 FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr),
@@ -1275,7 +1274,6 @@ namespace Reflection
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
-                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
                 FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
                 FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
@@ -1382,7 +1380,7 @@ namespace Reflection
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr),
-                FieldInfo("renderSceneHandle", "RenderSceneHandle", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh"),
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr),
                 FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr),

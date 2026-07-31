@@ -25,9 +25,6 @@ public:
     //用于判断 CPU 网格是否发生变化的版本号。
     uint64 meshRevision = 0;
 
-    //对应 CPU 资源的稳定路径，便于诊断和资源追踪。
-    std::string sourceKey;
-
     //检查绘制所需的 GPU 句柄和索引数量是否齐全。
     bool IsValid() const { return vertexInput.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
 };
@@ -49,9 +46,6 @@ public:
 
     //用于判断 CPU shader 是否需要重新上传的版本号。
     uint64 shaderRevision = 0;
-
-    //对应 CPU 资源的稳定路径。
-    std::string sourceKey;
 
     //检查所有 Pass 的 shader program 是否有效
     bool IsValid() const
@@ -103,9 +97,8 @@ struct GpuMaterial
 public:
     GpuShader shader;
 
-    //保留 CPU shader 和材质路径，用于版本检查。
+    //保留 CPU shader，用于版本检查。
     Shader* sourceShader = nullptr;
-    std::string sourceKey;
     uint64 materialRevision = 0;
     uint64 shaderRevision = 0;
 
@@ -118,30 +111,36 @@ public:
     bool IsValid() const { return shader.IsValid(); }
 };
 
-//CPU 资源到 GPU 资源的上传缓存；CPU 对象指针作为当前运行期的缓存键。
-class GpuResourceManager
+//CPU 资源到 GPU 资源的上传缓存，按对象销毁事件精确释放缓存。
+class GpuResourceManager : private IObjectDestroyListener
 {
 private:
-    //GPU 缓存统一记录，保存资源数据和对应 CPU 对象的稳定路径。
-    template<typename T>
-    struct CacheEntry
+    struct PendingResourceRelease
     {
-    public:
-        T resource;
-        std::string sourceKey;
+        int32 objectId = 0;
+        Type* type = nullptr;
     };
 
     //所有资源创建和销毁操作使用同一个渲染后端。
     RenderBackend* backend = nullptr;
 
-    //按 CPU 资源对象缓存已经上传的 GPU 资源。
-    std::unordered_map<Mesh*, CacheEntry<GpuMesh>> meshes;
-    std::unordered_map<Texture2D*, CacheEntry<GpuTextureID>> textures;
-    std::unordered_map<Skybox*, CacheEntry<GpuCubeTextureID>> skyboxes;
-    std::unordered_map<Shader*, CacheEntry<GpuShader>> shaders;
-    std::unordered_map<Material*, CacheEntry<GpuMaterial>> materials;
+    //按运行时对象 ID 缓存已经上传的 GPU 资源。
+    std::unordered_map<int32, GpuMesh> meshes;
+    std::unordered_map<int32, GpuTextureID> textures;
+    std::unordered_map<int32, GpuCubeTextureID> skyboxes;
+    std::unordered_map<int32, GpuShader> shaders;
+    std::unordered_map<int32, GpuMaterial> materials;
+
+    //等待下一个渲染安全点释放的对象身份。
+    List<PendingResourceRelease> pendingReleases;
+
+    //记录即将销毁的渲染资源对象
+    void OnObjectDestroyed(Object* object) override;
 
 public:
+    //注销对象事件并释放仍由管理器持有的 GPU 资源
+    ~GpuResourceManager() override;
+
     //初始化资源管理器并记录渲染后端。
     void Initialize(RenderBackend* renderBackend);
 
@@ -166,6 +165,6 @@ public:
     //获取缓存中的材质及其 shader、纹理和常量绑定。
     const GpuMaterial* GetMaterial(Material* material);
 
-    //清理 CPU 对象已经销毁的 GPU 缓存，释放对应 GPU 资源。
-    void CollectUnused();
+    //释放对象销毁事件对应的 GPU 缓存
+    void ReleaseDestroyedResources();
 };

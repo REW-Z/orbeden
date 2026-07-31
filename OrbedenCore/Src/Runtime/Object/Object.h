@@ -22,6 +22,16 @@ typedef Object* (*ObjectConstructorFunction)(IChunk* chunk);
 typedef void (*ObjectDestructorFunction)(Object* object);
 typedef void (*ObjectVisitorFunction)(Object* object, void* userData);
 
+//对象销毁监听器，在对象身份失效前接收通知。
+class IObjectDestroyListener
+{
+public:
+    virtual ~IObjectDestroyListener() = default;
+
+    //接收即将销毁的对象
+    virtual void OnObjectDestroyed(Object* object) = 0;
+};
+
 //字符串ID
 class StringId
 {
@@ -317,6 +327,12 @@ public:
 
     //获取类型数量
     static uint32 GetTypeCount();
+
+    //注册对象销毁监听器
+    static void AddDestroyListener(IObjectDestroyListener* listener);
+
+    //注销对象销毁监听器
+    static void RemoveDestroyListener(IObjectDestroyListener* listener);
 
     //查找对象
     static Object* FindObject(uint64 hash);

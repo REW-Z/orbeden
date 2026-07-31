@@ -2339,7 +2339,7 @@ void ImDrawData::AddDrawList(ImDrawList* draw_list)
     ImGui::AddDrawListToDrawDataEx(this, &CmdLists, draw_list);
 }
 
-// For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
+// For backward compatibility: convert all buffers from indexed to de-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of gpuResourceManager. Always prefer indexed rendering!
 void ImDrawData::DeIndexAllBuffers()
 {
     ImVector<ImDrawVert> new_vtx_buffer;
@@ -2850,7 +2850,7 @@ void ImFontAtlasUpdateNewFrame(ImFontAtlas* atlas, int frame_count, bool rendere
             if (tex->WantDestroyNextFrame)
                 remove_from_list = true; // Destroy was scheduled by us
             else
-                tex->Status = ImTextureStatus_WantCreate; // Destroy was done was backend: recreate it (e.g. freed resources mid-run)
+                tex->Status = ImTextureStatus_WantCreate; // Destroy was done was backend: recreate it (e.g. freed gpuResourceManager mid-run)
         }
 
         // The backend may need defer destroying by a few frames, to handle texture used by previous in-flight rendering.

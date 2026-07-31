@@ -43,20 +43,6 @@ public:
     bool operator!=(const RenderTargetID& other) const { return id != other.id; }
 };
 
-//持久渲染场景句柄，版本用于阻止延迟删除命中新复用的槽位
-struct RenderSceneHandle
-{
-public:
-    uint32 id = EnsId::InvalidId;
-    uint32 version = 0;
-
-    //判断句柄是否有效
-    bool IsValid() const { return id != EnsId::InvalidId && version != 0; }
-
-    bool operator==(const RenderSceneHandle& other) const { return id == other.id && version == other.version; }
-    bool operator!=(const RenderSceneHandle& other) const { return !(*this == other); }
-};
-
 //轻量矩阵，按 OpenGL 习惯使用列主序
 struct matrix4x4
 {

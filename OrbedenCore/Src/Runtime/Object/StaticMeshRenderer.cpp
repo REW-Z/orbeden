@@ -21,12 +21,11 @@ void StaticMeshRenderer::SetEnabled(bool value)
 
     if (enabled)
     {
-        renderSceneHandle = scene->RegisterRenderer(this);
+        scene->RegisterRenderer(this);
     }
     else
     {
-        scene->UnregisterRenderer(renderSceneHandle);
-        renderSceneHandle = RenderSceneHandle();
+        scene->UnregisterRenderer(this);
     }
 }
 
@@ -34,14 +33,13 @@ void StaticMeshRenderer::SetEnabled(bool value)
 void StaticMeshRenderer::OnAttach()
 {
     RenderScene* scene = GetRenderScene();
-    if (enabled && scene) renderSceneHandle = scene->RegisterRenderer(this);
+    if (enabled && scene) scene->RegisterRenderer(this);
 }
 
 //卸载时注销并释放脚本设置的网格资源引用
 void StaticMeshRenderer::OnDetach()
 {
     RenderScene* scene = GetRenderScene();
-    if (scene) scene->UnregisterRenderer(renderSceneHandle);
-    renderSceneHandle = RenderSceneHandle();
+    if (scene) scene->UnregisterRenderer(this);
     mesh.SetInstanceId(StringId());
 }

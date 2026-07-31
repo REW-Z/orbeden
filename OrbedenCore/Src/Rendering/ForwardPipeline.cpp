@@ -83,60 +83,6 @@ namespace
         return nullptr;
     }
 
-    //计算所有有效渲染项世界包围盒的整体中心。
-    vector3 CalculateSceneCenter(const RenderScene& scene)
-    {
-        bool hasBounds = false;
-        vector3 minValue;
-        vector3 maxValue;
-
-        //合并每个有效渲染器包围盒的最小点和最大点。
-        for (const RendererEntry& entry : scene.renderers)
-        {
-            if (!entry.active || !entry.worldBounds.valid) continue;
-
-            vector3 itemMin = Sub(entry.worldBounds.center, entry.worldBounds.extents);
-            vector3 itemMax = Add(entry.worldBounds.center, entry.worldBounds.extents);
-            if (!hasBounds)
-            {
-                minValue = itemMin;
-                maxValue = itemMax;
-                hasBounds = true;
-                continue;
-            }
-
-            minValue.x = std::min(minValue.x, itemMin.x);
-            minValue.y = std::min(minValue.y, itemMin.y);
-            minValue.z = std::min(minValue.z, itemMin.z);
-            maxValue.x = std::max(maxValue.x, itemMax.x);
-            maxValue.y = std::max(maxValue.y, itemMax.y);
-            maxValue.z = std::max(maxValue.z, itemMax.z);
-        }
-
-        //没有有效几何时回退到世界原点。
-        return hasBounds ? Scale(Add(minValue, maxValue), 0.5f) : vector3();
-    }
-
-    //根据阴影光源和场景范围构造稳定的正交光源视图投影矩阵。
-    matrix4x4 CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light)
-    {
-        //确定光源观察中心，并为无效光源方向提供默认值。
-        vector3 center = CalculateSceneCenter(scene);
-        vector3 direction = RenderMath::Normalize(light.direction);
-        if (IsZero(direction)) direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
-
-        //让阴影范围至少覆盖一个合理区域，并避免 up 与光线方向平行。
-        float32 distance = std::max(light.shadowDistance, 4.0f);
-        float32 halfSize = std::max(distance * 0.5f, 8.0f);
-        vector3 eye = Sub(center, Scale(direction, distance));
-        vector3 up = std::abs(RenderMath::Dot(direction, { 0.0f, 1.0f, 0.0f })) > 0.9f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 0.0f, 1.0f, 0.0f };
-
-        //方向光使用正交投影，覆盖以场景中心为基准的阴影区域。
-        matrix4x4 view = RenderMath::LookAt(eye, center, up);
-        matrix4x4 projection = RenderMath::Orthographic(-halfSize, halfSize, -halfSize, halfSize, 0.1f, distance * 2.5f);
-        return RenderMath::Mul(projection, view);
-    }
-
     //释放天空盒网格的顶点输入和顶点/索引缓冲。
     void DeleteGpuMesh(RenderBackend* backend, GpuMesh& mesh)
     {
@@ -147,6 +93,63 @@ namespace
         backend->DeleteIndexBuffer(mesh.indexBuffer);
         mesh = GpuMesh();
     }
+}
+
+//计算所有有效渲染器世界包围盒的整体中心。
+vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
+{
+    bool hasBounds = false;
+    vector3 minValue;
+    vector3 maxValue;
+
+    //合并每个有效渲染器包围盒的最小点和最大点。
+    for (StaticMeshRenderer* renderer : scene.renderers)
+    {
+        if (!renderer || !renderer->GetEnabled()) continue;
+
+        const StaticMeshRendererRenderState& state = renderer->renderState;
+        if (!state.worldBounds.valid) continue;
+
+        vector3 itemMin = Sub(state.worldBounds.center, state.worldBounds.extents);
+        vector3 itemMax = Add(state.worldBounds.center, state.worldBounds.extents);
+        if (!hasBounds)
+        {
+            minValue = itemMin;
+            maxValue = itemMax;
+            hasBounds = true;
+            continue;
+        }
+
+        minValue.x = std::min(minValue.x, itemMin.x);
+        minValue.y = std::min(minValue.y, itemMin.y);
+        minValue.z = std::min(minValue.z, itemMin.z);
+        maxValue.x = std::max(maxValue.x, itemMax.x);
+        maxValue.y = std::max(maxValue.y, itemMax.y);
+        maxValue.z = std::max(maxValue.z, itemMax.z);
+    }
+
+    //没有有效几何时回退到世界原点。
+    return hasBounds ? Scale(Add(minValue, maxValue), 0.5f) : vector3();
+}
+
+//根据阴影光源和场景范围构造稳定的正交光源视图投影矩阵。
+matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light) const
+{
+    //确定光源观察中心，并为无效光源方向提供默认值。
+    vector3 center = CalculateSceneCenter(scene);
+    vector3 direction = RenderMath::Normalize(light.direction);
+    if (IsZero(direction)) direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
+
+    //让阴影范围至少覆盖一个合理区域，并避免 up 与光线方向平行。
+    float32 distance = std::max(light.shadowDistance, 4.0f);
+    float32 halfSize = std::max(distance * 0.5f, 8.0f);
+    vector3 eye = Sub(center, Scale(direction, distance));
+    vector3 up = std::abs(RenderMath::Dot(direction, { 0.0f, 1.0f, 0.0f })) > 0.9f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 0.0f, 1.0f, 0.0f };
+
+    //方向光使用正交投影，覆盖以场景中心为基准的阴影区域。
+    matrix4x4 view = RenderMath::LookAt(eye, center, up);
+    matrix4x4 projection = RenderMath::Orthographic(-halfSize, halfSize, -halfSize, halfSize, 0.1f, distance * 2.5f);
+    return RenderMath::Mul(projection, view);
 }
 
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
@@ -182,7 +185,7 @@ void ForwardPipeline::Shutdown()
     backend = nullptr;
 }
 
-void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& resources)
+void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& gpuResourceManager)
 {
     //每帧先清除上一帧的阴影状态，避免资源失效后继续采样旧句柄。
     shadowReady = false;
@@ -197,10 +200,10 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
 
     //为当前场景计算光源矩阵，并准备可供所有相机共享的深度贴图。
     lightViewProjection = CalculateLightViewProjection(scene, *shadowLight);
-    shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, resources);
+    shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, gpuResourceManager);
 }
 
-void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& resources)
+void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager)
 {
     if (!backend) return;
 
@@ -227,7 +230,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     //仅在 pass 负责清屏时绘制天空盒，避免覆盖保留内容的目标。
     if (camera.clearMode == ClearMode::SolidColor)
     {
-        RenderSkybox(scene, camera, resources);
+        RenderSkybox(scene, camera, gpuResourceManager);
     }
 
     //按 shader program 记录全局 uniform，避免同一 pass 内重复写入。
@@ -237,7 +240,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     for (const RenderItem& item : visibleSet.renderItems)
     {
         //获取或上传 GPU 材质；任一 Pass 无效时跳过整个绘制项。
-        const GpuMaterial* material = resources.GetMaterial(item.material);
+        const GpuMaterial* material = gpuResourceManager.GetMaterial(item.material);
         if (!material || !material->IsValid())
         {
             Log::Error("ForwardPipeline draw skipped: material GPU resources are invalid.");
@@ -245,7 +248,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         }
 
         //材质有效后再获取网格，避免向后端绑定不完整的顶点资源。
-        const GpuMesh* mesh = resources.GetMesh(item.mesh);
+        const GpuMesh* mesh = gpuResourceManager.GetMesh(item.mesh);
         if (!mesh || !mesh->IsValid())
         {
             Log::Error("ForwardPipeline draw skipped: mesh GPU resources are invalid.");
@@ -453,14 +456,14 @@ bool ForwardPipeline::PrepareSkyboxMesh()
     return true;
 }
 
-bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& resources)
+bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager)
 {
     //解析阴影 shader，并确保阴影目标已经准备完成。
     Shader* sourceShader = ResolveBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
     if (!PrepareShadowResources() || !sourceShader) return false;
 
     //阴影 shader 必须先上传到 GPU，之后才能开始深度 pass。
-    const GpuShader* shader = resources.GetShader(sourceShader);
+    const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
     if (!shader || !shader->IsValid()) return false;
 
     //建立只写深度的光源视角 pass。
@@ -479,19 +482,20 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
     //使用光源视锥剔除不可能投射到阴影贴图中的对象。
     frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
-    for (const RendererEntry& entry : scene.renderers)
+    for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!entry.active) continue;
-        StaticMeshRenderer* renderer = entry.renderer;
-        Mesh* sourceMesh = entry.mesh;
-        if (!renderer || !renderer->GetEnabled() || !renderer->castShadows || !sourceMesh) continue;
-        if (!RenderMath::Intersects(lightFrustum, entry.worldBounds)) continue;
+        if (!renderer || !renderer->GetEnabled()) continue;
+
+        const StaticMeshRendererRenderState& state = renderer->renderState;
+        Mesh* sourceMesh = state.mesh;
+        if (!renderer->castShadows || !sourceMesh) continue;
+        if (!RenderMath::Intersects(lightFrustum, state.worldBounds)) continue;
 
         //阴影 pass 只需要网格和模型矩阵，不绑定材质纹理。
-        const GpuMesh* mesh = resources.GetMesh(sourceMesh);
+        const GpuMesh* mesh = gpuResourceManager.GetMesh(sourceMesh);
         if (!mesh || !mesh->IsValid()) continue;
 
-        backend->SetUniformMatrix4("u_Model", entry.localToWorld);
+        backend->SetUniformMatrix4("u_Model", state.localToWorld);
         backend->BindVertexInput(mesh->vertexInput);
         for (const SubMesh& subMesh : sourceMesh->subMeshes)
         {
@@ -512,7 +516,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     return true;
 }
 
-void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& resources)
+void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager)
 {
     //天空盒开关或内置 shader 缺失时直接跳过天空盒绘制。
     Shader* sourceShader = ResolveBuiltinShader(skyboxShader, SkyboxShaderKey);
@@ -523,8 +527,8 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     if (!skybox || !PrepareSkyboxMesh()) return;
 
     //上传天空盒立方体纹理和 shader，任一资源无效时跳过绘制。
-    GpuCubeTextureID cubeTexture = resources.GetSkybox(skybox);
-    const GpuShader* shader = resources.GetShader(sourceShader);
+    GpuCubeTextureID cubeTexture = gpuResourceManager.GetSkybox(skybox);
+    const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
     if (!cubeTexture.IsValid() || !shader || !shader->IsValid()) return;
 
     //移除相机平移，只保留旋转，使天空盒始终围绕相机绘制。

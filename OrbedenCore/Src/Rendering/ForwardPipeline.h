@@ -45,12 +45,18 @@ public:
     void Shutdown();
 
     //准备当前帧共享的阴影资源和方向光矩阵。
-    void PrepareFrame(const RenderScene& scene, GpuResourceManager& resources);
+    void PrepareFrame(const RenderScene& scene, GpuResourceManager& gpuResourceManager);
 
     //按照既定 pass 顺序渲染指定相机的可见集合。
-    void Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& resources);
+    void Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager);
 
 private:
+    //计算所有有效渲染器世界包围盒的整体中心。
+    vector3 CalculateSceneCenter(const RenderScene& scene) const;
+
+    //根据方向光和场景范围构造光源视图投影矩阵。
+    matrix4x4 CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light) const;
+
     //从当前内容根目录解析管线内置资源。
     void ResolveBuiltinResources();
 
@@ -61,8 +67,8 @@ private:
     bool PrepareSkyboxMesh();
 
     //使用方向光视角绘制会投射阴影的几何深度。
-    bool RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& resources);
+    bool RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager);
 
     //在当前相机的 color pass 中绘制全局天空盒。
-    void RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& resources);
+    void RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager);
 };

@@ -348,7 +348,7 @@ static bool IsPersistentField(string className, string fieldName)
     if (className == "Object" && (fieldName == "instanceId" || fieldName == "ownerWorld")) return false;
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
-    if (fieldName == "renderSceneHandle") return false;
+    if (className == "StaticMeshRenderer" && fieldName == "renderState") return false;
     if (className == "TransformComponent")
     {
         return fieldName is "localPosition" or "localRotation" or "localScale";

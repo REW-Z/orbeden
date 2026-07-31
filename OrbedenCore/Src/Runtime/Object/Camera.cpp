@@ -21,12 +21,11 @@ void Camera::SetEnabled(bool value)
 
     if (enabled)
     {
-        renderSceneHandle = scene->RegisterCamera(this);
+        scene->RegisterCamera(this);
     }
     else
     {
-        scene->UnregisterCamera(renderSceneHandle);
-        renderSceneHandle = RenderSceneHandle();
+        scene->UnregisterCamera(this);
     }
 }
 
@@ -34,13 +33,12 @@ void Camera::SetEnabled(bool value)
 void Camera::OnAttach()
 {
     RenderScene* scene = GetRenderScene();
-    if (enabled && scene) renderSceneHandle = scene->RegisterCamera(this);
+    if (enabled && scene) scene->RegisterCamera(this);
 }
 
 //卸载时从当前渲染场景注销
 void Camera::OnDetach()
 {
     RenderScene* scene = GetRenderScene();
-    if (scene) scene->UnregisterCamera(renderSceneHandle);
-    renderSceneHandle = RenderSceneHandle();
+    if (scene) scene->UnregisterCamera(this);
 }

@@ -21,12 +21,11 @@ void DirectionalLight::SetEnabled(bool value)
 
     if (enabled)
     {
-        renderSceneHandle = scene->RegisterDirectionalLight(this);
+        scene->RegisterDirectionalLight(this);
     }
     else
     {
-        scene->UnregisterDirectionalLight(renderSceneHandle);
-        renderSceneHandle = RenderSceneHandle();
+        scene->UnregisterDirectionalLight(this);
     }
 }
 
@@ -34,13 +33,12 @@ void DirectionalLight::SetEnabled(bool value)
 void DirectionalLight::OnAttach()
 {
     RenderScene* scene = GetRenderScene();
-    if (enabled && scene) renderSceneHandle = scene->RegisterDirectionalLight(this);
+    if (enabled && scene) scene->RegisterDirectionalLight(this);
 }
 
 //卸载时从当前渲染场景注销
 void DirectionalLight::OnDetach()
 {
     RenderScene* scene = GetRenderScene();
-    if (scene) scene->UnregisterDirectionalLight(renderSceneHandle);
-    renderSceneHandle = RenderSceneHandle();
+    if (scene) scene->UnregisterDirectionalLight(this);
 }
