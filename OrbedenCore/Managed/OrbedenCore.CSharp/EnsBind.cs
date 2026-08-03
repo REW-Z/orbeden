@@ -10,6 +10,9 @@ namespace Orbeden;
 internal unsafe struct EnsBindApi
 {
     public delegate* unmanaged[Cdecl]<EnsId, byte> IsAlive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetLocalActive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetWorldActive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetLocalActive;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte> HasTransformComponent;
@@ -36,6 +39,24 @@ internal static unsafe class EnsBind
     internal static bool IsAlive(EnsId ens)
     {
         return initialized && api.IsAlive != null && api.IsAlive(ens) != 0;
+    }
+
+    //读取 Ens 的 localActive
+    internal static bool GetLocalActive(EnsId ens)
+    {
+        return initialized && api.GetLocalActive != null && api.GetLocalActive(ens) != 0;
+    }
+
+    //读取 Ens 的 worldActive
+    internal static bool GetWorldActive(EnsId ens)
+    {
+        return initialized && api.GetWorldActive != null && api.GetWorldActive(ens) != 0;
+    }
+
+    //设置 Ens 的 localActive
+    internal static void SetLocalActive(EnsId ens, bool active)
+    {
+        if (initialized && api.SetLocalActive != null) api.SetLocalActive(ens, active ? (byte)1 : (byte)0);
     }
 
     //读取 Ens 名称

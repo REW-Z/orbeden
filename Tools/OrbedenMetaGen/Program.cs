@@ -359,6 +359,11 @@ static bool IsPersistentField(string className, string fieldName)
         return fieldName is "name" or "width" or "height" or "channels" or "format";
     }
 
+    if (className == "Skybox")
+    {
+        return fieldName is "right" or "left" or "top" or "bottom" or "front" or "back";
+    }
+
     if (className == "Mesh")
     {
         return fieldName is "name";
@@ -468,6 +473,7 @@ static string GenerateCpp(List<ClassInfo> classes)
         {
             var setterBacked = classInfo.Name == "TransformComponent"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
+            var marksDirty = classInfo.Name == "Material" && field.Name == "shader";
             var getterExpression = setterBacked
                 ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()"
                 : $"instance->{field.Name}";
@@ -488,6 +494,12 @@ static string GenerateCpp(List<ClassInfo> classes)
                 output.AppendLine($"        {field.Type} parsedValue{{}};");
                 output.AppendLine("        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;");
                 output.AppendLine($"        instance->{setterName}(parsedValue);");
+                output.AppendLine("        return true;");
+            }
+            else if (marksDirty)
+            {
+                output.AppendLine($"        if (!Reflection::SetFromXmlValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine("        instance->MarkDirty();");
                 output.AppendLine("        return true;");
             }
             else

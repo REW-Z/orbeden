@@ -58,6 +58,12 @@ private:
     //摘除世界拥有的运行时对象
     bool RemoveOwnedObject(Object* object);
 
+    //设置 Ens 的 localActive 并传播层级状态
+    void SetEnsLocalActive(EnsId ens, bool active);
+
+    //刷新指定 Ens 子树的 worldActive
+    void RefreshEnsWorldActive(EnsId ens);
+
 public:
     RenderSettings renderSettings;
 

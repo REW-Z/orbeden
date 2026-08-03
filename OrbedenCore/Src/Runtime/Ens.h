@@ -20,6 +20,8 @@ private:
     World* world = nullptr;
     EnsId ens;
     bool alive = false;
+    bool localActive = true;
+    bool worldActive = true;
     std::string name;
     uint64 componentMask = 0;
     List<TypeId> componentTypes;
@@ -63,6 +65,15 @@ public:
 
     //设置名称
     void SetName(const std::string& name);
+
+    //获取自身激活状态
+    bool GetLocalActive() const;
+
+    //获取层级计算后的激活状态
+    bool GetWorldActive() const;
+
+    //设置自身激活状态
+    void SetLocalActive(bool value);
 
     //设置父级
     void SetParent(Ens* parent);

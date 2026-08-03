@@ -43,7 +43,8 @@ public:
     void* GetSubMeshMaterial = nullptr;
     void* CreateInstance = nullptr;
     void* SetName = nullptr;
-    void* GetRevision = nullptr;
+    void* IsDirty = nullptr;
+    void* MarkDirty = nullptr;
     void* GetVertexPositions = nullptr;
     void* SetVertexPositions = nullptr;
     void* GetVertexNormals = nullptr;
@@ -84,7 +85,8 @@ public:
     void* GetFloat = nullptr;
     void* SetFloat = nullptr;
     void* ClearFloat = nullptr;
-    void* GetRevision = nullptr;
+    void* IsDirty = nullptr;
+    void* MarkDirty = nullptr;
     void* CreateInstance = nullptr;
 
     //创建 Material 函数表。
@@ -120,7 +122,8 @@ public:
     void* GetPassCull = nullptr;
     void* CreateFromSource = nullptr;
     void* ReplaceSource = nullptr;
-    void* GetRevision = nullptr;
+    void* IsDirty = nullptr;
+    void* MarkDirty = nullptr;
 
     //创建 Shader 函数表。
     static ShaderBind Create();

@@ -6,6 +6,7 @@
 #include "Physics/RigidBodyComponent.h"
 #include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
+#include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/TransformComponent.h"
 
 #include "PxPhysicsAPI.h"
@@ -176,7 +177,7 @@ namespace
     };
 }
 
-class PhysicsSystem::Impl
+class PhysicsSystem::Impl : private IObjectDestroyListener
 {
 public:
     enum class BindingKind : uint32
@@ -199,6 +200,8 @@ public:
         PxRigidActor* actor = nullptr;
         uint64 configurationHash = 0;
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
+        Mesh* sourceMesh = nullptr;
+        bool sourceMeshInvalidated = false;
         vector3 lastPosition;
         quaternion lastRotation;
         bool lastPoseValid = false;
@@ -306,8 +309,8 @@ public:
     std::unique_ptr<PxCookingParams> cookingParams;
     std::unordered_map<uint64, std::unique_ptr<BodyRecord>> bodies;
     std::unordered_map<uint64, std::unique_ptr<ControllerRecord>> controllers;
-    std::unordered_map<uint64, PxConvexMesh*> convexMeshes;
-    std::unordered_map<uint64, PxTriangleMesh*> triangleMeshes;
+    std::unordered_map<Mesh*, PxConvexMesh*> convexMeshes;
+    std::unordered_map<Mesh*, PxTriangleMesh*> triangleMeshes;
     List<PhysicsEvent> events;
     TransformCache transformCache;
     World* world = nullptr;
@@ -379,12 +382,14 @@ public:
             return false;
         }
 
+        Object::AddDestroyListener(this);
         Log::Info("PhysX 5 CPU-only physics initialized.");
         return true;
     }
 
     void Shutdown()
     {
+        Object::RemoveDestroyListener(this);
         ResetWorld();
 
         for (auto& entry : convexMeshes) entry.second->release();
@@ -483,8 +488,6 @@ public:
         hash = MixHash(hash, collider.collisionMask);
         hash = MixVector(hash, GetWorldScale(transform));
         hash = MixHash(hash, collider.mesh.GetInstanceId().GetHash());
-        Mesh* mesh = collider.mesh.Get();
-        hash = MixHash(hash, mesh ? mesh->GetRevision() : 0);
 
         PhysicsBodyType type = body ? body->bodyType : PhysicsBodyType::Static;
         hash = MixHash(hash, static_cast<uint32>(type));
@@ -502,8 +505,7 @@ public:
 
     PxConvexMesh* GetConvexMesh(Mesh& mesh)
     {
-        uint64 key = MixHash(mesh.GetInstanceId().GetHash(), mesh.GetRevision());
-        auto found = convexMeshes.find(key);
+        auto found = convexMeshes.find(&mesh);
         if (found != convexMeshes.end()) return found->second;
         if (mesh.vertices.size() < 4) return nullptr;
 
@@ -520,14 +522,13 @@ public:
         PxConvexMeshCookingResult::Enum result;
         PxConvexMesh* cooked = PxCreateConvexMesh(*cookingParams, desc, physics->getPhysicsInsertionCallback(), &result);
         if (!cooked) return nullptr;
-        convexMeshes.emplace(key, cooked);
+        convexMeshes.emplace(&mesh, cooked);
         return cooked;
     }
 
     PxTriangleMesh* GetTriangleMesh(Mesh& mesh)
     {
-        uint64 key = MixHash(mesh.GetInstanceId().GetHash(), mesh.GetRevision());
-        auto found = triangleMeshes.find(key);
+        auto found = triangleMeshes.find(&mesh);
         if (found != triangleMeshes.end()) return found->second;
         if (mesh.vertices.size() < 3 || mesh.indices.size() < 3 || mesh.indices.size() % 3 != 0) return nullptr;
 
@@ -546,8 +547,40 @@ public:
         PxTriangleMeshCookingResult::Enum result;
         PxTriangleMesh* cooked = PxCreateTriangleMesh(*cookingParams, desc, physics->getPhysicsInsertionCallback(), &result);
         if (!cooked) return nullptr;
-        triangleMeshes.emplace(key, cooked);
+        triangleMeshes.emplace(&mesh, cooked);
         return cooked;
+    }
+
+    //释放指定 CPU Mesh 对应的两类烘焙网格。
+    void InvalidateCookedMeshes(Mesh& mesh)
+    {
+        auto convex = convexMeshes.find(&mesh);
+        if (convex != convexMeshes.end())
+        {
+            convex->second->release();
+            convexMeshes.erase(convex);
+        }
+
+        auto triangle = triangleMeshes.find(&mesh);
+        if (triangle != triangleMeshes.end())
+        {
+            triangle->second->release();
+            triangleMeshes.erase(triangle);
+        }
+    }
+
+    //Mesh 析构前释放烘焙缓存，并让仍引用它的 Body 在下次同步时重建。
+    void OnObjectDestroyed(Object* object) override
+    {
+        if (!object || !object->Is(Mesh::StaticType())) return;
+
+        Mesh* mesh = static_cast<Mesh*>(object);
+        InvalidateCookedMeshes(*mesh);
+        for (auto& entry : bodies)
+        {
+            BodyRecord& body = *entry.second;
+            if (body.sourceMesh == mesh) body.sourceMeshInvalidated = true;
+        }
     }
 
     PxShape* CreateShape(const ColliderComponent& collider, PhysicsBodyType bodyType, const vector3& scale)
@@ -629,7 +662,12 @@ public:
         return shape;
     }
 
-    std::unique_ptr<BodyRecord> CreateBody(ColliderComponent& collider, RigidBodyComponent* body, TransformComponent& transform, uint64 configurationHash)
+    std::unique_ptr<BodyRecord> CreateBody(
+        ColliderComponent& collider,
+        RigidBodyComponent* body,
+        TransformComponent& transform,
+        uint64 configurationHash,
+        Mesh* sourceMesh)
     {
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
         if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
@@ -644,6 +682,7 @@ public:
         record->binding.owner = this;
         record->configurationHash = configurationHash;
         record->bodyType = bodyType;
+        record->sourceMesh = sourceMesh;
 
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         PxRigidActor* actor = bodyType == PhysicsBodyType::Static
@@ -732,6 +771,7 @@ public:
     void SyncBodies(World& currentWorld)
     {
         std::unordered_set<uint64> seen;
+        std::unordered_set<Mesh*> dirtyMeshes;
         currentWorld.ForEachComponent<ColliderComponent>([&](ColliderComponent* collider)
         {
             if (!collider || !collider->enabled) return;
@@ -740,11 +780,21 @@ public:
             RigidBodyComponent* body = ens ? ens->GetComponent<RigidBodyComponent>() : nullptr;
             if (!transform || (body && !body->enabled)) return;
 
+            bool usesMesh = collider->shape == ColliderShape::ConvexMesh || collider->shape == ColliderShape::TriangleMesh;
+            Mesh* mesh = usesMesh ? collider->mesh.Get() : nullptr;
+            bool meshDirty = mesh && mesh->IsDirty(MeshDirtyFlags::Physics);
+            if (meshDirty && dirtyMeshes.insert(mesh).second)
+            {
+                InvalidateCookedMeshes(*mesh);
+            }
+
             uint64 key = EnsKey(collider->GetEnsId());
             seen.insert(key);
             uint64 hash = CalculateBodyHash(*collider, body, *transform);
             auto found = bodies.find(key);
-            if (found != bodies.end() && found->second->configurationHash != hash)
+            bool meshChanged = found != bodies.end()
+                && (found->second->sourceMesh != mesh || found->second->sourceMeshInvalidated);
+            if (found != bodies.end() && (found->second->configurationHash != hash || meshDirty || meshChanged))
             {
                 DestroyBody(*found->second);
                 bodies.erase(found);
@@ -752,7 +802,7 @@ public:
             }
             if (found == bodies.end())
             {
-                std::unique_ptr<BodyRecord> created = CreateBody(*collider, body, *transform, hash);
+                std::unique_ptr<BodyRecord> created = CreateBody(*collider, body, *transform, hash, mesh);
                 if (created) bodies.emplace(key, std::move(created));
                 return;
             }
@@ -768,6 +818,11 @@ public:
             }
             DestroyBody(*it->second);
             it = bodies.erase(it);
+        }
+
+        for (Mesh* mesh : dirtyMeshes)
+        {
+            mesh->ClearDirty(MeshDirtyFlags::Physics);
         }
     }
 

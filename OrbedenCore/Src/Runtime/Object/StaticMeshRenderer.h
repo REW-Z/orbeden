@@ -12,7 +12,6 @@ class ForwardPipeline;
 struct StaticMeshRendererRenderState
 {
     Mesh* mesh = nullptr;
-    uint64 meshRevision = 0;
     matrix4x4 localToWorld;
     bounds3 localBounds;
     bounds3 worldBounds;
@@ -32,6 +31,9 @@ private:
     bool enabled = true;
     StaticMeshRendererRenderState renderState;
 
+    //按当前状态同步渲染场景注册
+    void SyncRenderSceneRegistration();
+
 public:
     Ref<Mesh> mesh;
     uint32 drawLayer = 1u;
@@ -45,9 +47,15 @@ public:
     //设置启用状态并同步渲染场景注册
     void SetEnabled(bool value);
 
+    //判断当前组件是否应注册到渲染场景
+    bool IsRenderSceneEligible() const;
+
     //挂载时注册到当前渲染场景
     void OnAttach() override;
 
     //卸载时注销并释放脚本设置的网格资源引用
     void OnDetach() override;
+
+    //所属 Ens 的 worldActive 变化时同步渲染场景注册
+    void OnWorldActiveChanged(bool worldActive) override;
 };

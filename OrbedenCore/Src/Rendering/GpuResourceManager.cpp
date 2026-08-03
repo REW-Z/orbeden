@@ -2,10 +2,14 @@
 
 #include "Log/Log.h"
 
+#include <cassert>
+#include <utility>
+
 namespace
 {
     constexpr uint32 VertexFloatCount = 11;
     constexpr uint32 VertexStride = VertexFloatCount * sizeof(float32);
+    constexpr usize InvalidStorageIndex = static_cast<usize>(-1);
 
     //判断字符串前缀
     bool StartsWith(const std::string& text, const std::string& prefix)
@@ -28,76 +32,186 @@ namespace
         return "u_Has" + name + "Texture";
     }
 
-    //释放普通缓存数据
-    template<typename T>
-    void DeleteGpuResource(RenderBackend*, T& resource)
-    {
-        resource = T();
-    }
-
-    //释放 GPU Mesh 句柄
+    //释放 GPU Mesh 句柄并保留管理器关联信息
     void DeleteGpuResource(RenderBackend* backend, GpuMesh& mesh)
     {
-        if (!backend) return;
+        if (backend)
+        {
+            backend->DeleteVertexInput(mesh.vertexInput);
+            backend->DeleteVertexBuffer(mesh.vertexBuffer);
+            backend->DeleteIndexBuffer(mesh.indexBuffer);
+        }
 
-        backend->DeleteVertexInput(mesh.vertexInput);
-        backend->DeleteVertexBuffer(mesh.vertexBuffer);
-        backend->DeleteIndexBuffer(mesh.indexBuffer);
-        mesh = GpuMesh();
+        mesh.vertexInput = GpuVertexInputID();
+        mesh.vertexBuffer = GpuVertexBufferID();
+        mesh.indexBuffer = GpuIndexBufferID();
+        mesh.indexCount = 0;
     }
 
     //释放 GPU 纹理句柄
     void DeleteGpuResource(RenderBackend* backend, GpuTextureID& texture)
     {
-        if (!backend) return;
-
-        backend->DeleteTexture(texture);
+        if (backend) backend->DeleteTexture(texture);
         texture = GpuTextureID();
     }
 
     //释放 GPU 天空盒句柄
     void DeleteGpuResource(RenderBackend* backend, GpuCubeTextureID& skybox)
     {
-        if (!backend) return;
-
-        backend->DeleteCubeTexture(skybox);
+        if (backend) backend->DeleteCubeTexture(skybox);
         skybox = GpuCubeTextureID();
     }
 
-    //释放 GPU Shader 句柄
+    //释放 GPU Shader 句柄并保留管理器关联信息
     void DeleteGpuResource(RenderBackend* backend, GpuShader& shader)
     {
-        if (!backend) return;
-
-        for (GpuShaderPass& pass : shader.passes)
+        if (backend)
         {
-            backend->DeleteShaderProgram(pass.shaderProgram);
-        }
-        shader = GpuShader();
-    }
-
-    //释放整个 GPU 缓存
-    template<typename TCache>
-    void DeleteGpuCache(RenderBackend* backend, TCache& cache)
-    {
-        //逐条释放后端资源，再清空缓存容器。
-        for (auto& pair : cache)
-        {
-            DeleteGpuResource(backend, pair.second);
+            for (GpuShaderPass& pass : shader.passes)
+            {
+                backend->DeleteShaderProgram(pass.shaderProgram);
+            }
         }
 
-        cache.clear();
+        shader.passes.clear();
     }
 
-    //按对象 ID 释放单个 GPU 缓存项
-    template<typename TCache>
-    void DeleteCachedGpuResource(RenderBackend* backend, TCache& cache, int32 objectId)
+    //清空材质解析缓存并保留管理器关联信息
+    void DeleteGpuResource(RenderBackend*, GpuMaterial& material)
     {
-        auto it = cache.find(objectId);
-        if (it == cache.end()) return;
+        material.shader = nullptr;
+        material.sourceShader = nullptr;
+        material.textureBindings.clear();
+        material.colorBindings.clear();
+        material.floatBindings.clear();
+    }
 
-        DeleteGpuResource(backend, it->second);
-        cache.erase(it);
+    //把新包装对象加入活动容器并返回稳定地址
+    template<typename T>
+    T* AddGpuResource(List<std::unique_ptr<T>>& resources, std::unique_ptr<T> resource)
+    {
+        resource->storageIndex = resources.size();
+        T* result = resource.get();
+        resources.push_back(std::move(resource));
+        return result;
+    }
+
+    //按包装对象记录的索引从活动容器 O(1) 摘除
+    template<typename T>
+    std::unique_ptr<T> TakeGpuResource(List<std::unique_ptr<T>>& resources, T* resource)
+    {
+        assert(resource);
+        usize index = resource->storageIndex;
+        assert(index < resources.size());
+        assert(resources[index].get() == resource);
+
+        usize lastIndex = resources.size() - 1;
+        std::unique_ptr<T> result = std::move(resources[index]);
+        if (index != lastIndex)
+        {
+            resources[index] = std::move(resources[lastIndex]);
+            resources[index]->storageIndex = index;
+        }
+
+        resources.pop_back();
+        result->storageIndex = InvalidStorageIndex;
+        return result;
+    }
+
+    //释放一组管理器拥有的 GPU 包装对象
+    template<typename T>
+    void DeleteGpuResources(RenderBackend* backend, List<std::unique_ptr<T>>& resources)
+    {
+        for (std::unique_ptr<T>& resource : resources)
+        {
+            if (resource) DeleteGpuResource(backend, *resource);
+        }
+        resources.clear();
+    }
+
+    //把 CPU Mesh 上传到临时 GPU 状态
+    bool UploadMesh(RenderBackend* backend, Mesh* mesh, GpuMesh& uploaded)
+    {
+        if (mesh->vertices.empty() || mesh->indices.empty())
+        {
+            Log::Error("GpuResourceManager mesh upload failed: mesh has no vertices or indices.");
+            return false;
+        }
+
+        //将位置、法线、纹理坐标和切线交错打包为统一顶点布局。
+        List<float32> vertexData;
+        vertexData.resize(mesh->vertices.size() * VertexFloatCount);
+        for (usize index = 0; index < mesh->vertices.size(); ++index)
+        {
+            const vector3& position = mesh->vertices[index];
+            vector3 normal = index < mesh->normals.size() ? mesh->normals[index] : vector3();
+            vector2 texcoord = index < mesh->texcoords.size() ? mesh->texcoords[index] : vector2();
+            vector3 tangent = index < mesh->tangents.size() ? mesh->tangents[index] : vector3();
+
+            usize offset = index * VertexFloatCount;
+            vertexData[offset + 0] = position.x;
+            vertexData[offset + 1] = position.y;
+            vertexData[offset + 2] = position.z;
+            vertexData[offset + 3] = normal.x;
+            vertexData[offset + 4] = normal.y;
+            vertexData[offset + 5] = normal.z;
+            vertexData[offset + 6] = texcoord.x;
+            vertexData[offset + 7] = texcoord.y;
+            vertexData[offset + 8] = tangent.x;
+            vertexData[offset + 9] = tangent.y;
+            vertexData[offset + 10] = tangent.z;
+        }
+
+        GpuBufferDesc vertexBufferDesc;
+        vertexBufferDesc.data = vertexData.data();
+        vertexBufferDesc.size = vertexData.size() * sizeof(float32);
+
+        GpuBufferDesc indexBufferDesc;
+        indexBufferDesc.data = mesh->indices.data();
+        indexBufferDesc.size = mesh->indices.size() * sizeof(uint32);
+
+        uploaded.vertexBuffer = backend->CreateVertexBuffer(vertexBufferDesc);
+        uploaded.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
+        uploaded.indexCount = static_cast<uint32>(mesh->indices.size());
+
+        GpuVertexInputDesc vertexInputDesc;
+        vertexInputDesc.vertexBuffer = uploaded.vertexBuffer;
+        vertexInputDesc.indexBuffer = uploaded.indexBuffer;
+        vertexInputDesc.stride = VertexStride;
+        if (uploaded.vertexBuffer.IsValid() && uploaded.indexBuffer.IsValid())
+        {
+            uploaded.vertexInput = backend->CreateVertexInput(vertexInputDesc);
+        }
+
+        if (uploaded.IsValid()) return true;
+
+        DeleteGpuResource(backend, uploaded);
+        Log::Error("GpuResourceManager mesh upload failed: backend returned invalid mesh handles.");
+        return false;
+    }
+
+    //把 CPU Shader 的所有 Pass 编译到临时 GPU 状态
+    bool UploadShader(RenderBackend* backend, Shader* shader, GpuShader& uploaded)
+    {
+        for (const ShaderPass& sourcePass : shader->passes)
+        {
+            GpuShaderProgramDesc shaderProgramDesc;
+            shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
+            shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
+
+            GpuShaderPass pass;
+            pass.name = sourcePass.name;
+            pass.state = sourcePass.state;
+            pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+            uploaded.passes.push_back(pass);
+            if (!pass.shaderProgram.IsValid()) break;
+        }
+
+        if (uploaded.IsValid()) return true;
+
+        DeleteGpuResource(backend, uploaded);
+        Log::Error("GpuResourceManager shader upload failed.");
+        return false;
     }
 }
 
@@ -109,136 +223,116 @@ GpuResourceManager::~GpuResourceManager()
 
 void GpuResourceManager::Initialize(RenderBackend* renderBackend)
 {
-    //记录后端并订阅统一对象销毁事件。
     backend = renderBackend;
     Object::AddDestroyListener(this);
 }
 
 void GpuResourceManager::InvalidateCaches()
 {
-    //先释放依赖其他资源的材质，再释放基础网格、纹理和 shader。
-    DeleteGpuCache(backend, materials);
-    DeleteGpuCache(backend, meshes);
-    DeleteGpuCache(backend, textures);
-    DeleteGpuCache(backend, skyboxes);
-    DeleteGpuCache(backend, shaders);
-    pendingReleases.clear();
+    //材质先断开依赖，避免随后释放 Shader 和纹理时留下悬空引用。
+    for (std::unique_ptr<GpuMaterial>& material : materials)
+    {
+        if (material->source) material->source->gpuMaterial = nullptr;
+        material->source = nullptr;
+    }
+    DeleteGpuResources(backend, materials);
+    DeleteGpuResources(backend, pendingMaterials);
+
+    //清空 Mesh 反向指针后释放活动和延迟资源。
+    for (std::unique_ptr<GpuMesh>& mesh : meshes)
+    {
+        if (mesh->source) mesh->source->gpuMesh = nullptr;
+        mesh->source = nullptr;
+    }
+    DeleteGpuResources(backend, meshes);
+    DeleteGpuResources(backend, pendingMeshes);
+
+    //Texture2D 直接保存 GPU ID，失效时同步清除活动索引。
+    for (Texture2D* texture : textures)
+    {
+        if (!texture) continue;
+        DeleteGpuResource(backend, texture->gpuTexture);
+        texture->gpuTextureStorageIndex = -1;
+    }
+    textures.clear();
+    for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
+    pendingTextures.clear();
+
+    //Skybox 与普通纹理相同，直接清除 CPU 对象中的轻量 ID。
+    for (Skybox* skybox : skyboxes)
+    {
+        if (!skybox) continue;
+        DeleteGpuResource(backend, skybox->gpuSkybox);
+        skybox->gpuSkyboxStorageIndex = -1;
+    }
+    skyboxes.clear();
+    for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
+    pendingSkyboxes.clear();
+
+    //最后释放 Shader，确保所有引用它的材质已经清空。
+    for (std::unique_ptr<GpuShader>& shader : shaders)
+    {
+        if (shader->source) shader->source->gpuShader = nullptr;
+        shader->source = nullptr;
+    }
+    DeleteGpuResources(backend, shaders);
+    DeleteGpuResources(backend, pendingShaders);
 }
 
 void GpuResourceManager::Shutdown()
 {
     Object::RemoveDestroyListener(this);
     InvalidateCaches();
-
-    //清空后端引用，防止关闭后继续访问 GPU 资源。
     backend = nullptr;
 }
 
 const GpuMesh* GpuResourceManager::GetMesh(Mesh* mesh)
 {
-    //没有后端或 CPU 网格时无法进行上传。
     if (!backend || !mesh) return nullptr;
 
-    //命中同版本缓存时直接复用；版本变化则先释放旧资源。
-    int32 objectId = mesh->GetObjectId();
-    if (objectId <= 0) return nullptr;
-    auto it = meshes.find(objectId);
-    uint64 meshRevision = mesh->GetRevision();
-    if (it != meshes.end())
-    {
-        if (it->second.meshRevision == meshRevision) return &it->second;
+    //正常命中只读取 CPU Mesh 上的稳定指针和 GPU dirty 标记。
+    GpuMesh* gpuMesh = mesh->gpuMesh;
+    if (gpuMesh && !mesh->IsDirty(MeshDirtyFlags::Gpu)) return gpuMesh;
 
-        DeleteGpuResource(backend, it->second);
-        meshes.erase(it);
-    }
+    //脏更新时原地清理旧句柄，包装对象地址保持不变。
+    if (gpuMesh) DeleteGpuResource(backend, *gpuMesh);
 
-    //空网格不具备可上传的顶点和索引数据。
-    if (mesh->vertices.empty() || mesh->indices.empty())
+    GpuMesh uploaded;
+    if (!UploadMesh(backend, mesh, uploaded))
     {
-        Log::Error("GpuResourceManager mesh upload failed: mesh has no vertices or indices.");
+        mesh->MarkDirty(MeshDirtyFlags::Gpu);
         return nullptr;
     }
 
-    //将位置、法线、纹理坐标和切线交错打包为统一顶点布局。
-    List<float32> vertexData;
-    vertexData.resize(mesh->vertices.size() * VertexFloatCount);
-    for (usize index = 0; index < mesh->vertices.size(); ++index)
+    if (!gpuMesh)
     {
-        const vector3& position = mesh->vertices[index];
-        vector3 normal = index < mesh->normals.size() ? mesh->normals[index] : vector3();
-        vector2 texcoord = index < mesh->texcoords.size() ? mesh->texcoords[index] : vector2();
-        vector3 tangent = index < mesh->tangents.size() ? mesh->tangents[index] : vector3();
-
-        usize offset = index * VertexFloatCount;
-        vertexData[offset + 0] = position.x;
-        vertexData[offset + 1] = position.y;
-        vertexData[offset + 2] = position.z;
-        vertexData[offset + 3] = normal.x;
-        vertexData[offset + 4] = normal.y;
-        vertexData[offset + 5] = normal.z;
-        vertexData[offset + 6] = texcoord.x;
-        vertexData[offset + 7] = texcoord.y;
-        vertexData[offset + 8] = tangent.x;
-        vertexData[offset + 9] = tangent.y;
-        vertexData[offset + 10] = tangent.z;
+        std::unique_ptr<GpuMesh> resource = std::make_unique<GpuMesh>();
+        resource->source = mesh;
+        gpuMesh = AddGpuResource(meshes, std::move(resource));
+        mesh->gpuMesh = gpuMesh;
     }
 
-    //准备顶点和索引缓冲描述，数据仍由 CPU 网格临时持有。
-    GpuBufferDesc vertexBufferDesc;
-    vertexBufferDesc.data = vertexData.data();
-    vertexBufferDesc.size = vertexData.size() * sizeof(float32);
-
-    GpuBufferDesc indexBufferDesc;
-    indexBufferDesc.data = mesh->indices.data();
-    indexBufferDesc.size = mesh->indices.size() * sizeof(uint32);
-
-    //创建 GPU 缓冲和顶点输入对象，并记录版本及来源路径。
-    GpuMesh gpuMesh;
-    gpuMesh.vertexBuffer = backend->CreateVertexBuffer(vertexBufferDesc);
-    gpuMesh.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
-    gpuMesh.indexCount = static_cast<uint32>(mesh->indices.size());
-    gpuMesh.meshRevision = meshRevision;
-
-    GpuVertexInputDesc vertexInputDesc;
-    vertexInputDesc.vertexBuffer = gpuMesh.vertexBuffer;
-    vertexInputDesc.indexBuffer = gpuMesh.indexBuffer;
-    vertexInputDesc.stride = VertexStride;
-    gpuMesh.vertexInput = backend->CreateVertexInput(vertexInputDesc);
-
-    //任一句柄创建失败时释放已创建的部分资源。
-    if (!gpuMesh.IsValid())
-    {
-        Log::Error("GpuResourceManager mesh upload failed: backend returned invalid mesh handles.");
-        backend->DeleteVertexInput(gpuMesh.vertexInput);
-        backend->DeleteVertexBuffer(gpuMesh.vertexBuffer);
-        backend->DeleteIndexBuffer(gpuMesh.indexBuffer);
-        return nullptr;
-    }
-
-    //上传成功后写入缓存，后续绘制直接返回缓存条目。
-    meshes[objectId] = gpuMesh;
-    return &meshes[objectId];
+    gpuMesh->vertexInput = uploaded.vertexInput;
+    gpuMesh->vertexBuffer = uploaded.vertexBuffer;
+    gpuMesh->indexBuffer = uploaded.indexBuffer;
+    gpuMesh->indexCount = uploaded.indexCount;
+    mesh->ClearDirty(MeshDirtyFlags::Gpu);
+    return gpuMesh;
 }
 
 GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
 {
-    //没有后端或 CPU 纹理时无法创建 GPU 纹理。
     if (!backend || !texture) return GpuTextureID();
 
-    //普通纹理当前按 CPU 对象缓存，命中后直接复用。
-    int32 objectId = texture->GetObjectId();
-    if (objectId <= 0) return GpuTextureID();
-    auto it = textures.find(objectId);
-    if (it != textures.end()) return it->second;
+    //Texture2D 直接保存后端无关 ID，命中时只复制一个整数句柄。
+    if (texture->gpuTexture.IsValid()) return texture->gpuTexture;
 
-    //使用纹理自身尺寸、通道和像素数据构造上传描述。
     GpuTextureDesc textureDesc;
     textureDesc.width = texture->width;
     textureDesc.height = texture->height;
     textureDesc.channels = texture->channels;
     textureDesc.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
 
-    //创建 GPU 纹理，失败时不写入无效缓存项。
     GpuTextureID textureID = backend->CreateTexture(textureDesc);
     if (!textureID.IsValid())
     {
@@ -246,23 +340,20 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
         return GpuTextureID();
     }
 
-    //按对象身份保存纹理，销毁事件会精确释放对应条目。
-    textures[objectId] = textureID;
+    assert(texture->gpuTextureStorageIndex < 0);
+    texture->gpuTexture = textureID;
+    texture->gpuTextureStorageIndex = static_cast<int32>(textures.size());
+    textures.push_back(texture);
     return textureID;
 }
 
 GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
 {
-    //没有后端或天空盒资源时无法创建立方体纹理。
     if (!backend || !skybox) return GpuCubeTextureID();
 
-    //天空盒按 CPU 对象缓存，避免每个相机重复上传六个面。
-    int32 objectId = skybox->GetObjectId();
-    if (objectId <= 0) return GpuCubeTextureID();
-    auto it = skyboxes.find(objectId);
-    if (it != skyboxes.end()) return it->second;
+    //Skybox 直接保存立方体纹理 ID，避免每个相机重新解析资源。
+    if (skybox->gpuSkybox.IsValid()) return skybox->gpuSkybox;
 
-    //按后端约定顺序收集立方体六个面。
     Texture2D* faces[6] =
     {
         skybox->right.Get(),
@@ -273,7 +364,6 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
         skybox->back.Get(),
     };
 
-    //先用第一个面确定立方体的尺寸和格式基准。
     Texture2D* firstFace = faces[0];
     if (!firstFace || firstFace->pixels.empty())
     {
@@ -281,7 +371,6 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
         return GpuCubeTextureID();
     }
 
-    //验证六个面尺寸、通道和像素数据一致，再填充上传描述。
     GpuCubeTextureDesc desc;
     desc.width = firstFace->width;
     desc.height = firstFace->height;
@@ -298,7 +387,6 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
         desc.faces[face] = texture->pixels.data();
     }
 
-    //创建 GPU 立方体纹理，失败时不保留无效条目。
     GpuCubeTextureID cubeTexture = backend->CreateCubeTexture(desc);
     if (!cubeTexture.IsValid())
     {
@@ -306,68 +394,68 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
         return GpuCubeTextureID();
     }
 
-    //按对象身份保存立方体纹理。
-    skyboxes[objectId] = cubeTexture;
+    assert(skybox->gpuSkyboxStorageIndex < 0);
+    skybox->gpuSkybox = cubeTexture;
+    skybox->gpuSkyboxStorageIndex = static_cast<int32>(skyboxes.size());
+    skyboxes.push_back(skybox);
     return cubeTexture;
 }
 
 const GpuShader* GpuResourceManager::GetShader(Shader* shader)
 {
-    //没有后端或 CPU shader 时无法创建 GPU program。
     if (!backend || !shader) return nullptr;
 
-    //命中同版本缓存时直接复用；shader 版本变化则释放旧 program。
-    int32 objectId = shader->GetObjectId();
-    if (objectId <= 0) return nullptr;
-    auto it = shaders.find(objectId);
-    uint64 shaderRevision = shader->GetRevision();
-    if (it != shaders.end())
-    {
-        if (it->second.shaderRevision == shaderRevision) return &it->second;
+    //正常命中只读取 CPU Shader 上的稳定指针和 dirty 标记。
+    GpuShader* gpuShader = shader->gpuShader;
+    if (gpuShader && !shader->IsDirty()) return gpuShader;
 
-        DeleteGpuResource(backend, it->second);
-        shaders.erase(it);
+    //Shader 布局或程序变化时，依赖材质也需要在下次使用时重建绑定。
+    if (gpuShader)
+    {
+        MarkMaterialsUsingShaderDirty(shader);
+        DeleteGpuResource(backend, *gpuShader);
     }
 
-    //按声明顺序创建所有 Pass program。
-    GpuShader gpuShader;
-    gpuShader.shaderRevision = shaderRevision;
-    for (const ShaderPass& sourcePass : shader->passes)
+    GpuShader uploaded;
+    if (!UploadShader(backend, shader, uploaded))
     {
-        GpuShaderProgramDesc shaderProgramDesc;
-        shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
-        shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
-
-        GpuShaderPass pass;
-        pass.name = sourcePass.name;
-        pass.state = sourcePass.state;
-        pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
-        gpuShader.passes.push_back(pass);
-        if (!pass.shaderProgram.IsValid()) break;
-    }
-
-    //任一 Pass 编译失败时释放整组 program，不保留部分可用 Shader。
-    if (!gpuShader.IsValid())
-    {
-        DeleteGpuResource(backend, gpuShader);
-        Log::Error("GpuResourceManager shader upload failed.");
+        shader->MarkDirty();
         return nullptr;
     }
 
-    //上传成功后保存 program 缓存。
-    shaders[objectId] = gpuShader;
-    return &shaders[objectId];
+    if (!gpuShader)
+    {
+        std::unique_ptr<GpuShader> resource = std::make_unique<GpuShader>();
+        resource->source = shader;
+        gpuShader = AddGpuResource(shaders, std::move(resource));
+        shader->gpuShader = gpuShader;
+    }
+
+    gpuShader->passes = std::move(uploaded.passes);
+    shader->ClearDirty();
+    return gpuShader;
 }
 
 const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
 {
-    //没有后端或 CPU 材质时无法建立材质绑定。
     if (!backend || !material) return nullptr;
 
-    int32 objectId = material->GetObjectId();
-    if (objectId <= 0) return nullptr;
+    //命中时只检查直接缓存指针和 dirty，不解析 Ref、ObjectID 或纹理槽。
+    GpuMaterial* gpuMaterial = material->gpuMaterial;
+    if (gpuMaterial
+        && !material->IsDirty()
+        && gpuMaterial->sourceShader
+        && !gpuMaterial->sourceShader->IsDirty())
+    {
+        return gpuMaterial;
+    }
 
-    //材质必须先解析出 shader，后续才能生成 uniform 绑定。
+    //失败时保持 dirty，避免把半有效缓存当作命中。
+    material->MarkDirty();
+
+    //缓存失效后原地清空绑定，包装地址保持稳定。
+    if (gpuMaterial) DeleteGpuResource(backend, *gpuMaterial);
+
     Shader* shader = material->shader.Get();
     if (!shader)
     {
@@ -375,42 +463,17 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
         return nullptr;
     }
 
-    //检查已缓存材质的 shader、版本和纹理引用是否仍然一致。
-    auto it = materials.find(objectId);
-    uint64 shaderRevision = shader->GetRevision();
-    bool textureBindingsCurrent = true;
-    if (it != materials.end())
-    {
-        for (const GpuMaterialTextureBinding& binding : it->second.textureBindings)
-        {
-            if (material->GetTexture(binding.uniformName) != binding.sourceTexture)
-            {
-                textureBindingsCurrent = false;
-                break;
-            }
-        }
-    }
-    //所有依赖仍然有效时直接复用完整材质缓存。
-    if (it != materials.end()
-        && it->second.sourceShader == shader
-        && it->second.materialRevision == material->GetRevision()
-        && it->second.shaderRevision == shaderRevision
-        && textureBindingsCurrent)
-    {
-        return &it->second;
-    }
-
-    //创建新的材质记录，并同步 CPU 材质和 shader 的版本信息。
-    GpuMaterial gpuMaterial;
-    gpuMaterial.sourceShader = shader;
-    gpuMaterial.materialRevision = material->GetRevision();
-    gpuMaterial.shaderRevision = shaderRevision;
-    //材质复用或创建 shader 的 GPU program。
     const GpuShader* gpuShader = GetShader(shader);
-    if (!gpuShader || !gpuShader->IsValid()) return nullptr;
-    gpuMaterial.shader = *gpuShader;
+    if (!gpuShader) return nullptr;
 
-    //按 shader 声明生成 2D 纹理槽和对应的存在标记。
+    //Shader 更新只标脏依赖材质，不摘除包装；仍重新读取以避免依赖隐式时序。
+    gpuMaterial = material->gpuMaterial;
+
+    GpuMaterial uploaded;
+    uploaded.shader = gpuShader;
+    uploaded.sourceShader = shader;
+
+    //只有首次创建或 dirty 时才解析材质的纹理引用。
     for (const ShaderTextureSlot& slot : shader->textureSlots)
     {
         if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
@@ -430,30 +493,169 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
             Log::Error(("GpuResourceManager material texture skipped: texture is missing for " + slot.name).c_str());
         }
 
-        gpuMaterial.textureBindings.push_back(binding);
+        uploaded.textureBindings.push_back(binding);
     }
 
-    //读取材质颜色值；未设置时使用 shader 默认值。
     for (const ShaderColorSlot& slot : shader->colorSlots)
     {
         GpuMaterialColorBinding binding;
         binding.uniformName = slot.name;
         binding.value = material->GetColor(slot.name, slot.defaultValue);
-        gpuMaterial.colorBindings.push_back(binding);
+        uploaded.colorBindings.push_back(binding);
     }
 
-    //读取材质浮点值；未设置时使用 shader 默认值。
     for (const ShaderFloatSlot& slot : shader->floatSlots)
     {
         GpuMaterialFloatBinding binding;
         binding.uniformName = slot.name;
         binding.value = material->GetFloat(slot.name, slot.defaultValue);
-        gpuMaterial.floatBindings.push_back(binding);
+        uploaded.floatBindings.push_back(binding);
     }
 
-    //完整绑定创建成功后写入材质缓存。
-    materials[objectId] = gpuMaterial;
-    return &materials[objectId];
+    if (!gpuMaterial)
+    {
+        std::unique_ptr<GpuMaterial> resource = std::make_unique<GpuMaterial>();
+        resource->source = material;
+        gpuMaterial = AddGpuResource(materials, std::move(resource));
+        material->gpuMaterial = gpuMaterial;
+    }
+
+    gpuMaterial->shader = uploaded.shader;
+    gpuMaterial->sourceShader = uploaded.sourceShader;
+    gpuMaterial->textureBindings = std::move(uploaded.textureBindings);
+    gpuMaterial->colorBindings = std::move(uploaded.colorBindings);
+    gpuMaterial->floatBindings = std::move(uploaded.floatBindings);
+    material->ClearDirty();
+    return gpuMaterial;
+}
+
+void GpuResourceManager::MarkMaterialsUsingShaderDirty(Shader* shader)
+{
+    for (const std::unique_ptr<GpuMaterial>& material : materials)
+    {
+        if (material->sourceShader == shader && material->source)
+        {
+            material->source->MarkDirty();
+        }
+    }
+}
+
+void GpuResourceManager::InvalidateMaterialsUsingShader(Shader* shader)
+{
+    usize index = 0;
+    while (index < materials.size())
+    {
+        GpuMaterial* material = materials[index].get();
+        if (material->sourceShader != shader)
+        {
+            ++index;
+            continue;
+        }
+
+        assert(material->source);
+        QueueMaterialRelease(material->source);
+    }
+}
+
+void GpuResourceManager::InvalidateMaterialsUsingTexture(Texture2D* texture)
+{
+    usize index = 0;
+    while (index < materials.size())
+    {
+        GpuMaterial* material = materials[index].get();
+        bool usesTexture = false;
+        for (const GpuMaterialTextureBinding& binding : material->textureBindings)
+        {
+            if (binding.sourceTexture == texture)
+            {
+                usesTexture = true;
+                break;
+            }
+        }
+
+        if (!usesTexture)
+        {
+            ++index;
+            continue;
+        }
+
+        assert(material->source);
+        QueueMaterialRelease(material->source);
+    }
+}
+
+void GpuResourceManager::QueueMeshRelease(Mesh* mesh)
+{
+    if (!mesh || !mesh->gpuMesh) return;
+
+    GpuMesh* resource = mesh->gpuMesh;
+    mesh->gpuMesh = nullptr;
+    resource->source = nullptr;
+    pendingMeshes.push_back(TakeGpuResource(meshes, resource));
+}
+
+void GpuResourceManager::QueueShaderRelease(Shader* shader)
+{
+    if (!shader || !shader->gpuShader) return;
+
+    GpuShader* resource = shader->gpuShader;
+    shader->gpuShader = nullptr;
+    resource->source = nullptr;
+    pendingShaders.push_back(TakeGpuResource(shaders, resource));
+}
+
+void GpuResourceManager::QueueMaterialRelease(Material* material)
+{
+    if (!material || !material->gpuMaterial) return;
+
+    GpuMaterial* resource = material->gpuMaterial;
+    material->gpuMaterial = nullptr;
+    resource->source = nullptr;
+    pendingMaterials.push_back(TakeGpuResource(materials, resource));
+}
+
+void GpuResourceManager::QueueTextureRelease(Texture2D* texture)
+{
+    if (!texture || !texture->gpuTexture.IsValid()) return;
+
+    int32 index = texture->gpuTextureStorageIndex;
+    assert(index >= 0 && static_cast<usize>(index) < textures.size());
+    assert(textures[index] == texture);
+
+    pendingTextures.push_back(texture->gpuTexture);
+    int32 lastIndex = static_cast<int32>(textures.size() - 1);
+    if (index != lastIndex)
+    {
+        Texture2D* moved = textures[lastIndex];
+        textures[index] = moved;
+        moved->gpuTextureStorageIndex = index;
+    }
+    textures.pop_back();
+
+    texture->gpuTexture = GpuTextureID();
+    texture->gpuTextureStorageIndex = -1;
+}
+
+void GpuResourceManager::QueueSkyboxRelease(Skybox* skybox)
+{
+    if (!skybox || !skybox->gpuSkybox.IsValid()) return;
+
+    int32 index = skybox->gpuSkyboxStorageIndex;
+    assert(index >= 0 && static_cast<usize>(index) < skyboxes.size());
+    assert(skyboxes[index] == skybox);
+
+    pendingSkyboxes.push_back(skybox->gpuSkybox);
+    int32 lastIndex = static_cast<int32>(skyboxes.size() - 1);
+    if (index != lastIndex)
+    {
+        Skybox* moved = skyboxes[lastIndex];
+        skyboxes[index] = moved;
+        moved->gpuSkyboxStorageIndex = index;
+    }
+    skyboxes.pop_back();
+
+    skybox->gpuSkybox = GpuCubeTextureID();
+    skybox->gpuSkyboxStorageIndex = -1;
 }
 
 //记录即将销毁的渲染资源对象
@@ -461,32 +663,46 @@ void GpuResourceManager::OnObjectDestroyed(Object* object)
 {
     if (!backend || !object) return;
 
-    //只记录 GPU 管理器关心的资源类型，组件等普通对象不进入队列。
-    Type* resourceType = nullptr;
-    if (object->Is(Material::StaticType())) resourceType = Material::StaticType();
-    else if (object->Is(Mesh::StaticType())) resourceType = Mesh::StaticType();
-    else if (object->Is(Texture2D::StaticType())) resourceType = Texture2D::StaticType();
-    else if (object->Is(Skybox::StaticType())) resourceType = Skybox::StaticType();
-    else if (object->Is(Shader::StaticType())) resourceType = Shader::StaticType();
-    if (!resourceType) return;
-
-    pendingReleases.push_back({ object->GetObjectId(), resourceType });
+    if (object->Is(Material::StaticType()))
+    {
+        QueueMaterialRelease(static_cast<Material*>(object));
+    }
+    else if (object->Is(Mesh::StaticType()))
+    {
+        QueueMeshRelease(static_cast<Mesh*>(object));
+    }
+    else if (object->Is(Texture2D::StaticType()))
+    {
+        Texture2D* texture = static_cast<Texture2D*>(object);
+        InvalidateMaterialsUsingTexture(texture);
+        QueueTextureRelease(texture);
+    }
+    else if (object->Is(Skybox::StaticType()))
+    {
+        QueueSkyboxRelease(static_cast<Skybox*>(object));
+    }
+    else if (object->Is(Shader::StaticType()))
+    {
+        Shader* shader = static_cast<Shader*>(object);
+        InvalidateMaterialsUsingShader(shader);
+        QueueShaderRelease(shader);
+    }
 }
 
 //释放对象销毁事件对应的 GPU 缓存
 void GpuResourceManager::ReleaseDestroyedResources()
 {
-    if (!backend || pendingReleases.empty()) return;
+    if (!backend) return;
 
-    //在渲染安全点按对象 ID 精确释放，不遍历其余存活缓存。
-    for (const PendingResourceRelease& release : pendingReleases)
-    {
-        if (release.type == Material::StaticType()) DeleteCachedGpuResource(backend, materials, release.objectId);
-        else if (release.type == Mesh::StaticType()) DeleteCachedGpuResource(backend, meshes, release.objectId);
-        else if (release.type == Texture2D::StaticType()) DeleteCachedGpuResource(backend, textures, release.objectId);
-        else if (release.type == Skybox::StaticType()) DeleteCachedGpuResource(backend, skyboxes, release.objectId);
-        else if (release.type == Shader::StaticType()) DeleteCachedGpuResource(backend, shaders, release.objectId);
-    }
+    //依赖项先释放，基础 GPU 资源随后释放。
+    DeleteGpuResources(backend, pendingMaterials);
+    DeleteGpuResources(backend, pendingMeshes);
 
-    pendingReleases.clear();
+    for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
+    pendingTextures.clear();
+
+    for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
+    pendingSkyboxes.clear();
+
+    DeleteGpuResources(backend, pendingShaders);
 }

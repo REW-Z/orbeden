@@ -338,7 +338,8 @@ namespace
         //写入当前 Ens 和它的组件
         WriteIndent(output, depth);
         output << "<Ens stableId=\"" << EscapeXml(transform->GetInstanceId().GetPath()) << "\" name=\""
-            << EscapeXml(ens.GetName()) << "\">\n";
+            << EscapeXml(ens.GetName()) << "\" localActive=\""
+            << (ens.GetLocalActive() ? "true" : "false") << "\">\n";
 
         for (TypeId typeId : ens.GetComponentTypes())
         {
@@ -458,6 +459,7 @@ namespace
         //先创建 Ens，再通过嵌套结构恢复父子关系
         const std::string& stableId = GetAttribute(startToken, "stableId");
         const std::string& name = GetAttribute(startToken, "name");
+        const std::string& localActive = GetAttribute(startToken, "localActive");
         Ens* ens = stableId.empty() ? world.CreateEns(name) : world.CreateEnsWithStableId(stableId, name);
         if (!ens)
         {
@@ -469,6 +471,10 @@ namespace
         if (parent)
         {
             ens->SetParent(parent);
+        }
+        if (localActive == "false" || localActive == "0")
+        {
+            ens->SetLocalActive(false);
         }
 
         if (startToken.emptyElement) return true;

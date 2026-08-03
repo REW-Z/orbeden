@@ -105,7 +105,7 @@ vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
     //合并每个有效渲染器包围盒的最小点和最大点。
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!renderer || !renderer->GetEnabled()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.worldBounds.valid) continue;
@@ -241,7 +241,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     {
         //获取或上传 GPU 材质；任一 Pass 无效时跳过整个绘制项。
         const GpuMaterial* material = gpuResourceManager.GetMaterial(item.material);
-        if (!material || !material->IsValid())
+        if (!material)
         {
             Log::Error("ForwardPipeline draw skipped: material GPU resources are invalid.");
             continue;
@@ -249,14 +249,14 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
 
         //材质有效后再获取网格，避免向后端绑定不完整的顶点资源。
         const GpuMesh* mesh = gpuResourceManager.GetMesh(item.mesh);
-        if (!mesh || !mesh->IsValid())
+        if (!mesh)
         {
             Log::Error("ForwardPipeline draw skipped: mesh GPU resources are invalid.");
             continue;
         }
 
         bool transparent = item.drawQueue == DrawQueue::Transparent;
-        for (const GpuShaderPass& shaderPass : material->shader.passes)
+        for (const GpuShaderPass& shaderPass : material->shader->passes)
         {
             //Auto 每次从管线基线解析，绝不继承上一个 Pass 的状态。
             backend->SetDepthTest(ResolvePassToggle(shaderPass.state.depthTest, true));
@@ -464,7 +464,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
     //阴影 shader 必须先上传到 GPU，之后才能开始深度 pass。
     const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
-    if (!shader || !shader->IsValid()) return false;
+    if (!shader) return false;
 
     //建立只写深度的光源视角 pass。
     RenderPassDesc passDesc;
@@ -484,7 +484,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!renderer || !renderer->GetEnabled()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         Mesh* sourceMesh = state.mesh;
@@ -493,7 +493,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
         //阴影 pass 只需要网格和模型矩阵，不绑定材质纹理。
         const GpuMesh* mesh = gpuResourceManager.GetMesh(sourceMesh);
-        if (!mesh || !mesh->IsValid()) continue;
+        if (!mesh) continue;
 
         backend->SetUniformMatrix4("u_Model", state.localToWorld);
         backend->BindVertexInput(mesh->vertexInput);
@@ -529,7 +529,7 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     //上传天空盒立方体纹理和 shader，任一资源无效时跳过绘制。
     GpuCubeTextureID cubeTexture = gpuResourceManager.GetSkybox(skybox);
     const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
-    if (!cubeTexture.IsValid() || !shader || !shader->IsValid()) return;
+    if (!cubeTexture.IsValid() || !shader) return;
 
     //移除相机平移，只保留旋转，使天空盒始终围绕相机绘制。
     matrix4x4 view = camera.viewMatrix;

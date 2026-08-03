@@ -724,7 +724,7 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
-        if (!renderer || !renderer->GetEnabled() || !mesh) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible() || !mesh) continue;
         if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
 
         EnsId rendererEns = renderer->GetEnsId();
@@ -913,7 +913,7 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
     List<InstanceGroup> groups;
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!renderer || !renderer->GetEnabled()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
         EnsId rendererEns = renderer->GetEnsId();
         auto selectionIt = selectionTypes.find(GetEnsKey(rendererEns));
@@ -1066,21 +1066,25 @@ void EditorScene::ClearTopologyCache()
     frameIndex = 0;
 }
 
-//获取与网格版本和有效索引范围匹配的拓扑缓存。
+//获取与网格数据和有效索引范围匹配的拓扑缓存。
 const EditorScene::MeshTopology& EditorScene::GetTopology(Mesh* mesh, const List<IndexRange>& ranges)
 {
+    if (mesh && mesh->IsDirty(MeshDirtyFlags::Editor))
+    {
+        topologyCache.erase(mesh);
+        mesh->ClearDirty(MeshDirtyFlags::Editor);
+    }
+
     List<MeshTopology>& entries = topologyCache[mesh];
     int32 objectId = mesh ? mesh->GetObjectId() : 0;
     uint64 instanceHash = mesh ? mesh->GetInstanceId().GetHash() : 0;
-    uint64 revision = mesh ? mesh->GetRevision() : 0;
     usize vertexCount = mesh ? mesh->vertices.size() : 0;
     usize indexCount = mesh ? mesh->indices.size() : 0;
     entries.erase(std::remove_if(entries.begin(), entries.end(),
-        [objectId, instanceHash, revision, vertexCount, indexCount](const MeshTopology& entry)
+        [objectId, instanceHash, vertexCount, indexCount](const MeshTopology& entry)
     {
         return entry.objectId != objectId
             || entry.instanceHash != instanceHash
-            || entry.revision != revision
             || entry.vertexCount != vertexCount
             || entry.indexCount != indexCount;
     }), entries.end());
@@ -1096,7 +1100,6 @@ const EditorScene::MeshTopology& EditorScene::GetTopology(Mesh* mesh, const List
     MeshTopology topology;
     topology.objectId = objectId;
     topology.instanceHash = instanceHash;
-    topology.revision = revision;
     topology.vertexCount = vertexCount;
     topology.indexCount = indexCount;
     topology.lastUsedFrame = frameIndex;
@@ -1317,7 +1320,7 @@ void EditorScene::DrawManagedGizmos()
     TransformComponent* transform = world.GetTransformComponent(cameraEns);
     Camera* camera = nullptr;
     if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
-    if (!transform || !camera || !camera->GetEnabled()) return;
+    if (!transform || !camera || !camera->IsRenderSceneEligible()) return;
 
     IWindow* window = app.GetWindow();
     gizmoViewportWidth = window ? window->GetFramebufferWidth() : 0;

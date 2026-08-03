@@ -256,15 +256,21 @@ namespace
         if (!mesh) return 0;
 
         mesh->name = ReadUtf8Text(name, nameLength);
-        mesh->TouchRevision();
         return 1;
     }
 
-    //读取 Mesh 版本
-    uint64 ORBEDEN_NATIVE_CALL NativeMeshGetRevision(void* pointer)
+    //判断 Mesh 是否需要刷新 GPU 数据
+    uint8 ORBEDEN_NATIVE_CALL NativeMeshIsDirty(void* pointer)
     {
         Mesh* mesh = GetBoundObject<Mesh>(pointer);
-        return mesh ? mesh->GetRevision() : 0u;
+        return mesh && mesh->IsDirty(MeshDirtyFlags::Gpu) ? 1 : 0;
+    }
+
+    //标记 Mesh 所有数据已修改
+    void ORBEDEN_NATIVE_CALL NativeMeshMarkDirty(void* pointer)
+    {
+        Mesh* mesh = GetBoundObject<Mesh>(pointer);
+        if (mesh) mesh->MarkDirty();
     }
 
     //读取顶点位置数组
@@ -416,8 +422,7 @@ namespace
         Shader* shader = shaderPointer ? GetBoundObject<Shader>(shaderPointer) : nullptr;
         if (!material || (shaderPointer && !shader)) return 0;
 
-        material->shader.Set(shader);
-        material->TouchRevision();
+        material->SetShader(shader);
         return 1;
     }
 
@@ -534,11 +539,18 @@ namespace
         return 1;
     }
 
-    //读取材质版本
-    uint64 ORBEDEN_NATIVE_CALL NativeMaterialGetRevision(void* pointer)
+    //判断材质是否需要刷新 GPU 数据
+    uint8 ORBEDEN_NATIVE_CALL NativeMaterialIsDirty(void* pointer)
     {
         Material* material = GetBoundObject<Material>(pointer);
-        return material ? material->GetRevision() : 0u;
+        return material && material->IsDirty() ? 1 : 0;
+    }
+
+    //标记材质需要刷新 GPU 数据
+    void ORBEDEN_NATIVE_CALL NativeMaterialMarkDirty(void* pointer)
+    {
+        Material* material = GetBoundObject<Material>(pointer);
+        if (material) material->MarkDirty();
     }
 
     //创建运行时 Material
@@ -552,8 +564,7 @@ namespace
 
         material->name = ReadUtf8Text(name, nameLength);
         if (material->name.empty()) material->name = "Material";
-        material->shader.Set(shader);
-        material->TouchRevision();
+        material->SetShader(shader);
         return material;
     }
 
@@ -782,11 +793,18 @@ namespace
         return 1;
     }
 
-    //读取 Shader 版本
-    uint64 ORBEDEN_NATIVE_CALL NativeShaderGetRevision(void* pointer)
+    //判断 Shader 是否需要刷新 GPU 数据
+    uint8 ORBEDEN_NATIVE_CALL NativeShaderIsDirty(void* pointer)
     {
         Shader* shader = GetBoundObject<Shader>(pointer);
-        return shader ? shader->GetRevision() : 0u;
+        return shader && shader->IsDirty() ? 1 : 0;
+    }
+
+    //标记 Shader 需要刷新 GPU 数据
+    void ORBEDEN_NATIVE_CALL NativeShaderMarkDirty(void* pointer)
+    {
+        Shader* shader = GetBoundObject<Shader>(pointer);
+        if (shader) shader->MarkDirty();
     }
 }
 
@@ -824,7 +842,8 @@ MeshBind MeshBind::Create()
     bind.GetSubMeshMaterial = reinterpret_cast<void*>(&NativeMeshGetSubMeshMaterial);
     bind.CreateInstance = reinterpret_cast<void*>(&NativeMeshCreate);
     bind.SetName = reinterpret_cast<void*>(&NativeMeshSetName);
-    bind.GetRevision = reinterpret_cast<void*>(&NativeMeshGetRevision);
+    bind.IsDirty = reinterpret_cast<void*>(&NativeMeshIsDirty);
+    bind.MarkDirty = reinterpret_cast<void*>(&NativeMeshMarkDirty);
     bind.GetVertexPositions = reinterpret_cast<void*>(&NativeMeshGetVertexPositions);
     bind.SetVertexPositions = reinterpret_cast<void*>(&NativeMeshSetVertexPositions);
     bind.GetVertexNormals = reinterpret_cast<void*>(&NativeMeshGetVertexNormals);
@@ -862,7 +881,8 @@ MaterialBind MaterialBind::Create()
     bind.GetFloat = reinterpret_cast<void*>(&NativeMaterialGetFloat);
     bind.SetFloat = reinterpret_cast<void*>(&NativeMaterialSetFloat);
     bind.ClearFloat = reinterpret_cast<void*>(&NativeMaterialClearFloat);
-    bind.GetRevision = reinterpret_cast<void*>(&NativeMaterialGetRevision);
+    bind.IsDirty = reinterpret_cast<void*>(&NativeMaterialIsDirty);
+    bind.MarkDirty = reinterpret_cast<void*>(&NativeMaterialMarkDirty);
     bind.CreateInstance = reinterpret_cast<void*>(&NativeMaterialCreate);
     return bind;
 }
@@ -895,6 +915,7 @@ ShaderBind ShaderBind::Create()
     bind.GetPassCull = reinterpret_cast<void*>(&NativeShaderGetPassCull);
     bind.CreateFromSource = reinterpret_cast<void*>(&NativeShaderCreateFromSource);
     bind.ReplaceSource = reinterpret_cast<void*>(&NativeShaderReplaceSource);
-    bind.GetRevision = reinterpret_cast<void*>(&NativeShaderGetRevision);
+    bind.IsDirty = reinterpret_cast<void*>(&NativeShaderIsDirty);
+    bind.MarkDirty = reinterpret_cast<void*>(&NativeShaderMarkDirty);
     return bind;
 }

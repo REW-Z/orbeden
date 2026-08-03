@@ -115,6 +115,48 @@ bool World::RemoveOwnedObject(Object* object)
     return true;
 }
 
+//设置 Ens 的 localActive 并传播层级状态
+void World::SetEnsLocalActive(EnsId ens, bool active)
+{
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns || storedEns->localActive == active) return;
+
+    storedEns->localActive = active;
+    RefreshEnsWorldActive(ens);
+}
+
+//刷新指定 Ens 子树的 worldActive
+void World::RefreshEnsWorldActive(EnsId ens)
+{
+    Ens* storedEns = GetEns(ens);
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!storedEns || !transform) return;
+
+    Ens* parent = GetEns(transform->parent);
+    bool active = storedEns->localActive && (!parent || parent->worldActive);
+    if (storedEns->worldActive != active)
+    {
+        storedEns->worldActive = active;
+
+        List<TypeId> componentTypes = storedEns->componentTypes;
+        for (TypeId typeId : componentTypes)
+        {
+            Type* type = Object::FindType(typeId);
+            Component* component = type ? GetComponent(ens, type) : nullptr;
+            if (component) component->OnWorldActiveChanged(active);
+        }
+    }
+
+    EnsId child = transform->firstChild;
+    while (!child.IsNull())
+    {
+        TransformComponent* childTransform = GetTransformComponent(child);
+        EnsId nextChild = childTransform ? childTransform->next : EnsId();
+        RefreshEnsWorldActive(child);
+        child = nextChild;
+    }
+}
+
 //获取当前活动世界
 World* World::CurrentWorld()
 {
@@ -275,6 +317,9 @@ bool World::DestroyEns(EnsId ens)
     TransformComponent* transform = GetTransformComponent(ens);
     if (!transform) return false;
 
+    //先失活，避免从失活父级摘除时短暂重新注册组件
+    SetEnsLocalActive(ens, false);
+
     //先解除子级关系
     EnsId child = transform->firstChild;
     while (!child.IsNull())
@@ -404,6 +449,7 @@ void World::SetParent(EnsId child, EnsId parent)
     if (parent.IsNull())
     {
         NotifyTransformChanged(child);
+        RefreshEnsWorldActive(child);
         return;
     }
 
@@ -426,6 +472,7 @@ void World::SetParent(EnsId child, EnsId parent)
 
     parentTransform->lastChild = child;
     NotifyTransformChanged(child);
+    RefreshEnsWorldActive(child);
 }
 
 //移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾
