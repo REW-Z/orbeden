@@ -83,6 +83,24 @@ void Ens::SetName(const std::string& name)
     this->name = name;
 }
 
+//获取自身激活状态
+bool Ens::GetLocalActive() const
+{
+    return localActive;
+}
+
+//获取层级计算后的激活状态
+bool Ens::GetWorldActive() const
+{
+    return worldActive;
+}
+
+//设置自身激活状态
+void Ens::SetLocalActive(bool value)
+{
+    if (!world) return;
+    world->SetEnsLocalActive(ens, value);
+}
 
 //设置父级
 void Ens::SetParent(Ens* parent)

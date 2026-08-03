@@ -42,15 +42,15 @@ void RenderScene::BindWorld(World& currentWorld)
     //初次绑定完整收集，后续增删由组件生命周期主动维护
     currentWorld.ForEachComponent<Camera>([this](Camera* camera)
     {
-        if (camera->GetEnabled()) RegisterCamera(camera);
+        if (camera->IsRenderSceneEligible()) RegisterCamera(camera);
     });
     currentWorld.ForEachComponent<DirectionalLight>([this](DirectionalLight* light)
     {
-        if (light->GetEnabled()) RegisterDirectionalLight(light);
+        if (light->IsRenderSceneEligible()) RegisterDirectionalLight(light);
     });
     currentWorld.ForEachComponent<StaticMeshRenderer>([this](StaticMeshRenderer* renderer)
     {
-        if (renderer->GetEnabled()) RegisterRenderer(renderer);
+        if (renderer->IsRenderSceneEligible()) RegisterRenderer(renderer);
     });
 }
 
@@ -77,32 +77,38 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     renderSettings = currentWorld.renderSettings;
     transformCache.Update(currentWorld);
 
+    //先让所有引用同一脏 Mesh 的渲染器完成刷新，再统一清除 Render dirty。
+    for (StaticMeshRenderer* renderer : renderers)
+    {
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
+
+        Mesh* mesh = renderer->mesh.Get();
+        if (mesh != renderer->renderState.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render)))
+        {
+            UpdateRenderer(renderer, false);
+        }
+    }
+    for (StaticMeshRenderer* renderer : renderers)
+    {
+        if (!renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) continue;
+
+        Mesh* mesh = renderer->renderState.mesh;
+        if (mesh) mesh->ClearDirty(MeshDirtyFlags::Render);
+    }
+
     //只刷新收到变换通知的渲染器
     for (EnsId ens : transformCache.GetChangedNodes())
     {
         Ens* entity = currentWorld.GetEns(ens);
         StaticMeshRenderer* renderer = entity ? entity->GetComponent<StaticMeshRenderer>() : nullptr;
-        if (renderer && renderer->GetEnabled()) UpdateRenderer(renderer, true);
-    }
-
-    //Mesh 引用和几何版本可直接修改，因此只做 renderer 级轻量版本检查
-    for (StaticMeshRenderer* renderer : renderers)
-    {
-        if (!renderer || !renderer->GetEnabled()) continue;
-
-        Mesh* mesh = renderer->mesh.Get();
-        uint64 revision = mesh ? mesh->GetRevision() : 0;
-        if (mesh != renderer->renderState.mesh || revision != renderer->renderState.meshRevision)
-        {
-            UpdateRenderer(renderer, false);
-        }
+        if (renderer && renderer->IsRenderSceneEligible()) UpdateRenderer(renderer, true);
     }
 
     //相机
     cameras.clear();
     for (Camera* camera : cameraComponents)
     {
-        if (!camera || !camera->GetEnabled()) continue;
+        if (!camera || !camera->IsRenderSceneEligible()) continue;
 
         RenderCamera renderCamera;
         renderCamera.ens = camera->GetEnsId();
@@ -137,7 +143,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     directionalLights.clear();
     for (DirectionalLight* light : directionalLightComponents)
     {
-        if (!light || !light->GetEnabled()) continue;
+        if (!light || !light->IsRenderSceneEligible()) continue;
 
         RenderDirectionalLight renderLight;
         renderLight.ens = light->GetEnsId();
@@ -175,7 +181,7 @@ void RenderScene::EndRead()
 //注册启用的相机组件
 void RenderScene::RegisterCamera(Camera* camera)
 {
-    if (!camera || !camera->GetEnabled() || camera->GetWorld() != world) return;
+    if (!camera || !camera->IsRenderSceneEligible() || camera->GetWorld() != world) return;
 
     if (readDepth > 0) pendingChanges.push_back({ ComponentType::Camera, true, camera });
     else AddCamera(camera);
@@ -200,7 +206,7 @@ void RenderScene::UnregisterCamera(Camera* camera)
 //注册启用的方向光组件
 void RenderScene::RegisterDirectionalLight(DirectionalLight* light)
 {
-    if (!light || !light->GetEnabled() || light->GetWorld() != world) return;
+    if (!light || !light->IsRenderSceneEligible() || light->GetWorld() != world) return;
 
     if (readDepth > 0) pendingChanges.push_back({ ComponentType::DirectionalLight, true, light });
     else AddDirectionalLight(light);
@@ -225,7 +231,7 @@ void RenderScene::UnregisterDirectionalLight(DirectionalLight* light)
 //注册启用的静态网格渲染器
 void RenderScene::RegisterRenderer(StaticMeshRenderer* renderer)
 {
-    if (!renderer || !renderer->GetEnabled() || renderer->GetWorld() != world) return;
+    if (!renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) return;
 
     if (readDepth > 0) pendingChanges.push_back({ ComponentType::Renderer, true, renderer });
     else AddRenderer(renderer);
@@ -254,7 +260,7 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
     for (const VisibleItem& visible : visibleSet.visibleItems)
     {
         StaticMeshRenderer* renderer = visible.renderer;
-        if (!renderer || !renderer->GetEnabled()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         Mesh* mesh = state.mesh;
@@ -334,7 +340,8 @@ bool RenderScene::CancelPendingAdd(ComponentType type, Component* component)
 //激活相机注册
 void RenderScene::AddCamera(Camera* camera)
 {
-    if (!camera || std::find(cameraComponents.begin(), cameraComponents.end(), camera) != cameraComponents.end()) return;
+    if (!camera || !camera->IsRenderSceneEligible() || camera->GetWorld() != world) return;
+    if (std::find(cameraComponents.begin(), cameraComponents.end(), camera) != cameraComponents.end()) return;
     cameraComponents.push_back(camera);
 }
 
@@ -351,7 +358,8 @@ void RenderScene::RemoveCamera(Camera* camera)
 //激活方向光注册
 void RenderScene::AddDirectionalLight(DirectionalLight* light)
 {
-    if (!light || std::find(directionalLightComponents.begin(), directionalLightComponents.end(), light) != directionalLightComponents.end()) return;
+    if (!light || !light->IsRenderSceneEligible() || light->GetWorld() != world) return;
+    if (std::find(directionalLightComponents.begin(), directionalLightComponents.end(), light) != directionalLightComponents.end()) return;
     directionalLightComponents.push_back(light);
 }
 
@@ -368,8 +376,11 @@ void RenderScene::RemoveDirectionalLight(DirectionalLight* light)
 //激活渲染器注册
 void RenderScene::AddRenderer(StaticMeshRenderer* renderer)
 {
-    if (!renderer || std::find(renderers.begin(), renderers.end(), renderer) != renderers.end()) return;
+    if (!renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) return;
+    if (std::find(renderers.begin(), renderers.end(), renderer) != renderers.end()) return;
 
+    //重新启用的 Renderer 可能错过 Mesh dirty 清除，注册时强制重建运行时快照。
+    renderer->renderState = StaticMeshRendererRenderState();
     renderers.push_back(renderer);
     UpdateRenderer(renderer, true);
 }
@@ -387,15 +398,14 @@ void RenderScene::RemoveRenderer(StaticMeshRenderer* renderer)
 //刷新指定渲染器的变换和包围盒
 void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransform)
 {
-    if (!world || !renderer || renderer->GetWorld() != world) return;
+    if (!world || !renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) return;
 
     StaticMeshRendererRenderState& state = renderer->renderState;
     Mesh* mesh = renderer->mesh.Get();
-    bool meshChanged = mesh != state.mesh || (mesh && mesh->GetRevision() != state.meshRevision);
+    bool meshChanged = mesh != state.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render));
     if (meshChanged)
     {
         state.mesh = mesh;
-        state.meshRevision = mesh ? mesh->GetRevision() : 0;
         state.localBounds = mesh ? mesh->GetLocalBounds() : bounds3();
     }
 

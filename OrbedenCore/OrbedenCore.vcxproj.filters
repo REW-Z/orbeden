@@ -153,6 +153,9 @@
     <ClInclude Include="Src\Rendering\RenderItemSorter.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Rendering\Backend\GpuResourceIDs.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Rendering\Backend\RenderBackend.h">
       <Filter>头文件</Filter>
     </ClInclude>

@@ -1,4 +1,5 @@
 #include "Runtime/Object/Material.h"
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Texture2D.h"
 
 OBJECT_TYPE_IMPLEMENT(Material, Object)
@@ -72,6 +73,18 @@ namespace
     }
 }
 
+void Material::SetShader(Shader* value)
+{
+    shader.Set(value);
+    MarkDirty();
+}
+
+void Material::SetShader(const StringId& shaderId)
+{
+    shader.SetInstanceId(shaderId);
+    MarkDirty();
+}
+
 void Material::SetTexture(const std::string& slotName, Texture2D* texture)
 {
     if (slotName.empty()) return;
@@ -86,7 +99,7 @@ void Material::SetTexture(const std::string& slotName, Texture2D* texture)
     }
 
     slot->texture.Set(texture);
-    revision++;
+    MarkDirty();
 }
 
 void Material::SetTexture(const std::string& slotName, const StringId& textureId)
@@ -103,7 +116,7 @@ void Material::SetTexture(const std::string& slotName, const StringId& textureId
     }
 
     slot->texture.SetInstanceId(textureId);
-    revision++;
+    MarkDirty();
 }
 
 Texture2D* Material::GetTexture(const std::string& slotName) const
@@ -125,7 +138,7 @@ void Material::ClearTexture(const std::string& slotName)
         if (textureSlots[index].name != slotName) continue;
 
         textureSlots.erase(textureSlots.begin() + static_cast<isize>(index));
-        revision++;
+        MarkDirty();
         return;
     }
 }
@@ -144,7 +157,7 @@ void Material::SetColor(const std::string& slotName, const color& value)
     }
 
     slot->value = value;
-    revision++;
+    MarkDirty();
 }
 
 color Material::GetColor(const std::string& slotName, const color& defaultValue) const
@@ -165,7 +178,7 @@ void Material::ClearColor(const std::string& slotName)
         if (colorSlots[index].name != slotName) continue;
 
         colorSlots.erase(colorSlots.begin() + static_cast<isize>(index));
-        revision++;
+        MarkDirty();
         return;
     }
 }
@@ -184,7 +197,7 @@ void Material::SetFloat(const std::string& slotName, float32 value)
     }
 
     slot->value = value;
-    revision++;
+    MarkDirty();
 }
 
 float32 Material::GetFloat(const std::string& slotName, float32 defaultValue) const
@@ -205,17 +218,22 @@ void Material::ClearFloat(const std::string& slotName)
         if (floatSlots[index].name != slotName) continue;
 
         floatSlots.erase(floatSlots.begin() + static_cast<isize>(index));
-        revision++;
+        MarkDirty();
         return;
     }
 }
 
-uint64 Material::GetRevision() const
+bool Material::IsDirty() const
 {
-    return revision;
+    return gpuDirty;
 }
 
-void Material::TouchRevision()
+void Material::MarkDirty()
 {
-    revision++;
+    gpuDirty = true;
+}
+
+void Material::ClearDirty()
+{
+    gpuDirty = false;
 }

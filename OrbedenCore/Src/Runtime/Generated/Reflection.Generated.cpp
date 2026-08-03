@@ -216,8 +216,20 @@ public:
         return Reflection::Value();
     }
 
+    //调用 Camera.IsRenderSceneEligible 方法
+    static Reflection::Value Invoke_Camera_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsRenderSceneEligible();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Camera.OnAttach 方法
-    static Reflection::Value Invoke_Camera_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -229,13 +241,27 @@ public:
     }
 
     //调用 Camera.OnDetach 方法
-    static Reflection::Value Invoke_Camera_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Camera.OnWorldActiveChanged 方法
+    static Reflection::Value Invoke_Camera_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
     }
@@ -381,8 +407,20 @@ public:
         return Reflection::Value();
     }
 
+    //调用 DirectionalLight.IsRenderSceneEligible 方法
+    static Reflection::Value Invoke_DirectionalLight_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsRenderSceneEligible();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 DirectionalLight.OnAttach 方法
-    static Reflection::Value Invoke_DirectionalLight_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -394,13 +432,27 @@ public:
     }
 
     //调用 DirectionalLight.OnDetach 方法
-    static Reflection::Value Invoke_DirectionalLight_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 DirectionalLight.OnWorldActiveChanged 方法
+    static Reflection::Value Invoke_DirectionalLight_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
     }
@@ -430,11 +482,27 @@ public:
     static bool Set_Material_shader(Object* object, const std::string& value)
     {
         Material* instance = static_cast<Material*>(object);
-        return Reflection::SetFromXmlValue(instance->shader, value);
+        if (!Reflection::SetFromXmlValue(instance->shader, value)) return false;
+        instance->MarkDirty();
+        return true;
+    }
+
+    //调用 Material.SetShader 方法
+    static Reflection::Value Invoke_Material_SetShader_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        Material* instance = static_cast<Material*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        StringId arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetShader(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
     //调用 Material.SetTexture 方法
-    static Reflection::Value Invoke_Material_SetTexture_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetTexture_1(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -450,7 +518,7 @@ public:
     }
 
     //调用 Material.HasTexture 方法
-    static Reflection::Value Invoke_Material_HasTexture_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasTexture_2(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -464,7 +532,7 @@ public:
     }
 
     //调用 Material.ClearTexture 方法
-    static Reflection::Value Invoke_Material_ClearTexture_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearTexture_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -478,7 +546,7 @@ public:
     }
 
     //调用 Material.SetColor 方法
-    static Reflection::Value Invoke_Material_SetColor_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetColor_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -494,7 +562,7 @@ public:
     }
 
     //调用 Material.HasColor 方法
-    static Reflection::Value Invoke_Material_HasColor_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasColor_5(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -508,7 +576,7 @@ public:
     }
 
     //调用 Material.ClearColor 方法
-    static Reflection::Value Invoke_Material_ClearColor_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearColor_6(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -522,7 +590,7 @@ public:
     }
 
     //调用 Material.SetFloat 方法
-    static Reflection::Value Invoke_Material_SetFloat_6(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetFloat_7(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -538,7 +606,7 @@ public:
     }
 
     //调用 Material.GetFloat 方法
-    static Reflection::Value Invoke_Material_GetFloat_7(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_GetFloat_8(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -554,7 +622,7 @@ public:
     }
 
     //调用 Material.HasFloat 方法
-    static Reflection::Value Invoke_Material_HasFloat_8(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasFloat_9(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -568,7 +636,7 @@ public:
     }
 
     //调用 Material.ClearFloat 方法
-    static Reflection::Value Invoke_Material_ClearFloat_9(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearFloat_10(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -581,26 +649,26 @@ public:
         return Reflection::Value();
     }
 
-    //调用 Material.GetRevision 方法
-    static Reflection::Value Invoke_Material_GetRevision_10(Object* object, const List<Reflection::Value>& args, bool& success)
+    //调用 Material.IsDirty 方法
+    static Reflection::Value Invoke_Material_IsDirty_11(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        auto result = instance->GetRevision();
+        auto result = instance->IsDirty();
         success = true;
         return Reflection::Value(result);
     }
 
-    //调用 Material.TouchRevision 方法
-    static Reflection::Value Invoke_Material_TouchRevision_11(Object* object, const List<Reflection::Value>& args, bool& success)
+    //调用 Material.MarkDirty 方法
+    static Reflection::Value Invoke_Material_MarkDirty_12(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        instance->TouchRevision();
+        instance->MarkDirty();
         success = true;
         return Reflection::Value();
     }
@@ -619,32 +687,20 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
-    //调用 Mesh.GetRevision 方法
-    static Reflection::Value Invoke_Mesh_GetRevision_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    //调用 Mesh.MarkDirty 方法
+    static Reflection::Value Invoke_Mesh_MarkDirty_0(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        auto result = instance->GetRevision();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 Mesh.TouchRevision 方法
-    static Reflection::Value Invoke_Mesh_TouchRevision_1(Object* object, const List<Reflection::Value>& args, bool& success)
-    {
-        success = false;
-        Mesh* instance = static_cast<Mesh*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->TouchRevision();
+        instance->MarkDirty();
         success = true;
         return Reflection::Value();
     }
 
     //调用 Mesh.ClearGeometry 方法
-    static Reflection::Value Invoke_Mesh_ClearGeometry_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_ClearGeometry_1(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -656,7 +712,7 @@ public:
     }
 
     //调用 Mesh.ResizeSubMeshes 方法
-    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_2(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -670,7 +726,7 @@ public:
     }
 
     //调用 Mesh.RefreshNormals 方法
-    static Reflection::Value Invoke_Mesh_RefreshNormals_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_RefreshNormals_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -791,26 +847,26 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 Shader.GetRevision 方法
-    static Reflection::Value Invoke_Shader_GetRevision_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    //调用 Shader.IsDirty 方法
+    static Reflection::Value Invoke_Shader_IsDirty_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        auto result = instance->GetRevision();
+        auto result = instance->IsDirty();
         success = true;
         return Reflection::Value(result);
     }
 
-    //调用 Shader.TouchRevision 方法
-    static Reflection::Value Invoke_Shader_TouchRevision_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    //调用 Shader.MarkDirty 方法
+    static Reflection::Value Invoke_Shader_MarkDirty_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
-        instance->TouchRevision();
+        instance->MarkDirty();
         success = true;
         return Reflection::Value();
     }
@@ -1012,8 +1068,20 @@ public:
         return Reflection::Value();
     }
 
+    //调用 StaticMeshRenderer.IsRenderSceneEligible 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsRenderSceneEligible();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 StaticMeshRenderer.OnAttach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1025,13 +1093,27 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnDetach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 StaticMeshRenderer.OnWorldActiveChanged 方法
+    static Reflection::Value Invoke_StaticMeshRenderer_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    {
+        success = false;
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
     }
@@ -1267,8 +1349,10 @@ namespace Reflection
             {
                 MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_GetEnabled_0),
                 MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_SetEnabled_1),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnAttach_2),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnDetach_3),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_IsRenderSceneEligible_2),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnAttach_3),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnDetach_4),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_OnWorldActiveChanged_5),
             });
 
         RegisterTypeFields(DirectionalLight::StaticType(),
@@ -1287,13 +1371,16 @@ namespace Reflection
             {
                 MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_GetEnabled_0),
                 MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_SetEnabled_1),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_2),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_3),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_IsRenderSceneEligible_2),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_3),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_4),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_OnWorldActiveChanged_5),
             });
 
         RegisterTypeFields(Material::StaticType(),
             {
-                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr),
                 FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
@@ -1303,24 +1390,24 @@ namespace Reflection
 
         RegisterTypeMethods(Material::StaticType(),
             {
-                MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_0),
-                MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_1),
-                MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_2),
-                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_3),
-                MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_4),
-                MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_5),
-                MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_6),
-                MethodInfo("GetFloat", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_GetFloat_7),
-                MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_8),
-                MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_9),
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_GetRevision_10),
-                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_TouchRevision_11),
+                MethodInfo("SetShader", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("shaderId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetShader_0),
+                MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_1),
+                MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_2),
+                MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_3),
+                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_4),
+                MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_5),
+                MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_6),
+                MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_7),
+                MethodInfo("GetFloat", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_GetFloat_8),
+                MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_9),
+                MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_10),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_IsDirty_11),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_MarkDirty_12),
             });
 
         RegisterTypeFields(Mesh::StaticType(),
             {
-                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
-                FieldInfo("localBoundsRevision", "mutable uint64", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("localBounds", "mutable bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr),
                 FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
@@ -1333,16 +1420,16 @@ namespace Reflection
 
         RegisterTypeMethods(Mesh::StaticType(),
             {
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_GetRevision_0),
-                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_TouchRevision_1),
-                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_2),
-                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_3),
-                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_4),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_0),
+                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_1),
+                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_2),
+                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_3),
             });
 
         RegisterTypeFields(Shader::StaticType(),
             {
-                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr),
                 FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr),
                 FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr),
@@ -1359,12 +1446,14 @@ namespace Reflection
                 MethodInfo("ReflectSlotsFromSource", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
                 MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_1),
                 MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_2),
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetRevision_3),
-                MethodInfo("TouchRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_TouchRevision_4),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_IsDirty_3),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_MarkDirty_4),
             });
 
         RegisterTypeFields(Skybox::StaticType(),
             {
+                FieldInfo("gpuSkybox", "GpuCubeTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuSkyboxStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr),
                 FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D"),
                 FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D"),
                 FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D"),
@@ -1392,12 +1481,16 @@ namespace Reflection
             {
                 MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_0),
                 MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_1),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_2),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_3),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_IsRenderSceneEligible_2),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_3),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_4),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_5),
             });
 
         RegisterTypeFields(Texture2D::StaticType(),
             {
+                FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr),
                 FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr),
                 FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr),

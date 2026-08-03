@@ -278,7 +278,7 @@ bool Shader::ReflectSlotsFromSource()
         valid &= !HasFloatSlot(floatSlots, colorSlot.name);
     }
 
-    TouchRevision();
+    MarkDirty();
     return valid;
 }
 
@@ -317,12 +317,17 @@ const ShaderPass* Shader::GetPass(uint32 index) const
     return index < passes.size() ? &passes[index] : nullptr;
 }
 
-uint64 Shader::GetRevision() const
+bool Shader::IsDirty() const
 {
-    return revision;
+    return gpuDirty;
 }
 
-void Shader::TouchRevision()
+void Shader::MarkDirty()
 {
-    revision++;
+    gpuDirty = true;
+}
+
+void Shader::ClearDirty()
+{
+    gpuDirty = false;
 }

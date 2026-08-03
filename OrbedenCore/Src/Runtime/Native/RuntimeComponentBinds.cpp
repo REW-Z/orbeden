@@ -132,6 +132,27 @@ namespace
         return world && world->IsAlive(ens) ? 1 : 0;
     }
 
+    //读取 Ens 的 localActive。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetLocalActive(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetLocalActive() ? 1 : 0;
+    }
+
+    //读取 Ens 的 worldActive。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetWorldActive(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetWorldActive() ? 1 : 0;
+    }
+
+    //设置 Ens 的 localActive。
+    void ORBEDEN_NATIVE_CALL NativeEnsSetLocalActive(EnsId ens, uint8 active)
+    {
+        Ens* value = GetNativeEns(ens);
+        if (value) value->SetLocalActive(active != 0);
+    }
+
     //读取 Ens 名称到 UTF-8 缓冲区。
     int32 ORBEDEN_NATIVE_CALL NativeEnsGetName(EnsId ens, uint8* buffer, int32 bufferSize)
     {
@@ -885,6 +906,9 @@ EnsBind EnsBind::Create()
 {
     EnsBind bind;
     bind.IsAlive = reinterpret_cast<void*>(&NativeEnsIsAlive);
+    bind.GetLocalActive = reinterpret_cast<void*>(&NativeEnsGetLocalActive);
+    bind.GetWorldActive = reinterpret_cast<void*>(&NativeEnsGetWorldActive);
+    bind.SetLocalActive = reinterpret_cast<void*>(&NativeEnsSetLocalActive);
     bind.GetName = reinterpret_cast<void*>(&NativeEnsGetName);
     bind.SetName = reinterpret_cast<void*>(&NativeEnsSetName);
     bind.HasTransformComponent = reinterpret_cast<void*>(&NativeEnsHasTransformComponent);

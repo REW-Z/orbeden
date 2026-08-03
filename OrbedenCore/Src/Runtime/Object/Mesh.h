@@ -7,6 +7,26 @@
 
 #include <string>
 
+struct GpuMesh;
+class GpuResourceManager;
+
+//网格数据变更的独立消费方
+enum class MeshDirtyFlags : uint32
+{
+    None = 0,
+    Gpu = 1u << 0,
+    Bounds = 1u << 1,
+    Render = 1u << 2,
+    Physics = 1u << 3,
+    Editor = 1u << 4,
+    All = (1u << 5) - 1u,
+};
+
+constexpr MeshDirtyFlags operator|(MeshDirtyFlags left, MeshDirtyFlags right)
+{
+    return static_cast<MeshDirtyFlags>(static_cast<uint32>(left) | static_cast<uint32>(right));
+}
+
 //子网格
 struct SubMesh
 {
@@ -23,8 +43,11 @@ class Mesh : public Object
     OBJECT_TYPE_DECLARE(Mesh)
 
 private:
-    uint64 revision = 1;
-    mutable uint64 localBoundsRevision = 0;
+    friend class GpuResourceManager;
+
+    //GPU 网格由资源管理器持有。
+    GpuMesh* gpuMesh = nullptr;
+    mutable uint32 dirtyFlags = static_cast<uint32>(MeshDirtyFlags::All);
     mutable bounds3 localBounds;
 
 public:
@@ -36,14 +59,20 @@ public:
     List<uint32> indices;
     List<SubMesh> subMeshes;
 
-    //获取网格版本，用于刷新 GPU 缓存
-    uint64 GetRevision() const;
-
-    //获取按网格版本缓存的本地包围盒
+    //获取按脏标记缓存的本地包围盒
     const bounds3& GetLocalBounds() const;
 
-    //标记网格数据已修改
-    void TouchRevision();
+    //判断指定消费方是否需要刷新
+    bool IsDirty(MeshDirtyFlags flags) const;
+
+    //标记指定消费方需要刷新
+    void MarkDirty(MeshDirtyFlags flags);
+
+    //清除指定消费方的刷新标记
+    void ClearDirty(MeshDirtyFlags flags);
+
+    //标记所有消费方需要刷新
+    void MarkDirty();
 
     //清空所有几何数据
     void ClearGeometry();

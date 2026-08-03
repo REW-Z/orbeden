@@ -143,6 +143,7 @@
     <ClInclude Include="Src\Platform\GlfwWindow.h" />
     <ClInclude Include="Src\Platform\InputManager.h" />
     <ClInclude Include="Src\Platform\Window.h" />
+    <ClInclude Include="Src\Rendering\Backend\GpuResourceIDs.h" />
     <ClInclude Include="Src\Rendering\Backend\OpenGLContext.h" />
     <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h" />
     <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />

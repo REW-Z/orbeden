@@ -50,6 +50,16 @@ public sealed class Ens : IEquatable<Ens>
     /// <summary>判断 Ens 是否仍然有效。</summary>
     public bool IsValid => EnsBind.IsAlive(Id);
 
+    /// <summary>Ens 自身设置的激活状态。</summary>
+    public bool LocalActive
+    {
+        get => EnsBind.GetLocalActive(Id);
+        set => EnsBind.SetLocalActive(Id, value);
+    }
+
+    /// <summary>Ens 经父子层级计算后的实际激活状态。</summary>
+    public bool WorldActive => EnsBind.GetWorldActive(Id);
+
     /// <summary>Ens 名称。</summary>
     public string Name
     {

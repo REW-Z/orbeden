@@ -37,7 +37,8 @@ internal unsafe struct MeshBindApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr> GetSubMeshMaterial;
     public delegate* unmanaged[Cdecl]<byte*, int, IntPtr> CreateInstance;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> SetName;
-    public delegate* unmanaged[Cdecl]<IntPtr, ulong> GetRevision;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte> IsDirty;
+    public delegate* unmanaged[Cdecl]<IntPtr, void> MarkDirty;
     public delegate* unmanaged[Cdecl]<IntPtr, vector3*, int, int> GetVertexPositions;
     public delegate* unmanaged[Cdecl]<IntPtr, vector3*, int, byte> SetVertexPositions;
     public delegate* unmanaged[Cdecl]<IntPtr, vector3*, int, int> GetVertexNormals;
@@ -74,7 +75,8 @@ internal unsafe struct MaterialBindApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, float, float> GetFloat;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, float, byte> SetFloat;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> ClearFloat;
-    public delegate* unmanaged[Cdecl]<IntPtr, ulong> GetRevision;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte> IsDirty;
+    public delegate* unmanaged[Cdecl]<IntPtr, void> MarkDirty;
     public delegate* unmanaged[Cdecl]<byte*, int, IntPtr, IntPtr> CreateInstance;
 }
 
@@ -106,7 +108,8 @@ internal unsafe struct ShaderBindApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetPassCull;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, IntPtr> CreateFromSource;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte> ReplaceSource;
-    public delegate* unmanaged[Cdecl]<IntPtr, ulong> GetRevision;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte> IsDirty;
+    public delegate* unmanaged[Cdecl]<IntPtr, void> MarkDirty;
 }
 #pragma warning restore CS0649
 
@@ -230,10 +233,16 @@ internal static unsafe class MeshBind
         }
     }
 
-    //读取 Mesh 版本
-    internal static ulong GetRevision(IntPtr mesh)
+    //判断 Mesh 是否需要刷新 GPU 数据
+    internal static bool IsDirty(IntPtr mesh)
     {
-        return initialized && mesh != IntPtr.Zero && api.GetRevision != null ? api.GetRevision(mesh) : 0;
+        return initialized && mesh != IntPtr.Zero && api.IsDirty != null && api.IsDirty(mesh) != 0;
+    }
+
+    //标记 Mesh 所有数据已修改
+    internal static void MarkDirty(IntPtr mesh)
+    {
+        if (initialized && mesh != IntPtr.Zero && api.MarkDirty != null) api.MarkDirty(mesh);
     }
 
     //读取顶点数量
@@ -469,8 +478,14 @@ internal static unsafe class MaterialBind
     //读取 Material 名称
     internal static string GetName(IntPtr material) => initialized ? GetString(api.GetName, material) : string.Empty;
 
-    //读取材质版本
-    internal static ulong GetRevision(IntPtr material) => initialized && material != IntPtr.Zero ? api.GetRevision(material) : 0;
+    //判断材质是否需要刷新 GPU 数据
+    internal static bool IsDirty(IntPtr material) => initialized && material != IntPtr.Zero && api.IsDirty != null && api.IsDirty(material) != 0;
+
+    //标记材质需要刷新 GPU 数据
+    internal static void MarkDirty(IntPtr material)
+    {
+        if (initialized && material != IntPtr.Zero && api.MarkDirty != null) api.MarkDirty(material);
+    }
 
     //读取材质 Shader
     internal static IntPtr GetShader(IntPtr material) => initialized && material != IntPtr.Zero ? api.GetShader(material) : IntPtr.Zero;
@@ -673,8 +688,14 @@ internal static unsafe class ShaderBind
     //读取 Shader 名称
     internal static string GetName(IntPtr shader) => initialized ? GetString(api.GetName, shader) : string.Empty;
 
-    //读取 Shader 版本
-    internal static ulong GetRevision(IntPtr shader) => initialized && shader != IntPtr.Zero ? api.GetRevision(shader) : 0;
+    //判断 Shader 是否需要刷新 GPU 数据
+    internal static bool IsDirty(IntPtr shader) => initialized && shader != IntPtr.Zero && api.IsDirty != null && api.IsDirty(shader) != 0;
+
+    //标记 Shader 需要刷新 GPU 数据
+    internal static void MarkDirty(IntPtr shader)
+    {
+        if (initialized && shader != IntPtr.Zero && api.MarkDirty != null) api.MarkDirty(shader);
+    }
 
     //读取顶点源码路径
     internal static string GetVertexPath(IntPtr shader) => initialized ? GetString(api.GetVertexPath, shader) : string.Empty;

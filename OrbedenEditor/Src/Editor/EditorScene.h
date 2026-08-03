@@ -79,7 +79,6 @@ private:
     public:
         int32 objectId = 0;
         uint64 instanceHash = 0;
-        uint64 revision = 0;
         usize vertexCount = 0;
         usize indexCount = 0;
         uint64 lastUsedFrame = 0;
@@ -219,7 +218,7 @@ private:
     //清空网格拓扑缓存。
     void ClearTopologyCache();
 
-    //获取与网格版本和有效索引范围匹配的拓扑缓存。
+    //获取与网格数据和有效索引范围匹配的拓扑缓存。
     const MeshTopology& GetTopology(Mesh* mesh, const List<IndexRange>& ranges);
 
     //计算顶点的齐次裁剪空间坐标。

@@ -1040,7 +1040,7 @@ namespace
                     if (shaderKey.empty()) continue;
 
                     AssetPipeline::ImportSource(shaderKey);
-                    currentMaterial->shader.SetInstanceId(StringId(shaderKey));
+                    currentMaterial->SetShader(StringId(shaderKey));
                     ResourceManager::RegisterDependency(currentMaterialKey, shaderKey);
                 }
                 else if (command == "map_Kd" || command == "map_Bump" || command == "bump")
@@ -1766,7 +1766,7 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path)
             collection.AddWarning("glTF mesh imported without triangles: " + meshKey);
         }
 
-        mesh->TouchRevision();
+        mesh->MarkDirty();
         collection.AddObject(meshKey, mesh, true);
     }
 
@@ -1959,7 +1959,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
         collection.AddWarning("OBJ imported without triangles: " + sourceKey);
     }
 
-    mesh->TouchRevision();
+    mesh->MarkDirty();
     collection.AddObject(meshKey, mesh, true);
     return collection;
 }
@@ -2004,7 +2004,7 @@ AssetCollection AssetPipeline::Import_AsIndexlessMesh_OBJ(std::string path)
         subMesh.indexStart = 0;
         subMesh.indexCount = static_cast<uint32>(mesh->vertices.size());
         mesh->subMeshes.push_back(subMesh);
-        mesh->TouchRevision();
+        mesh->MarkDirty();
         break;
     }
 

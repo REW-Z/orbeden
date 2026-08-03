@@ -7,13 +7,17 @@
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/Texture2D.h"
 
+#include <memory>
 #include <string>
-#include <unordered_map>
 
-//网格上传到 GPU 后持有的缓冲、顶点输入和版本信息。
+//网格上传到 GPU 后持有的缓冲和顶点输入。
 struct GpuMesh
 {
 public:
+    //反向记录来源和活动容器位置，CPU Mesh 只保存非拥有型指针。
+    Mesh* source = nullptr;
+    usize storageIndex = static_cast<usize>(-1);
+
     //顶点输入布局以及顶点/索引缓冲。
     GpuVertexInputID vertexInput;
     GpuVertexBufferID vertexBuffer;
@@ -22,11 +26,11 @@ public:
     //本次上传可供绘制的索引数量。
     uint32 indexCount = 0;
 
-    //用于判断 CPU 网格是否发生变化的版本号。
-    uint64 meshRevision = 0;
-
     //检查绘制所需的 GPU 句柄和索引数量是否齐全。
-    bool IsValid() const { return vertexInput.IsValid() && indexBuffer.IsValid() && indexCount > 0; }
+    bool IsValid() const
+    {
+        return vertexInput.IsValid() && vertexBuffer.IsValid() && indexBuffer.IsValid() && indexCount > 0;
+    }
 };
 
 //单个 Shader Pass 上传后的 GPU program 和固定功能状态
@@ -38,14 +42,15 @@ public:
     ShaderPassState state;
 };
 
-//Shader 上传到 GPU 后持有的有序 Pass 和版本信息
+//Shader 上传到 GPU 后持有的有序 Pass
 struct GpuShader
 {
 public:
-    List<GpuShaderPass> passes;
+    //反向记录来源和活动容器位置，CPU Shader 只保存非拥有型指针。
+    Shader* source = nullptr;
+    usize storageIndex = static_cast<usize>(-1);
 
-    //用于判断 CPU shader 是否需要重新上传的版本号。
-    uint64 shaderRevision = 0;
+    List<GpuShaderPass> passes;
 
     //检查所有 Pass 的 shader program 是否有效
     bool IsValid() const
@@ -67,7 +72,7 @@ public:
     std::string uniformName;
     std::string presenceUniformName;
 
-    //保留 CPU 纹理指针，用于检测资源版本和诊断来源。
+    //保留 CPU 纹理指针，用于依赖失效和诊断来源。
     Texture2D* sourceTexture = nullptr;
     GpuTextureID texture;
     bool hasTexture = false;
@@ -95,47 +100,71 @@ public:
 struct GpuMaterial
 {
 public:
-    GpuShader shader;
+    //反向记录来源和活动容器位置，CPU Material 只保存非拥有型指针。
+    Material* source = nullptr;
+    usize storageIndex = static_cast<usize>(-1);
 
-    //保留 CPU shader，用于版本检查。
+    const GpuShader* shader = nullptr;
+
+    //保留 CPU shader，用于依赖失效。
     Shader* sourceShader = nullptr;
-    uint64 materialRevision = 0;
-    uint64 shaderRevision = 0;
 
     //按材质属性类型保存 shader uniform 绑定。
     List<GpuMaterialTextureBinding> textureBindings;
     List<GpuMaterialColorBinding> colorBindings;
     List<GpuMaterialFloatBinding> floatBindings;
 
-    //材质至少需要拥有有效的 shader program 才能参与绘制。
-    bool IsValid() const { return shader.IsValid(); }
 };
 
-//CPU 资源到 GPU 资源的上传缓存，按对象销毁事件精确释放缓存。
+//CPU 资源到 GPU 资源的上传缓存，CPU 对象通过稳定指针或轻量 ID 直接关联 GPU 状态。
 class GpuResourceManager : private IObjectDestroyListener
 {
 private:
-    struct PendingResourceRelease
-    {
-        int32 objectId = 0;
-        Type* type = nullptr;
-    };
-
     //所有资源创建和销毁操作使用同一个渲染后端。
     RenderBackend* backend = nullptr;
 
-    //按运行时对象 ID 缓存已经上传的 GPU 资源。
-    std::unordered_map<int32, GpuMesh> meshes;
-    std::unordered_map<int32, GpuTextureID> textures;
-    std::unordered_map<int32, GpuCubeTextureID> skyboxes;
-    std::unordered_map<int32, GpuShader> shaders;
-    std::unordered_map<int32, GpuMaterial> materials;
+    //活动包装对象拥有稳定地址，CPU 资源只保存指向它们的非拥有型指针。
+    List<std::unique_ptr<GpuMesh>> meshes;
+    List<std::unique_ptr<GpuShader>> shaders;
+    List<std::unique_ptr<GpuMaterial>> materials;
 
-    //等待下一个渲染安全点释放的对象身份。
-    List<PendingResourceRelease> pendingReleases;
+    //纹理和天空盒直接把轻量 GPU ID 保存在 CPU 资源中，此处只跟踪活动来源。
+    List<Texture2D*> textures;
+    List<Skybox*> skyboxes;
+
+    //对象析构前摘下的 GPU 状态，在下一帧渲染安全点真正释放。
+    List<std::unique_ptr<GpuMesh>> pendingMeshes;
+    List<std::unique_ptr<GpuShader>> pendingShaders;
+    List<std::unique_ptr<GpuMaterial>> pendingMaterials;
+    List<GpuTextureID> pendingTextures;
+    List<GpuCubeTextureID> pendingSkyboxes;
 
     //记录即将销毁的渲染资源对象
     void OnObjectDestroyed(Object* object) override;
+
+    //使依赖指定 Shader 的材质缓存失效
+    void InvalidateMaterialsUsingShader(Shader* shader);
+
+    //把依赖指定 Shader 的活动材质标记为脏
+    void MarkMaterialsUsingShaderDirty(Shader* shader);
+
+    //使依赖指定纹理的材质缓存失效
+    void InvalidateMaterialsUsingTexture(Texture2D* texture);
+
+    //摘下 CPU Mesh 的 GPU 包装并延迟释放
+    void QueueMeshRelease(Mesh* mesh);
+
+    //摘下 CPU Shader 的 GPU 包装并延迟释放
+    void QueueShaderRelease(Shader* shader);
+
+    //摘下 CPU Material 的 GPU 包装并延迟释放
+    void QueueMaterialRelease(Material* material);
+
+    //摘下 CPU Texture 的 GPU ID 并延迟释放
+    void QueueTextureRelease(Texture2D* texture);
+
+    //摘下 CPU Skybox 的 GPU ID 并延迟释放
+    void QueueSkyboxRelease(Skybox* skybox);
 
 public:
     //注销对象事件并释放仍由管理器持有的 GPU 资源
@@ -150,16 +179,16 @@ public:
     //释放缓存中的所有 GPU 资源并清空索引。
     void Shutdown();
 
-    //获取缓存中的网格；缺少或版本过期时执行上传。
+    //获取缓存中的网格；缺少或标记为脏时执行上传。
     const GpuMesh* GetMesh(Mesh* mesh);
 
-    //获取缓存中的纹理；缺少或版本过期时执行上传。
+    //获取缓存中的纹理；缺少时执行上传。
     GpuTextureID GetTexture(Texture2D* texture);
 
-    //获取缓存中的天空盒立方体纹理；缺少或版本过期时执行上传。
+    //获取缓存中的天空盒立方体纹理；缺少时执行上传。
     GpuCubeTextureID GetSkybox(Skybox* skybox);
 
-    //获取缓存中的 shader；缺少或版本过期时执行上传。
+    //获取缓存中的 shader；缺少或标记为脏时执行上传。
     const GpuShader* GetShader(Shader* shader);
 
     //获取缓存中的材质及其 shader、纹理和常量绑定。

@@ -47,4 +47,7 @@ public:
 
     //卸载时调用
     virtual void OnDetach() {}
+
+    //所属 Ens 的 worldActive 变化时调用
+    virtual void OnWorldActiveChanged(bool worldActive) { (void)worldActive; }
 };

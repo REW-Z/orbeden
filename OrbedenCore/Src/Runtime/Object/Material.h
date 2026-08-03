@@ -7,6 +7,8 @@
 
 class Shader;
 class Texture2D;
+struct GpuMaterial;
+class GpuResourceManager;
 
 //材质保存的纹理槽，name 使用 GLSL uniform 名
 struct MaterialTextureSlot
@@ -38,7 +40,14 @@ class Material : public Object
     OBJECT_TYPE_DECLARE(Material)
 
 private:
-    uint64 revision = 1;
+    friend class GpuResourceManager;
+
+    //GPU 材质由资源管理器持有。
+    GpuMaterial* gpuMaterial = nullptr;
+    bool gpuDirty = true;
+
+    //清除 GPU 刷新标记
+    void ClearDirty();
 
 public:
     std::string name;
@@ -46,6 +55,12 @@ public:
     List<MaterialColorSlot> colorSlots;
     List<MaterialFloatSlot> floatSlots;
     Ref<Shader> shader;
+
+    //设置材质使用的 Shader
+    void SetShader(Shader* value);
+
+    //按资源 ID 设置材质使用的 Shader
+    void SetShader(const StringId& shaderId);
 
     //设置材质纹理槽
     void SetTexture(const std::string& slotName, Texture2D* texture);
@@ -86,9 +101,9 @@ public:
     //清除材质浮点槽
     void ClearFloat(const std::string& slotName);
 
-    //获取材质版本，用于刷新 GPU 缓存
-    uint64 GetRevision() const;
+    //判断 GPU 数据是否需要刷新
+    bool IsDirty() const;
 
-    //标记材质数据已修改
-    void TouchRevision();
+    //标记 GPU 数据需要刷新
+    void MarkDirty();
 };

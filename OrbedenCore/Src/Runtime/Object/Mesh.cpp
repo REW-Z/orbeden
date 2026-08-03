@@ -64,14 +64,9 @@ namespace
     }
 }
 
-uint64 Mesh::GetRevision() const
-{
-    return revision;
-}
-
 const bounds3& Mesh::GetLocalBounds() const
 {
-    if (localBoundsRevision == revision) return localBounds;
+    if (!IsDirty(MeshDirtyFlags::Bounds)) return localBounds;
 
     localBounds = bounds3();
     if (!vertices.empty())
@@ -104,13 +99,28 @@ const bounds3& Mesh::GetLocalBounds() const
         localBounds.valid = true;
     }
 
-    localBoundsRevision = revision;
+    dirtyFlags &= ~static_cast<uint32>(MeshDirtyFlags::Bounds);
     return localBounds;
 }
 
-void Mesh::TouchRevision()
+bool Mesh::IsDirty(MeshDirtyFlags flags) const
 {
-    revision++;
+    return (dirtyFlags & static_cast<uint32>(flags)) != 0;
+}
+
+void Mesh::MarkDirty(MeshDirtyFlags flags)
+{
+    dirtyFlags |= static_cast<uint32>(flags);
+}
+
+void Mesh::ClearDirty(MeshDirtyFlags flags)
+{
+    dirtyFlags &= ~static_cast<uint32>(flags);
+}
+
+void Mesh::MarkDirty()
+{
+    MarkDirty(MeshDirtyFlags::All);
 }
 
 void Mesh::ClearGeometry()
@@ -121,7 +131,7 @@ void Mesh::ClearGeometry()
     tangents.clear();
     indices.clear();
     subMeshes.clear();
-    TouchRevision();
+    MarkDirty();
 }
 
 bool Mesh::SetVertexPositions(const vector3* data, int32 count)
@@ -145,7 +155,7 @@ bool Mesh::SetVertexPositions(const vector3* data, int32 count)
         }
     }
 
-    TouchRevision();
+    MarkDirty();
     return true;
 }
 
@@ -155,7 +165,7 @@ bool Mesh::SetVertexNormals(const vector3* data, int32 count)
 
     if (count == 0) normals.clear();
     else normals.assign(data, data + count);
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Gpu);
     return true;
 }
 
@@ -165,7 +175,7 @@ bool Mesh::SetVertexTexcoords(const vector2* data, int32 count)
 
     if (count == 0) texcoords.clear();
     else texcoords.assign(data, data + count);
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Gpu);
     return true;
 }
 
@@ -175,7 +185,7 @@ bool Mesh::SetVertexTangents(const vector3* data, int32 count)
 
     if (count == 0) tangents.clear();
     else tangents.assign(data, data + count);
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Gpu);
     return true;
 }
 
@@ -196,7 +206,7 @@ bool Mesh::SetIndexData(const uint32* data, int32 count)
         }
     }
 
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Gpu | MeshDirtyFlags::Physics | MeshDirtyFlags::Editor);
     return true;
 }
 
@@ -205,7 +215,7 @@ bool Mesh::ResizeSubMeshes(int32 count)
     if (count < 0) return false;
 
     subMeshes.resize(static_cast<usize>(count));
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Editor);
     return true;
 }
 
@@ -222,7 +232,7 @@ bool Mesh::ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 
     subMesh.indexStart = indexStart;
     subMesh.indexCount = indexCount;
     subMesh.material.Set(material);
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Editor);
     return true;
 }
 
@@ -253,6 +263,6 @@ bool Mesh::RefreshNormals()
         normal = Normalize(normal);
     }
 
-    TouchRevision();
+    MarkDirty(MeshDirtyFlags::Gpu);
     return true;
 }

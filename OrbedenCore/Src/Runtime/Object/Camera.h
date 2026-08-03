@@ -11,6 +11,9 @@ class Camera : public Component
 private:
     bool enabled = true;
 
+    //按当前状态同步渲染场景注册
+    void SyncRenderSceneRegistration();
+
 public:
     float32 fieldOfView = 60.0f;
     float32 nearPlane = 0.1f;
@@ -35,9 +38,15 @@ public:
     //设置启用状态并同步渲染场景注册
     void SetEnabled(bool value);
 
+    //判断当前组件是否应注册到渲染场景
+    bool IsRenderSceneEligible() const;
+
     //挂载时注册到当前渲染场景
     void OnAttach() override;
 
     //卸载时从当前渲染场景注销
     void OnDetach() override;
+
+    //所属 Ens 的 worldActive 变化时同步渲染场景注册
+    void OnWorldActiveChanged(bool worldActive) override;
 };

@@ -6,6 +6,9 @@
 
 #include <string>
 
+struct GpuShader;
+class GpuResourceManager;
+
 //Shader纹理维度，当前 GLSL 前端 v1 只反射 sampler2D
 enum class ShaderTextureDimension
 {
@@ -73,7 +76,14 @@ class Shader : public Object
     OBJECT_TYPE_DECLARE(Shader)
 
 private:
-    uint64 revision = 1;
+    friend class GpuResourceManager;
+
+    //GPU Shader 由资源管理器持有。
+    GpuShader* gpuShader = nullptr;
+    bool gpuDirty = true;
+
+    //清除 GPU 刷新标记
+    void ClearDirty();
 
 public:
     std::string name;
@@ -101,9 +111,9 @@ public:
     //获取指定 Pass
     const ShaderPass* GetPass(uint32 index) const;
 
-    //获取 Shader 版本，用于刷新 GPU 缓存
-    uint64 GetRevision() const;
+    //判断 GPU 数据是否需要刷新
+    bool IsDirty() const;
 
-    //标记 Shader 数据已修改
-    void TouchRevision();
+    //标记 GPU 数据需要刷新
+    void MarkDirty();
 };

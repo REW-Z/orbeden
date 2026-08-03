@@ -14,7 +14,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
     uint32 layerMask = camera.drawLayerMask;
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!renderer || !renderer->GetEnabled()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) continue;

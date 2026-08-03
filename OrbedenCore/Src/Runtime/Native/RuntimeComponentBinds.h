@@ -32,6 +32,9 @@ struct EnsBind
 {
 public:
     void* IsAlive = nullptr;
+    void* GetLocalActive = nullptr;
+    void* GetWorldActive = nullptr;
+    void* SetLocalActive = nullptr;
     void* GetName = nullptr;
     void* SetName = nullptr;
     void* HasTransformComponent = nullptr;

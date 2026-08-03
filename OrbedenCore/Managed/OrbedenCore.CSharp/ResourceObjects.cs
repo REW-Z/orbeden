@@ -270,8 +270,11 @@ public sealed class Mesh : Object
         set => MeshBind.SetName(NativePtr, value);
     }
 
-    /// <summary>Mesh 版本。</summary>
-    public ulong revision => MeshBind.GetRevision(NativePtr);
+    /// <summary>Mesh 是否需要刷新 GPU 数据。</summary>
+    public bool dirty => MeshBind.IsDirty(NativePtr);
+
+    /// <summary>标记所有 Mesh 数据已修改。</summary>
+    public void MarkDirty() => MeshBind.MarkDirty(NativePtr);
 
     /// <summary>顶点数量。</summary>
     public int vertexCount => MeshBind.GetVertexCount(NativePtr);
@@ -390,8 +393,11 @@ public sealed class Material : Object
     /// <summary>Material 名称。</summary>
     public string name => MaterialBind.GetName(NativePtr);
 
-    /// <summary>材质版本。</summary>
-    public ulong revision => MaterialBind.GetRevision(NativePtr);
+    /// <summary>材质是否需要刷新 GPU 数据。</summary>
+    public bool dirty => MaterialBind.IsDirty(NativePtr);
+
+    /// <summary>标记材质需要刷新 GPU 数据。</summary>
+    public void MarkDirty() => MaterialBind.MarkDirty(NativePtr);
 
     /// <summary>材质使用的 Shader。</summary>
     public Shader? shader
@@ -588,8 +594,11 @@ public sealed class Shader : Object
     /// <summary>Shader 名称。</summary>
     public string name => ShaderBind.GetName(NativePtr);
 
-    /// <summary>Shader 版本。</summary>
-    public ulong revision => ShaderBind.GetRevision(NativePtr);
+    /// <summary>Shader 是否需要刷新 GPU 数据。</summary>
+    public bool dirty => ShaderBind.IsDirty(NativePtr);
+
+    /// <summary>标记 Shader 需要刷新 GPU 数据。</summary>
+    public void MarkDirty() => ShaderBind.MarkDirty(NativePtr);
 
     /// <summary>顶点源码路径。</summary>
     public string vertexPath => ShaderBind.GetVertexPath(NativePtr);
