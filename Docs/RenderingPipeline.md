@@ -10,8 +10,8 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | `TransformCache` | 根据 Transform 通知更新脏子树 |
 | `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
-| `RenderItemSorter` | 不透明/透明队列排序 |
-| `ForwardPipeline` | 阴影、天空盒、Forward Main Pass |
+| `RenderItemSorter` | Opaque、Transparent、Refraction 队列排序 |
+| `ForwardPipeline` | 阴影、天空盒、Forward Main Pass 与原生 Refraction Pass |
 | `GpuResourceManager` | GPU 资源按需上传、缓存和释放 |
 | `OpenGLRenderBackend` | OpenGL Pass、状态、Uniform 和 Draw 调用 |
 
@@ -26,7 +26,7 @@ flowchart TD
     E -- 否 --> F["默认窗口清黑"]
     E -- 是 --> G["共享 Shadow Pass\n每帧一次"]
     G --> H["按 Camera.depth 遍历"]
-    H --> I["Cull StaticMeshRenderer\n→ 展开 RenderItem → Sort → Main Pass"]
+    H --> I["Cull StaticMeshRenderer\n→ 展开 RenderItem → Sort\n→ Main Pass / Refraction"]
     I --> J{"还有相机?"}
     J -- 是 --> H
     J -- 否 --> K["ImGui / Overlay"]
@@ -57,6 +57,12 @@ Camera 使用归一化 Viewport，默认 `(0, 0, 1, 1)`。RenderSystem 根据窗
 
 普通 RenderTarget 由颜色纹理、深度纹理和 FBO 组成；创建、Resize、项目 Reload 和 Shutdown 都由 RenderSystem 统一管理。
 
+每个有效相机还会自动持有一组与 Viewport 同尺寸的 GPU 快照：
+
+- `CameraColorTexture`：包含 Skybox、Opaque 和普通 Transparent 的 RGBA8 颜色。
+- `CameraDepthTexture`：在相同时间点复制的 Depth24 深度；普通透明物体默认不写深度。
+- 快照始终生成，不需要相机开关，也不提供 CPU 回读。
+
 ### 3. 共享阴影 Pass
 
 Forward Pipeline 选择第一个开启阴影的方向光，每帧生成一次共享阴影图：
@@ -71,7 +77,7 @@ flowchart LR
     F --> G["Depth Shader DrawIndexed"]
 ```
 
-阴影 Pass 只写深度，不创建颜色附件；生成的阴影图供所有相机共享。
+阴影 Pass 只绘制 `DrawQueue::Opaque && castShadows`，只写深度且不创建颜色附件；生成的阴影图供所有相机共享。
 
 ### 4. 每相机裁剪与排序
 
@@ -84,8 +90,11 @@ flowchart LR
 
 排序规则：
 
-- Opaque：Material → Mesh → 近到远。
+- Opaque：近到远，Material 和 Mesh 作为稳定的次级排序。
 - Transparent：远到近。
+- Refraction：远到近。
+
+队列是离散语义标记，不提供自定义数值优先级。已有序列化数值保持 `Opaque=0`、`Transparent=1`，原生折射使用 `Refraction=2`。
 
 ### 5. Forward Main Pass
 
@@ -99,9 +108,11 @@ flowchart TD
     E --> F["DepthTest On\nDepthWrite On\nBlend Off"]
     F --> G["Transparent Pass"]
     G --> H["DepthTest On\nDepthWrite Off\nBlend On"]
+    H --> I["Copy Camera Color + Depth\n一次 GPU Blit"]
+    I --> J["Refraction Pass\nDepthWrite Off\nBlend On"]
 ```
 
-每个 `RenderItem` 会按 Shader 中的 Pass 声明顺序连续绘制。Pass 可独立配置 `DepthTest`、`DepthWrite`、`Blend` 和 `Cull`；`Auto` 每次从当前 Opaque/Transparent 管线基线解析，不继承前一个 Pass 的状态。
+每个 `RenderItem` 会按 Shader 中的 Pass 声明顺序连续绘制。Pass 可独立配置 `DepthTest`、`DepthWrite`、`Blend` 和 `Cull`；`Auto` 每次从当前 Opaque、Transparent 或 Refraction 队列基线解析，不继承前一个 Pass 的状态。
 
 `ClearMode` 含义：
 
@@ -112,6 +123,19 @@ flowchart TD
 清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
 
 绘制时，同一 Shader Program 的相机/灯光 Uniform 每个相机只设置一次。Material 参数会对每个 Pass Program 分别写入。
+
+Refraction Pass 是引擎原生阶段。进入该阶段前，管线一次性冻结相机颜色和深度，并自动绑定：
+
+```text
+u_CameraColorTexture
+u_CameraDepthTexture
+u_UseCameraTextures
+u_CameraNearPlane
+u_CameraFarPlane
+u_Time
+```
+
+新项目包含 `Builtin/camera_texture_common.orbinc`、雨水玻璃和热浪 Shader 范例。使用这些 Shader 的 `StaticMeshRenderer.drawQueue` 必须设置为 `Refraction`。
 
 ### 6. OrbShader 多 Pass
 
@@ -150,6 +174,8 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
 - 每个可见 SubMesh 对应一次 `DrawIndexed`，尚未实现 Instancing/Indirect Draw。
 - RenderScene 在同一线程增量更新并立即消费。
+- 所有 Refraction 物体共享同一份冻结快照，因此不会互相折射。
+- 普通透明物体全部先于 Refraction 绘制；前景透明物体可能被后绘制的折射表面覆盖。
 
 ## 主要源码
 

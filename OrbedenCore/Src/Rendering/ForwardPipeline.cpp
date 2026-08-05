@@ -15,10 +15,10 @@ namespace
     constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth.orbshader";
     constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox.orbshader";
 
-    //从资源系统解析管线内置 shader，并保留到下一次使用。
-    Shader* ResolveBuiltinShader(Ref<Shader>& shader, const char* key)
+    //返回已缓存的内置 shader；缓存对象失效时按资源路径重新加载。
+    Shader* GetOrLoadBuiltinShader(Ref<Shader>& shader, const char* key)
     {
-        //优先使用已经解析过的资源；无效引用不再重复尝试加载。
+        //优先使用已经加载的资源；无效引用不再重复尝试加载。
         Shader* result = shader.Get();
         if (result || !shader.GetInstanceId().IsValid()) return result;
 
@@ -52,16 +52,16 @@ namespace
         return RenderMath::Dot(value, value) <= 0.000001f;
     }
 
-    //从 Pass 三态值解析本次绘制的最终布尔状态
-    bool ResolvePassToggle(ShaderPassToggle value, bool baseline)
+    //将 Pass 三态开关转换为本次绘制使用的布尔值。
+    bool ConvertPassToggleToBool(ShaderPassToggle value, bool baseline)
     {
         if (value == ShaderPassToggle::On) return true;
         if (value == ShaderPassToggle::Off) return false;
         return baseline;
     }
 
-    //从 Pass 剔除设置解析最终模式
-    CullMode ResolveCullMode(CullMode value)
+    //将 Pass 的 Auto 剔除设置转换为后端使用的具体模式。
+    CullMode ConvertCullModeForBackend(CullMode value)
     {
         return value == CullMode::Auto ? CullMode::None : value;
     }
@@ -154,9 +154,9 @@ matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene
 
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
-    //记录后端；内置资源在首次绘制前按当前内容根目录解析。
+    //记录后端；内置 shader 在首次绘制前按当前内容根目录加载。
     backend = renderBackend;
-    builtinResourcesInvalidated = true;
+    builtinShadersInvalidated = true;
 }
 
 void ForwardPipeline::InvalidateResourceCaches()
@@ -169,14 +169,14 @@ void ForwardPipeline::InvalidateResourceCaches()
         DeleteGpuMesh(backend, skyboxMesh);
     }
 
-    //清空资源引用和当前帧状态，允许后续从新的内容根目录解析。
+    //清空资源引用和当前帧状态，允许后续从新的内容根目录加载。
     shadowRenderTarget = GpuRenderTargetID();
     shadowDepthTexture = GpuDepthTextureID();
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
     lightViewProjection = matrix4x4();
     shadowReady = false;
-    builtinResourcesInvalidated = true;
+    builtinShadersInvalidated = true;
 }
 
 void ForwardPipeline::Shutdown()
@@ -192,7 +192,7 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
     lightViewProjection = matrix4x4();
     if (!backend) return;
 
-    ResolveBuiltinResources();
+    LoadBuiltinShaders();
 
     //没有启用阴影的方向光时，不执行阴影资源创建和深度绘制。
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
@@ -233,13 +233,55 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         RenderSkybox(scene, camera, gpuResourceManager);
     }
 
-    //按 shader program 记录全局 uniform，避免同一 pass 内重复写入。
-    std::unordered_set<uint32> configuredPrograms;
+    //按原生队列顺序绘制，普通透明内容会进入后续的相机颜色快照。
+    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
+    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
 
-    //遍历已剔除并排序的绘制项，同一对象的 Pass 按声明顺序连续提交。
+    //一次 GPU 传输冻结当前颜色和深度，Refraction 只采样该快照。
+    bool cameraTexturesReady = false;
+    if (camera.cameraTextureTarget.IsValid() && camera.cameraColorTexture.IsValid() && camera.cameraDepthTexture.IsValid())
+    {
+        GpuRenderTargetCopyDesc copyDesc;
+        copyDesc.sourceRenderTarget = camera.renderTarget;
+        copyDesc.destinationRenderTarget = camera.cameraTextureTarget;
+        copyDesc.sourceX = camera.viewportX;
+        copyDesc.sourceY = camera.viewportY;
+        copyDesc.width = camera.viewportWidth;
+        copyDesc.height = camera.viewportHeight;
+        cameraTexturesReady = backend->CopyRenderTargetColorAndDepth(copyDesc);
+    }
+
+    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
+
+    //清理 pass 结束时的绑定和状态，避免影响下一个相机或覆盖层。
+    backend->SetBlend(false);
+    backend->SetDepthWrite(true);
+    backend->SetDepthTest(true);
+    backend->SetCullMode(CullMode::None);
+    backend->BindVertexInput(GpuVertexInputID());
+    backend->BindShaderProgram(GpuShaderProgramID());
+    backend->EndPass();
+}
+
+//按指定队列绘制当前相机的可见项。
+void ForwardPipeline::RenderQueueItems(
+    const RenderScene& scene,
+    const VisibleSet& visibleSet,
+    GpuResourceManager& gpuResourceManager,
+    DrawQueue drawQueue,
+    const RenderDirectionalLight* mainLight,
+    bool cameraTexturesReady)
+{
+    const RenderCamera& camera = visibleSet.camera;
+    bool alphaBlended = drawQueue != DrawQueue::Opaque;
+
+    //每个阶段独立记录全局 uniform，确保 Refraction 重新绑定相机纹理。
+    std::unordered_set<uint32> configuredPrograms;
     for (const RenderItem& item : visibleSet.renderItems)
     {
-        //获取或上传 GPU 材质；任一 Pass 无效时跳过整个绘制项。
+        if (item.drawQueue != drawQueue) continue;
+
+        //获取或上传 GPU 材质；任一资源无效时跳过当前绘制项。
         const GpuMaterial* material = gpuResourceManager.GetMaterial(item.material);
         if (!material)
         {
@@ -247,7 +289,6 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
             continue;
         }
 
-        //材质有效后再获取网格，避免向后端绑定不完整的顶点资源。
         const GpuMesh* mesh = gpuResourceManager.GetMesh(item.mesh);
         if (!mesh)
         {
@@ -255,23 +296,26 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
             continue;
         }
 
-        bool transparent = item.drawQueue == DrawQueue::Transparent;
         for (const GpuShaderPass& shaderPass : material->shader->passes)
         {
-            //Auto 每次从管线基线解析，绝不继承上一个 Pass 的状态。
-            backend->SetDepthTest(ResolvePassToggle(shaderPass.state.depthTest, true));
-            backend->SetDepthWrite(ResolvePassToggle(shaderPass.state.depthWrite, !transparent));
-            backend->SetBlend(ResolvePassToggle(shaderPass.state.blend, transparent));
-            backend->SetCullMode(ResolveCullMode(shaderPass.state.cull));
+            //Auto 每次转换为当前队列的基线状态，不继承上一个 Pass。
+            backend->SetDepthTest(ConvertPassToggleToBool(shaderPass.state.depthTest, true));
+            backend->SetDepthWrite(ConvertPassToggleToBool(shaderPass.state.depthWrite, !alphaBlended));
+            backend->SetBlend(ConvertPassToggleToBool(shaderPass.state.blend, alphaBlended));
+            backend->SetCullMode(ConvertCullModeForBackend(shaderPass.state.cull));
             backend->BindShaderProgram(shaderPass.shaderProgram);
             backend->SetUniformMatrix4("u_Model", item.localToWorld);
 
             if (configuredPrograms.insert(shaderPass.shaderProgram.id).second)
             {
-                //写入相机、环境光以及阴影光源参数。
+                //写入相机、时间、环境光以及阴影光源参数。
                 backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
                 backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
                 backend->SetUniformVector3("u_CameraPosition", camera.position);
+                backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
+                backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
+                backend->SetUniformFloat("u_Time", camera.elapsedTime);
+                backend->SetUniformInt("u_UseCameraTextures", drawQueue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
                 backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
                 if (mainLight)
                 {
@@ -309,33 +353,36 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
                 backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
             }
 
-            uint32 materialTextureSlot = static_cast<uint32>(material->textureBindings.size());
-            backend->SetUniformInt("u_ShadowMap", static_cast<int32>(materialTextureSlot));
+            //内置阴影和相机纹理紧跟材质纹理槽，避免固定槽位冲突。
+            uint32 shadowTextureSlot = static_cast<uint32>(material->textureBindings.size());
+            backend->SetUniformInt("u_ShadowMap", static_cast<int32>(shadowTextureSlot));
             backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
-            backend->BindDepthTexture(materialTextureSlot, shadowReady ? shadowDepthTexture : GpuDepthTextureID());
+            backend->BindDepthTexture(shadowTextureSlot, shadowReady ? shadowDepthTexture : GpuDepthTextureID());
             backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
+
+            if (drawQueue == DrawQueue::Refraction)
+            {
+                uint32 cameraColorSlot = shadowTextureSlot + 1;
+                uint32 cameraDepthSlot = shadowTextureSlot + 2;
+                backend->SetUniformInt("u_CameraColorTexture", static_cast<int32>(cameraColorSlot));
+                backend->SetUniformInt("u_CameraDepthTexture", static_cast<int32>(cameraDepthSlot));
+                backend->BindTexture(cameraColorSlot, cameraTexturesReady ? camera.cameraColorTexture : GpuTextureID());
+                backend->BindDepthTexture(cameraDepthSlot, cameraTexturesReady ? camera.cameraDepthTexture : GpuDepthTextureID());
+            }
+
             backend->BindVertexInput(mesh->vertexInput);
             backend->DrawIndexed(item.indexStart, item.indexCount);
         }
     }
-
-    //清理 pass 结束时的绑定和状态，避免影响下一个相机或覆盖层。
-    backend->SetBlend(false);
-    backend->SetDepthWrite(true);
-    backend->SetDepthTest(true);
-    backend->SetCullMode(CullMode::None);
-    backend->BindVertexInput(GpuVertexInputID());
-    backend->BindShaderProgram(GpuShaderProgramID());
-    backend->EndPass();
 }
 
-void ForwardPipeline::ResolveBuiltinResources()
+void ForwardPipeline::LoadBuiltinShaders()
 {
-    if (!builtinResourcesInvalidated) return;
+    if (!builtinShadersInvalidated) return;
 
     shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
     skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
-    builtinResourcesInvalidated = false;
+    builtinShadersInvalidated = false;
 
     //内置 shader 缺失不会阻止系统运行，但对应 pass 会被跳过。
     if (!shadowDepthShader.Get())
@@ -458,8 +505,8 @@ bool ForwardPipeline::PrepareSkyboxMesh()
 
 bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager)
 {
-    //解析阴影 shader，并确保阴影目标已经准备完成。
-    Shader* sourceShader = ResolveBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
+    //获取阴影 shader，并确保阴影目标已经准备完成。
+    Shader* sourceShader = GetOrLoadBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
     if (!PrepareShadowResources() || !sourceShader) return false;
 
     //阴影 shader 必须先上传到 GPU，之后才能开始深度 pass。
@@ -484,7 +531,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
-        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
+        if (!renderer || !renderer->IsRenderSceneEligible() || renderer->drawQueue != DrawQueue::Opaque) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         Mesh* sourceMesh = state.mesh;
@@ -519,7 +566,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager)
 {
     //天空盒开关或内置 shader 缺失时直接跳过天空盒绘制。
-    Shader* sourceShader = ResolveBuiltinShader(skyboxShader, SkyboxShaderKey);
+    Shader* sourceShader = GetOrLoadBuiltinShader(skyboxShader, SkyboxShaderKey);
     if (!scene.renderSettings.skyboxEnabled || !sourceShader) return;
 
     //天空盒资源和内置立方体网格必须同时有效。

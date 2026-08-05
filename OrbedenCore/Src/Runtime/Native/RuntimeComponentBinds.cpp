@@ -367,6 +367,22 @@ namespace
         return 1;
     }
 
+    //读取 StaticMeshRenderer.drawQueue。
+    uint32 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetDrawQueue(EnsId ens)
+    {
+        StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
+        return renderer ? static_cast<uint32>(renderer->drawQueue) : static_cast<uint32>(DrawQueue::Opaque);
+    }
+
+    //写入 StaticMeshRenderer.drawQueue。
+    void ORBEDEN_NATIVE_CALL NativeStaticMeshRendererSetDrawQueue(EnsId ens, uint32 value)
+    {
+        if (value > static_cast<uint32>(DrawQueue::Refraction)) return;
+
+        StaticMeshRenderer* renderer = GetNativeStaticMeshRenderer(ens);
+        if (renderer) renderer->drawQueue = static_cast<DrawQueue>(value);
+    }
+
     //读取 StaticMeshRenderer.castShadows。
     uint8 ORBEDEN_NATIVE_CALL NativeStaticMeshRendererGetCastShadows(EnsId ens)
     {
@@ -942,6 +958,8 @@ StaticMeshRendererBind StaticMeshRendererBind::Create()
     bind.SetEnabled = reinterpret_cast<void*>(&NativeStaticMeshRendererSetEnabled);
     bind.GetMesh = reinterpret_cast<void*>(&NativeStaticMeshRendererGetMesh);
     bind.SetMesh = reinterpret_cast<void*>(&NativeStaticMeshRendererSetMesh);
+    bind.GetDrawQueue = reinterpret_cast<void*>(&NativeStaticMeshRendererGetDrawQueue);
+    bind.SetDrawQueue = reinterpret_cast<void*>(&NativeStaticMeshRendererSetDrawQueue);
     bind.GetCastShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererGetCastShadows);
     bind.SetCastShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererSetCastShadows);
     bind.GetReceiveShadows = reinterpret_cast<void*>(&NativeStaticMeshRendererGetReceiveShadows);

@@ -763,8 +763,8 @@ namespace
         }
     }
 
-    //解析glTF相对URI为磁盘路径
-    std::string ResolveGltfFileUri(const std::string& sourcePath, const char* uri)
+    //将glTF相对URI转换为磁盘路径
+    std::string ConvertGltfFileUriToPath(const std::string& sourcePath, const char* uri)
     {
         if (!uri || !uri[0] || StartsWith(uri, "data:") || std::string(uri).find("://") != std::string::npos)
         {
@@ -911,7 +911,7 @@ namespace
         }
         else
         {
-            std::string imagePath = ResolveGltfFileUri(sourcePath, image->uri);
+            std::string imagePath = ConvertGltfFileUriToPath(sourcePath, image->uri);
             if (imagePath.empty())
             {
                 collection.AddError("Unsupported glTF image URI: " + textureKey);
@@ -1676,7 +1676,7 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path)
 
     for (cgltf_size index = 0; index < data->buffers_count; ++index)
     {
-        std::string bufferPath = ResolveGltfFileUri(sourcePath, data->buffers[index].uri);
+        std::string bufferPath = ConvertGltfFileUriToPath(sourcePath, data->buffers[index].uri);
         if (!bufferPath.empty()) collection.AddSourceFile(bufferPath);
     }
 

@@ -33,6 +33,16 @@ private:
         int32 height = 0;
     };
 
+    struct ManagedCameraFrameTextures
+    {
+        EnsId cameraEns;
+        GpuDepthTextureID depthTexture;
+        GpuRenderTargetID renderTarget;
+        int32 width = 0;
+        int32 height = 0;
+        bool active = false;
+    };
+
     //窗口提供的 framebuffer 尺寸和生命周期入口
     IWindow* window = nullptr;
 
@@ -66,6 +76,7 @@ private:
 
     //运行时创建的离屏渲染目标及其后端资源
     List<ManagedRenderTarget> renderTargets;
+    List<ManagedCameraFrameTextures> cameraFrameTextures;
     uint32 nextRenderTargetId = 1;
 
     //主 framebuffer 尺寸。
@@ -76,6 +87,7 @@ private:
     bool initialized = false;
     bool warnedMissingCamera = false;
     bool fpsLabelVisible = true;
+    float32 elapsedTime = 0.0f;
 
     //在当前 framebuffer 上绘制渲染系统级调试 UI
     void RenderDebugOverlay();
@@ -87,8 +99,14 @@ private:
     //释放全部离屏渲染目标及其深度资源
     void ReleaseRenderTargets();
 
+    //释放所有相机颜色和深度快照资源
+    void ReleaseCameraFrameTextures();
+
     //准备当前帧相机的目标、像素 viewport 和投影数据
     void PrepareCameraRenderData();
+
+    //查找指定相机持有的颜色和深度快照资源
+    ManagedCameraFrameTextures* FindCameraFrameTextures(EnsId cameraEns);
 
 public:
     //获取资源依赖并初始化窗口渲染后端

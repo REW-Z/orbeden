@@ -113,7 +113,11 @@ namespace
             || uniformName == "u_ShadowBias"
             || uniformName == "u_ShadowStrength"
             || uniformName == "u_UseShadowMap"
-            || uniformName == "u_ReceiveShadows";
+            || uniformName == "u_ReceiveShadows"
+            || uniformName == "u_UseCameraTextures"
+            || uniformName == "u_CameraNearPlane"
+            || uniformName == "u_CameraFarPlane"
+            || uniformName == "u_Time";
     }
 
     //从 uniform 名获取编辑器可读名
@@ -209,6 +213,14 @@ namespace
     float32 GetFloatSlotDefault(const std::string& uniformName)
     {
         if (uniformName == MaterialShininessSlot) return 1.0f;
+        if (uniformName == "u_RefractionStrength") return 0.015f;
+        if (uniformName == "u_DistortionStrength") return 0.01f;
+        if (uniformName == "u_DropletScale") return 12.0f;
+        if (uniformName == "u_NoiseScale") return 16.0f;
+        if (uniformName == "u_FlowSpeed") return 0.25f;
+        if (uniformName == "u_DistortionSpeed") return 0.8f;
+        if (uniformName == "u_EdgeFade") return 0.12f;
+        if (uniformName == "u_Opacity") return 1.0f;
         return 0.0f;
     }
 

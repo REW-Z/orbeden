@@ -49,6 +49,7 @@ public:
     GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) override;
     void DeleteRenderTarget(GpuRenderTargetID id) override;
     GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const override;
+    bool CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc) override;
     GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) override;
     void DeleteShaderProgram(GpuShaderProgramID id) override;
 

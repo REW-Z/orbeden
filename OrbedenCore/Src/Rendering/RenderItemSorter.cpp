@@ -22,21 +22,22 @@ void RenderItemSorter::Sort(VisibleSet& visibleSet)
             return static_cast<uint32>(itemA.drawQueue) < static_cast<uint32>(itemB.drawQueue);
         }
 
-        if (itemA.drawQueue == DrawQueue::Transparent)
+        float32 distanceA = GetSortableDistance(itemA.cameraDistance);
+        float32 distanceB = GetSortableDistance(itemB.cameraDistance);
+        if (itemA.drawQueue != DrawQueue::Opaque)
         {
-            float32 distanceA = GetSortableDistance(itemA.cameraDistance);
-            float32 distanceB = GetSortableDistance(itemB.cameraDistance);
             if (distanceA != distanceB) return distanceA > distanceB;
-            if (itemA.renderer != itemB.renderer) return std::less<StaticMeshRenderer*>()(itemA.renderer, itemB.renderer);
+            if (itemA.ens.id != itemB.ens.id) return itemA.ens.id < itemB.ens.id;
+            if (itemA.ens.version != itemB.ens.version) return itemA.ens.version < itemB.ens.version;
             return itemA.subMeshIndex < itemB.subMeshIndex;
         }
 
+        //不透明物体优先前到后，材质和网格只作为稳定的次级排序。
+        if (distanceA != distanceB) return distanceA < distanceB;
         if (itemA.material != itemB.material) return std::less<Material*>()(itemA.material, itemB.material);
         if (itemA.mesh != itemB.mesh) return std::less<Mesh*>()(itemA.mesh, itemB.mesh);
-        float32 distanceA = GetSortableDistance(itemA.cameraDistance);
-        float32 distanceB = GetSortableDistance(itemB.cameraDistance);
-        if (distanceA != distanceB) return distanceA < distanceB;
-        if (itemA.renderer != itemB.renderer) return std::less<StaticMeshRenderer*>()(itemA.renderer, itemB.renderer);
+        if (itemA.ens.id != itemB.ens.id) return itemA.ens.id < itemB.ens.id;
+        if (itemA.ens.version != itemB.ens.version) return itemA.ens.version < itemB.ens.version;
         return itemA.subMeshIndex < itemB.subMeshIndex;
     });
 }

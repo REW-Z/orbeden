@@ -85,8 +85,8 @@ public static class GUI
         return changed;
     }
 
-    /// <summary>通过当前 ObjectField 数据源解析资源对象。</summary>
-    public static Object? ResolveObjectFieldAsset(Type objectType, string resourceKey)
+    /// <summary>通过当前 ObjectField 数据源加载资源对象。</summary>
+    public static Object? LoadObjectFieldAsset(Type objectType, string resourceKey)
     {
         if (string.IsNullOrEmpty(resourceKey)) return null;
         return objectFieldAssetProvider?.Load(objectType, resourceKey);

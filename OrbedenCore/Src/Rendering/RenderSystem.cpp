@@ -5,6 +5,7 @@
 #include "Runtime/ResourceManager.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -90,6 +91,7 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
 
     gpuResourceManager.Initialize(&backend);
     forwardPipeline.Initialize(&backend);
+    elapsedTime = 0.0f;
 
     //ImGui 是可选覆盖层，初始化失败不影响场景渲染。
     if (!imguiLayer.Initialize(window))
@@ -105,12 +107,14 @@ void RenderSystem::Shutdown()
 {
     //按照使用依赖的逆序释放 UI、离屏目标、管线、缓存和后端。
     imguiLayer.Shutdown();
+    ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
     forwardPipeline.Shutdown();
     gpuResourceManager.Shutdown();
     backend.Shutdown();
     initialized = false;
     window = nullptr;
+    elapsedTime = 0.0f;
 }
 
 void RenderSystem::SetRenderOverlay(IRenderOverlay* overlay)
@@ -234,8 +238,13 @@ void RenderSystem::InvalidateResourceCaches()
 
 void RenderSystem::Render(World& world, float deltaTime)
 {
-    (void)deltaTime;
     if (!initialized || !window) return;
+
+    //仅累加有效的正时间步，避免暂停或异常时间污染 Shader 时间。
+    if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+    {
+        elapsedTime += deltaTime;
+    }
 
     //在新一帧读取场景前释放已销毁对象对应的 GPU 资源。
     gpuResourceManager.ReleaseDestroyedResources();
@@ -339,10 +348,40 @@ void RenderSystem::ReleaseRenderTargets()
     renderTargets.clear();
 }
 
+//释放所有相机颜色和深度快照资源。
+void RenderSystem::ReleaseCameraFrameTextures()
+{
+    for (ManagedCameraFrameTextures& textures : cameraFrameTextures)
+    {
+        backend.DeleteRenderTarget(textures.renderTarget);
+        backend.DeleteDepthTexture(textures.depthTexture);
+    }
+
+    cameraFrameTextures.clear();
+}
+
+//查找指定相机持有的颜色和深度快照资源。
+RenderSystem::ManagedCameraFrameTextures* RenderSystem::FindCameraFrameTextures(EnsId cameraEns)
+{
+    for (ManagedCameraFrameTextures& textures : cameraFrameTextures)
+    {
+        if (textures.cameraEns == cameraEns) return &textures;
+    }
+
+    return nullptr;
+}
+
 void RenderSystem::PrepareCameraRenderData()
 {
+    for (ManagedCameraFrameTextures& textures : cameraFrameTextures)
+    {
+        textures.active = false;
+    }
+
     for (RenderCamera& camera : scene.cameras)
     {
+        camera.elapsedTime = elapsedTime;
+
         //解析相机指定的离屏目标；目标已被删除时使该相机本帧不可绘制。
         const ManagedRenderTarget* target = FindRenderTarget(camera.renderTargetId);
         if (camera.renderTargetId.IsValid() && !target)
@@ -368,6 +407,78 @@ void RenderSystem::PrepareCameraRenderData()
         camera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
         camera.viewProjectionMatrix = RenderMath::Mul(camera.projectionMatrix, camera.viewMatrix);
         camera.viewFrustum = RenderMath::BuildFrustum(camera.viewProjectionMatrix);
+
+        //按相机 viewport 创建或重建独立的颜色和深度快照。
+        ManagedCameraFrameTextures* textures = FindCameraFrameTextures(camera.ens);
+        if (!textures)
+        {
+            ManagedCameraFrameTextures created;
+            created.cameraEns = camera.ens;
+            cameraFrameTextures.push_back(created);
+            textures = &cameraFrameTextures.back();
+        }
+        textures->active = true;
+
+        if (textures->width != camera.viewportWidth || textures->height != camera.viewportHeight ||
+            !textures->depthTexture.IsValid() || !textures->renderTarget.IsValid())
+        {
+            GpuDepthTextureDesc depthDesc;
+            depthDesc.width = camera.viewportWidth;
+            depthDesc.height = camera.viewportHeight;
+            GpuDepthTextureID newDepthTexture = backend.CreateDepthTexture(depthDesc);
+
+            GpuRenderTargetID newRenderTarget;
+            if (newDepthTexture.IsValid())
+            {
+                GpuRenderTargetDesc targetDesc;
+                targetDesc.width = camera.viewportWidth;
+                targetDesc.height = camera.viewportHeight;
+                targetDesc.depthTexture = newDepthTexture;
+                targetDesc.linearColorFilter = true;
+                newRenderTarget = backend.CreateRenderTarget(targetDesc);
+            }
+
+            if (newDepthTexture.IsValid() && newRenderTarget.IsValid())
+            {
+                //新资源完整创建后再替换旧快照，避免尺寸变化时留下半成品。
+                backend.DeleteRenderTarget(textures->renderTarget);
+                backend.DeleteDepthTexture(textures->depthTexture);
+                textures->depthTexture = newDepthTexture;
+                textures->renderTarget = newRenderTarget;
+                textures->width = camera.viewportWidth;
+                textures->height = camera.viewportHeight;
+            }
+            else
+            {
+                backend.DeleteRenderTarget(newRenderTarget);
+                backend.DeleteDepthTexture(newDepthTexture);
+                Log::Error("RenderSystem camera texture setup failed: GPU resource creation failed.");
+            }
+        }
+
+        //只有尺寸与当前 viewport 一致的完整资源才能交给 Refraction Pass。
+        if (textures->width == camera.viewportWidth && textures->height == camera.viewportHeight &&
+            textures->depthTexture.IsValid() && textures->renderTarget.IsValid())
+        {
+            camera.cameraTextureTarget = textures->renderTarget;
+            camera.cameraColorTexture = backend.GetRenderTargetColorTexture(textures->renderTarget);
+            camera.cameraDepthTexture = textures->depthTexture;
+        }
+    }
+
+    //相机注销后立即释放其快照，避免编辑器频繁创建相机时累积 GPU 资源。
+    auto textures = cameraFrameTextures.begin();
+    while (textures != cameraFrameTextures.end())
+    {
+        if (textures->active)
+        {
+            ++textures;
+            continue;
+        }
+
+        backend.DeleteRenderTarget(textures->renderTarget);
+        backend.DeleteDepthTexture(textures->depthTexture);
+        textures = cameraFrameTextures.erase(textures);
     }
 }
 

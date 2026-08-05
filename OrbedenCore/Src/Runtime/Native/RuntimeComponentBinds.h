@@ -74,6 +74,8 @@ public:
     void* SetEnabled = nullptr;
     void* GetMesh = nullptr;
     void* SetMesh = nullptr;
+    void* GetDrawQueue = nullptr;
+    void* SetDrawQueue = nullptr;
     void* GetCastShadows = nullptr;
     void* SetCastShadows = nullptr;
     void* GetReceiveShadows = nullptr;

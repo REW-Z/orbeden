@@ -12,6 +12,8 @@ internal unsafe struct StaticMeshRendererBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetEnabled;
     public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetMesh;
     public delegate* unmanaged[Cdecl]<EnsId, IntPtr, byte> SetMesh;
+    public delegate* unmanaged[Cdecl]<EnsId, uint> GetDrawQueue;
+    public delegate* unmanaged[Cdecl]<EnsId, uint, void> SetDrawQueue;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetCastShadows;
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetReceiveShadows;
@@ -54,6 +56,18 @@ internal static unsafe class StaticMeshRendererBind
     {
         if (!initialized || api.SetMesh == null) return false;
         return api.SetMesh(ens, mesh) != 0;
+    }
+
+    //读取 drawQueue
+    internal static DrawQueue GetDrawQueue(EnsId ens)
+    {
+        return initialized && api.GetDrawQueue != null ? (DrawQueue)api.GetDrawQueue(ens) : DrawQueue.Opaque;
+    }
+
+    //写入 drawQueue
+    internal static void SetDrawQueue(EnsId ens, DrawQueue value)
+    {
+        if (initialized && api.SetDrawQueue != null) api.SetDrawQueue(ens, (uint)value);
     }
 
     //读取 castShadows
