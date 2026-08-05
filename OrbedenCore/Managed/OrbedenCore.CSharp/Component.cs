@@ -68,6 +68,14 @@ public sealed class TransformComponent : Component
     public quaternion worldRotation => TransformComponentBind.GetWorldRotation(Ens.Id);
 }
 
+/// <summary>静态网格绘制队列。</summary>
+public enum DrawQueue : uint
+{
+    Opaque = 0,
+    Transparent = 1,
+    Refraction = 2,
+}
+
 /// <summary>静态网格渲染组件包装。</summary>
 public sealed class StaticMeshRenderer : Component
 {
@@ -92,6 +100,13 @@ public sealed class StaticMeshRenderer : Component
     {
         get => Mesh.FromNative(StaticMeshRendererBind.GetMesh(Ens.Id));
         set => StaticMeshRendererBind.SetMesh(Ens.Id, value?.NativePtr ?? IntPtr.Zero);
+    }
+
+    /// <summary>渲染器所在的原生绘制阶段。</summary>
+    public DrawQueue drawQueue
+    {
+        get => StaticMeshRendererBind.GetDrawQueue(Ens.Id);
+        set => StaticMeshRendererBind.SetDrawQueue(Ens.Id, value);
     }
 
     /// <summary>是否投射阴影。</summary>

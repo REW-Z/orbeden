@@ -178,6 +178,7 @@ void OpenGLRenderBackend::Shutdown()
 
 void OpenGLRenderBackend::BeginFrame()
 {
+    //OpenGL 没有必须显式开始或结束的帧对象。
 }
 
 void OpenGLRenderBackend::EndFrame()
@@ -394,11 +395,12 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     {
         glGenTextures(1, &colorTexture);
         glBindTexture(GL_TEXTURE_2D, colorTexture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        GLint colorFilter = desc.linearColorFilter ? GL_LINEAR : GL_NEAREST;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, colorFilter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, colorFilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, desc.width, desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, desc.width, desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
         boundTexture2Ds[currentTextureSlot] = 0;
     }
@@ -410,13 +412,14 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     if (desc.depthOnly)
     {
         glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
     }
     else
     {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
     }
-    glReadBuffer(GL_NONE);
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -458,6 +461,58 @@ GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID 
     if (it == renderTargetColorAttachments.end() || it->second == 0) return GpuTextureID();
 
     return { it->second };
+}
+
+//把源 viewport 的颜色和深度复制到独立渲染目标。
+bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc)
+{
+    if (!desc.destinationRenderTarget.IsValid() || desc.width <= 0 || desc.height <= 0) return false;
+
+    //非默认源目标和目标快照都必须带有颜色附件。
+    auto destination = renderTargetColorAttachments.find(desc.destinationRenderTarget.id);
+    if (destination == renderTargetColorAttachments.end() || destination->second == 0) return false;
+    if (desc.sourceRenderTarget.IsValid())
+    {
+        auto source = renderTargetColorAttachments.find(desc.sourceRenderTarget.id);
+        if (source == renderTargetColorAttachments.end() || source->second == 0) return false;
+    }
+
+    //分别绑定读写 framebuffer，一次 Blit 同步颜色和深度。
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, desc.sourceRenderTarget.id);
+    glReadBuffer(desc.sourceRenderTarget.IsValid() ? GL_COLOR_ATTACHMENT0 : GL_BACK);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, desc.destinationRenderTarget.id);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glBlitFramebuffer(
+        desc.sourceX,
+        desc.sourceY,
+        desc.sourceX + desc.width,
+        desc.sourceY + desc.height,
+        0,
+        0,
+        desc.width,
+        desc.height,
+        GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
+        GL_NEAREST);
+
+    GLenum error = glGetError();
+
+    //恢复主 pass 的 framebuffer，viewport 和其他管线状态不受 Blit 影响。
+    glBindFramebuffer(GL_FRAMEBUFFER, desc.sourceRenderTarget.id);
+    if (desc.sourceRenderTarget.IsValid())
+    {
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
+    }
+    else
+    {
+        glReadBuffer(GL_BACK);
+    }
+
+    if (error == GL_NO_ERROR) return true;
+
+    std::string message = "OpenGL camera texture copy failed: ";
+    message += ToOpenGLErrorName(error);
+    Log::Error(message.c_str());
+    return false;
 }
 
 GpuShaderProgramID OpenGLRenderBackend::CreateShaderProgram(const GpuShaderProgramDesc& desc)

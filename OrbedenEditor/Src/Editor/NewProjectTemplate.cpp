@@ -263,6 +263,160 @@ void main()
 }
 )ORB";
 
+    constexpr const char* CameraTextureCommonText = R"ORB(--------frag
+uniform sampler2D u_CameraColorTexture;
+uniform sampler2D u_CameraDepthTexture;
+uniform bool u_UseCameraTextures;
+uniform float u_CameraNearPlane;
+uniform float u_CameraFarPlane;
+
+vec2 GetCameraScreenUv(vec4 clipPosition)
+{
+    vec2 ndc = clipPosition.xy / max(clipPosition.w, 0.00001);
+    return ndc * 0.5 + 0.5;
+}
+
+vec2 ClampCameraScreenUv(vec2 uv)
+{
+    return clamp(uv, vec2(0.001), vec2(0.999));
+}
+
+float LinearizeCameraDepth(float depth)
+{
+    float ndcDepth = depth * 2.0 - 1.0;
+    float denominator = u_CameraFarPlane + u_CameraNearPlane - ndcDepth * (u_CameraFarPlane - u_CameraNearPlane);
+    return (2.0 * u_CameraNearPlane * u_CameraFarPlane) / max(denominator, 0.00001);
+}
+
+vec2 RejectForegroundCameraUv(vec2 baseUv, vec2 distortedUv, float surfaceDepth)
+{
+    float sceneDepth = LinearizeCameraDepth(texture(u_CameraDepthTexture, distortedUv).r);
+    float refractorDepth = LinearizeCameraDepth(surfaceDepth);
+    float depthBias = max(u_CameraNearPlane * 0.25, 0.01);
+    return sceneDepth + depthBias < refractorDepth ? baseUv : distortedUv;
+}
+)ORB";
+
+    constexpr const char* RefractionVertexShaderText = R"ORB(#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 2) in vec2 a_TexCoord;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+
+out vec2 v_TexCoord;
+out vec4 v_ClipPosition;
+
+void main()
+{
+    v_TexCoord = a_TexCoord;
+    v_ClipPosition = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+    gl_Position = v_ClipPosition;
+}
+)ORB";
+
+    constexpr const char* RainGlassFragmentShaderText = R"ORB(#version 430 core
+
+#include "Builtin/camera_texture_common.orbinc"
+
+in vec2 v_TexCoord;
+in vec4 v_ClipPosition;
+
+uniform float u_Time;
+uniform float u_RefractionStrength;
+uniform float u_DropletScale;
+uniform float u_FlowSpeed;
+uniform float u_Opacity;
+uniform vec4 u_TintColor;
+
+out vec4 FragColor;
+
+float RandomCell(vec2 cell)
+{
+    return fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+vec2 CalculateRainOffset(vec2 uv)
+{
+    float scale = max(u_DropletScale, 1.0);
+    vec2 scaledUv = uv * scale;
+    vec2 cell = floor(scaledUv);
+    vec2 localUv = fract(scaledUv);
+    float randomValue = RandomCell(cell);
+    float dropY = fract(randomValue + u_Time * max(u_FlowSpeed, 0.0));
+    vec2 delta = localUv - vec2(randomValue, dropY);
+
+    float droplet = 1.0 - smoothstep(0.03, 0.22, length(delta * vec2(1.0, 1.7)));
+    float trailWidth = 1.0 - smoothstep(0.02, 0.08, abs(delta.x));
+    float trailLength = smoothstep(0.0, 0.7, delta.y) * (1.0 - smoothstep(0.7, 0.95, delta.y));
+    float strength = droplet + trailWidth * trailLength * 0.25;
+    return vec2(delta.x, -0.35) * strength * max(u_RefractionStrength, 0.0);
+}
+
+void main()
+{
+    float opacity = clamp(u_Opacity, 0.0, 1.0);
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(u_TintColor.rgb, opacity * 0.12);
+        return;
+    }
+
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    vec2 distortedUv = ClampCameraScreenUv(screenUv + CalculateRainOffset(v_TexCoord));
+    distortedUv = RejectForegroundCameraUv(screenUv, distortedUv, gl_FragCoord.z);
+
+    vec3 sceneColor = texture(u_CameraColorTexture, distortedUv).rgb;
+    vec3 tintedColor = mix(sceneColor, sceneColor * u_TintColor.rgb, 0.25);
+    FragColor = vec4(tintedColor, opacity);
+}
+)ORB";
+
+    constexpr const char* HeatWaveFragmentShaderText = R"ORB(#version 430 core
+
+#include "Builtin/camera_texture_common.orbinc"
+
+in vec2 v_TexCoord;
+in vec4 v_ClipPosition;
+
+uniform float u_Time;
+uniform float u_DistortionStrength;
+uniform float u_NoiseScale;
+uniform float u_DistortionSpeed;
+uniform float u_EdgeFade;
+uniform float u_Opacity;
+uniform vec4 u_TintColor;
+
+out vec4 FragColor;
+
+void main()
+{
+    float opacity = clamp(u_Opacity, 0.0, 1.0);
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(u_TintColor.rgb, opacity * 0.08);
+        return;
+    }
+
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    float scale = max(u_NoiseScale, 1.0);
+    float phase = u_Time * u_DistortionSpeed;
+    float waveX = sin(v_TexCoord.y * scale + phase * 1.7);
+    float waveY = sin(v_TexCoord.x * scale * 0.73 - phase);
+
+    float edgeDistance = min(min(v_TexCoord.x, 1.0 - v_TexCoord.x), min(v_TexCoord.y, 1.0 - v_TexCoord.y));
+    float edgeMask = smoothstep(0.0, max(u_EdgeFade, 0.0001), edgeDistance);
+    vec2 offset = vec2(waveX, waveY) * max(u_DistortionStrength, 0.0) * edgeMask;
+
+    vec2 distortedUv = ClampCameraScreenUv(screenUv + offset);
+    distortedUv = RejectForegroundCameraUv(screenUv, distortedUv, gl_FragCoord.z);
+    vec3 sceneColor = texture(u_CameraColorTexture, distortedUv).rgb;
+    vec3 tintedColor = mix(sceneColor, sceneColor * u_TintColor.rgb, 0.15);
+    FragColor = vec4(tintedColor, opacity * edgeMask);
+}
+)ORB";
+
     constexpr const char* ScriptProjectTemplate = R"ORB(<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -926,7 +1080,10 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/blinn_phong_shadow.orbshader", BlinnPhongVertexShaderText, BlinnPhongFragmentShaderText) && succeeded;
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/shadow_depth.orbshader", ShadowDepthVertexShaderText, ShadowDepthFragmentShaderText) && succeeded;
     succeeded = WriteOrbShaderFile(root / "Resource/Shader/skybox.orbshader", SkyboxVertexShaderText, SkyboxFragmentShaderText) && succeeded;
+    succeeded = WriteOrbShaderFile(root / "Resource/Shader/rain_glass_refraction.orbshader", RefractionVertexShaderText, RainGlassFragmentShaderText) && succeeded;
+    succeeded = WriteOrbShaderFile(root / "Resource/Shader/heat_wave_distortion.orbshader", RefractionVertexShaderText, HeatWaveFragmentShaderText) && succeeded;
     succeeded = WriteTextFile(root / "Resource/Shader/Builtin/shadow_common.orbinc", ShadowCommonText) && succeeded;
+    succeeded = WriteTextFile(root / "Resource/Shader/Builtin/camera_texture_common.orbinc", CameraTextureCommonText) && succeeded;
     succeeded = WriteBinaryFile(root / "Resource/Texture/sky_blue.png", SkyBluePngBytes, sizeof(SkyBluePngBytes)) && succeeded;
 
     //写入 C# 默认脚本工程。

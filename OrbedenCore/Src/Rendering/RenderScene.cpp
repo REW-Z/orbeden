@@ -163,7 +163,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     }
 }
 
-//进入不允许修改组件指针列表的读取阶段
+//进入读取阶段 不允许修改组件指针列表
 void RenderScene::BeginRead()
 {
     readDepth++;

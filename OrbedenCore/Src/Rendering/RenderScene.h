@@ -38,6 +38,9 @@ public:
 
     RenderTargetID renderTargetId;
     GpuRenderTargetID renderTarget;
+    GpuRenderTargetID cameraTextureTarget;
+    GpuTextureID cameraColorTexture;
+    GpuDepthTextureID cameraDepthTexture;
 
     float32 normalizedViewportX = 0.0f;
     float32 normalizedViewportY = 0.0f;
@@ -47,6 +50,7 @@ public:
     int32 viewportY = 0;
     int32 viewportWidth = 0;
     int32 viewportHeight = 0;
+    float32 elapsedTime = 0.0f;
 };
 
 //相机可见渲染器记录
@@ -176,7 +180,7 @@ public:
     //增量刷新变换状态和组件快照
     void Update(World& currentWorld, TransformCache& transformCache);
 
-    //进入不允许修改组件指针列表的读取阶段
+    //读取阶段 不允许修改组件指针列表
     void BeginRead();
 
     //结束读取阶段并应用延迟增删

@@ -21,6 +21,7 @@ enum class DrawQueue : uint32
 {
     Opaque = 0,
     Transparent = 1,
+    Refraction = 2,
 };
 
 //光栅化剔除模式，Auto 由渲染管线解析为基线状态

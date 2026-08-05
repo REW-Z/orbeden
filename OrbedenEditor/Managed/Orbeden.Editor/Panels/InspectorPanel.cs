@@ -399,6 +399,26 @@ internal sealed class InspectorPanel : EditorPanel
                     GUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
                 }
 
+                DrawQueue drawQueue = renderer.drawQueue;
+                if (GUI.BeginCombo("drawQueue", drawQueue.ToString()))
+                {
+                    try
+                    {
+                        foreach (DrawQueue queue in Enum.GetValues<DrawQueue>())
+                        {
+                            if (!GUI.Selectable(queue.ToString(), queue == drawQueue)) continue;
+
+                            renderer.drawQueue = queue;
+                            drawQueue = queue;
+                            EditorApplication.RequestRepaint();
+                        }
+                    }
+                    finally
+                    {
+                        GUI.EndCombo();
+                    }
+                }
+
                 bool castShadows = renderer.castShadows;
                 if (GUI.Checkbox("castShadows", ref castShadows))
                 {
@@ -744,7 +764,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
-            Orbeden.Object? typedValue = GUI.ResolveObjectFieldAsset(type, serialized.Value);
+            Orbeden.Object? typedValue = GUI.LoadObjectFieldAsset(type, serialized.Value);
             string resourceKey = serialized.Value;
             if (!GUI.ObjectField(label, type, ref typedValue, ref resourceKey)) return false;
 
@@ -1059,7 +1079,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
-            value = GUI.ResolveObjectFieldAsset(type, text);
+            value = GUI.LoadObjectFieldAsset(type, text);
             return string.IsNullOrEmpty(text) || value != null;
         }
 

@@ -57,6 +57,19 @@ public:
     int32 height = 0;
     GpuDepthTextureID depthTexture;
     bool depthOnly = false;
+    bool linearColorFilter = false;
+};
+
+//GPU 渲染目标拷贝描述，将源 viewport 的颜色和深度复制到目标起点。
+struct GpuRenderTargetCopyDesc
+{
+public:
+    GpuRenderTargetID sourceRenderTarget;
+    GpuRenderTargetID destinationRenderTarget;
+    int32 sourceX = 0;
+    int32 sourceY = 0;
+    int32 width = 0;
+    int32 height = 0;
 };
 
 //GPU shader 程序创建描述，描述顶点和片元 shader 源码。
@@ -108,6 +121,7 @@ public:
     virtual GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) = 0;
     virtual void DeleteRenderTarget(GpuRenderTargetID id) = 0;
     virtual GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const = 0;
+    virtual bool CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc) = 0;
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;
 
