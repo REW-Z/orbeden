@@ -157,7 +157,7 @@ namespace
     }
 }
 
-//确保窗口销毁时释放 GLFW 资源
+//销毁 GLFW 窗口
 GlfwWindow::~GlfwWindow()
 {
     Destroy();
@@ -321,7 +321,7 @@ void* GlfwWindow::GetNativeHandle() const
 #endif
 }
 
-//获取 GLFW 窗口指针，供后续渲染后端对接
+//获取 GLFW 窗口指针
 GLFWwindow* GlfwWindow::GetGlfwWindow() const
 {
     return window;

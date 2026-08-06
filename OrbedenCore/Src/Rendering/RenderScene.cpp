@@ -39,7 +39,7 @@ void RenderScene::BindWorld(World& currentWorld)
     world = &currentWorld;
     currentRenderScene = this;
 
-    //初次绑定完整收集，后续增删由组件生命周期主动维护
+    //收集世界渲染组件
     currentWorld.ForEachComponent<Camera>([this](Camera* camera)
     {
         if (camera->IsRenderSceneEligible()) RegisterCamera(camera);
@@ -77,7 +77,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     renderSettings = currentWorld.renderSettings;
     transformCache.Update(currentWorld);
 
-    //先让所有引用同一脏 Mesh 的渲染器完成刷新，再统一清除 Render dirty。
+    //刷新脏 Mesh 渲染器
     for (StaticMeshRenderer* renderer : renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible()) continue;
@@ -163,7 +163,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     }
 }
 
-//进入读取阶段 不允许修改组件指针列表
+//进入场景读取阶段
 void RenderScene::BeginRead()
 {
     readDepth++;
@@ -379,7 +379,7 @@ void RenderScene::AddRenderer(StaticMeshRenderer* renderer)
     if (!renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) return;
     if (std::find(renderers.begin(), renderers.end(), renderer) != renderers.end()) return;
 
-    //重新启用的 Renderer 可能错过 Mesh dirty 清除，注册时强制重建运行时快照。
+    //重建渲染器运行时快照
     renderer->renderState = StaticMeshRendererRenderState();
     renderers.push_back(renderer);
     UpdateRenderer(renderer, true);

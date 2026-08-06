@@ -106,7 +106,7 @@ Object* ResourceManager::Load(Type* type, const std::string& key)
     return record ? record->object : nullptr;
 }
 
-//释放所有资源，通常在应用退出时调用
+//释放所有资源
 void ResourceManager::Shutdown()
 {
     auto& records = GetResourceRuntime().records;

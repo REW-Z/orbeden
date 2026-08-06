@@ -160,6 +160,7 @@
     <ClInclude Include="Src\Rendering\TransformCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
+    <ClInclude Include="Src\Runtime\Native\OrbedenEngineNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeResourceBinds.h" />

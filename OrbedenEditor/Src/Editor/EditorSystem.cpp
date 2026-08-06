@@ -45,7 +45,7 @@ namespace
         Stop,
     };
 
-    //绘制不依赖字体字符集的工具栏图标按钮。
+    //绘制工具栏图标按钮
     bool DrawToolbarIconButton(const char* id, ToolbarIcon icon, const ImVec2& size)
     {
         bool clicked = ImGui::Button(id, size);
@@ -340,6 +340,11 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
+    if (!editorGUI.Initialize(app.GetWindow()))
+    {
+        Log::Error("EditorSystem initialize failed: EditorGUI initialize failed.");
+        return;
+    }
     SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
     for (std::unique_ptr<IEditorPanel>& panel : EditorPanelRegistry::CreatePanels(*this))
     {
@@ -354,13 +359,12 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     clrConfig.componentAssemblyPath = ToCleanPath(managedDirectory / "Orbeden.Editor.dll");
     if (clrHost.Initialize(clrConfig))
     {
-        managedBridge.Initialize(clrHost, *this, panelManager, editorScene.GetGizmoApi(), executablePath);
-    }
-
-    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
-    {
-        renderSystem->SetRenderOverlay(this);
-        renderSystem->SetFpsLabelVisible(false);
+        managedBridge.Initialize(clrHost,
+            *this,
+            editorGUI,
+            panelManager,
+            editorScene.GetGizmoApi(),
+            executablePath);
     }
 }
 
@@ -374,18 +378,15 @@ EditorSystem::~EditorSystem()
     managedBridge.Shutdown();
     clrHost.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
-
-    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
-    {
-        renderSystem->SetRenderOverlay(nullptr);
-    }
+    editorGUI.Shutdown();
 }
 
 void EditorSystem::Update(World& world, float deltaTime)
 {
+    float32 mouseWheel = editorGUI.ConsumeSceneMouseWheel();
     if (!playMode.IsPlaying())
     {
-        editorScene.Update(world, deltaTime);
+        editorScene.Update(world, deltaTime, mouseWheel);
     }
 }
 
@@ -408,8 +409,11 @@ bool EditorSystem::NeedsContinuousRepaint() const
     return continuousRepaint || (playMode.IsPlaying() && !app.IsPaused());
 }
 
-void EditorSystem::DrawOverlay()
+void EditorSystem::RenderEditorGUI()
 {
+    if (!editorGUI.IsInitialized()) return;
+
+    editorGUI.BeginFrame();
     DrawMainMenuBar();
     DrawPlayToolbar();
     DrawProjectDialog();
@@ -426,12 +430,7 @@ void EditorSystem::DrawOverlay()
         editorScene.CancelInteraction();
     }
 
-    if (playMode.IsPlaying())
-    {
-        app.GetSystem<ScriptSystem>()->DrawOverlay();
-    }
-
-    //活跃控件保持连续帧，释放鼠标后再补一帧提交本帧产生的修改
+    //更新连续重绘状态
     continuousRepaint = ImGui::IsAnyItemActive();
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)
         || ImGui::IsMouseReleased(ImGuiMouseButton_Right)
@@ -439,6 +438,8 @@ void EditorSystem::DrawOverlay()
     {
         RequestRepaint();
     }
+
+    editorGUI.Render();
 }
 
 void EditorSystem::RequestOpenProjectDialog()

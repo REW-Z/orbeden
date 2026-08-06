@@ -2,6 +2,7 @@
 
 #include "Editor/EditorScene.h"
 #include "Editor/EditorSystem.h"
+#include "Editor/EditorGUI.h"
 #include "Editor/PanelManager.h"
 #include "Editor/Panels/ManagedPanelAdapter.h"
 #include "FileSystem/PathDefines.h"
@@ -10,7 +11,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Runtime/Native/OrbedenNativeApi.h"
+#include "Runtime/Native/OrbedenEngineNativeApi.h"
 
 #include <coreclr_delegates.h>
 #include <algorithm>
@@ -83,7 +84,8 @@ namespace
     struct EditorManagedApi
     {
     public:
-        void* nativeApi = nullptr;
+        void* engineApi = nullptr;
+        EditorGuiNativeApi gui;
         EditorApplicationNativeApi application;
         EditorGizmoApi gizmo;
         EditorPanelNativeApi panels;
@@ -106,7 +108,7 @@ namespace
         return std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length));
     }
 
-    //把 UTF-8 文本复制到托管层提供的缓冲区。
+    //复制 UTF-8 文本到托管缓冲区
     int32 CopyUtf8(const std::string& text, uint8* buffer, int32 bufferSize)
     {
         int32 required = static_cast<int32>(text.size());
@@ -166,7 +168,7 @@ namespace
         if (editor) editor->RequestRepaint();
     }
 
-    //重映射全部存活原生对象的 ObjectRef 字段并使资源缓存失效。
+    //重映射原生对象资源引用
     int32 ORBEDEN_NATIVE_CALL RemapManagedLiveReferences(void* context,
         const uint8* oldKeyText,
         int32 oldKeyLength,
@@ -198,7 +200,7 @@ namespace
             });
         }
 
-        //资源源文件已经变化，清空导入缓存并让 Ref 在下次访问时按新 Key 懒加载。
+        //刷新资源引用缓存
         ResourceManager::Shutdown();
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (editor) editor->RequestRepaint();
@@ -243,6 +245,7 @@ namespace
 
 bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     EditorSystem& editor,
+    EditorGUI& editorGUI,
     PanelManager& panelManager,
     const EditorGizmoApi& gizmoApi,
     const std::string& executablePath)
@@ -257,7 +260,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     std::filesystem::path managedDirectory = GetExecutableDirectory(executablePath) / "Managed";
     std::string editorAssemblyPath = Utf8Path::ToUtf8((managedDirectory / "Orbeden.Editor.dll").lexically_normal());
 
-    //绑定全部托管入口后再允许注册 Panel
+    //绑定托管入口并注册面板
     clrHost = &host;
     ManagedInitializeEditorFn initializeEditor = nullptr;
     if (!clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorInitializeMethod,
@@ -274,11 +277,12 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         return false;
     }
 
-    //初始化托管运行时并同步推送 Panel 元数据
-    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
+    //初始化托管运行时和面板元数据
+    OrbedenEngineNativeApi engineApi = OrbedenEngineNativeApi::Create();
     ManagedPanelRegistrationContext panelContext { &editor, &panelManager };
     EditorManagedApi editorApi;
-    editorApi.nativeApi = &nativeApi;
+    editorApi.engineApi = &engineApi;
+    editorApi.gui = editorGUI.GetNativeApi();
     editorApi.application.context = &editor;
     editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
     editorApi.gizmo = gizmoApi;

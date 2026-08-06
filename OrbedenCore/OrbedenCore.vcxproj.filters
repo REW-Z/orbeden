@@ -75,6 +75,9 @@
     <ClInclude Include="Src\Runtime\Native\NativeCall.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\Native\OrbedenEngineNativeApi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h">
       <Filter>头文件</Filter>
     </ClInclude>

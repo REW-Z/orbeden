@@ -68,7 +68,7 @@ internal static class PlayerBuildPipeline
             Directory.CreateDirectory(outputDirectory);
             string sdkProperty = Path.TrimEndingDirectorySeparator(sdkPath) + Path.DirectorySeparatorChar;
 
-            //只使用本机 SDK/NativeAOT packs 还原发布工具链。
+            //还原本机 NativeAOT 工具链
             string[] restoreArguments =
             [
                 "restore",

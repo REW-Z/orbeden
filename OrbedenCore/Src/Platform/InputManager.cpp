@@ -52,7 +52,7 @@ void InputManager::BeginFrame()
     keyUpThisFrame.fill(false);
 }
 
-//写入按键状态，供平台回调调用
+//写入按键状态
 void InputManager::SetKeyState(KeyEnum key, bool pressed)
 {
     if (!inputEnabled) return;
@@ -72,7 +72,7 @@ void InputManager::SetKeyState(KeyEnum key, bool pressed)
     }
 }
 
-//写入鼠标位置，供平台回调调用
+//写入鼠标位置
 void InputManager::SetMousePosition(float32 x, float32 y)
 {
     if (!inputEnabled) return;

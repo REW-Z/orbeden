@@ -21,7 +21,7 @@ internal static unsafe class EditorPanelRegistry
             return false;
         }
 
-        //先完成构造和元数据读取，避免注册到一半后才发现类型错误
+        //创建面板并读取元数据
         List<(EditorPanel Panel, EditorPanelInfo Info, string TypeName)> candidates = [];
         IEnumerable<Type?> discoveredTypes;
         try
@@ -73,7 +73,7 @@ internal static unsafe class EditorPanelRegistry
             return id != 0 ? id : string.Compare(left.TypeName, right.TypeName, StringComparison.Ordinal);
         });
 
-        //只保存被原生层接受的实例，handle 始终对应 panels 下标
+        //记录已注册面板
         foreach (var (panel, info, _) in candidates)
         {
             byte[] id = Encoding.UTF8.GetBytes(info.Id);
@@ -112,7 +112,7 @@ internal static unsafe class EditorPanelRegistry
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Editor Panel draw failed: {panels[handle].GetType().FullName}: {ex}");
-            GUI.Label($"Panel error: {ex.Message}");
+            EditorGUI.Label($"Panel error: {ex.Message}");
         }
     }
 

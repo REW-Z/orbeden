@@ -22,7 +22,7 @@ namespace
         EndElement,
     };
 
-    //轻量 XML Token，只保存元素名和属性
+    //定义 XML Token
     struct XmlToken
     {
     public:
@@ -102,7 +102,7 @@ namespace
         return result;
     }
 
-    //读取属性，不存在时返回空字符串
+    //读取 XML 属性
     const std::string& GetAttribute(const XmlToken& token, const std::string& name)
     {
         static const std::string empty;
@@ -117,7 +117,7 @@ namespace
         return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_' || ch == '-' || ch == ':' || ch == '.';
     }
 
-    //轻量 Pull XML 读取器，不构建 DOM 树
+    //读取 XML Token 流
     class XmlReader
     {
     private:
@@ -125,7 +125,7 @@ namespace
         usize position = 0;
 
     public:
-        //创建 XML 读取器并接管文本内容
+        //创建 XML 读取器
         explicit XmlReader(std::string content)
             : text(std::move(content))
         {
@@ -185,7 +185,7 @@ namespace
                 token.name = ReadName();
                 if (token.name.empty()) return false;
 
-                //读取属性，直到元素结束
+                //读取元素属性
                 while (position < text.size())
                 {
                     SkipWhitespace();
@@ -408,7 +408,7 @@ namespace
             return false;
         }
 
-        //变换组件复用 Ens 自带实例，其余组件按类型挂载
+        //创建组件实例
         Component* component = type == TransformComponent::StaticType() ? ens.Transform() : ens.AddComponent(type);
         if (!component)
         {
@@ -419,7 +419,7 @@ namespace
 
         if (startToken.emptyElement) return true;
 
-        //读取子 Field 节点，其他未知节点跳过
+        //读取组件字段
         XmlToken token;
         while (reader.Next(token))
         {
@@ -456,7 +456,7 @@ namespace
     //读取 Ens 节点并递归读取子级
     bool ReadEns(XmlReader& reader, World& world, Ens* parent, const XmlToken& startToken)
     {
-        //先创建 Ens，再通过嵌套结构恢复父子关系
+        //创建 Ens 并恢复父子关系
         const std::string& stableId = GetAttribute(startToken, "stableId");
         const std::string& name = GetAttribute(startToken, "name");
         const std::string& localActive = GetAttribute(startToken, "localActive");
@@ -479,7 +479,7 @@ namespace
 
         if (startToken.emptyElement) return true;
 
-        //读取组件和子 Ens，其他未知节点跳过
+        //读取 Ens 内容
         XmlToken token;
         while (reader.Next(token))
         {
@@ -520,7 +520,7 @@ namespace
     {
         if (startToken.emptyElement) return true;
 
-        //World 下只关心根 Ens，其余节点保留向前兼容并跳过
+        //读取根 Ens
         XmlToken token;
         while (reader.Next(token))
         {
@@ -593,7 +593,7 @@ bool WorldSerializer::LoadXml(World& world, const std::string& path)
 {
     Reflection::RegisterGeneratedReflection();
 
-    //缺失文件不是致命错误，由 Application 决定是否继续
+    //读取 World XML 文件
     if (!FileSystem::Exist(path))
     {
         Log::Warning(("World file does not exist: " + path).c_str());
@@ -635,7 +635,7 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
 {
     Reflection::RegisterGeneratedReflection();
 
-    //确保目标目录存在
+    //创建目标目录
     std::filesystem::path filePath = Utf8Path::FromUtf8(path);
     if (filePath.has_parent_path())
     {

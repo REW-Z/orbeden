@@ -160,7 +160,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         }
         catch
         {
-            //坏 MTL 不影响其它资源继续显示。
+            //跳过无效 MTL
         }
     }
 
@@ -200,7 +200,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         }
         catch
         {
-            //坏 glTF 不影响目录浏览，导入器会负责输出具体错误。
+            //跳过无效 glTF
         }
     }
 

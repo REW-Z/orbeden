@@ -571,7 +571,7 @@ internal static class MountedScriptRuntime
         scripts.Clear();
     }
 
-    //创建 AOT 友好的脚本实例，不通过反射构造。
+    //创建脚本实例
     private static ScriptBehaviour? CreateScript(ScriptMount mount, Ens ens)
     {
         return StripAssemblyName(mount.Type) switch

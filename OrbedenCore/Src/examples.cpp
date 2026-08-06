@@ -111,7 +111,7 @@ namespace examples
             Log::Info(line.c_str());
         }
 
-        //Ens 名称已经是运行时记录，不再作为 TransformComponent 字段反射
+        //跳过 Ens 名称字段
         ens->SetName("新名称");
         std::string nameLine = "Ens 名称写入后: " + ens->GetName();
         Log::Info(nameLine.c_str());
@@ -141,7 +141,7 @@ namespace examples
             Log::Info(line.c_str());
         }
 
-        //调用 Object 上的方法，参数和返回值都通过 Reflection::Value 传递
+        //通过反射调用 Object 方法
         Object reflectedObject;
         const Reflection::MethodInfo* setIdMethod = Object::StaticType()->GetMethod("SetInstanceId");
         if (setIdMethod)
@@ -166,7 +166,7 @@ namespace examples
             }
         }
 
-        //调用 Component 上的方法，派生类型实例也可以作为 Object* 传入
+        //通过反射调用 Component 方法
         const Reflection::MethodInfo* getEnsIdMethod = Component::StaticType()->GetMethod("GetEnsId");
         if (getEnsIdMethod)
         {

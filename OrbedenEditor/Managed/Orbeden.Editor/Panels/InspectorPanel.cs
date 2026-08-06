@@ -189,14 +189,14 @@ internal sealed class InspectorPanel : EditorPanel
     {
         if (selectedEns.IsNull)
         {
-            GUI.Label("No Ens selected.");
+            EditorGUI.Label("No Ens selected.");
             return;
         }
 
         Ens ens = Ens.FromId(selectedEns);
         if (!ens.IsValid)
         {
-            GUI.Label("Selected Ens is not alive.");
+            EditorGUI.Label("Selected Ens is not alive.");
             return;
         }
 
@@ -211,14 +211,14 @@ internal sealed class InspectorPanel : EditorPanel
         DrawComponentBlock("Selected Ens", () =>
         {
             string name = ens.Name;
-            if (GUI.InputText("Name", ref name))
+            if (EditorGUI.InputText("Name", ref name))
             {
                 ens.Name = name;
                 EditorApplication.RequestRepaint();
             }
 
-            GUI.Label($"Runtime Id: {selectedEns.id}:{selectedEns.version}");
-            GUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
+            EditorGUI.Label($"Runtime Id: {selectedEns.id}:{selectedEns.version}");
+            EditorGUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
         });
     }
 
@@ -227,7 +227,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         if (string.IsNullOrWhiteSpace(status)) return;
 
-        GUI.Label($"C# Assembly: {status}");
+        EditorGUI.Label($"C# Assembly: {status}");
     }
 
     //卸载仅用于 Inspector 反射的用户程序集上下文。
@@ -355,23 +355,23 @@ internal sealed class InspectorPanel : EditorPanel
             {
                 TransformComponent transform = ens.Transform;
                 vector3 localPosition = transform.localPosition;
-                if (GUI.InputVector3("localPosition", ref localPosition))
+                if (EditorGUI.InputVector3("localPosition", ref localPosition))
                 {
                     transform.localPosition = localPosition;
                     EditorApplication.RequestRepaint();
                 }
 
                 vector3 localScale = transform.localScale;
-                if (GUI.InputVector3("localScale", ref localScale))
+                if (EditorGUI.InputVector3("localScale", ref localScale))
                 {
                     transform.localScale = localScale;
                     EditorApplication.RequestRepaint();
                 }
 
                 quaternion localRotation = transform.localRotation;
-                GUI.Label($"localRotation: {FormatQuaternion(localRotation)}");
-                GUI.Label($"worldPosition: {SerializeVector3(transform.worldPosition)}");
-                GUI.Label($"worldRotation: {FormatQuaternion(transform.worldRotation)}");
+                EditorGUI.Label($"localRotation: {FormatQuaternion(localRotation)}");
+                EditorGUI.Label($"worldPosition: {SerializeVector3(transform.worldPosition)}");
+                EditorGUI.Label($"worldRotation: {FormatQuaternion(transform.worldRotation)}");
             });
         }
 
@@ -381,14 +381,14 @@ internal sealed class InspectorPanel : EditorPanel
             if (renderer != null && DrawCollapsibleComponentBlock("StaticMeshRenderer", $"bound_{selectedEns.id}_StaticMeshRenderer", true, () =>
             {
                 bool enabled = renderer.enabled;
-                if (GUI.Checkbox("enabled", ref enabled))
+                if (EditorGUI.Checkbox("enabled", ref enabled))
                 {
                     renderer.enabled = enabled;
                     EditorApplication.RequestRepaint();
                 }
 
                 Mesh? mesh = renderer.mesh;
-                if (GUI.ObjectField("mesh", ref mesh))
+                if (EditorGUI.ObjectField("mesh", ref mesh))
                 {
                     renderer.mesh = mesh;
                     EditorApplication.RequestRepaint();
@@ -396,17 +396,17 @@ internal sealed class InspectorPanel : EditorPanel
 
                 if (mesh != null && mesh.IsValid)
                 {
-                    GUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
+                    EditorGUI.Label($"mesh stats: {mesh.vertexCount} vertices, {mesh.indexCount} indices, {mesh.subMeshCount} subMeshes");
                 }
 
                 DrawQueue drawQueue = renderer.drawQueue;
-                if (GUI.BeginCombo("drawQueue", drawQueue.ToString()))
+                if (EditorGUI.BeginCombo("drawQueue", drawQueue.ToString()))
                 {
                     try
                     {
                         foreach (DrawQueue queue in Enum.GetValues<DrawQueue>())
                         {
-                            if (!GUI.Selectable(queue.ToString(), queue == drawQueue)) continue;
+                            if (!EditorGUI.Selectable(queue.ToString(), queue == drawQueue)) continue;
 
                             renderer.drawQueue = queue;
                             drawQueue = queue;
@@ -415,19 +415,19 @@ internal sealed class InspectorPanel : EditorPanel
                     }
                     finally
                     {
-                        GUI.EndCombo();
+                        EditorGUI.EndCombo();
                     }
                 }
 
                 bool castShadows = renderer.castShadows;
-                if (GUI.Checkbox("castShadows", ref castShadows))
+                if (EditorGUI.Checkbox("castShadows", ref castShadows))
                 {
                     renderer.castShadows = castShadows;
                     EditorApplication.RequestRepaint();
                 }
 
                 bool receiveShadows = renderer.receiveShadows;
-                if (GUI.Checkbox("receiveShadows", ref receiveShadows))
+                if (EditorGUI.Checkbox("receiveShadows", ref receiveShadows))
                 {
                     renderer.receiveShadows = receiveShadows;
                     EditorApplication.RequestRepaint();
@@ -478,11 +478,11 @@ internal sealed class InspectorPanel : EditorPanel
         IReadOnlyList<ScriptBehaviour> runtimeScripts = ScriptRuntimeRegistry.GetScripts(selectedEns);
         HashSet<ScriptBehaviour> drawnRuntimeScripts = [];
 
-        GUI.Label($"C# Components ({GetBoundComponentCount(ens) + mounts.Count})");
+        EditorGUI.Label($"C# Components ({GetBoundComponentCount(ens) + mounts.Count})");
         DrawBoundComponents(ens, selectedEns);
         if (string.IsNullOrEmpty(stableId))
         {
-            GUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
+            EditorGUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
             DrawComponentBlock("Add C# Component", () => DrawAddComponentControls(ens, stableId, mounts));
             return;
         }
@@ -503,8 +503,8 @@ internal sealed class InspectorPanel : EditorPanel
 
             bool removeRequested = DrawCollapsibleComponentBlock(title, $"script_{stableId}_{mount.Type}", true, () =>
             {
-                GUI.Label($"Type: {mount.Type}");
-                GUI.Label("Serialized Fields");
+                EditorGUI.Label($"Type: {mount.Type}");
+                EditorGUI.Label("Serialized Fields");
                 DrawSerializedScriptFields(mount);
                 DrawMatchingRuntimeScripts(matchingRuntimeScripts);
             });
@@ -534,7 +534,7 @@ internal sealed class InspectorPanel : EditorPanel
         List<Type> availableTypes = GetAvailableComponentTypes(ens, stableId, mounts);
         if (availableTypes.Count == 0)
         {
-            GUI.Label("No C# component types are available.");
+            EditorGUI.Label("No C# component types are available.");
             return;
         }
 
@@ -547,11 +547,11 @@ internal sealed class InspectorPanel : EditorPanel
         }
 
         string preview = string.IsNullOrEmpty(selectedTypeName) ? "Select a C# component" : GetShortTypeName(selectedTypeName);
-        if (GUI.BeginCombo($"Component##add_component_combo_{stableId}", preview))
+        if (EditorGUI.BeginCombo($"Component##add_component_combo_{stableId}", preview))
         {
             try
             {
-                if (GUI.InputText($"Search##add_component_search_{stableId}", ref search))
+                if (EditorGUI.InputText($"Search##add_component_search_{stableId}", ref search))
                 {
                     componentSearches[stableId] = search;
                 }
@@ -564,22 +564,22 @@ internal sealed class InspectorPanel : EditorPanel
 
                     hasMatch = true;
                     bool selected = string.Equals(typeName, selectedTypeName, StringComparison.Ordinal);
-                    if (GUI.Selectable($"{GetShortTypeName(typeName)}##add_component_{stableId}_{typeName}", selected))
+                    if (EditorGUI.Selectable($"{GetShortTypeName(typeName)}##add_component_{stableId}_{typeName}", selected))
                     {
                         selectedTypeName = typeName;
                         selectedAddTypes[stableId] = typeName;
                     }
                 }
 
-                if (!hasMatch) GUI.Label("No matching C# components.");
+                if (!hasMatch) EditorGUI.Label("No matching C# components.");
             }
             finally
             {
-                GUI.EndCombo();
+                EditorGUI.EndCombo();
             }
         }
 
-        if (GUI.Button($"Add Component##add_component_button_{stableId}") && !string.IsNullOrEmpty(selectedTypeName))
+        if (EditorGUI.Button($"Add Component##add_component_button_{stableId}") && !string.IsNullOrEmpty(selectedTypeName))
         {
             Type? selectedType = availableTypes.FirstOrDefault(type => string.Equals(GetScriptTypeName(type), selectedTypeName, StringComparison.Ordinal));
             if (selectedType != null) AddComponent(ens, stableId, selectedType);
@@ -661,7 +661,7 @@ internal sealed class InspectorPanel : EditorPanel
         Type? type = FindScriptType(mount.Type);
         if (type == null)
         {
-            GUI.Label("Build Game C# to edit fields.");
+            EditorGUI.Label("Build Game C# to edit fields.");
             return;
         }
 
@@ -674,7 +674,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (!hasField)
         {
-            GUI.Label("No serialized fields.");
+            EditorGUI.Label("No serialized fields.");
         }
     }
 
@@ -720,7 +720,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(bool))
         {
             bool typedValue = bool.TryParse(serialized.Value, out bool boolValue) && boolValue;
-            if (!GUI.Checkbox(label, ref typedValue)) return false;
+            if (!EditorGUI.Checkbox(label, ref typedValue)) return false;
 
             newValue = typedValue ? "true" : "false";
             return true;
@@ -729,7 +729,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(int))
         {
             int typedValue = int.TryParse(serialized.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue) ? intValue : 0;
-            if (!GUI.InputInt(label, ref typedValue)) return false;
+            if (!EditorGUI.InputInt(label, ref typedValue)) return false;
 
             newValue = typedValue.ToString(CultureInfo.InvariantCulture);
             return true;
@@ -738,7 +738,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(float))
         {
             float typedValue = float.TryParse(serialized.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out float floatValue) ? floatValue : 0.0f;
-            if (!GUI.InputFloat(label, ref typedValue)) return false;
+            if (!EditorGUI.InputFloat(label, ref typedValue)) return false;
 
             newValue = typedValue.ToString(CultureInfo.InvariantCulture);
             return true;
@@ -747,7 +747,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(string))
         {
             string typedValue = serialized.Value;
-            if (!GUI.InputText(label, ref typedValue)) return false;
+            if (!EditorGUI.InputText(label, ref typedValue)) return false;
 
             newValue = typedValue;
             return true;
@@ -756,7 +756,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(vector3))
         {
             vector3 typedValue = ParseVector3(serialized.Value);
-            if (!GUI.InputVector3(label, ref typedValue)) return false;
+            if (!EditorGUI.InputVector3(label, ref typedValue)) return false;
 
             newValue = SerializeVector3(typedValue);
             return true;
@@ -764,15 +764,15 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
-            Orbeden.Object? typedValue = GUI.LoadObjectFieldAsset(type, serialized.Value);
+            Orbeden.Object? typedValue = EditorGUI.LoadObjectFieldAsset(type, serialized.Value);
             string resourceKey = serialized.Value;
-            if (!GUI.ObjectField(label, type, ref typedValue, ref resourceKey)) return false;
+            if (!EditorGUI.ObjectField(label, type, ref typedValue, ref resourceKey)) return false;
 
             newValue = resourceKey;
             return true;
         }
 
-        GUI.Label($"{label}: {type.Name}");
+        EditorGUI.Label($"{label}: {type.Name}");
         return false;
     }
 
@@ -782,7 +782,7 @@ internal sealed class InspectorPanel : EditorPanel
         foreach (ScriptBehaviour script in runtimeScripts)
         {
             Type type = script.GetType();
-            GUI.Label("Runtime Fields");
+            EditorGUI.Label("Runtime Fields");
             DrawScriptMembers(script, type);
         }
     }
@@ -808,28 +808,28 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制一个 Inspector 组件块。
     private void DrawComponentBlock(string title, Action draw)
     {
-        GUI.BeginComponentBlock(title);
+        EditorGUI.BeginComponentBlock(title);
         try
         {
             draw();
         }
         finally
         {
-            GUI.EndComponentBlock();
+            EditorGUI.EndComponentBlock();
         }
     }
 
     //绘制一个可折叠的 Inspector 组件块。
     private bool DrawCollapsibleComponentBlock(string title, string id, bool removable, Action draw)
     {
-        bool expanded = GUI.BeginCollapsibleComponentBlock(title, id, removable, out bool removeRequested);
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock(title, id, removable, out bool removeRequested);
         try
         {
             if (expanded && !removeRequested) draw();
         }
         finally
         {
-            GUI.EndComponentBlock();
+            EditorGUI.EndComponentBlock();
         }
 
         return removeRequested;
@@ -927,46 +927,46 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(bool))
         {
             bool typedValue = value is bool boolValue && boolValue;
-            if (GUI.Checkbox(name, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.Checkbox(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(int))
         {
             int typedValue = value is int intValue ? intValue : 0;
-            if (GUI.InputInt(name, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.InputInt(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(float))
         {
             float typedValue = value is float floatValue ? floatValue : 0.0f;
-            if (GUI.InputFloat(name, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.InputFloat(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(string))
         {
             string typedValue = value as string ?? string.Empty;
-            if (GUI.InputText(name, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.InputText(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (type == typeof(vector3))
         {
             vector3 typedValue = value is vector3 vectorValue ? vectorValue : new vector3();
-            if (GUI.InputVector3(name, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.InputVector3(name, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
             Orbeden.Object? typedValue = value as Orbeden.Object;
-            if (GUI.ObjectField(name, type, ref typedValue)) WriteValue(typedValue);
+            if (EditorGUI.ObjectField(name, type, ref typedValue)) WriteValue(typedValue);
             return;
         }
 
-        GUI.Label($"{name}: {value ?? type.Name}");
+        EditorGUI.Label($"{name}: {value ?? type.Name}");
     }
 
     //查找 sidecar 脚本组件。
@@ -1079,7 +1079,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (typeof(Orbeden.Object).IsAssignableFrom(type))
         {
-            value = GUI.LoadObjectFieldAsset(type, text);
+            value = EditorGUI.LoadObjectFieldAsset(type, text);
             return string.IsNullOrEmpty(text) || value != null;
         }
 

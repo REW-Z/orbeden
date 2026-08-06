@@ -317,10 +317,10 @@ bool World::DestroyEns(EnsId ens)
     TransformComponent* transform = GetTransformComponent(ens);
     if (!transform) return false;
 
-    //先失活，避免从失活父级摘除时短暂重新注册组件
+    //停用待销毁 Ens
     SetEnsLocalActive(ens, false);
 
-    //先解除子级关系
+    //解除子级关系
     EnsId child = transform->firstChild;
     while (!child.IsNull())
     {
@@ -330,7 +330,7 @@ bool World::DestroyEns(EnsId ens)
         child = nextChild;
     }
 
-    //再从父级摘除
+    //解除父级关系
     SetParent(ens, EnsId());
 
     //销毁额外组件
@@ -360,7 +360,7 @@ bool World::DestroyEns(EnsId ens)
     assert(slot.denseIndex < liveEns.size());
     assert(liveEns[slot.denseIndex] == storedEns);
 
-    //从紧凑存活列表中移除，并修正换入Ens的索引
+    //移除 Ens 存活记录
     Ens* movedEns = liveEns.back();
     liveEns[slot.denseIndex] = movedEns;
     liveEns.pop_back();
@@ -422,7 +422,7 @@ void World::SetParent(EnsId child, EnsId parent)
     if (child == parent) return;
     if (!parent.IsNull() && !IsAlive(parent)) return;
 
-    //避免形成循环
+    //检查父级循环
     EnsId current = parent;
     while (!current.IsNull())
     {
@@ -475,21 +475,21 @@ void World::SetParent(EnsId child, EnsId parent)
     RefreshEnsWorldActive(child);
 }
 
-//移动Ens到指定父级，并插入到同级目标之前；目标为空时放到末尾
+//移动 Ens 到指定同级位置
 bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
 {
     TransformComponent* transform = GetTransformComponent(child);
     if (!transform || child == parent || child == beforeSibling) return false;
     if (!parent.IsNull() && !IsAlive(parent)) return false;
 
-    //插入目标必须与目标父级处于同一层。
+    //验证同层插入目标
     if (!beforeSibling.IsNull())
     {
         TransformComponent* beforeTransform = GetTransformComponent(beforeSibling);
         if (!beforeTransform || beforeTransform->parent != parent) return false;
     }
 
-    //禁止把节点挂到自己的后代下。
+    //验证目标父级
     EnsId current = parent;
     while (!current.IsNull())
     {
@@ -502,7 +502,7 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
     transform = GetTransformComponent(child);
     if (!transform || transform->parent != parent) return false;
 
-    //根节点使用 liveEns 的相对顺序，World 序列化和 EnsView 会保持相同顺序。
+    //获取根节点插入位置
     if (parent.IsNull())
     {
         Ens* childEns = GetEns(child);
@@ -520,7 +520,7 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
         return true;
     }
 
-    //SetParent 已将节点放到新父级末尾，无目标时无需继续调整。
+    //处理空插入目标
     if (beforeSibling.IsNull()) return true;
 
     TransformComponent* parentTransform = GetTransformComponent(parent);
@@ -528,7 +528,7 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
     TransformComponent* previous = GetTransformComponent(transform->prev);
     if (!parentTransform || !beforeTransform) return false;
 
-    //从末尾摘下，再插到目标兄弟节点之前。
+    //调整同级节点顺序
     if (previous) previous->next = EnsId();
     parentTransform->lastChild = transform->prev;
 
@@ -590,10 +590,10 @@ bool World::RemoveComponent(EnsId ens, Type* type)
     Component* component = storage ? storage->Get(ens) : nullptr;
     if (!component) return false;
 
-    //先执行卸载回调
+    //执行组件卸载回调
     component->OnDetach();
 
-    //再移除索引和对象
+    //移除组件索引和对象
     Component* removedComponent = storage->Remove(ens);
     assert(removedComponent == component);
 

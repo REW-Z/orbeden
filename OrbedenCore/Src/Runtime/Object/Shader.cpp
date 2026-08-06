@@ -23,7 +23,7 @@ namespace
         return text.size() >= suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
-    //移除 GLSL 注释，避免注释中的 uniform 被反射出来
+    //移除 GLSL 注释
     std::string StripGlslComments(const std::string& source)
     {
         std::string result;
@@ -279,7 +279,7 @@ bool Shader::ReflectSlotsFromSource()
         scanSource(pass.fragmentSource);
     }
 
-    //同名 uniform 不能同时映射成不同材质槽类型
+    //校验 Uniform 材质槽类型
     bool valid = true;
     for (const ShaderTextureSlot& texture : textureSlots)
     {
@@ -306,7 +306,7 @@ void Shader::ReplaceSource(const std::string& vertex, const std::string& fragmen
     ReflectSlotsFromSource();
 }
 
-//替换有序 Pass 列表并刷新兼容源码和材质槽
+//替换有序 Pass 并刷新材质槽
 bool Shader::ReplacePasses(const List<ShaderPass>& value)
 {
     if (value.empty()) return false;

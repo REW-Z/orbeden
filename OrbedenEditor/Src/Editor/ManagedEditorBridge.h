@@ -6,6 +6,7 @@
 #include <string>
 
 class EditorSystem;
+class EditorGUI;
 class PanelManager;
 struct EditorGizmoApi;
 
@@ -26,6 +27,7 @@ public:
     //初始化 Editor 托管桥
     bool Initialize(EditorClrHost& host,
         EditorSystem& editor,
+        EditorGUI& editorGUI,
         PanelManager& panelManager,
         const EditorGizmoApi& gizmoApi,
         const std::string& executablePath);

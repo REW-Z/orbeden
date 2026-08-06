@@ -178,7 +178,6 @@ void OpenGLRenderBackend::Shutdown()
 
 void OpenGLRenderBackend::BeginFrame()
 {
-    //OpenGL 没有必须显式开始或结束的帧对象。
 }
 
 void OpenGLRenderBackend::EndFrame()
@@ -463,12 +462,12 @@ GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID 
     return { it->second };
 }
 
-//把源 viewport 的颜色和深度复制到独立渲染目标。
+//复制渲染目标颜色和深度
 bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc)
 {
     if (!desc.destinationRenderTarget.IsValid() || desc.width <= 0 || desc.height <= 0) return false;
 
-    //非默认源目标和目标快照都必须带有颜色附件。
+    //验证拷贝目标
     auto destination = renderTargetColorAttachments.find(desc.destinationRenderTarget.id);
     if (destination == renderTargetColorAttachments.end() || destination->second == 0) return false;
     if (desc.sourceRenderTarget.IsValid())
@@ -477,7 +476,7 @@ bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCop
         if (source == renderTargetColorAttachments.end() || source->second == 0) return false;
     }
 
-    //分别绑定读写 framebuffer，一次 Blit 同步颜色和深度。
+    //拷贝颜色和深度附件
     glBindFramebuffer(GL_READ_FRAMEBUFFER, desc.sourceRenderTarget.id);
     glReadBuffer(desc.sourceRenderTarget.IsValid() ? GL_COLOR_ATTACHMENT0 : GL_BACK);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, desc.destinationRenderTarget.id);
@@ -496,7 +495,7 @@ bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCop
 
     GLenum error = glGetError();
 
-    //恢复主 pass 的 framebuffer，viewport 和其他管线状态不受 Blit 影响。
+    //恢复主 Pass 帧缓冲
     glBindFramebuffer(GL_FRAMEBUFFER, desc.sourceRenderTarget.id);
     if (desc.sourceRenderTarget.IsValid())
     {

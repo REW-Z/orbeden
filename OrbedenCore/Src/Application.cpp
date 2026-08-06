@@ -82,12 +82,12 @@ bool Application::Initialize()
 {
     if (initialized) return true;
 
-    //注册生成的反射信息，并建立兼容旧静态入口的当前 World
+    //注册反射信息并绑定当前 World
     Reflection::RegisterGeneratedReflection();
     PhysicsReflection::Register();
     World::SetCurrentWorld(&world);
 
-    //所有 Core 系统集中在这里声明，依赖仍由各系统通过 GetSystem 创建
+    //创建内置系统
     if (!GetSystem<Profiler>()
         || !GetSystem<FileSystem>()
         || !GetSystem<InputManager>()
@@ -131,7 +131,7 @@ IEngineSystem* Application::CreateSystem(std::type_index type, std::unique_ptr<I
         return nullptr;
     }
 
-    //系统初始化期间允许通过 GetSystem 递归创建依赖
+    //初始化系统依赖
     initializingSystems.push_back(type);
     bool succeeded = system->OnInitialize(*this);
     initializingSystems.pop_back();
@@ -160,19 +160,19 @@ void Application::ShutdownSystems()
     shuttingDown = false;
 }
 
-//从 XML 文件读取 World，失败时保留空 World 继续运行
+//从 XML 文件读取 World
 bool Application::LoadWorld(const std::string& path)
 {
     if (!Initialize()) return false;
     if (PhysicsSystem* physicsSystem = GetSystem<PhysicsSystem>()) physicsSystem->ResetWorld();
 
-    //读取成功时直接使用反序列化后的 World
+    //替换当前 World
     if (WorldSerializer::LoadXml(world, path))
     {
         return true;
     }
 
-    //启动阶段允许关卡缺失，保持开发期可运行
+    //记录 World 读取失败
     Log::Warning("World load failed, continuing with empty world.");
     world.Clear();
     return false;
@@ -189,13 +189,13 @@ void Application::Tick(float deltaTime)
 {
     if (!Initialize()) return;
 
-    //防御外部宿主传入异常时间
+    //校正帧时间
     if (deltaTime < 0.0f)
     {
         deltaTime = 0.0f;
     }
 
-    //Simulation 关闭或暂停时丢弃固定时间积累
+    //重置固定时间积累
     bool runSimulation = simulationEnabled && !paused;
     if(!runSimulation)
     {
@@ -208,7 +208,7 @@ void Application::Tick(float deltaTime)
 
         /// *** Fixed Update ***
 
-        //按固定步长补跑 FixedUpdate，限制单帧最大补帧次数
+        //补跑固定步长更新
         uint32 fixedStepCount = 0;
         while (fixedAccumulator >= fixedDeltaTime && fixedStepCount < maxFixedStepsPerFrame)
         {
@@ -221,7 +221,7 @@ void Application::Tick(float deltaTime)
             fixedAccumulator -= fixedDeltaTime;
             fixedStepCount++;
         }
-        //过慢帧直接丢弃剩余积累，避免长时间追帧
+        //丢弃剩余时间积累
         if (fixedStepCount == maxFixedStepsPerFrame && fixedAccumulator >= fixedDeltaTime)
         {
             fixedAccumulator = 0.0f;
@@ -238,8 +238,8 @@ void Application::Tick(float deltaTime)
     }
 }
 
-//渲染当前 World 并提交窗口显示
-void Application::RenderFrame(float deltaTime)
+//渲染当前 World
+void Application::Render(float deltaTime)
 {
     if (!Initialize() || !window) return;
 
@@ -248,11 +248,16 @@ void Application::RenderFrame(float deltaTime)
 
     //渲染系统
     renderSystem->Render(world, deltaTime);
+}
 
+//提交窗口显示
+void Application::Present()
+{
+    if (!window) return;
     window->Present();
 }
 
-//进入主循环，直到请求退出
+//运行应用主循环
 void Application::Run()
 {
     if (!Initialize()) return;
@@ -266,7 +271,7 @@ void Application::Run()
     //GameLoop
     while (ShouldKeepRunning())
     {
-        //先清理瞬时输入，再由平台事件写入本帧状态
+        //更新本帧输入状态
         InputManager::BeginFrame();
         window->PollEvents();
         if (window->ShouldClose())
@@ -275,15 +280,17 @@ void Application::Run()
             break;
         }
 
-        //计算本帧真实 deltaTime
+        //计算本帧时间
         auto frameStartTime = Clock::now();
         std::chrono::duration<float> elapsed = frameStartTime - previousTime;
         previousTime = frameStartTime;
 
+        //各系统更新推进
         Tick(elapsed.count());
 
         //渲染
-        RenderFrame(elapsed.count());
+        Render(elapsed.count());
+        Present();
 
         WaitForNextFrame(frameStartTime);
     }
@@ -368,7 +375,7 @@ float Application::GetFixedDeltaTime() const
     return fixedDeltaTime;
 }
 
-//设置固定更新步长，非法值会被忽略
+//设置固定更新步长
 void Application::SetFixedDeltaTime(float value)
 {
     if (value <= 0.0f) return;
@@ -382,7 +389,7 @@ uint32 Application::GetTargetFrameRate() const
     return targetFrameRate;
 }
 
-//设置目标帧率，0 表示不限帧
+//设置目标帧率
 void Application::SetTargetFrameRate(uint32 value)
 {
     targetFrameRate = value;
@@ -436,7 +443,7 @@ void Application::SetWindow(IWindow* newWindow)
     window->SetResizeListener(this);
     OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
 
-    //运行中切换窗口时立即重建渲染后端
+    //重建窗口渲染后端
     if (renderSystem && (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL || !renderSystem->Initialize(window)))
     {
         Log::Error("Application window does not provide a supported graphics API.");

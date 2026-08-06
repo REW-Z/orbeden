@@ -130,7 +130,7 @@ public:
     EditorScene(Application& application, PanelManager& panels, ManagedEditorBridge& bridge);
 
     /// <summary>更新编辑器观察相机。</summary>
-    void Update(World& world, float32 deltaTime);
+    void Update(World& world, float32 deltaTime, float32 mouseWheel);
 
     /// <summary>绘制场景选择、轮廓和托管 Handles。</summary>
     void DrawBackground();

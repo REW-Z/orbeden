@@ -1,21 +1,8 @@
-using System;
-using System.Collections.Generic;
-
 namespace Orbeden;
 
 /// <summary>运行时 Immediate GUI API。</summary>
 public static class GUI
 {
-    private static readonly Dictionary<string, string> ObjectFieldSearches = [];
-    private static IObjectFieldAssetProvider? objectFieldAssetProvider;
-
-    /// <summary>设置 ObjectField 使用的资源数据源。</summary>
-    public static void SetObjectFieldAssetProvider(IObjectFieldAssetProvider? provider)
-    {
-        objectFieldAssetProvider = provider;
-        ObjectFieldSearches.Clear();
-    }
-
     /// <summary>绘制文本标签。</summary>
     public static void Label(string text)
     {
@@ -74,95 +61,6 @@ public static class GUI
     public static bool Selectable(string label, bool selected = false)
     {
         return NativeGui.Selectable(label, selected);
-    }
-
-    /// <summary>绘制一个强类型资源对象引用选择框。</summary>
-    public static bool ObjectField<T>(string label, ref T? value) where T : Object
-    {
-        Object? objectValue = value;
-        bool changed = ObjectField(label, typeof(T), ref objectValue);
-        if (changed) value = objectValue as T;
-        return changed;
-    }
-
-    /// <summary>通过当前 ObjectField 数据源加载资源对象。</summary>
-    public static Object? LoadObjectFieldAsset(Type objectType, string resourceKey)
-    {
-        if (string.IsNullOrEmpty(resourceKey)) return null;
-        return objectFieldAssetProvider?.Load(objectType, resourceKey);
-    }
-
-    /// <summary>绘制一个运行时指定类型的资源对象引用选择框。</summary>
-    public static bool ObjectField(string label, Type objectType, ref Object? value)
-    {
-        string resourceKey = value?.ResourceKey ?? string.Empty;
-        return ObjectField(label, objectType, ref value, ref resourceKey);
-    }
-
-    /// <summary>绘制一个可保留未解析资源 Key 的对象引用选择框。</summary>
-    public static bool ObjectField(string label, Type objectType, ref Object? value, ref string resourceKey)
-    {
-        if (objectType == null || !typeof(Object).IsAssignableFrom(objectType)) return false;
-
-        IReadOnlyList<ObjectFieldOption> options = objectFieldAssetProvider?.GetAssets(objectType) ?? [];
-        string currentKey = resourceKey ?? string.Empty;
-        string preview = string.IsNullOrEmpty(currentKey) ? $"None ({objectType.Name})" : GetObjectFieldDisplayName(currentKey, options);
-        if (!BeginCombo(label, preview)) return false;
-
-        bool changed = false;
-        try
-        {
-            string searchId = $"Search##object_field_{label}";
-            string search = ObjectFieldSearches.TryGetValue(label, out string? savedSearch) ? savedSearch : string.Empty;
-            if (InputText(searchId, ref search)) ObjectFieldSearches[label] = search;
-
-            if (Selectable($"None ({objectType.Name})##object_field_none_{label}", string.IsNullOrEmpty(currentKey)))
-            {
-                value = null;
-                resourceKey = string.Empty;
-                changed = !string.IsNullOrEmpty(currentKey);
-            }
-
-            foreach (ObjectFieldOption option in options)
-            {
-                if (!MatchesObjectFieldSearch(option, search)) continue;
-
-                bool selected = string.Equals(option.ResourceKey, currentKey, StringComparison.Ordinal);
-                if (!Selectable($"{option.DisplayName}##object_field_{label}_{option.ResourceKey}", selected)) continue;
-
-                Object? loaded = objectFieldAssetProvider?.Load(objectType, option.ResourceKey);
-                if (loaded == null || !objectType.IsInstanceOfType(loaded)) continue;
-
-                value = loaded;
-                resourceKey = option.ResourceKey;
-                changed = !selected || currentKey.Length == 0;
-            }
-        }
-        finally
-        {
-            EndCombo();
-        }
-
-        return changed;
-    }
-
-    //读取 ObjectField 当前资源的显示名。
-    private static string GetObjectFieldDisplayName(string resourceKey, IReadOnlyList<ObjectFieldOption> options)
-    {
-        foreach (ObjectFieldOption option in options)
-        {
-            if (string.Equals(option.ResourceKey, resourceKey, StringComparison.Ordinal)) return option.DisplayName;
-        }
-
-        return $"Missing: {resourceKey}";
-    }
-
-    //判断资源选择项是否匹配搜索文本。
-    private static bool MatchesObjectFieldSearch(ObjectFieldOption option, string search)
-    {
-        if (string.IsNullOrWhiteSpace(search)) return true;
-        return option.DisplayName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
-            || option.ResourceKey.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>绘制分隔线。</summary>

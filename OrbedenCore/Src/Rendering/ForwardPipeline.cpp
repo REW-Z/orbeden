@@ -15,44 +15,44 @@ namespace
     constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth.orbshader";
     constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox.orbshader";
 
-    //返回已缓存的内置 shader；缓存对象失效时按资源路径重新加载。
+    //获取内置 Shader
     Shader* GetOrLoadBuiltinShader(Ref<Shader>& shader, const char* key)
     {
-        //优先使用已经加载的资源；无效引用不再重复尝试加载。
+        //读取已缓存的 Shader
         Shader* result = shader.Get();
         if (result || !shader.GetInstanceId().IsValid()) return result;
 
-        //内容资源失效后引用可能只剩实例 ID，此时按固定资源路径重新加载。
+        //重新加载内置 Shader
         result = ResourceManager::Load<Shader>(key);
         shader.Set(result);
         return result;
     }
 
-    //计算三个分量的向量和。
+    //计算向量和
     vector3 Add(const vector3& a, const vector3& b)
     {
         return { a.x + b.x, a.y + b.y, a.z + b.z };
     }
 
-    //计算三个分量的向量差。
+    //计算向量差
     vector3 Sub(const vector3& a, const vector3& b)
     {
         return { a.x - b.x, a.y - b.y, a.z - b.z };
     }
 
-    //按标量缩放向量。
+    //缩放向量
     vector3 Scale(const vector3& value, float32 scale)
     {
         return { value.x * scale, value.y * scale, value.z * scale };
     }
 
-    //判断向量长度是否接近零，避免将无效方向送入矩阵计算。
+    //判断向量是否接近零
     bool IsZero(const vector3& value)
     {
         return RenderMath::Dot(value, value) <= 0.000001f;
     }
 
-    //将 Pass 三态开关转换为本次绘制使用的布尔值。
+    //转换 Pass 三态开关
     bool ConvertPassToggleToBool(ShaderPassToggle value, bool baseline)
     {
         if (value == ShaderPassToggle::On) return true;
@@ -60,19 +60,19 @@ namespace
         return baseline;
     }
 
-    //将 Pass 的 Auto 剔除设置转换为后端使用的具体模式。
+    //转换 Pass 剔除模式
     CullMode ConvertCullModeForBackend(CullMode value)
     {
         return value == CullMode::Auto ? CullMode::None : value;
     }
 
-    //Forward 光照默认使用场景中的第一盏方向光。
+    //查找主方向光
     const RenderDirectionalLight* FindMainLight(const RenderScene& scene)
     {
         return scene.directionalLights.empty() ? nullptr : &scene.directionalLights[0];
     }
 
-    //查找第一盏启用阴影的方向光作为阴影 pass 光源。
+    //查找阴影方向光
     const RenderDirectionalLight* FindShadowLight(const RenderScene& scene)
     {
         for (const RenderDirectionalLight& light : scene.directionalLights)
@@ -83,7 +83,7 @@ namespace
         return nullptr;
     }
 
-    //释放天空盒网格的顶点输入和顶点/索引缓冲。
+    //释放天空盒 GPU 网格
     void DeleteGpuMesh(RenderBackend* backend, GpuMesh& mesh)
     {
         if (!backend) return;
@@ -95,14 +95,14 @@ namespace
     }
 }
 
-//计算所有有效渲染器世界包围盒的整体中心。
+//计算场景包围盒中心
 vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
 {
     bool hasBounds = false;
     vector3 minValue;
     vector3 maxValue;
 
-    //合并每个有效渲染器包围盒的最小点和最大点。
+    //合并渲染器包围盒
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible()) continue;
@@ -128,25 +128,25 @@ vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
         maxValue.z = std::max(maxValue.z, itemMax.z);
     }
 
-    //没有有效几何时回退到世界原点。
+    //返回场景中心
     return hasBounds ? Scale(Add(minValue, maxValue), 0.5f) : vector3();
 }
 
-//根据阴影光源和场景范围构造稳定的正交光源视图投影矩阵。
+//计算阴影视图投影矩阵
 matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light) const
 {
-    //确定光源观察中心，并为无效光源方向提供默认值。
+    //计算光源观察参数
     vector3 center = CalculateSceneCenter(scene);
     vector3 direction = RenderMath::Normalize(light.direction);
     if (IsZero(direction)) direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
 
-    //让阴影范围至少覆盖一个合理区域，并避免 up 与光线方向平行。
+    //计算阴影覆盖范围
     float32 distance = std::max(light.shadowDistance, 4.0f);
     float32 halfSize = std::max(distance * 0.5f, 8.0f);
     vector3 eye = Sub(center, Scale(direction, distance));
     vector3 up = std::abs(RenderMath::Dot(direction, { 0.0f, 1.0f, 0.0f })) > 0.9f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 0.0f, 1.0f, 0.0f };
 
-    //方向光使用正交投影，覆盖以场景中心为基准的阴影区域。
+    //构造正交光源矩阵
     matrix4x4 view = RenderMath::LookAt(eye, center, up);
     matrix4x4 projection = RenderMath::Orthographic(-halfSize, halfSize, -halfSize, halfSize, 0.1f, distance * 2.5f);
     return RenderMath::Mul(projection, view);
@@ -154,14 +154,14 @@ matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene
 
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
-    //记录后端；内置 shader 在首次绘制前按当前内容根目录加载。
+    //绑定渲染后端
     backend = renderBackend;
     builtinShadersInvalidated = true;
 }
 
 void ForwardPipeline::InvalidateResourceCaches()
 {
-    //先释放管线直接持有的后端资源。
+    //释放管线 GPU 资源
     if (backend)
     {
         backend->DeleteRenderTarget(shadowRenderTarget);
@@ -169,7 +169,7 @@ void ForwardPipeline::InvalidateResourceCaches()
         DeleteGpuMesh(backend, skyboxMesh);
     }
 
-    //清空资源引用和当前帧状态，允许后续从新的内容根目录加载。
+    //重置管线资源状态
     shadowRenderTarget = GpuRenderTargetID();
     shadowDepthTexture = GpuDepthTextureID();
     shadowDepthShader.Set(nullptr);
@@ -187,18 +187,19 @@ void ForwardPipeline::Shutdown()
 
 void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& gpuResourceManager)
 {
-    //每帧先清除上一帧的阴影状态，避免资源失效后继续采样旧句柄。
+    //重置阴影帧状态
     shadowReady = false;
     lightViewProjection = matrix4x4();
     if (!backend) return;
 
+    //加载内置 Shader
     LoadBuiltinShaders();
 
-    //没有启用阴影的方向光时，不执行阴影资源创建和深度绘制。
+    //选择阴影方向光
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
     if (!shadowLight) return;
 
-    //为当前场景计算光源矩阵，并准备可供所有相机共享的深度贴图。
+    //渲染阴影贴图
     lightViewProjection = CalculateLightViewProjection(scene, *shadowLight);
     shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, gpuResourceManager);
 }
@@ -207,12 +208,12 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
 {
     if (!backend) return;
 
-    //选择当前相机和本帧使用的主光源；没有阴影光源时回退到第一盏方向光。
+    //选择相机和主方向光
     const RenderCamera& camera = visibleSet.camera;
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
     const RenderDirectionalLight* mainLight = shadowLight ? shadowLight : FindMainLight(scene);
 
-    //建立当前相机的 color pass，并设置默认深度和混合状态。
+    //开始相机主 Pass
     RenderPassDesc passDesc;
     passDesc.x = camera.viewportX;
     passDesc.y = camera.viewportY;
@@ -227,17 +228,19 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->SetBlend(false);
     backend->SetCullMode(CullMode::None);
 
-    //仅在 pass 负责清屏时绘制天空盒，避免覆盖保留内容的目标。
+    //绘制天空盒
     if (camera.clearMode == ClearMode::SolidColor)
     {
         RenderSkybox(scene, camera, gpuResourceManager);
     }
 
-    //按原生队列顺序绘制，普通透明内容会进入后续的相机颜色快照。
+    //绘制不透明队列
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
+
+    //绘制普通透明队列
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
 
-    //一次 GPU 传输冻结当前颜色和深度，Refraction 只采样该快照。
+    //复制相机颜色和深度纹理
     bool cameraTexturesReady = false;
     if (camera.cameraTextureTarget.IsValid() && camera.cameraColorTexture.IsValid() && camera.cameraDepthTexture.IsValid())
     {
@@ -251,9 +254,10 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         cameraTexturesReady = backend->CopyRenderTargetColorAndDepth(copyDesc);
     }
 
+    //绘制折射队列
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
 
-    //清理 pass 结束时的绑定和状态，避免影响下一个相机或覆盖层。
+    //结束相机主 Pass
     backend->SetBlend(false);
     backend->SetDepthWrite(true);
     backend->SetDepthTest(true);
@@ -263,7 +267,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->EndPass();
 }
 
-//按指定队列绘制当前相机的可见项。
+//绘制指定队列的可见项
 void ForwardPipeline::RenderQueueItems(
     const RenderScene& scene,
     const VisibleSet& visibleSet,
@@ -275,13 +279,13 @@ void ForwardPipeline::RenderQueueItems(
     const RenderCamera& camera = visibleSet.camera;
     bool alphaBlended = drawQueue != DrawQueue::Opaque;
 
-    //每个阶段独立记录全局 uniform，确保 Refraction 重新绑定相机纹理。
+    //记录已配置的 Shader Program
     std::unordered_set<uint32> configuredPrograms;
     for (const RenderItem& item : visibleSet.renderItems)
     {
         if (item.drawQueue != drawQueue) continue;
 
-        //获取或上传 GPU 材质；任一资源无效时跳过当前绘制项。
+        //获取绘制资源
         const GpuMaterial* material = gpuResourceManager.GetMaterial(item.material);
         if (!material)
         {
@@ -298,7 +302,7 @@ void ForwardPipeline::RenderQueueItems(
 
         for (const GpuShaderPass& shaderPass : material->shader->passes)
         {
-            //Auto 每次转换为当前队列的基线状态，不继承上一个 Pass。
+            //配置 Shader Pass 状态
             backend->SetDepthTest(ConvertPassToggleToBool(shaderPass.state.depthTest, true));
             backend->SetDepthWrite(ConvertPassToggleToBool(shaderPass.state.depthWrite, !alphaBlended));
             backend->SetBlend(ConvertPassToggleToBool(shaderPass.state.blend, alphaBlended));
@@ -308,7 +312,7 @@ void ForwardPipeline::RenderQueueItems(
 
             if (configuredPrograms.insert(shaderPass.shaderProgram.id).second)
             {
-                //写入相机、时间、环境光以及阴影光源参数。
+                //绑定全局渲染参数
                 backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
                 backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
                 backend->SetUniformVector3("u_CameraPosition", camera.position);
@@ -335,7 +339,7 @@ void ForwardPipeline::RenderQueueItems(
                 }
             }
 
-            //每个 program 都有独立 uniform 状态，因此逐 Pass 写入材质绑定。
+            //绑定材质参数
             for (const GpuMaterialColorBinding& binding : material->colorBindings)
             {
                 backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
@@ -353,7 +357,7 @@ void ForwardPipeline::RenderQueueItems(
                 backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
             }
 
-            //内置阴影和相机纹理紧跟材质纹理槽，避免固定槽位冲突。
+            //绑定内置渲染纹理
             uint32 shadowTextureSlot = static_cast<uint32>(material->textureBindings.size());
             backend->SetUniformInt("u_ShadowMap", static_cast<int32>(shadowTextureSlot));
             backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
@@ -380,11 +384,13 @@ void ForwardPipeline::LoadBuiltinShaders()
 {
     if (!builtinShadersInvalidated) return;
 
+    //阴影深度
     shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
+    //天空盒
     skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
     builtinShadersInvalidated = false;
 
-    //内置 shader 缺失不会阻止系统运行，但对应 pass 会被跳过。
+    //记录内置 Shader 加载错误
     if (!shadowDepthShader.Get())
     {
         Log::Error("ForwardPipeline resource resolve warning: shadow depth shader resource is missing.");
@@ -399,10 +405,10 @@ bool ForwardPipeline::PrepareShadowResources()
 {
     if (!backend) return false;
 
-    //已有完整阴影资源时直接复用，避免每帧重新创建。
+    //复用阴影资源
     if (shadowDepthTexture.IsValid() && shadowRenderTarget.IsValid()) return true;
 
-    //先创建固定尺寸的深度纹理。
+    //创建阴影深度纹理
     GpuDepthTextureDesc depthDesc;
     depthDesc.width = shadowMapSize;
     depthDesc.height = shadowMapSize;
@@ -413,7 +419,7 @@ bool ForwardPipeline::PrepareShadowResources()
         return false;
     }
 
-    //再创建只包含深度附件的阴影渲染目标。
+    //创建阴影渲染目标
     GpuRenderTargetDesc targetDesc;
     targetDesc.width = shadowMapSize;
     targetDesc.height = shadowMapSize;
@@ -428,7 +434,7 @@ bool ForwardPipeline::PrepareShadowResources()
         return false;
     }
 
-    //两项资源均有效后，阴影 pass 才可以开始绘制。
+    //完成阴影资源创建
     return true;
 }
 
@@ -436,10 +442,10 @@ bool ForwardPipeline::PrepareSkyboxMesh()
 {
     if (!backend) return false;
 
-    //天空盒网格是管线内置资源，只在第一次使用时创建。
+    //复用天空盒网格
     if (skyboxMesh.IsValid()) return true;
 
-    //立方体位置占用统一的顶点布局，其他属性填充为默认值。
+    //定义天空盒立方体数据
     constexpr uint32 vertexFloatCount = 11;
     constexpr uint32 vertexStride = vertexFloatCount * sizeof(float32);
     const float32 positions[8][3] =
@@ -463,7 +469,7 @@ bool ForwardPipeline::PrepareSkyboxMesh()
         0, 3, 7, 7, 4, 0,
     };
 
-    //将八个立方体顶点转换为后端统一的交错顶点格式。
+    //构造天空盒顶点数据
     float32 vertexData[8 * vertexFloatCount] = {};
     for (uint32 vertex = 0; vertex < 8; ++vertex)
     {
@@ -473,7 +479,7 @@ bool ForwardPipeline::PrepareSkyboxMesh()
         vertexData[offset + 2] = positions[vertex][2];
     }
 
-    //创建顶点和索引缓冲，并记录天空盒的索引数量。
+    //创建天空盒顶点和索引缓冲
     GpuBufferDesc vertexBufferDesc;
     vertexBufferDesc.data = vertexData;
     vertexBufferDesc.size = sizeof(vertexData);
@@ -486,7 +492,7 @@ bool ForwardPipeline::PrepareSkyboxMesh()
     skyboxMesh.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
     skyboxMesh.indexCount = static_cast<uint32>(sizeof(indices) / sizeof(indices[0]));
 
-    //根据缓冲布局创建顶点输入对象。
+    //创建天空盒顶点输入
     GpuVertexInputDesc inputDesc;
     inputDesc.vertexBuffer = skyboxMesh.vertexBuffer;
     inputDesc.indexBuffer = skyboxMesh.indexBuffer;
@@ -494,7 +500,7 @@ bool ForwardPipeline::PrepareSkyboxMesh()
     skyboxMesh.vertexInput = backend->CreateVertexInput(inputDesc);
     if (!skyboxMesh.IsValid())
     {
-        //任一后端句柄创建失败时，回收已经创建的部分资源。
+        //回收天空盒网格资源
         Log::Error("ForwardPipeline skybox setup failed: cube mesh creation failed.");
         DeleteGpuMesh(backend, skyboxMesh);
         return false;
@@ -505,15 +511,15 @@ bool ForwardPipeline::PrepareSkyboxMesh()
 
 bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager)
 {
-    //获取阴影 shader，并确保阴影目标已经准备完成。
+    //准备阴影 Shader 和渲染目标
     Shader* sourceShader = GetOrLoadBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
     if (!PrepareShadowResources() || !sourceShader) return false;
 
-    //阴影 shader 必须先上传到 GPU，之后才能开始深度 pass。
+    //上传阴影 Shader
     const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
     if (!shader) return false;
 
-    //建立只写深度的光源视角 pass。
+    //开始阴影 Pass
     RenderPassDesc passDesc;
     passDesc.width = shadowMapSize;
     passDesc.height = shadowMapSize;
@@ -527,7 +533,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
     backend->BindShaderProgram(shaderPass.shaderProgram);
     backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
 
-    //使用光源视锥剔除不可能投射到阴影贴图中的对象。
+    //筛选阴影投射物
     frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
@@ -538,7 +544,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
         if (!renderer->castShadows || !sourceMesh) continue;
         if (!RenderMath::Intersects(lightFrustum, state.worldBounds)) continue;
 
-        //阴影 pass 只需要网格和模型矩阵，不绑定材质纹理。
+        //绘制阴影投射物
         const GpuMesh* mesh = gpuResourceManager.GetMesh(sourceMesh);
         if (!mesh) continue;
 
@@ -555,7 +561,7 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
         }
     }
 
-    //解除阴影 pass 的绑定，避免深度 shader 泄漏到后续 color pass。
+    //结束阴影 Pass
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     backend->EndPass();
@@ -565,27 +571,27 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
 void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager)
 {
-    //天空盒开关或内置 shader 缺失时直接跳过天空盒绘制。
+    //获取天空盒 Shader
     Shader* sourceShader = GetOrLoadBuiltinShader(skyboxShader, SkyboxShaderKey);
     if (!scene.renderSettings.skyboxEnabled || !sourceShader) return;
 
-    //天空盒资源和内置立方体网格必须同时有效。
+    //获取天空盒资源
     Skybox* skybox = scene.renderSettings.skybox.Get();
     if (!skybox || !PrepareSkyboxMesh()) return;
 
-    //上传天空盒立方体纹理和 shader，任一资源无效时跳过绘制。
+    //上传天空盒 GPU 资源
     GpuCubeTextureID cubeTexture = gpuResourceManager.GetSkybox(skybox);
     const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
     if (!cubeTexture.IsValid() || !shader) return;
 
-    //移除相机平移，只保留旋转，使天空盒始终围绕相机绘制。
+    //计算天空盒视图投影矩阵
     matrix4x4 view = camera.viewMatrix;
     view.m[12] = 0.0f;
     view.m[13] = 0.0f;
     view.m[14] = 0.0f;
     matrix4x4 viewProjection = RenderMath::Mul(camera.projectionMatrix, view);
 
-    //关闭深度写入后绘制立方体，再恢复主 pass 的默认状态。
+    //绘制天空盒立方体
     backend->SetDepthTest(false);
     backend->SetDepthWrite(false);
     backend->SetBlend(false);

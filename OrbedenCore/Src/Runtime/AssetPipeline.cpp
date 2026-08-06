@@ -102,7 +102,7 @@ namespace
         std::string key;
     };
 
-    //读取文本文件，失败时记录错误
+    //读取文本文件
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection);
 
     //判断字符串前缀
@@ -128,7 +128,7 @@ namespace
         return ResourceManager::ToResourceKey(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).lexically_normal()));
     }
 
-    //解析实际磁盘路径，保持资源 Key 不变但由当前内容根目录决定来源。
+    //解析资源磁盘路径
     std::string GetAssetFilePath(const std::string& path)
     {
         std::string cleanPath = ToCleanPath(path);
@@ -928,7 +928,7 @@ namespace
         return result;
     }
 
-    //读取文本文件，失败时记录错误
+    //读取文本文件
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection)
     {
         std::string filePath = GetAssetFilePath(path);
