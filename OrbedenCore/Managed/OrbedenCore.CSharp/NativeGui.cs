@@ -9,7 +9,7 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct RuntimeGuiApi
 {
-    //所有字符串参数均为 UTF-8 字节，长度不包含结尾零字符。
+    //定义运行时 GUI 函数表
     public delegate* unmanaged[Cdecl]<byte*, int, void> Label;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> Button;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPanel;

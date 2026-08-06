@@ -23,7 +23,7 @@ namespace
         return std::string(reinterpret_cast<const char*>(text), static_cast<size_t>(length));
     }
 
-    //把 UTF-8 字符串写入 C# 提供的缓冲区，并返回完整字节数。
+    //复制 UTF-8 字符串到 C# 缓冲区
     int32 CopyText(const std::string& text, uint8* buffer, int32 bufferSize)
     {
         int32 byteCount = static_cast<int32>(text.size());

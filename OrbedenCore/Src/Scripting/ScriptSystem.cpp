@@ -19,7 +19,7 @@ bool ScriptEntryPoints::IsValid() const
     return initialize && shutdown && update && drawGui;
 }
 
-//获取渲染依赖，并按运行模式准备脚本入口
+//准备脚本系统依赖和入口
 bool ScriptSystem::OnInitialize(Application& app)
 {
     renderSystem = app.GetSystem<RenderSystem>();
@@ -35,8 +35,6 @@ bool ScriptSystem::OnInitialize(Application& app)
     entryPoints.drawGui = &OrbedenGame_DrawGui;
     if (!Initialize()) return false;
 
-    renderSystem->SetRenderOverlay(this);
-    renderOverlayAttached = true;
     return true;
 #else
     Log::Error("ScriptSystem AOT mode is unavailable in this Core build.");
@@ -72,6 +70,8 @@ bool ScriptSystem::Initialize()
 
     OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
     entryPoints.initialize(&nativeApi);
+    renderSystem->SetRenderOverlay(this);
+    renderOverlayAttached = true;
     initialized = true;
     Log::Info(runtimeMode == ScriptRuntimeMode::AOT
         ? "AOT ScriptSystem initialized."

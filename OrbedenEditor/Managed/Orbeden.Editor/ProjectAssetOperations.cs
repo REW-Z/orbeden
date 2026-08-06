@@ -328,7 +328,7 @@ internal sealed class ReferenceRewritePlan
         return plan;
     }
 
-    //使用显式项目路径创建引用计划，供独立验证和工具复用。
+    //创建资源引用计划
     internal static ReferenceRewritePlan CreateForProject(string projectRoot,
         string resourceRootKey,
         string source,
@@ -383,7 +383,7 @@ internal sealed class ReferenceRewritePlan
             }
             catch
             {
-                //尽力回滚，保留最初异常作为操作结果。
+                //忽略回滚错误
             }
         }
         foreach (BinaryRewrite rewrite in binaryApplied.AsEnumerable().Reverse())
@@ -394,7 +394,7 @@ internal sealed class ReferenceRewritePlan
             }
             catch
             {
-                //尽力回滚，保留最初异常作为操作结果。
+                //忽略回滚错误
             }
         }
         applied.Clear();
@@ -657,7 +657,7 @@ internal sealed class ReferenceRewritePlan
         return mapped != value;
     }
 
-    //解析、重映射并重新生成一个源文件依赖路径。
+    //重映射源文件依赖路径
     private bool TryRewriteDependency(string reference,
         string oldOwnerKey,
         string newOwnerKey,

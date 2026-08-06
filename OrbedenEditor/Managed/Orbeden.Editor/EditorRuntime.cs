@@ -11,7 +11,8 @@ public static class EditorRuntime
     [StructLayout(LayoutKind.Sequential)]
     private unsafe struct EditorManagedApi
     {
-        public IntPtr NativeApi;
+        public IntPtr EngineApi;
+        public EditorGuiNativeApi Gui;
         public EditorApplicationNativeApi Application;
         public EditorGizmoApi Gizmo;
         public EditorPanelNativeApi Panels;
@@ -26,21 +27,23 @@ public static class EditorRuntime
         {
             if (editorApi == IntPtr.Zero)
             {
-                OrbedenCoreRuntime.Initialize(IntPtr.Zero);
+                OrbedenCoreRuntime.InitializeEngineBindings(IntPtr.Zero);
+                NativeEditorGUI.Initialize(default);
                 EditorApplication.Initialize(default);
                 Gizmos.Initialize(default);
                 EditorAssetsNative.Initialize(default);
-                GUI.SetObjectFieldAssetProvider(null);
+                EditorGUI.SetObjectFieldAssetProvider(null);
                 return 0;
             }
 
             EditorManagedApi api = *(EditorManagedApi*)editorApi;
-            OrbedenCoreRuntime.Initialize(api.NativeApi);
+            OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
+            NativeEditorGUI.Initialize(api.Gui);
             EditorApplication.Initialize(api.Application);
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
             EditorAssetCatalog.Instance.Refresh();
-            GUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
+            EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
             return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
         }
         catch (Exception ex)

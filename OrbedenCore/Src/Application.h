@@ -98,8 +98,11 @@ public:
     //推进一帧 Simulation 逻辑
     void Tick(float deltaTime);
 
-    //渲染当前 World 并提交窗口显示
-    void RenderFrame(float deltaTime);
+    //渲染当前 World
+    void Render(float deltaTime);
+
+    //提交窗口显示
+    void Present();
 
     //进入主循环，直到请求退出
     void Run();

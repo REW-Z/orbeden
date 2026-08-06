@@ -8,7 +8,7 @@
 
 namespace
 {
-    //计算父节点旋转与局部旋转的组合结果
+    //计算世界旋转
     quaternion Mul(const quaternion& a, const quaternion& b)
     {
         return
@@ -44,7 +44,7 @@ void TransformCache::Update(World& currentWorld)
     changedNodes.clear();
     if (pendingNodes.empty()) return;
 
-    //只处理没有待处理祖先的根，避免同一子树重复遍历
+    //更新脏变换根节点
     List<EnsId> roots;
     for (EnsId ens : pendingNodes)
     {
@@ -91,7 +91,7 @@ void TransformCache::BindWorld(World& currentWorld)
     changedNodes.clear();
     world->AddTransformListener(this);
 
-    //初次绑定只收集层级根节点，递归阶段会覆盖完整世界
+    //收集世界层级根节点
     currentWorld.ForEachEns([this](Ens& ens)
     {
         TransformComponent* transform = ens.Transform();

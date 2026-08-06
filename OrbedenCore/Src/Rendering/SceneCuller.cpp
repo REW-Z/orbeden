@@ -6,11 +6,11 @@
 
 void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, VisibleSet& visibleSet)
 {
-    //复用可见集合容器，并保存本次剔除对应的相机数据。
+    //重置相机可见集合
     visibleSet.Clear();
     visibleSet.camera = camera;
 
-    //先按绘制层过滤，再按相机视锥过滤持久渲染器。
+    //筛选可见渲染器
     uint32 layerMask = camera.drawLayerMask;
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
@@ -21,7 +21,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
         if ((renderer->drawLayer & layerMask) == 0) continue;
         if (!RenderMath::Intersects(camera.viewFrustum, state.worldBounds)) continue;
 
-        //使用对象中心到相机的平方距离，避免排序时进行开方。
+        //计算相机距离平方
         vector3 toItem =
         {
             state.worldPosition.x - camera.position.x,
@@ -29,7 +29,7 @@ void SceneCuller::Cull(const RenderScene& scene, const RenderCamera& camera, Vis
             state.worldPosition.z - camera.position.z,
         };
 
-        //记录渲染器指针和距离，供可见后 SubMesh 展开使用。
+        //记录可见渲染器
         VisibleItem visibleItem;
         visibleItem.renderer = renderer;
         visibleItem.cameraDistance = RenderMath::Dot(toItem, toItem);

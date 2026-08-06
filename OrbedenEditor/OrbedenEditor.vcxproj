@@ -186,6 +186,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\EditorPlayMode.cpp" />
     <ClCompile Include="Src\Editor\EditorScene.cpp" />
     <ClCompile Include="Src\Editor\EditorSystem.cpp" />
+    <ClCompile Include="Src\Editor\EditorGUI.cpp" />
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
@@ -198,6 +199,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\EditorPlayMode.h" />
     <ClInclude Include="Src\Editor\EditorScene.h" />
     <ClInclude Include="Src\Editor\EditorSystem.h" />
+    <ClInclude Include="Src\Editor\EditorGUI.h" />
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorLayoutState.h" />
     <ClInclude Include="Src\Editor\ManagedEditorBridge.h" />
@@ -207,6 +209,8 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
   </ItemGroup>
   <ItemGroup>
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs" />
+    <None Include="Managed\Orbeden.Editor\EditorGUI.cs" />
+    <None Include="Managed\Orbeden.Editor\NativeEditorGUI.cs" />
     <None Include="Managed\Orbeden.Editor\Gizmos.cs" />
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
     <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj" />

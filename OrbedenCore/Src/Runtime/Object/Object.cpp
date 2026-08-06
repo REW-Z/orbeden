@@ -846,7 +846,7 @@ bool Object::DestroyDetachedInstance(Object* object)
 
     ObjectRuntime& runtime = GetObjectRuntime();
 
-    //先通知监听者，使外部缓存记录精确的对象身份，再注销并销毁对象。
+    //通知对象销毁监听者
     List<IObjectDestroyListener*> listeners = runtime.destroyListeners;
     for (IObjectDestroyListener* listener : listeners)
     {

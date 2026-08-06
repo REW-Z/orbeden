@@ -551,7 +551,7 @@ public:
         return cooked;
     }
 
-    //释放指定 CPU Mesh 对应的两类烘焙网格。
+    //释放 Mesh 烘焙网格
     void InvalidateCookedMeshes(Mesh& mesh)
     {
         auto convex = convexMeshes.find(&mesh);
@@ -569,7 +569,7 @@ public:
         }
     }
 
-    //Mesh 析构前释放烘焙缓存，并让仍引用它的 Body 在下次同步时重建。
+    //处理 Mesh 销毁事件
     void OnObjectDestroyed(Object* object) override
     {
         if (!object || !object->Is(Mesh::StaticType())) return;

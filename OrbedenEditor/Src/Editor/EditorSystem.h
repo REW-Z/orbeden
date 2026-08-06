@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Application.h"
+#include "Editor/EditorGUI.h"
 #include "Editor/EditorProject.h"
 #include "Editor/EditorScene.h"
 #include "Editor/ManagedEditorBridge.h"
 #include "Editor/PanelManager.h"
 #include "Editor/EditorPlayMode.h"
-#include "Rendering/RenderSystem.h"
 #include "Runtime/EnsId.h"
 
 #include <atomic>
@@ -14,11 +14,12 @@
 
 class ManagedPanelAdapter;
 
-//编辑器主系统，负责项目菜单和编辑器渲染覆盖层。
-class EditorSystem : public IRenderOverlay
+//编辑器主系统
+class EditorSystem
 {
 private:
     Application& app;
+    EditorGUI editorGUI;
     EditorProject project;
     std::string executablePath;
     std::string dialogDirectory;
@@ -40,7 +41,7 @@ private:
 
 public:
     EditorSystem(Application& application, const char* startupExecutablePath);
-    ~EditorSystem() override;
+    ~EditorSystem();
 
     //每帧更新编辑器状态
     void Update(World& world, float deltaTime);
@@ -54,8 +55,8 @@ public:
     //判断编辑器是否需要连续重绘
     bool NeedsContinuousRepaint() const;
 
-    //绘制编辑器覆盖层
-    void DrawOverlay() override;
+    //绘制 EditorGUI
+    void RenderEditorGUI();
 
     //请求打开项目选择弹窗
     void RequestOpenProjectDialog();

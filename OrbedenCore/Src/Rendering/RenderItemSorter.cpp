@@ -32,7 +32,7 @@ void RenderItemSorter::Sort(VisibleSet& visibleSet)
             return itemA.subMeshIndex < itemB.subMeshIndex;
         }
 
-        //不透明物体优先前到后，材质和网格只作为稳定的次级排序。
+        //排序不透明物体
         if (distanceA != distanceB) return distanceA < distanceB;
         if (itemA.material != itemB.material) return std::less<Material*>()(itemA.material, itemB.material);
         if (itemA.mesh != itemB.mesh) return std::less<Mesh*>()(itemA.mesh, itemB.mesh);

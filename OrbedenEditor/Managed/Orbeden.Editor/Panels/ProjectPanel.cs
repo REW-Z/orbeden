@@ -20,7 +20,6 @@ public readonly struct ProjectAssetContext
         IsDirectory = isDirectory;
     }
 }
-
 /// <summary>允许 Editor 扩展向 ProjectPanel 追加右键菜单项。</summary>
 public static class ProjectContextMenuRegistry
 {
@@ -39,11 +38,11 @@ public static class ProjectContextMenuRegistry
     internal static void Draw(ProjectAssetContext context, Action<string> setStatus)
     {
         if (Items.Count == 0) return;
-        GUI.Separator();
+        EditorGUI.Separator();
         foreach (Item item in Items)
         {
             bool enabled = item.Enabled?.Invoke(context) ?? true;
-            if (!GUI.MenuItem(item.Label, enabled)) continue;
+            if (!EditorGUI.MenuItem(item.Label, enabled)) continue;
             try
             {
                 item.Execute(context);
@@ -143,7 +142,7 @@ internal sealed class ProjectPanel : EditorPanel
     {
         if (!EnsureProject())
         {
-            GUI.Label("No project loaded.");
+            EditorGUI.Label("No project loaded.");
             return;
         }
 
@@ -155,8 +154,8 @@ internal sealed class ProjectPanel : EditorPanel
 
         DrawToolbar();
         DrawPendingOperation();
-        if (!string.IsNullOrEmpty(status)) GUI.Label(status);
-        GUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
+        if (!string.IsNullOrEmpty(status)) EditorGUI.Label(status);
+        EditorGUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
         DrawAssetTable();
     }
 
@@ -215,31 +214,31 @@ internal sealed class ProjectPanel : EditorPanel
     private void DrawToolbar()
     {
         bool atRoot = string.Equals(currentDirectory, EditorAssetCatalog.Instance.ResourceRootPath, StringComparison.OrdinalIgnoreCase);
-        GUI.BeginDisabled(atRoot);
-        if (GUI.Button("Up") && !atRoot)
+        EditorGUI.BeginDisabled(atRoot);
+        if (EditorGUI.Button("Up") && !atRoot)
         {
             currentDirectory = Path.GetDirectoryName(currentDirectory) ?? EditorAssetCatalog.Instance.ResourceRootPath;
             selectedPath = null;
         }
-        GUI.EndDisabled();
+        EditorGUI.EndDisabled();
 
-        GUI.SameLine();
-        if (GUI.Button("Refresh"))
+        EditorGUI.SameLine();
+        if (EditorGUI.Button("Refresh"))
         {
             EditorAssetCatalog.Instance.Refresh();
             status = "Assets refreshed.";
         }
 
         bool canModify = EditorAssetsNative.CanModifyAssets();
-        GUI.SameLine();
-        GUI.BeginDisabled(!canModify);
-        if (GUI.Button("Import...")) ImportFile();
-        GUI.SameLine();
-        if (GUI.Button("Create Folder")) BeginOperation(PendingOperation.CreateFolder, null);
-        GUI.EndDisabled();
+        EditorGUI.SameLine();
+        EditorGUI.BeginDisabled(!canModify);
+        if (EditorGUI.Button("Import...")) ImportFile();
+        EditorGUI.SameLine();
+        if (EditorGUI.Button("Create Folder")) BeginOperation(PendingOperation.CreateFolder, null);
+        EditorGUI.EndDisabled();
 
-        GUI.SameLine();
-        GUI.InputText("Search##project_search", ref search);
+        EditorGUI.SameLine();
+        EditorGUI.InputText("Search##project_search", ref search);
     }
 
     //绘制当前正在确认的文件操作。
@@ -247,30 +246,30 @@ internal sealed class ProjectPanel : EditorPanel
     {
         if (pendingOperation == PendingOperation.None) return;
 
-        GUI.Separator();
+        EditorGUI.Separator();
         switch (pendingOperation)
         {
         case PendingOperation.Rename:
-            GUI.Label("Rename selected asset:");
-            GUI.InputText("Name##project_operation", ref operationValue);
+            EditorGUI.Label("Rename selected asset:");
+            EditorGUI.InputText("Name##project_operation", ref operationValue);
             break;
         case PendingOperation.Move:
-            GUI.Label("Destination folder (project-relative):");
-            GUI.InputText("Folder##project_operation", ref operationValue);
+            EditorGUI.Label("Destination folder (project-relative):");
+            EditorGUI.InputText("Folder##project_operation", ref operationValue);
             break;
         case PendingOperation.Delete:
-            GUI.Label($"Move '{Path.GetFileName(selectedPath)}' to Recycle Bin? Soft references will be cleared.");
+            EditorGUI.Label($"Move '{Path.GetFileName(selectedPath)}' to Recycle Bin? Soft references will be cleared.");
             break;
         case PendingOperation.CreateFolder:
-            GUI.Label("Create folder in the current directory:");
-            GUI.InputText("Name##project_operation", ref operationValue);
+            EditorGUI.Label("Create folder in the current directory:");
+            EditorGUI.InputText("Name##project_operation", ref operationValue);
             break;
         }
 
-        if (GUI.Button("Confirm##project_operation")) ConfirmOperation();
-        GUI.SameLine();
-        if (GUI.Button("Cancel##project_operation")) pendingOperation = PendingOperation.None;
-        GUI.Separator();
+        if (EditorGUI.Button("Confirm##project_operation")) ConfirmOperation();
+        EditorGUI.SameLine();
+        if (EditorGUI.Button("Cancel##project_operation")) pendingOperation = PendingOperation.None;
+        EditorGUI.Separator();
     }
 
     //绘制两列资源列表。
@@ -287,31 +286,31 @@ internal sealed class ProjectPanel : EditorPanel
         }
         catch (Exception ex)
         {
-            GUI.Label("Directory read failed: " + ex.Message);
+            EditorGUI.Label("Directory read failed: " + ex.Message);
             return;
         }
 
-        if (!GUI.BeginTable("##project_assets", 2)) return;
+        if (!EditorGUI.BeginTable("##project_assets", 2)) return;
         try
         {
-            GUI.TableSetupColumn("Name");
-            GUI.TableSetupColumn("Type", 150.0f, fixedWidth: true);
-            GUI.TableHeadersRow();
+            EditorGUI.TableSetupColumn("Name");
+            EditorGUI.TableSetupColumn("Type", 150.0f, fixedWidth: true);
+            EditorGUI.TableHeadersRow();
             foreach (string entry in entries) DrawAssetRow(entry);
         }
         finally
         {
-            GUI.EndTable();
+            EditorGUI.EndTable();
         }
 
-        if (GUI.BeginPopupContextWindow("##project_background_menu"))
+        if (EditorGUI.BeginPopupContextWindow("##project_background_menu"))
         {
             try
             {
                 bool canModify = EditorAssetsNative.CanModifyAssets();
-                if (GUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
-                if (GUI.MenuItem("Import...", canModify)) ImportFile();
-                if (GUI.MenuItem("Refresh"))
+                if (EditorGUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
+                if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
+                if (EditorGUI.MenuItem("Refresh"))
                 {
                     EditorAssetCatalog.Instance.Refresh();
                     status = "Assets refreshed.";
@@ -319,7 +318,7 @@ internal sealed class ProjectPanel : EditorPanel
             }
             finally
             {
-                GUI.EndPopup();
+                EditorGUI.EndPopup();
             }
         }
     }
@@ -329,15 +328,15 @@ internal sealed class ProjectPanel : EditorPanel
     {
         bool directory = Directory.Exists(entry);
         string name = Path.GetFileName(entry);
-        GUI.TableNextRow();
-        GUI.TableSetColumnIndex(0);
-        bool clicked = GUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
+        EditorGUI.TableNextRow();
+        EditorGUI.TableSetColumnIndex(0);
+        bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
             string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase));
-        bool doubleClicked = GUI.IsItemDoubleClicked();
+        bool doubleClicked = EditorGUI.IsItemDoubleClicked();
         if (clicked) selectedPath = entry;
         if (doubleClicked) OpenEntry(entry);
 
-        if (GUI.BeginPopupContextItem("##project_item_menu_" + entry))
+        if (EditorGUI.BeginPopupContextItem("##project_item_menu_" + entry))
         {
             selectedPath = entry;
             try
@@ -346,30 +345,30 @@ internal sealed class ProjectPanel : EditorPanel
             }
             finally
             {
-                GUI.EndPopup();
+                EditorGUI.EndPopup();
             }
         }
 
-        GUI.TableSetColumnIndex(1);
-        GUI.Label(EditorAssetCatalog.Instance.GetSourceType(entry));
+        EditorGUI.TableSetColumnIndex(1);
+        EditorGUI.Label(EditorAssetCatalog.Instance.GetSourceType(entry));
     }
 
     //绘制一个资源条目的右键菜单。
     private void DrawItemContextMenu(string entry, bool directory)
     {
         bool canModify = EditorAssetsNative.CanModifyAssets();
-        if (GUI.MenuItem("Open")) OpenEntry(entry);
-        GUI.Separator();
-        if (GUI.MenuItem("Rename", canModify)) BeginOperation(PendingOperation.Rename, entry);
-        if (GUI.MenuItem("Move...", canModify)) BeginOperation(PendingOperation.Move, entry);
-        if (GUI.MenuItem("Duplicate", canModify))
+        if (EditorGUI.MenuItem("Open")) OpenEntry(entry);
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Rename", canModify)) BeginOperation(PendingOperation.Rename, entry);
+        if (EditorGUI.MenuItem("Move...", canModify)) BeginOperation(PendingOperation.Move, entry);
+        if (EditorGUI.MenuItem("Duplicate", canModify))
         {
             if (ProjectAssetOperations.Duplicate(entry, out string duplicate, out status)) selectedPath = duplicate;
         }
-        if (GUI.MenuItem("Delete", canModify)) BeginOperation(PendingOperation.Delete, entry);
-        GUI.Separator();
-        if (GUI.MenuItem("Reveal in Explorer")) EditorAssetCatalog.Reveal(entry);
-        if (GUI.MenuItem("Copy Resource Key")) GUI.SetClipboardText(EditorAssetCatalog.Instance.ToResourceKey(entry));
+        if (EditorGUI.MenuItem("Delete", canModify)) BeginOperation(PendingOperation.Delete, entry);
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Reveal in Explorer")) EditorAssetCatalog.Reveal(entry);
+        if (EditorGUI.MenuItem("Copy Resource Key")) EditorGUI.SetClipboardText(EditorAssetCatalog.Instance.ToResourceKey(entry));
 
         ProjectAssetContext context = new(entry, EditorAssetCatalog.Instance.ToResourceKey(entry), directory);
         ProjectContextMenuRegistry.Draw(context, value => status = value);

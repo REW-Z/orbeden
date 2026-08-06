@@ -30,7 +30,8 @@ bool ImGuiLayer::Initialize(IWindow* window)
     }
 
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    context = ImGui::CreateContext();
+    ImGui::SetCurrentContext(context);
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
@@ -40,7 +41,8 @@ bool ImGuiLayer::Initialize(IWindow* window)
     if (!ImGui_ImplGlfw_InitForOpenGL(glfwWindow->GetGlfwWindow(), true))
     {
         Log::Warning("ImGuiLayer initialize skipped: GLFW backend initialize failed.");
-        ImGui::DestroyContext();
+        ImGui::DestroyContext(context);
+        context = nullptr;
         return false;
     }
 
@@ -48,7 +50,8 @@ bool ImGuiLayer::Initialize(IWindow* window)
     {
         Log::Warning("ImGuiLayer initialize skipped: OpenGL3 backend initialize failed.");
         ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
+        ImGui::DestroyContext(context);
+        context = nullptr;
         return false;
     }
 
@@ -60,9 +63,11 @@ void ImGuiLayer::Shutdown()
 {
     if (!initialized) return;
 
+    ImGui::SetCurrentContext(context);
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    ImGui::DestroyContext(context);
+    context = nullptr;
     initialized = false;
 }
 
@@ -70,6 +75,7 @@ void ImGuiLayer::BeginFrame()
 {
     if (!initialized) return;
 
+    ImGui::SetCurrentContext(context);
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -79,6 +85,7 @@ void ImGuiLayer::DrawFpsLabel()
 {
     if (!initialized) return;
 
+    ImGui::SetCurrentContext(context);
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const ImVec2 position = ImVec2(viewport->WorkPos.x + 8.0f, viewport->WorkPos.y + 8.0f);
     constexpr ImGuiWindowFlags flags =
@@ -103,6 +110,7 @@ void ImGuiLayer::Render()
 {
     if (!initialized) return;
 
+    ImGui::SetCurrentContext(context);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

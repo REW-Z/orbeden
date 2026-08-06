@@ -85,7 +85,7 @@ void* HeapAllocator::Allocate(uint32 size, uint32 alignment, bool isArray)
 
     std::byte* alignedAddr = tmpAddr + byteAdjustment;
 
-    //记录释放时回退到原始地址所需的偏移
+    //记录原始地址偏移
     uint32* adjustmentMark = reinterpret_cast<uint32*>(alignedAddr - sizeof(uint32));
     *adjustmentMark = byteAdjustment + static_cast<uint32>(sizeof(uint32));
 
@@ -497,7 +497,7 @@ void ChunkSlotAllocator::VisitAliveSlots(ChunkSlotVisitorFunction visitor, void*
     }
 }
 
-//临时使用堆分配，后续再按尺寸分桶
+//分配临时堆内存
 void* SlabAllocator::Allocate(uint32 size, uint32 alignment, bool isArray)
 {
     return Memory::GetHeapAllocator()->Allocate(size, alignment, isArray);

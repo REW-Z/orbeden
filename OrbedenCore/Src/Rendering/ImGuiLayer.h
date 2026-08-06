@@ -3,12 +3,14 @@
 #include "Defines/types.h"
 
 class IWindow;
+struct ImGuiContext;
 
 //ImGui 调试 UI 层，负责 GLFW/OpenGL 后端接入和调试 overlay 绘制
 class ImGuiLayer
 {
 private:
     bool initialized = false;
+    ImGuiContext* context = nullptr;
 
 public:
     //初始化 ImGui GLFW/OpenGL 后端

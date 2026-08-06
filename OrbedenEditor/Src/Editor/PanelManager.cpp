@@ -366,7 +366,7 @@ PanelManager::DockNode& PanelManager::CreateDockNode()
     return dockNodes.back();
 }
 
-//建立类似 Unity Editor 的默认布局，并保留中央场景区域。
+//建立默认编辑器布局
 void PanelManager::BuildDefaultDockLayout()
 {
     dockNodes.clear();
@@ -731,7 +731,7 @@ bool PanelManager::IsRootDockPlacement(PanelDockPlacement placement) const
         || placement == PanelDockPlacement::Bottom;
 }
 
-//在 Dock 树绘制完成后统一执行结构修改，避免递归绘制期间节点地址失效。
+//提交 Dock 树结构修改
 void PanelManager::ApplyPendingCommands()
 {
     if (pendingDock.pending)
@@ -988,7 +988,7 @@ void PanelManager::SynchronizeDockAssignments()
     }
 }
 
-//优先寻找空的中央叶子，否则返回第一个可停靠叶子。
+//查找可停靠叶子
 int32 PanelManager::FindBestDockTarget(int32 nodeId) const
 {
     const DockNode* node = FindDockNode(nodeId);

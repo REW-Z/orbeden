@@ -35,9 +35,6 @@ namespace
     constexpr uint8 ExplicitSelection = 1;
     constexpr uint8 DescendantSelection = 2;
 
-    float32 ScrollDelta = 0.0f;
-    GLFWscrollfun ChainedScrollCallback = nullptr;
-    bool ScrollCallbackInstalled = false;
     EditorScene* CurrentGizmoScene = nullptr;
 
     struct WeldKey
@@ -153,19 +150,6 @@ namespace
         return !windowBackgroundActive;
     }
 
-    //累积 GLFW 滚轮输入并转发原回调。
-    void EditorScrollCallback(GLFWwindow* window, double xOffset, double yOffset)
-    {
-        static thread_local bool inCallback = false;
-        if (inCallback) return;
-        inCallback = true;
-
-        ScrollDelta += static_cast<float32>(yOffset);
-        if (ChainedScrollCallback) ChainedScrollCallback(window, xOffset, yOffset);
-
-        inCallback = false;
-    }
-
     //把 EnsId 合并为本帧查找键。
     uint64 GetEnsKey(EnsId ens)
     {
@@ -252,7 +236,7 @@ EditorScene::EditorScene(Application& application, PanelManager& panels, Managed
 }
 
 //更新编辑器观察相机。
-void EditorScene::Update(World& world, float32 deltaTime)
+void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
 {
     (void)deltaTime;
     CreateEditorCamera(world);
@@ -315,25 +299,18 @@ void EditorScene::Update(World& world, float32 deltaTime)
             cameraMouseMode = 0;
         }
 
-        //安装一次 GLFW 滚轮回调并应用本帧增量。
-        if (!ScrollCallbackInstalled)
-        {
-            ChainedScrollCallback = glfwSetScrollCallback(window, EditorScrollCallback);
-            ScrollCallbackInstalled = true;
-        }
-        if (ScrollDelta != 0.0f)
+        //移动场景相机
+        if (mouseWheel != 0.0f)
         {
             vector3 forward = GetForward(cameraYaw, cameraPitch);
             transform->SetLocalPosition(Add(transform->GetLocalPosition(),
-                Scale(forward, ScrollDelta * cameraMoveSpeed * 0.5f)));
-            ScrollDelta = 0.0f;
+                Scale(forward, mouseWheel * cameraMoveSpeed * 0.5f)));
         }
     }
     else
     {
         cameraMouseDragging = false;
         cameraMouseMode = 0;
-        ScrollDelta = 0.0f;
     }
 
     transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
@@ -371,7 +348,6 @@ void EditorScene::CancelInteraction()
     cameraMouseMode = 0;
     selectionPressed = false;
     selectionDragged = false;
-    ScrollDelta = 0.0f;
 }
 
 //清空选择和场景绘制缓存。

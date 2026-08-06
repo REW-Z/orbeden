@@ -56,7 +56,9 @@ int main(int argc, char** argv)
 
             app.Tick(deltaTime);
             editorSystem.Update(app.GetWorld(), deltaTime);
-            app.RenderFrame(deltaTime);
+            app.Render(deltaTime);
+            editorSystem.RenderEditorGUI();
+            app.Present();
             if (continuousRepaint) app.WaitForNextFrame(frameStartTime);
         }
     }
