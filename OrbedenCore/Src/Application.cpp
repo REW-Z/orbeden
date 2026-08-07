@@ -18,16 +18,19 @@
 
 namespace
 {
+    //计算允许帧率最多快 1 FPS 时的帧时间容差
     std::chrono::steady_clock::duration CalculateFrameTimeTolerance(uint32 targetFrameRate)
     {
         if (targetFrameRate == 0) return std::chrono::steady_clock::duration::zero();
 
+        //计算目标帧时间与最快可接受帧时间
         double targetFrameSeconds = 1.0 / static_cast<double>(targetFrameRate);
         double acceptedFastFrameSeconds = 1.0 / static_cast<double>(targetFrameRate + 1);
         return std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(targetFrameSeconds - acceptedFastFrameSeconds));
     }
 
+    //等待至可接受的目标帧结束时间
     void WaitUntilFrameTime(std::chrono::steady_clock::time_point targetTime, uint32 targetFrameRate)
     {
         using Clock = std::chrono::steady_clock;
@@ -36,11 +39,14 @@ namespace
         constexpr auto sleepPadding = std::chrono::microseconds(100);
         static int64 estimatedSleepUs = 1000;
 
+        //计算可接受的帧结束时间
         auto acceptedTime = targetTime - CalculateFrameTimeTolerance(targetFrameRate);
         while (Clock::now() < acceptedTime)
         {
             auto remaining = acceptedTime - Clock::now();
             auto sleepGuard = Microseconds(estimatedSleepUs) + sleepPadding;
+
+            //根据剩余时间执行短睡眠或线程让出
             if (remaining > sleepGuard)
             {
                 auto sleepStart = Clock::now();
@@ -48,6 +54,8 @@ namespace
                 auto sleepEnd = Clock::now();
 
                 int64 sleptUs = std::chrono::duration_cast<Microseconds>(sleepEnd - sleepStart).count();
+
+                //更新预估睡眠耗时
                 if (sleptUs > estimatedSleepUs)
                 {
                     estimatedSleepUs = sleptUs;
