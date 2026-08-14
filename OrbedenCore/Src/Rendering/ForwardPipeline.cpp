@@ -228,16 +228,16 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->SetBlend(false);
     backend->SetCullMode(CullMode::None);
 
-    //绘制天空盒
+    //绘制 [天空盒]
     if (camera.clearMode == ClearMode::SolidColor)
     {
         RenderSkybox(scene, camera, gpuResourceManager);
     }
 
-    //绘制不透明队列
+    //绘制 [不透明队列]
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
 
-    //绘制普通透明队列
+    //绘制 [普通透明队列]
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
 
     //复制相机颜色和深度纹理
@@ -254,7 +254,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         cameraTexturesReady = backend->CopyRenderTargetColorAndDepth(copyDesc);
     }
 
-    //绘制折射队列
+    //绘制 [折射队列]
     RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
 
     //结束相机主 Pass
