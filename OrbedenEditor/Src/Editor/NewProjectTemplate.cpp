@@ -484,6 +484,7 @@ public static class GameModule
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_DrawGui", CallConvs = [typeof(CallConvCdecl)])]
     public static void OrbedenGame_DrawGui()
     {
+        MountedScriptRuntime.DrawGUI();
         GuiOverlay.Draw();
     }
 }
@@ -556,6 +557,18 @@ internal static class MountedScriptRuntime
             if (script.Ens.IsValid)
             {
                 script.InvokeUpdate(deltaTime);
+            }
+        }
+    }
+
+    /// <summary>绘制已挂载脚本的运行时 GUI。</summary>
+    public static void DrawGUI()
+    {
+        foreach (ScriptBehaviour script in scripts)
+        {
+            if (script.Ens.IsValid)
+            {
+                script.InvokeDrawGUI();
             }
         }
     }
