@@ -89,8 +89,8 @@ private:
     bool fpsLabelVisible = true;
     float32 elapsedTime = 0.0f;
 
-    //在当前 framebuffer 上绘制渲染系统级调试 UI
-    void RenderDebugOverlay();
+    //在主 framebuffer 上绘制运行时 GUI 和调试覆盖层
+    void RenderOverlayPass();
 
     //按逻辑 ID 查找离屏渲染目标
     ManagedRenderTarget* FindRenderTarget(RenderTargetID id);

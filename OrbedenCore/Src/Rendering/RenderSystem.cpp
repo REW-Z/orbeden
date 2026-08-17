@@ -279,8 +279,8 @@ void RenderSystem::Render(World& world, float deltaTime)
         backend.BeginPass(passDesc);
         backend.EndPass();
 
-        //绘制无相机调试覆盖层
-        RenderDebugOverlay();
+        //绘制无相机场景的覆盖层
+        RenderOverlayPass();
         backend.EndFrame();
         scene.EndRead();
         return;
@@ -302,7 +302,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     }
 
     //结束渲染帧
-    RenderDebugOverlay();
+    RenderOverlayPass();
     backend.EndFrame();
     scene.EndRead();
 }
@@ -482,11 +482,11 @@ void RenderSystem::PrepareCameraRenderData()
     }
 }
 
-void RenderSystem::RenderDebugOverlay()
+void RenderSystem::RenderOverlayPass()
 {
     if (!imguiLayer.IsInitialized()) return;
 
-    //开始调试覆盖层 Pass
+    //开始 GUI 覆盖层 Pass
     RenderPassDesc passDesc;
     passDesc.width = framebufferWidth;
     passDesc.height = framebufferHeight;
@@ -495,7 +495,7 @@ void RenderSystem::RenderDebugOverlay()
 
     imguiLayer.BeginFrame();
 
-    //绘制调试覆盖层
+    //绘制运行时 GUI 和调试信息
     if (renderOverlay)
     {
         renderOverlay->DrawOverlay();
@@ -505,7 +505,7 @@ void RenderSystem::RenderDebugOverlay()
         imguiLayer.DrawFpsLabel();
     }
 
-    //结束调试覆盖层 Pass
+    //结束 GUI 覆盖层 Pass
     imguiLayer.Render();
     backend.EndPass();
 }
