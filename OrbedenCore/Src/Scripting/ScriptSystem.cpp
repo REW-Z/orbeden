@@ -19,6 +19,17 @@ bool ScriptEntryPoints::IsValid() const
     return initialize && shutdown && update && drawGui;
 }
 
+#if defined(ORBEDEN_PLAYER)
+//绑定 NativeAOT 游戏模块的链接期导出入口
+void ScriptSystem::SetAotEntryPoints()
+{
+    entryPoints.initialize = &OrbedenGame_Initialize;
+    entryPoints.shutdown = &OrbedenGame_Shutdown;
+    entryPoints.update = &OrbedenGame_Update;
+    entryPoints.drawGui = &OrbedenGame_DrawGui;
+}
+#endif
+
 //准备脚本系统依赖和入口
 bool ScriptSystem::OnInitialize(Application& app)
 {
@@ -29,10 +40,7 @@ bool ScriptSystem::OnInitialize(Application& app)
     if (runtimeMode == ScriptRuntimeMode::CLR) return true;
 
 #if defined(ORBEDEN_PLAYER)
-    entryPoints.initialize = &OrbedenGame_Initialize;
-    entryPoints.shutdown = &OrbedenGame_Shutdown;
-    entryPoints.update = &OrbedenGame_Update;
-    entryPoints.drawGui = &OrbedenGame_DrawGui;
+    SetAotEntryPoints();
     if (!Initialize()) return false;
 
     return true;
@@ -50,7 +58,7 @@ void ScriptSystem::OnShutdown()
 }
 
 //设置 CLR 游戏程序集导出的完整入口
-bool ScriptSystem::SetEntryPoints(const ScriptEntryPoints& value)
+bool ScriptSystem::SetClrEntryPoints(const ScriptEntryPoints& value)
 {
     if (runtimeMode != ScriptRuntimeMode::CLR || initialized || !value.IsValid()) return false;
 
@@ -97,7 +105,9 @@ void ScriptSystem::Shutdown()
     renderOverlayAttached = false;
 }
 
-//每帧更新游戏脚本
+//每帧更新游戏脚本。
+//Editor CLR 模式调用 EditorPlayMode 绑定并注入的 C# 函数指针；
+//Player AOT 模式调用构建期链接的 OrbedenGame_Update 导出符号。
 void ScriptSystem::Update(World& world, float deltaTime)
 {
     (void)world;
@@ -107,7 +117,9 @@ void ScriptSystem::Update(World& world, float deltaTime)
     }
 }
 
-//绘制游戏脚本 GUI
+//绘制游戏脚本 GUI。
+//Editor CLR 模式调用 EditorPlayMode 绑定并注入的 C# 函数指针；
+//Player AOT 模式调用构建期链接的 OrbedenGame_DrawGui 导出符号。
 void ScriptSystem::DrawOverlay()
 {
     if (initialized && entryPoints.drawGui)

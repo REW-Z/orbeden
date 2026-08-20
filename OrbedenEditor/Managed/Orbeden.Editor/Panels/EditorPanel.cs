@@ -83,7 +83,7 @@ internal abstract class EditorPanel
 }
 
 #pragma warning disable CS0649
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorPanelNativeApi
 {
     public IntPtr Context;

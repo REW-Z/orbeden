@@ -123,11 +123,20 @@ public:
     //添加组件
     Component* AddComponent(EnsId ens, Type* type);
 
+    //添加同类型的独立组件实例
+    Component* AddComponentInstance(EnsId ens, Type* type);
+
     //获取组件
     Component* GetComponent(EnsId ens, Type* type) const;
 
+    //获取指定类型的全部组件实例
+    void GetComponentInstances(EnsId ens, Type* type, List<Component*>& output) const;
+
     //移除组件
     bool RemoveComponent(EnsId ens, Type* type);
+
+    //移除指定组件实例
+    bool RemoveComponent(Component* component);
 
     //按稳定ID查找Ens
     Ens* FindEns(const StringId& id) const;

@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Orbeden;
 
 /// <summary>Ens 运行时句柄，布局需要与 C++ EnsId 一致。</summary>
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct EnsId : IEquatable<EnsId>
 {
     /// <summary>空 Ens 句柄。</summary>
@@ -42,7 +42,7 @@ public struct EnsId : IEquatable<EnsId>
 }
 
 /// <summary>二维向量，布局需要与 C++ 托管桥接结构一致。</summary>
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct vector2
 {
     public float x;
@@ -58,7 +58,7 @@ public struct vector2
 
 
 /// <summary>三维向量，布局需要与 C++ 托管桥接结构一致。</summary>
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct vector3
 {
     public float x;
@@ -75,7 +75,7 @@ public struct vector3
 }
 
 /// <summary>四元数，布局需要与 C++ quaternion 一致。</summary>
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct quaternion
 {
     public float x;
@@ -94,7 +94,7 @@ public struct quaternion
 }
 
 /// <summary>线性颜色，布局需要与 C++ 托管桥接结构一致。</summary>
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct color4
 {
     public float r;

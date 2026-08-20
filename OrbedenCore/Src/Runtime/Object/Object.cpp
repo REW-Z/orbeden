@@ -2,6 +2,7 @@
 
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
+#include "Physics/ColliderComponent.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
@@ -486,6 +487,12 @@ Object* Type::CreateObject(IChunk* chunk)
     return object;
 }
 
+//判断类型能否直接创建实例
+bool Type::CanCreateObject() const
+{
+    return constructor != nullptr && destructor != nullptr;
+}
+
 //销毁对象实例
 void Type::DestroyObject(Object* object)
 {
@@ -885,7 +892,7 @@ bool Object::DestroyObjectFromBinding(Object* object)
             return false;
         }
 
-        return world->RemoveComponent(component->GetEnsId(), component->GetType());
+        return world->RemoveComponent(component);
     }
 
     if (object->GetOwnership() == Ownership::ResourceOwned)
@@ -980,6 +987,23 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
         world->ForEachComponent<StaticMeshRenderer>([&](StaticMeshRenderer* renderer)
         {
             if (renderer) ResourceManager::MarkObjectGraph(renderer->mesh.Get(), marked);
+        });
+        world->ForEachEns([&](Ens& ens)
+        {
+            for (Component* component : ens.GetComponents())
+            {
+                ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
+                if (!collider) continue;
+
+                if (ConvexMeshColliderComponent* convex = collider->Cast<ConvexMeshColliderComponent>())
+                {
+                    ResourceManager::MarkObjectGraph(convex->mesh.Get(), marked);
+                }
+                else if (TriangleMeshColliderComponent* triangle = collider->Cast<TriangleMeshColliderComponent>())
+                {
+                    ResourceManager::MarkObjectGraph(triangle->mesh.Get(), marked);
+                }
+            }
         });
     }
 

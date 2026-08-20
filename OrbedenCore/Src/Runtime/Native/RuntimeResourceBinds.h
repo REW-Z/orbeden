@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/Native/NativeApiAbi.h"
+
+#pragma pack(push, 8)
 
 //通用对象函数表。
 struct ObjectBind
@@ -128,3 +131,11 @@ public:
     //创建 Shader 函数表。
     static ShaderBind Create();
 };
+
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 6);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectExtensionBind, 1);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(MeshBind, 28);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(MaterialBind, 20);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ShaderBind, 27);

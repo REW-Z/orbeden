@@ -1,5 +1,6 @@
 #include "Runtime/ComponentStorage.h"
 
+#include <algorithm>
 #include <cassert>
 
 //创建指定类型的World组件稀疏集
@@ -40,7 +41,11 @@ Component* ComponentStorage::Create(EnsId owner, const std::string& instancePath
     }
 
     SparseSlot& slot = sparseSlots[owner.id];
-    if (slot.component) return nullptr;
+    if (slot.ensVersion != 0 && slot.ensVersion != owner.version)
+    {
+        assert(slot.components.empty());
+        slot.ensVersion = 0;
+    }
 
     Object* object = Object::CreateRawInstance(componentType, instancePath, componentChunk);
     Component* component = object ? object->Cast<Component>() : nullptr;
@@ -57,7 +62,7 @@ Component* ComponentStorage::Create(EnsId owner, const std::string& instancePath
     component->SetWorld(ownerWorld);
     component->SetOwnership(Object::Ownership::WorldOwned);
     component->SetEnsId(owner);
-    slot.component = component;
+    slot.components.push_back(component);
     slot.ensVersion = owner.version;
     componentCount++;
     return component;
@@ -69,21 +74,45 @@ Component* ComponentStorage::Get(EnsId owner) const
     if (owner.IsNull() || owner.id >= sparseSlots.size()) return nullptr;
 
     const SparseSlot& slot = sparseSlots[owner.id];
-    if (!slot.component) return nullptr;
+    if (slot.components.empty()) return nullptr;
     if (slot.ensVersion != owner.version) return nullptr;
 
-    return slot.component;
+    return slot.components.front();
 }
 
-//移除并返回Ens拥有的组件
+//获取Ens拥有的全部组件
+void ComponentStorage::GetAll(EnsId owner, List<Component*>& output) const
+{
+    output.clear();
+    if (owner.IsNull() || owner.id >= sparseSlots.size()) return;
+
+    const SparseSlot& slot = sparseSlots[owner.id];
+    if (slot.ensVersion != owner.version) return;
+    output = slot.components;
+}
+
+//移除并返回Ens拥有的首个组件
 Component* ComponentStorage::Remove(EnsId owner)
 {
     Component* component = Get(owner);
+    return Remove(component);
+}
+
+//移除并返回指定组件实例
+Component* ComponentStorage::Remove(Component* component)
+{
     if (!component) return nullptr;
+    EnsId owner = component->GetEnsId();
+    if (owner.IsNull() || owner.id >= sparseSlots.size()) return nullptr;
 
     SparseSlot& slot = sparseSlots[owner.id];
-    slot.component = nullptr;
-    slot.ensVersion = 0;
+    if (slot.ensVersion != owner.version) return nullptr;
+
+    auto found = std::find(slot.components.begin(), slot.components.end(), component);
+    if (found == slot.components.end()) return nullptr;
+
+    slot.components.erase(found);
+    if (slot.components.empty()) slot.ensVersion = 0;
     assert(componentCount > 0);
     componentCount--;
     return component;

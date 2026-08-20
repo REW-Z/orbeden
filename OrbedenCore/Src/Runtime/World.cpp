@@ -138,11 +138,9 @@ void World::RefreshEnsWorldActive(EnsId ens)
     {
         storedEns->worldActive = active;
 
-        List<TypeId> componentTypes = storedEns->componentTypes;
-        for (TypeId typeId : componentTypes)
+        List<Component*> componentInstances = storedEns->componentInstances;
+        for (Component* component : componentInstances)
         {
-            Type* type = Object::FindType(typeId);
-            Component* component = type ? GetComponent(ens, type) : nullptr;
             if (component) component->OnWorldActiveChanged(active);
         }
     }
@@ -303,7 +301,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     }
 
     storedEns->name = name;
-    storedEns->AddComponentType(TransformComponent::StaticType());
+    storedEns->AddComponentInstance(transform);
     NotifyTransformChanged(value);
     return storedEns;
 }
@@ -333,21 +331,21 @@ bool World::DestroyEns(EnsId ens)
     //解除父级关系
     SetParent(ens, EnsId());
 
-    //销毁额外组件
-    List<TypeId> componentTypes = storedEns->componentTypes;
-    for (TypeId typeId : componentTypes)
+    //销毁额外组件实例
+    List<Component*> componentInstances = storedEns->componentInstances;
+    for (Component* component : componentInstances)
     {
-        Type* type = Object::FindType(typeId);
-        if (type && type != TransformComponent::StaticType())
+        if (component && component != transform)
         {
-            RemoveComponent(ens, type);
+            RemoveComponent(component);
         }
     }
 
     //注销并销毁变换组件
     ComponentStorage* transformStorage = FindComponentStorage(TransformComponent::StaticType());
-    Component* removedTransform = transformStorage ? transformStorage->Remove(ens) : nullptr;
+    Component* removedTransform = transformStorage ? transformStorage->Remove(transform) : nullptr;
     assert(removedTransform == transform);
+    storedEns->RemoveComponentInstance(transform);
     transform->SetEnsId(EnsId());
     transform->SetWorld(nullptr);
     transform->SetOwnership(Object::Ownership::None);
@@ -557,16 +555,27 @@ Component* World::AddComponent(EnsId ens, Type* type)
 
     Component* oldComponent = GetComponent(ens, type);
     if (oldComponent) return oldComponent;
+
+    return AddComponentInstance(ens, type);
+}
+
+//添加同类型的独立组件实例
+Component* World::AddComponentInstance(EnsId ens, Type* type)
+{
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return nullptr;
+    if (type == TransformComponent::StaticType()) return transform;
+
     Ens* storedEns = GetEns(ens);
     if (!storedEns) return nullptr;
 
     //创建并注册组件
-    std::string instancePath = transform->GetInstanceId().GetPath() + "/" + type->GetName();
+    std::string instancePath = Object::CreateRuntimeInstancePath(transform->GetInstanceId().GetPath(), type);
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
     Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
     if (!component) return nullptr;
 
-    storedEns->AddComponentType(type);
+    storedEns->AddComponentInstance(component);
     component->OnAttach();
     return component;
 }
@@ -580,25 +589,44 @@ Component* World::GetComponent(EnsId ens, Type* type) const
     return storage ? storage->Get(ens) : nullptr;
 }
 
+//获取指定类型的全部组件实例
+void World::GetComponentInstances(EnsId ens, Type* type, List<Component*>& output) const
+{
+    output.clear();
+    if (!type) return;
+
+    ComponentStorage* storage = FindComponentStorage(type);
+    if (storage) storage->GetAll(ens, output);
+}
+
 //移除组件
 bool World::RemoveComponent(EnsId ens, Type* type)
 {
-    TransformComponent* transform = GetTransformComponent(ens);
-    if (!transform || !type || type == TransformComponent::StaticType()) return false;
+    Component* component = GetComponent(ens, type);
+    return RemoveComponent(component);
+}
 
-    ComponentStorage* storage = FindComponentStorage(type);
-    Component* component = storage ? storage->Get(ens) : nullptr;
+//移除指定组件实例
+bool World::RemoveComponent(Component* component)
+{
     if (!component) return false;
+    if (component->GetWorld() != this) return false;
+    EnsId ens = component->GetEnsId();
+    TransformComponent* transform = GetTransformComponent(ens);
+    if (!transform || component == transform) return false;
+
+    ComponentStorage* storage = FindComponentStorage(component->GetType());
+    if (!storage) return false;
 
     //执行组件卸载回调
     component->OnDetach();
 
     //移除组件索引和对象
-    Component* removedComponent = storage->Remove(ens);
-    assert(removedComponent == component);
+    Component* removedComponent = storage->Remove(component);
+    if (removedComponent != component) return false;
 
     Ens* storedEns = GetEns(ens);
-    if (storedEns) storedEns->RemoveComponentType(type);
+    if (storedEns) storedEns->RemoveComponentInstance(component);
     component->SetEnsId(EnsId());
     component->SetWorld(nullptr);
     component->SetOwnership(Object::Ownership::None);

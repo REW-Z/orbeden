@@ -3,6 +3,8 @@
 #include "Runtime/Gui/RuntimeGuiBridge.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
 
+#pragma pack(push, 8)
+
 //传给 AOT GameModule 的引擎原生 API。
 struct OrbedenNativeApi
 {
@@ -27,3 +29,10 @@ public:
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create();
 };
+
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 231);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Gui, 0);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 152);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 230);

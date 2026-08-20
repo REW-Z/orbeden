@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/Native/NativeApiAbi.h"
+
+#pragma pack(push, 8)
 
 // Runtime GUI 原生函数表，传给 C# Runtime 保存。
 struct RuntimeGuiApi
@@ -51,6 +54,12 @@ public:
     void* BeginDisabled = nullptr;
     void* EndDisabled = nullptr;
 };
+
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiApi, 11);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiExtensionApi, 4);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiAdvancedApi, 17);
 
 // Runtime GUI 桥接层，当前由 Dear ImGui 实现。
 class RuntimeGuiBridge

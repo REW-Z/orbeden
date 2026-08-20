@@ -505,6 +505,7 @@ internal static class MountedScriptRuntime
 {
     private sealed class ScriptMount
     {
+        public string Id = string.Empty;
         public string StableId = string.Empty;
         public string Type = string.Empty;
         public Dictionary<string, string> Values = [];
@@ -540,6 +541,7 @@ internal static class MountedScriptRuntime
                 continue;
             }
 
+            script.SetMountId(mount.Id);
             scripts.Add(script);
         }
 
@@ -660,7 +662,9 @@ internal static class MountedScriptRuntime
         string type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() ?? string.Empty : string.Empty;
         if (string.IsNullOrWhiteSpace(stableId) || string.IsNullOrWhiteSpace(type)) return null;
 
-        ScriptMount mount = new() { StableId = stableId, Type = StripAssemblyName(type) };
+        string id = element.TryGetProperty("id", out JsonElement idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
+        if (string.IsNullOrWhiteSpace(id)) id = Guid.NewGuid().ToString("N");
+        ScriptMount mount = new() { Id = id, StableId = stableId, Type = StripAssemblyName(type) };
         if (!element.TryGetProperty("values", out JsonElement valuesElement)) return mount;
         if (valuesElement.ValueKind != JsonValueKind.Object) return mount;
 
@@ -938,10 +942,12 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
     constexpr const char* WorldScriptsText = R"ORB({
   "scripts": [
     {
+      "id": "sample-behaviour",
       "stableId": "world://{{PROJECT_NAME}}/main/cube",
       "type": "{{PROJECT_NAME}}.SampleBehaviour"
     },
     {
+      "id": "cube-test-behaviour",
       "stableId": "world://{{PROJECT_NAME}}/main/cube",
       "type": "{{PROJECT_NAME}}.CubeTestBehaviour",
       "values": {

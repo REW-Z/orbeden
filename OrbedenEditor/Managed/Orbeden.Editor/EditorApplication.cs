@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace OrbedenEditor;
 
 #pragma warning disable CS0649
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorApplicationNativeApi
 {
     public IntPtr Context;

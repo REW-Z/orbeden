@@ -134,6 +134,9 @@ public:
     //创建对象实例
     Object* CreateObject(IChunk* chunk = nullptr);
 
+    //判断类型能否直接创建实例
+    bool CanCreateObject() const;
+
     //销毁对象实例
     void DestroyObject(Object* object);
 
@@ -190,6 +193,17 @@ public: \
     static Object* ConstructObject(IChunk* chunk); \
     static void DestructObject(Object* object);
 
+//声明不可直接创建的抽象对象类型
+#define OBJECT_TYPE_DECLARE_ABSTRACT(CLASS) \
+    friend class ReflectionGeneratedAccess; \
+protected: \
+    CLASS() = default; \
+    ~CLASS() override = default; \
+public: \
+    static Type type; \
+    static Type* StaticType(); \
+    virtual Type* GetType() const;
+
 //声明叶子对象类型
 #define OBJECT_TYPE_DECLARE(CLASS) \
     friend class ReflectionGeneratedAccess; \
@@ -218,6 +232,12 @@ public: \
     Type* CLASS::GetType() const { return &CLASS::type; } \
     Object* CLASS::ConstructObject(IChunk* chunk) { return new (CLASS::type.AllocateMemory(chunk)) CLASS(); } \
     void CLASS::DestructObject(Object* object) { CLASS* instance = static_cast<CLASS*>(object); instance->~CLASS(); }
+
+//实现不可直接创建的抽象对象类型
+#define OBJECT_TYPE_IMPLEMENT_ABSTRACT(CLASS, BASE) \
+    Type CLASS::type(#CLASS, BASE::StaticType(), sizeof(CLASS), alignof(CLASS), nullptr, nullptr); \
+    Type* CLASS::StaticType() { return &CLASS::type; } \
+    Type* CLASS::GetType() const { return &CLASS::type; }
 
 //对象类型宏  
 #define is_type(CLASS) ->Is(CLASS::StaticType())
