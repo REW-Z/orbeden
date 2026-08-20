@@ -66,12 +66,26 @@ namespace
         return component ? component->Cast<RigidBodyComponent>() : nullptr;
     }
 
-    //获取当前 World 中的 ColliderComponent。
-    ColliderComponent* GetNativeCollider(EnsId ens)
+    //获取原生 ColliderComponent。
+    ColliderComponent* GetNativeCollider(void* pointer)
     {
-        World* world = World::CurrentWorld();
-        Component* component = world ? world->GetComponent(ens, ColliderComponent::StaticType()) : nullptr;
-        return component ? component->Cast<ColliderComponent>() : nullptr;
+        Object* object = static_cast<Object*>(pointer);
+        if (!object || !Object::IsObjectAlive(object->GetObjectId())) return nullptr;
+        return object->Cast<ColliderComponent>();
+    }
+
+    //收集 Ens 挂载的全部 ColliderComponent。
+    void GetNativeColliders(EnsId ens, List<ColliderComponent*>& output)
+    {
+        output.clear();
+        Ens* value = GetNativeEns(ens);
+        if (!value) return;
+
+        for (Component* component : value->GetComponents())
+        {
+            ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
+            if (collider) output.push_back(collider);
+        }
     }
 
     //获取当前 World 中的 CharacterControllerComponent。
@@ -187,12 +201,6 @@ namespace
         return GetNativeRigidBody(ens) ? 1 : 0;
     }
 
-    //判断 Ens 是否拥有 ColliderComponent。
-    uint8 ORBEDEN_NATIVE_CALL NativeEnsHasCollider(EnsId ens)
-    {
-        return GetNativeCollider(ens) ? 1 : 0;
-    }
-
     //判断 Ens 是否拥有 CharacterControllerComponent。
     uint8 ORBEDEN_NATIVE_CALL NativeEnsHasCharacterController(EnsId ens)
     {
@@ -213,11 +221,39 @@ namespace
         return value ? value->AddComponent<RigidBodyComponent>() : nullptr;
     }
 
-    //添加 ColliderComponent。
-    void* ORBEDEN_NATIVE_CALL NativeEnsAddCollider(EnsId ens)
+    //添加 BoxColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddBoxCollider(EnsId ens)
     {
         Ens* value = GetNativeEns(ens);
-        return value ? value->AddComponent<ColliderComponent>() : nullptr;
+        return value ? value->AddComponentInstance<BoxColliderComponent>() : nullptr;
+    }
+
+    //添加 SphereColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddSphereCollider(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value ? value->AddComponentInstance<SphereColliderComponent>() : nullptr;
+    }
+
+    //添加 CapsuleColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddCapsuleCollider(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value ? value->AddComponentInstance<CapsuleColliderComponent>() : nullptr;
+    }
+
+    //添加 ConvexMeshColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddConvexMeshCollider(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value ? value->AddComponentInstance<ConvexMeshColliderComponent>() : nullptr;
+    }
+
+    //添加 TriangleMeshColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsAddTriangleMeshCollider(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value ? value->AddComponentInstance<TriangleMeshColliderComponent>() : nullptr;
     }
 
     //添加 CharacterControllerComponent。
@@ -245,10 +281,27 @@ namespace
         return GetNativeRigidBody(ens);
     }
 
-    //获取 ColliderComponent。
-    void* ORBEDEN_NATIVE_CALL NativeEnsGetCollider(EnsId ens)
+    //获取 Ens 挂载的 ColliderComponent 数量。
+    int32 ORBEDEN_NATIVE_CALL NativeEnsGetColliderCount(EnsId ens)
     {
-        return GetNativeCollider(ens);
+        List<ColliderComponent*> colliders;
+        GetNativeColliders(ens, colliders);
+        return static_cast<int32>(colliders.size());
+    }
+
+    //获取 Ens 挂载的指定 ColliderComponent。
+    void* ORBEDEN_NATIVE_CALL NativeEnsGetColliderAt(EnsId ens, int32 index)
+    {
+        List<ColliderComponent*> colliders;
+        GetNativeColliders(ens, colliders);
+        return index >= 0 && static_cast<usize>(index) < colliders.size() ? colliders[index] : nullptr;
+    }
+
+    //获取 ColliderComponent 的具体几何类型。
+    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetGeometryType(void* pointer)
+    {
+        ColliderComponent* collider = GetNativeCollider(pointer);
+        return collider ? static_cast<uint32>(collider->GetGeometryType()) : static_cast<uint32>(ColliderGeometryType::Box);
     }
 
     //获取 CharacterControllerComponent。
@@ -552,196 +605,201 @@ namespace
     }
 
     //读取 Collider.enabled。
-    uint8 ORBEDEN_NATIVE_CALL NativeColliderGetEnabled(EnsId ens)
+    uint8 ORBEDEN_NATIVE_CALL NativeColliderGetEnabled(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider && collider->enabled ? 1 : 0;
     }
 
     //写入 Collider.enabled。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetEnabled(EnsId ens, uint8 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetEnabled(void* pointer, uint8 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->enabled = value != 0;
     }
 
-    //读取 Collider.shape。
-    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetShape(EnsId ens)
-    {
-        ColliderComponent* collider = GetNativeCollider(ens);
-        return collider ? static_cast<uint32>(collider->shape) : 0;
-    }
-
-    //写入 Collider.shape。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetShape(EnsId ens, uint32 value)
-    {
-        ColliderComponent* collider = GetNativeCollider(ens);
-        if (collider) collider->shape = static_cast<ColliderShape>(value);
-    }
-
     //读取 Collider.isTrigger。
-    uint8 ORBEDEN_NATIVE_CALL NativeColliderGetIsTrigger(EnsId ens)
+    uint8 ORBEDEN_NATIVE_CALL NativeColliderGetIsTrigger(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider && collider->isTrigger ? 1 : 0;
     }
 
     //写入 Collider.isTrigger。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetIsTrigger(EnsId ens, uint8 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetIsTrigger(void* pointer, uint8 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->isTrigger = value != 0;
     }
 
     //读取 Collider.center。
-    vector3 ORBEDEN_NATIVE_CALL NativeColliderGetCenter(EnsId ens)
+    vector3 ORBEDEN_NATIVE_CALL NativeColliderGetCenter(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->center : vector3();
     }
 
     //写入 Collider.center。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetCenter(EnsId ens, vector3 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetCenter(void* pointer, vector3 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->center = value;
     }
 
-    //读取 Collider.halfExtents。
-    vector3 ORBEDEN_NATIVE_CALL NativeColliderGetHalfExtents(EnsId ens)
+    //读取 BoxCollider.halfExtents。
+    vector3 ORBEDEN_NATIVE_CALL NativeColliderGetHalfExtents(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* base = GetNativeCollider(pointer);
+        BoxColliderComponent* collider = base ? base->Cast<BoxColliderComponent>() : nullptr;
         return collider ? collider->halfExtents : vector3();
     }
 
-    //写入 Collider.halfExtents。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetHalfExtents(EnsId ens, vector3 value)
+    //写入 BoxCollider.halfExtents。
+    void ORBEDEN_NATIVE_CALL NativeColliderSetHalfExtents(void* pointer, vector3 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* base = GetNativeCollider(pointer);
+        BoxColliderComponent* collider = base ? base->Cast<BoxColliderComponent>() : nullptr;
         if (collider) collider->halfExtents = value;
     }
 
-    //读取 Collider.radius。
-    float32 ORBEDEN_NATIVE_CALL NativeColliderGetRadius(EnsId ens)
+    //读取 SphereCollider 或 CapsuleCollider.radius。
+    float32 ORBEDEN_NATIVE_CALL NativeColliderGetRadius(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
-        return collider ? collider->radius : 0.0f;
+        ColliderComponent* collider = GetNativeCollider(pointer);
+        if (SphereColliderComponent* sphere = collider ? collider->Cast<SphereColliderComponent>() : nullptr) return sphere->radius;
+        if (CapsuleColliderComponent* capsule = collider ? collider->Cast<CapsuleColliderComponent>() : nullptr) return capsule->radius;
+        return 0.0f;
     }
 
-    //写入 Collider.radius。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetRadius(EnsId ens, float32 value)
+    //写入 SphereCollider 或 CapsuleCollider.radius。
+    void ORBEDEN_NATIVE_CALL NativeColliderSetRadius(void* pointer, float32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
-        if (collider) collider->radius = value;
+        ColliderComponent* collider = GetNativeCollider(pointer);
+        if (SphereColliderComponent* sphere = collider ? collider->Cast<SphereColliderComponent>() : nullptr) sphere->radius = value;
+        if (CapsuleColliderComponent* capsule = collider ? collider->Cast<CapsuleColliderComponent>() : nullptr) capsule->radius = value;
     }
 
-    //读取 Collider.halfHeight。
-    float32 ORBEDEN_NATIVE_CALL NativeColliderGetHalfHeight(EnsId ens)
+    //读取 CapsuleCollider.halfHeight。
+    float32 ORBEDEN_NATIVE_CALL NativeColliderGetHalfHeight(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* base = GetNativeCollider(pointer);
+        CapsuleColliderComponent* collider = base ? base->Cast<CapsuleColliderComponent>() : nullptr;
         return collider ? collider->halfHeight : 0.0f;
     }
 
-    //写入 Collider.halfHeight。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetHalfHeight(EnsId ens, float32 value)
+    //写入 CapsuleCollider.halfHeight。
+    void ORBEDEN_NATIVE_CALL NativeColliderSetHalfHeight(void* pointer, float32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* base = GetNativeCollider(pointer);
+        CapsuleColliderComponent* collider = base ? base->Cast<CapsuleColliderComponent>() : nullptr;
         if (collider) collider->halfHeight = value;
     }
 
-    //读取 Collider.mesh。
-    void* ORBEDEN_NATIVE_CALL NativeColliderGetMesh(EnsId ens)
+    //读取 MeshCollider.mesh。
+    void* ORBEDEN_NATIVE_CALL NativeColliderGetMesh(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
-        return collider ? collider->mesh.Get() : nullptr;
+        ColliderComponent* collider = GetNativeCollider(pointer);
+        if (ConvexMeshColliderComponent* convex = collider ? collider->Cast<ConvexMeshColliderComponent>() : nullptr) return convex->mesh.Get();
+        if (TriangleMeshColliderComponent* triangle = collider ? collider->Cast<TriangleMeshColliderComponent>() : nullptr) return triangle->mesh.Get();
+        return nullptr;
     }
 
-    //写入 Collider.mesh。
-    uint8 ORBEDEN_NATIVE_CALL NativeColliderSetMesh(EnsId ens, void* meshPointer)
+    //写入 MeshCollider.mesh。
+    uint8 ORBEDEN_NATIVE_CALL NativeColliderSetMesh(void* pointer, void* meshPointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (!collider) return 0;
 
-        if (!meshPointer)
+        Mesh* mesh = nullptr;
+        if (meshPointer)
         {
-            collider->mesh.SetInstanceId(StringId());
-            return 1;
+            Object* object = static_cast<Object*>(meshPointer);
+            mesh = object && Object::IsObjectAlive(object->GetObjectId()) ? object->Cast<Mesh>() : nullptr;
+            if (!mesh) return 0;
         }
 
-        Mesh* mesh = static_cast<Object*>(meshPointer)->Cast<Mesh>();
-        if (!mesh || Object::FindObjectById(mesh->GetObjectId()) != mesh) return 0;
-
-        collider->mesh.Set(mesh);
-        return 1;
+        if (ConvexMeshColliderComponent* convex = collider->Cast<ConvexMeshColliderComponent>())
+        {
+            if (mesh) convex->mesh.Set(mesh);
+            else convex->mesh.SetInstanceId(StringId());
+            return 1;
+        }
+        if (TriangleMeshColliderComponent* triangle = collider->Cast<TriangleMeshColliderComponent>())
+        {
+            if (mesh) triangle->mesh.Set(mesh);
+            else triangle->mesh.SetInstanceId(StringId());
+            return 1;
+        }
+        return 0;
     }
 
     //读取 Collider.staticFriction。
-    float32 ORBEDEN_NATIVE_CALL NativeColliderGetStaticFriction(EnsId ens)
+    float32 ORBEDEN_NATIVE_CALL NativeColliderGetStaticFriction(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->staticFriction : 0.0f;
     }
 
     //写入 Collider.staticFriction。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetStaticFriction(EnsId ens, float32 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetStaticFriction(void* pointer, float32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->staticFriction = value;
     }
 
     //读取 Collider.dynamicFriction。
-    float32 ORBEDEN_NATIVE_CALL NativeColliderGetDynamicFriction(EnsId ens)
+    float32 ORBEDEN_NATIVE_CALL NativeColliderGetDynamicFriction(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->dynamicFriction : 0.0f;
     }
 
     //写入 Collider.dynamicFriction。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetDynamicFriction(EnsId ens, float32 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetDynamicFriction(void* pointer, float32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->dynamicFriction = value;
     }
 
     //读取 Collider.restitution。
-    float32 ORBEDEN_NATIVE_CALL NativeColliderGetRestitution(EnsId ens)
+    float32 ORBEDEN_NATIVE_CALL NativeColliderGetRestitution(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->restitution : 0.0f;
     }
 
     //写入 Collider.restitution。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetRestitution(EnsId ens, float32 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetRestitution(void* pointer, float32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->restitution = value;
     }
 
     //读取 Collider.collisionLayer。
-    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetCollisionLayer(EnsId ens)
+    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetCollisionLayer(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->collisionLayer : 0;
     }
 
     //写入 Collider.collisionLayer。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetCollisionLayer(EnsId ens, uint32 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetCollisionLayer(void* pointer, uint32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->collisionLayer = value;
     }
 
     //读取 Collider.collisionMask。
-    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetCollisionMask(EnsId ens)
+    uint32 ORBEDEN_NATIVE_CALL NativeColliderGetCollisionMask(void* pointer)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         return collider ? collider->collisionMask : 0;
     }
 
     //写入 Collider.collisionMask。
-    void ORBEDEN_NATIVE_CALL NativeColliderSetCollisionMask(EnsId ens, uint32 value)
+    void ORBEDEN_NATIVE_CALL NativeColliderSetCollisionMask(void* pointer, uint32 value)
     {
-        ColliderComponent* collider = GetNativeCollider(ens);
+        ColliderComponent* collider = GetNativeCollider(pointer);
         if (collider) collider->collisionMask = value;
     }
 
@@ -999,13 +1057,16 @@ RigidBodyBind RigidBodyBind::Create()
 ColliderBind ColliderBind::Create()
 {
     ColliderBind bind;
-    bind.HasComponent = reinterpret_cast<void*>(&NativeEnsHasCollider);
-    bind.AddComponent = reinterpret_cast<void*>(&NativeEnsAddCollider);
-    bind.GetComponent = reinterpret_cast<void*>(&NativeEnsGetCollider);
+    bind.AddBoxCollider = reinterpret_cast<void*>(&NativeEnsAddBoxCollider);
+    bind.AddSphereCollider = reinterpret_cast<void*>(&NativeEnsAddSphereCollider);
+    bind.AddCapsuleCollider = reinterpret_cast<void*>(&NativeEnsAddCapsuleCollider);
+    bind.AddConvexMeshCollider = reinterpret_cast<void*>(&NativeEnsAddConvexMeshCollider);
+    bind.AddTriangleMeshCollider = reinterpret_cast<void*>(&NativeEnsAddTriangleMeshCollider);
+    bind.GetColliderCount = reinterpret_cast<void*>(&NativeEnsGetColliderCount);
+    bind.GetColliderAt = reinterpret_cast<void*>(&NativeEnsGetColliderAt);
+    bind.GetGeometryType = reinterpret_cast<void*>(&NativeColliderGetGeometryType);
     bind.GetEnabled = reinterpret_cast<void*>(&NativeColliderGetEnabled);
     bind.SetEnabled = reinterpret_cast<void*>(&NativeColliderSetEnabled);
-    bind.GetShape = reinterpret_cast<void*>(&NativeColliderGetShape);
-    bind.SetShape = reinterpret_cast<void*>(&NativeColliderSetShape);
     bind.GetIsTrigger = reinterpret_cast<void*>(&NativeColliderGetIsTrigger);
     bind.SetIsTrigger = reinterpret_cast<void*>(&NativeColliderSetIsTrigger);
     bind.GetCenter = reinterpret_cast<void*>(&NativeColliderGetCenter);

@@ -2,6 +2,7 @@
 
 #include "Defines/types.h"
 #include "Runtime/EngineTypes.h"
+#include "Runtime/Native/NativeApiAbi.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -10,6 +11,8 @@
 #include <array>
 
 class IWindow;
+
+#pragma pack(push, 8)
 
 struct EditorGuiNativeApi
 {
@@ -45,6 +48,10 @@ public:
     void* beginDisabled = nullptr;
     void* endDisabled = nullptr;
 };
+
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 30);
 
 //Editor ImGui 绑定层
 class EditorGUI

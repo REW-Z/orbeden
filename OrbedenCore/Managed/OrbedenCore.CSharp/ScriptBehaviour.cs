@@ -6,10 +6,19 @@ public abstract class ScriptBehaviour : Component
     /// <summary>脚本所属 EnsId。</summary>
     public EnsId EnsId => Ens.Id;
 
+    /// <summary>脚本挂载实例的持久化标识。</summary>
+    public string MountId { get; private set; } = string.Empty;
+
     /// <summary>创建托管脚本行为。</summary>
     protected ScriptBehaviour(Ens ens) : base(ens)
     {
         ScriptRuntimeRegistry.Register(this);
+    }
+
+    /// <summary>由脚本装载器设置挂载实例标识。</summary>
+    public void SetMountId(string? mountId)
+    {
+        MountId = mountId ?? string.Empty;
     }
 
     //由 Runtime 调用脚本启动回调

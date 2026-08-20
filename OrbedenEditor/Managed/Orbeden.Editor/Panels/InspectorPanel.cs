@@ -53,6 +53,9 @@ internal sealed class InspectorPanel : EditorPanel
 
     private sealed class ScriptMount
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("stableId")]
         public string StableId { get; set; } = string.Empty;
 
@@ -82,6 +85,7 @@ internal sealed class InspectorPanel : EditorPanel
     private Assembly? gameAssembly;
     private string status = "Game assembly is not loaded.";
     private string currentSidecarPath = string.Empty;
+    private bool generatedMissingMountIds;
 
     public override EditorPanelInfo Info => new(
         "inspector",
@@ -137,9 +141,11 @@ internal sealed class InspectorPanel : EditorPanel
         componentSearches.Clear();
         selectedAddTypes.Clear();
         runtimeSerializedApplied.Clear();
+        generatedMissingMountIds = false;
         currentSidecarPath = sidecarPath;
 
         LoadSidecar(sidecarPath);
+        if (generatedMissingMountIds) SaveSidecar();
         if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))
         {
             status = sidecarScripts.Count > 0
@@ -179,6 +185,7 @@ internal sealed class InspectorPanel : EditorPanel
         componentSearches.Clear();
         selectedAddTypes.Clear();
         runtimeSerializedApplied.Clear();
+        generatedMissingMountIds = false;
         currentSidecarPath = string.Empty;
         ScriptRuntimeRegistry.Clear();
         status = "Game assembly is not loaded.";
@@ -291,7 +298,14 @@ internal sealed class InspectorPanel : EditorPanel
         string? type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() : null;
         if (string.IsNullOrWhiteSpace(stableId) || string.IsNullOrWhiteSpace(type)) return null;
 
-        ScriptMount mount = new() { StableId = stableId, Type = StripAssemblyName(type) };
+        string? id = element.TryGetProperty("id", out JsonElement idElement) ? idElement.GetString() : null;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            id = Guid.NewGuid().ToString("N");
+            generatedMissingMountIds = true;
+        }
+
+        ScriptMount mount = new() { Id = id, StableId = stableId, Type = StripAssemblyName(type) };
         if (!element.TryGetProperty("values", out JsonElement values)) return mount;
         if (values.ValueKind != JsonValueKind.Object) return mount;
 
@@ -440,7 +454,12 @@ internal sealed class InspectorPanel : EditorPanel
         }
 
         DrawBoundComponent(ens.GetComponent<RigidBody>(), selectedEns, component => DrawScriptMembers(component, typeof(RigidBody)));
-        DrawBoundComponent(ens.GetComponent<Collider>(), selectedEns, component => DrawScriptMembers(component, typeof(Collider)));
+        Collider[] colliders = ens.GetComponents<Collider>();
+        for (int index = 0; index < colliders.Length; index++)
+        {
+            Collider collider = colliders[index];
+            DrawBoundCollider(collider, selectedEns, index);
+        }
         DrawBoundComponent(ens.GetComponent<CharacterController>(), selectedEns, component => DrawScriptMembers(component, typeof(CharacterController)));
     }
 
@@ -457,6 +476,21 @@ internal sealed class InspectorPanel : EditorPanel
         }
     }
 
+    //绘制一个可独立删除的 Collider 实例。
+    private void DrawBoundCollider(Collider collider, EnsId selectedEns, int index)
+    {
+        string typeName = collider.GetType().Name;
+        if (DrawCollapsibleComponentBlock(typeName, $"bound_{selectedEns.id}_{typeName}_{index}", true, () =>
+        {
+            DrawScriptMembers(collider, typeof(Collider));
+            DrawScriptMembers(collider, collider.GetType());
+        }))
+        {
+            Orbeden.Object.Destroy(collider);
+            EditorApplication.RequestRepaint();
+        }
+    }
+
     //统计当前对象上的引擎 Bind 组件数量。
     private int GetBoundComponentCount(Ens ens)
     {
@@ -464,7 +498,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (ens.HasTransformComponent) count++;
         if (ens.HasStaticMeshRenderer) count++;
         if (ens.HasRigidBody) count++;
-        if (ens.HasCollider) count++;
+        count += ens.GetComponents<Collider>().Length;
         if (ens.HasCharacterController) count++;
         return count;
     }
@@ -493,7 +527,7 @@ internal sealed class InspectorPanel : EditorPanel
             ScriptMount mount = mounts[index];
             string title = GetShortTypeName(mount.Type);
             List<ScriptBehaviour> matchingRuntimeScripts = runtimeScripts
-                .Where(script => TypeMatches(mount.Type, script.GetType()))
+                .Where(script => string.Equals(script.MountId, mount.Id, StringComparison.Ordinal))
                 .ToList();
             foreach (ScriptBehaviour script in matchingRuntimeScripts)
             {
@@ -501,7 +535,7 @@ internal sealed class InspectorPanel : EditorPanel
                 ApplySerializedValuesToRuntimeScript(script, stableId);
             }
 
-            bool removeRequested = DrawCollapsibleComponentBlock(title, $"script_{stableId}_{mount.Type}", true, () =>
+            bool removeRequested = DrawCollapsibleComponentBlock(title, $"script_{stableId}_{mount.Id}", true, () =>
             {
                 EditorGUI.Label($"Type: {mount.Type}");
                 EditorGUI.Label("Serialized Fields");
@@ -591,29 +625,134 @@ internal sealed class InspectorPanel : EditorPanel
     //获取当前可添加的引擎 Bind 与游戏脚本组件类型。
     private List<Type> GetAvailableComponentTypes(Ens ens, string stableId, List<ScriptMount> mounts)
     {
-        List<Type> types = [];
-        if (!ens.HasStaticMeshRenderer) types.Add(typeof(StaticMeshRenderer));
-        if (!ens.HasRigidBody) types.Add(typeof(RigidBody));
-        if (!ens.HasCollider) types.Add(typeof(Collider));
-        if (!ens.HasCharacterController) types.Add(typeof(CharacterController));
+        List<Type> types =
+        [
+            typeof(StaticMeshRenderer),
+            typeof(RigidBody),
+            typeof(BoxCollider),
+            typeof(SphereCollider),
+            typeof(CapsuleCollider),
+            typeof(ConvexMeshCollider),
+            typeof(TriangleMeshCollider),
+            typeof(CharacterController),
+        ];
         if (!string.IsNullOrEmpty(stableId))
         {
-            types.AddRange(scriptTypes.Where(type => !mounts.Any(mount => TypeMatches(mount.Type, type))));
+            types.AddRange(scriptTypes);
         }
 
+        types.RemoveAll(type => IsUniqueComponent(type) && HasComponentInstance(ens, stableId, mounts, type));
         types.Sort((left, right) => string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
         return types;
     }
 
-    //按托管类型添加引擎 Bind 或游戏脚本组件。
+    //按组件规则添加引擎 Bind 或游戏脚本组件。
     private void AddComponent(Ens ens, string stableId, Type type)
+    {
+        try
+        {
+            List<Type> order = [];
+            BuildComponentAddOrder(type, [], [], order);
+            bool sidecarChanged = false;
+            foreach (Type componentType in order)
+            {
+                bool isRequestedType = componentType == type;
+                bool hasExisting = HasComponentInstance(ens, stableId, GetScriptMounts(stableId), componentType);
+                if (hasExisting && (!isRequestedType || IsUniqueComponent(componentType))) continue;
+
+                if (IsNativeComponentType(componentType))
+                {
+                    AddNativeComponent(ens, componentType);
+                }
+                else
+                {
+                    AddScriptMount(stableId, GetScriptTypeName(componentType));
+                    sidecarChanged = true;
+                }
+            }
+
+            if (sidecarChanged) SaveSidecar();
+            EditorApplication.RequestRepaint();
+        }
+        catch (Exception ex)
+        {
+            status = "Component add failed: " + ex.Message;
+        }
+    }
+
+    //验证依赖图并生成拓扑创建顺序。
+    private void BuildComponentAddOrder(Type componentType, HashSet<Type> visiting, HashSet<Type> visited, List<Type> order)
+    {
+        if (!typeof(Component).IsAssignableFrom(componentType) || componentType.IsAbstract || !CanCreateComponent(componentType))
+        {
+            throw new InvalidOperationException($"Unsupported component type '{componentType.FullName}'.");
+        }
+
+        if (!visiting.Add(componentType))
+        {
+            throw new InvalidOperationException($"Circular component dependency at '{componentType.FullName}'.");
+        }
+
+        foreach (DependsOnComponentAttribute dependency in componentType.GetCustomAttributes<DependsOnComponentAttribute>(true))
+        {
+            foreach (Type requiredType in dependency.ComponentTypes)
+            {
+                if (requiredType == null) throw new InvalidOperationException($"Component '{componentType.FullName}' has a null dependency.");
+                BuildComponentAddOrder(requiredType, visiting, visited, order);
+            }
+        }
+
+        visiting.Remove(componentType);
+        if (visited.Add(componentType)) order.Add(componentType);
+    }
+
+    //判断组件是否为唯一组件。
+    private static bool IsUniqueComponent(Type type) => type.GetCustomAttribute<UniqueComponentAttribute>(true) != null;
+
+    //判断类型能否由 Inspector 创建。
+    private bool CanCreateComponent(Type type) => IsNativeComponentType(type) || scriptTypes.Contains(type);
+
+    //判断类型是否对应原生绑定组件。
+    private static bool IsNativeComponentType(Type type)
+    {
+        return type == typeof(StaticMeshRenderer) || type == typeof(RigidBody) ||
+               type == typeof(BoxCollider) || type == typeof(SphereCollider) ||
+               type == typeof(CapsuleCollider) || type == typeof(ConvexMeshCollider) ||
+               type == typeof(TriangleMeshCollider) || type == typeof(CharacterController);
+    }
+
+    //判断 Ens 是否已拥有某个组件类型实例。
+    private bool HasComponentInstance(Ens ens, string stableId, List<ScriptMount> mounts, Type type)
+    {
+        if (type == typeof(TransformComponent)) return ens.HasTransformComponent;
+        if (type == typeof(StaticMeshRenderer)) return ens.HasStaticMeshRenderer;
+        if (type == typeof(RigidBody)) return ens.HasRigidBody;
+        if (type == typeof(BoxCollider)) return ens.GetComponent<BoxCollider>() != null;
+        if (type == typeof(SphereCollider)) return ens.GetComponent<SphereCollider>() != null;
+        if (type == typeof(CapsuleCollider)) return ens.GetComponent<CapsuleCollider>() != null;
+        if (type == typeof(ConvexMeshCollider)) return ens.GetComponent<ConvexMeshCollider>() != null;
+        if (type == typeof(TriangleMeshCollider)) return ens.GetComponent<TriangleMeshCollider>() != null;
+        if (type == typeof(CharacterController)) return ens.HasCharacterController;
+        return !string.IsNullOrEmpty(stableId) && mounts.Any(mount => TypeMatches(mount.Type, type));
+    }
+
+    //获取 stableId 对应的脚本挂载清单。
+    private List<ScriptMount> GetScriptMounts(string stableId)
+    {
+        return sidecarScripts.TryGetValue(stableId, out List<ScriptMount>? mounts) ? mounts : [];
+    }
+
+    //创建一个原生绑定组件。
+    private static void AddNativeComponent(Ens ens, Type type)
     {
         if (type == typeof(StaticMeshRenderer)) ens.AddStaticMeshRenderer();
         else if (type == typeof(RigidBody)) ens.AddRigidBody();
-        else if (type == typeof(Collider)) ens.AddCollider();
+        else if (type == typeof(BoxCollider)) ens.AddBoxCollider();
+        else if (type == typeof(SphereCollider)) ens.AddSphereCollider();
+        else if (type == typeof(CapsuleCollider)) ens.AddCapsuleCollider();
+        else if (type == typeof(ConvexMeshCollider)) ens.AddConvexMeshCollider();
+        else if (type == typeof(TriangleMeshCollider)) ens.AddTriangleMeshCollider();
         else if (type == typeof(CharacterController)) ens.AddCharacterController();
-        else AddScriptMount(stableId, GetScriptTypeName(type));
-        EditorApplication.RequestRepaint();
     }
 
     //判断组件类型是否匹配搜索文本。
@@ -637,12 +776,12 @@ internal sealed class InspectorPanel : EditorPanel
             sidecarScripts.Add(stableId, mounts);
         }
 
-        if (mounts.Any(mount => string.Equals(mount.Type, scriptTypeName, StringComparison.Ordinal)))
+        if (type != null && IsUniqueComponent(type) && mounts.Any(mount => TypeMatches(mount.Type, type)))
         {
             return;
         }
 
-        ScriptMount newMount = new() { StableId = stableId, Type = scriptTypeName };
+        ScriptMount newMount = new() { Id = Guid.NewGuid().ToString("N"), StableId = stableId, Type = scriptTypeName };
         if (type != null)
         {
             foreach (FieldInfo field in GetSerializableFields(type))
@@ -652,7 +791,6 @@ internal sealed class InspectorPanel : EditorPanel
         }
 
         mounts.Add(newMount);
-        SaveSidecar();
     }
 
     //绘制 sidecar 中一个脚本组件的字段。
@@ -682,7 +820,7 @@ internal sealed class InspectorPanel : EditorPanel
     private void DrawSerializedField(ScriptMount mount, FieldInfo field)
     {
         ScriptSerializedValue serialized = GetSerializedValueForField(mount, field);
-        string label = $"{field.Name}##serialized_{mount.StableId}_{mount.Type}_{field.Name}";
+        string label = $"{field.Name}##serialized_{mount.StableId}_{mount.Id}_{field.Name}";
         if (!DrawSerializedValue(label, field.FieldType, serialized, out string newValue)) return;
 
         serialized.Type = GetValueTypeName(field.FieldType);
@@ -797,7 +935,7 @@ internal sealed class InspectorPanel : EditorPanel
             if (drawnRuntimeScripts.Contains(script)) continue;
 
             Type type = script.GetType();
-            DrawCollapsibleComponentBlock($"{type.Name} (runtime)", $"runtime_script_{stableId}_{type.FullName}", false, () =>
+            DrawCollapsibleComponentBlock($"{type.Name} (runtime)", $"runtime_script_{stableId}_{script.MountId}_{type.FullName}", false, () =>
             {
                 ApplySerializedValuesToRuntimeScript(script, stableId);
                 DrawScriptMembers(script, type);
@@ -842,7 +980,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (!runtimeSerializedApplied.Add(script)) return;
 
         Type type = script.GetType();
-        ScriptMount? mount = FindScriptMount(stableId, type);
+        ScriptMount? mount = FindScriptMount(stableId, script.MountId);
         if (mount == null) return;
 
         foreach (FieldInfo field in GetSerializableFields(type))
@@ -970,10 +1108,10 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //查找 sidecar 脚本组件。
-    private ScriptMount? FindScriptMount(string stableId, Type type)
+    private ScriptMount? FindScriptMount(string stableId, string mountId)
     {
         if (!sidecarScripts.TryGetValue(stableId, out List<ScriptMount>? mounts)) return null;
-        return mounts.FirstOrDefault(mount => TypeMatches(mount.Type, type));
+        return mounts.FirstOrDefault(mount => string.Equals(mount.Id, mountId, StringComparison.Ordinal));
     }
 
     //查找已反射到的脚本类型。

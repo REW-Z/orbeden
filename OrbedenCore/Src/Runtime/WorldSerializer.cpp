@@ -341,12 +341,8 @@ namespace
             << EscapeXml(ens.GetName()) << "\" localActive=\""
             << (ens.GetLocalActive() ? "true" : "false") << "\">\n";
 
-        for (TypeId typeId : ens.GetComponentTypes())
+        for (Component* component : ens.GetComponents())
         {
-            Type* type = Object::FindType(typeId);
-            if (!type) continue;
-
-            Component* component = ens.GetComponent(type);
             WriteComponent(output, component, depth + 1);
         }
 
@@ -407,9 +403,15 @@ namespace
             if (!startToken.emptyElement) reader.SkipElement(startToken.name);
             return false;
         }
+        if (!type->CanCreateObject())
+        {
+            LogSerializerError("World XML references abstract component type: " + typeName);
+            if (!startToken.emptyElement) reader.SkipElement(startToken.name);
+            return false;
+        }
 
         //创建组件实例
-        Component* component = type == TransformComponent::StaticType() ? ens.Transform() : ens.AddComponent(type);
+        Component* component = type == TransformComponent::StaticType() ? ens.Transform() : ens.AddComponentInstance(type);
         if (!component)
         {
             LogSerializerError("World XML failed to create component: " + typeName);
@@ -578,10 +580,8 @@ namespace
     {
         world.ForEachEns([&world](Ens& ens)
             {
-                for (TypeId typeId : ens.GetComponentTypes())
+                for (Component* component : ens.GetComponents())
                 {
-                    Type* type = Object::FindType(typeId);
-                    Component* component = type ? ens.GetComponent(type) : nullptr;
                     LoadResourceRefsFromObject(world, component);
                 }
             });

@@ -11,16 +11,6 @@ enum class PhysicsBodyType : uint32
     Kinematic = 2,
 };
 
-//碰撞体几何类型
-enum class ColliderShape : uint32
-{
-    Box = 0,
-    Sphere = 1,
-    Capsule = 2,
-    ConvexMesh = 3,
-    TriangleMesh = 4,
-};
-
 //角色控制器几何类型
 enum class CharacterControllerShape : uint32
 {

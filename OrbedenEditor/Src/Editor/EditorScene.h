@@ -3,6 +3,7 @@
 #include "Editor/EditorLayoutState.h"
 #include "Rendering/RenderScene.h"
 #include "Runtime/EnsId.h"
+#include "Runtime/Native/NativeApiAbi.h"
 
 #include <string>
 #include <unordered_map>
@@ -12,6 +13,8 @@ class ManagedEditorBridge;
 class Mesh;
 class PanelManager;
 class World;
+
+#pragma pack(push, 4)
 
 //Editor Gizmo 三维向量，布局与 C# Orbeden.vector3 一致。
 struct EditorGizmoVector3
@@ -32,13 +35,27 @@ public:
     float32 a = 1.0f;
 };
 
+#pragma pack(pop)
+
+static_assert(std::is_standard_layout_v<EditorGizmoVector3> && std::is_trivially_copyable_v<EditorGizmoVector3>);
+static_assert(sizeof(EditorGizmoVector3) == sizeof(float32) * 3 && alignof(EditorGizmoVector3) <= 4);
+static_assert(offsetof(EditorGizmoVector3, x) == 0 && offsetof(EditorGizmoVector3, y) == sizeof(float32) && offsetof(EditorGizmoVector3, z) == sizeof(float32) * 2);
+
+static_assert(std::is_standard_layout_v<EditorGizmoColor> && std::is_trivially_copyable_v<EditorGizmoColor>);
+static_assert(sizeof(EditorGizmoColor) == sizeof(float32) * 4 && alignof(EditorGizmoColor) <= 4);
+static_assert(offsetof(EditorGizmoColor, r) == 0 && offsetof(EditorGizmoColor, g) == sizeof(float32) && offsetof(EditorGizmoColor, b) == sizeof(float32) * 2 && offsetof(EditorGizmoColor, a) == sizeof(float32) * 3);
+
 //Editor Gizmo 原生函数表，传给 C# Editor 保存。
+#pragma pack(push, 8)
 struct EditorGizmoApi
 {
 public:
     void* Line3D = nullptr;
     void* Label3D = nullptr;
 };
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 2);
 
 //编辑器背景场景，负责相机、选择、轮廓和 Handles 绘制。
 class EditorScene

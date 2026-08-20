@@ -200,7 +200,7 @@ public:
         PxRigidActor* actor = nullptr;
         uint64 configurationHash = 0;
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
-        Mesh* sourceMesh = nullptr;
+        List<Mesh*> sourceMeshes;
         bool sourceMeshInvalidated = false;
         vector3 lastPosition;
         quaternion lastRotation;
@@ -472,22 +472,54 @@ public:
         events.push_back(event);
     }
 
-    uint64 CalculateBodyHash(const ColliderComponent& collider, const RigidBodyComponent* body, const TransformComponent& transform) const
+    Mesh* GetColliderMesh(const ColliderComponent& collider) const
+    {
+        if (const ConvexMeshColliderComponent* convex = collider.Cast<ConvexMeshColliderComponent>()) return convex->mesh.Get();
+        if (const TriangleMeshColliderComponent* triangle = collider.Cast<TriangleMeshColliderComponent>()) return triangle->mesh.Get();
+        return nullptr;
+    }
+
+    uint64 CalculateColliderHash(const ColliderComponent& collider, const vector3& scale) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
-        hash = MixHash(hash, static_cast<uint32>(collider.shape));
+        hash = MixHash(hash, static_cast<uint32>(collider.GetGeometryType()));
         hash = MixHash(hash, collider.isTrigger);
         hash = MixVector(hash, collider.center);
-        hash = MixVector(hash, collider.halfExtents);
-        hash = MixFloat(hash, collider.radius);
-        hash = MixFloat(hash, collider.halfHeight);
         hash = MixFloat(hash, collider.staticFriction);
         hash = MixFloat(hash, collider.dynamicFriction);
         hash = MixFloat(hash, collider.restitution);
         hash = MixHash(hash, collider.collisionLayer);
         hash = MixHash(hash, collider.collisionMask);
-        hash = MixVector(hash, GetWorldScale(transform));
-        hash = MixHash(hash, collider.mesh.GetInstanceId().GetHash());
+        hash = MixVector(hash, scale);
+
+        if (const BoxColliderComponent* box = collider.Cast<BoxColliderComponent>())
+        {
+            hash = MixVector(hash, box->halfExtents);
+        }
+        else if (const SphereColliderComponent* sphere = collider.Cast<SphereColliderComponent>())
+        {
+            hash = MixFloat(hash, sphere->radius);
+        }
+        else if (const CapsuleColliderComponent* capsule = collider.Cast<CapsuleColliderComponent>())
+        {
+            hash = MixFloat(hash, capsule->radius);
+            hash = MixFloat(hash, capsule->halfHeight);
+        }
+        else if (Mesh* mesh = GetColliderMesh(collider))
+        {
+            hash = MixHash(hash, mesh->GetInstanceId().GetHash());
+        }
+        return hash;
+    }
+
+    uint64 CalculateBodyHash(const List<ColliderComponent*>& colliders, const RigidBodyComponent* body, const TransformComponent& transform) const
+    {
+        uint64 hash = 0xCBF29CE484222325ull;
+        vector3 scale = GetWorldScale(transform);
+        for (const ColliderComponent* collider : colliders)
+        {
+            if (collider) hash = MixHash(hash, CalculateColliderHash(*collider, scale));
+        }
 
         PhysicsBodyType type = body ? body->bodyType : PhysicsBodyType::Static;
         hash = MixHash(hash, static_cast<uint32>(type));
@@ -579,7 +611,10 @@ public:
         for (auto& entry : bodies)
         {
             BodyRecord& body = *entry.second;
-            if (body.sourceMesh == mesh) body.sourceMeshInvalidated = true;
+            if (std::find(body.sourceMeshes.begin(), body.sourceMeshes.end(), mesh) != body.sourceMeshes.end())
+            {
+                body.sourceMeshInvalidated = true;
+            }
         }
     }
 
@@ -595,33 +630,29 @@ public:
         flags |= collider.isTrigger ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
         PxShape* shape = nullptr;
 
-        if (collider.shape == ColliderShape::Box)
+        ColliderGeometryType geometryType = collider.GetGeometryType();
+        if (const BoxColliderComponent* box = collider.Cast<BoxColliderComponent>())
         {
             PxBoxGeometry geometry(
-                Positive(collider.halfExtents.x * scale.x),
-                Positive(collider.halfExtents.y * scale.y),
-                Positive(collider.halfExtents.z * scale.z));
+                Positive(box->halfExtents.x * scale.x),
+                Positive(box->halfExtents.y * scale.y),
+                Positive(box->halfExtents.z * scale.z));
             shape = physics->createShape(geometry, *material, true, flags);
         }
-        else if (collider.shape == ColliderShape::Sphere)
+        else if (const SphereColliderComponent* sphere = collider.Cast<SphereColliderComponent>())
         {
             float32 uniformScale = std::max({ Positive(scale.x), Positive(scale.y), Positive(scale.z) });
-            shape = physics->createShape(PxSphereGeometry(Positive(collider.radius * uniformScale)), *material, true, flags);
+            shape = physics->createShape(PxSphereGeometry(Positive(sphere->radius * uniformScale)), *material, true, flags);
         }
-        else if (collider.shape == ColliderShape::Capsule)
+        else if (const CapsuleColliderComponent* capsule = collider.Cast<CapsuleColliderComponent>())
         {
             float32 radialScale = std::max(Positive(scale.x), Positive(scale.z));
-            PxCapsuleGeometry geometry(Positive(collider.radius * radialScale), Positive(collider.halfHeight * scale.y));
+            PxCapsuleGeometry geometry(Positive(capsule->radius * radialScale), Positive(capsule->halfHeight * scale.y));
             shape = physics->createShape(geometry, *material, true, flags);
         }
-        else
+        else if (Mesh* mesh = GetColliderMesh(collider))
         {
-            Mesh* mesh = collider.mesh.Get();
-            if (!mesh)
-            {
-                Log::Warning("Mesh collider has no loaded Mesh resource.");
-            }
-            else if (collider.shape == ColliderShape::ConvexMesh)
+            if (geometryType == ColliderGeometryType::ConvexMesh)
             {
                 PxConvexMesh* convex = GetConvexMesh(*mesh);
                 if (convex)
@@ -630,7 +661,7 @@ public:
                     shape = physics->createShape(geometry, *material, true, flags);
                 }
             }
-            else if (collider.shape == ColliderShape::TriangleMesh)
+            else if (geometryType == ColliderGeometryType::TriangleMesh)
             {
                 if (bodyType == PhysicsBodyType::Dynamic)
                 {
@@ -647,6 +678,10 @@ public:
                 }
             }
         }
+        else if (geometryType == ColliderGeometryType::ConvexMesh || geometryType == ColliderGeometryType::TriangleMesh)
+        {
+            Log::Warning("Mesh collider has no loaded Mesh resource.");
+        }
 
         material->release();
         if (!shape) return nullptr;
@@ -655,7 +690,7 @@ public:
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
         PxVec3 center(collider.center.x * scale.x, collider.center.y * scale.y, collider.center.z * scale.z);
-        PxQuat localRotation = collider.shape == ColliderShape::Capsule
+        PxQuat localRotation = geometryType == ColliderGeometryType::Capsule
             ? PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f))
             : PxQuat(PxIdentity);
         shape->setLocalPose(PxTransform(center, localRotation));
@@ -663,12 +698,14 @@ public:
     }
 
     std::unique_ptr<BodyRecord> CreateBody(
-        ColliderComponent& collider,
+        const List<ColliderComponent*>& colliders,
         RigidBodyComponent* body,
         TransformComponent& transform,
         uint64 configurationHash,
-        Mesh* sourceMesh)
+        const List<Mesh*>& sourceMeshes)
     {
+        if (colliders.empty()) return nullptr;
+
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
         if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
         {
@@ -678,11 +715,11 @@ public:
 
         std::unique_ptr<BodyRecord> record = std::make_unique<BodyRecord>();
         record->binding.kind = BindingKind::Body;
-        record->binding.ens = collider.GetEnsId();
+        record->binding.ens = colliders.front()->GetEnsId();
         record->binding.owner = this;
         record->configurationHash = configurationHash;
         record->bodyType = bodyType;
-        record->sourceMesh = sourceMesh;
+        record->sourceMeshes = sourceMeshes;
 
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         PxRigidActor* actor = bodyType == PhysicsBodyType::Static
@@ -690,16 +727,30 @@ public:
             : static_cast<PxRigidActor*>(physics->createRigidDynamic(pose));
         if (!actor) return nullptr;
 
-        PxShape* shape = CreateShape(collider, bodyType, GetWorldScale(transform));
-        if (!shape)
+        bool hasShape = false;
+        vector3 scale = GetWorldScale(transform);
+        for (ColliderComponent* collider : colliders)
+        {
+            if (!collider) continue;
+
+            PxShape* shape = CreateShape(*collider, bodyType, scale);
+            if (!shape)
+            {
+                Log::Warning("PhysX collider geometry creation failed; the shape was skipped.");
+                continue;
+            }
+
+            actor->attachShape(*shape);
+            shape->release();
+            hasShape = true;
+        }
+
+        if (!hasShape)
         {
             actor->release();
-            Log::Warning("PhysX collider geometry creation failed.");
             return nullptr;
         }
 
-        actor->attachShape(*shape);
-        shape->release();
         actor->userData = &record->binding;
         record->actor = actor;
 
@@ -772,28 +823,42 @@ public:
     {
         std::unordered_set<uint64> seen;
         std::unordered_set<Mesh*> dirtyMeshes;
-        currentWorld.ForEachComponent<ColliderComponent>([&](ColliderComponent* collider)
+        currentWorld.ForEachEns([&](Ens& ens)
         {
-            if (!collider || !collider->enabled) return;
-            Ens* ens = collider->GetEns();
-            TransformComponent* transform = ens ? ens->Transform() : nullptr;
-            RigidBodyComponent* body = ens ? ens->GetComponent<RigidBodyComponent>() : nullptr;
+            TransformComponent* transform = ens.Transform();
+            RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
             if (!transform || (body && !body->enabled)) return;
 
-            bool usesMesh = collider->shape == ColliderShape::ConvexMesh || collider->shape == ColliderShape::TriangleMesh;
-            Mesh* mesh = usesMesh ? collider->mesh.Get() : nullptr;
-            bool meshDirty = mesh && mesh->IsDirty(MeshDirtyFlags::Physics);
-            if (meshDirty && dirtyMeshes.insert(mesh).second)
+            List<ColliderComponent*> colliders;
+            List<Mesh*> sourceMeshes;
+            bool meshDirty = false;
+            for (Component* component : ens.GetComponents())
             {
-                InvalidateCookedMeshes(*mesh);
-            }
+                ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
+                if (!collider || !collider->enabled) continue;
 
-            uint64 key = EnsKey(collider->GetEnsId());
+                colliders.push_back(collider);
+                Mesh* mesh = GetColliderMesh(*collider);
+                if (!mesh) continue;
+
+                if (std::find(sourceMeshes.begin(), sourceMeshes.end(), mesh) == sourceMeshes.end())
+                {
+                    sourceMeshes.push_back(mesh);
+                }
+                if (mesh->IsDirty(MeshDirtyFlags::Physics))
+                {
+                    meshDirty = true;
+                    if (dirtyMeshes.insert(mesh).second) InvalidateCookedMeshes(*mesh);
+                }
+            }
+            if (colliders.empty()) return;
+
+            uint64 key = EnsKey(ens.GetId());
             seen.insert(key);
-            uint64 hash = CalculateBodyHash(*collider, body, *transform);
+            uint64 hash = CalculateBodyHash(colliders, body, *transform);
             auto found = bodies.find(key);
             bool meshChanged = found != bodies.end()
-                && (found->second->sourceMesh != mesh || found->second->sourceMeshInvalidated);
+                && (found->second->sourceMeshes != sourceMeshes || found->second->sourceMeshInvalidated);
             if (found != bodies.end() && (found->second->configurationHash != hash || meshDirty || meshChanged))
             {
                 DestroyBody(*found->second);
@@ -802,7 +867,7 @@ public:
             }
             if (found == bodies.end())
             {
-                std::unique_ptr<BodyRecord> created = CreateBody(*collider, body, *transform, hash, mesh);
+                std::unique_ptr<BodyRecord> created = CreateBody(colliders, body, *transform, hash, sourceMeshes);
                 if (created) bodies.emplace(key, std::move(created));
                 return;
             }

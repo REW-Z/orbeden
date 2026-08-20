@@ -5,7 +5,7 @@ using System.Text;
 namespace OrbedenEditor;
 
 #pragma warning disable CS0649
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorAssetNativeApi
 {
     public IntPtr Context;

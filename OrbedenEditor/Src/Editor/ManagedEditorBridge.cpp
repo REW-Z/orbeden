@@ -11,6 +11,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Native/NativeCall.h"
+#include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
 
 #include <coreclr_delegates.h>
@@ -54,6 +55,8 @@ namespace
         PanelManager* panelManager = nullptr;
     };
 
+    #pragma pack(push, 8)
+
     //传给 Editor C# 的 Panel 注册函数表。
     struct EditorPanelNativeApi
     {
@@ -91,6 +94,18 @@ namespace
         EditorPanelNativeApi panels;
         EditorAssetNativeApi assets;
     };
+
+    #pragma pack(pop)
+
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 2);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 41);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 33);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 35);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 37);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)

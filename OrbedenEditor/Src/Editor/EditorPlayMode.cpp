@@ -127,7 +127,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    if (!scripts.SetEntryPoints(entryPoints) || !scripts.Initialize())
+    if (!scripts.SetClrEntryPoints(entryPoints) || !scripts.Initialize())
     {
         lastError = "ScriptSystem failed to initialize CLR game entry points.";
         ClearBindings();

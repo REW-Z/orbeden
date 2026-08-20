@@ -2,6 +2,9 @@
 
 #include "Defines/types.h"
 #include "Runtime/EnsId.h"
+#include "Runtime/Native/NativeApiAbi.h"
+
+#pragma pack(push, 8)
 
 //World 原生函数表。
 struct WorldBind
@@ -121,13 +124,16 @@ public:
 struct ColliderBind
 {
 public:
-    void* HasComponent = nullptr;
-    void* AddComponent = nullptr;
-    void* GetComponent = nullptr;
+    void* AddBoxCollider = nullptr;
+    void* AddSphereCollider = nullptr;
+    void* AddCapsuleCollider = nullptr;
+    void* AddConvexMeshCollider = nullptr;
+    void* AddTriangleMeshCollider = nullptr;
+    void* GetColliderCount = nullptr;
+    void* GetColliderAt = nullptr;
+    void* GetGeometryType = nullptr;
     void* GetEnabled = nullptr;
     void* SetEnabled = nullptr;
-    void* GetShape = nullptr;
-    void* SetShape = nullptr;
     void* GetIsTrigger = nullptr;
     void* SetIsTrigger = nullptr;
     void* GetCenter = nullptr;
@@ -188,3 +194,47 @@ public:
     //创建 CharacterControllerComponent 函数表。
     static CharacterControllerBind Create();
 };
+
+#pragma pack(pop)
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(WorldBind, 4);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(PathDefinesBind, 2);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 11);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(TransformComponentBind, 10);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(StaticMeshRendererBind, 10);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RigidBodyBind, 23);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ColliderBind, 32);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(CharacterControllerBind, 25);
+
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, AddBoxCollider, 0);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, AddSphereCollider, 1);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, AddCapsuleCollider, 2);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, AddConvexMeshCollider, 3);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, AddTriangleMeshCollider, 4);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetColliderCount, 5);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetColliderAt, 6);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetGeometryType, 7);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetEnabled, 8);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetEnabled, 9);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetIsTrigger, 10);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetIsTrigger, 11);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetCenter, 12);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetCenter, 13);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetHalfExtents, 14);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetHalfExtents, 15);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetRadius, 16);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetRadius, 17);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetHalfHeight, 18);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetHalfHeight, 19);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetMesh, 20);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetMesh, 21);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetStaticFriction, 22);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetStaticFriction, 23);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetDynamicFriction, 24);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetDynamicFriction, 25);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetRestitution, 26);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetRestitution, 27);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetCollisionLayer, 28);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetCollisionLayer, 29);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, GetCollisionMask, 30);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(ColliderBind, SetCollisionMask, 31);

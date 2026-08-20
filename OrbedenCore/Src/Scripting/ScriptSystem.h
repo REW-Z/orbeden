@@ -32,6 +32,11 @@ private:
     bool initialized = false;
     bool renderOverlayAttached = false;
 
+#if defined(ORBEDEN_PLAYER)
+    //绑定 NativeAOT 游戏模块的链接期导出入口
+    void SetAotEntryPoints();
+#endif
+
 public:
     //获取渲染依赖，并按运行模式准备脚本入口
     bool OnInitialize(Application& app) override;
@@ -40,7 +45,7 @@ public:
     void OnShutdown() override;
 
     //设置 CLR 游戏程序集导出的完整入口
-    bool SetEntryPoints(const ScriptEntryPoints& value);
+    bool SetClrEntryPoints(const ScriptEntryPoints& value);
 
     //初始化当前模式的游戏脚本模块
     bool Initialize();

@@ -6,7 +6,7 @@ using Orbeden;
 namespace OrbedenEditor;
 
 #pragma warning disable CS0649
-[StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorGuiNativeApi
 {
     public delegate* unmanaged[Cdecl]<byte*, int, void> Label;

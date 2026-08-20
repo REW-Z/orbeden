@@ -8,7 +8,7 @@ namespace OrbedenEditor;
 /// <summary>Editor 托管入口，由 C++ EditorSystem 调用。</summary>
 public static class EditorRuntime
 {
-    [StructLayout(LayoutKind.Sequential)]
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
     private unsafe struct EditorManagedApi
     {
         public IntPtr EngineApi;
@@ -25,6 +25,8 @@ public static class EditorRuntime
     {
         try
         {
+            ValidateNativeApiLayout();
+
             if (editorApi == IntPtr.Zero)
             {
                 OrbedenCoreRuntime.InitializeEngineBindings(IntPtr.Zero);
@@ -158,5 +160,24 @@ public static class EditorRuntime
         output.Clear();
         Encoding.UTF8.GetEncoder().Convert(text.AsSpan(), output[..^1], true, out _, out int bytesUsed, out _);
         output[bytesUsed] = 0;
+    }
+
+    //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
+    private static unsafe void ValidateNativeApiLayout()
+    {
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 30);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 2);
+        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
+        ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 4);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 41);
+    }
+
+    //验证全由函数指针槽组成的函数表尺寸。
+    private static unsafe void ValidateFunctionTable<T>(string name, int slotCount) where T : unmanaged
+    {
+        int expectedSize = checked(slotCount * IntPtr.Size);
+        if (sizeof(T) != expectedSize)
+            throw new TypeLoadException($"{name} ABI size mismatch: expected {expectedSize}, actual {sizeof(T)}.");
     }
 }

@@ -4,14 +4,14 @@
 
 #include <type_traits>
 
-//单个Component类型在一个World中的稀疏集索引
+//单个Component类型在一个World中的多实例稀疏集索引
 class ComponentStorage
 {
 private:
-    //EnsId槽位到紧凑数组位置的映射
+    //EnsId槽位到该类型所有组件实例的映射
     struct SparseSlot
     {
-        Component* component = nullptr;
+        List<Component*> components;
         uint32 ensVersion = 0;
     };
 
@@ -49,11 +49,17 @@ public:
     //创建Ens拥有的组件
     Component* Create(EnsId owner, const std::string& instancePath);
 
-    //查找Ens拥有的组件
+    //查找Ens拥有的首个组件
     Component* Get(EnsId owner) const;
 
-    //移除并返回Ens拥有的组件
+    //获取Ens拥有的全部组件
+    void GetAll(EnsId owner, List<Component*>& output) const;
+
+    //移除并返回Ens拥有的首个组件
     Component* Remove(EnsId owner);
+
+    //移除并返回指定组件实例
+    Component* Remove(Component* component);
 
     //获取存活组件数量
     uint32 GetCount() const;
