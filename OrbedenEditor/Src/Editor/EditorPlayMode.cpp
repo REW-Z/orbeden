@@ -11,6 +11,7 @@ namespace
     constexpr const char* InitializeMethod = "OrbedenGame_Initialize";
     constexpr const char* ShutdownMethod = "OrbedenGame_Shutdown";
     constexpr const char* UpdateMethod = "OrbedenGame_Update";
+    constexpr const char* FixedUpdateMethod = "OrbedenGame_FixedUpdate";
     constexpr const char* DrawGuiMethod = "OrbedenGame_DrawGui";
 
     //规范化路径字符串。
@@ -120,6 +121,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
     if (!host.BindFunction(shadowAssemblyPath, gameModuleType, InitializeMethod, reinterpret_cast<void**>(&entryPoints.initialize))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, ShutdownMethod, reinterpret_cast<void**>(&entryPoints.shutdown))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&entryPoints.update))
+        || !host.BindFunction(shadowAssemblyPath, gameModuleType, FixedUpdateMethod, reinterpret_cast<void**>(&entryPoints.fixedUpdate))
         || !host.BindFunction(shadowAssemblyPath, gameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui)))
     {
         lastError = host.GetLastError() + " Assembly: " + shadowAssemblyPath + " Type: " + gameModuleType;

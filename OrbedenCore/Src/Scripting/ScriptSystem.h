@@ -11,11 +11,13 @@ public:
     using InitializeFunction = void(ORBEDEN_NATIVE_CALL*)(void*);
     using ShutdownFunction = void(ORBEDEN_NATIVE_CALL*)();
     using UpdateFunction = void(ORBEDEN_NATIVE_CALL*)(float);
+    using FixedUpdateFunction = void(ORBEDEN_NATIVE_CALL*)(float);
     using DrawGuiFunction = void(ORBEDEN_NATIVE_CALL*)();
 
     InitializeFunction initialize = nullptr;
     ShutdownFunction shutdown = nullptr;
     UpdateFunction update = nullptr;
+    FixedUpdateFunction fixedUpdate = nullptr;
     DrawGuiFunction drawGui = nullptr;
 
     //判断脚本入口是否完整
@@ -55,6 +57,9 @@ public:
 
     //每帧更新游戏脚本
     void Update(World& world, float deltaTime) override;
+
+    //固定步长更新游戏脚本
+    void FixedUpdate(World& world, float fixedDeltaTime) override;
 
     //绘制游戏脚本 GUI
     void DrawOverlay() override;

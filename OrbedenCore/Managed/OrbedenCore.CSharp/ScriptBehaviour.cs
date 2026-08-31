@@ -33,6 +33,12 @@ public abstract class ScriptBehaviour : Component
         OnUpdate(deltaTime);
     }
 
+    //由 Runtime 调用脚本固定步长回调
+    public void InvokeFixedUpdate(float fixedDeltaTime)
+    {
+        OnFixedUpdate(fixedDeltaTime);
+    }
+
     //由 Runtime 调用脚本 GUI 绘制回调
     public void InvokeDrawGUI()
     {
@@ -57,6 +63,9 @@ public abstract class ScriptBehaviour : Component
 
     /// <summary>脚本每帧更新时调用。</summary>
     protected virtual void OnUpdate(float deltaTime) {}
+
+    /// <summary>脚本固定步长更新时调用。</summary>
+    protected virtual void OnFixedUpdate(float fixedDeltaTime) {}
 
     /// <summary>脚本每个 GUI 渲染帧调用，只能在此回调的同步调用链中使用 GUI API。</summary>
     protected virtual void OnDrawGUI() {}
