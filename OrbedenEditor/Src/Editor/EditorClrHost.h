@@ -7,7 +7,7 @@ struct EditorClrHostConfig
 {
 public:
     std::string runtimeConfigPath;
-    std::string dotnetRoot;
+    std::string overrideDotnetRoot;
     std::string componentAssemblyPath;
 };
 

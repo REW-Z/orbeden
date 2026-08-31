@@ -256,6 +256,14 @@ namespace
             || content.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
     }
 
+    //判断脚本工程是否引用本地脚本生成器
+    bool ScriptProjectUsesLocalScriptGenerator(const std::string& csproj)
+    {
+        std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
+        return content.find("Lib\\Orbeden.ScriptGenerator.dll") != std::string::npos
+            || content.find("Lib/Orbeden.ScriptGenerator.dll") != std::string::npos;
+    }
+
     bool RefreshLocalRuntimeDllReference(const std::string& csproj, const std::string& runtimeDllPath, std::string& outError)
     {
         outError.clear();
@@ -271,20 +279,48 @@ namespace
         std::filesystem::create_directories(target.parent_path());
 
         std::error_code equivalentError;
-        if (std::filesystem::exists(target) && std::filesystem::equivalent(Utf8Path::FromUtf8(runtimeDllPath), target, equivalentError))
+        if (!std::filesystem::exists(target) || !std::filesystem::equivalent(Utf8Path::FromUtf8(runtimeDllPath), target, equivalentError))
+        {
+            std::error_code copyError;
+            std::filesystem::copy_file(Utf8Path::FromUtf8(runtimeDllPath),
+                target,
+                std::filesystem::copy_options::overwrite_existing,
+                copyError);
+            if (copyError)
+            {
+                outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
+                return false;
+            }
+        }
+
+        if (!ScriptProjectUsesLocalScriptGenerator(csproj)) return true;
+
+        std::filesystem::path generatorSource = Utf8Path::FromUtf8(runtimeDllPath).parent_path() / "Orbeden.ScriptGenerator.dll";
+        if (!std::filesystem::exists(generatorSource))
+        {
+            outError = "Orbeden.ScriptGenerator.dll was not found. Build OrbedenCore.vcxproj first.";
+            return false;
+        }
+
+        std::filesystem::path generatorTarget = Utf8Path::FromUtf8(csproj).parent_path() / "Lib/Orbeden.ScriptGenerator.dll";
+        equivalentError.clear();
+        if (std::filesystem::exists(generatorTarget) && std::filesystem::equivalent(generatorSource, generatorTarget, equivalentError))
         {
             return true;
         }
 
         std::error_code copyError;
-        std::filesystem::copy_file(Utf8Path::FromUtf8(runtimeDllPath),
-            target,
+        std::filesystem::copy_file(generatorSource,
+            generatorTarget,
             std::filesystem::copy_options::overwrite_existing,
             copyError);
-        if (!copyError) return true;
+        if (copyError)
+        {
+            outError = "Copy Orbeden.ScriptGenerator.dll failed: " + copyError.message();
+            return false;
+        }
 
-        outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
-        return false;
+        return true;
     }
 
     std::filesystem::path GetVisualStudioRoot()
@@ -939,39 +975,19 @@ bool EditorSystem::SyncProjectRuntimeCSharpDll(std::string& outError) const
         return false;
     }
 
-    std::string scriptRoot = project.GetScriptRootPath();
-    if (scriptRoot.empty())
+    std::string scriptProject = GetProjectScriptProjectPath();
+    if (scriptProject.empty())
     {
-        outError = "Project script root is empty.";
+        outError = "Project script project is empty.";
         return false;
     }
 
-    std::filesystem::path source = Utf8Path::FromUtf8(runtimeDll);
-    std::filesystem::path target = Utf8Path::FromUtf8(scriptRoot) / "Lib/OrbedenCore.CSharp.dll";
-    std::error_code error;
-    if (std::filesystem::exists(target)
-        && std::filesystem::equivalent(source, target, error)
-        && !error)
+    if (!RefreshLocalRuntimeDllReference(scriptProject, runtimeDll, outError))
     {
-        return true;
-    }
-
-    error.clear();
-    std::filesystem::create_directories(target.parent_path(), error);
-    if (error)
-    {
-        outError = "Create project script Lib directory failed: " + error.message();
         return false;
     }
 
-    std::filesystem::copy_file(source, target, std::filesystem::copy_options::overwrite_existing, error);
-    if (error)
-    {
-        outError = "Copy OrbedenCore.CSharp.dll failed: " + error.message();
-        return false;
-    }
-
-    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(target)).c_str());
+    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(Utf8Path::FromUtf8(scriptProject).parent_path() / "Lib")).c_str());
     return true;
 #endif
 }

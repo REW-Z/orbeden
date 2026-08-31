@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Orbeden.ScriptGenerator</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <RoslynBinariesPath>$(MSBuildSDKsPath)\..\Roslyn\bincore\</RoslynBinariesPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis" HintPath="$(RoslynBinariesPath)Microsoft.CodeAnalysis.dll" Private="false" />
+    <Reference Include="Microsoft.CodeAnalysis.CSharp" HintPath="$(RoslynBinariesPath)Microsoft.CodeAnalysis.CSharp.dll" Private="false" />
+  </ItemGroup>
+</Project>

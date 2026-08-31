@@ -139,7 +139,7 @@ private:
     //获取当前项目游戏程序集名
     std::string GetProjectGameAssemblyName() const;
 
-    //获取当前项目 GameModule 类型名
+    //获取当前项目生成的 GameModule 类型名
     std::string GetProjectGameModuleTypeName() const;
 
     //获取当前项目游戏程序集路径

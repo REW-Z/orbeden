@@ -153,6 +153,14 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
+    std::filesystem::path scriptGeneratorPath = runtimePath.parent_path() / "Orbeden.ScriptGenerator.dll";
+    if (!std::filesystem::exists(scriptGeneratorPath))
+    {
+        outError = "Orbeden.ScriptGenerator.dll was not found. Build OrbedenCore.vcxproj first: " + ToCleanPath(scriptGeneratorPath);
+        Log::Error(outError.c_str());
+        return false;
+    }
+
     std::filesystem::path projectRoot = parentPath / projectName;
     if (std::filesystem::exists(projectRoot) && !std::filesystem::is_directory(projectRoot))
     {
@@ -181,6 +189,18 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
     if (copyError)
     {
         outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
+        Log::Error(outError.c_str());
+        return false;
+    }
+
+    copyError.clear();
+    std::filesystem::copy_file(scriptGeneratorPath,
+        projectRoot / "Script/Lib/Orbeden.ScriptGenerator.dll",
+        std::filesystem::copy_options::overwrite_existing,
+        copyError);
+    if (copyError)
+    {
+        outError = "Copy Orbeden.ScriptGenerator.dll failed: " + copyError.message();
         Log::Error(outError.c_str());
         return false;
     }

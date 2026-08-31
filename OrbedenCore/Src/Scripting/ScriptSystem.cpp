@@ -9,6 +9,7 @@ extern "C"
     void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi);
     void ORBEDEN_NATIVE_CALL OrbedenGame_Shutdown();
     void ORBEDEN_NATIVE_CALL OrbedenGame_Update(float deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_FixedUpdate(float fixedDeltaTime);
     void ORBEDEN_NATIVE_CALL OrbedenGame_DrawGui();
 }
 #endif
@@ -16,19 +17,34 @@ extern "C"
 //判断脚本入口是否完整
 bool ScriptEntryPoints::IsValid() const
 {
-    return initialize && shutdown && update && drawGui;
+    return initialize && shutdown && update && fixedUpdate && drawGui;
 }
 
+
+
+
 #if defined(ORBEDEN_PLAYER)
-//绑定 NativeAOT 游戏模块的链接期导出入口
+//**Player**：绑定 NativeAOT 游戏模块的链接期导出入口
 void ScriptSystem::SetAotEntryPoints()
 {
     entryPoints.initialize = &OrbedenGame_Initialize;
     entryPoints.shutdown = &OrbedenGame_Shutdown;
     entryPoints.update = &OrbedenGame_Update;
+    entryPoints.fixedUpdate = &OrbedenGame_FixedUpdate;
     entryPoints.drawGui = &OrbedenGame_DrawGui;
 }
 #endif
+
+//**Editor**：设置 CLR 游戏程序集导出的完整入口
+bool ScriptSystem::SetClrEntryPoints(const ScriptEntryPoints& value)
+{
+    if (runtimeMode != ScriptRuntimeMode::CLR || initialized || !value.IsValid()) return false;
+
+    entryPoints = value;
+    return true;
+}
+
+
 
 //准备脚本系统依赖和入口
 bool ScriptSystem::OnInitialize(Application& app)
@@ -55,15 +71,6 @@ void ScriptSystem::OnShutdown()
 {
     Shutdown();
     renderSystem = nullptr;
-}
-
-//设置 CLR 游戏程序集导出的完整入口
-bool ScriptSystem::SetClrEntryPoints(const ScriptEntryPoints& value)
-{
-    if (runtimeMode != ScriptRuntimeMode::CLR || initialized || !value.IsValid()) return false;
-
-    entryPoints = value;
-    return true;
 }
 
 //初始化当前模式的游戏脚本模块
@@ -114,6 +121,16 @@ void ScriptSystem::Update(World& world, float deltaTime)
     if (initialized && entryPoints.update)
     {
         entryPoints.update(deltaTime);
+    }
+}
+
+//固定步长更新游戏脚本。
+void ScriptSystem::FixedUpdate(World& world, float fixedDeltaTime)
+{
+    (void)world;
+    if (initialized && entryPoints.fixedUpdate)
+    {
+        entryPoints.fixedUpdate(fixedDeltaTime);
     }
 }
 
