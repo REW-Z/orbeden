@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <unordered_map>
@@ -434,6 +435,13 @@ namespace Reflection
         GetTypeInfoForWrite(type).methods = methods;
     }
 
+    //注销一个动态模块类型的全部反射元数据
+    void UnregisterType(Type* type)
+    {
+        if (!type) return;
+        GetReflectionRegistry().erase(type->GetId());
+    }
+
     //查找类型元数据
     const TypeInfo* FindTypeInfo(Type* type)
     {
@@ -449,18 +457,44 @@ namespace Reflection
     //查找字段元数据
     const FieldInfo* FindField(Type* type, const std::string& name)
     {
-        const TypeInfo* info = FindTypeInfo(type);
-        if (!info) return nullptr;
-
-        for (const FieldInfo& field : info->fields)
+        for (Type* current = type; current; current = current->GetBaseType())
         {
-            if (field.name && name == field.name)
+            const TypeInfo* info = FindTypeInfo(current);
+            if (!info) continue;
+
+            for (const FieldInfo& field : info->fields)
             {
-                return &field;
+                if (field.name && name == field.name) return &field;
             }
         }
 
         return nullptr;
+    }
+
+    //按基类到派生类顺序收集可见字段
+    void CollectFields(Type* type, List<const FieldInfo*>& output)
+    {
+        output.clear();
+        if (!type) return;
+
+        List<Type*> chain;
+        for (Type* current = type; current; current = current->GetBaseType()) chain.push_back(current);
+
+        for (auto typeIt = chain.rbegin(); typeIt != chain.rend(); ++typeIt)
+        {
+            const TypeInfo* info = FindTypeInfo(*typeIt);
+            if (!info) continue;
+
+            for (const FieldInfo& field : info->fields)
+            {
+                auto duplicate = std::find_if(output.begin(), output.end(), [&field](const FieldInfo* value)
+                    {
+                        return value && value->name && field.name && std::string(value->name) == field.name;
+                    });
+                if (duplicate != output.end()) *duplicate = &field;
+                else output.push_back(&field);
+            }
+        }
     }
 
     //查找方法元数据

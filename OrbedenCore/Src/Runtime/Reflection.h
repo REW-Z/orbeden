@@ -227,11 +227,17 @@ namespace Reflection
     //注册类型方法元数据
     void RegisterTypeMethods(Type* type, const List<MethodInfo>& methods);
 
+    //注销一个动态模块类型的全部反射元数据。
+    void UnregisterType(Type* type);
+
     //查找类型元数据
     const TypeInfo* FindTypeInfo(Type* type);
 
     //查找字段元数据
     const FieldInfo* FindField(Type* type, const std::string& name);
+
+    //按基类到派生类顺序收集可见字段。
+    void CollectFields(Type* type, List<const FieldInfo*>& output);
 
     //查找方法元数据
     const MethodInfo* FindMethod(Type* type, const std::string& name);

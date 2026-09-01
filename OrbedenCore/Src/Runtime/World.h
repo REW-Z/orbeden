@@ -12,7 +12,7 @@
 class World
 {
     friend class Ens;
-    friend class Object;
+    friend class OrbedenObject;
 
 private:
     //Ens ID槽位，保存版本和紧凑列表索引
@@ -30,6 +30,7 @@ private:
     List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
 	List<Object*> ownedObjects;//world拥有的运行时对象
     List<ITransformListener*> transformListeners;//变换监听器
+    List<class IWorldLifecycleListener*> lifecycleListeners;//Ens生命周期监听器
 
     //使用指定稳定ID创建Ens
     Ens* CreateEnsInternal(const std::string& name, const std::string& stableId);
@@ -83,6 +84,12 @@ public:
 
     //注销变换监听器
     void RemoveTransformListener(ITransformListener* listener);
+
+    //注册 Ens 生命周期监听器
+    void AddLifecycleListener(class IWorldLifecycleListener* listener);
+
+    //注销 Ens 生命周期监听器
+    void RemoveLifecycleListener(class IWorldLifecycleListener* listener);
 
     //通知指定节点及其子树的世界变换失效
     void NotifyTransformChanged(EnsId ens);
@@ -179,4 +186,17 @@ public:
 
         storage->ForEachTyped<TComponent>(visitor);
     }
+};
+
+//接收 World 中与脚本调度有关的低频 Ens 生命周期事件。
+class IWorldLifecycleListener
+{
+public:
+    virtual ~IWorldLifecycleListener() = default;
+
+    //Ens 的层级活动状态发生变化。
+    virtual void OnEnsWorldActiveChanged(EnsId ens, bool worldActive) { (void)ens; (void)worldActive; }
+
+    //Ens 即将完成销毁，额外组件已经卸载。
+    virtual void OnEnsDestroyed(EnsId ens) { (void)ens; }
 };

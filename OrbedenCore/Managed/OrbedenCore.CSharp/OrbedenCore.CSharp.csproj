@@ -8,8 +8,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EditorSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenEditor\Sdk\Managed\OrbedenCore.CSharp\</EditorSdkOutputPath>
     <GameSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenGame\Sdk\Managed\OrbedenCore.CSharp\</GameSdkOutputPath>
-    <ScriptGeneratorProjectPath>$(MSBuildThisFileDirectory)..\..\..\Tools\OrbedenScriptGenerator\Orbeden.ScriptGenerator.csproj</ScriptGeneratorProjectPath>
-    <ScriptGeneratorOutputPath>$(MSBuildThisFileDirectory)..\..\..\Tools\OrbedenScriptGenerator\bin\$(Configuration)\net10.0\Orbeden.ScriptGenerator.dll</ScriptGeneratorOutputPath>
     <OutputPath>$(EditorSdkOutputPath)</OutputPath>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
@@ -18,19 +16,13 @@
     <NoWarn>$(NoWarn);CS8981</NoWarn>
   </PropertyGroup>
 
-  <Target Name="BuildScriptGenerator">
-    <MSBuild Projects="$(ScriptGeneratorProjectPath)" Targets="Build" Properties="Configuration=$(Configuration)" />
-  </Target>
-
-  <Target Name="CopyRuntimeSdkToGame" AfterTargets="Build" DependsOnTargets="BuildScriptGenerator">
+  <Target Name="CopyRuntimeSdkToGame" AfterTargets="Build">
     <ItemGroup>
       <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.dll" />
       <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.pdb" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.pdb')" />
       <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.deps.json" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.deps.json')" />
-      <RuntimeSdkFiles Include="$(ScriptGeneratorOutputPath)" />
     </ItemGroup>
     <MakeDir Directories="$(GameSdkOutputPath)" />
-    <Copy SourceFiles="$(ScriptGeneratorOutputPath)" DestinationFolder="$(EditorSdkOutputPath)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(RuntimeSdkFiles)" DestinationFolder="$(GameSdkOutputPath)" SkipUnchangedFiles="true" />
   </Target>
 </Project>

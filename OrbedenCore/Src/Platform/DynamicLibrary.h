@@ -14,3 +14,6 @@ DynamicLibrary LoadDynamicLibrary(const std::filesystem::path& path);
 
 // 获取原生动态库导出符号。
 void* GetDynamicLibrarySymbol(DynamicLibrary library, const char* name);
+
+//卸载原生动态库并使句柄失效。
+void UnloadDynamicLibrary(DynamicLibrary& library);

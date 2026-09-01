@@ -12,6 +12,6 @@ namespace NewProjectGenerator
         std::string& outProjectRoot,
         std::string& outError);
 
-    //修复早期生成项目中放错位置的 MSBuild 输出路径属性。
+    //修复并迁移脚本工程的 MSBuild 配置。
     bool RepairScriptProjectBuildProps(const std::string& scriptProjectPath, std::string& outError);
 }

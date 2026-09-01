@@ -8,7 +8,7 @@ internal static class PlayerBuildPipeline
 {
     private readonly record struct AotTarget(string RuntimeIdentifier, string OutputDirectory, bool UsesWindowsLibraryName);
 
-    /// <summary>发布用户游戏 NativeAOT 静态库。</summary>
+    /// <summary>发布用户游戏 NativeAOT 库。</summary>
     public static bool Publish(string repositoryRoot,
         string projectRoot,
         string scriptProject,
@@ -67,6 +67,14 @@ internal static class PlayerBuildPipeline
             string outputDirectory = Path.Combine(fullProjectRoot, "Aot", target.OutputDirectory, configuration);
             Directory.CreateDirectory(outputDirectory);
             string sdkProperty = Path.TrimEndingDirectorySeparator(sdkPath) + Path.DirectorySeparatorChar;
+            string nativeLibraryKind = target.UsesWindowsLibraryName ? "Shared" : "Static";
+            string runtimeManifestTargets = Path.Combine(fullRepositoryRoot,
+                "OrbedenEditor", "Managed", "Orbeden.Editor", "AotRuntimeManifest.targets");
+            if (!File.Exists(runtimeManifestTargets))
+            {
+                error = $"NativeAOT runtime manifest targets were not found: {runtimeManifestTargets}";
+                return false;
+            }
 
             //还原本机 NativeAOT 工具链
             string[] restoreArguments =
@@ -75,8 +83,9 @@ internal static class PlayerBuildPipeline
                 fullScriptProject,
                 "-r", target.RuntimeIdentifier,
                 "/p:PublishAot=true",
-                "/p:NativeLib=Static",
+                $"/p:NativeLib={nativeLibraryKind}",
                 $"/p:OrbedenSdkPath={sdkProperty}",
+                $"/p:CustomAfterMicrosoftCommonTargets={runtimeManifestTargets}",
                 "/p:RestoreSources=",
             ];
             if (!RunDotnet(restoreArguments, out string restoreError))
@@ -85,7 +94,7 @@ internal static class PlayerBuildPipeline
                 return false;
             }
 
-            //生成用户游戏 NativeAOT 静态库。
+            //Windows 生成隔离 CRT 的共享库；其余平台生成静态库。
             string[] publishArguments =
             [
                 "publish",
@@ -94,8 +103,9 @@ internal static class PlayerBuildPipeline
                 "-c", configuration,
                 "-r", target.RuntimeIdentifier,
                 "/p:PublishAot=true",
-                "/p:NativeLib=Static",
+                $"/p:NativeLib={nativeLibraryKind}",
                 $"/p:OrbedenSdkPath={sdkProperty}",
+                $"/p:CustomAfterMicrosoftCommonTargets={runtimeManifestTargets}",
                 "/p:RestoreSources=",
                 "-o", outputDirectory,
             ];
@@ -112,8 +122,14 @@ internal static class PlayerBuildPipeline
                 error = $"NativeAOT publish did not produce: {libraryPath}";
                 return false;
             }
+            string runtimeManifest = Path.Combine(outputDirectory, "orbeden-aot-runtime", "native-files.txt");
+            if (nativeLibraryKind == "Static" && !File.Exists(runtimeManifest))
+            {
+                error = $"NativeAOT publish did not produce its runtime dependency manifest: {runtimeManifest}";
+                return false;
+            }
 
-            Console.WriteLine($"Published NativeAOT static library: {libraryPath}");
+            Console.WriteLine($"Published NativeAOT library: {libraryPath}");
             return true;
         }
         catch (Exception exception)

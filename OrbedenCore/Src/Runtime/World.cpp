@@ -3,6 +3,7 @@
 #include "Memory/MemoryManager.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/TransformComponent.h"
+#include "Scripting/ScriptSystem.h"
 
 #include <algorithm>
 #include <cassert>
@@ -143,6 +144,12 @@ void World::RefreshEnsWorldActive(EnsId ens)
         {
             if (component) component->OnWorldActiveChanged(active);
         }
+
+        List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+        for (IWorldLifecycleListener* listener : listeners)
+        {
+            if (listener) listener->OnEnsWorldActiveChanged(ens, active);
+        }
     }
 
     EnsId child = transform->firstChild;
@@ -153,6 +160,20 @@ void World::RefreshEnsWorldActive(EnsId ens)
         RefreshEnsWorldActive(child);
         child = nextChild;
     }
+}
+
+//注册 Ens 生命周期监听器
+void World::AddLifecycleListener(IWorldLifecycleListener* listener)
+{
+    if (!listener) return;
+    if (std::find(lifecycleListeners.begin(), lifecycleListeners.end(), listener) != lifecycleListeners.end()) return;
+    lifecycleListeners.push_back(listener);
+}
+
+//注销 Ens 生命周期监听器
+void World::RemoveLifecycleListener(IWorldLifecycleListener* listener)
+{
+    lifecycleListeners.erase(std::remove(lifecycleListeners.begin(), lifecycleListeners.end(), listener), lifecycleListeners.end());
 }
 
 //获取当前活动世界
@@ -309,6 +330,11 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
 //销毁Ens
 bool World::DestroyEns(EnsId ens)
 {
+    if (ScriptSystem* scripts = ScriptSystem::Current())
+    {
+        if (scripts->DeferEnsDestruction(ens)) return true;
+    }
+
     Ens* storedEns = GetEns(ens);
     if (!storedEns) return false;
 
@@ -339,6 +365,12 @@ bool World::DestroyEns(EnsId ens)
         {
             RemoveComponent(component);
         }
+    }
+
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsDestroyed(ens);
     }
 
     //注销并销毁变换组件
@@ -609,6 +641,11 @@ bool World::RemoveComponent(EnsId ens, Type* type)
 //移除指定组件实例
 bool World::RemoveComponent(Component* component)
 {
+    if (ScriptSystem* scripts = ScriptSystem::Current())
+    {
+        if (scripts->DeferComponentRemoval(component)) return true;
+    }
+
     if (!component) return false;
     if (component->GetWorld() != this) return false;
     EnsId ens = component->GetEnsId();

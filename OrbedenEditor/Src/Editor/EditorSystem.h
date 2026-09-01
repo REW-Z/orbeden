@@ -5,6 +5,7 @@
 #include "Editor/EditorProject.h"
 #include "Editor/EditorScene.h"
 #include "Editor/ManagedEditorBridge.h"
+#include "Editor/NativeGameModule.h"
 #include "Editor/PanelManager.h"
 #include "Editor/EditorPlayMode.h"
 #include "Runtime/EnsId.h"
@@ -35,6 +36,7 @@ private:
     ManagedEditorBridge managedBridge;
     EditorScene editorScene;
     EditorPlayMode playMode;
+    NativeGameModule nativeGameModule;
     int32 selectedPlayerTargetPlatform = 0;
     std::atomic_bool repaintRequested = true;
     bool continuousRepaint = false;
@@ -70,6 +72,9 @@ public:
     //请求构建当前项目 C# 脚本
     void RequestBuildScripts();
 
+    //请求构建并热重载当前项目 C++ 模块。
+    void RequestBuildNative();
+
     //请求进入 Play-In-Editor
     void RequestPlay();
 
@@ -96,6 +101,9 @@ public:
 
     //获取项目托管输出目录
     std::string GetProjectManagedRootPath() const;
+
+    //获取项目 C++ 代码根目录。
+    std::string GetProjectNativeRootPath() const;
 
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;
@@ -139,9 +147,6 @@ private:
     //获取当前项目游戏程序集名
     std::string GetProjectGameAssemblyName() const;
 
-    //获取当前项目生成的 GameModule 类型名
-    std::string GetProjectGameModuleTypeName() const;
-
     //获取当前项目游戏程序集路径
     std::string GetProjectGameAssemblyPath() const;
 
@@ -150,6 +155,9 @@ private:
 
     //刷新 Inspector 使用的用户游戏程序集
     bool RefreshInspectorGameAssembly();
+
+    //构建并热重载项目 C++ 模块。
+    bool BuildNativeGameModule(bool saveWorldBeforeReload);
 
     //查找仓库根目录
     std::string FindRepositoryRoot() const;

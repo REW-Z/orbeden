@@ -435,7 +435,8 @@ void main()
       <HintPath>Lib\OrbedenCore.CSharp.dll</HintPath>
       <Private>true</Private>
     </Reference>
-    <Analyzer Include="Lib\Orbeden.ScriptGenerator.dll" />
+    <TrimmerRootAssembly Include="$(AssemblyName)" />
+    <TrimmerRootAssembly Include="OrbedenCore.CSharp" />
   </ItemGroup>
 </Project>
 )ORB";
@@ -448,6 +449,168 @@ void main()
   </PropertyGroup>
 </Project>
 )ORB";
+
+    constexpr const char* AotExportsText = R"ORB(using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Orbeden;
+
+// NativeAOT 只导出游戏主程序集中的入口；每个阶段在此进入托管域一次。
+internal static class OrbedenAotExports
+{
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Initialize", CallConvs = [typeof(CallConvCdecl)])]
+    public static void Initialize(IntPtr nativeApi) => GameScriptRuntime.Initialize(nativeApi);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Shutdown", CallConvs = [typeof(CallConvCdecl)])]
+    public static void Shutdown() => GameScriptRuntime.Shutdown();
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Update", CallConvs = [typeof(CallConvCdecl)])]
+    public static void Update(float deltaTime) => GameScriptRuntime.Update(deltaTime);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_FixedUpdate", CallConvs = [typeof(CallConvCdecl)])]
+    public static void FixedUpdate(float fixedDeltaTime) => GameScriptRuntime.FixedUpdate(fixedDeltaTime);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_LateUpdate", CallConvs = [typeof(CallConvCdecl)])]
+    public static void LateUpdate(float deltaTime) => GameScriptRuntime.LateUpdate(deltaTime);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_EnsWorldActiveChanged", CallConvs = [typeof(CallConvCdecl)])]
+    public static void EnsWorldActiveChanged(EnsId ens, byte worldActive) =>
+        GameScriptRuntime.OnEnsWorldActiveChanged(ens, worldActive != 0);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_EnsDestroyed", CallConvs = [typeof(CallConvCdecl)])]
+    public static void EnsDestroyed(EnsId ens) => GameScriptRuntime.OnEnsDestroyed(ens);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_DrawGui", CallConvs = [typeof(CallConvCdecl)])]
+    public static void DrawGui() => GameScriptRuntime.DrawGUI();
+}
+)ORB";
+
+    constexpr const char* NativeCMakeTemplate = R"ORB(cmake_minimum_required(VERSION 3.26)
+
+project({{PROJECT_NAME}}Native LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(ORBEDEN_ENGINE_ROOT "" CACHE PATH "Orbeden repository root")
+set(ORBEDEN_CORE_LIB "" CACHE FILEPATH "Editor OrbedenCore import library")
+
+if(NOT ORBEDEN_ENGINE_ROOT OR NOT EXISTS "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj")
+    message(FATAL_ERROR "ORBEDEN_ENGINE_ROOT is invalid")
+endif()
+if(NOT ORBEDEN_CORE_LIB OR NOT EXISTS "${ORBEDEN_CORE_LIB}")
+    message(FATAL_ERROR "ORBEDEN_CORE_LIB is invalid")
+endif()
+
+file(GLOB_RECURSE GAME_NATIVE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+set(GENERATED_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Generated")
+set(GENERATED_REFLECTION "${GENERATED_DIRECTORY}/Reflection.Generated.cpp")
+
+add_custom_command(
+    OUTPUT "${GENERATED_REFLECTION}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${GENERATED_DIRECTORY}"
+    COMMAND dotnet run --project "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" -- "${CMAKE_CURRENT_SOURCE_DIR}" "${GENERATED_DIRECTORY}" --game-module
+    DEPENDS ${GAME_NATIVE_SOURCES} "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/Program.cs"
+    VERBATIM)
+
+add_library({{PROJECT_NAME}}Native SHARED ${GAME_NATIVE_SOURCES} "${GENERATED_REFLECTION}")
+target_include_directories({{PROJECT_NAME}}Native PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${ORBEDEN_ENGINE_ROOT}/OrbedenCore/Src")
+target_link_libraries({{PROJECT_NAME}}Native PRIVATE "${ORBEDEN_CORE_LIB}")
+target_compile_options({{PROJECT_NAME}}Native PRIVATE /utf-8)
+set_target_properties({{PROJECT_NAME}}Native PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+)ORB";
+
+    constexpr const char* NativeModuleTemplate = R"ORB(#include "Scripting/NativeGameModule.h"
+
+extern "C" void OrbedenGameNative_RegisterReflection();
+
+namespace
+{
+    const OrbedenNativeGameModuleApi ModuleApi
+    {
+        OrbedenNativeGameModuleAbiVersion,
+        sizeof(OrbedenNativeGameModuleApi),
+        "{{PROJECT_NAME}}Native",
+        &OrbedenGameNative_RegisterReflection,
+    };
+}
+
+extern "C" ORBEDEN_GAME_MODULE_EXPORT const OrbedenNativeGameModuleApi* OrbedenGameNative_GetApi()
+{
+    return &ModuleApi;
+}
+)ORB";
+
+    constexpr const char* SampleNativeBehaviourHeader = R"ORB(#pragma once
+
+#include "Scripting/ScriptBehaviour.h"
+
+//无需 C# binding 的高性能原生脚本组件。
+class SampleNativeBehaviour final : public ScriptBehaviour
+{
+    OBJECT_TYPE_DECLARE(SampleNativeBehaviour)
+
+public:
+    float32 speed = 2.0f;
+
+private:
+    float32 elapsedTime = 0.0f;
+
+protected:
+    void OnStart();
+    void OnUpdate(float32 deltaTime);
+    void OnLateUpdate(float32 deltaTime);
+    void OnDrawGUI();
+    void OnEnd();
+};
+)ORB";
+
+    constexpr const char* SampleNativeBehaviourSource = R"ORB(#include "SampleNativeBehaviour.h"
+
+#include "Runtime/Ens.h"
+#include "Runtime/Object/TransformComponent.h"
+
+#include <cmath>
+
+OBJECT_TYPE_IMPLEMENT(SampleNativeBehaviour, ScriptBehaviour)
+
+void SampleNativeBehaviour::OnStart()
+{
+    elapsedTime = 0.0f;
+}
+
+void SampleNativeBehaviour::OnUpdate(float32 deltaTime)
+{
+    elapsedTime += deltaTime * speed;
+    Ens* ens = GetEns();
+    TransformComponent* transform = ens ? ens->Transform() : nullptr;
+    if (!transform) return;
+
+    vector3 position = transform->GetLocalPosition();
+    position.y = 1.0f + std::sin(elapsedTime) * 0.2f;
+    transform->SetLocalPosition(position);
+}
+
+void SampleNativeBehaviour::OnLateUpdate(float32 deltaTime)
+{
+    (void)deltaTime;
+}
+
+void SampleNativeBehaviour::OnDrawGUI()
+{
+}
+
+void SampleNativeBehaviour::OnEnd()
+{
+}
+)ORB";
+
+    constexpr const char* NativeGitIgnoreText = "Build/\n";
 
     constexpr const char* SampleBehaviourText = R"ORB(using System.Collections.Generic;
 using Orbeden;
@@ -735,6 +898,11 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
 static bool GenerateWorldFile(const std::string& projectRoot, const std::string& projectName);
 
 //生成新项目模板的资源、脚本和 World 文件
+const char* NewProjectTemplate::GetAotExportsText()
+{
+    return AotExportsText;
+}
+
 bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     const std::string& projectName,
     std::string& outError)
@@ -742,7 +910,7 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     outError.clear();
     std::filesystem::path root = Utf8Path::FromUtf8(projectRoot);
     std::string projectFileText = "<OrbedenProject version=\"1\" name=\"" + projectName
-        + "\" startupWorld=\"World/main.world\" resourceRoot=\"Resource\" scriptRoot=\"Script\" managedRoot=\"Managed\" />\n";
+        + "\" startupWorld=\"World/main.world\" resourceRoot=\"Resource\" scriptRoot=\"Script\" managedRoot=\"Managed\" nativeRoot=\"Native\" />\n";
 
     //写入项目描述和资源目录。
     bool succeeded = true;
@@ -765,11 +933,19 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     //写入 C# 默认脚本工程。
     succeeded = WriteTextFile(root / "Script" / (projectName + ".csproj"), ExpandTemplate(ScriptProjectTemplate, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/Directory.Build.props", DirectoryBuildPropsText) && succeeded;
+    succeeded = WriteTextFile(root / "Script/OrbedenAotExports.cs", AotExportsText) && succeeded;
     succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", ExpandTemplate(SampleBehaviourText, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/CubeTestBehaviour.cs", ExpandTemplate(CubeTestBehaviourText, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/.gitignore", ScriptGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "Managed/.gitignore", ManagedGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "World/main.world.scripts.json", ExpandTemplate(WorldScriptsText, projectName)) && succeeded;
+
+    //写入 C++ 游戏模块、示例原生脚本和 MetaGen 构建步骤。
+    succeeded = WriteTextFile(root / "Native/CMakeLists.txt", ExpandTemplate(NativeCMakeTemplate, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Native/GameModule.cpp", ExpandTemplate(NativeModuleTemplate, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.h", SampleNativeBehaviourHeader) && succeeded;
+    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.cpp", SampleNativeBehaviourSource) && succeeded;
+    succeeded = WriteTextFile(root / "Native/.gitignore", NativeGitIgnoreText) && succeeded;
 
     //写入默认 World。
     succeeded = GenerateWorldFile(projectRoot, projectName) && succeeded;
@@ -823,6 +999,10 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "                <Field name=\"drawQueue\" type=\"DrawQueue\" value=\"0\" />\n"
         "                <Field name=\"castShadows\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"receiveShadows\" type=\"bool\" value=\"true\" />\n"
+        "            </Component>\n"
+        "            <Component type=\"SampleNativeBehaviour\">\n"
+        "                <Field name=\"enabled\" type=\"bool\" value=\"true\" />\n"
+        "                <Field name=\"speed\" type=\"float32\" value=\"2\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "ground\" name=\"Ground\">\n"

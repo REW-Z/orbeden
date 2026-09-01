@@ -220,10 +220,16 @@ void Application::Tick(float deltaTime)
         uint32 fixedStepCount = 0;
         while (fixedAccumulator >= fixedDeltaTime && fixedStepCount < maxFixedStepsPerFrame)
         {
+            IEngineSystem* scriptSystem = FindSystem(typeid(ScriptSystem));
+            if (scriptSystem) scriptSystem->FixedUpdate(world, fixedDeltaTime);
+
             usize fixedSystemCount = systems.size();
             for (usize index = 0; index < fixedSystemCount; index++)
             {
-                systems[index].system->FixedUpdate(world, fixedDeltaTime);
+                if (systems[index].system.get() != scriptSystem)
+                {
+                    systems[index].system->FixedUpdate(world, fixedDeltaTime);
+                }
             }
 
             fixedAccumulator -= fixedDeltaTime;
@@ -242,6 +248,14 @@ void Application::Tick(float deltaTime)
         for (usize index = 0; index < updateSystemCount; index++)
         {
             systems[index].system->Update(world, deltaTime);
+        }
+
+        /// *** Late Update ***
+
+        usize lateUpdateSystemCount = systems.size();
+        for (usize index = 0; index < lateUpdateSystemCount; index++)
+        {
+            systems[index].system->LateUpdate(world, deltaTime);
         }
     }
 }

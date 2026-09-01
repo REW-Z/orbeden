@@ -50,7 +50,7 @@ public:
     //绘制 C# Scene Handles。
     void DrawSceneGizmos();
 
-    // 使用 Editor C# 发布用户游戏 NativeAOT 静态库。
+    // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,
         const std::string& projectRoot,
         const std::string& scriptProject,

@@ -9,7 +9,10 @@
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/Ens.h"
+#include "Runtime/Object/TransformComponent.h"
 #include "Runtime/ResourceManager.h"
+#include "Scripting/ScriptBehaviour.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
@@ -75,6 +78,25 @@ namespace
         void* remapLiveReferences = nullptr;
     };
 
+    //传给 Editor C# 的原生组件检查函数表。
+    struct EditorComponentNativeApi
+    {
+    public:
+        void* context = nullptr;
+        void* getComponentCount = nullptr;
+        void* getComponentObjectId = nullptr;
+        void* getComponentTypeName = nullptr;
+        void* getFieldCount = nullptr;
+        void* getFieldName = nullptr;
+        void* getFieldKind = nullptr;
+        void* getFieldValue = nullptr;
+        void* setFieldValue = nullptr;
+        void* getAddableTypeCount = nullptr;
+        void* getAddableTypeName = nullptr;
+        void* addComponent = nullptr;
+        void* removeComponent = nullptr;
+    };
+
     //传给 Editor C# 的应用函数表。
     struct EditorApplicationNativeApi
     {
@@ -93,6 +115,7 @@ namespace
         EditorGizmoApi gizmo;
         EditorPanelNativeApi panels;
         EditorAssetNativeApi assets;
+        EditorComponentNativeApi components;
     };
 
     #pragma pack(pop)
@@ -100,12 +123,14 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 41);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 13);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 54);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 33);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 35);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 37);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 41);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -222,6 +247,135 @@ namespace
         return changed;
     }
 
+    //查找属于当前 Editor World 的组件对象。
+    Component* FindEditorComponent(void* context, int32 objectId)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Object* object = Object::FindObjectById(objectId);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        return editor && component && component->GetWorld() == &editor->GetWorld() ? component : nullptr;
+    }
+
+    //收集一个组件从基类到派生类的可见字段。
+    List<const Reflection::FieldInfo*> GetEditorComponentFields(Component* component)
+    {
+        List<const Reflection::FieldInfo*> fields;
+        if (component) Reflection::CollectFields(component->GetType(), fields);
+        return fields;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentCount(void* context, uint32 ensId, uint32 ensVersion)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
+        return ens ? static_cast<int32>(ens->GetComponents().size()) : 0;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentObjectId(void* context, uint32 ensId, uint32 ensVersion, int32 index)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
+        if (!ens || index < 0 || index >= static_cast<int32>(ens->GetComponents().size())) return 0;
+
+        Component* component = ens->GetComponents()[index];
+        return component ? component->GetObjectId() : 0;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentTypeName(void* context, int32 objectId, uint8* buffer, int32 bufferSize)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        return component ? CopyUtf8(component->GetType()->GetName(), buffer, bufferSize) : 0;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldCount(void* context, int32 objectId)
+    {
+        return static_cast<int32>(GetEditorComponentFields(FindEditorComponent(context, objectId)).size());
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldName(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
+    {
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(FindEditorComponent(context, objectId));
+        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
+        return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
+    {
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(FindEditorComponent(context, objectId));
+        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
+        return static_cast<int32>(fields[fieldIndex]->kind);
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldValue(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
+        if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
+        return CopyUtf8(fields[fieldIndex]->GetValueAsString(component), buffer, bufferSize);
+    }
+
+    uint8 ORBEDEN_NATIVE_CALL SetManagedComponentFieldValue(void* context,
+        int32 objectId,
+        int32 fieldIndex,
+        const uint8* value,
+        int32 valueLength)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
+        if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
+        return fields[fieldIndex]->SetValueFromString(component, ReadUtf8(value, valueLength)) ? 1 : 0;
+    }
+
+    //按类型注册顺序枚举可创建的原生组件类型。
+    List<Type*> GetAddableNativeComponentTypes()
+    {
+        List<Type*> types;
+        for (TypeId typeId = 0; typeId < Object::GetTypeCount(); ++typeId)
+        {
+            Type* type = Object::FindType(typeId);
+            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType()) continue;
+            if (type->Is(Component::StaticType()) && type->CanCreateObject()) types.push_back(type);
+        }
+        return types;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedAddableComponentTypeCount(void*)
+    {
+        return static_cast<int32>(GetAddableNativeComponentTypes().size());
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedAddableComponentTypeName(void*, int32 index, uint8* buffer, int32 bufferSize)
+    {
+        List<Type*> types = GetAddableNativeComponentTypes();
+        if (index < 0 || index >= static_cast<int32>(types.size())) return 0;
+        return CopyUtf8(types[index]->GetName(), buffer, bufferSize);
+    }
+
+    int32 ORBEDEN_NATIVE_CALL AddManagedNativeComponent(void* context,
+        uint32 ensId,
+        uint32 ensVersion,
+        const uint8* typeName,
+        int32 typeNameLength)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
+        Type* type = Object::FindType(ReadUtf8(typeName, typeNameLength));
+        if (!ens || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return 0;
+
+        Component* component = type->Is(ScriptBehaviour::StaticType())
+            ? ens->AddComponentInstance(type)
+            : ens->AddComponent(type);
+        return component ? component->GetObjectId() : 0;
+    }
+
+    uint8 ORBEDEN_NATIVE_CALL RemoveManagedNativeComponent(void* context, int32 objectId)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        if (!component || component->GetType() == TransformComponent::StaticType()) return 0;
+        Ens* ens = component->GetEns();
+        return ens && ens->RemoveComponent(component) ? 1 : 0;
+    }
+
     //把一个 C# Panel 注册到原生 PanelManager
     uint8 ORBEDEN_NATIVE_CALL RegisterManagedPanel(void* context,
         int32 handle,
@@ -307,6 +461,19 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.getResourceRoot = reinterpret_cast<void*>(&GetManagedResourceRoot);
     editorApi.assets.canModifyAssets = reinterpret_cast<void*>(&CanModifyManagedAssets);
     editorApi.assets.remapLiveReferences = reinterpret_cast<void*>(&RemapManagedLiveReferences);
+    editorApi.components.context = &editor;
+    editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
+    editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
+    editorApi.components.getComponentTypeName = reinterpret_cast<void*>(&GetManagedComponentTypeName);
+    editorApi.components.getFieldCount = reinterpret_cast<void*>(&GetManagedComponentFieldCount);
+    editorApi.components.getFieldName = reinterpret_cast<void*>(&GetManagedComponentFieldName);
+    editorApi.components.getFieldKind = reinterpret_cast<void*>(&GetManagedComponentFieldKind);
+    editorApi.components.getFieldValue = reinterpret_cast<void*>(&GetManagedComponentFieldValue);
+    editorApi.components.setFieldValue = reinterpret_cast<void*>(&SetManagedComponentFieldValue);
+    editorApi.components.getAddableTypeCount = reinterpret_cast<void*>(&GetManagedAddableComponentTypeCount);
+    editorApi.components.getAddableTypeName = reinterpret_cast<void*>(&GetManagedAddableComponentTypeName);
+    editorApi.components.addComponent = reinterpret_cast<void*>(&AddManagedNativeComponent);
+    editorApi.components.removeComponent = reinterpret_cast<void*>(&RemoveManagedNativeComponent);
     if (initializeEditor(&editorApi) == 0)
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed runtime rejected initialization.");

@@ -1,0 +1,42 @@
+<Project>
+  <Target
+    Name="WriteOrbedenAotRuntimeManifest"
+    AfterTargets="SetupOSSpecificProps"
+    Condition="'$(NativeLib)' == 'Static'">
+    <PropertyGroup>
+      <OrbedenAotRuntimeDirectory>$(PublishDir)orbeden-aot-runtime</OrbedenAotRuntimeDirectory>
+    </PropertyGroup>
+    <MakeDir Directories="$(OrbedenAotRuntimeDirectory)" />
+    <Copy
+      SourceFiles="@(NativeLibrary)"
+      DestinationFiles="@(NativeLibrary->'$(OrbedenAotRuntimeDirectory)/%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <WriteLinesToFile
+      File="$(OrbedenAotRuntimeDirectory)/native-files.txt"
+      Lines="@(NativeLibrary->'%(Filename)%(Extension)')"
+      Overwrite="true" />
+    <WriteLinesToFile
+      File="$(OrbedenAotRuntimeDirectory)/system-libraries.txt"
+      Lines="@(SdkNativeLibrary);@(NativeSystemLibrary)"
+      Overwrite="true" />
+    <WriteLinesToFile
+      File="$(OrbedenAotRuntimeDirectory)/native-frameworks.txt"
+      Lines="@(NativeFramework)"
+      Overwrite="true" />
+    <WriteLinesToFile
+      File="$(OrbedenAotRuntimeDirectory)/sections.ld"
+      Lines="OVERWRITE_SECTIONS { __modules : { KEEP(*(__modules)) } }"
+      Overwrite="true" />
+  </Target>
+
+  <Target
+    Name="CopyOrbedenAotImportLibrary"
+    AfterTargets="LinkNative"
+    Condition="'$(_targetOS)' == 'win' and '$(NativeLib)' == 'Shared'">
+    <MakeDir Directories="$(PublishDir)" />
+    <Copy
+      SourceFiles="$([System.IO.Path]::ChangeExtension('$(NativeBinary)', '.lib'))"
+      DestinationFolder="$(PublishDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>
