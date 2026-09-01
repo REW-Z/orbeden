@@ -17,6 +17,7 @@ public static class EditorRuntime
         public EditorGizmoApi Gizmo;
         public EditorPanelNativeApi Panels;
         public EditorAssetNativeApi Assets;
+        public EditorComponentNativeApi Components;
     }
 
     /// <summary>初始化 Editor 托管桥接。</summary>
@@ -34,6 +35,7 @@ public static class EditorRuntime
                 EditorApplication.Initialize(default);
                 Gizmos.Initialize(default);
                 EditorAssetsNative.Initialize(default);
+                EditorNativeComponents.Initialize(default);
                 EditorGUI.SetObjectFieldAssetProvider(null);
                 return 0;
             }
@@ -44,6 +46,7 @@ public static class EditorRuntime
             EditorApplication.Initialize(api.Application);
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
+            EditorNativeComponents.Initialize(api.Components);
             EditorAssetCatalog.Instance.Refresh();
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
             return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
@@ -118,7 +121,7 @@ public static class EditorRuntime
         }
     }
 
-    /// <summary>发布当前项目的 NativeAOT 静态库。</summary>
+    /// <summary>发布当前项目的 NativeAOT 库。</summary>
     [UnmanagedCallersOnly]
     public static unsafe byte PublishGameAot(byte* repositoryRoot,
         int repositoryRootLength,
@@ -170,7 +173,8 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 4);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 41);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 13);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 54);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

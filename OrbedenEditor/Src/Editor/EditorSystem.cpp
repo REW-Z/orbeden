@@ -16,6 +16,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 namespace
@@ -256,14 +257,6 @@ namespace
             || content.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
     }
 
-    //判断脚本工程是否引用本地脚本生成器
-    bool ScriptProjectUsesLocalScriptGenerator(const std::string& csproj)
-    {
-        std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
-        return content.find("Lib\\Orbeden.ScriptGenerator.dll") != std::string::npos
-            || content.find("Lib/Orbeden.ScriptGenerator.dll") != std::string::npos;
-    }
-
     bool RefreshLocalRuntimeDllReference(const std::string& csproj, const std::string& runtimeDllPath, std::string& outError)
     {
         outError.clear();
@@ -291,33 +284,6 @@ namespace
                 outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
                 return false;
             }
-        }
-
-        if (!ScriptProjectUsesLocalScriptGenerator(csproj)) return true;
-
-        std::filesystem::path generatorSource = Utf8Path::FromUtf8(runtimeDllPath).parent_path() / "Orbeden.ScriptGenerator.dll";
-        if (!std::filesystem::exists(generatorSource))
-        {
-            outError = "Orbeden.ScriptGenerator.dll was not found. Build OrbedenCore.vcxproj first.";
-            return false;
-        }
-
-        std::filesystem::path generatorTarget = Utf8Path::FromUtf8(csproj).parent_path() / "Lib/Orbeden.ScriptGenerator.dll";
-        equivalentError.clear();
-        if (std::filesystem::exists(generatorTarget) && std::filesystem::equivalent(generatorSource, generatorTarget, equivalentError))
-        {
-            return true;
-        }
-
-        std::error_code copyError;
-        std::filesystem::copy_file(generatorSource,
-            generatorTarget,
-            std::filesystem::copy_options::overwrite_existing,
-            copyError);
-        if (copyError)
-        {
-            outError = "Copy Orbeden.ScriptGenerator.dll failed: " + copyError.message();
-            return false;
         }
 
         return true;
@@ -410,6 +376,9 @@ EditorSystem::~EditorSystem()
     app.SetPaused(false);
     app.SetSimulationEnabled(false);
     playMode.Stop();
+    app.GetWorld().Clear();
+    std::string nativeUnloadError;
+    nativeGameModule.Unload(nativeUnloadError);
     managedBridge.UnloadGameAssembly();
     managedBridge.Shutdown();
     clrHost.Shutdown();
@@ -539,6 +508,126 @@ void EditorSystem::RequestBuildScripts()
     }
 }
 
+void EditorSystem::RequestBuildNative()
+{
+    BuildNativeGameModule(true);
+}
+
+bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
+{
+    if (playMode.IsPlaying()) RequestStop();
+    if (!project.HasProject())
+    {
+        projectStatus = "No project is open.";
+        return false;
+    }
+
+    std::string nativeRoot = project.GetNativeRootPath();
+    if (nativeRoot.empty())
+    {
+        if (!nativeGameModule.IsLoaded()) return true;
+        app.GetWorld().Clear();
+        std::string unloadError;
+        if (!nativeGameModule.Unload(unloadError))
+        {
+            projectStatus = unloadError;
+            return false;
+        }
+        return project.ReloadStartupWorld();
+    }
+    if (!std::filesystem::exists(Utf8Path::FromUtf8(nativeRoot) / "CMakeLists.txt"))
+    {
+        projectStatus = "Native project is missing CMakeLists.txt: " + nativeRoot;
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    //项目切换时先移除旧模块，避免新 World 误用同名旧类型。
+    if (!saveWorldBeforeReload && nativeGameModule.IsLoaded())
+    {
+        app.GetWorld().Clear();
+        std::string unloadError;
+        if (!nativeGameModule.Unload(unloadError))
+        {
+            projectStatus = unloadError;
+            return false;
+        }
+        if (!project.ReloadStartupWorld())
+        {
+            projectStatus = project.GetLastError();
+            return false;
+        }
+    }
+
+    //手动热重载时记录当前 World 实际依赖的游戏模块组件类型。
+    List<std::string> requiredTypes;
+    std::unordered_set<std::string> requiredTypeSet;
+    if (saveWorldBeforeReload) app.GetWorld().ForEachEns([&](Ens& ens)
+        {
+            for (Component* component : ens.GetComponents())
+            {
+                Type* type = component ? component->GetType() : nullptr;
+                if (!type || type->GetModuleOwner() != &nativeGameModule) continue;
+                if (requiredTypeSet.insert(type->GetName()).second) requiredTypes.push_back(type->GetName());
+            }
+        });
+
+    if (saveWorldBeforeReload && !SaveCurrentWorld()) return false;
+
+    std::string repositoryRoot = FindRepositoryRoot();
+    if (repositoryRoot.empty())
+    {
+        projectStatus = "Repository root was not found.";
+        return false;
+    }
+
+    std::filesystem::path buildDirectory = Utf8Path::FromUtf8(nativeRoot) / "Build/Editor";
+    std::string cmakeCommand = GetCMakeCommand();
+    std::string coreLibrary = ToCleanPath(Utf8Path::FromUtf8(repositoryRoot)
+        / "OrbedenEditor/Sdk/Native/WindowsX64"
+        / BuildConfiguration
+        / "OrbedenCore.lib");
+    std::string configureCommand = cmakeCommand
+        + " -S " + Quote(nativeRoot)
+        + " -B " + Quote(ToCleanPath(buildDirectory))
+        + " -G \"Visual Studio 17 2022\" -A x64"
+        + " " + CMakeDefine("ORBEDEN_ENGINE_ROOT", "PATH", repositoryRoot)
+        + " " + CMakeDefine("ORBEDEN_CORE_LIB", "FILEPATH", coreLibrary);
+
+    //构建期间继续保留旧 shadow DLL，源输出可以直接覆盖
+    if (!RunCommand(configureCommand, "Configure Game C++")) return false;
+    std::string buildCommand = cmakeCommand + " --build " + Quote(ToCleanPath(buildDirectory))
+        + " --config " + BuildConfiguration;
+    if (!RunCommand(buildCommand, "Build Game C++")) return false;
+
+    std::string modulePath = ToCleanPath(buildDirectory
+        / "bin"
+        / (project.GetProjectName() + "Native.dll"));
+    std::string shadowDirectory = ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".native-pie");
+
+    //清空全部模块实例后替换 DLL，再从 .world 恢复字段和挂载顺序
+    app.GetWorld().Clear();
+    std::string reloadError;
+    bool loaded = nativeGameModule.Reload(modulePath, shadowDirectory, requiredTypes, reloadError);
+    if (!project.ReloadStartupWorld())
+    {
+        projectStatus = project.GetLastError();
+        return false;
+    }
+    editorScene.ClearSceneState();
+
+    if (!loaded)
+    {
+        projectStatus = "Game C++ reload failed. " + reloadError;
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    projectStatus = "Built Game C++: " + modulePath;
+    RequestRepaint();
+    return true;
+}
+
 void EditorSystem::RequestPlay()
 {
     if (playMode.IsPlaying()) return;
@@ -577,10 +666,10 @@ void EditorSystem::RequestPlay()
     editorScene.EnterPlayMode(app.GetWorld());
 
     std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".pie";
-    std::string gameModuleType = GetProjectGameModuleTypeName();
+    std::string runtimeAssemblyPath = FindRuntimeCSharpDll();
     ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
     if (!scriptSystem
-        || !playMode.Start(*scriptSystem, clrHost, assemblyPath, gameModuleType,
+        || !playMode.Start(*scriptSystem, clrHost, assemblyPath, runtimeAssemblyPath,
             ToCleanPath(shadowDirectory), GetManagedDependencyDirectories()))
     {
         projectStatus = playMode.GetLastError();
@@ -664,6 +753,14 @@ void EditorSystem::RequestBuildPlayer()
     if (assemblyName.empty())
     {
         projectStatus = "Build Player failed: game assembly name was not found.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string projectRepairError;
+    if (!NewProjectGenerator::RepairScriptProjectBuildProps(scriptProject, projectRepairError))
+    {
+        projectStatus = "Build Player project migration failed: " + projectRepairError;
         Log::Error(projectStatus.c_str());
         return;
     }
@@ -760,6 +857,11 @@ std::string EditorSystem::GetProjectManagedRootPath() const
     return project.GetManagedRootPath();
 }
 
+std::string EditorSystem::GetProjectNativeRootPath() const
+{
+    return project.GetNativeRootPath();
+}
+
 std::string EditorSystem::GetStartupWorldPath() const
 {
     return project.GetStartupWorldPath();
@@ -844,19 +946,6 @@ std::string EditorSystem::GetProjectGameAssemblyName() const
     if (!assemblyName.empty()) return assemblyName;
 
     return Utf8Path::ToUtf8(Utf8Path::FromUtf8(csproj).stem());
-}
-
-std::string EditorSystem::GetProjectGameModuleTypeName() const
-{
-    std::string csproj = GetProjectScriptProjectPath();
-    std::string assemblyName = GetProjectGameAssemblyName();
-    if (csproj.empty() || assemblyName.empty()) return std::string();
-
-    std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
-    std::string rootNamespace = GetXmlTagValue(content, "RootNamespace");
-    if (rootNamespace.empty()) rootNamespace = assemblyName;
-
-    return rootNamespace + ".GameModule, " + assemblyName;
 }
 
 std::string EditorSystem::GetProjectGameAssemblyPath() const
@@ -1307,6 +1396,7 @@ void EditorSystem::DrawProjectDialog()
                 projectStatus += " Core C# sync failed: " + runtimeSyncError;
                 Log::Warning(runtimeSyncError.c_str());
             }
+            BuildNativeGameModule(false);
             ApplyEditorLayout();
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
@@ -1407,6 +1497,7 @@ void EditorSystem::DrawNewProjectDialog()
                     projectStatus += " Core C# sync failed: " + runtimeSyncError;
                     Log::Warning(runtimeSyncError.c_str());
                 }
+                BuildNativeGameModule(false);
                 ApplyEditorLayout();
                 RefreshInspectorGameAssembly();
                 ImGui::CloseCurrentPopup();

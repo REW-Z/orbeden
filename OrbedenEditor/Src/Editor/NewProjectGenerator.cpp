@@ -107,6 +107,44 @@ namespace
         return ReplaceAll(text, "<Private>false</Private>", "<Private>true</Private>");
     }
 
+    bool RemoveLinesContaining(std::string& text, const std::string& value)
+    {
+        bool changed = false;
+        std::size_t position = 0;
+        while ((position = text.find(value, position)) != std::string::npos)
+        {
+            std::size_t lineStart = text.rfind('\n', position);
+            lineStart = lineStart == std::string::npos ? 0 : lineStart + 1;
+            std::size_t lineEnd = text.find('\n', position);
+            lineEnd = lineEnd == std::string::npos ? text.size() : lineEnd + 1;
+            text.erase(lineStart, lineEnd - lineStart);
+            position = lineStart;
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    bool EnsureScriptAssemblyAotRoot(std::string& text)
+    {
+        std::size_t itemGroupEnd = text.find("</ItemGroup>");
+        if (itemGroupEnd == std::string::npos) return false;
+
+        bool changed = false;
+        if (text.find("TrimmerRootAssembly Include=\"$(AssemblyName)\"") == std::string::npos)
+        {
+            text.insert(itemGroupEnd, "    <TrimmerRootAssembly Include=\"$(AssemblyName)\" />\n");
+            itemGroupEnd = text.find("</ItemGroup>", itemGroupEnd);
+            changed = true;
+        }
+        if (text.find("TrimmerRootAssembly Include=\"OrbedenCore.CSharp\"") == std::string::npos)
+        {
+            text.insert(itemGroupEnd, "    <TrimmerRootAssembly Include=\"OrbedenCore.CSharp\" />\n");
+            changed = true;
+        }
+        return changed;
+    }
+
     std::string GetDirectoryBuildPropsText()
     {
         return R"ORB(<Project>
@@ -153,14 +191,6 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    std::filesystem::path scriptGeneratorPath = runtimePath.parent_path() / "Orbeden.ScriptGenerator.dll";
-    if (!std::filesystem::exists(scriptGeneratorPath))
-    {
-        outError = "Orbeden.ScriptGenerator.dll was not found. Build OrbedenCore.vcxproj first: " + ToCleanPath(scriptGeneratorPath);
-        Log::Error(outError.c_str());
-        return false;
-    }
-
     std::filesystem::path projectRoot = parentPath / projectName;
     if (std::filesystem::exists(projectRoot) && !std::filesystem::is_directory(projectRoot))
     {
@@ -193,18 +223,6 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    copyError.clear();
-    std::filesystem::copy_file(scriptGeneratorPath,
-        projectRoot / "Script/Lib/Orbeden.ScriptGenerator.dll",
-        std::filesystem::copy_options::overwrite_existing,
-        copyError);
-    if (copyError)
-    {
-        outError = "Copy Orbeden.ScriptGenerator.dll failed: " + copyError.message();
-        Log::Error(outError.c_str());
-        return false;
-    }
-
     if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, outError)) return false;
 
     outProjectRoot = ToCleanPath(projectRoot);
@@ -227,6 +245,8 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
     std::string content = ReadTextFile(projectPath);
     bool hasLateBuildProps = content.find("<MSBuildProjectExtensionsPath>") != std::string::npos;
     bool changed = EnsureRuntimeReferenceCopyLocal(content);
+    changed = RemoveLinesContaining(content, "Orbeden.ScriptGenerator.dll") || changed;
+    changed = EnsureScriptAssemblyAotRoot(content) || changed;
     if (hasLateBuildProps)
     {
         RemoveElement(content, "OutputPath");
@@ -245,6 +265,10 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
     {
         if (!WriteTextFile(propsPath, GetDirectoryBuildPropsText(), outError)) return false;
     }
+
+    std::filesystem::path aotExportsPath = projectPath.parent_path() / "OrbedenAotExports.cs";
+    if (!std::filesystem::exists(aotExportsPath)
+        && !WriteTextFile(aotExportsPath, NewProjectTemplate::GetAotExportsText(), outError)) return false;
 
     return true;
 }

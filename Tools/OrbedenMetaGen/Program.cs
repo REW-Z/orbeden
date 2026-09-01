@@ -10,6 +10,7 @@ if (args.Length < 2)
 
 var sourceRoot = Path.GetFullPath(args[0]);
 var outputDir = Path.GetFullPath(args[1]);
+var gameModule = args.Skip(2).Any(value => value == "--game-module");
 
 if (!Directory.Exists(sourceRoot))
 {
@@ -39,14 +40,41 @@ foreach (var classInfo in classes)
 {
     foreach (var field in classInfo.Fields)
     {
-        field.Persistent = IsPersistentField(classInfo.Name, field.Name);
+        field.Persistent = IsPersistentField(classInfo.Name, field.Name)
+            && (!gameModule || field.Access == "public" || field.ExplicitPersistent);
         field.ObjectRefTypeName = GetObjectRefTypeName(field.Type);
         field.Kind = GetFieldKind(field.Type);
 
         if (field.Persistent && field.Kind is null)
         {
-            errors.Add($"{classInfo.Name}.{field.Name}: unsupported field type '{field.Type}'");
+            if (field.ExplicitPersistent)
+            {
+                errors.Add($"{classInfo.File}: {classInfo.Name}.{field.Name}: explicitly serialized field type '{field.Type}' is unsupported");
+            }
+            else
+            {
+                Console.Error.WriteLine($"warning: {classInfo.File}: {classInfo.Name}.{field.Name}: public field type '{field.Type}' is unsupported and will be ignored");
+                field.Persistent = false;
+            }
         }
+    }
+}
+
+//识别脚本继承关系并校验生命周期函数不能声明为 virtual。
+var classByName = classes.ToDictionary(value => value.Name, StringComparer.Ordinal);
+bool IsScriptClass(ClassInfo value)
+{
+    if (value.BaseName == "ScriptBehaviour") return true;
+    return classByName.TryGetValue(value.BaseName, out ClassInfo? baseClass) && IsScriptClass(baseClass);
+}
+foreach (ClassInfo classInfo in classes)
+{
+    classInfo.IsScript = IsScriptClass(classInfo);
+    if (!classInfo.IsScript) continue;
+
+    foreach (ScriptCallbackInfo callback in classInfo.ScriptCallbacks.Where(value => value.IsVirtual))
+    {
+        errors.Add($"{classInfo.File}: {classInfo.Name}.{callback.Name}: C++ script callbacks must not use virtual or override");
     }
 }
 
@@ -62,7 +90,7 @@ if (errors.Count > 0)
 
 //生成 C++ 反射注册代码
 var generatedPath = Path.Combine(outputDir, "Reflection.Generated.cpp");
-File.WriteAllText(generatedPath, GenerateCpp(classes), new UTF8Encoding(false));
+File.WriteAllText(generatedPath, GenerateCpp(classes, sourceRoot, gameModule), new UTF8Encoding(false));
 Console.WriteLine($"Generated {generatedPath}");
 return 0;
 
@@ -70,7 +98,7 @@ return 0;
 static IEnumerable<ClassInfo> ParseClasses(string text, string file)
 {
     var results = new List<ClassInfo>();
-    var classRegex = new Regex(@"\bclass\s+(?<name>\w+)(?:\s*:\s*(?:(?:public|private|protected)\s+)?(?<base>\w+))?\s*\{", RegexOptions.Multiline);
+    var classRegex = new Regex(@"\bclass\s+(?<name>\w+)(?:\s+final)?(?:\s*:\s*(?:(?:public|private|protected)\s+)?(?<base>\w+))?\s*\{", RegexOptions.Multiline);
 
     foreach (Match match in classRegex.Matches(text))
     {
@@ -80,7 +108,8 @@ static IEnumerable<ClassInfo> ParseClasses(string text, string file)
 
         var body = text.Substring(openBrace + 1, closeBrace - openBrace - 1);
         var className = match.Groups["name"].Value;
-        if (!body.Contains($"OBJECT_TYPE_DECLARE({className})", StringComparison.Ordinal)) continue;
+        var typeDeclaration = new Regex($@"\bOBJECT_TYPE_DECLARE(?:_ROOT|_BASE|_ABSTRACT)?\s*\(\s*{Regex.Escape(className)}\s*\)");
+        if (!typeDeclaration.IsMatch(body)) continue;
 
         results.Add(new ClassInfo
         {
@@ -89,6 +118,7 @@ static IEnumerable<ClassInfo> ParseClasses(string text, string file)
             File = file,
             Fields = ParseFields(body),
             Methods = ParseMethods(body, className),
+            ScriptCallbacks = ParseScriptCallbacks(body),
         });
     }
 
@@ -120,6 +150,7 @@ static List<FieldInfo> ParseFields(string body)
     var statement = new StringBuilder();
     var braceDepth = 0;
     var angleDepth = 0;
+    var explicitPersistent = false;
 
     foreach (var rawLine in body.Replace("\r\n", "\n").Split('\n'))
     {
@@ -136,6 +167,12 @@ static List<FieldInfo> ParseFields(string body)
         if (line.StartsWith("friend ", StringComparison.Ordinal)) continue;
         if (line.StartsWith("using ", StringComparison.Ordinal)) continue;
         if (line.StartsWith("typedef ", StringComparison.Ordinal)) continue;
+        if (line.StartsWith("ORBEDEN_SERIALIZE_FIELD", StringComparison.Ordinal))
+        {
+            explicitPersistent = true;
+            line = line["ORBEDEN_SERIALIZE_FIELD".Length..].Trim();
+            if (line.Length == 0) continue;
+        }
 
         foreach (var ch in line)
         {
@@ -158,11 +195,39 @@ static List<FieldInfo> ParseFields(string body)
         var field = ParseFieldStatement(text, access);
         if (field is not null)
         {
+            field.ExplicitPersistent = explicitPersistent;
             fields.Add(field);
         }
+        explicitPersistent = false;
     }
 
     return fields;
+}
+
+//解析脚本约定生命周期函数，不把它们加入普通反射方法表。
+static List<ScriptCallbackInfo> ParseScriptCallbacks(string body)
+{
+    var callbacks = new List<ScriptCallbackInfo>();
+    var cleanBody = string.Join('\n', body.Replace("\r\n", "\n").Split('\n').Select(StripLineComment));
+    var methodRegex = new Regex(@"(?<prefix>virtual\s+)?(?<ret>[A-Za-z_]\w*)\s+(?<name>OnStart|OnUpdate|OnFixedUpdate|OnLateUpdate|OnDrawGUI|OnEnd)\s*\((?<params>[^()]*)\)\s*(?<override>override\s*)?(?:;|\{)", RegexOptions.Multiline);
+    foreach (Match match in methodRegex.Matches(cleanBody))
+    {
+        var name = match.Groups["name"].Value;
+        var parameters = match.Groups["params"].Value.Trim();
+        var expectedTimed = name is "OnUpdate" or "OnFixedUpdate" or "OnLateUpdate";
+        var validParameters = expectedTimed
+            ? Regex.IsMatch(parameters, @"^float32\s+[A-Za-z_]\w*$")
+            : parameters.Length == 0 || parameters == "void";
+        if (match.Groups["ret"].Value != "void" || !validParameters) continue;
+
+        callbacks.Add(new ScriptCallbackInfo
+        {
+            Name = name,
+            IsVirtual = match.Groups["prefix"].Success || match.Groups["override"].Success,
+        });
+    }
+
+    return callbacks;
 }
 
 //解析类中的可反射方法
@@ -441,7 +506,7 @@ static ValueKindInfo? GetValueKind(string type)
 }
 
 //生成 C++ 反射注册源码
-static string GenerateCpp(List<ClassInfo> classes)
+static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameModule)
 {
     var output = new StringBuilder();
     output.AppendLine("// <auto-generated>");
@@ -449,18 +514,11 @@ static string GenerateCpp(List<ClassInfo> classes)
     output.AppendLine("// </auto-generated>");
     output.AppendLine();
     output.AppendLine("#include \"Runtime/Reflection.h\"");
-    output.AppendLine("#include \"Runtime/Ens.h\"");
-    output.AppendLine("#include \"Runtime/EnsId.h\"");
-    output.AppendLine("#include \"Runtime/Object/Object.h\"");
-    output.AppendLine("#include \"Runtime/Object/Material.h\"");
-    output.AppendLine("#include \"Runtime/Object/Shader.h\"");
-    output.AppendLine("#include \"Runtime/Object/Mesh.h\"");
-    output.AppendLine("#include \"Runtime/Object/Skybox.h\"");
-    output.AppendLine("#include \"Runtime/Object/Texture2D.h\"");
-    output.AppendLine("#include \"Runtime/Object/Camera.h\"");
-    output.AppendLine("#include \"Runtime/Object/DirectionalLight.h\"");
-    output.AppendLine("#include \"Runtime/Object/TransformComponent.h\"");
-    output.AppendLine("#include \"Runtime/Object/StaticMeshRenderer.h\"");
+    output.AppendLine("#include \"Scripting/ScriptBehaviour.h\"");
+    foreach (var file in classes.Select(value => Path.GetRelativePath(sourceRoot, value.File).Replace('\\', '/')).Distinct(StringComparer.Ordinal))
+    {
+        output.AppendLine($"#include \"{file}\"");
+    }
     output.AppendLine();
     output.AppendLine("class ReflectionGeneratedAccess");
     output.AppendLine("{");
@@ -468,6 +526,22 @@ static string GenerateCpp(List<ClassInfo> classes)
 
     foreach (var classInfo in classes)
     {
+        foreach (var callback in classInfo.ScriptCallbacks)
+        {
+            var timed = callback.Name is "OnUpdate" or "OnFixedUpdate" or "OnLateUpdate";
+            output.AppendLine($"    //直接调用 {classInfo.Name}.{callback.Name}，不经过虚函数表");
+            output.AppendLine(timed
+                ? $"    static void Script_{classInfo.Name}_{callback.Name}(ScriptBehaviour* script, float32 deltaTime)"
+                : $"    static void Script_{classInfo.Name}_{callback.Name}(ScriptBehaviour* script)");
+            output.AppendLine("    {");
+            output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(script);");
+            output.AppendLine(timed
+                ? $"        instance->{classInfo.Name}::{callback.Name}(deltaTime);"
+                : $"        instance->{classInfo.Name}::{callback.Name}();");
+            output.AppendLine("    }");
+            output.AppendLine();
+        }
+
         //生成字段 getter/setter 和方法 invoker
         foreach (var field in classInfo.Fields.Where(field => field.Persistent))
         {
@@ -549,11 +623,24 @@ static string GenerateCpp(List<ClassInfo> classes)
 
     output.AppendLine("};");
     output.AppendLine();
-    output.AppendLine("namespace Reflection");
-    output.AppendLine("{");
-    output.AppendLine("    //注册生成的反射元数据");
-    output.AppendLine("    void RegisterGeneratedReflection()");
+    if (gameModule)
+    {
+        output.AppendLine("#if defined(_WIN32)");
+        output.AppendLine("#define ORBEDEN_GAME_EXPORT __declspec(dllexport)");
+        output.AppendLine("#else");
+        output.AppendLine("#define ORBEDEN_GAME_EXPORT __attribute__((visibility(\"default\")))");
+        output.AppendLine("#endif");
+        output.AppendLine("extern \"C\" ORBEDEN_GAME_EXPORT void OrbedenGameNative_RegisterReflection()");
+    }
+    else
+    {
+        output.AppendLine("namespace Reflection");
+        output.AppendLine("{");
+        output.AppendLine("    //注册生成的反射元数据");
+        output.AppendLine("    void RegisterGeneratedReflection()");
+    }
     output.AppendLine("    {");
+    if (gameModule) output.AppendLine("        using namespace Reflection;");
     output.AppendLine("        static bool registered = false;");
     output.AppendLine("        if (registered) return;");
     output.AppendLine("        registered = true;");
@@ -578,6 +665,27 @@ static string GenerateCpp(List<ClassInfo> classes)
         output.AppendLine("            });");
         output.AppendLine();
 
+        if (classInfo.IsScript)
+        {
+            string Callback(string name)
+            {
+                return classInfo.ScriptCallbacks.Any(value => value.Name == name)
+                    ? $"ReflectionGeneratedAccess::Script_{classInfo.Name}_{name}"
+                    : "nullptr";
+            }
+
+            output.AppendLine($"        RegisterScriptCallbacks({classInfo.Name}::StaticType(),");
+            output.AppendLine("            {");
+            output.AppendLine($"                {Callback("OnStart")},");
+            output.AppendLine($"                {Callback("OnUpdate")},");
+            output.AppendLine($"                {Callback("OnFixedUpdate")},");
+            output.AppendLine($"                {Callback("OnLateUpdate")},");
+            output.AppendLine($"                {Callback("OnDrawGUI")},");
+            output.AppendLine($"                {Callback("OnEnd")},");
+            output.AppendLine("            });");
+            output.AppendLine();
+        }
+
         //注册方法元数据
         output.AppendLine($"        RegisterTypeMethods({classInfo.Name}::StaticType(),");
         output.AppendLine("            {");
@@ -596,7 +704,7 @@ static string GenerateCpp(List<ClassInfo> classes)
     }
 
     output.AppendLine("    }");
-    output.AppendLine("}");
+    if (!gameModule) output.AppendLine("}");
     return output.ToString();
 }
 
@@ -607,6 +715,8 @@ sealed class ClassInfo
     public string File { get; set; } = "";
     public List<FieldInfo> Fields { get; set; } = [];
     public List<MethodInfo> Methods { get; set; } = [];
+    public List<ScriptCallbackInfo> ScriptCallbacks { get; set; } = [];
+    public bool IsScript { get; set; }
 }
 
 sealed class FieldInfo
@@ -614,9 +724,16 @@ sealed class FieldInfo
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";
     public string Access { get; set; } = "";
+    public bool ExplicitPersistent { get; set; }
     public bool Persistent { get; set; }
     public FieldKindInfo? Kind { get; set; }
     public string? ObjectRefTypeName { get; set; }
+}
+
+sealed class ScriptCallbackInfo
+{
+    public string Name { get; set; } = "";
+    public bool IsVirtual { get; set; }
 }
 
 sealed class FieldKindInfo(string cppName)

@@ -33,6 +33,8 @@ void BuildGamePanel::DrawPanel()
         ImGui::TextWrapped("World: %s", editor.GetStartupWorldPath().c_str());
         ImGui::TextWrapped("Script: %s", editor.GetProjectScriptRootPath().c_str());
         ImGui::TextWrapped("Managed: %s", editor.GetProjectManagedRootPath().c_str());
+        std::string nativeRoot = editor.GetProjectNativeRootPath();
+        ImGui::TextWrapped("Native: %s", nativeRoot.empty() ? "<disabled>" : nativeRoot.c_str());
     }
     else
     {
@@ -49,6 +51,12 @@ void BuildGamePanel::DrawPanel()
     if (ImGui::Button("Build Game C#"))
     {
         editor.RequestBuildScripts();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Build Game C++"))
+    {
+        editor.RequestBuildNative();
     }
 
     ImGui::SetNextItemWidth(180.0f);

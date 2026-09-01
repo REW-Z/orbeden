@@ -9,6 +9,7 @@ extern "C"
 {
     __declspec(dllimport) void* __stdcall LoadLibraryW(const wchar_t* fileName);
     __declspec(dllimport) void* __stdcall GetProcAddress(void* module, const char* name);
+    __declspec(dllimport) int __stdcall FreeLibrary(void* module);
 }
 #else
 #include <dlfcn.h>
@@ -40,4 +41,15 @@ void* GetDynamicLibrarySymbol(DynamicLibrary library, const char* name)
 #else
     return dlsym(library.handle, name);
 #endif
+}
+
+void UnloadDynamicLibrary(DynamicLibrary& library)
+{
+    if (!library.handle) return;
+#if defined(_WIN32)
+    FreeLibrary(library.handle);
+#else
+    dlclose(library.handle);
+#endif
+    library.handle = nullptr;
 }

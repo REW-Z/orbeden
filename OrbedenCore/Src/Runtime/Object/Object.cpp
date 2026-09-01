@@ -12,6 +12,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/World.h"
+#include "Scripting/ScriptBehaviour.h"
 
 #include <algorithm>
 #include <array>
@@ -38,6 +39,9 @@ namespace
         List<Object*> orphanObjects;
         List<IObjectDestroyListener*> destroyListeners;
         int32 nextObjectId = 1;
+        void* currentModuleOwner = nullptr;
+        List<Type*> pendingModuleTypes;
+        bool moduleTypeRegistrationFailed = false;
     };
 
     //获取对象运行时注册表
@@ -493,6 +497,21 @@ bool Type::CanCreateObject() const
     return constructor != nullptr && destructor != nullptr;
 }
 
+void* Type::GetModuleOwner() const
+{
+    return moduleOwner;
+}
+
+bool Type::HasLiveObjects() const
+{
+    bool found = false;
+    VisitLiveObjects([](Object*, void* userData)
+        {
+            *static_cast<bool*>(userData) = true;
+        }, &found);
+    return found;
+}
+
 //销毁对象实例
 void Type::DestroyObject(Object* object)
 {
@@ -557,7 +576,29 @@ void Type::VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
     }
 }
 
-OBJECT_TYPE_IMPLEMENT_ROOT(Object)
+Type OrbedenObject::type("Object", nullptr, sizeof(OrbedenObject), alignof(OrbedenObject),
+    OrbedenObject::ConstructObject, OrbedenObject::DestructObject);
+
+Type* OrbedenObject::StaticType()
+{
+    return &OrbedenObject::type;
+}
+
+Type* OrbedenObject::GetType() const
+{
+    return &OrbedenObject::type;
+}
+
+Object* OrbedenObject::ConstructObject(IChunk* chunk)
+{
+    return new (OrbedenObject::type.AllocateMemory(chunk)) OrbedenObject();
+}
+
+void OrbedenObject::DestructObject(Object* object)
+{
+    OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+    instance->~OrbedenObject();
+}
 
 //获取实例ID
 const StringId& Object::GetInstanceId() const
@@ -606,11 +647,91 @@ void Object::RegisterType(Type* type)
     if (!type) return;
 
     ObjectRuntime& runtime = GetObjectRuntime();
-    type->id = static_cast<TypeId>(runtime.types.size());
-    type->mask = type->id < 64 ? (1ull << type->id) : 0;
+    if (runtime.currentModuleOwner)
+    {
+        type->moduleOwner = runtime.currentModuleOwner;
+        if (runtime.typeByName.find(type->GetName()) != runtime.typeByName.end())
+        {
+            runtime.moduleTypeRegistrationFailed = true;
+            return;
+        }
+        for (Type* pendingType : runtime.pendingModuleTypes)
+        {
+            if (std::string(pendingType->GetName()) != type->GetName()) continue;
+            runtime.moduleTypeRegistrationFailed = true;
+            return;
+        }
+        runtime.pendingModuleTypes.push_back(type);
+        return;
+    }
 
-    runtime.types.push_back(type);
+    auto emptySlot = std::find(runtime.types.begin(), runtime.types.end(), nullptr);
+    type->id = emptySlot == runtime.types.end()
+        ? static_cast<TypeId>(runtime.types.size())
+        : static_cast<TypeId>(std::distance(runtime.types.begin(), emptySlot));
+    type->mask = type->id < 64 ? (1ull << type->id) : 0;
+    type->moduleOwner = runtime.currentModuleOwner;
+
+    if (emptySlot == runtime.types.end()) runtime.types.push_back(type);
+    else *emptySlot = type;
     runtime.typeByName[type->GetName()] = type;
+}
+
+void Object::BeginModuleTypeRegistration(void* moduleOwner)
+{
+    ObjectRuntime& runtime = GetObjectRuntime();
+    runtime.currentModuleOwner = moduleOwner;
+    runtime.pendingModuleTypes.clear();
+    runtime.moduleTypeRegistrationFailed = moduleOwner == nullptr;
+}
+
+bool Object::EndModuleTypeRegistration(bool commit)
+{
+    ObjectRuntime& runtime = GetObjectRuntime();
+    bool succeeded = commit && !runtime.moduleTypeRegistrationFailed;
+    void* moduleOwner = runtime.currentModuleOwner;
+    List<Type*> pendingTypes;
+    if (succeeded) pendingTypes.swap(runtime.pendingModuleTypes);
+    else runtime.pendingModuleTypes.clear();
+
+    runtime.currentModuleOwner = nullptr;
+    runtime.moduleTypeRegistrationFailed = false;
+    for (Type* type : pendingTypes)
+    {
+        RegisterType(type);
+        type->moduleOwner = moduleOwner;
+    }
+    return succeeded;
+}
+
+bool Object::UnregisterModuleTypes(void* moduleOwner)
+{
+    if (!moduleOwner) return false;
+
+    ObjectRuntime& runtime = GetObjectRuntime();
+    List<Type*> ownedTypes;
+    for (Type* type : runtime.types)
+    {
+        if (type && type->GetModuleOwner() == moduleOwner) ownedTypes.push_back(type);
+    }
+    for (Type* type : ownedTypes)
+    {
+        if (type->HasLiveObjects()) return false;
+    }
+
+    for (auto it = ownedTypes.rbegin(); it != ownedTypes.rend(); ++it)
+    {
+        Type* type = *it;
+        Reflection::UnregisterType(type);
+        UnregisterScriptCallbacks(type);
+        type->ReleaseStorage();
+
+        auto namedType = runtime.typeByName.find(type->GetName());
+        if (namedType != runtime.typeByName.end() && namedType->second == type) runtime.typeByName.erase(namedType);
+        if (type->GetId() < runtime.types.size() && runtime.types[type->GetId()] == type) runtime.types[type->GetId()] = nullptr;
+        type->moduleOwner = nullptr;
+    }
+    return true;
 }
 
 //查找类型

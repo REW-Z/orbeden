@@ -7,13 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(ORBEDEN_PROJECT_DIR "" CACHE PATH "Game project directory.")
-set(ORBEDEN_GAME_AOT_LIB "" CACHE FILEPATH "NativeAOT static game library.")
+set(ORBEDEN_GAME_AOT_LIB "" CACHE FILEPATH "NativeAOT game link library.")
 set(ORBEDEN_GLFW_ROOT "" CACHE PATH "Optional GLFW root for clang/gcc player builds.")
 set(ORBEDEN_PLAYER_TARGET "windows-x64" CACHE STRING "Orbeden player target platform.")
 set(ORBEDEN_PHYSX_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/OrbedenCore/Src/ThirdParty/PhysX" CACHE PATH "Orbeden PhysX CPU-only package root.")
 
 if(NOT ORBEDEN_GAME_AOT_LIB)
-    message(FATAL_ERROR "ORBEDEN_GAME_AOT_LIB is required. Build the game C# NativeAOT static library first.")
+    message(FATAL_ERROR "ORBEDEN_GAME_AOT_LIB is required. Build the game C# NativeAOT library first.")
 endif()
 
 if(NOT ORBEDEN_PROJECT_DIR)
@@ -63,6 +63,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/SceneCuller.cpp
     OrbedenCore/Src/Rendering/TransformCache.cpp
     OrbedenCore/Src/Scripting/ScriptSystem.cpp
+    OrbedenCore/Src/Scripting/ScriptBehaviour.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp
     OrbedenCore/Src/Runtime/Ens.cpp
@@ -99,6 +100,61 @@ set(ORBEDEN_CORE_SOURCES
 set(ORBEDEN_GAME_SOURCES
     OrbedenGame/Src/game_main.cpp
 )
+
+#旧项目没有 Native 目录时保持纯 C#；新项目把原生脚本直接静态链接进 Player。
+set(ORBEDEN_PROJECT_NATIVE_DIR "${ORBEDEN_PROJECT_DIR}/Native")
+if(EXISTS "${ORBEDEN_PROJECT_NATIVE_DIR}/CMakeLists.txt")
+    file(GLOB_RECURSE ORBEDEN_PROJECT_NATIVE_SOURCES CONFIGURE_DEPENDS
+        "${ORBEDEN_PROJECT_NATIVE_DIR}/*.cpp"
+        "${ORBEDEN_PROJECT_NATIVE_DIR}/*.h")
+    list(FILTER ORBEDEN_PROJECT_NATIVE_SOURCES EXCLUDE REGEX "[/\\]Build[/\\]")
+    list(FILTER ORBEDEN_PROJECT_NATIVE_SOURCES EXCLUDE REGEX "[/\\]GameModule\\.cpp$")
+
+    set(ORBEDEN_PROJECT_NATIVE_GENERATED_DIR "${CMAKE_BINARY_DIR}/Generated/ProjectNative")
+    set(ORBEDEN_PROJECT_NATIVE_REFLECTION "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}/Reflection.Generated.cpp")
+    add_custom_command(
+        OUTPUT "${ORBEDEN_PROJECT_NATIVE_REFLECTION}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}"
+        COMMAND dotnet run --project "${CMAKE_CURRENT_SOURCE_DIR}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" --
+            "${ORBEDEN_PROJECT_NATIVE_DIR}" "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}" --game-module
+        DEPENDS ${ORBEDEN_PROJECT_NATIVE_SOURCES} Tools/OrbedenMetaGen/Program.cs
+        VERBATIM)
+    list(APPEND ORBEDEN_GAME_SOURCES ${ORBEDEN_PROJECT_NATIVE_SOURCES} "${ORBEDEN_PROJECT_NATIVE_REFLECTION}")
+    set(ORBEDEN_HAS_NATIVE_GAME TRUE)
+endif()
+
+get_filename_component(ORBEDEN_GAME_AOT_DIRECTORY "${ORBEDEN_GAME_AOT_LIB}" DIRECTORY)
+set(ORBEDEN_AOT_SHARED FALSE)
+if(WIN32)
+    get_filename_component(ORBEDEN_GAME_AOT_NAME "${ORBEDEN_GAME_AOT_LIB}" NAME_WE)
+    set(ORBEDEN_GAME_AOT_SHARED_LIBRARY "${ORBEDEN_GAME_AOT_DIRECTORY}/${ORBEDEN_GAME_AOT_NAME}.dll")
+    if(EXISTS "${ORBEDEN_GAME_AOT_SHARED_LIBRARY}")
+        set(ORBEDEN_AOT_SHARED TRUE)
+    endif()
+endif()
+
+set(ORBEDEN_AOT_NATIVE_FILES)
+set(ORBEDEN_AOT_SYSTEM_LIBRARIES)
+if(NOT ORBEDEN_AOT_SHARED)
+    set(ORBEDEN_AOT_RUNTIME_DIR "${ORBEDEN_GAME_AOT_DIRECTORY}/orbeden-aot-runtime")
+    set(ORBEDEN_AOT_NATIVE_FILES_MANIFEST "${ORBEDEN_AOT_RUNTIME_DIR}/native-files.txt")
+    set(ORBEDEN_AOT_SYSTEM_LIBRARIES_MANIFEST "${ORBEDEN_AOT_RUNTIME_DIR}/system-libraries.txt")
+    if(NOT EXISTS "${ORBEDEN_AOT_NATIVE_FILES_MANIFEST}")
+        message(FATAL_ERROR "NativeAOT runtime dependency manifest was not found: ${ORBEDEN_AOT_NATIVE_FILES_MANIFEST}")
+    endif()
+
+    file(STRINGS "${ORBEDEN_AOT_NATIVE_FILES_MANIFEST}" ORBEDEN_AOT_NATIVE_FILE_NAMES)
+    foreach(_name IN LISTS ORBEDEN_AOT_NATIVE_FILE_NAMES)
+        set(_path "${ORBEDEN_AOT_RUNTIME_DIR}/${_name}")
+        if(NOT EXISTS "${_path}")
+            message(FATAL_ERROR "NativeAOT runtime dependency was not found: ${_path}")
+        endif()
+        list(APPEND ORBEDEN_AOT_NATIVE_FILES "${_path}")
+    endforeach()
+    if(EXISTS "${ORBEDEN_AOT_SYSTEM_LIBRARIES_MANIFEST}")
+        file(STRINGS "${ORBEDEN_AOT_SYSTEM_LIBRARIES_MANIFEST}" ORBEDEN_AOT_SYSTEM_LIBRARIES)
+    endif()
+endif()
 
 add_library(orbeden_core STATIC ${ORBEDEN_CORE_SOURCES})
 target_include_directories(orbeden_core PUBLIC
@@ -213,10 +269,45 @@ set_target_properties(orbeden_game PROPERTIES OUTPUT_NAME "OrbedenGame")
 target_include_directories(orbeden_game PRIVATE
     "${ORBEDEN_GAME_DIR}/Src"
     "${ORBEDEN_CORE_DIR}/Src"
+    "${ORBEDEN_PROJECT_NATIVE_DIR}"
 )
-target_link_libraries(orbeden_game PRIVATE orbeden_core "${ORBEDEN_GAME_AOT_LIB}")
+if(ORBEDEN_AOT_SHARED)
+    target_link_libraries(orbeden_game PRIVATE orbeden_core "${ORBEDEN_GAME_AOT_LIB}")
+    add_custom_command(TARGET orbeden_game POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${ORBEDEN_GAME_AOT_SHARED_LIBRARY}"
+            "$<TARGET_FILE_DIR:orbeden_game>")
+elseif(WIN32)
+    target_link_libraries(orbeden_game PRIVATE
+        orbeden_core
+        "${ORBEDEN_GAME_AOT_LIB}"
+        ${ORBEDEN_AOT_NATIVE_FILES}
+        ${ORBEDEN_AOT_SYSTEM_LIBRARIES})
+else()
+    target_link_libraries(orbeden_game PRIVATE
+        orbeden_core
+        "$<LINK_GROUP:RESCAN,${ORBEDEN_GAME_AOT_LIB},${ORBEDEN_AOT_NATIVE_FILES}>"
+        ${ORBEDEN_AOT_SYSTEM_LIBRARIES})
+endif()
 target_compile_definitions(orbeden_game PRIVATE ORBEDEN_PROJECT_DIR="${ORBEDEN_PROJECT_DIR}")
+if(ORBEDEN_HAS_NATIVE_GAME)
+    target_compile_definitions(orbeden_game PRIVATE ORBEDEN_HAS_NATIVE_GAME)
+endif()
 
 if(MSVC)
     target_compile_options(orbeden_game PRIVATE /utf-8)
+    if(NOT ORBEDEN_AOT_SHARED)
+        target_link_options(orbeden_game PRIVATE
+            /INCREMENTAL:NO
+            /MERGE:.managedcode=.text
+            /MERGE:hydrated=.bss
+            /NODEFAULTLIB:libucrt.lib
+            /DEFAULTLIB:ucrt.lib)
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(orbeden_game PRIVATE
+        -Wl,--export-dynamic
+        -Wl,--build-id=sha1
+        -Wl,--as-needed
+        -pthread)
 endif()

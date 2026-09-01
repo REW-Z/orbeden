@@ -10,9 +10,14 @@ namespace
 {
     constexpr const char* InitializeMethod = "OrbedenGame_Initialize";
     constexpr const char* ShutdownMethod = "OrbedenGame_Shutdown";
+    constexpr const char* LoadAssemblyMethod = "OrbedenGame_LoadAssembly";
     constexpr const char* UpdateMethod = "OrbedenGame_Update";
     constexpr const char* FixedUpdateMethod = "OrbedenGame_FixedUpdate";
+    constexpr const char* LateUpdateMethod = "OrbedenGame_LateUpdate";
+    constexpr const char* EnsWorldActiveChangedMethod = "OrbedenGame_EnsWorldActiveChanged";
+    constexpr const char* EnsDestroyedMethod = "OrbedenGame_EnsDestroyed";
     constexpr const char* DrawGuiMethod = "OrbedenGame_DrawGui";
+    constexpr const char* GameModuleType = "Orbeden.GameModule, OrbedenCore.CSharp";
 
     //规范化路径字符串。
     std::string ToCleanPath(const std::filesystem::path& path)
@@ -76,8 +81,8 @@ namespace
 
 bool EditorPlayMode::Start(ScriptSystem& scripts,
     EditorClrHost& host,
-    const std::string& assemblyPath,
-    const std::string& gameModuleType,
+    const std::string& gameAssemblyPath,
+    const std::string& runtimeAssemblyPath,
     const std::string& shadowDirectory,
     const List<std::string>& managedDependencyDirectories)
 {
@@ -92,10 +97,18 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(assemblyPath));
+    std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(gameAssemblyPath));
     if (!std::filesystem::exists(sourceAssembly))
     {
         lastError = "Game assembly does not exist: " + ToCleanPath(sourceAssembly);
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    std::filesystem::path runtimeAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(runtimeAssemblyPath));
+    if (!std::filesystem::exists(runtimeAssembly))
+    {
+        lastError = "Script runtime assembly does not exist: " + ToCleanPath(runtimeAssembly);
         Log::Error(lastError.c_str());
         return false;
     }
@@ -118,13 +131,24 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
 
     shadowAssemblyPath = ToCleanPath(shadowAssembly);
     ScriptEntryPoints entryPoints;
-    if (!host.BindFunction(shadowAssemblyPath, gameModuleType, InitializeMethod, reinterpret_cast<void**>(&entryPoints.initialize))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, ShutdownMethod, reinterpret_cast<void**>(&entryPoints.shutdown))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, UpdateMethod, reinterpret_cast<void**>(&entryPoints.update))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, FixedUpdateMethod, reinterpret_cast<void**>(&entryPoints.fixedUpdate))
-        || !host.BindFunction(shadowAssemblyPath, gameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui)))
+    if (!host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, LoadAssemblyMethod, reinterpret_cast<void**>(&entryPoints.loadAssembly))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, InitializeMethod, reinterpret_cast<void**>(&entryPoints.initialize))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, ShutdownMethod, reinterpret_cast<void**>(&entryPoints.shutdown))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, UpdateMethod, reinterpret_cast<void**>(&entryPoints.update))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, FixedUpdateMethod, reinterpret_cast<void**>(&entryPoints.fixedUpdate))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, LateUpdateMethod, reinterpret_cast<void**>(&entryPoints.lateUpdate))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, EnsWorldActiveChangedMethod, reinterpret_cast<void**>(&entryPoints.ensWorldActiveChanged))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, EnsDestroyedMethod, reinterpret_cast<void**>(&entryPoints.ensDestroyed))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui)))
     {
-        lastError = host.GetLastError() + " Assembly: " + shadowAssemblyPath + " Type: " + gameModuleType;
+        lastError = host.GetLastError() + " Assembly: " + ToCleanPath(runtimeAssembly) + " Type: " + GameModuleType;
+        ClearBindings();
+        return false;
+    }
+
+    if (!entryPoints.loadAssembly(reinterpret_cast<const uint8*>(shadowAssemblyPath.data()), static_cast<int32>(shadowAssemblyPath.size())))
+    {
+        lastError = "Script runtime could not load the game assembly: " + shadowAssemblyPath;
         ClearBindings();
         return false;
     }

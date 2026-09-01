@@ -26,6 +26,9 @@ public:
     //每帧更新，由 Application 每次 Tick 调用一次
     virtual void Update(World& world, float deltaTime) {}
 
+    //所有普通 Update 完成后、渲染前调用一次
+    virtual void LateUpdate(World& world, float deltaTime) {}
+
     //窗口 framebuffer 尺寸变化时调用
     virtual void OnWindowResize(int width, int height) {}
 

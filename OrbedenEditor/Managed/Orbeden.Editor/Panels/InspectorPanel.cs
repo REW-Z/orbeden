@@ -62,6 +62,9 @@ internal sealed class InspectorPanel : EditorPanel
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
 
+        [JsonPropertyName("enabled")]
+        public bool Enabled { get; set; } = true;
+
         [JsonPropertyName("values")]
         public Dictionary<string, ScriptSerializedValue> Values { get; set; } = [];
     }
@@ -75,6 +78,8 @@ internal sealed class InspectorPanel : EditorPanel
         public string Value { get; set; } = string.Empty;
     }
 
+    private readonly record struct ComponentAddChoice(string Key, string Label, Type? ManagedType, string? NativeType);
+
     private readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly List<Type> scriptTypes = [];
     private readonly Dictionary<string, List<ScriptMount>> sidecarScripts = [];
@@ -86,6 +91,19 @@ internal sealed class InspectorPanel : EditorPanel
     private string status = "Game assembly is not loaded.";
     private string currentSidecarPath = string.Empty;
     private bool generatedMissingMountIds;
+    private static readonly HashSet<string> NativeTypesCoveredByDedicatedDrawers =
+    [
+        "TransformComponent",
+        "StaticMeshRenderer",
+        "RigidBodyComponent",
+        "ColliderComponent",
+        "BoxColliderComponent",
+        "SphereColliderComponent",
+        "CapsuleColliderComponent",
+        "ConvexMeshColliderComponent",
+        "TriangleMeshColliderComponent",
+        "CharacterControllerComponent",
+    ];
 
     public override EditorPanelInfo Info => new(
         "inspector",
@@ -305,7 +323,9 @@ internal sealed class InspectorPanel : EditorPanel
             generatedMissingMountIds = true;
         }
 
-        ScriptMount mount = new() { Id = id, StableId = stableId, Type = StripAssemblyName(type) };
+        bool enabled = !element.TryGetProperty("enabled", out JsonElement enabledElement)
+            || enabledElement.ValueKind != JsonValueKind.False;
+        ScriptMount mount = new() { Id = id, StableId = stableId, Type = StripAssemblyName(type), Enabled = enabled };
         if (!element.TryGetProperty("values", out JsonElement values)) return mount;
         if (values.ValueKind != JsonValueKind.Object) return mount;
 
@@ -491,19 +511,7 @@ internal sealed class InspectorPanel : EditorPanel
         }
     }
 
-    //统计当前对象上的引擎 Bind 组件数量。
-    private int GetBoundComponentCount(Ens ens)
-    {
-        int count = 0;
-        if (ens.HasTransformComponent) count++;
-        if (ens.HasStaticMeshRenderer) count++;
-        if (ens.HasRigidBody) count++;
-        count += ens.GetComponents<Collider>().Length;
-        if (ens.HasCharacterController) count++;
-        return count;
-    }
-
-    //绘制引擎 Bind 和用户脚本组成的 C# 组件列表。
+    //绘制原生组件和用户 C# 脚本组成的组件列表。
     private void DrawManagedComponents(Ens ens, EnsId selectedEns, string stableId)
     {
         List<ScriptMount>? mounts = null;
@@ -512,12 +520,14 @@ internal sealed class InspectorPanel : EditorPanel
         IReadOnlyList<ScriptBehaviour> runtimeScripts = ScriptRuntimeRegistry.GetScripts(selectedEns);
         HashSet<ScriptBehaviour> drawnRuntimeScripts = [];
 
-        EditorGUI.Label($"C# Components ({GetBoundComponentCount(ens) + mounts.Count})");
+        List<NativeComponentInfo> nativeComponents = EditorNativeComponents.GetComponents(selectedEns);
+        EditorGUI.Label($"Components ({nativeComponents.Count + mounts.Count})");
         DrawBoundComponents(ens, selectedEns);
+        DrawGenericNativeComponents(nativeComponents, selectedEns);
         if (string.IsNullOrEmpty(stableId))
         {
             EditorGUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
-            DrawComponentBlock("Add C# Component", () => DrawAddComponentControls(ens, stableId, mounts));
+            DrawComponentBlock("Add Component", () => DrawAddComponentControls(ens, selectedEns, stableId, mounts));
             return;
         }
 
@@ -538,6 +548,14 @@ internal sealed class InspectorPanel : EditorPanel
             bool removeRequested = DrawCollapsibleComponentBlock(title, $"script_{stableId}_{mount.Id}", true, () =>
             {
                 EditorGUI.Label($"Type: {mount.Type}");
+                bool enabled = mount.Enabled;
+                if (EditorGUI.Checkbox("enabled", ref enabled))
+                {
+                    mount.Enabled = enabled;
+                    foreach (ScriptBehaviour script in matchingRuntimeScripts) script.enabled = enabled;
+                    SaveSidecar();
+                    EditorApplication.RequestRepaint();
+                }
                 EditorGUI.Label("Serialized Fields");
                 DrawSerializedScriptFields(mount);
                 DrawMatchingRuntimeScripts(matchingRuntimeScripts);
@@ -559,28 +577,129 @@ internal sealed class InspectorPanel : EditorPanel
         }
 
         DrawUnmatchedRuntimeScripts(stableId, runtimeScripts, drawnRuntimeScripts);
-        DrawComponentBlock("Add C# Component", () => DrawAddComponentControls(ens, stableId, mounts));
+        DrawComponentBlock("Add Component", () => DrawAddComponentControls(ens, selectedEns, stableId, mounts));
     }
 
-    //绘制新增 C# 组件控件。
-    private void DrawAddComponentControls(Ens ens, string stableId, List<ScriptMount> mounts)
+    //绘制没有专用 C# binding 绘制器的原生组件。
+    private void DrawGenericNativeComponents(IReadOnlyList<NativeComponentInfo> components, EnsId selectedEns)
     {
-        List<Type> availableTypes = GetAvailableComponentTypes(ens, stableId, mounts);
-        if (availableTypes.Count == 0)
+        foreach (NativeComponentInfo component in components)
         {
-            EditorGUI.Label("No C# component types are available.");
+            if (NativeTypesCoveredByDedicatedDrawers.Contains(component.TypeName)) continue;
+
+            bool removeRequested = DrawCollapsibleComponentBlock(
+                $"{component.TypeName} [C++]",
+                $"native_{selectedEns.id}_{component.ObjectId}",
+                true,
+                () => DrawGenericNativeFields(component));
+            if (!removeRequested) continue;
+
+            if (EditorNativeComponents.RemoveComponent(component.ObjectId)) EditorApplication.RequestRepaint();
+            return;
+        }
+    }
+
+    //按原生反射元数据绘制一个组件的字段。
+    private void DrawGenericNativeFields(NativeComponentInfo component)
+    {
+        int fieldCount = EditorNativeComponents.GetFieldCount(component.ObjectId);
+        if (fieldCount == 0)
+        {
+            EditorGUI.Label("No reflected fields.");
+            return;
+        }
+
+        for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++)
+        {
+            string name = EditorNativeComponents.GetFieldName(component.ObjectId, fieldIndex);
+            NativeFieldKind kind = EditorNativeComponents.GetFieldKind(component.ObjectId, fieldIndex);
+            string value = EditorNativeComponents.GetFieldValue(component.ObjectId, fieldIndex);
+            DrawGenericNativeField(component.ObjectId, fieldIndex, name, kind, value);
+        }
+    }
+
+    //绘制并写回一个原生反射字段。
+    private void DrawGenericNativeField(int objectId, int fieldIndex, string name, NativeFieldKind kind, string value)
+    {
+        string label = $"{name}##native_field_{objectId}_{fieldIndex}";
+        string updatedValue = value;
+        bool changed = false;
+        if (kind == NativeFieldKind.Bool)
+        {
+            bool typedValue = value is "true" or "1";
+            changed = EditorGUI.Checkbox(label, ref typedValue);
+            updatedValue = typedValue ? "true" : "false";
+        }
+        else if (kind == NativeFieldKind.Int32)
+        {
+            int typedValue = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : 0;
+            changed = EditorGUI.InputInt(label, ref typedValue);
+            updatedValue = typedValue.ToString(CultureInfo.InvariantCulture);
+        }
+        else if (kind == NativeFieldKind.Float32)
+        {
+            float typedValue = float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : 0.0f;
+            changed = EditorGUI.InputFloat(label, ref typedValue);
+            updatedValue = typedValue.ToString(CultureInfo.InvariantCulture);
+        }
+        else if (kind == NativeFieldKind.Vector3)
+        {
+            vector3 typedValue = ParseVector3(value);
+            changed = EditorGUI.InputVector3(label, ref typedValue);
+            updatedValue = SerializeVector3(typedValue);
+        }
+        else if (kind != NativeFieldKind.Unsupported)
+        {
+            changed = EditorGUI.InputText(label, ref updatedValue);
+        }
+        else
+        {
+            EditorGUI.Label($"{name}: unsupported");
+        }
+
+        if (changed && EditorNativeComponents.SetFieldValue(objectId, fieldIndex, updatedValue))
+        {
+            EditorApplication.RequestRepaint();
+        }
+    }
+
+    //绘制新增 C++ / C# 组件控件。
+    private void DrawAddComponentControls(Ens ens, EnsId selectedEns, string stableId, List<ScriptMount> mounts)
+    {
+        List<ComponentAddChoice> choices = [];
+        foreach (Type type in GetAvailableComponentTypes(ens, stableId, mounts))
+        {
+            string typeName = GetScriptTypeName(type);
+            bool nativeBinding = IsNativeComponentType(type);
+            choices.Add(new ComponentAddChoice(
+                $"managed:{typeName}",
+                $"[{(nativeBinding ? "C++" : "C#")}] {GetShortTypeName(typeName)}",
+                type,
+                null));
+        }
+        foreach (string typeName in EditorNativeComponents.GetAddableTypes())
+        {
+            if (NativeTypesCoveredByDedicatedDrawers.Contains(typeName)) continue;
+            choices.Add(new ComponentAddChoice($"native:{typeName}", $"[C++] {typeName}", null, typeName));
+        }
+        choices.Sort((left, right) => string.Compare(left.Label, right.Label, StringComparison.Ordinal));
+
+        if (choices.Count == 0)
+        {
+            EditorGUI.Label("No component types are available.");
             return;
         }
 
         string search = componentSearches.TryGetValue(stableId, out string? searchValue) ? searchValue : string.Empty;
         string selectedTypeName = selectedAddTypes.TryGetValue(stableId, out string? selectedValue) ? selectedValue : string.Empty;
-        if (!availableTypes.Any(type => string.Equals(GetScriptTypeName(type), selectedTypeName, StringComparison.Ordinal)))
+        if (!choices.Any(choice => string.Equals(choice.Key, selectedTypeName, StringComparison.Ordinal)))
         {
             selectedTypeName = string.Empty;
             selectedAddTypes.Remove(stableId);
         }
 
-        string preview = string.IsNullOrEmpty(selectedTypeName) ? "Select a C# component" : GetShortTypeName(selectedTypeName);
+        ComponentAddChoice selectedChoice = choices.FirstOrDefault(choice => string.Equals(choice.Key, selectedTypeName, StringComparison.Ordinal));
+        string preview = string.IsNullOrEmpty(selectedChoice.Key) ? "Select a component" : selectedChoice.Label;
         if (EditorGUI.BeginCombo($"Component##add_component_combo_{stableId}", preview))
         {
             try
@@ -591,21 +710,20 @@ internal sealed class InspectorPanel : EditorPanel
                 }
 
                 bool hasMatch = false;
-                foreach (Type type in availableTypes)
+                foreach (ComponentAddChoice choice in choices)
                 {
-                    string typeName = GetScriptTypeName(type);
-                    if (!MatchesComponentSearch(typeName, search)) continue;
+                    if (!MatchesComponentSearch(choice.Label, search)) continue;
 
                     hasMatch = true;
-                    bool selected = string.Equals(typeName, selectedTypeName, StringComparison.Ordinal);
-                    if (EditorGUI.Selectable($"{GetShortTypeName(typeName)}##add_component_{stableId}_{typeName}", selected))
+                    bool selected = string.Equals(choice.Key, selectedTypeName, StringComparison.Ordinal);
+                    if (EditorGUI.Selectable($"{choice.Label}##add_component_{stableId}_{choice.Key}", selected))
                     {
-                        selectedTypeName = typeName;
-                        selectedAddTypes[stableId] = typeName;
+                        selectedTypeName = choice.Key;
+                        selectedAddTypes[stableId] = choice.Key;
                     }
                 }
 
-                if (!hasMatch) EditorGUI.Label("No matching C# components.");
+                if (!hasMatch) EditorGUI.Label("No matching components.");
             }
             finally
             {
@@ -615,8 +733,10 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (EditorGUI.Button($"Add Component##add_component_button_{stableId}") && !string.IsNullOrEmpty(selectedTypeName))
         {
-            Type? selectedType = availableTypes.FirstOrDefault(type => string.Equals(GetScriptTypeName(type), selectedTypeName, StringComparison.Ordinal));
-            if (selectedType != null) AddComponent(ens, stableId, selectedType);
+            selectedChoice = choices.FirstOrDefault(choice => string.Equals(choice.Key, selectedTypeName, StringComparison.Ordinal));
+            if (selectedChoice.ManagedType != null) AddComponent(ens, stableId, selectedChoice.ManagedType);
+            else if (selectedChoice.NativeType != null && EditorNativeComponents.AddComponent(selectedEns, selectedChoice.NativeType))
+                EditorApplication.RequestRepaint();
             componentSearches[stableId] = string.Empty;
             selectedAddTypes.Remove(stableId);
         }

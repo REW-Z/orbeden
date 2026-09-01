@@ -395,6 +395,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     std::string parsedResourceRoot = GetAttribute(content, "resourceRoot");
     std::string parsedScriptRoot = GetAttribute(content, "scriptRoot");
     std::string parsedManagedRoot = GetAttribute(content, "managedRoot");
+    std::string parsedNativeRoot = GetAttribute(content, "nativeRoot");
     EditorLayoutState parsedLayout;
     ReadEditorLayout(content, parsedLayout);
     if (parsedStartupWorld.empty())
@@ -427,6 +428,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     resourceRoot = parsedResourceRoot;
     scriptRoot = parsedScriptRoot;
     managedRoot = parsedManagedRoot;
+    nativeRoot = parsedNativeRoot;
     startupWorld = parsedStartupWorld;
     projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     editorLayout = parsedLayout;
@@ -562,6 +564,12 @@ std::string EditorProject::GetManagedRootPath() const
 {
     if (projectRoot.empty() || managedRoot.empty()) return std::string();
     return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(managedRoot));
+}
+
+std::string EditorProject::GetNativeRootPath() const
+{
+    if (projectRoot.empty() || nativeRoot.empty()) return std::string();
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / Utf8Path::FromUtf8(nativeRoot));
 }
 
 std::string EditorProject::GetStartupWorldPath() const

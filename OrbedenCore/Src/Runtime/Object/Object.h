@@ -5,7 +5,8 @@
 #include <string>
 #include <type_traits>
 
-class Object;
+class OrbedenObject;
+using Object = OrbedenObject;
 class Component;
 class Type;
 class IChunk;
@@ -63,7 +64,7 @@ public:
 //运行时类型信息
 class Type
 {
-    friend class Object;
+    friend class OrbedenObject;
     friend class ComponentStorage;
 
 private:
@@ -77,6 +78,7 @@ private:
     ObjectDestructorFunction destructor = nullptr;
     IChunk* commonChunk = nullptr;
     List<IChunk*> worldChunks;
+    void* moduleOwner = nullptr;
 
     //访问当前类型的所有存活对象
     void VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const;
@@ -136,6 +138,12 @@ public:
 
     //判断类型能否直接创建实例
     bool CanCreateObject() const;
+
+    //获取注册该类型的动态模块所有者；Core 类型返回空。
+    void* GetModuleOwner() const;
+
+    //判断当前类型是否仍有存活对象。
+    bool HasLiveObjects() const;
 
     //销毁对象实例
     void DestroyObject(Object* object);
@@ -245,9 +253,9 @@ public: \
 
 
 //基础对象
-class Object
+class OrbedenObject
 {
-    OBJECT_TYPE_DECLARE_ROOT(Object)
+    OBJECT_TYPE_DECLARE_ROOT(OrbedenObject)
 
 private:
     enum class Ownership
@@ -338,6 +346,15 @@ public:
 
     //注册类型
     static void RegisterType(Type* type);
+
+    //开始把随后静态初始化的类型归属到指定动态模块。
+    static void BeginModuleTypeRegistration(void* moduleOwner);
+
+    //结束动态模块类型归属范围；仅在 DLL 加载成功时提交暂存类型。
+    static bool EndModuleTypeRegistration(bool commit);
+
+    //在无存活实例时注销指定动态模块的全部类型和元数据。
+    static bool UnregisterModuleTypes(void* moduleOwner);
 
     //查找类型
     static Type* FindType(TypeId typeId);

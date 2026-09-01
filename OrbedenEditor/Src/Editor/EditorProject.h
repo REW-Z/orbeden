@@ -16,6 +16,7 @@ private:
     std::string resourceRoot = "Resource";
     std::string scriptRoot = "Script";
     std::string managedRoot = "Managed";
+    std::string nativeRoot;
     std::string startupWorld;
     std::string projectFilePath;
     EditorLayoutState editorLayout;
@@ -53,6 +54,9 @@ public:
 
     //获取项目托管输出目录
     std::string GetManagedRootPath() const;
+
+    //获取项目原生游戏代码目录；旧项目返回空。
+    std::string GetNativeRootPath() const;
 
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;

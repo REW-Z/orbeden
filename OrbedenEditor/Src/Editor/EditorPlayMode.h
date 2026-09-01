@@ -6,7 +6,7 @@
 
 #include <string>
 
-//Editor 进程内游戏播放模式，负责绑定用户 Game DLL 的固定入口。
+//Editor 进程内游戏播放模式，负责启动引擎内置的脚本运行时。
 class EditorPlayMode
 {
 private:
@@ -15,11 +15,11 @@ private:
     std::string lastError;
 
 public:
-    //装载 CLR 游戏入口并启动 Play-In-Editor
+    //装载 CLR 脚本运行时并启动 Play-In-Editor
     bool Start(ScriptSystem& scripts,
         EditorClrHost& host,
-        const std::string& assemblyPath,
-        const std::string& gameModuleType,
+        const std::string& gameAssemblyPath,
+        const std::string& runtimeAssemblyPath,
         const std::string& shadowDirectory,
         const List<std::string>& managedDependencyDirectories);
 

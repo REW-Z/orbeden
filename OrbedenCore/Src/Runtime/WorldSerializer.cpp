@@ -311,18 +311,16 @@ namespace
         output << "<Component type=\"" << EscapeXml(type->GetName()) << "\">\n";
 
         //按反射元数据写入持久化字段
-        const Reflection::TypeInfo* typeInfo = Reflection::FindTypeInfo(type);
-        if (typeInfo)
+        List<const Reflection::FieldInfo*> fields;
+        Reflection::CollectFields(type, fields);
+        for (const Reflection::FieldInfo* field : fields)
         {
-            for (const Reflection::FieldInfo& field : typeInfo->fields)
-            {
-                if (!field.persistent || !field.getter) continue;
+            if (!field || !field->persistent || !field->getter) continue;
 
-                WriteIndent(output, depth + 1);
-                output << "<Field name=\"" << EscapeXml(field.name ? field.name : "") << "\" type=\""
-                    << EscapeXml(field.typeName ? field.typeName : "") << "\" value=\""
-                    << EscapeXml(field.getter(component)) << "\" />\n";
-            }
+            WriteIndent(output, depth + 1);
+            output << "<Field name=\"" << EscapeXml(field->name ? field->name : "") << "\" type=\""
+                << EscapeXml(field->typeName ? field->typeName : "") << "\" value=\""
+                << EscapeXml(field->getter(component)) << "\" />\n";
         }
 
         WriteIndent(output, depth);

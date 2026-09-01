@@ -131,7 +131,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -145,6 +145,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
@@ -158,7 +159,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -172,6 +173,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" "$(TargetDir)"
+copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
@@ -189,6 +191,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClCompile Include="Src\Editor\EditorGUI.cpp" />
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
+    <ClCompile Include="Src\Editor\NativeGameModule.cpp" />
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
     <ClCompile Include="Src\Editor\PanelManager.cpp" />
     <ClCompile Include="Src\Editor\Panels\**\*.cpp" />
@@ -203,6 +206,7 @@ dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(C
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorLayoutState.h" />
     <ClInclude Include="Src\Editor\ManagedEditorBridge.h" />
+    <ClInclude Include="Src\Editor\NativeGameModule.h" />
     <ClInclude Include="Src\Editor\NewProjectGenerator.h" />
     <ClInclude Include="Src\Editor\PanelManager.h" />
     <ClInclude Include="Src\Editor\Panels\**\*.h" />

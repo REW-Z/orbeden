@@ -4,11 +4,16 @@
 #include "Platform/GlfwWindow.h"
 #include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
+#include "Scripting/ScriptSystem.h"
 
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+
+#if defined(ORBEDEN_HAS_NATIVE_GAME)
+extern "C" void OrbedenGameNative_RegisterReflection();
+#endif
 
 #if !defined(ORBEDEN_PROJECT_DIR)
 #error ORBEDEN_PROJECT_DIR must identify the project packaged with this player.
@@ -116,8 +121,20 @@ int main()
         return 1;
     }
 
+#if defined(ORBEDEN_HAS_NATIVE_GAME)
+    OrbedenGameNative_RegisterReflection();
+#endif
+
     if (!LoadConfiguredProject(app))
     {
+        app.Quit();
+        return 1;
+    }
+
+    ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
+    if (!scriptSystem || !scriptSystem->Initialize())
+    {
+        Log::Error("Game startup failed: script domains could not initialize.");
         app.Quit();
         return 1;
     }
