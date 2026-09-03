@@ -922,7 +922,19 @@ const EditorScene& EditorSystem::GetEditorScene() const
 //绘制一个托管面板
 void EditorSystem::DrawManagedPanel(int32 handle)
 {
-    managedBridge.DrawPanel(handle, editorScene.GetSelectedEns(), editorScene.GetSelectedStableId());
+    const List<EnsId>& selection = editorScene.GetSelectedEnsList();
+    std::string stableIds;
+    for (EnsId ens : selection)
+    {
+        stableIds += editorScene.GetStableId(ens);
+        stableIds.push_back('\0');
+    }
+    managedBridge.DrawPanel(handle,
+        editorScene.GetSelectedEns(),
+        selection.empty() ? nullptr : selection.data(),
+        static_cast<int32>(selection.size()),
+        stableIds,
+        editorScene.GetSelectedStableId());
 }
 
 //设置托管面板可见状态
@@ -1132,8 +1144,12 @@ bool EditorSystem::SaveCurrentWorld()
     World& world = app.GetWorld();
     bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
 
-    bool saved = project.SaveStartupWorld();
-    projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath()) : project.GetLastError();
+    bool sidecarSaved = managedBridge.SaveProjectState();
+    bool worldSaved = project.SaveStartupWorld();
+    if (worldSaved) managedBridge.NotifyWorldSaved();
+    bool saved = sidecarSaved && worldSaved;
+    projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath())
+        : (worldSaved ? "Managed project data save failed." : project.GetLastError());
 
     if (hadEditorCamera) editorScene.RestoreCamera(world);
     editorScene.CancelInteraction();
@@ -1192,6 +1208,25 @@ void EditorSystem::OpenNewProjectDialog()
 
 void EditorSystem::DrawMainMenuBar()
 {
+    //文本控件编辑时保留 ImGui 自身的 Undo，其余情况处理全局项目快捷键。
+    const ImGuiIO& io = ImGui::GetIO();
+    if (!io.WantTextInput && io.KeyCtrl)
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_S, false))
+        {
+            SaveCurrentWorld();
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Z, false))
+        {
+            if (io.KeyShift) managedBridge.Redo();
+            else managedBridge.Undo();
+        }
+        else if (ImGui::IsKeyPressed(ImGuiKey_Y, false))
+        {
+            managedBridge.Redo();
+        }
+    }
+
     if (!ImGui::BeginMainMenuBar()) return;
 
     if (ImGui::BeginMenu("Project"))
@@ -1233,6 +1268,19 @@ void EditorSystem::DrawMainMenuBar()
             ImGui::TextWrapped("%s", projectStatus.c_str());
         }
 
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Edit"))
+    {
+        if (ImGui::MenuItem("Undo", "Ctrl+Z"))
+        {
+            managedBridge.Undo();
+        }
+        if (ImGui::MenuItem("Redo", "Ctrl+Y / Ctrl+Shift+Z"))
+        {
+            managedBridge.Redo();
+        }
         ImGui::EndMenu();
     }
 

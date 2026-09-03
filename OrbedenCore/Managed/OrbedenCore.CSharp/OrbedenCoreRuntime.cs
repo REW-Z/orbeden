@@ -41,6 +41,7 @@ internal unsafe struct OrbedenNativeApi
     public RuntimeGuiExtensionApi GuiExtension;
     public RuntimeGuiAdvancedApi GuiAdvanced;
     public ObjectExtensionBindApi ObjectExtension;
+    public NativeScriptInteropApi ScriptInterop;
 }
 #pragma warning restore CS0649
 
@@ -57,12 +58,14 @@ public static unsafe class OrbedenCoreRuntime
         if (nativeApi == IntPtr.Zero)
         {
             InitializeEngineBindings(default(OrbedenNativeApi));
+            ScriptInteropDispatch.Initialize(default);
             GUI.InitializeNativeApi(default, default, default);
             return;
         }
 
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         InitializeEngineBindings(api);
+        ScriptInteropDispatch.Initialize(api.ScriptInterop);
         GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
     }
 
@@ -153,8 +156,10 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<RuntimeGuiApi>(nameof(RuntimeGuiApi), 11);
         ValidateFunctionTable<RuntimeGuiExtensionApi>(nameof(RuntimeGuiExtensionApi), 4);
         ValidateFunctionTable<RuntimeGuiAdvancedApi>(nameof(RuntimeGuiAdvancedApi), 17);
+        ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
+        ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 7);
         ValidateFunctionTable<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 199);
-        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 231);
+        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 240);
 
         nativeAbiValidated = true;
     }

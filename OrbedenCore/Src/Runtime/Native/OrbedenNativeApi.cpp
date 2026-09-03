@@ -38,5 +38,6 @@ OrbedenNativeApi OrbedenNativeApi::Create()
     api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();
     api.GuiAdvanced = RuntimeGuiBridge::GetAdvancedApi();
     api.ObjectExtension = ObjectExtensionBind::Create();
+    api.ScriptInterop = ScriptInterop::ScriptInteropApi::Create();
     return api;
 }

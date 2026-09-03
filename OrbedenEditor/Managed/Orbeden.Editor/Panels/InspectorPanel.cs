@@ -79,6 +79,100 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     private readonly record struct ComponentAddChoice(string Key, string Label, Type? ManagedType, string? NativeType);
+    private sealed record NativeFieldSnapshot(string Name, string Value);
+    private sealed record NativeComponentSnapshot(EnsId Ens, string TypeName, int Occurrence, List<NativeFieldSnapshot> Fields);
+    private sealed record SidecarMountSnapshot(string StableId, int Index, ScriptMount Mount);
+    private sealed record RuntimeScriptSnapshot(
+        EnsId Ens, string MountId, string TypeName, bool Enabled, Dictionary<string, string> Values);
+
+    /// <summary>把一个 C# sidecar 挂载项适配到统一属性事务。</summary>
+    private sealed class SidecarScriptPropertyTarget : IPropertyTarget
+    {
+        private readonly InspectorPanel owner;
+        private readonly ScriptMount mount;
+        private readonly Dictionary<string, (FieldInfo Field, InteropValueKind Kind)> fields = new(StringComparer.Ordinal);
+        private readonly IReadOnlyList<PropertyDescriptor> properties;
+
+        internal SidecarScriptPropertyTarget(InspectorPanel inspector, ScriptMount scriptMount, Type type)
+        {
+            owner = inspector;
+            mount = scriptMount;
+            List<PropertyDescriptor> descriptors = [new PropertyDescriptor("enabled", InteropValueKind.Bool)];
+            foreach (FieldInfo field in owner.GetSerializableFields(type))
+            {
+                InteropValueKind kind = GetSidecarKind(field.FieldType);
+                if (kind == InteropValueKind.Empty) continue;
+                if (fields.ContainsKey(field.Name))
+                {
+                    fields[field.Name] = (field, kind);
+                    continue;
+                }
+                fields[field.Name] = (field, kind);
+                descriptors.Add(new PropertyDescriptor(field.Name, kind));
+            }
+            properties = descriptors;
+        }
+
+        public string Identity => $"sidecar:{mount.StableId}:{mount.Id}";
+        public IReadOnlyList<PropertyDescriptor> Properties => properties;
+
+        public InteropStatus TryGet(string name, out InteropValue value)
+        {
+            if (name == "enabled")
+            {
+                value = InteropValue.From(mount.Enabled);
+                return InteropStatus.Ok;
+            }
+            if (!fields.TryGetValue(name, out var entry))
+            {
+                value = default;
+                return InteropStatus.NotFound;
+            }
+            ScriptSerializedValue serialized = owner.GetSerializedValueForField(mount, entry.Field);
+            if (entry.Kind == InteropValueKind.StringId)
+            {
+                value = InteropValue.FromStringId(serialized.Value);
+                return InteropStatus.Ok;
+            }
+            return EditorInteropValueText.TryParse(entry.Kind, serialized.Value, out value)
+                ? InteropStatus.Ok
+                : InteropStatus.InvocationFailed;
+        }
+
+        public InteropStatus Validate(string name, InteropValue value)
+        {
+            if (name == "enabled") return value.Kind == InteropValueKind.Bool ? InteropStatus.Ok : InteropStatus.TypeMismatch;
+            return fields.TryGetValue(name, out var entry) && entry.Kind == value.Kind
+                ? InteropStatus.Ok
+                : InteropStatus.TypeMismatch;
+        }
+
+        public InteropStatus Set(string name, InteropValue value)
+        {
+            if (Validate(name, value) != InteropStatus.Ok) return InteropStatus.TypeMismatch;
+            if (name == "enabled")
+            {
+                value.TryGet(out bool enabled);
+                mount.Enabled = enabled;
+                return InteropStatus.Ok;
+            }
+
+            var entry = fields[name];
+            ScriptSerializedValue serialized = owner.GetSerializedValueForField(mount, entry.Field);
+            serialized.Type = owner.GetValueTypeName(entry.Field.FieldType);
+            serialized.Value = EditorInteropValueText.Format(value);
+            return InteropStatus.Ok;
+        }
+
+        public void MarkDirty() => owner.MarkSidecarDirty();
+
+        private static InteropValueKind GetSidecarKind(Type type)
+        {
+            return typeof(Orbeden.Object).IsAssignableFrom(type)
+                ? InteropValueKind.StringId
+                : EditorManagedInteropValue.GetKind(type);
+        }
+    }
 
     private readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly List<Type> scriptTypes = [];
@@ -129,6 +223,7 @@ internal sealed class InspectorPanel : EditorPanel
     /// <summary>同步 sidecar 缓存中的资源对象引用。</summary>
     public override void OnAssetReferencesRemapped(string oldKey, string newKey, bool prefix)
     {
+        bool changed = false;
         foreach (List<ScriptMount> mounts in sidecarScripts.Values)
         {
             foreach (ScriptMount mount in mounts)
@@ -136,18 +231,24 @@ internal sealed class InspectorPanel : EditorPanel
                 foreach (ScriptSerializedValue value in mount.Values.Values)
                 {
                     if (!IsSerializedResourceType(value.Type)) continue;
-                    if (TryMapResourceKey(value.Value, oldKey, newKey, prefix, out string mapped)) value.Value = mapped;
+                    if (!TryMapResourceKey(value.Value, oldKey, newKey, prefix, out string mapped)) continue;
+                    value.Value = mapped;
+                    changed = true;
                 }
             }
         }
+        if (changed) MarkSidecarDirty();
 
         runtimeSerializedApplied.Clear();
     }
 
+    /// <summary>统一保存 Dirty 的脚本 sidecar。</summary>
+    public override bool SavePendingChanges() => !EditorApplication.SidecarDirty || SaveSidecar();
+
     /// <summary>绘制 Inspector 内容。</summary>
     public override void Draw(EditorPanelContext context)
     {
-        DrawContent(context.SelectedEns, context.SelectedStableId);
+        DrawContent(context.SelectedEns, context.SelectedEnsList, context.SelectedStableIds, context.SelectedStableId);
     }
 
     /// <summary>加载用户游戏程序集和脚本挂载清单。</summary>
@@ -163,7 +264,7 @@ internal sealed class InspectorPanel : EditorPanel
         currentSidecarPath = sidecarPath;
 
         LoadSidecar(sidecarPath);
-        if (generatedMissingMountIds) SaveSidecar();
+        if (generatedMissingMountIds) MarkSidecarDirty();
         if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))
         {
             status = sidecarScripts.Count > 0
@@ -210,7 +311,10 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //绘制选中 Ens 的 Inspector 内容。
-    private void DrawContent(EnsId selectedEns, string stableId)
+    private void DrawContent(EnsId selectedEns,
+        IReadOnlyList<EnsId> selectedEnsList,
+        IReadOnlyList<string> selectedStableIds,
+        string stableId)
     {
         if (selectedEns.IsNull)
         {
@@ -225,24 +329,37 @@ internal sealed class InspectorPanel : EditorPanel
             return;
         }
 
-        DrawObjectHeader(ens, selectedEns, stableId);
+        DrawObjectHeader(ens, selectedEns, selectedEnsList, stableId);
         DrawInspectorStatus();
-        DrawManagedComponents(ens, selectedEns, stableId);
+        DrawManagedComponents(ens, selectedEns, selectedEnsList, selectedStableIds, stableId);
     }
 
     //绘制选中对象摘要。
-    private void DrawObjectHeader(Ens ens, EnsId selectedEns, string stableId)
+    private void DrawObjectHeader(Ens ens, EnsId selectedEns, IReadOnlyList<EnsId> selectedEnsList, string stableId)
     {
         DrawComponentBlock("Selected Ens", () =>
         {
-            string name = ens.Name;
-            if (EditorGUI.InputText("Name", ref name))
-            {
-                ens.Name = name;
-                EditorApplication.RequestRepaint();
-            }
+            IReadOnlyList<EnsId> selection = selectedEnsList.Count == 0 ? [selectedEns] : selectedEnsList;
+            List<IPropertyTarget> targets = selection
+                .Select(Ens.FromId)
+                .Where(target => target.IsValid)
+                .Select(target => (IPropertyTarget)new DelegatedPropertyTarget(
+                    $"ens:{target.Id.id}:{target.Id.version}",
+                    "Name",
+                    InteropValueKind.String,
+                    () => InteropValue.From(target.Name),
+                    value =>
+                    {
+                        if (!value.TryGet(out string name)) return InteropStatus.TypeMismatch;
+                        target.Name = name;
+                        return InteropStatus.Ok;
+                    },
+                    EditorApplication.MarkWorldDirty))
+                .ToList();
+            DrawPropertyDocument(new PropertyDocument(targets), "ens_name");
 
             EditorGUI.Label($"Runtime Id: {selectedEns.id}:{selectedEns.version}");
+            if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
             EditorGUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
         });
     }
@@ -356,10 +473,11 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //保存 world sidecar 脚本挂载清单。
-    private void SaveSidecar()
+    private bool SaveSidecar()
     {
-        if (string.IsNullOrWhiteSpace(currentSidecarPath)) return;
+        if (string.IsNullOrWhiteSpace(currentSidecarPath)) return true;
 
+        string temporaryPath = currentSidecarPath + ".tmp." + Guid.NewGuid().ToString("N");
         try
         {
             string? directory = Path.GetDirectoryName(currentSidecarPath);
@@ -372,12 +490,25 @@ internal sealed class InspectorPanel : EditorPanel
             {
                 Scripts = sidecarScripts.Values.SelectMany(mounts => mounts).ToList(),
             };
-            File.WriteAllText(currentSidecarPath, JsonSerializer.Serialize(document, JsonOptions));
+            File.WriteAllText(temporaryPath, JsonSerializer.Serialize(document, JsonOptions));
+            File.Move(temporaryPath, currentSidecarPath, true);
+            EditorApplication.ClearSidecarDirty();
+            return true;
         }
         catch (Exception ex)
         {
             status = "Script sidecar save failed: " + ex.Message;
+            try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
+            catch { }
+            return false;
         }
+    }
+
+    //记录 sidecar 已修改，PIE 运行副本不会污染项目文件。
+    private void MarkSidecarDirty()
+    {
+        EditorApplication.MarkSidecarDirty();
+        EditorApplication.RequestRepaint();
     }
 
     //绘制引擎 Bind 对应的 C# 组件块。
@@ -512,7 +643,11 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //绘制原生组件和用户 C# 脚本组成的组件列表。
-    private void DrawManagedComponents(Ens ens, EnsId selectedEns, string stableId)
+    private void DrawManagedComponents(Ens ens,
+        EnsId selectedEns,
+        IReadOnlyList<EnsId> selectedEnsList,
+        IReadOnlyList<string> selectedStableIds,
+        string stableId)
     {
         List<ScriptMount>? mounts = null;
         if (!string.IsNullOrEmpty(stableId)) sidecarScripts.TryGetValue(stableId, out mounts);
@@ -522,8 +657,16 @@ internal sealed class InspectorPanel : EditorPanel
 
         List<NativeComponentInfo> nativeComponents = EditorNativeComponents.GetComponents(selectedEns);
         EditorGUI.Label($"Components ({nativeComponents.Count + mounts.Count})");
-        DrawBoundComponents(ens, selectedEns);
-        DrawGenericNativeComponents(nativeComponents, selectedEns);
+        DrawBoundComponentDocuments(nativeComponents, selectedEns, selectedEnsList);
+        DrawGenericNativeComponentDocuments(nativeComponents, selectedEns, selectedEnsList);
+        if (DrawManagedScriptComponentDocuments(mounts, selectedEns, selectedEnsList, selectedStableIds,
+            stableId, runtimeScripts, drawnRuntimeScripts))
+        {
+            if (selectedEnsList.Count <= 1) DrawUnmatchedRuntimeScripts(stableId, runtimeScripts, drawnRuntimeScripts);
+            DrawComponentBlock("Add Component", () => DrawAddComponentControls(
+                ens, selectedEns, stableId, mounts, selectedEnsList, selectedStableIds));
+            return;
+        }
         if (string.IsNullOrEmpty(stableId))
         {
             EditorGUI.Label("Selected Ens has no stableId. C# script components require a stableId.");
@@ -553,7 +696,7 @@ internal sealed class InspectorPanel : EditorPanel
                 {
                     mount.Enabled = enabled;
                     foreach (ScriptBehaviour script in matchingRuntimeScripts) script.enabled = enabled;
-                    SaveSidecar();
+                    MarkSidecarDirty();
                     EditorApplication.RequestRepaint();
                 }
                 EditorGUI.Label("Serialized Fields");
@@ -571,7 +714,7 @@ internal sealed class InspectorPanel : EditorPanel
                 sidecarScripts.Remove(stableId);
             }
 
-            SaveSidecar();
+            MarkSidecarDirty();
             EditorApplication.RequestRepaint();
             return;
         }
@@ -663,8 +806,494 @@ internal sealed class InspectorPanel : EditorPanel
         }
     }
 
+    //保留专用绑定类型的卡片，并让字段写入共用 PropertyDocument 事务。
+    private void DrawBoundComponentDocuments(IReadOnlyList<NativeComponentInfo> components,
+        EnsId selectedEns,
+        IReadOnlyList<EnsId> selectedEnsList)
+    {
+        IReadOnlyList<EnsId> selection = selectedEnsList.Count == 0 ? [selectedEns] : selectedEnsList;
+        Dictionary<string, int> occurrences = new(StringComparer.Ordinal);
+        foreach (NativeComponentInfo component in components)
+        {
+            if (!NativeTypesCoveredByDedicatedDrawers.Contains(component.TypeName)) continue;
+            int occurrence = occurrences.TryGetValue(component.TypeName, out int count) ? count : 0;
+            occurrences[component.TypeName] = occurrence + 1;
+
+            List<(EnsId Ens, NativeComponentInfo Native, Component Managed)> matches = [];
+            foreach (EnsId targetEns in selection)
+            {
+                NativeComponentInfo[] sameType = EditorNativeComponents.GetComponents(targetEns)
+                    .Where(candidate => string.Equals(candidate.TypeName, component.TypeName, StringComparison.Ordinal))
+                    .ToArray();
+                if (occurrence >= sameType.Length)
+                {
+                    matches.Clear();
+                    break;
+                }
+                Component? managed = FindBoundComponent(Ens.FromId(targetEns), sameType[occurrence].ObjectId);
+                if (managed == null)
+                {
+                    matches.Clear();
+                    break;
+                }
+                matches.Add((targetEns, sameType[occurrence], managed));
+            }
+            if (matches.Count != selection.Count) continue;
+
+            bool removable = !string.Equals(component.TypeName, "TransformComponent", StringComparison.Ordinal);
+            bool removeRequested = DrawCollapsibleComponentBlock(
+                component.TypeName,
+                $"bound_document_{selectedEns.id}_{component.TypeName}_{occurrence}",
+                removable,
+                () => DrawPropertyDocument(
+                    new PropertyDocument(matches
+                        .Select(match => (IPropertyTarget)new ManagedObjectPropertyTarget(
+                            match.Managed, EditorApplication.MarkWorldDirty))
+                        .ToArray()),
+                    $"bound_{component.TypeName}_{occurrence}"));
+            if (!removeRequested) continue;
+
+            List<NativeComponentSnapshot> snapshots = matches
+                .Select(match => CaptureNativeComponent(match.Ens, match.Native, occurrence))
+                .ToList();
+            if (!RemoveNativeComponents(snapshots)) return;
+            EditorPropertyHistory.PushAction(
+                $"Remove {component.TypeName}",
+                () => RestoreNativeComponents(snapshots),
+                () => RemoveNativeComponents(snapshots));
+            EditorApplication.RequestRepaint();
+            return;
+        }
+    }
+
+    //从现有 C# binding 中按原生 ObjectId 找到组件包装。
+    private static Component? FindBoundComponent(Ens ens, int objectId)
+    {
+        if (!ens.IsValid) return null;
+        if (ens.HasTransformComponent && ens.Transform.InstanceId == objectId) return ens.Transform;
+
+        StaticMeshRenderer? renderer = ens.GetComponent<StaticMeshRenderer>();
+        if (renderer?.InstanceId == objectId) return renderer;
+        RigidBody? rigidBody = ens.GetComponent<RigidBody>();
+        if (rigidBody?.InstanceId == objectId) return rigidBody;
+        CharacterController? controller = ens.GetComponent<CharacterController>();
+        if (controller?.InstanceId == objectId) return controller;
+        foreach (Collider collider in ens.GetComponents<Collider>())
+        {
+            if (collider.InstanceId == objectId) return collider;
+        }
+        return null;
+    }
+
+    //绘制所有选中 Ens 共同拥有且 occurrence 一致的通用 C++ 组件。
+    private void DrawGenericNativeComponentDocuments(IReadOnlyList<NativeComponentInfo> components,
+        EnsId selectedEns,
+        IReadOnlyList<EnsId> selectedEnsList)
+    {
+        IReadOnlyList<EnsId> selection = selectedEnsList.Count == 0 ? [selectedEns] : selectedEnsList;
+        Dictionary<string, int> occurrences = new(StringComparer.Ordinal);
+        foreach (NativeComponentInfo component in components)
+        {
+            if (NativeTypesCoveredByDedicatedDrawers.Contains(component.TypeName)) continue;
+            int occurrence = occurrences.TryGetValue(component.TypeName, out int count) ? count : 0;
+            occurrences[component.TypeName] = occurrence + 1;
+
+            List<(EnsId Ens, NativeComponentInfo Component)> matches = [];
+            foreach (EnsId targetEns in selection)
+            {
+                NativeComponentInfo[] sameType = EditorNativeComponents.GetComponents(targetEns)
+                    .Where(candidate => string.Equals(candidate.TypeName, component.TypeName, StringComparison.Ordinal))
+                    .ToArray();
+                if (occurrence >= sameType.Length)
+                {
+                    matches.Clear();
+                    break;
+                }
+                matches.Add((targetEns, sameType[occurrence]));
+            }
+            if (matches.Count != selection.Count) continue;
+
+            bool removeRequested = DrawCollapsibleComponentBlock(
+                $"{component.TypeName} [C++]",
+                $"native_{selectedEns.id}_{component.TypeName}_{occurrence}",
+                true,
+                () => DrawPropertyDocument(
+                    new PropertyDocument(matches
+                        .Select(match => (IPropertyTarget)new NativeComponentPropertyTarget(match.Component, EditorApplication.MarkWorldDirty))
+                        .ToArray()),
+                    $"native_{component.TypeName}_{occurrence}"));
+            if (!removeRequested) continue;
+
+            List<NativeComponentSnapshot> snapshots = matches
+                .Select(match => CaptureNativeComponent(match.Ens, match.Component, occurrence))
+                .ToList();
+            if (!RemoveNativeComponents(snapshots)) return;
+            EditorPropertyHistory.PushAction(
+                $"Remove {component.TypeName}",
+                () => RestoreNativeComponents(snapshots),
+                () => RemoveNativeComponents(snapshots));
+            EditorApplication.RequestRepaint();
+            return;
+        }
+    }
+
+    //绘制 PropertyDocument 中的全部公共属性。
+    private void DrawPropertyDocument(PropertyDocument document, string controlId)
+    {
+        document.Update();
+        if (document.Properties.Count == 0)
+        {
+            EditorGUI.Label("No reflected fields.");
+            return;
+        }
+
+        foreach (PropertyValue property in document.Properties)
+        {
+            string label = property.HasMultipleDifferentValues ? property.Name + " (mixed)" : property.Name;
+            label += $"##property_{controlId}_{property.Name}";
+            if (!DrawInteropValue(label, property.Value, out InteropValue updated)) continue;
+            property.SetValue(updated);
+            if (!document.ApplyChanges($"Edit {property.Name}")) status = $"Failed to apply property '{property.Name}'.";
+            EditorApplication.RequestRepaint();
+        }
+    }
+
+    //按跨域值类型绘制一个属性控件。
+    private bool DrawInteropValue(string label, InteropValue value, out InteropValue updated)
+    {
+        updated = value;
+        if (value.Kind == InteropValueKind.Bool && value.TryGet(out bool boolean))
+        {
+            if (!EditorGUI.Checkbox(label, ref boolean)) return false;
+            updated = InteropValue.From(boolean);
+            return true;
+        }
+        if (value.Kind == InteropValueKind.Int32 && value.TryGet(out int integer))
+        {
+            if (!EditorGUI.InputInt(label, ref integer)) return false;
+            updated = InteropValue.From(integer);
+            return true;
+        }
+        if (value.Kind == InteropValueKind.Float32 && value.TryGet(out float number))
+        {
+            if (!EditorGUI.InputFloat(label, ref number)) return false;
+            updated = InteropValue.From(number);
+            return true;
+        }
+        if (value.Kind == InteropValueKind.Vector3 && value.TryGet(out vector3 vector))
+        {
+            if (!EditorGUI.InputVector3(label, ref vector)) return false;
+            updated = InteropValue.From(vector);
+            return true;
+        }
+        if (value.Kind == InteropValueKind.Object && value.TryGet(out int objectId))
+        {
+            Orbeden.Object? objectValue = Orbeden.Object.FindLoadedObject(objectId);
+            if (!EditorGUI.ObjectField(label, typeof(Orbeden.Object), ref objectValue)) return false;
+            updated = InteropValue.FromObject(objectValue);
+            return true;
+        }
+
+        string text = EditorInteropValueText.Format(value);
+        if (value.Kind is InteropValueKind.String or InteropValueKind.StringId
+            or InteropValueKind.UInt32 or InteropValueKind.UInt64
+            or InteropValueKind.Color or InteropValueKind.Quaternion
+            or InteropValueKind.EnsId or InteropValueKind.Object)
+        {
+            if (!EditorGUI.InputText(label, ref text)) return false;
+            return EditorInteropValueText.TryParse(value.Kind, text, out updated);
+        }
+
+        EditorGUI.Label($"{label}: unsupported");
+        return false;
+    }
+
+    //保存一个原生组件的反射字段，以便删除事务撤销。
+    private NativeComponentSnapshot CaptureNativeComponent(EnsId ens, NativeComponentInfo component, int occurrence)
+    {
+        List<NativeFieldSnapshot> fields = [];
+        int fieldCount = EditorNativeComponents.GetFieldCount(component.ObjectId);
+        for (int index = 0; index < fieldCount; ++index)
+        {
+            fields.Add(new NativeFieldSnapshot(
+                EditorNativeComponents.GetFieldName(component.ObjectId, index),
+                EditorNativeComponents.GetFieldValue(component.ObjectId, index)));
+        }
+        return new NativeComponentSnapshot(ens, component.TypeName, occurrence, fields);
+    }
+
+    //删除一组原生组件；失败时恢复已经删除的目标。
+    private bool RemoveNativeComponents(IReadOnlyList<NativeComponentSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return true;
+        List<NativeComponentSnapshot> removed = [];
+        foreach (NativeComponentSnapshot snapshot in snapshots)
+        {
+            NativeComponentInfo[] matches = EditorNativeComponents.GetComponents(snapshot.Ens)
+                .Where(component => string.Equals(component.TypeName, snapshot.TypeName, StringComparison.Ordinal))
+                .ToArray();
+            if (snapshot.Occurrence < matches.Length && EditorNativeComponents.RemoveComponent(matches[snapshot.Occurrence].ObjectId))
+            {
+                removed.Add(snapshot);
+                continue;
+            }
+            RestoreNativeComponents(removed);
+            return false;
+        }
+        EditorApplication.MarkWorldDirty();
+        return true;
+    }
+
+    //重新创建一组原生组件并恢复持久化字段。
+    private void RestoreNativeComponents(IReadOnlyList<NativeComponentSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return;
+        foreach (NativeComponentSnapshot snapshot in snapshots)
+        {
+            if (!EditorNativeComponents.AddComponent(snapshot.Ens, snapshot.TypeName)) continue;
+            NativeComponentInfo[] matches = EditorNativeComponents.GetComponents(snapshot.Ens)
+                .Where(component => string.Equals(component.TypeName, snapshot.TypeName, StringComparison.Ordinal))
+                .ToArray();
+            if (matches.Length == 0) continue;
+            NativeComponentInfo restored = matches[^1];
+            int fieldCount = EditorNativeComponents.GetFieldCount(restored.ObjectId);
+            for (int fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex)
+            {
+                string fieldName = EditorNativeComponents.GetFieldName(restored.ObjectId, fieldIndex);
+                NativeFieldSnapshot? field = snapshot.Fields.FirstOrDefault(candidate => candidate.Name == fieldName);
+                if (field != null) EditorNativeComponents.SetFieldValue(restored.ObjectId, fieldIndex, field.Value);
+            }
+        }
+        EditorApplication.MarkWorldDirty();
+    }
+
+    //绘制所有选中 Ens 共同拥有且 occurrence 一致的 C# 脚本组件。
+    private bool DrawManagedScriptComponentDocuments(IReadOnlyList<ScriptMount> activeMounts,
+        EnsId activeEns,
+        IReadOnlyList<EnsId> selectedEnsList,
+        IReadOnlyList<string> selectedStableIds,
+        string activeStableId,
+        IReadOnlyList<ScriptBehaviour> activeRuntimeScripts,
+        HashSet<ScriptBehaviour> drawnRuntimeScripts)
+    {
+        if (string.IsNullOrEmpty(activeStableId)) return false;
+        if (activeMounts.Any(mount => FindScriptType(mount.Type) == null)) return false;
+
+        IReadOnlyList<EnsId> selection = selectedEnsList.Count == 0 ? [activeEns] : selectedEnsList;
+        IReadOnlyList<string> stableIds = selectedStableIds.Count == selection.Count
+            ? selectedStableIds
+            : [activeStableId];
+        Dictionary<string, int> occurrences = new(StringComparer.Ordinal);
+        foreach (ScriptMount activeMount in activeMounts)
+        {
+            string normalizedType = StripAssemblyName(activeMount.Type);
+            int occurrence = occurrences.TryGetValue(normalizedType, out int count) ? count : 0;
+            occurrences[normalizedType] = occurrence + 1;
+            Type scriptType = FindScriptType(activeMount.Type)!;
+            List<IPropertyTarget> targets = [];
+            List<ScriptBehaviour> runtimeMatches = [];
+            List<(string StableId, List<ScriptMount> Mounts, int Index, ScriptMount Mount)> sidecarMatches = [];
+
+            if (EditorApplication.IsPlaying)
+            {
+                foreach (EnsId targetEns in selection)
+                {
+                    ScriptBehaviour[] sameType = ScriptRuntimeRegistry.GetScripts(targetEns)
+                        .Where(script => string.Equals(
+                            StripAssemblyName(GetScriptTypeName(script.GetType())), normalizedType, StringComparison.Ordinal))
+                        .ToArray();
+                    if (occurrence >= sameType.Length)
+                    {
+                        runtimeMatches.Clear();
+                        break;
+                    }
+                    runtimeMatches.Add(sameType[occurrence]);
+                }
+                if (runtimeMatches.Count != selection.Count) continue;
+                foreach (ScriptBehaviour script in runtimeMatches)
+                {
+                    targets.Add(new ManagedObjectPropertyTarget(script, EditorApplication.RequestRepaint));
+                    if (script.EnsId.Equals(activeEns)) drawnRuntimeScripts.Add(script);
+                }
+            }
+            else
+            {
+                for (int targetIndex = 0; targetIndex < selection.Count; ++targetIndex)
+                {
+                    string targetStableId = targetIndex < stableIds.Count ? stableIds[targetIndex] : string.Empty;
+                    if (string.IsNullOrEmpty(targetStableId))
+                    {
+                        sidecarMatches.Clear();
+                        break;
+                    }
+                    List<ScriptMount> targetMounts = GetScriptMounts(targetStableId);
+                    List<(int Index, ScriptMount Mount)> sameType = targetMounts
+                        .Select((mount, index) => (Index: index, Mount: mount))
+                        .Where(item => string.Equals(StripAssemblyName(item.Mount.Type), normalizedType, StringComparison.Ordinal))
+                        .ToList();
+                    if (occurrence >= sameType.Count)
+                    {
+                        sidecarMatches.Clear();
+                        break;
+                    }
+                    var match = sameType[occurrence];
+                    sidecarMatches.Add((targetStableId, targetMounts, match.Index, match.Mount));
+                }
+                if (sidecarMatches.Count != selection.Count) continue;
+                targets.AddRange(sidecarMatches.Select(match =>
+                    (IPropertyTarget)new SidecarScriptPropertyTarget(this, match.Mount, scriptType)));
+            }
+
+            bool removeRequested = DrawCollapsibleComponentBlock(
+                $"{GetShortTypeName(activeMount.Type)} [C#]",
+                $"managed_{activeEns.id}_{normalizedType}_{occurrence}",
+                true,
+                () =>
+                {
+                    EditorGUI.Label($"Type: {normalizedType}");
+                    DrawPropertyDocument(new PropertyDocument(targets), $"managed_{normalizedType}_{occurrence}");
+                });
+            if (!removeRequested) continue;
+
+            if (EditorApplication.IsPlaying)
+            {
+                List<RuntimeScriptSnapshot> snapshots = runtimeMatches.Select(CaptureRuntimeScript).ToList();
+                if (!RemoveRuntimeScripts(snapshots)) return true;
+                EditorPropertyHistory.PushAction(
+                    $"Remove {GetShortTypeName(normalizedType)}",
+                    () => RestoreRuntimeScripts(snapshots),
+                    () => RemoveRuntimeScripts(snapshots));
+            }
+            else
+            {
+                List<SidecarMountSnapshot> snapshots = sidecarMatches
+                    .Select(match => new SidecarMountSnapshot(match.StableId, match.Index, CloneMount(match.Mount)))
+                    .ToList();
+                if (!RemoveSidecarMounts(snapshots)) return true;
+                EditorPropertyHistory.PushAction(
+                    $"Remove {GetShortTypeName(normalizedType)}",
+                    () => RestoreSidecarMounts(snapshots),
+                    () => RemoveSidecarMounts(snapshots));
+            }
+            EditorApplication.RequestRepaint();
+            return true;
+        }
+        return true;
+    }
+
+    //复制 sidecar 挂载项和全部序列化字段。
+    private static ScriptMount CloneMount(ScriptMount source)
+    {
+        ScriptMount clone = new()
+        {
+            Id = source.Id,
+            StableId = source.StableId,
+            Type = source.Type,
+            Enabled = source.Enabled,
+        };
+        foreach ((string name, ScriptSerializedValue value) in source.Values)
+        {
+            clone.Values[name] = new ScriptSerializedValue { Type = value.Type, Value = value.Value };
+        }
+        return clone;
+    }
+
+    //原子删除一组 sidecar 挂载项。
+    private bool RemoveSidecarMounts(IReadOnlyList<SidecarMountSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return true;
+        List<SidecarMountSnapshot> removed = [];
+        foreach (SidecarMountSnapshot snapshot in snapshots)
+        {
+            if (!sidecarScripts.TryGetValue(snapshot.StableId, out List<ScriptMount>? mounts))
+            {
+                RestoreSidecarMounts(removed);
+                return false;
+            }
+            int index = mounts.FindIndex(mount => string.Equals(mount.Id, snapshot.Mount.Id, StringComparison.Ordinal));
+            if (index < 0)
+            {
+                RestoreSidecarMounts(removed);
+                return false;
+            }
+            mounts.RemoveAt(index);
+            if (mounts.Count == 0) sidecarScripts.Remove(snapshot.StableId);
+            removed.Add(snapshot);
+        }
+        MarkSidecarDirty();
+        return true;
+    }
+
+    //按原列表位置恢复一组 sidecar 挂载项。
+    private void RestoreSidecarMounts(IReadOnlyList<SidecarMountSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return;
+        foreach (SidecarMountSnapshot snapshot in snapshots.OrderBy(value => value.Index))
+        {
+            if (!sidecarScripts.TryGetValue(snapshot.StableId, out List<ScriptMount>? mounts))
+            {
+                mounts = [];
+                sidecarScripts[snapshot.StableId] = mounts;
+            }
+            if (mounts.Any(mount => string.Equals(mount.Id, snapshot.Mount.Id, StringComparison.Ordinal))) continue;
+            mounts.Insert(Math.Min(snapshot.Index, mounts.Count), CloneMount(snapshot.Mount));
+        }
+        MarkSidecarDirty();
+    }
+
+    //保存运行态脚本的可恢复字段快照。
+    private RuntimeScriptSnapshot CaptureRuntimeScript(ScriptBehaviour script)
+    {
+        Dictionary<string, string> values = [];
+        ScriptMount? sourceMount = sidecarScripts.Values.SelectMany(mounts => mounts)
+            .FirstOrDefault(mount => string.Equals(mount.Id, script.MountId, StringComparison.Ordinal));
+        if (sourceMount != null)
+        {
+            foreach ((string name, ScriptSerializedValue serialized) in sourceMount.Values) values[name] = serialized.Value;
+        }
+        foreach (FieldInfo field in GetSerializableFields(script.GetType()))
+        {
+            if (!EditorManagedInteropValue.TryEncode(field.FieldType, field.GetValue(script), out InteropValue value)) continue;
+            values[field.Name] = EditorInteropValueText.Format(value);
+        }
+        return new RuntimeScriptSnapshot(script.EnsId, script.MountId,
+            GetScriptTypeName(script.GetType()), script.enabled, values);
+    }
+
+    //删除一组 PIE 运行态脚本。
+    private static bool RemoveRuntimeScripts(IReadOnlyList<RuntimeScriptSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return true;
+        List<RuntimeScriptSnapshot> removed = [];
+        foreach (RuntimeScriptSnapshot snapshot in snapshots)
+        {
+            if (ScriptRuntime.RemoveMountedScript(snapshot.Ens, snapshot.MountId))
+            {
+                removed.Add(snapshot);
+                continue;
+            }
+            RestoreRuntimeScripts(removed);
+            return false;
+        }
+        EditorApplication.RequestRepaint();
+        return true;
+    }
+
+    //恢复一组 PIE 运行态脚本。
+    private static void RestoreRuntimeScripts(IReadOnlyList<RuntimeScriptSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0) return;
+        foreach (RuntimeScriptSnapshot snapshot in snapshots)
+        {
+            ScriptRuntime.AddMountedScript(snapshot.Ens, snapshot.MountId,
+                snapshot.TypeName, snapshot.Enabled, snapshot.Values);
+        }
+        EditorApplication.RequestRepaint();
+    }
+
     //绘制新增 C++ / C# 组件控件。
-    private void DrawAddComponentControls(Ens ens, EnsId selectedEns, string stableId, List<ScriptMount> mounts)
+    private void DrawAddComponentControls(Ens ens, EnsId selectedEns, string stableId, List<ScriptMount> mounts,
+        IReadOnlyList<EnsId>? selectedEnsList = null, IReadOnlyList<string>? selectedStableIds = null)
     {
         List<ComponentAddChoice> choices = [];
         foreach (Type type in GetAvailableComponentTypes(ens, stableId, mounts))
@@ -734,12 +1363,216 @@ internal sealed class InspectorPanel : EditorPanel
         if (EditorGUI.Button($"Add Component##add_component_button_{stableId}") && !string.IsNullOrEmpty(selectedTypeName))
         {
             selectedChoice = choices.FirstOrDefault(choice => string.Equals(choice.Key, selectedTypeName, StringComparison.Ordinal));
-            if (selectedChoice.ManagedType != null) AddComponent(ens, stableId, selectedChoice.ManagedType);
-            else if (selectedChoice.NativeType != null && EditorNativeComponents.AddComponent(selectedEns, selectedChoice.NativeType))
-                EditorApplication.RequestRepaint();
+            AddSelectedComponent(selectedChoice, selectedEns, stableId,
+                selectedEnsList, selectedStableIds);
             componentSearches[stableId] = string.Empty;
             selectedAddTypes.Remove(stableId);
         }
+    }
+
+    //对全部选中 Ens 原子添加所选组件，并记录一条结构 Undo。
+    private void AddSelectedComponent(ComponentAddChoice choice,
+        EnsId activeEns,
+        string activeStableId,
+        IReadOnlyList<EnsId>? selectedEnsList,
+        IReadOnlyList<string>? selectedStableIds)
+    {
+        IReadOnlyList<EnsId> selection = selectedEnsList is { Count: > 0 } ? selectedEnsList : [activeEns];
+        IReadOnlyList<string> stableIds = selectedStableIds != null && selectedStableIds.Count == selection.Count
+            ? selectedStableIds
+            : [activeStableId];
+        if (choice.NativeType != null)
+        {
+            AddNativeTypeToSelection(selection, choice.NativeType);
+            return;
+        }
+        if (choice.ManagedType == null) return;
+
+        List<NativeComponentSnapshot> addedNative = [];
+        List<SidecarMountSnapshot> addedSidecar = [];
+        List<RuntimeScriptSnapshot> addedRuntime = [];
+        try
+        {
+            List<Type> order = [];
+            BuildComponentAddOrder(choice.ManagedType, [], [], order);
+            bool needsStableId = order.Any(type => !IsNativeComponentType(type));
+            if (needsStableId && (stableIds.Count != selection.Count || stableIds.Any(string.IsNullOrEmpty)))
+            {
+                status = "All selected Ens need a stableId before adding C# components.";
+                return;
+            }
+
+            for (int targetIndex = 0; targetIndex < selection.Count; ++targetIndex)
+            {
+                EnsId targetId = selection[targetIndex];
+                Ens target = Ens.FromId(targetId);
+                if (!target.IsValid) throw new InvalidOperationException("A selected Ens is no longer alive.");
+                string targetStableId = targetIndex < stableIds.Count ? stableIds[targetIndex] : string.Empty;
+
+                foreach (Type componentType in order)
+                {
+                    bool requested = componentType == choice.ManagedType;
+                    bool exists = EditorApplication.IsPlaying
+                        ? HasRuntimeComponentInstance(target, componentType)
+                        : HasComponentInstance(target, targetStableId, GetScriptMounts(targetStableId), componentType);
+                    if (exists && (!requested || IsUniqueComponent(componentType))) continue;
+
+                    if (IsNativeComponentType(componentType))
+                    {
+                        List<NativeComponentInfo> before = EditorNativeComponents.GetComponents(targetId);
+                        HashSet<int> oldIds = before.Select(component => component.ObjectId).ToHashSet();
+                        AddNativeComponent(target, componentType);
+                        if (!TryFindAddedNativeComponent(targetId, oldIds, out NativeComponentInfo added))
+                            throw new InvalidOperationException($"Failed to add native dependency '{componentType.FullName}'.");
+                        int occurrence = EditorNativeComponents.GetComponents(targetId)
+                            .Where(component => string.Equals(component.TypeName, added.TypeName, StringComparison.Ordinal))
+                            .TakeWhile(component => component.ObjectId != added.ObjectId)
+                            .Count();
+                        addedNative.Add(CaptureNativeComponent(targetId, added, occurrence));
+                        continue;
+                    }
+
+                    ScriptMount mount = CreateDefaultScriptMount(targetStableId, componentType);
+                    if (EditorApplication.IsPlaying)
+                    {
+                        Dictionary<string, string> values = mount.Values.ToDictionary(
+                            pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal);
+                        ScriptBehaviour? script = ScriptRuntime.AddMountedScript(targetId, mount.Id,
+                            mount.Type, mount.Enabled, values);
+                        if (script == null) throw new InvalidOperationException($"Failed to add runtime script '{mount.Type}'.");
+                        addedRuntime.Add(CaptureRuntimeScript(script));
+                    }
+                    else
+                    {
+                        if (!sidecarScripts.TryGetValue(targetStableId, out List<ScriptMount>? targetMounts))
+                        {
+                            targetMounts = [];
+                            sidecarScripts[targetStableId] = targetMounts;
+                        }
+                        int mountIndex = targetMounts.Count;
+                        targetMounts.Add(mount);
+                        addedSidecar.Add(new SidecarMountSnapshot(targetStableId, mountIndex, CloneMount(mount)));
+                    }
+                }
+            }
+
+            if (addedNative.Count == 0 && addedSidecar.Count == 0 && addedRuntime.Count == 0) return;
+            if (!EditorApplication.IsPlaying && addedSidecar.Count != 0) MarkSidecarDirty();
+            if (addedNative.Count != 0) EditorApplication.MarkWorldDirty();
+            string label = $"Add {choice.Label}";
+            if (EditorApplication.IsPlaying)
+            {
+                EditorPropertyHistory.PushAction(label,
+                    () =>
+                    {
+                        RemoveRuntimeScripts(addedRuntime);
+                        RemoveNativeComponents(addedNative);
+                    },
+                    () =>
+                    {
+                        RestoreNativeComponents(addedNative);
+                        RestoreRuntimeScripts(addedRuntime);
+                    });
+            }
+            else
+            {
+                EditorPropertyHistory.PushAction(label,
+                    () =>
+                    {
+                        RemoveSidecarMounts(addedSidecar);
+                        RemoveNativeComponents(addedNative);
+                    },
+                    () =>
+                    {
+                        RestoreNativeComponents(addedNative);
+                        RestoreSidecarMounts(addedSidecar);
+                    });
+            }
+            EditorApplication.RequestRepaint();
+        }
+        catch (Exception ex)
+        {
+            if (EditorApplication.IsPlaying)
+            {
+                RemoveRuntimeScripts(addedRuntime);
+            }
+            else
+            {
+                RemoveSidecarMounts(addedSidecar);
+            }
+            RemoveNativeComponents(addedNative);
+            status = "Component add failed: " + ex.Message;
+        }
+    }
+
+    //添加一个没有 C# binding 的原生组件类型到全部选中 Ens。
+    private void AddNativeTypeToSelection(IReadOnlyList<EnsId> selection, string typeName)
+    {
+        List<NativeComponentSnapshot> added = [];
+        foreach (EnsId target in selection)
+        {
+            List<NativeComponentInfo> before = EditorNativeComponents.GetComponents(target);
+            HashSet<int> oldIds = before.Select(component => component.ObjectId).ToHashSet();
+            if (!EditorNativeComponents.AddComponent(target, typeName))
+            {
+                if (before.Any(component => string.Equals(component.TypeName, typeName, StringComparison.Ordinal))) continue;
+                RemoveNativeComponents(added);
+                status = $"Failed to add native component '{typeName}'.";
+                return;
+            }
+            if (!TryFindAddedNativeComponent(target, oldIds, out NativeComponentInfo created))
+            {
+                RemoveNativeComponents(added);
+                status = $"Native component '{typeName}' did not create an instance.";
+                return;
+            }
+            int occurrence = EditorNativeComponents.GetComponents(target)
+                .Where(component => string.Equals(component.TypeName, created.TypeName, StringComparison.Ordinal))
+                .TakeWhile(component => component.ObjectId != created.ObjectId)
+                .Count();
+            added.Add(CaptureNativeComponent(target, created, occurrence));
+        }
+        if (added.Count == 0) return;
+        EditorPropertyHistory.PushAction(
+            $"Add {typeName}",
+            () => RemoveNativeComponents(added),
+            () => RestoreNativeComponents(added));
+        EditorApplication.MarkWorldDirty();
+        EditorApplication.RequestRepaint();
+    }
+
+    //创建包含默认序列化字段的脚本挂载项。
+    private ScriptMount CreateDefaultScriptMount(string stableId, Type type)
+    {
+
+    //查找一次 AddComponent 调用新产生的原生组件，避免值类型默认值被误判为有效实例。
+    private static bool TryFindAddedNativeComponent(EnsId ens, IReadOnlySet<int> existingObjectIds,
+        out NativeComponentInfo component)
+    {
+        foreach (NativeComponentInfo candidate in EditorNativeComponents.GetComponents(ens))
+        {
+            if (candidate.ObjectId == 0 || existingObjectIds.Contains(candidate.ObjectId)) continue;
+            component = candidate;
+            return true;
+        }
+        component = default;
+        return false;
+    }
+        ScriptMount mount = new()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            StableId = stableId,
+            Type = GetScriptTypeName(type),
+        };
+        foreach (FieldInfo field in GetSerializableFields(type)) GetSerializedValueForField(mount, field);
+        return mount;
+    }
+
+    //判断 PIE 运行副本是否已有指定组件。
+    private bool HasRuntimeComponentInstance(Ens ens, Type type)
+    {
+        if (IsNativeComponentType(type)) return HasComponentInstance(ens, string.Empty, [], type);
+        return ScriptRuntimeRegistry.GetScripts(ens.Id).Any(script => script.GetType() == type);
     }
 
     //获取当前可添加的引擎 Bind 与游戏脚本组件类型。
@@ -791,7 +1624,7 @@ internal sealed class InspectorPanel : EditorPanel
                 }
             }
 
-            if (sidecarChanged) SaveSidecar();
+            if (sidecarChanged) MarkSidecarDirty();
             EditorApplication.RequestRepaint();
         }
         catch (Exception ex)
@@ -945,7 +1778,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         serialized.Type = GetValueTypeName(field.FieldType);
         serialized.Value = newValue;
-        SaveSidecar();
+        MarkSidecarDirty();
         EditorApplication.RequestRepaint();
     }
 
@@ -1281,9 +2114,14 @@ internal sealed class InspectorPanel : EditorPanel
     {
         if (type == typeof(bool)) return "bool";
         if (type == typeof(int)) return "int";
+        if (type == typeof(uint)) return "uint";
+        if (type == typeof(ulong)) return "ulong";
         if (type == typeof(float)) return "float";
         if (type == typeof(string)) return "string";
         if (type == typeof(vector3)) return "vector3";
+        if (type == typeof(color4)) return "color4";
+        if (type == typeof(quaternion)) return "quaternion";
+        if (type == typeof(EnsId)) return "EnsId";
         return type.FullName ?? type.Name;
     }
 
@@ -1292,9 +2130,13 @@ internal sealed class InspectorPanel : EditorPanel
     {
         if (type == typeof(bool)) return "false";
         if (type == typeof(int)) return "0";
+        if (type == typeof(uint) || type == typeof(ulong) || type.IsEnum) return "0";
         if (type == typeof(float)) return "0";
         if (type == typeof(string)) return string.Empty;
         if (type == typeof(vector3)) return "0 0 0";
+        if (type == typeof(color4)) return "0 0 0 1";
+        if (type == typeof(quaternion)) return "0 0 0 1";
+        if (type == typeof(EnsId)) return $"{uint.MaxValue}:0";
         return string.Empty;
     }
 
@@ -1302,6 +2144,20 @@ internal sealed class InspectorPanel : EditorPanel
     private bool TryConvertSerializedValue(Type type, string text, out object? value)
     {
         value = null;
+        if (type.IsEnum)
+        {
+            Type underlying = Enum.GetUnderlyingType(type);
+            try
+            {
+                object numeric = Convert.ChangeType(text, underlying, CultureInfo.InvariantCulture);
+                value = Enum.ToObject(type, numeric);
+                return true;
+            }
+            catch
+            {
+                return Enum.TryParse(type, text, ignoreCase: false, out value);
+            }
+        }
         if (type == typeof(bool))
         {
             if (!bool.TryParse(text, out bool boolValue)) return false;
@@ -1313,6 +2169,19 @@ internal sealed class InspectorPanel : EditorPanel
         {
             if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue)) return false;
             value = intValue;
+            return true;
+        }
+
+        if (type == typeof(uint))
+        {
+            if (!uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned)) return false;
+            value = unsigned;
+            return true;
+        }
+        if (type == typeof(ulong))
+        {
+            if (!ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong)) return false;
+            value = unsignedLong;
             return true;
         }
 
@@ -1332,6 +2201,28 @@ internal sealed class InspectorPanel : EditorPanel
         if (type == typeof(vector3))
         {
             value = ParseVector3(text);
+            return true;
+        }
+
+        if (type == typeof(color4)
+            && EditorInteropValueText.TryParse(InteropValueKind.Color, text, out InteropValue colorValue)
+            && colorValue.TryGet(out color4 color))
+        {
+            value = color;
+            return true;
+        }
+        if (type == typeof(quaternion)
+            && EditorInteropValueText.TryParse(InteropValueKind.Quaternion, text, out InteropValue rotationValue)
+            && rotationValue.TryGet(out quaternion rotation))
+        {
+            value = rotation;
+            return true;
+        }
+        if (type == typeof(EnsId)
+            && EditorInteropValueText.TryParse(InteropValueKind.EnsId, text, out InteropValue ensValue)
+            && ensValue.TryGet(out EnsId ens))
+        {
+            value = ens;
             return true;
         }
 

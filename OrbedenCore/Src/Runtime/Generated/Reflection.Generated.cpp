@@ -3,27 +3,1069 @@
 // </auto-generated>
 
 #include "Runtime/Reflection.h"
-#include "Runtime/Ens.h"
+#include "Scripting/ScriptBehaviour.h"
+#include "Physics/CharacterControllerComponent.h"
+#include "Physics/ColliderComponent.h"
+#include "Physics/RigidBodyComponent.h"
 #include "Runtime/EnsId.h"
-#include "Runtime/Object/Object.h"
-#include "Runtime/Object/Material.h"
-#include "Runtime/Object/Shader.h"
-#include "Runtime/Object/Mesh.h"
-#include "Runtime/Object/Skybox.h"
-#include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/DirectionalLight.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Material.h"
+#include "Runtime/Object/Mesh.h"
+#include "Runtime/Object/Object.h"
+#include "Runtime/Object/Shader.h"
+#include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
+#include "Runtime/Object/Texture2D.h"
+#include "Runtime/Object/TransformComponent.h"
+#include "Scripting/ScriptBehaviour.h"
 
 class ReflectionGeneratedAccess
 {
 public:
+    //读取 CharacterControllerComponent.enabled 字段
+    static std::string Get_CharacterControllerComponent_enabled(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 CharacterControllerComponent.enabled 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_enabled(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.enabled 字段
+    static bool Set_CharacterControllerComponent_enabled(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 CharacterControllerComponent.enabled 字段
+    static bool SetValue_CharacterControllerComponent_enabled(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 CharacterControllerComponent.radius 字段
+    static std::string Get_CharacterControllerComponent_radius(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 CharacterControllerComponent.radius 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_radius(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.radius 字段
+    static bool Set_CharacterControllerComponent_radius(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 CharacterControllerComponent.radius 字段
+    static bool SetValue_CharacterControllerComponent_radius(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CharacterControllerComponent.height 字段
+    static std::string Get_CharacterControllerComponent_height(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->height);
+    }
+
+    //直接读取 CharacterControllerComponent.height 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_height(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->height) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.height 字段
+    static bool Set_CharacterControllerComponent_height(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->height, value);
+    }
+
+    //直接写入 CharacterControllerComponent.height 字段
+    static bool SetValue_CharacterControllerComponent_height(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->height, value);
+    }
+
+    //读取 CharacterControllerComponent.halfExtents 字段
+    static std::string Get_CharacterControllerComponent_halfExtents(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->halfExtents);
+    }
+
+    //直接读取 CharacterControllerComponent.halfExtents 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_halfExtents(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.halfExtents 字段
+    static bool Set_CharacterControllerComponent_halfExtents(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->halfExtents, value);
+    }
+
+    //直接写入 CharacterControllerComponent.halfExtents 字段
+    static bool SetValue_CharacterControllerComponent_halfExtents(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfExtents, value);
+    }
+
+    //读取 CharacterControllerComponent.stepOffset 字段
+    static std::string Get_CharacterControllerComponent_stepOffset(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->stepOffset);
+    }
+
+    //直接读取 CharacterControllerComponent.stepOffset 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_stepOffset(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->stepOffset) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.stepOffset 字段
+    static bool Set_CharacterControllerComponent_stepOffset(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->stepOffset, value);
+    }
+
+    //直接写入 CharacterControllerComponent.stepOffset 字段
+    static bool SetValue_CharacterControllerComponent_stepOffset(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->stepOffset, value);
+    }
+
+    //读取 CharacterControllerComponent.contactOffset 字段
+    static std::string Get_CharacterControllerComponent_contactOffset(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->contactOffset);
+    }
+
+    //直接读取 CharacterControllerComponent.contactOffset 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_contactOffset(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->contactOffset) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.contactOffset 字段
+    static bool Set_CharacterControllerComponent_contactOffset(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->contactOffset, value);
+    }
+
+    //直接写入 CharacterControllerComponent.contactOffset 字段
+    static bool SetValue_CharacterControllerComponent_contactOffset(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->contactOffset, value);
+    }
+
+    //读取 CharacterControllerComponent.slopeLimit 字段
+    static std::string Get_CharacterControllerComponent_slopeLimit(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->slopeLimit);
+    }
+
+    //直接读取 CharacterControllerComponent.slopeLimit 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_slopeLimit(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->slopeLimit) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.slopeLimit 字段
+    static bool Set_CharacterControllerComponent_slopeLimit(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->slopeLimit, value);
+    }
+
+    //直接写入 CharacterControllerComponent.slopeLimit 字段
+    static bool SetValue_CharacterControllerComponent_slopeLimit(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->slopeLimit, value);
+    }
+
+    //读取 CharacterControllerComponent.minMoveDistance 字段
+    static std::string Get_CharacterControllerComponent_minMoveDistance(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->minMoveDistance);
+    }
+
+    //直接读取 CharacterControllerComponent.minMoveDistance 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_minMoveDistance(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->minMoveDistance) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.minMoveDistance 字段
+    static bool Set_CharacterControllerComponent_minMoveDistance(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->minMoveDistance, value);
+    }
+
+    //直接写入 CharacterControllerComponent.minMoveDistance 字段
+    static bool SetValue_CharacterControllerComponent_minMoveDistance(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->minMoveDistance, value);
+    }
+
+    //读取 CharacterControllerComponent.collisionLayer 字段
+    static std::string Get_CharacterControllerComponent_collisionLayer(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->collisionLayer);
+    }
+
+    //直接读取 CharacterControllerComponent.collisionLayer 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_collisionLayer(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.collisionLayer 字段
+    static bool Set_CharacterControllerComponent_collisionLayer(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
+    }
+
+    //直接写入 CharacterControllerComponent.collisionLayer 字段
+    static bool SetValue_CharacterControllerComponent_collisionLayer(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionLayer, value);
+    }
+
+    //读取 CharacterControllerComponent.collisionMask 字段
+    static std::string Get_CharacterControllerComponent_collisionMask(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::ToXmlValue(instance->collisionMask);
+    }
+
+    //直接读取 CharacterControllerComponent.collisionMask 字段
+    static Reflection::Value GetValue_CharacterControllerComponent_collisionMask(Object* object)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
+    }
+
+    //写入 CharacterControllerComponent.collisionMask 字段
+    static bool Set_CharacterControllerComponent_collisionMask(Object* object, const std::string& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionMask, value);
+    }
+
+    //直接写入 CharacterControllerComponent.collisionMask 字段
+    static bool SetValue_CharacterControllerComponent_collisionMask(Object* object, const Reflection::Value& value)
+    {
+        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //读取 ColliderComponent.enabled 字段
+    static std::string Get_ColliderComponent_enabled(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 ColliderComponent.enabled 字段
+    static Reflection::Value GetValue_ColliderComponent_enabled(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.enabled 字段
+    static bool Set_ColliderComponent_enabled(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 ColliderComponent.enabled 字段
+    static bool SetValue_ColliderComponent_enabled(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 ColliderComponent.isTrigger 字段
+    static std::string Get_ColliderComponent_isTrigger(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->isTrigger);
+    }
+
+    //直接读取 ColliderComponent.isTrigger 字段
+    static Reflection::Value GetValue_ColliderComponent_isTrigger(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->isTrigger) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.isTrigger 字段
+    static bool Set_ColliderComponent_isTrigger(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->isTrigger, value);
+    }
+
+    //直接写入 ColliderComponent.isTrigger 字段
+    static bool SetValue_ColliderComponent_isTrigger(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->isTrigger, value);
+    }
+
+    //读取 ColliderComponent.center 字段
+    static std::string Get_ColliderComponent_center(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->center);
+    }
+
+    //直接读取 ColliderComponent.center 字段
+    static Reflection::Value GetValue_ColliderComponent_center(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->center) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.center 字段
+    static bool Set_ColliderComponent_center(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->center, value);
+    }
+
+    //直接写入 ColliderComponent.center 字段
+    static bool SetValue_ColliderComponent_center(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->center, value);
+    }
+
+    //读取 ColliderComponent.staticFriction 字段
+    static std::string Get_ColliderComponent_staticFriction(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->staticFriction);
+    }
+
+    //直接读取 ColliderComponent.staticFriction 字段
+    static Reflection::Value GetValue_ColliderComponent_staticFriction(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->staticFriction) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.staticFriction 字段
+    static bool Set_ColliderComponent_staticFriction(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->staticFriction, value);
+    }
+
+    //直接写入 ColliderComponent.staticFriction 字段
+    static bool SetValue_ColliderComponent_staticFriction(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->staticFriction, value);
+    }
+
+    //读取 ColliderComponent.dynamicFriction 字段
+    static std::string Get_ColliderComponent_dynamicFriction(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->dynamicFriction);
+    }
+
+    //直接读取 ColliderComponent.dynamicFriction 字段
+    static Reflection::Value GetValue_ColliderComponent_dynamicFriction(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->dynamicFriction) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.dynamicFriction 字段
+    static bool Set_ColliderComponent_dynamicFriction(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->dynamicFriction, value);
+    }
+
+    //直接写入 ColliderComponent.dynamicFriction 字段
+    static bool SetValue_ColliderComponent_dynamicFriction(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->dynamicFriction, value);
+    }
+
+    //读取 ColliderComponent.restitution 字段
+    static std::string Get_ColliderComponent_restitution(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->restitution);
+    }
+
+    //直接读取 ColliderComponent.restitution 字段
+    static Reflection::Value GetValue_ColliderComponent_restitution(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->restitution) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.restitution 字段
+    static bool Set_ColliderComponent_restitution(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->restitution, value);
+    }
+
+    //直接写入 ColliderComponent.restitution 字段
+    static bool SetValue_ColliderComponent_restitution(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->restitution, value);
+    }
+
+    //读取 ColliderComponent.collisionLayer 字段
+    static std::string Get_ColliderComponent_collisionLayer(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->collisionLayer);
+    }
+
+    //直接读取 ColliderComponent.collisionLayer 字段
+    static Reflection::Value GetValue_ColliderComponent_collisionLayer(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.collisionLayer 字段
+    static bool Set_ColliderComponent_collisionLayer(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
+    }
+
+    //直接写入 ColliderComponent.collisionLayer 字段
+    static bool SetValue_ColliderComponent_collisionLayer(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionLayer, value);
+    }
+
+    //读取 ColliderComponent.collisionMask 字段
+    static std::string Get_ColliderComponent_collisionMask(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->collisionMask);
+    }
+
+    //直接读取 ColliderComponent.collisionMask 字段
+    static Reflection::Value GetValue_ColliderComponent_collisionMask(Object* object)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
+    }
+
+    //写入 ColliderComponent.collisionMask 字段
+    static bool Set_ColliderComponent_collisionMask(Object* object, const std::string& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionMask, value);
+    }
+
+    //直接写入 ColliderComponent.collisionMask 字段
+    static bool SetValue_ColliderComponent_collisionMask(Object* object, const Reflection::Value& value)
+    {
+        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //读取 BoxColliderComponent.halfExtents 字段
+    static std::string Get_BoxColliderComponent_halfExtents(Object* object)
+    {
+        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->halfExtents);
+    }
+
+    //直接读取 BoxColliderComponent.halfExtents 字段
+    static Reflection::Value GetValue_BoxColliderComponent_halfExtents(Object* object)
+    {
+        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
+    }
+
+    //写入 BoxColliderComponent.halfExtents 字段
+    static bool Set_BoxColliderComponent_halfExtents(Object* object, const std::string& value)
+    {
+        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->halfExtents, value);
+    }
+
+    //直接写入 BoxColliderComponent.halfExtents 字段
+    static bool SetValue_BoxColliderComponent_halfExtents(Object* object, const Reflection::Value& value)
+    {
+        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfExtents, value);
+    }
+
+    //读取 SphereColliderComponent.radius 字段
+    static std::string Get_SphereColliderComponent_radius(Object* object)
+    {
+        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 SphereColliderComponent.radius 字段
+    static Reflection::Value GetValue_SphereColliderComponent_radius(Object* object)
+    {
+        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 SphereColliderComponent.radius 字段
+    static bool Set_SphereColliderComponent_radius(Object* object, const std::string& value)
+    {
+        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 SphereColliderComponent.radius 字段
+    static bool SetValue_SphereColliderComponent_radius(Object* object, const Reflection::Value& value)
+    {
+        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CapsuleColliderComponent.radius 字段
+    static std::string Get_CapsuleColliderComponent_radius(Object* object)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 CapsuleColliderComponent.radius 字段
+    static Reflection::Value GetValue_CapsuleColliderComponent_radius(Object* object)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 CapsuleColliderComponent.radius 字段
+    static bool Set_CapsuleColliderComponent_radius(Object* object, const std::string& value)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 CapsuleColliderComponent.radius 字段
+    static bool SetValue_CapsuleColliderComponent_radius(Object* object, const Reflection::Value& value)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CapsuleColliderComponent.halfHeight 字段
+    static std::string Get_CapsuleColliderComponent_halfHeight(Object* object)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->halfHeight);
+    }
+
+    //直接读取 CapsuleColliderComponent.halfHeight 字段
+    static Reflection::Value GetValue_CapsuleColliderComponent_halfHeight(Object* object)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->halfHeight) : Reflection::Value();
+    }
+
+    //写入 CapsuleColliderComponent.halfHeight 字段
+    static bool Set_CapsuleColliderComponent_halfHeight(Object* object, const std::string& value)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->halfHeight, value);
+    }
+
+    //直接写入 CapsuleColliderComponent.halfHeight 字段
+    static bool SetValue_CapsuleColliderComponent_halfHeight(Object* object, const Reflection::Value& value)
+    {
+        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfHeight, value);
+    }
+
+    //读取 ConvexMeshColliderComponent.mesh 字段
+    static std::string Get_ConvexMeshColliderComponent_mesh(Object* object)
+    {
+        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 ConvexMeshColliderComponent.mesh 字段
+    static Reflection::Value GetValue_ConvexMeshColliderComponent_mesh(Object* object)
+    {
+        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+    }
+
+    //写入 ConvexMeshColliderComponent.mesh 字段
+    static bool Set_ConvexMeshColliderComponent_mesh(Object* object, const std::string& value)
+    {
+        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->mesh, value);
+    }
+
+    //直接写入 ConvexMeshColliderComponent.mesh 字段
+    static bool SetValue_ConvexMeshColliderComponent_mesh(Object* object, const Reflection::Value& value)
+    {
+        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mesh, value);
+    }
+
+    //调用 ConvexMeshColliderComponent.OnDetach 方法
+    static Reflection::Value Invoke_ConvexMeshColliderComponent_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 TriangleMeshColliderComponent.mesh 字段
+    static std::string Get_TriangleMeshColliderComponent_mesh(Object* object)
+    {
+        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 TriangleMeshColliderComponent.mesh 字段
+    static Reflection::Value GetValue_TriangleMeshColliderComponent_mesh(Object* object)
+    {
+        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+    }
+
+    //写入 TriangleMeshColliderComponent.mesh 字段
+    static bool Set_TriangleMeshColliderComponent_mesh(Object* object, const std::string& value)
+    {
+        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->mesh, value);
+    }
+
+    //直接写入 TriangleMeshColliderComponent.mesh 字段
+    static bool SetValue_TriangleMeshColliderComponent_mesh(Object* object, const Reflection::Value& value)
+    {
+        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mesh, value);
+    }
+
+    //调用 TriangleMeshColliderComponent.OnDetach 方法
+    static Reflection::Value Invoke_TriangleMeshColliderComponent_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 RigidBodyComponent.enabled 字段
+    static std::string Get_RigidBodyComponent_enabled(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 RigidBodyComponent.enabled 字段
+    static Reflection::Value GetValue_RigidBodyComponent_enabled(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.enabled 字段
+    static bool Set_RigidBodyComponent_enabled(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 RigidBodyComponent.enabled 字段
+    static bool SetValue_RigidBodyComponent_enabled(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 RigidBodyComponent.mass 字段
+    static std::string Get_RigidBodyComponent_mass(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->mass);
+    }
+
+    //直接读取 RigidBodyComponent.mass 字段
+    static Reflection::Value GetValue_RigidBodyComponent_mass(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->mass) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.mass 字段
+    static bool Set_RigidBodyComponent_mass(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->mass, value);
+    }
+
+    //直接写入 RigidBodyComponent.mass 字段
+    static bool SetValue_RigidBodyComponent_mass(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mass, value);
+    }
+
+    //读取 RigidBodyComponent.useGravity 字段
+    static std::string Get_RigidBodyComponent_useGravity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->useGravity);
+    }
+
+    //直接读取 RigidBodyComponent.useGravity 字段
+    static Reflection::Value GetValue_RigidBodyComponent_useGravity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->useGravity) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.useGravity 字段
+    static bool Set_RigidBodyComponent_useGravity(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->useGravity, value);
+    }
+
+    //直接写入 RigidBodyComponent.useGravity 字段
+    static bool SetValue_RigidBodyComponent_useGravity(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->useGravity, value);
+    }
+
+    //读取 RigidBodyComponent.linearDamping 字段
+    static std::string Get_RigidBodyComponent_linearDamping(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->linearDamping);
+    }
+
+    //直接读取 RigidBodyComponent.linearDamping 字段
+    static Reflection::Value GetValue_RigidBodyComponent_linearDamping(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->linearDamping) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.linearDamping 字段
+    static bool Set_RigidBodyComponent_linearDamping(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->linearDamping, value);
+    }
+
+    //直接写入 RigidBodyComponent.linearDamping 字段
+    static bool SetValue_RigidBodyComponent_linearDamping(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->linearDamping, value);
+    }
+
+    //读取 RigidBodyComponent.angularDamping 字段
+    static std::string Get_RigidBodyComponent_angularDamping(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->angularDamping);
+    }
+
+    //直接读取 RigidBodyComponent.angularDamping 字段
+    static Reflection::Value GetValue_RigidBodyComponent_angularDamping(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->angularDamping) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.angularDamping 字段
+    static bool Set_RigidBodyComponent_angularDamping(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->angularDamping, value);
+    }
+
+    //直接写入 RigidBodyComponent.angularDamping 字段
+    static bool SetValue_RigidBodyComponent_angularDamping(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->angularDamping, value);
+    }
+
+    //读取 RigidBodyComponent.linearVelocity 字段
+    static std::string Get_RigidBodyComponent_linearVelocity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->linearVelocity);
+    }
+
+    //直接读取 RigidBodyComponent.linearVelocity 字段
+    static Reflection::Value GetValue_RigidBodyComponent_linearVelocity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->linearVelocity) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.linearVelocity 字段
+    static bool Set_RigidBodyComponent_linearVelocity(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->linearVelocity, value);
+    }
+
+    //直接写入 RigidBodyComponent.linearVelocity 字段
+    static bool SetValue_RigidBodyComponent_linearVelocity(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->linearVelocity, value);
+    }
+
+    //读取 RigidBodyComponent.angularVelocity 字段
+    static std::string Get_RigidBodyComponent_angularVelocity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->angularVelocity);
+    }
+
+    //直接读取 RigidBodyComponent.angularVelocity 字段
+    static Reflection::Value GetValue_RigidBodyComponent_angularVelocity(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->angularVelocity) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.angularVelocity 字段
+    static bool Set_RigidBodyComponent_angularVelocity(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->angularVelocity, value);
+    }
+
+    //直接写入 RigidBodyComponent.angularVelocity 字段
+    static bool SetValue_RigidBodyComponent_angularVelocity(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->angularVelocity, value);
+    }
+
+    //读取 RigidBodyComponent.continuousCollisionDetection 字段
+    static std::string Get_RigidBodyComponent_continuousCollisionDetection(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->continuousCollisionDetection);
+    }
+
+    //直接读取 RigidBodyComponent.continuousCollisionDetection 字段
+    static Reflection::Value GetValue_RigidBodyComponent_continuousCollisionDetection(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->continuousCollisionDetection) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.continuousCollisionDetection 字段
+    static bool Set_RigidBodyComponent_continuousCollisionDetection(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->continuousCollisionDetection, value);
+    }
+
+    //直接写入 RigidBodyComponent.continuousCollisionDetection 字段
+    static bool SetValue_RigidBodyComponent_continuousCollisionDetection(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->continuousCollisionDetection, value);
+    }
+
+    //读取 RigidBodyComponent.lockFlags 字段
+    static std::string Get_RigidBodyComponent_lockFlags(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::ToXmlValue(instance->lockFlags);
+    }
+
+    //直接读取 RigidBodyComponent.lockFlags 字段
+    static Reflection::Value GetValue_RigidBodyComponent_lockFlags(Object* object)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return instance ? Reflection::ToValue(instance->lockFlags) : Reflection::Value();
+    }
+
+    //写入 RigidBodyComponent.lockFlags 字段
+    static bool Set_RigidBodyComponent_lockFlags(Object* object, const std::string& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        return Reflection::SetFromXmlValue(instance->lockFlags, value);
+    }
+
+    //直接写入 RigidBodyComponent.lockFlags 字段
+    static bool SetValue_RigidBodyComponent_lockFlags(Object* object, const Reflection::Value& value)
+    {
+        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->lockFlags, value);
+    }
+
+    //调用 Component.GetEnsId 方法
+    static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnsId();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Component.OnAttach 方法
+    static Reflection::Value Invoke_Component_OnAttach_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Component.OnDetach 方法
+    static Reflection::Value Invoke_Component_OnDetach_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Component.OnWorldActiveChanged 方法
+    static Reflection::Value Invoke_Component_OnWorldActiveChanged_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Component* instance = static_cast<Component*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->OnWorldActiveChanged(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Camera.enabled 字段
     static std::string Get_Camera_enabled(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->GetEnabled());
+    }
+
+    //直接读取 Camera.enabled 字段
+    static Reflection::Value GetValue_Camera_enabled(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->GetEnabled()) : Reflection::Value();
     }
 
     //写入 Camera.enabled 字段
@@ -36,11 +1078,29 @@ public:
         return true;
     }
 
+    //直接写入 Camera.enabled 字段
+    static bool SetValue_Camera_enabled(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
+    }
+
     //读取 Camera.fieldOfView 字段
     static std::string Get_Camera_fieldOfView(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->fieldOfView);
+    }
+
+    //直接读取 Camera.fieldOfView 字段
+    static Reflection::Value GetValue_Camera_fieldOfView(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->fieldOfView) : Reflection::Value();
     }
 
     //写入 Camera.fieldOfView 字段
@@ -50,11 +1110,26 @@ public:
         return Reflection::SetFromXmlValue(instance->fieldOfView, value);
     }
 
+    //直接写入 Camera.fieldOfView 字段
+    static bool SetValue_Camera_fieldOfView(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->fieldOfView, value);
+    }
+
     //读取 Camera.nearPlane 字段
     static std::string Get_Camera_nearPlane(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->nearPlane);
+    }
+
+    //直接读取 Camera.nearPlane 字段
+    static Reflection::Value GetValue_Camera_nearPlane(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->nearPlane) : Reflection::Value();
     }
 
     //写入 Camera.nearPlane 字段
@@ -64,11 +1139,26 @@ public:
         return Reflection::SetFromXmlValue(instance->nearPlane, value);
     }
 
+    //直接写入 Camera.nearPlane 字段
+    static bool SetValue_Camera_nearPlane(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->nearPlane, value);
+    }
+
     //读取 Camera.farPlane 字段
     static std::string Get_Camera_farPlane(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->farPlane);
+    }
+
+    //直接读取 Camera.farPlane 字段
+    static Reflection::Value GetValue_Camera_farPlane(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->farPlane) : Reflection::Value();
     }
 
     //写入 Camera.farPlane 字段
@@ -78,11 +1168,26 @@ public:
         return Reflection::SetFromXmlValue(instance->farPlane, value);
     }
 
+    //直接写入 Camera.farPlane 字段
+    static bool SetValue_Camera_farPlane(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->farPlane, value);
+    }
+
     //读取 Camera.depth 字段
     static std::string Get_Camera_depth(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->depth);
+    }
+
+    //直接读取 Camera.depth 字段
+    static Reflection::Value GetValue_Camera_depth(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->depth) : Reflection::Value();
     }
 
     //写入 Camera.depth 字段
@@ -92,11 +1197,26 @@ public:
         return Reflection::SetFromXmlValue(instance->depth, value);
     }
 
+    //直接写入 Camera.depth 字段
+    static bool SetValue_Camera_depth(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->depth, value);
+    }
+
     //读取 Camera.drawLayerMask 字段
     static std::string Get_Camera_drawLayerMask(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->drawLayerMask);
+    }
+
+    //直接读取 Camera.drawLayerMask 字段
+    static Reflection::Value GetValue_Camera_drawLayerMask(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->drawLayerMask) : Reflection::Value();
     }
 
     //写入 Camera.drawLayerMask 字段
@@ -106,11 +1226,26 @@ public:
         return Reflection::SetFromXmlValue(instance->drawLayerMask, value);
     }
 
+    //直接写入 Camera.drawLayerMask 字段
+    static bool SetValue_Camera_drawLayerMask(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->drawLayerMask, value);
+    }
+
     //读取 Camera.clearMode 字段
     static std::string Get_Camera_clearMode(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->clearMode);
+    }
+
+    //直接读取 Camera.clearMode 字段
+    static Reflection::Value GetValue_Camera_clearMode(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->clearMode) : Reflection::Value();
     }
 
     //写入 Camera.clearMode 字段
@@ -120,11 +1255,26 @@ public:
         return Reflection::SetFromXmlValue(instance->clearMode, value);
     }
 
+    //直接写入 Camera.clearMode 字段
+    static bool SetValue_Camera_clearMode(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->clearMode, value);
+    }
+
     //读取 Camera.clearColor 字段
     static std::string Get_Camera_clearColor(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->clearColor);
+    }
+
+    //直接读取 Camera.clearColor 字段
+    static Reflection::Value GetValue_Camera_clearColor(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->clearColor) : Reflection::Value();
     }
 
     //写入 Camera.clearColor 字段
@@ -134,11 +1284,26 @@ public:
         return Reflection::SetFromXmlValue(instance->clearColor, value);
     }
 
+    //直接写入 Camera.clearColor 字段
+    static bool SetValue_Camera_clearColor(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->clearColor, value);
+    }
+
     //读取 Camera.viewportX 字段
     static std::string Get_Camera_viewportX(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->viewportX);
+    }
+
+    //直接读取 Camera.viewportX 字段
+    static Reflection::Value GetValue_Camera_viewportX(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->viewportX) : Reflection::Value();
     }
 
     //写入 Camera.viewportX 字段
@@ -148,11 +1313,26 @@ public:
         return Reflection::SetFromXmlValue(instance->viewportX, value);
     }
 
+    //直接写入 Camera.viewportX 字段
+    static bool SetValue_Camera_viewportX(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->viewportX, value);
+    }
+
     //读取 Camera.viewportY 字段
     static std::string Get_Camera_viewportY(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->viewportY);
+    }
+
+    //直接读取 Camera.viewportY 字段
+    static Reflection::Value GetValue_Camera_viewportY(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->viewportY) : Reflection::Value();
     }
 
     //写入 Camera.viewportY 字段
@@ -162,11 +1342,26 @@ public:
         return Reflection::SetFromXmlValue(instance->viewportY, value);
     }
 
+    //直接写入 Camera.viewportY 字段
+    static bool SetValue_Camera_viewportY(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->viewportY, value);
+    }
+
     //读取 Camera.viewportWidth 字段
     static std::string Get_Camera_viewportWidth(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->viewportWidth);
+    }
+
+    //直接读取 Camera.viewportWidth 字段
+    static Reflection::Value GetValue_Camera_viewportWidth(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->viewportWidth) : Reflection::Value();
     }
 
     //写入 Camera.viewportWidth 字段
@@ -176,11 +1371,26 @@ public:
         return Reflection::SetFromXmlValue(instance->viewportWidth, value);
     }
 
+    //直接写入 Camera.viewportWidth 字段
+    static bool SetValue_Camera_viewportWidth(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->viewportWidth, value);
+    }
+
     //读取 Camera.viewportHeight 字段
     static std::string Get_Camera_viewportHeight(Object* object)
     {
         Camera* instance = static_cast<Camera*>(object);
         return Reflection::ToXmlValue(instance->viewportHeight);
+    }
+
+    //直接读取 Camera.viewportHeight 字段
+    static Reflection::Value GetValue_Camera_viewportHeight(Object* object)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return instance ? Reflection::ToValue(instance->viewportHeight) : Reflection::Value();
     }
 
     //写入 Camera.viewportHeight 字段
@@ -190,8 +1400,16 @@ public:
         return Reflection::SetFromXmlValue(instance->viewportHeight, value);
     }
 
+    //直接写入 Camera.viewportHeight 字段
+    static bool SetValue_Camera_viewportHeight(Object* object, const Reflection::Value& value)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->viewportHeight, value);
+    }
+
     //调用 Camera.GetEnabled 方法
-    static Reflection::Value Invoke_Camera_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -203,7 +1421,7 @@ public:
     }
 
     //调用 Camera.SetEnabled 方法
-    static Reflection::Value Invoke_Camera_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -217,7 +1435,7 @@ public:
     }
 
     //调用 Camera.IsRenderSceneEligible 方法
-    static Reflection::Value Invoke_Camera_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -229,7 +1447,7 @@ public:
     }
 
     //调用 Camera.OnAttach 方法
-    static Reflection::Value Invoke_Camera_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_OnAttach_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -241,7 +1459,7 @@ public:
     }
 
     //调用 Camera.OnDetach 方法
-    static Reflection::Value Invoke_Camera_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -253,7 +1471,7 @@ public:
     }
 
     //调用 Camera.OnWorldActiveChanged 方法
-    static Reflection::Value Invoke_Camera_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Camera_OnWorldActiveChanged_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Camera* instance = static_cast<Camera*>(object);
@@ -273,12 +1491,30 @@ public:
         return Reflection::ToXmlValue(instance->GetEnabled());
     }
 
+    //直接读取 DirectionalLight.enabled 字段
+    static Reflection::Value GetValue_DirectionalLight_enabled(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->GetEnabled()) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.enabled 字段
     static bool Set_DirectionalLight_enabled(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         bool parsedValue{};
         if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
+    }
+
+    //直接写入 DirectionalLight.enabled 字段
+    static bool SetValue_DirectionalLight_enabled(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
         instance->SetEnabled(parsedValue);
         return true;
     }
@@ -290,11 +1526,26 @@ public:
         return Reflection::ToXmlValue(instance->direction);
     }
 
+    //直接读取 DirectionalLight.direction 字段
+    static Reflection::Value GetValue_DirectionalLight_direction(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->direction) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.direction 字段
     static bool Set_DirectionalLight_direction(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->direction, value);
+    }
+
+    //直接写入 DirectionalLight.direction 字段
+    static bool SetValue_DirectionalLight_direction(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->direction, value);
     }
 
     //读取 DirectionalLight.color 字段
@@ -304,11 +1555,26 @@ public:
         return Reflection::ToXmlValue(instance->color);
     }
 
+    //直接读取 DirectionalLight.color 字段
+    static Reflection::Value GetValue_DirectionalLight_color(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->color) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.color 字段
     static bool Set_DirectionalLight_color(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->color, value);
+    }
+
+    //直接写入 DirectionalLight.color 字段
+    static bool SetValue_DirectionalLight_color(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->color, value);
     }
 
     //读取 DirectionalLight.intensity 字段
@@ -318,11 +1584,26 @@ public:
         return Reflection::ToXmlValue(instance->intensity);
     }
 
+    //直接读取 DirectionalLight.intensity 字段
+    static Reflection::Value GetValue_DirectionalLight_intensity(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->intensity) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.intensity 字段
     static bool Set_DirectionalLight_intensity(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->intensity, value);
+    }
+
+    //直接写入 DirectionalLight.intensity 字段
+    static bool SetValue_DirectionalLight_intensity(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->intensity, value);
     }
 
     //读取 DirectionalLight.castShadows 字段
@@ -332,11 +1613,26 @@ public:
         return Reflection::ToXmlValue(instance->castShadows);
     }
 
+    //直接读取 DirectionalLight.castShadows 字段
+    static Reflection::Value GetValue_DirectionalLight_castShadows(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->castShadows) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.castShadows 字段
     static bool Set_DirectionalLight_castShadows(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->castShadows, value);
+    }
+
+    //直接写入 DirectionalLight.castShadows 字段
+    static bool SetValue_DirectionalLight_castShadows(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->castShadows, value);
     }
 
     //读取 DirectionalLight.shadowBias 字段
@@ -346,11 +1642,26 @@ public:
         return Reflection::ToXmlValue(instance->shadowBias);
     }
 
+    //直接读取 DirectionalLight.shadowBias 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowBias(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowBias) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.shadowBias 字段
     static bool Set_DirectionalLight_shadowBias(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->shadowBias, value);
+    }
+
+    //直接写入 DirectionalLight.shadowBias 字段
+    static bool SetValue_DirectionalLight_shadowBias(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowBias, value);
     }
 
     //读取 DirectionalLight.shadowStrength 字段
@@ -360,11 +1671,26 @@ public:
         return Reflection::ToXmlValue(instance->shadowStrength);
     }
 
+    //直接读取 DirectionalLight.shadowStrength 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowStrength(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowStrength) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.shadowStrength 字段
     static bool Set_DirectionalLight_shadowStrength(Object* object, const std::string& value)
     {
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         return Reflection::SetFromXmlValue(instance->shadowStrength, value);
+    }
+
+    //直接写入 DirectionalLight.shadowStrength 字段
+    static bool SetValue_DirectionalLight_shadowStrength(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowStrength, value);
     }
 
     //读取 DirectionalLight.shadowDistance 字段
@@ -374,6 +1700,13 @@ public:
         return Reflection::ToXmlValue(instance->shadowDistance);
     }
 
+    //直接读取 DirectionalLight.shadowDistance 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowDistance(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowDistance) : Reflection::Value();
+    }
+
     //写入 DirectionalLight.shadowDistance 字段
     static bool Set_DirectionalLight_shadowDistance(Object* object, const std::string& value)
     {
@@ -381,8 +1714,16 @@ public:
         return Reflection::SetFromXmlValue(instance->shadowDistance, value);
     }
 
+    //直接写入 DirectionalLight.shadowDistance 字段
+    static bool SetValue_DirectionalLight_shadowDistance(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowDistance, value);
+    }
+
     //调用 DirectionalLight.GetEnabled 方法
-    static Reflection::Value Invoke_DirectionalLight_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -394,7 +1735,7 @@ public:
     }
 
     //调用 DirectionalLight.SetEnabled 方法
-    static Reflection::Value Invoke_DirectionalLight_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -408,7 +1749,7 @@ public:
     }
 
     //调用 DirectionalLight.IsRenderSceneEligible 方法
-    static Reflection::Value Invoke_DirectionalLight_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -420,7 +1761,7 @@ public:
     }
 
     //调用 DirectionalLight.OnAttach 方法
-    static Reflection::Value Invoke_DirectionalLight_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_OnAttach_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -432,7 +1773,7 @@ public:
     }
 
     //调用 DirectionalLight.OnDetach 方法
-    static Reflection::Value Invoke_DirectionalLight_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -444,7 +1785,7 @@ public:
     }
 
     //调用 DirectionalLight.OnWorldActiveChanged 方法
-    static Reflection::Value Invoke_DirectionalLight_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_DirectionalLight_OnWorldActiveChanged_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
@@ -464,6 +1805,13 @@ public:
         return Reflection::ToXmlValue(instance->name);
     }
 
+    //直接读取 Material.name 字段
+    static Reflection::Value GetValue_Material_name(Object* object)
+    {
+        Material* instance = static_cast<Material*>(object);
+        return instance ? Reflection::ToValue(instance->name) : Reflection::Value();
+    }
+
     //写入 Material.name 字段
     static bool Set_Material_name(Object* object, const std::string& value)
     {
@@ -471,11 +1819,26 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
+    //直接写入 Material.name 字段
+    static bool SetValue_Material_name(Object* object, const Reflection::Value& value)
+    {
+        Material* instance = static_cast<Material*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->name, value);
+    }
+
     //读取 Material.shader 字段
     static std::string Get_Material_shader(Object* object)
     {
         Material* instance = static_cast<Material*>(object);
         return Reflection::ToXmlValue(instance->shader);
+    }
+
+    //直接读取 Material.shader 字段
+    static Reflection::Value GetValue_Material_shader(Object* object)
+    {
+        Material* instance = static_cast<Material*>(object);
+        return instance ? Reflection::ToValue(instance->shader) : Reflection::Value();
     }
 
     //写入 Material.shader 字段
@@ -487,8 +1850,18 @@ public:
         return true;
     }
 
+    //直接写入 Material.shader 字段
+    static bool SetValue_Material_shader(Object* object, const Reflection::Value& value)
+    {
+        Material* instance = static_cast<Material*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->shader, value)) return false;
+        instance->MarkDirty();
+        return true;
+    }
+
     //调用 Material.SetShader 方法
-    static Reflection::Value Invoke_Material_SetShader_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetShader_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -502,7 +1875,7 @@ public:
     }
 
     //调用 Material.SetTexture 方法
-    static Reflection::Value Invoke_Material_SetTexture_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetTexture_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -518,7 +1891,7 @@ public:
     }
 
     //调用 Material.HasTexture 方法
-    static Reflection::Value Invoke_Material_HasTexture_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasTexture_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -532,7 +1905,7 @@ public:
     }
 
     //调用 Material.ClearTexture 方法
-    static Reflection::Value Invoke_Material_ClearTexture_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearTexture_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -546,7 +1919,7 @@ public:
     }
 
     //调用 Material.SetColor 方法
-    static Reflection::Value Invoke_Material_SetColor_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetColor_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -562,7 +1935,7 @@ public:
     }
 
     //调用 Material.HasColor 方法
-    static Reflection::Value Invoke_Material_HasColor_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasColor_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -576,7 +1949,7 @@ public:
     }
 
     //调用 Material.ClearColor 方法
-    static Reflection::Value Invoke_Material_ClearColor_6(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearColor_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -590,7 +1963,7 @@ public:
     }
 
     //调用 Material.SetFloat 方法
-    static Reflection::Value Invoke_Material_SetFloat_7(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_SetFloat_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -606,7 +1979,7 @@ public:
     }
 
     //调用 Material.GetFloat 方法
-    static Reflection::Value Invoke_Material_GetFloat_8(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_GetFloat_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -622,7 +1995,7 @@ public:
     }
 
     //调用 Material.HasFloat 方法
-    static Reflection::Value Invoke_Material_HasFloat_9(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_HasFloat_9(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -636,7 +2009,7 @@ public:
     }
 
     //调用 Material.ClearFloat 方法
-    static Reflection::Value Invoke_Material_ClearFloat_10(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_ClearFloat_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -650,7 +2023,7 @@ public:
     }
 
     //调用 Material.IsDirty 方法
-    static Reflection::Value Invoke_Material_IsDirty_11(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_IsDirty_11(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -662,7 +2035,7 @@ public:
     }
 
     //调用 Material.MarkDirty 方法
-    static Reflection::Value Invoke_Material_MarkDirty_12(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Material_MarkDirty_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Material* instance = static_cast<Material*>(object);
@@ -680,6 +2053,13 @@ public:
         return Reflection::ToXmlValue(instance->name);
     }
 
+    //直接读取 Mesh.name 字段
+    static Reflection::Value GetValue_Mesh_name(Object* object)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        return instance ? Reflection::ToValue(instance->name) : Reflection::Value();
+    }
+
     //写入 Mesh.name 字段
     static bool Set_Mesh_name(Object* object, const std::string& value)
     {
@@ -687,8 +2067,16 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
+    //直接写入 Mesh.name 字段
+    static bool SetValue_Mesh_name(Object* object, const Reflection::Value& value)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->name, value);
+    }
+
     //调用 Mesh.MarkDirty 方法
-    static Reflection::Value Invoke_Mesh_MarkDirty_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_MarkDirty_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -700,7 +2088,7 @@ public:
     }
 
     //调用 Mesh.ClearGeometry 方法
-    static Reflection::Value Invoke_Mesh_ClearGeometry_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_ClearGeometry_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -712,7 +2100,7 @@ public:
     }
 
     //调用 Mesh.ResizeSubMeshes 方法
-    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -726,7 +2114,7 @@ public:
     }
 
     //调用 Mesh.RefreshNormals 方法
-    static Reflection::Value Invoke_Mesh_RefreshNormals_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Mesh_RefreshNormals_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -737,11 +2125,102 @@ public:
         return Reflection::Value(result);
     }
 
+    //读取 OrbedenObject.instanceId 字段
+    static std::string Get_OrbedenObject_instanceId(Object* object)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return Reflection::ToXmlValue(instance->instanceId);
+    }
+
+    //直接读取 OrbedenObject.instanceId 字段
+    static Reflection::Value GetValue_OrbedenObject_instanceId(Object* object)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return instance ? Reflection::ToValue(instance->instanceId) : Reflection::Value();
+    }
+
+    //写入 OrbedenObject.instanceId 字段
+    static bool Set_OrbedenObject_instanceId(Object* object, const std::string& value)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return Reflection::SetFromXmlValue(instance->instanceId, value);
+    }
+
+    //直接写入 OrbedenObject.instanceId 字段
+    static bool SetValue_OrbedenObject_instanceId(Object* object, const Reflection::Value& value)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->instanceId, value);
+    }
+
+    //读取 OrbedenObject.objectId 字段
+    static std::string Get_OrbedenObject_objectId(Object* object)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return Reflection::ToXmlValue(instance->objectId);
+    }
+
+    //直接读取 OrbedenObject.objectId 字段
+    static Reflection::Value GetValue_OrbedenObject_objectId(Object* object)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return instance ? Reflection::ToValue(instance->objectId) : Reflection::Value();
+    }
+
+    //写入 OrbedenObject.objectId 字段
+    static bool Set_OrbedenObject_objectId(Object* object, const std::string& value)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        return Reflection::SetFromXmlValue(instance->objectId, value);
+    }
+
+    //直接写入 OrbedenObject.objectId 字段
+    static bool SetValue_OrbedenObject_objectId(Object* object, const Reflection::Value& value)
+    {
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->objectId, value);
+    }
+
+    //调用 OrbedenObject.GetObjectId 方法
+    static Reflection::Value Invoke_OrbedenObject_GetObjectId_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetObjectId();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 OrbedenObject.SetInstanceId 方法
+    static Reflection::Value Invoke_OrbedenObject_SetInstanceId_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        StringId arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetInstanceId(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Shader.name 字段
     static std::string Get_Shader_name(Object* object)
     {
         Shader* instance = static_cast<Shader*>(object);
         return Reflection::ToXmlValue(instance->name);
+    }
+
+    //直接读取 Shader.name 字段
+    static Reflection::Value GetValue_Shader_name(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return instance ? Reflection::ToValue(instance->name) : Reflection::Value();
     }
 
     //写入 Shader.name 字段
@@ -751,11 +2230,26 @@ public:
         return Reflection::SetFromXmlValue(instance->name, value);
     }
 
+    //直接写入 Shader.name 字段
+    static bool SetValue_Shader_name(Object* object, const Reflection::Value& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->name, value);
+    }
+
     //读取 Shader.vertexPath 字段
     static std::string Get_Shader_vertexPath(Object* object)
     {
         Shader* instance = static_cast<Shader*>(object);
         return Reflection::ToXmlValue(instance->vertexPath);
+    }
+
+    //直接读取 Shader.vertexPath 字段
+    static Reflection::Value GetValue_Shader_vertexPath(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return instance ? Reflection::ToValue(instance->vertexPath) : Reflection::Value();
     }
 
     //写入 Shader.vertexPath 字段
@@ -765,11 +2259,26 @@ public:
         return Reflection::SetFromXmlValue(instance->vertexPath, value);
     }
 
+    //直接写入 Shader.vertexPath 字段
+    static bool SetValue_Shader_vertexPath(Object* object, const Reflection::Value& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->vertexPath, value);
+    }
+
     //读取 Shader.fragmentPath 字段
     static std::string Get_Shader_fragmentPath(Object* object)
     {
         Shader* instance = static_cast<Shader*>(object);
         return Reflection::ToXmlValue(instance->fragmentPath);
+    }
+
+    //直接读取 Shader.fragmentPath 字段
+    static Reflection::Value GetValue_Shader_fragmentPath(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return instance ? Reflection::ToValue(instance->fragmentPath) : Reflection::Value();
     }
 
     //写入 Shader.fragmentPath 字段
@@ -779,11 +2288,26 @@ public:
         return Reflection::SetFromXmlValue(instance->fragmentPath, value);
     }
 
+    //直接写入 Shader.fragmentPath 字段
+    static bool SetValue_Shader_fragmentPath(Object* object, const Reflection::Value& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->fragmentPath, value);
+    }
+
     //读取 Shader.vertexSource 字段
     static std::string Get_Shader_vertexSource(Object* object)
     {
         Shader* instance = static_cast<Shader*>(object);
         return Reflection::ToXmlValue(instance->vertexSource);
+    }
+
+    //直接读取 Shader.vertexSource 字段
+    static Reflection::Value GetValue_Shader_vertexSource(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return instance ? Reflection::ToValue(instance->vertexSource) : Reflection::Value();
     }
 
     //写入 Shader.vertexSource 字段
@@ -793,11 +2317,26 @@ public:
         return Reflection::SetFromXmlValue(instance->vertexSource, value);
     }
 
+    //直接写入 Shader.vertexSource 字段
+    static bool SetValue_Shader_vertexSource(Object* object, const Reflection::Value& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->vertexSource, value);
+    }
+
     //读取 Shader.fragmentSource 字段
     static std::string Get_Shader_fragmentSource(Object* object)
     {
         Shader* instance = static_cast<Shader*>(object);
         return Reflection::ToXmlValue(instance->fragmentSource);
+    }
+
+    //直接读取 Shader.fragmentSource 字段
+    static Reflection::Value GetValue_Shader_fragmentSource(Object* object)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return instance ? Reflection::ToValue(instance->fragmentSource) : Reflection::Value();
     }
 
     //写入 Shader.fragmentSource 字段
@@ -807,8 +2346,16 @@ public:
         return Reflection::SetFromXmlValue(instance->fragmentSource, value);
     }
 
+    //直接写入 Shader.fragmentSource 字段
+    static bool SetValue_Shader_fragmentSource(Object* object, const Reflection::Value& value)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->fragmentSource, value);
+    }
+
     //调用 Shader.ReflectSlotsFromSource 方法
-    static Reflection::Value Invoke_Shader_ReflectSlotsFromSource_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_ReflectSlotsFromSource_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -820,7 +2367,7 @@ public:
     }
 
     //调用 Shader.ReplaceSource 方法
-    static Reflection::Value Invoke_Shader_ReplaceSource_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_ReplaceSource_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -836,7 +2383,7 @@ public:
     }
 
     //调用 Shader.GetPassCount 方法
-    static Reflection::Value Invoke_Shader_GetPassCount_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_GetPassCount_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -848,7 +2395,7 @@ public:
     }
 
     //调用 Shader.IsDirty 方法
-    static Reflection::Value Invoke_Shader_IsDirty_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_IsDirty_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -860,7 +2407,7 @@ public:
     }
 
     //调用 Shader.MarkDirty 方法
-    static Reflection::Value Invoke_Shader_MarkDirty_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_Shader_MarkDirty_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -878,11 +2425,26 @@ public:
         return Reflection::ToXmlValue(instance->right);
     }
 
+    //直接读取 Skybox.right 字段
+    static Reflection::Value GetValue_Skybox_right(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->right) : Reflection::Value();
+    }
+
     //写入 Skybox.right 字段
     static bool Set_Skybox_right(Object* object, const std::string& value)
     {
         Skybox* instance = static_cast<Skybox*>(object);
         return Reflection::SetFromXmlValue(instance->right, value);
+    }
+
+    //直接写入 Skybox.right 字段
+    static bool SetValue_Skybox_right(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->right, value);
     }
 
     //读取 Skybox.left 字段
@@ -892,11 +2454,26 @@ public:
         return Reflection::ToXmlValue(instance->left);
     }
 
+    //直接读取 Skybox.left 字段
+    static Reflection::Value GetValue_Skybox_left(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->left) : Reflection::Value();
+    }
+
     //写入 Skybox.left 字段
     static bool Set_Skybox_left(Object* object, const std::string& value)
     {
         Skybox* instance = static_cast<Skybox*>(object);
         return Reflection::SetFromXmlValue(instance->left, value);
+    }
+
+    //直接写入 Skybox.left 字段
+    static bool SetValue_Skybox_left(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->left, value);
     }
 
     //读取 Skybox.top 字段
@@ -906,11 +2483,26 @@ public:
         return Reflection::ToXmlValue(instance->top);
     }
 
+    //直接读取 Skybox.top 字段
+    static Reflection::Value GetValue_Skybox_top(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->top) : Reflection::Value();
+    }
+
     //写入 Skybox.top 字段
     static bool Set_Skybox_top(Object* object, const std::string& value)
     {
         Skybox* instance = static_cast<Skybox*>(object);
         return Reflection::SetFromXmlValue(instance->top, value);
+    }
+
+    //直接写入 Skybox.top 字段
+    static bool SetValue_Skybox_top(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->top, value);
     }
 
     //读取 Skybox.bottom 字段
@@ -920,11 +2512,26 @@ public:
         return Reflection::ToXmlValue(instance->bottom);
     }
 
+    //直接读取 Skybox.bottom 字段
+    static Reflection::Value GetValue_Skybox_bottom(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->bottom) : Reflection::Value();
+    }
+
     //写入 Skybox.bottom 字段
     static bool Set_Skybox_bottom(Object* object, const std::string& value)
     {
         Skybox* instance = static_cast<Skybox*>(object);
         return Reflection::SetFromXmlValue(instance->bottom, value);
+    }
+
+    //直接写入 Skybox.bottom 字段
+    static bool SetValue_Skybox_bottom(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->bottom, value);
     }
 
     //读取 Skybox.front 字段
@@ -934,11 +2541,26 @@ public:
         return Reflection::ToXmlValue(instance->front);
     }
 
+    //直接读取 Skybox.front 字段
+    static Reflection::Value GetValue_Skybox_front(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->front) : Reflection::Value();
+    }
+
     //写入 Skybox.front 字段
     static bool Set_Skybox_front(Object* object, const std::string& value)
     {
         Skybox* instance = static_cast<Skybox*>(object);
         return Reflection::SetFromXmlValue(instance->front, value);
+    }
+
+    //直接写入 Skybox.front 字段
+    static bool SetValue_Skybox_front(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->front, value);
     }
 
     //读取 Skybox.back 字段
@@ -948,6 +2570,13 @@ public:
         return Reflection::ToXmlValue(instance->back);
     }
 
+    //直接读取 Skybox.back 字段
+    static Reflection::Value GetValue_Skybox_back(Object* object)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        return instance ? Reflection::ToValue(instance->back) : Reflection::Value();
+    }
+
     //写入 Skybox.back 字段
     static bool Set_Skybox_back(Object* object, const std::string& value)
     {
@@ -955,11 +2584,26 @@ public:
         return Reflection::SetFromXmlValue(instance->back, value);
     }
 
+    //直接写入 Skybox.back 字段
+    static bool SetValue_Skybox_back(Object* object, const Reflection::Value& value)
+    {
+        Skybox* instance = static_cast<Skybox*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->back, value);
+    }
+
     //读取 StaticMeshRenderer.enabled 字段
     static std::string Get_StaticMeshRenderer_enabled(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->GetEnabled());
+    }
+
+    //直接读取 StaticMeshRenderer.enabled 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_enabled(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->GetEnabled()) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.enabled 字段
@@ -972,11 +2616,29 @@ public:
         return true;
     }
 
+    //直接写入 StaticMeshRenderer.enabled 字段
+    static bool SetValue_StaticMeshRenderer_enabled(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        bool parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetEnabled(parsedValue);
+        return true;
+    }
+
     //读取 StaticMeshRenderer.mesh 字段
     static std::string Get_StaticMeshRenderer_mesh(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 StaticMeshRenderer.mesh 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_mesh(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.mesh 字段
@@ -986,11 +2648,26 @@ public:
         return Reflection::SetFromXmlValue(instance->mesh, value);
     }
 
+    //直接写入 StaticMeshRenderer.mesh 字段
+    static bool SetValue_StaticMeshRenderer_mesh(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mesh, value);
+    }
+
     //读取 StaticMeshRenderer.drawLayer 字段
     static std::string Get_StaticMeshRenderer_drawLayer(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->drawLayer);
+    }
+
+    //直接读取 StaticMeshRenderer.drawLayer 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_drawLayer(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->drawLayer) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.drawLayer 字段
@@ -1000,11 +2677,26 @@ public:
         return Reflection::SetFromXmlValue(instance->drawLayer, value);
     }
 
+    //直接写入 StaticMeshRenderer.drawLayer 字段
+    static bool SetValue_StaticMeshRenderer_drawLayer(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->drawLayer, value);
+    }
+
     //读取 StaticMeshRenderer.drawQueue 字段
     static std::string Get_StaticMeshRenderer_drawQueue(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->drawQueue);
+    }
+
+    //直接读取 StaticMeshRenderer.drawQueue 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_drawQueue(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->drawQueue) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.drawQueue 字段
@@ -1014,11 +2706,26 @@ public:
         return Reflection::SetFromXmlValue(instance->drawQueue, value);
     }
 
+    //直接写入 StaticMeshRenderer.drawQueue 字段
+    static bool SetValue_StaticMeshRenderer_drawQueue(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->drawQueue, value);
+    }
+
     //读取 StaticMeshRenderer.castShadows 字段
     static std::string Get_StaticMeshRenderer_castShadows(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->castShadows);
+    }
+
+    //直接读取 StaticMeshRenderer.castShadows 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_castShadows(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->castShadows) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.castShadows 字段
@@ -1028,11 +2735,26 @@ public:
         return Reflection::SetFromXmlValue(instance->castShadows, value);
     }
 
+    //直接写入 StaticMeshRenderer.castShadows 字段
+    static bool SetValue_StaticMeshRenderer_castShadows(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->castShadows, value);
+    }
+
     //读取 StaticMeshRenderer.receiveShadows 字段
     static std::string Get_StaticMeshRenderer_receiveShadows(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         return Reflection::ToXmlValue(instance->receiveShadows);
+    }
+
+    //直接读取 StaticMeshRenderer.receiveShadows 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_receiveShadows(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->receiveShadows) : Reflection::Value();
     }
 
     //写入 StaticMeshRenderer.receiveShadows 字段
@@ -1042,8 +2764,16 @@ public:
         return Reflection::SetFromXmlValue(instance->receiveShadows, value);
     }
 
+    //直接写入 StaticMeshRenderer.receiveShadows 字段
+    static bool SetValue_StaticMeshRenderer_receiveShadows(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->receiveShadows, value);
+    }
+
     //调用 StaticMeshRenderer.GetEnabled 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_GetEnabled_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1055,7 +2785,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.SetEnabled 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1069,7 +2799,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.IsRenderSceneEligible 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1081,7 +2811,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnAttach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnAttach_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1093,7 +2823,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnDetach 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1105,7 +2835,7 @@ public:
     }
 
     //调用 StaticMeshRenderer.OnWorldActiveChanged 方法
-    static Reflection::Value Invoke_StaticMeshRenderer_OnWorldActiveChanged_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_StaticMeshRenderer_OnWorldActiveChanged_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
@@ -1125,11 +2855,26 @@ public:
         return Reflection::ToXmlValue(instance->name);
     }
 
+    //直接读取 Texture2D.name 字段
+    static Reflection::Value GetValue_Texture2D_name(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return instance ? Reflection::ToValue(instance->name) : Reflection::Value();
+    }
+
     //写入 Texture2D.name 字段
     static bool Set_Texture2D_name(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         return Reflection::SetFromXmlValue(instance->name, value);
+    }
+
+    //直接写入 Texture2D.name 字段
+    static bool SetValue_Texture2D_name(Object* object, const Reflection::Value& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->name, value);
     }
 
     //读取 Texture2D.width 字段
@@ -1139,11 +2884,26 @@ public:
         return Reflection::ToXmlValue(instance->width);
     }
 
+    //直接读取 Texture2D.width 字段
+    static Reflection::Value GetValue_Texture2D_width(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return instance ? Reflection::ToValue(instance->width) : Reflection::Value();
+    }
+
     //写入 Texture2D.width 字段
     static bool Set_Texture2D_width(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         return Reflection::SetFromXmlValue(instance->width, value);
+    }
+
+    //直接写入 Texture2D.width 字段
+    static bool SetValue_Texture2D_width(Object* object, const Reflection::Value& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->width, value);
     }
 
     //读取 Texture2D.height 字段
@@ -1153,11 +2913,26 @@ public:
         return Reflection::ToXmlValue(instance->height);
     }
 
+    //直接读取 Texture2D.height 字段
+    static Reflection::Value GetValue_Texture2D_height(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return instance ? Reflection::ToValue(instance->height) : Reflection::Value();
+    }
+
     //写入 Texture2D.height 字段
     static bool Set_Texture2D_height(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         return Reflection::SetFromXmlValue(instance->height, value);
+    }
+
+    //直接写入 Texture2D.height 字段
+    static bool SetValue_Texture2D_height(Object* object, const Reflection::Value& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->height, value);
     }
 
     //读取 Texture2D.channels 字段
@@ -1167,11 +2942,26 @@ public:
         return Reflection::ToXmlValue(instance->channels);
     }
 
+    //直接读取 Texture2D.channels 字段
+    static Reflection::Value GetValue_Texture2D_channels(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return instance ? Reflection::ToValue(instance->channels) : Reflection::Value();
+    }
+
     //写入 Texture2D.channels 字段
     static bool Set_Texture2D_channels(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         return Reflection::SetFromXmlValue(instance->channels, value);
+    }
+
+    //直接写入 Texture2D.channels 字段
+    static bool SetValue_Texture2D_channels(Object* object, const Reflection::Value& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->channels, value);
     }
 
     //读取 Texture2D.format 字段
@@ -1181,6 +2971,13 @@ public:
         return Reflection::ToXmlValue(instance->format);
     }
 
+    //直接读取 Texture2D.format 字段
+    static Reflection::Value GetValue_Texture2D_format(Object* object)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return instance ? Reflection::ToValue(instance->format) : Reflection::Value();
+    }
+
     //写入 Texture2D.format 字段
     static bool Set_Texture2D_format(Object* object, const std::string& value)
     {
@@ -1188,11 +2985,26 @@ public:
         return Reflection::SetFromXmlValue(instance->format, value);
     }
 
+    //直接写入 Texture2D.format 字段
+    static bool SetValue_Texture2D_format(Object* object, const Reflection::Value& value)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->format, value);
+    }
+
     //读取 TransformComponent.localPosition 字段
     static std::string Get_TransformComponent_localPosition(Object* object)
     {
         TransformComponent* instance = static_cast<TransformComponent*>(object);
         return Reflection::ToXmlValue(instance->GetLocalPosition());
+    }
+
+    //直接读取 TransformComponent.localPosition 字段
+    static Reflection::Value GetValue_TransformComponent_localPosition(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return instance ? Reflection::ToValue(instance->GetLocalPosition()) : Reflection::Value();
     }
 
     //写入 TransformComponent.localPosition 字段
@@ -1205,11 +3017,29 @@ public:
         return true;
     }
 
+    //直接写入 TransformComponent.localPosition 字段
+    static bool SetValue_TransformComponent_localPosition(Object* object, const Reflection::Value& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance) return false;
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLocalPosition(parsedValue);
+        return true;
+    }
+
     //读取 TransformComponent.localRotation 字段
     static std::string Get_TransformComponent_localRotation(Object* object)
     {
         TransformComponent* instance = static_cast<TransformComponent*>(object);
         return Reflection::ToXmlValue(instance->GetLocalRotation());
+    }
+
+    //直接读取 TransformComponent.localRotation 字段
+    static Reflection::Value GetValue_TransformComponent_localRotation(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return instance ? Reflection::ToValue(instance->GetLocalRotation()) : Reflection::Value();
     }
 
     //写入 TransformComponent.localRotation 字段
@@ -1222,11 +3052,29 @@ public:
         return true;
     }
 
+    //直接写入 TransformComponent.localRotation 字段
+    static bool SetValue_TransformComponent_localRotation(Object* object, const Reflection::Value& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance) return false;
+        quaternion parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLocalRotation(parsedValue);
+        return true;
+    }
+
     //读取 TransformComponent.localScale 字段
     static std::string Get_TransformComponent_localScale(Object* object)
     {
         TransformComponent* instance = static_cast<TransformComponent*>(object);
         return Reflection::ToXmlValue(instance->GetLocalScale());
+    }
+
+    //直接读取 TransformComponent.localScale 字段
+    static Reflection::Value GetValue_TransformComponent_localScale(Object* object)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        return instance ? Reflection::ToValue(instance->GetLocalScale()) : Reflection::Value();
     }
 
     //写入 TransformComponent.localScale 字段
@@ -1239,8 +3087,19 @@ public:
         return true;
     }
 
+    //直接写入 TransformComponent.localScale 字段
+    static bool SetValue_TransformComponent_localScale(Object* object, const Reflection::Value& value)
+    {
+        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        if (!instance) return false;
+        vector3 parsedValue{};
+        if (!Reflection::SetFromValue(parsedValue, value)) return false;
+        instance->SetLocalScale(parsedValue);
+        return true;
+    }
+
     //调用 TransformComponent.GetLocalPosition 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalPosition_0(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_GetLocalPosition_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1252,7 +3111,7 @@ public:
     }
 
     //调用 TransformComponent.SetLocalPosition 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalPosition_1(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_SetLocalPosition_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1266,7 +3125,7 @@ public:
     }
 
     //调用 TransformComponent.GetLocalRotation 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalRotation_2(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_GetLocalRotation_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1278,7 +3137,7 @@ public:
     }
 
     //调用 TransformComponent.SetLocalRotation 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalRotation_3(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_SetLocalRotation_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1292,7 +3151,7 @@ public:
     }
 
     //调用 TransformComponent.GetLocalScale 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalScale_4(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_GetLocalScale_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1304,7 +3163,7 @@ public:
     }
 
     //调用 TransformComponent.SetLocalScale 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalScale_5(Object* object, const List<Reflection::Value>& args, bool& success)
+    static Reflection::Value Invoke_TransformComponent_SetLocalScale_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         TransformComponent* instance = static_cast<TransformComponent*>(object);
@@ -1313,6 +3172,119 @@ public:
         vector3 arg0{};
         if (!args[0].TryGet(arg0)) return Reflection::Value();
         instance->SetLocalScale(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 ScriptBehaviour.enabled 字段
+    static std::string Get_ScriptBehaviour_enabled(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 ScriptBehaviour.enabled 字段
+    static Reflection::Value GetValue_ScriptBehaviour_enabled(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 ScriptBehaviour.enabled 字段
+    static bool Set_ScriptBehaviour_enabled(Object* object, const std::string& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 ScriptBehaviour.enabled 字段
+    static bool SetValue_ScriptBehaviour_enabled(Object* object, const Reflection::Value& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 ScriptBehaviour.scriptStarted 字段
+    static std::string Get_ScriptBehaviour_scriptStarted(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::ToXmlValue(instance->scriptStarted);
+    }
+
+    //直接读取 ScriptBehaviour.scriptStarted 字段
+    static Reflection::Value GetValue_ScriptBehaviour_scriptStarted(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return instance ? Reflection::ToValue(instance->scriptStarted) : Reflection::Value();
+    }
+
+    //写入 ScriptBehaviour.scriptStarted 字段
+    static bool Set_ScriptBehaviour_scriptStarted(Object* object, const std::string& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::SetFromXmlValue(instance->scriptStarted, value);
+    }
+
+    //直接写入 ScriptBehaviour.scriptStarted 字段
+    static bool SetValue_ScriptBehaviour_scriptStarted(Object* object, const Reflection::Value& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->scriptStarted, value);
+    }
+
+    //读取 ScriptBehaviour.runtimeRegistered 字段
+    static std::string Get_ScriptBehaviour_runtimeRegistered(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::ToXmlValue(instance->runtimeRegistered);
+    }
+
+    //直接读取 ScriptBehaviour.runtimeRegistered 字段
+    static Reflection::Value GetValue_ScriptBehaviour_runtimeRegistered(Object* object)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return instance ? Reflection::ToValue(instance->runtimeRegistered) : Reflection::Value();
+    }
+
+    //写入 ScriptBehaviour.runtimeRegistered 字段
+    static bool Set_ScriptBehaviour_runtimeRegistered(Object* object, const std::string& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        return Reflection::SetFromXmlValue(instance->runtimeRegistered, value);
+    }
+
+    //直接写入 ScriptBehaviour.runtimeRegistered 字段
+    static bool SetValue_ScriptBehaviour_runtimeRegistered(Object* object, const Reflection::Value& value)
+    {
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->runtimeRegistered, value);
+    }
+
+    //调用 ScriptBehaviour.GetEnabled 方法
+    static Reflection::Value Invoke_ScriptBehaviour_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 ScriptBehaviour.SetEnabled 方法
+    static Reflection::Value Invoke_ScriptBehaviour_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnabled(arg0);
         success = true;
         return Reflection::Value();
     }
@@ -1328,21 +3300,135 @@ namespace Reflection
         if (registered) return;
         registered = true;
 
+        RegisterTypeFields(CharacterControllerComponent::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_enabled, ReflectionGeneratedAccess::Set_CharacterControllerComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_enabled, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_enabled),
+                FieldInfo("shape", "CharacterControllerShape", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_radius, ReflectionGeneratedAccess::Set_CharacterControllerComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_radius, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_radius),
+                FieldInfo("height", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_height, ReflectionGeneratedAccess::Set_CharacterControllerComponent_height, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_height, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_height),
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_halfExtents, ReflectionGeneratedAccess::Set_CharacterControllerComponent_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_halfExtents, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_halfExtents),
+                FieldInfo("stepOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_stepOffset, ReflectionGeneratedAccess::Set_CharacterControllerComponent_stepOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_stepOffset, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_stepOffset),
+                FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_contactOffset, ReflectionGeneratedAccess::Set_CharacterControllerComponent_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_contactOffset),
+                FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_slopeLimit, ReflectionGeneratedAccess::Set_CharacterControllerComponent_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_slopeLimit),
+                FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterControllerComponent_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_minMoveDistance),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_collisionLayer, ReflectionGeneratedAccess::Set_CharacterControllerComponent_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_collisionLayer),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_collisionMask, ReflectionGeneratedAccess::Set_CharacterControllerComponent_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_collisionMask),
+            });
+
+        RegisterTypeMethods(CharacterControllerComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(ColliderComponent::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ColliderComponent_enabled, ReflectionGeneratedAccess::Set_ColliderComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_enabled, ReflectionGeneratedAccess::SetValue_ColliderComponent_enabled),
+                FieldInfo("isTrigger", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ColliderComponent_isTrigger, ReflectionGeneratedAccess::Set_ColliderComponent_isTrigger, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_isTrigger, ReflectionGeneratedAccess::SetValue_ColliderComponent_isTrigger),
+                FieldInfo("center", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_ColliderComponent_center, ReflectionGeneratedAccess::Set_ColliderComponent_center, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_center, ReflectionGeneratedAccess::SetValue_ColliderComponent_center),
+                FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_staticFriction, ReflectionGeneratedAccess::Set_ColliderComponent_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_staticFriction, ReflectionGeneratedAccess::SetValue_ColliderComponent_staticFriction),
+                FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_dynamicFriction, ReflectionGeneratedAccess::Set_ColliderComponent_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_dynamicFriction, ReflectionGeneratedAccess::SetValue_ColliderComponent_dynamicFriction),
+                FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_restitution, ReflectionGeneratedAccess::Set_ColliderComponent_restitution, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_restitution, ReflectionGeneratedAccess::SetValue_ColliderComponent_restitution),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ColliderComponent_collisionLayer, ReflectionGeneratedAccess::Set_ColliderComponent_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_collisionLayer, ReflectionGeneratedAccess::SetValue_ColliderComponent_collisionLayer),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ColliderComponent_collisionMask, ReflectionGeneratedAccess::Set_ColliderComponent_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_collisionMask, ReflectionGeneratedAccess::SetValue_ColliderComponent_collisionMask),
+            });
+
+        RegisterTypeMethods(ColliderComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(BoxColliderComponent::StaticType(),
+            {
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_BoxColliderComponent_halfExtents, ReflectionGeneratedAccess::Set_BoxColliderComponent_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_BoxColliderComponent_halfExtents, ReflectionGeneratedAccess::SetValue_BoxColliderComponent_halfExtents),
+            });
+
+        RegisterTypeMethods(BoxColliderComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(SphereColliderComponent::StaticType(),
+            {
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_SphereColliderComponent_radius, ReflectionGeneratedAccess::Set_SphereColliderComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_SphereColliderComponent_radius, ReflectionGeneratedAccess::SetValue_SphereColliderComponent_radius),
+            });
+
+        RegisterTypeMethods(SphereColliderComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(CapsuleColliderComponent::StaticType(),
+            {
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleColliderComponent_radius, ReflectionGeneratedAccess::Set_CapsuleColliderComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleColliderComponent_radius, ReflectionGeneratedAccess::SetValue_CapsuleColliderComponent_radius),
+                FieldInfo("halfHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleColliderComponent_halfHeight, ReflectionGeneratedAccess::Set_CapsuleColliderComponent_halfHeight, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleColliderComponent_halfHeight, ReflectionGeneratedAccess::SetValue_CapsuleColliderComponent_halfHeight),
+            });
+
+        RegisterTypeMethods(CapsuleColliderComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(ConvexMeshColliderComponent::StaticType(),
+            {
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ConvexMeshColliderComponent_mesh, ReflectionGeneratedAccess::Set_ConvexMeshColliderComponent_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ConvexMeshColliderComponent_mesh, ReflectionGeneratedAccess::SetValue_ConvexMeshColliderComponent_mesh),
+            });
+
+        RegisterTypeMethods(ConvexMeshColliderComponent::StaticType(),
+            {
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshColliderComponent_OnDetach_0),
+            });
+
+        RegisterTypeFields(TriangleMeshColliderComponent::StaticType(),
+            {
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshColliderComponent_mesh, ReflectionGeneratedAccess::Set_TriangleMeshColliderComponent_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshColliderComponent_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshColliderComponent_mesh),
+            });
+
+        RegisterTypeMethods(TriangleMeshColliderComponent::StaticType(),
+            {
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshColliderComponent_OnDetach_0),
+            });
+
+        RegisterTypeFields(RigidBodyComponent::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_enabled, ReflectionGeneratedAccess::Set_RigidBodyComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_enabled, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_enabled),
+                FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_mass, ReflectionGeneratedAccess::Set_RigidBodyComponent_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_mass, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_mass),
+                FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_useGravity, ReflectionGeneratedAccess::Set_RigidBodyComponent_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_useGravity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_useGravity),
+                FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_linearDamping, ReflectionGeneratedAccess::Set_RigidBodyComponent_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_linearDamping),
+                FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_angularDamping, ReflectionGeneratedAccess::Set_RigidBodyComponent_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_angularDamping),
+                FieldInfo("linearVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_linearVelocity, ReflectionGeneratedAccess::Set_RigidBodyComponent_linearVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_linearVelocity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_linearVelocity),
+                FieldInfo("angularVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_angularVelocity, ReflectionGeneratedAccess::Set_RigidBodyComponent_angularVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_angularVelocity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_angularVelocity),
+                FieldInfo("continuousCollisionDetection", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_continuousCollisionDetection, ReflectionGeneratedAccess::Set_RigidBodyComponent_continuousCollisionDetection, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_continuousCollisionDetection, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_continuousCollisionDetection),
+                FieldInfo("lockFlags", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_lockFlags, ReflectionGeneratedAccess::Set_RigidBodyComponent_lockFlags, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_lockFlags, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_lockFlags),
+            });
+
+        RegisterTypeMethods(RigidBodyComponent::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(Component::StaticType(),
+            {
+                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(Component::StaticType(),
+            {
+                MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_1),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_2),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Component_OnWorldActiveChanged_3),
+            });
+
         RegisterTypeFields(Camera::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr),
-                FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr),
-                FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr),
-                FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr),
-                FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr),
-                FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr),
-                FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr),
-                FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr),
-                FieldInfo("viewportX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportX, ReflectionGeneratedAccess::Set_Camera_viewportX, nullptr),
-                FieldInfo("viewportY", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportY, ReflectionGeneratedAccess::Set_Camera_viewportY, nullptr),
-                FieldInfo("viewportWidth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportWidth, ReflectionGeneratedAccess::Set_Camera_viewportWidth, nullptr),
-                FieldInfo("viewportHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportHeight, ReflectionGeneratedAccess::Set_Camera_viewportHeight, nullptr),
-                FieldInfo("renderTargetId", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Camera_enabled, ReflectionGeneratedAccess::SetValue_Camera_enabled),
+                FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr, ReflectionGeneratedAccess::GetValue_Camera_fieldOfView, ReflectionGeneratedAccess::SetValue_Camera_fieldOfView),
+                FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_nearPlane, ReflectionGeneratedAccess::SetValue_Camera_nearPlane),
+                FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_farPlane, ReflectionGeneratedAccess::SetValue_Camera_farPlane),
+                FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_depth, ReflectionGeneratedAccess::SetValue_Camera_depth),
+                FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr, ReflectionGeneratedAccess::GetValue_Camera_drawLayerMask, ReflectionGeneratedAccess::SetValue_Camera_drawLayerMask),
+                FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearMode, ReflectionGeneratedAccess::SetValue_Camera_clearMode),
+                FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearColor, ReflectionGeneratedAccess::SetValue_Camera_clearColor),
+                FieldInfo("viewportX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportX, ReflectionGeneratedAccess::Set_Camera_viewportX, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportX, ReflectionGeneratedAccess::SetValue_Camera_viewportX),
+                FieldInfo("viewportY", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportY, ReflectionGeneratedAccess::Set_Camera_viewportY, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportY, ReflectionGeneratedAccess::SetValue_Camera_viewportY),
+                FieldInfo("viewportWidth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportWidth, ReflectionGeneratedAccess::Set_Camera_viewportWidth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportWidth, ReflectionGeneratedAccess::SetValue_Camera_viewportWidth),
+                FieldInfo("viewportHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportHeight, ReflectionGeneratedAccess::Set_Camera_viewportHeight, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportHeight, ReflectionGeneratedAccess::SetValue_Camera_viewportHeight),
+                FieldInfo("renderTargetId", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Camera::StaticType(),
@@ -1357,14 +3443,14 @@ namespace Reflection
 
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr),
-                FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr),
-                FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr),
-                FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr),
-                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr),
-                FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr),
-                FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr),
-                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_enabled, ReflectionGeneratedAccess::SetValue_DirectionalLight_enabled),
+                FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_direction, ReflectionGeneratedAccess::SetValue_DirectionalLight_direction),
+                FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_color, ReflectionGeneratedAccess::SetValue_DirectionalLight_color),
+                FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_intensity, ReflectionGeneratedAccess::SetValue_DirectionalLight_intensity),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_castShadows, ReflectionGeneratedAccess::SetValue_DirectionalLight_castShadows),
+                FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBias),
+                FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowStrength),
+                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDistance),
             });
 
         RegisterTypeMethods(DirectionalLight::StaticType(),
@@ -1379,13 +3465,13 @@ namespace Reflection
 
         RegisterTypeFields(Material::StaticType(),
             {
-                FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr),
-                FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("floatSlots", "List<MaterialFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("shader", "Ref<Shader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "Shader"),
+                FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr, ReflectionGeneratedAccess::GetValue_Material_name, ReflectionGeneratedAccess::SetValue_Material_name),
+                FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<MaterialFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("shader", "Ref<Shader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "Shader", ReflectionGeneratedAccess::GetValue_Material_shader, ReflectionGeneratedAccess::SetValue_Material_shader),
             });
 
         RegisterTypeMethods(Material::StaticType(),
@@ -1407,15 +3493,15 @@ namespace Reflection
 
         RegisterTypeFields(Mesh::StaticType(),
             {
-                FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("localBounds", "mutable bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr),
-                FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("normals", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("tangents", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("indices", "List<uint32>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("subMeshes", "List<SubMesh>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("localBounds", "mutable bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr, ReflectionGeneratedAccess::GetValue_Mesh_name, ReflectionGeneratedAccess::SetValue_Mesh_name),
+                FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("normals", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("tangents", "List<vector3>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("indices", "List<uint32>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("subMeshes", "List<SubMesh>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Mesh::StaticType(),
@@ -1426,19 +3512,35 @@ namespace Reflection
                 MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_3),
             });
 
+        RegisterTypeFields(OrbedenObject::StaticType(),
+            {
+                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, true, ReflectionGeneratedAccess::Get_OrbedenObject_instanceId, ReflectionGeneratedAccess::Set_OrbedenObject_instanceId, nullptr, ReflectionGeneratedAccess::GetValue_OrbedenObject_instanceId, ReflectionGeneratedAccess::SetValue_OrbedenObject_instanceId),
+                FieldInfo("objectId", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_OrbedenObject_objectId, ReflectionGeneratedAccess::Set_OrbedenObject_objectId, nullptr, ReflectionGeneratedAccess::GetValue_OrbedenObject_objectId, ReflectionGeneratedAccess::SetValue_OrbedenObject_objectId),
+                FieldInfo("managedWrapper", "void*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("ownership", "Ownership", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("allocationChunk", "IChunk*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+            });
+
+        RegisterTypeMethods(OrbedenObject::StaticType(),
+            {
+                MethodInfo("GetObjectId", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_OrbedenObject_GetObjectId_0),
+                MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_OrbedenObject_SetInstanceId_1),
+            });
+
         RegisterTypeFields(Shader::StaticType(),
             {
-                FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr),
-                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr),
-                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr),
-                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr),
-                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr),
-                FieldInfo("passes", "List<ShaderPass>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr, ReflectionGeneratedAccess::GetValue_Shader_name, ReflectionGeneratedAccess::SetValue_Shader_name),
+                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexPath, ReflectionGeneratedAccess::SetValue_Shader_vertexPath),
+                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentPath, ReflectionGeneratedAccess::SetValue_Shader_fragmentPath),
+                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexSource, ReflectionGeneratedAccess::SetValue_Shader_vertexSource),
+                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentSource, ReflectionGeneratedAccess::SetValue_Shader_fragmentSource),
+                FieldInfo("passes", "List<ShaderPass>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Shader::StaticType(),
@@ -1452,14 +3554,14 @@ namespace Reflection
 
         RegisterTypeFields(Skybox::StaticType(),
             {
-                FieldInfo("gpuSkybox", "GpuCubeTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("gpuSkyboxStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr),
-                FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D"),
-                FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D"),
-                FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D"),
-                FieldInfo("bottom", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_bottom, ReflectionGeneratedAccess::Set_Skybox_bottom, "Texture2D"),
-                FieldInfo("front", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_front, ReflectionGeneratedAccess::Set_Skybox_front, "Texture2D"),
-                FieldInfo("back", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_back, ReflectionGeneratedAccess::Set_Skybox_back, "Texture2D"),
+                FieldInfo("gpuSkybox", "GpuCubeTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("gpuSkyboxStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_right, ReflectionGeneratedAccess::SetValue_Skybox_right),
+                FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_left, ReflectionGeneratedAccess::SetValue_Skybox_left),
+                FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_top, ReflectionGeneratedAccess::SetValue_Skybox_top),
+                FieldInfo("bottom", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_bottom, ReflectionGeneratedAccess::Set_Skybox_bottom, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_bottom, ReflectionGeneratedAccess::SetValue_Skybox_bottom),
+                FieldInfo("front", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_front, ReflectionGeneratedAccess::Set_Skybox_front, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_front, ReflectionGeneratedAccess::SetValue_Skybox_front),
+                FieldInfo("back", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_back, ReflectionGeneratedAccess::Set_Skybox_back, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_back, ReflectionGeneratedAccess::SetValue_Skybox_back),
             });
 
         RegisterTypeMethods(Skybox::StaticType(),
@@ -1468,13 +3570,13 @@ namespace Reflection
 
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr),
-                FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh"),
-                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr),
-                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr),
-                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr),
-                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enabled),
+                FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh),
+                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer),
+                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawQueue),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows),
+                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows),
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
@@ -1489,14 +3591,14 @@ namespace Reflection
 
         RegisterTypeFields(Texture2D::StaticType(),
             {
-                FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr),
-                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr),
-                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr),
-                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr),
-                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr),
-                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
+                FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_name, ReflectionGeneratedAccess::SetValue_Texture2D_name),
+                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_width, ReflectionGeneratedAccess::SetValue_Texture2D_width),
+                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_height, ReflectionGeneratedAccess::SetValue_Texture2D_height),
+                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_channels, ReflectionGeneratedAccess::SetValue_Texture2D_channels),
+                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_format, ReflectionGeneratedAccess::SetValue_Texture2D_format),
+                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Texture2D::StaticType(),
@@ -1505,20 +3607,20 @@ namespace Reflection
 
         RegisterTypeFields(TransformComponent::StaticType(),
             {
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localPosition, ReflectionGeneratedAccess::Set_TransformComponent_localPosition, nullptr),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_TransformComponent_localRotation, ReflectionGeneratedAccess::Set_TransformComponent_localRotation, nullptr),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localScale, ReflectionGeneratedAccess::Set_TransformComponent_localScale, nullptr),
-                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr),
-                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr),
-                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr),
-                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
-                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr),
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localPosition, ReflectionGeneratedAccess::Set_TransformComponent_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localPosition, ReflectionGeneratedAccess::SetValue_TransformComponent_localPosition),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_TransformComponent_localRotation, ReflectionGeneratedAccess::Set_TransformComponent_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localRotation, ReflectionGeneratedAccess::SetValue_TransformComponent_localRotation),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localScale, ReflectionGeneratedAccess::Set_TransformComponent_localScale, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localScale, ReflectionGeneratedAccess::SetValue_TransformComponent_localScale),
+                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(TransformComponent::StaticType(),
@@ -1529,6 +3631,19 @@ namespace Reflection
                 MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalRotation_3),
                 MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalScale_4),
                 MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalScale_5),
+            });
+
+        RegisterTypeFields(ScriptBehaviour::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_enabled, ReflectionGeneratedAccess::Set_ScriptBehaviour_enabled, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_enabled, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_enabled),
+                FieldInfo("scriptStarted", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_scriptStarted, ReflectionGeneratedAccess::Set_ScriptBehaviour_scriptStarted, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_scriptStarted, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_scriptStarted),
+                FieldInfo("runtimeRegistered", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_runtimeRegistered, ReflectionGeneratedAccess::Set_ScriptBehaviour_runtimeRegistered, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_runtimeRegistered, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_runtimeRegistered),
+            });
+
+        RegisterTypeMethods(ScriptBehaviour::StaticType(),
+            {
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ScriptBehaviour_GetEnabled_0),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ScriptBehaviour_SetEnabled_1),
             });
 
     }

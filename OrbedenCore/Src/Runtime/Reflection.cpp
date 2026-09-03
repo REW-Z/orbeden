@@ -15,6 +15,19 @@ namespace
         return registry;
     }
 
+    uint32& GetReflectionRegistryGeneration()
+    {
+        static uint32 generation = 1;
+        return generation;
+    }
+
+    void AdvanceReflectionRegistryGeneration()
+    {
+        uint32& generation = GetReflectionRegistryGeneration();
+        ++generation;
+        if (generation == 0) generation = 1;
+    }
+
     //获取或创建指定类型的反射元数据
     Reflection::TypeInfo& GetTypeInfoForWrite(Type* type)
     {
@@ -355,8 +368,8 @@ namespace Reflection
     }
 
     //创建字段元数据
-    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName)
-        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue)
+    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue)
+        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue)
     {
     }
 
@@ -364,7 +377,9 @@ namespace Reflection
     Value FieldInfo::GetValue(Object* object) const
     {
         Value value;
-        if (!object || !getter) return value;
+        if (!object) return value;
+        if (valueGetter) return valueGetter(object);
+        if (!getter) return value;
 
         Value::FromString(kind, getter(object), value);
         return value;
@@ -373,7 +388,9 @@ namespace Reflection
     //写入字段值
     bool FieldInfo::SetValue(Object* object, const Value& value) const
     {
-        if (!object || !setter) return false;
+        if (!object) return false;
+        if (valueSetter) return valueSetter(object, value);
+        if (!setter) return false;
 
         return setter(object, value.ToString());
     }
@@ -400,22 +417,34 @@ namespace Reflection
     {
     }
 
+    //创建使用连续参数视图的方法元数据
+    MethodInfo::MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod)
+        : name(methodName), returnTypeName(methodReturnTypeName), returnKind(methodReturnKind), parameters(methodParameters), spanInvoker(invokeMethod)
+    {
+    }
+
     //调用反射方法
     Value MethodInfo::Invoke(Object* object, const List<Value>& args, bool* success) const
     {
-        //由生成代码负责实参类型检查和真实调用
+        return Invoke(object, std::span<const Value>(args.data(), args.size()), success);
+    }
+
+    //使用连续参数视图调用反射方法
+    Value MethodInfo::Invoke(Object* object, std::span<const Value> args, bool* success) const
+    {
         bool localSuccess = false;
         Value result;
-        if (object && invoker)
+        if (object && spanInvoker)
         {
-            result = invoker(object, args, localSuccess);
+            result = spanInvoker(object, args, localSuccess);
+        }
+        else if (object && invoker)
+        {
+            List<Value> compatibleArgs(args.begin(), args.end());
+            result = invoker(object, compatibleArgs, localSuccess);
         }
 
-        if (success)
-        {
-            *success = localSuccess;
-        }
-
+        if (success) *success = localSuccess;
         return result;
     }
 
@@ -425,6 +454,7 @@ namespace Reflection
         if (!type) return;
 
         GetTypeInfoForWrite(type).fields = fields;
+        AdvanceReflectionRegistryGeneration();
     }
 
     //注册类型方法元数据
@@ -433,13 +463,14 @@ namespace Reflection
         if (!type) return;
 
         GetTypeInfoForWrite(type).methods = methods;
+        AdvanceReflectionRegistryGeneration();
     }
 
     //注销一个动态模块类型的全部反射元数据
     void UnregisterType(Type* type)
     {
         if (!type) return;
-        GetReflectionRegistry().erase(type->GetId());
+        if (GetReflectionRegistry().erase(type->GetId()) != 0) AdvanceReflectionRegistryGeneration();
     }
 
     //查找类型元数据
@@ -512,6 +543,49 @@ namespace Reflection
         }
 
         return nullptr;
+    }
+
+    //按方法名和精确参数类型查找继承链中的方法
+    const MethodInfo* FindMethod(Type* type, const std::string& name, std::span<const ValueKind> parameterKinds, bool* ambiguous)
+    {
+        if (ambiguous) *ambiguous = false;
+        for (Type* current = type; current; current = current->GetBaseType())
+        {
+            const TypeInfo* info = FindTypeInfo(current);
+            if (!info) continue;
+
+            const MethodInfo* found = nullptr;
+            for (const MethodInfo& method : info->methods)
+            {
+                if (!method.name || name != method.name || method.parameters.size() != parameterKinds.size()) continue;
+
+                bool signatureMatches = true;
+                for (std::size_t index = 0; index < parameterKinds.size(); ++index)
+                {
+                    if (method.parameters[index].kind != parameterKinds[index])
+                    {
+                        signatureMatches = false;
+                        break;
+                    }
+                }
+                if (!signatureMatches) continue;
+
+                if (found)
+                {
+                    if (ambiguous) *ambiguous = true;
+                    return nullptr;
+                }
+                found = &method;
+            }
+            if (found) return found;
+        }
+        return nullptr;
+    }
+
+    //获取当前反射注册表代次
+    uint32 GetRegistryGeneration()
+    {
+        return GetReflectionRegistryGeneration();
     }
 
     //转换 bool 为 XML 文本

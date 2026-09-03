@@ -2,6 +2,7 @@
 
 #include "Log/Log.h"
 #include "Runtime/Native/OrbedenNativeApi.h"
+#include "Scripting/ScriptInterop.h"
 
 #include <algorithm>
 #include <exception>
@@ -121,6 +122,7 @@ bool ScriptSystem::OnInitialize(Application& app)
     world->AddLifecycleListener(this);
     runtimeMode = app.GetScriptRuntimeMode();
     ScriptBehaviour::RegisterReflection();
+    ScriptInterop::Initialize(world);
     currentScriptSystem = this;
 
     if (runtimeMode == ScriptRuntimeMode::CLR) return true;
@@ -139,6 +141,7 @@ void ScriptSystem::OnShutdown()
     Shutdown();
     if (world) world->RemoveLifecycleListener(this);
     if (currentScriptSystem == this) currentScriptSystem = nullptr;
+    ScriptInterop::Shutdown();
     renderSystem = nullptr;
     world = nullptr;
 }
@@ -151,6 +154,8 @@ bool ScriptSystem::Initialize()
         Log::Error("ScriptSystem initialize failed: script domains are incomplete.");
         return false;
     }
+
+    ScriptInterop::Initialize(world);
 
     domains.clear();
     domains.push_back({
@@ -214,6 +219,7 @@ void ScriptSystem::Shutdown()
     }
 
     domains.clear();
+    ScriptInterop::RegisterManagedApi(nullptr);
     entryPoints = ScriptEntryPoints();
     initialized = false;
     renderOverlayAttached = false;

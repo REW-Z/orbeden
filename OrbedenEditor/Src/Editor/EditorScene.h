@@ -173,11 +173,17 @@ public:
     /// <summary>获取当前活动选择。</summary>
     EnsId GetSelectedEns() const;
 
+    /// <summary>获取完整选择列表，顺序与用户选择顺序一致。</summary>
+    const List<EnsId>& GetSelectedEnsList() const;
+
     /// <summary>判断指定 Ens 是否被选中。</summary>
     bool IsSelected(EnsId ens) const;
 
     /// <summary>获取当前活动选择的稳定 ID。</summary>
     std::string GetSelectedStableId() const;
+
+    /// <summary>获取指定 Ens 的稳定 ID。</summary>
+    std::string GetStableId(EnsId ens) const;
 
     /// <summary>判断 Ens 是否属于编辑器临时场景对象。</summary>
     bool IsTemporaryEns(EnsId ens) const;
