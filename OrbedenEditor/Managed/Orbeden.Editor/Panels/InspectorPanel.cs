@@ -1267,7 +1267,7 @@ internal sealed class InspectorPanel : EditorPanel
         List<RuntimeScriptSnapshot> removed = [];
         foreach (RuntimeScriptSnapshot snapshot in snapshots)
         {
-            if (ScriptRuntime.RemoveMountedScript(snapshot.Ens, snapshot.MountId))
+            if (ScriptRuntimeRegistry.RemoveMountedScript(snapshot.Ens, snapshot.MountId))
             {
                 removed.Add(snapshot);
                 continue;
@@ -1285,7 +1285,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (snapshots.Count == 0) return;
         foreach (RuntimeScriptSnapshot snapshot in snapshots)
         {
-            ScriptRuntime.AddMountedScript(snapshot.Ens, snapshot.MountId,
+            ScriptRuntimeRegistry.AddMountedScript(snapshot.Ens, snapshot.MountId,
                 snapshot.TypeName, snapshot.Enabled, snapshot.Values);
         }
         EditorApplication.RequestRepaint();
@@ -1437,7 +1437,7 @@ internal sealed class InspectorPanel : EditorPanel
                     {
                         Dictionary<string, string> values = mount.Values.ToDictionary(
                             pair => pair.Key, pair => pair.Value.Value, StringComparer.Ordinal);
-                        ScriptBehaviour? script = ScriptRuntime.AddMountedScript(targetId, mount.Id,
+                        ScriptBehaviour? script = ScriptRuntimeRegistry.AddMountedScript(targetId, mount.Id,
                             mount.Type, mount.Enabled, values);
                         if (script == null) throw new InvalidOperationException($"Failed to add runtime script '{mount.Type}'.");
                         addedRuntime.Add(CaptureRuntimeScript(script));
@@ -1541,10 +1541,6 @@ internal sealed class InspectorPanel : EditorPanel
         EditorApplication.RequestRepaint();
     }
 
-    //创建包含默认序列化字段的脚本挂载项。
-    private ScriptMount CreateDefaultScriptMount(string stableId, Type type)
-    {
-
     //查找一次 AddComponent 调用新产生的原生组件，避免值类型默认值被误判为有效实例。
     private static bool TryFindAddedNativeComponent(EnsId ens, IReadOnlySet<int> existingObjectIds,
         out NativeComponentInfo component)
@@ -1558,6 +1554,10 @@ internal sealed class InspectorPanel : EditorPanel
         component = default;
         return false;
     }
+
+    //创建包含默认序列化字段的脚本挂载项。
+    private ScriptMount CreateDefaultScriptMount(string stableId, Type type)
+    {
         ScriptMount mount = new()
         {
             Id = Guid.NewGuid().ToString("N"),

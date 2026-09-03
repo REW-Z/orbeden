@@ -197,6 +197,9 @@ internal static class ManagedTypeMetadataCache
         foreach (MethodInfo method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public))
         {
             if (method.IsStatic || method.IsGenericMethodDefinition || method.IsSpecialName || method.DeclaringType == typeof(object)) continue;
+            if (method.Name is "OnStart" or "OnUpdate" or "OnFixedUpdate" or
+                "OnLateUpdate" or "OnDrawGUI" or "OnEnd")
+                continue;
             ParameterInfo[] parameters = method.GetParameters();
             if (parameters.Any(parameter => parameter.ParameterType.IsByRef || parameter.IsOut)) continue;
             if (!TryGetMethodReturnKind(method.ReturnType, out InteropValueKind returnKind)) continue;

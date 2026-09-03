@@ -142,6 +142,32 @@ struct ScriptCallbackTable
 
 类型没有实现的阶段保存为 `nullptr`。如果派生脚本没有重新声明某个生命周期，运行时会沿父类链找到最近的父脚本 thunk，因此可以继承父类的行为。
 
+### 游戏工程从哪里取得 MetaGen 和 C++ 头文件
+
+游戏项目不保存一份自己的 OrbedenCore 源码，也不在创建项目时复制一套以后容易过期的头文件。`OrbedenCore.vcxproj` 的 x64 构建会统一发布 Native SDK：
+
+```text
+OrbedenEditor/Sdk/
+├─ Native/Include/                         Core C++ 声明头文件
+├─ Native/WindowsX64/Debug/OrbedenCore.lib Editor Debug 导入库
+├─ Native/WindowsX64/Release/OrbedenCore.lib
+└─ Tools/OrbedenMetaGen/OrbedenMetaGen.exe 元数据生成工具
+```
+
+因此，正式分发 Editor 时应把整个 `Sdk` 目录作为引擎安装内容一起分发，而不是给每个游戏项目单独复制 MetaGen。升级引擎以后只更新中央 SDK，所有指向这套引擎的游戏工程会使用同一版本的声明、库和工具。
+
+新项目的 `Native/CMakeLists.txt` 包含完整构建步骤：
+
+1. Editor 的 Build C++ 将 `ORBEDEN_ENGINE_ROOT` 和当前配置的 `OrbedenCore.lib` 传给 CMake。
+2. CMake 从 `Sdk/Native/Include` 取得 `ScriptBehaviour`、`Ens`、内建组件和互操作 API 的声明。
+3. C++ 源码发生变化时，先运行 SDK 中的 `OrbedenMetaGen`。
+4. MetaGen 扫描项目 `Native` 目录，将 `Reflection.Generated.cpp` 写进 `Native/Build/Editor/Generated`。
+5. 编译器同时编译游戏源码与生成代码，并链接 `OrbedenCore.lib`，输出游戏模块 DLL。
+
+生成文件只存在于构建目录，不写回游戏源码目录。CMake 的 Visual Studio 工程同时承担普通 C++ 编译和语法检查；IDE 也可以使用相同的 include path 进行补全和诊断。
+
+在引擎源码开发环境中，如果 SDK 尚未发布，模板仍可暂时回退到 `OrbedenCore/Src` 和 `Tools/OrbedenMetaGen`。正常流程仍是先构建一次 OrbedenCore，让声明、二进制与 MetaGen 版本保持一致。
+
 ### C++ 实例怎样进入调用表
 
 原生脚本是真正的 `Component`，直接挂在 `Ens` 上并保存在 `.world` 中。
@@ -199,7 +225,7 @@ MetaGen 会为可持久化字段生成文本 getter/setter，并把字段类型�
 
 ### 游戏开发者怎样写 C# 脚本
 
-C# 保留熟悉的虚方法开发接口：
+C# 与 C++ 使用相同的“约定名称 + 固定签名”接口。`ScriptBehaviour` 基类不声明生命周期槽位：
 
 ```csharp
 public sealed class MoveBehaviour : ScriptBehaviour
@@ -208,18 +234,18 @@ public sealed class MoveBehaviour : ScriptBehaviour
 
     public MoveBehaviour(Ens ens) : base(ens) {}
 
-    protected override void OnStart() {}
+    protected void OnStart() {}
 
-    protected override void OnUpdate(float deltaTime)
+    protected void OnUpdate(float deltaTime)
     {
         // 游戏逻辑
     }
 
-    protected override void OnEnd() {}
+    protected void OnEnd() {}
 }
 ```
 
-虽然源代码写的是 `override`，帧循环并不会通过公共包装函数逐实例执行虚调用。
+这些方法不是 `override`，也不能声明为 `virtual`。基类只提供 Ens、enabled 和运行时身份等公共能力，不提供空的生命周期虚函数。
 
 ### 程序集加载时只解析一次
 
@@ -227,7 +253,7 @@ public sealed class MoveBehaviour : ScriptBehaviour
 
 1. 找到接收 `Ens` 参数的 public 构造函数。
 2. 找到可选的序列化值应用方法。
-3. 找到该类型最终覆盖的 `OnStart`、`OnUpdate` 等具体方法。
+3. 沿游戏脚本继承链查找最近声明、名称和签名精确匹配的 `OnStart`、`OnUpdate` 等非虚方法。
 4. 为每个脚本实例创建绑定到该实例的闭合 delegate。
 
 例如：
@@ -241,7 +267,7 @@ Update = updateMethod.CreateDelegate<Action<float>>(script);
 - 要调用哪个脚本对象。
 - 要调用哪个具体方法。
 
-反射发生在程序集/脚本实例加载阶段。普通帧循环只遍历 delegate 表，不使用 `MethodInfo.Invoke` 调生命周期，也不会每帧重新查找 override。
+反射发生在程序集/脚本实例加载阶段。普通帧循环只遍历 delegate 表，不使用 `MethodInfo.Invoke`、不按名称查找，也不经过生命周期虚函数分派。
 
 构造函数调用和初始序列化值应用可以在加载阶段使用反射，因为它们不属于高频帧循环。
 
@@ -523,7 +549,7 @@ C# 字段显示规则是：
 组件域 + 实例槽位 + generation
 ```
 
-字段和方法第一次按名字解析后，还会缓存成员句柄；后续读写不再扫描整张反射表。
+字段和方法第一次按名字解析后会缓存成员句柄。按名称调用不会再扫描整张反射表，但仍需要构造名称/签名缓存键；重复或高频调用可以直接保存预解析句柄，完全跳过这一段。
 
 C++ 示例：
 
@@ -538,9 +564,15 @@ ComponentProxy managed = FindManagedComponent(
 native.SetField("speed", Reflection::Value(4.0f));
 managed.SetField("health", Reflection::Value(int32(80)));
 
+constexpr Reflection::ValueKind damageSignature[]{
+    Reflection::ValueKind::Int32
+};
+MemberHandle damageMethod;
+managed.ResolveMethod("Damage", damageSignature, damageMethod);
+
 Reflection::Value result;
 Reflection::Value arguments[] = { Reflection::Value(int32(10)) };
-managed.Invoke("Damage", arguments, result);
+managed.Invoke(damageMethod, arguments, result);
 ```
 
 C# 示例：
@@ -552,10 +584,14 @@ ComponentProxy? managed = Ens.GetManagedComponent<HealthBehaviour>();
 native?.SetField("speed", InteropValue.From(4.0f));
 managed?.SetField("health", InteropValue.From(80));
 
-InteropStatus status = native?.Invoke(
-    "Teleport", out InteropValue result,
-    InteropValue.From(new vector3(1, 2, 3)))
-    ?? InteropStatus.NotFound;
+InteropStatus status = native?.TryResolveMethod(
+    "Teleport", out ComponentMethod teleportMethod,
+    InteropValueKind.Vector3) ?? InteropStatus.NotFound;
+if (status == InteropStatus.Ok)
+{
+    status = teleportMethod.Invoke(out InteropValue result,
+        InteropValue.From(new vector3(1, 2, 3)));
+}
 ```
 
 它支持四种组合：
@@ -567,7 +603,19 @@ InteropStatus status = native?.Invoke(
 | C# → C++ | `OrbedenNativeApi` 中的原生互操作函数表 |
 | C# → C# | 同一套托管实例表和缓存元数据，不跨原生边界 |
 
-字段和方法匹配有意保持严格：名字区分大小写；重载按“方法名 + 参数 `InteropValueKind` 列表”精确匹配；不做隐式整数、浮点转换。普通生命周期方法是 protected，不会进入通用 `Invoke` 表。
+字段和方法匹配有意保持严格：名字区分大小写；重载按“方法名 + 参数 `InteropValueKind` 列表”精确匹配；不做隐式整数、浮点转换。六个生命周期名称属于运行时保留名称，即使写成 public 也不会进入通用 `Invoke` 表。
+
+### 为什么不直接返回跨语言函数指针
+
+真正的裸函数指针不能安全统一 C++、CLR 和 NativeAOT：C# 实例可能被 GC 移动，普通实例方法没有可长期暴露的稳定 C ABI；程序集卸载和 C++ 游戏 DLL 热重载也会让旧地址直接变成悬空地址。NativeAOT 可以导出少量静态 C 入口，但不能把任意游戏脚本实例方法都当作普通 C++ 函数地址使用。
+
+`MemberHandle`（C++）和 `ComponentMethod`（C#）是这里的安全“函数引用”：
+
+- 名称和精确参数签名只解析一次；
+- 重复调用直接携带组件句柄与方法槽位进入调度；
+- 每次调用仍校验 generation，模块或程序集重载后返回 `StaleHandle`，不会跳进旧地址。
+
+这会消除重复字符串查找，但不会消除跨域 ABI、参数编码，以及 C# 通用动态方法的 `MethodInfo.Invoke`/装箱成本。对每帧大量调用的固定 API，仍应写明确的强类型 C# Binding 或 AOT 静态入口；生命周期继续使用专门的批量阶段表。
 
 当前可跨域传递的值包括 `bool`、`int32`、`uint32`、`uint64`、`float32`、UTF-8 字符串、`StringId`、`vector3`、`color4`、`quaternion`、`EnsId` 和以 ObjectId 表示的原生对象引用。数组、列表、自定义结构体、泛型方法、委托以及 `ref/out` 参数不属于这条通用通道。
 ### TypeId 在 Core、游戏 C++ 和 C# 之间是什么关系
@@ -625,10 +673,11 @@ Inspector 的三类组件最终都转成属性目标，但取元数据的方式�
 
 ### 什么时候不该使用 ComponentProxy
 
-这是通用、低频、方便的调用通道，不是新的帧循环调用机制。C# 动态方法最终使用缓存的 `MethodInfo.Invoke`，参数也可能产生装箱。每帧对大量组件进行高频调用时，仍应使用：
+按名称的 `ComponentProxy.Invoke` 适合低频和工具代码；重复调用应至少先取得 `MemberHandle`/`ComponentMethod`。托管动态方法最终仍使用缓存的 `MethodInfo.Invoke`，参数也可能产生装箱。每帧对大量组件进行高频调用时，仍应使用：
 
 - 生命周期函数表；
 - 明确编写的 C# Binding；
+- 明确的 NativeAOT 静态、blittable 批量入口；
 - 或把高性能逻辑整体放在 C++ 组件内部。
 
 ## PropertyDocument：Inspector 的统一编辑事务
@@ -701,7 +750,7 @@ C#：一次域入口 → 遍历闭合 delegate 列表
 ## 当前边界和注意事项
 
 - 当前固定为 C++ 域先于 C# 域，没有跨语言 execution order。
-- C++ 生命周期函数必须使用 MetaGen 支持的固定名称和签名，并且不能声明为 virtual。
+- C++ 和 C# 生命周期函数都必须使用受支持的固定名称和签名，并且不能声明为 `virtual`；C# 不写 `override`。
 - C# 脚本需要 public `ScriptType(Ens ens)` 构造函数。
 - C# 脚本需要所属 Ens 有稳定 `stableId`，否则无法持久化到 sidecar。
 - C++ 显式序列化字段必须使用受支持的反射类型。
@@ -713,7 +762,7 @@ C#：一次域入口 → 遍历闭合 delegate 列表
 - Native 组件删除后的 Undo 会恢复组件类型和持久化字段；当前不保证精确恢复跨类型组件的原全局挂载序号。
 - 当前没有在切换、重载或关闭项目时提供完整的 Save/Discard/Cancel 模态确认流程；应先显式保存重要修改。
 - 通用 Object 字段使用 ObjectId 传递；Inspector 写回时会做目标字段类型校验，但选择器尚未针对每个具体派生类型做完整过滤。
-- 互操作和 PropertyDocument 代码已经接入源码；构建结果和运行行为需要在后续构建、CLR/NativeAOT 与 Editor 集成测试后确认。
+- OrbedenCore 与 OrbedenEditor 的 Debug x64 工程构建已经通过；完整 CLR/NativeAOT 游戏工程运行和热重载行为仍应继续做集成验证。
 
 ## 主要源码入口
 

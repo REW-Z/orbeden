@@ -494,11 +494,38 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(ORBEDEN_ENGINE_ROOT "" CACHE PATH "Orbeden repository root")
 set(ORBEDEN_CORE_LIB "" CACHE FILEPATH "Editor OrbedenCore import library")
 
-if(NOT ORBEDEN_ENGINE_ROOT OR NOT EXISTS "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj")
+if(NOT ORBEDEN_ENGINE_ROOT)
     message(FATAL_ERROR "ORBEDEN_ENGINE_ROOT is invalid")
 endif()
 if(NOT ORBEDEN_CORE_LIB OR NOT EXISTS "${ORBEDEN_CORE_LIB}")
     message(FATAL_ERROR "ORBEDEN_CORE_LIB is invalid")
+endif()
+
+# 游戏工程只引用 Editor 随引擎统一发布的 Native SDK，不复制 Core 头文件和 MetaGen。
+set(ORBEDEN_SDK_ROOT "${ORBEDEN_ENGINE_ROOT}/OrbedenEditor/Sdk")
+set(ORBEDEN_NATIVE_INCLUDE_ROOT "${ORBEDEN_SDK_ROOT}/Native/Include")
+if(NOT EXISTS "${ORBEDEN_NATIVE_INCLUDE_ROOT}/Scripting/ScriptBehaviour.h")
+    # 保留源码树开发环境兼容入口。
+    set(ORBEDEN_NATIVE_INCLUDE_ROOT "${ORBEDEN_ENGINE_ROOT}/OrbedenCore/Src")
+endif()
+if(NOT EXISTS "${ORBEDEN_NATIVE_INCLUDE_ROOT}/Scripting/ScriptBehaviour.h")
+    message(FATAL_ERROR "Orbeden Native SDK headers were not found; build OrbedenCore first")
+endif()
+
+set(ORBEDEN_METAGEN_EXE "${ORBEDEN_SDK_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.exe")
+set(ORBEDEN_METAGEN_DLL "${ORBEDEN_SDK_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.dll")
+if(EXISTS "${ORBEDEN_METAGEN_EXE}")
+    set(ORBEDEN_METAGEN_COMMAND "${ORBEDEN_METAGEN_EXE}")
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_METAGEN_EXE}")
+elseif(EXISTS "${ORBEDEN_METAGEN_DLL}")
+    set(ORBEDEN_METAGEN_COMMAND dotnet "${ORBEDEN_METAGEN_DLL}")
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_METAGEN_DLL}")
+elseif(EXISTS "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj")
+    # 兼容尚未发布 SDK 工具的引擎源码开发环境。
+    set(ORBEDEN_METAGEN_COMMAND dotnet run --project "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" --)
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/Program.cs")
+else()
+    message(FATAL_ERROR "OrbedenMetaGen was not found; build OrbedenCore first")
 endif()
 
 file(GLOB_RECURSE GAME_NATIVE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
@@ -508,14 +535,18 @@ set(GENERATED_REFLECTION "${GENERATED_DIRECTORY}/Reflection.Generated.cpp")
 add_custom_command(
     OUTPUT "${GENERATED_REFLECTION}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${GENERATED_DIRECTORY}"
-    COMMAND dotnet run --project "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" -- "${CMAKE_CURRENT_SOURCE_DIR}" "${GENERATED_DIRECTORY}" --game-module
-    DEPENDS ${GAME_NATIVE_SOURCES} "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/Program.cs"
+    COMMAND ${ORBEDEN_METAGEN_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}" "${GENERATED_DIRECTORY}" --game-module
+    DEPENDS ${GAME_NATIVE_SOURCES} "${ORBEDEN_METAGEN_DEPENDENCY}"
     VERBATIM)
 
 add_library({{PROJECT_NAME}}Native SHARED ${GAME_NATIVE_SOURCES} "${GENERATED_REFLECTION}")
 target_include_directories({{PROJECT_NAME}}Native PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${ORBEDEN_ENGINE_ROOT}/OrbedenCore/Src")
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/PhysX/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/glfw/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/glad/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/imgui")
 target_link_libraries({{PROJECT_NAME}}Native PRIVATE "${ORBEDEN_CORE_LIB}")
 target_compile_options({{PROJECT_NAME}}Native PRIVATE /utf-8)
 set_target_properties({{PROJECT_NAME}}Native PROPERTIES
@@ -549,8 +580,9 @@ extern "C" ORBEDEN_GAME_MODULE_EXPORT const OrbedenNativeGameModuleApi* OrbedenG
     constexpr const char* SampleNativeBehaviourHeader = R"ORB(#pragma once
 
 #include "Scripting/ScriptBehaviour.h"
+#include "Scripting/ScriptInterop.h"
 
-//无需 C# binding 的高性能原生脚本组件。
+//无需 C# binding 的高性能原生脚本；同时演示预解析后调用 C# 方法。
 class SampleNativeBehaviour final : public ScriptBehaviour
 {
     OBJECT_TYPE_DECLARE(SampleNativeBehaviour)
@@ -558,8 +590,14 @@ class SampleNativeBehaviour final : public ScriptBehaviour
 public:
     float32 speed = 2.0f;
 
+    //public 方法会由 MetaGen 加入互操作方法表，C# 可以预解析后调用。
+    void ReceiveManagedPing(float32 value);
+
 private:
     float32 elapsedTime = 0.0f;
+    float32 interopTimer = 0.0f;
+    ScriptInterop::ComponentProxy managedSample;
+    ScriptInterop::MemberHandle managedPingMethod;
 
 protected:
     void OnStart();
@@ -572,16 +610,25 @@ protected:
 
     constexpr const char* SampleNativeBehaviourSource = R"ORB(#include "SampleNativeBehaviour.h"
 
+#include "Log/Log.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/TransformComponent.h"
 
 #include <cmath>
+#include <span>
 
 OBJECT_TYPE_IMPLEMENT(SampleNativeBehaviour, ScriptBehaviour)
 
 void SampleNativeBehaviour::OnStart()
 {
     elapsedTime = 0.0f;
+    interopTimer = 0.0f;
+    managedSample = ScriptInterop::FindManagedComponent(GetEnsId(), "{{PROJECT_NAME}}.SampleBehaviour");
+    constexpr Reflection::ValueKind signature[]{ Reflection::ValueKind::Float32 };
+    if (managedSample.IsValid())
+    {
+        managedSample.ResolveMethod("ReceiveNativePing", signature, managedPingMethod);
+    }
 }
 
 void SampleNativeBehaviour::OnUpdate(float32 deltaTime)
@@ -594,6 +641,22 @@ void SampleNativeBehaviour::OnUpdate(float32 deltaTime)
     vector3 position = transform->GetLocalPosition();
     position.y = 1.0f + std::sin(elapsedTime) * 0.2f;
     transform->SetLocalPosition(position);
+
+    //高频场景持有 MemberHandle；这里每两秒演示一次，不再按字符串查找方法。
+    interopTimer += deltaTime;
+    if (interopTimer >= 2.0f && managedSample.IsValid())
+    {
+        interopTimer = 0.0f;
+        Reflection::Value arguments[]{ Reflection::Value(elapsedTime) };
+        Reflection::Value result;
+        managedSample.Invoke(managedPingMethod, arguments, result);
+    }
+}
+
+void SampleNativeBehaviour::ReceiveManagedPing(float32 value)
+{
+    (void)value;
+    Log::Info("SampleNativeBehaviour received a pre-resolved C# call.");
 }
 
 void SampleNativeBehaviour::OnLateUpdate(float32 deltaTime)
@@ -628,20 +691,30 @@ public sealed class SampleBehaviour : ScriptBehaviour
     private float elapsedTime;
     [SerializeField]
     private int reportCount;
+    private ComponentProxy? nativeSample;
+    private ComponentMethod nativePingMethod;
+    private float interopTimer;
 
     /// <summary>创建示例托管脚本行为。</summary>
     public SampleBehaviour(Ens ens) : base(ens) {}
 
 
     /// <summary>脚本启动时调用。</summary>
-    protected override void OnStart()
+    protected void OnStart()
     {
         startPosition = Ens.Transform.localPosition;
+
+        //按名称只解析一次；后续通过 ComponentMethod 调用 C++ public 方法。
+        nativeSample = Ens.GetNativeComponent("SampleNativeBehaviour");
+        if (nativeSample != null)
+        {
+            nativeSample.TryResolveMethod("ReceiveManagedPing", out nativePingMethod, InteropValueKind.Float32);
+        }
         Console.WriteLine($"SampleBehaviour start: Ens({EnsId.id}, {EnsId.version})");
     }
 
     /// <summary>脚本每帧更新时调用。</summary>
-    protected override void OnUpdate(float deltaTime)
+    protected void OnUpdate(float deltaTime)
     {
         totalTime += deltaTime;
         TransformComponent transform = Ens.Transform;
@@ -656,6 +729,13 @@ public sealed class SampleBehaviour : ScriptBehaviour
             renderer.receiveShadows = true;
         }
 
+        interopTimer += deltaTime;
+        if (interopTimer >= 2.0f && nativePingMethod.IsValid)
+        {
+            interopTimer = 0.0f;
+            nativePingMethod.Invoke(out _, InteropValue.From(totalTime));
+        }
+
         elapsedTime += deltaTime;
         if (elapsedTime < 2.0f) return;
 
@@ -664,8 +744,14 @@ public sealed class SampleBehaviour : ScriptBehaviour
         Console.WriteLine($"SampleBehaviour update report: {reportCount}");
     }
 
+    /// <summary>供 C++ 示例脚本通过缓存的方法句柄调用。</summary>
+    public void ReceiveNativePing(float value)
+    {
+        Console.WriteLine($"SampleBehaviour received C++ ping: {value:F2}");
+    }
+
     /// <summary>脚本结束时调用。</summary>
-    protected override void OnEnd()
+    protected void OnEnd()
     {
         Console.WriteLine("SampleBehaviour end");
     }
@@ -703,14 +789,14 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
 
 
     /// <summary>脚本启动时调用。</summary>
-    protected override void OnStart()
+    protected void OnStart()
     {
         baseScale = Ens.Transform.localScale;
         Console.WriteLine($"CubeTestBehaviour start: {label}");
     }
 
     /// <summary>脚本每帧更新时调用。</summary>
-    protected override void OnUpdate(float deltaTime)
+    protected void OnUpdate(float deltaTime)
     {
         elapsedTime += deltaTime;
         updateCount++;
@@ -732,7 +818,7 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
     }
 
     /// <summary>脚本结束时调用。</summary>
-    protected override void OnEnd()
+    protected void OnEnd()
     {
         Ens.Transform.localScale = baseScale;
         Console.WriteLine($"CubeTestBehaviour end: {label}");
@@ -926,8 +1012,8 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     //写入 C++ 游戏模块、示例原生脚本和 MetaGen 构建步骤。
     succeeded = WriteTextFile(root / "Native/CMakeLists.txt", ExpandTemplate(NativeCMakeTemplate, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Native/GameModule.cpp", ExpandTemplate(NativeModuleTemplate, projectName)) && succeeded;
-    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.h", SampleNativeBehaviourHeader) && succeeded;
-    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.cpp", SampleNativeBehaviourSource) && succeeded;
+    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.h", ExpandTemplate(SampleNativeBehaviourHeader, projectName)) && succeeded;
+    succeeded = WriteTextFile(root / "Native/SampleNativeBehaviour.cpp", ExpandTemplate(SampleNativeBehaviourSource, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Native/.gitignore", NativeGitIgnoreText) && succeeded;
 
     //写入默认 World。

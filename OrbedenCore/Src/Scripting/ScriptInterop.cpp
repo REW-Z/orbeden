@@ -625,7 +625,11 @@ namespace ScriptInterop
         MemberHandle member;
         InteropStatus status = ResolveCachedMethod(name, kinds, member);
         if (status != InteropStatus::Ok) return status;
+        return Invoke(member, args, result);
+    }
 
+    InteropStatus ComponentProxy::Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const
+    {
         std::vector<std::string> strings(args.size());
         List<InteropValueAbi> values(args.size());
         for (std::size_t index = 0; index < args.size(); ++index)
@@ -634,7 +638,7 @@ namespace ScriptInterop
         }
 
         InteropValueAbi output;
-        status = DispatchInvoke(handle, member, values.empty() ? nullptr : values.data(), static_cast<int32>(values.size()), &output);
+        InteropStatus status = DispatchInvoke(handle, method, values.empty() ? nullptr : values.data(), static_cast<int32>(values.size()), &output);
         if (status != InteropStatus::Ok) return status;
         return DecodeValue(output, result) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
     }

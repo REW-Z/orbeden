@@ -414,7 +414,7 @@ internal static class ScriptRuntime
         }
     }
 
-    //缓存脚本构造函数、序列化入口和具体 override
+    //缓存脚本构造函数、序列化入口和具体生命周期方法
     private static bool TryGetScriptFactory(string typeName, out ScriptTypeFactory? factory)
     {
         if (scriptFactories.TryGetValue(typeName, out factory)) return true;
@@ -433,6 +433,18 @@ internal static class ScriptRuntime
             return false;
         }
 
+        if (!TryFindLifecycleMethod(scriptType, "OnStart", Type.EmptyTypes, out MethodInfo? start)
+            || !TryFindLifecycleMethod(scriptType, "OnUpdate", [typeof(float)], out MethodInfo? update)
+            || !TryFindLifecycleMethod(scriptType, "OnFixedUpdate", [typeof(float)], out MethodInfo? fixedUpdate)
+            || !TryFindLifecycleMethod(scriptType, "OnLateUpdate", [typeof(float)], out MethodInfo? lateUpdate)
+            || !TryFindLifecycleMethod(scriptType, "OnDrawGUI", Type.EmptyTypes, out MethodInfo? drawGUI)
+            || !TryFindLifecycleMethod(scriptType, "OnEnd", Type.EmptyTypes, out MethodInfo? end))
+        {
+            Console.Error.WriteLine($"ScriptRuntime: script '{typeName}' contains an invalid lifecycle method.");
+            factory = null;
+            return false;
+        }
+
         factory = new ScriptTypeFactory
         {
             Constructor = constructor,
@@ -442,30 +454,60 @@ internal static class ScriptRuntime
                 binder: null,
                 types: [typeof(IReadOnlyDictionary<string, string>)],
                 modifiers: null),
-            Start = FindLifecycleOverride(scriptType, "OnStart", Type.EmptyTypes),
-            Update = FindLifecycleOverride(scriptType, "OnUpdate", [typeof(float)]),
-            FixedUpdate = FindLifecycleOverride(scriptType, "OnFixedUpdate", [typeof(float)]),
-            LateUpdate = FindLifecycleOverride(scriptType, "OnLateUpdate", [typeof(float)]),
-            DrawGUI = FindLifecycleOverride(scriptType, "OnDrawGUI", Type.EmptyTypes),
-            End = FindLifecycleOverride(scriptType, "OnEnd", Type.EmptyTypes),
+            Start = start,
+            Update = update,
+            FixedUpdate = fixedUpdate,
+            LateUpdate = lateUpdate,
+            DrawGUI = drawGUI,
+            End = end,
         };
         scriptFactories.Add(typeName, factory);
         return true;
     }
 
-    //查找最终由脚本类型覆盖的生命周期方法
-    private static MethodInfo? FindLifecycleOverride(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.NonPublicMethods)] Type scriptType,
+    //沿脚本继承链查找最近声明的非虚生命周期方法
+    private static bool TryFindLifecycleMethod(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] Type scriptType,
         string name,
-        Type[] parameters)
+        Type[] parameters,
+        out MethodInfo? lifecycleMethod)
     {
-        MethodInfo? method = scriptType.GetMethod(
-            name,
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            types: parameters,
-            modifiers: null);
-        return method?.DeclaringType == typeof(ScriptBehaviour) ? null : method;
+        for (Type? current = scriptType;
+             current != null && current != typeof(ScriptBehaviour);
+             current = current.BaseType)
+        {
+            foreach (MethodInfo method in current.GetMethods(
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+            {
+                if (!string.Equals(method.Name, name, StringComparison.Ordinal)) continue;
+
+                ParameterInfo[] actualParameters = method.GetParameters();
+                if (actualParameters.Length != parameters.Length) continue;
+
+                bool signatureMatches = true;
+                for (int index = 0; index < parameters.Length; ++index)
+                {
+                    if (actualParameters[index].ParameterType == parameters[index]) continue;
+                    signatureMatches = false;
+                    break;
+                }
+                if (!signatureMatches) continue;
+
+                if (method.IsStatic || method.IsVirtual || method.IsGenericMethod || method.ReturnType != typeof(void))
+                {
+                    Console.Error.WriteLine(
+                        $"ScriptRuntime: lifecycle '{current.FullName}.{name}' must be a non-static, non-virtual void method with the required parameter signature.");
+                    lifecycleMethod = null;
+                    return false;
+                }
+
+                lifecycleMethod = method;
+                return true;
+            }
+        }
+
+        lifecycleMethod = null;
+        return true;
     }
 
     //开始活动脚本并重建所有阶段调用表
