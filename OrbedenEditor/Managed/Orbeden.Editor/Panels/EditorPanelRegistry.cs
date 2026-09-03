@@ -164,6 +164,25 @@ internal static unsafe class EditorPanelRegistry
         }
     }
 
+    /// <summary>统一保存全部 Panel 的暂存项目数据。</summary>
+    public static bool SavePendingChanges()
+    {
+        bool success = true;
+        foreach (EditorPanel panel in panels)
+        {
+            try
+            {
+                success &= panel.SavePendingChanges();
+            }
+            catch (Exception ex)
+            {
+                success = false;
+                Console.Error.WriteLine($"Editor Panel save failed: {panel.GetType().FullName}: {ex}");
+            }
+        }
+        return success;
+    }
+
     /// <summary>向全部 C# Panel 广播资源引用路径变化。</summary>
     public static void RemapAssetReferences(string oldKey, string newKey, bool prefix)
     {

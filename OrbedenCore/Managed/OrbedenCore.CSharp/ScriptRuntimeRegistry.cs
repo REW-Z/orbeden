@@ -6,6 +6,10 @@ namespace Orbeden;
 public static class ScriptRuntimeRegistry
 {
     private static readonly Dictionary<EnsId, List<ScriptBehaviour>> scriptsByEns = [];
+    private static readonly Dictionary<ScriptBehaviour, ulong> slotsByScript = [];
+    private static readonly Dictionary<ulong, ScriptBehaviour> scriptsBySlot = [];
+    private static ulong nextSlot = 1;
+    private static uint generation = 1;
 
     /// <summary>注册脚本实例。</summary>
     internal static void Register(ScriptBehaviour script)
@@ -22,6 +26,12 @@ public static class ScriptRuntimeRegistry
         {
             scripts.Add(script);
         }
+        if (!slotsByScript.ContainsKey(script))
+        {
+            ulong slot = nextSlot++;
+            slotsByScript.Add(script, slot);
+            scriptsBySlot.Add(slot, script);
+        }
     }
 
     /// <summary>注销脚本实例。</summary>
@@ -35,12 +45,36 @@ public static class ScriptRuntimeRegistry
         {
             scriptsByEns.Remove(script.EnsId);
         }
+        if (slotsByScript.Remove(script, out ulong slot)) scriptsBySlot.Remove(slot);
     }
 
     /// <summary>清空所有运行态脚本实例记录。</summary>
     public static void Clear()
     {
         scriptsByEns.Clear();
+        slotsByScript.Clear();
+        scriptsBySlot.Clear();
+        nextSlot = 1;
+        ++generation;
+        if (generation == 0) generation = 1;
+    }
+
+    internal static bool TryGetHandle(ScriptBehaviour script, out ComponentHandle handle)
+    {
+        if (slotsByScript.TryGetValue(script, out ulong slot))
+        {
+            handle = new ComponentHandle(ComponentDomain.Managed, generation, slot);
+            return true;
+        }
+        handle = default;
+        return false;
+    }
+
+    internal static bool TryResolve(ComponentHandle handle, out ScriptBehaviour? script)
+    {
+        if (handle.Domain == ComponentDomain.Managed && handle.Generation == generation && scriptsBySlot.TryGetValue(handle.Slot, out script)) return true;
+        script = null;
+        return false;
     }
 
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>

@@ -82,7 +82,8 @@ void ScriptBehaviour::RegisterReflection()
     Reflection::RegisterTypeFields(StaticType(),
         {
             Reflection::FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true,
-                &ScriptBehaviour::GetEnabledField, &ScriptBehaviour::SetEnabledField),
+                &ScriptBehaviour::GetEnabledField, &ScriptBehaviour::SetEnabledField, nullptr,
+                &ScriptBehaviour::GetEnabledValue, &ScriptBehaviour::SetEnabledValue),
         });
 }
 
@@ -100,6 +101,25 @@ bool ScriptBehaviour::SetEnabledField(Object* object, const std::string& value)
     bool parsed = false;
     if (!Reflection::SetFromXmlValue(parsed, value)) return false;
     script->SetEnabled(parsed);
+    return true;
+}
+
+//读取 enabled 类型化字段
+Reflection::Value ScriptBehaviour::GetEnabledValue(Object* object)
+{
+    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    return script ? Reflection::Value(script->GetEnabled()) : Reflection::Value();
+}
+
+//通过业务 setter 写入 enabled 类型化字段
+bool ScriptBehaviour::SetEnabledValue(Object* object, const Reflection::Value& value)
+{
+    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    if (!script) return false;
+
+    bool enabledValue = false;
+    if (!value.TryGet(enabledValue)) return false;
+    script->SetEnabled(enabledValue);
     return true;
 }
 

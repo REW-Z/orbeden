@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -144,8 +145,60 @@ namespace Reflection
         static bool FromString(FieldKind kind, const std::string& text, Value& value);
     };
 
+    //把受支持的 C++ 字段值直接装入类型化反射值。
+    template<typename T>
+    std::enable_if_t<!std::is_enum_v<T>, Value> ToValue(const T& value)
+    {
+        return Value(value);
+    }
+
+    //把枚举按 UInt32 装入类型化反射值。
+    template<typename T>
+    std::enable_if_t<std::is_enum_v<T>, Value> ToValue(T value)
+    {
+        return Value(static_cast<uint32>(value));
+    }
+
+    //把原生对象软引用按对象身份装入类型化反射值。
+    template<typename T>
+    Value ToValue(const Ref<T>& value)
+    {
+        return Value(value.Get());
+    }
+
+    //从同类型反射值直接写入 C++ 字段。
+    template<typename T>
+    std::enable_if_t<!std::is_enum_v<T>, bool> SetFromValue(T& target, const Value& value)
+    {
+        return value.TryGet(target);
+    }
+
+    //从 UInt32 反射值写入枚举字段。
+    template<typename T>
+    std::enable_if_t<std::is_enum_v<T>, bool> SetFromValue(T& target, const Value& value)
+    {
+        uint32 raw = 0;
+        if (!value.TryGet(raw)) return false;
+        target = static_cast<T>(raw);
+        return true;
+    }
+
+    //从对象身份反射值写入原生对象软引用。
+    template<typename T>
+    bool SetFromValue(Ref<T>& target, const Value& value)
+    {
+        Object* object = nullptr;
+        if (!value.TryGet(object)) return false;
+        T* typedObject = object ? object->Cast<T>() : nullptr;
+        if (object && !typedObject) return false;
+        target.Set(typedObject);
+        return true;
+    }
+
     typedef std::string (*FieldGetter)(Object* object);
     typedef bool (*FieldSetter)(Object* object, const std::string& value);
+    typedef Value (*FieldValueGetter)(Object* object);
+    typedef bool (*FieldValueSetter)(Object* object, const Value& value);
 
     //反射方法参数元数据
     struct ParameterInfo
@@ -162,6 +215,7 @@ namespace Reflection
     };
 
     typedef Value (*MethodInvoker)(Object* object, const List<Value>& args, bool& success);
+    typedef Value (*MethodSpanInvoker)(Object* object, std::span<const Value> args, bool& success);
 
     //反射字段元数据和读写入口
     struct FieldInfo
@@ -174,11 +228,13 @@ namespace Reflection
         bool persistent = false;
         FieldGetter getter = nullptr;
         FieldSetter setter = nullptr;
+        FieldValueGetter valueGetter = nullptr;
+        FieldValueSetter valueSetter = nullptr;
 
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr);
 
         //读取字段值
         Value GetValue(Object* object) const;
@@ -202,14 +258,21 @@ namespace Reflection
         ValueKind returnKind = ValueKind::Empty;
         List<ParameterInfo> parameters;
         MethodInvoker invoker = nullptr;
+        MethodSpanInvoker spanInvoker = nullptr;
 
         MethodInfo() = default;
 
         //创建方法元数据
         MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodInvoker invokeMethod);
 
+        //创建使用连续参数视图的方法元数据
+        MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod);
+
         //调用反射方法
         Value Invoke(Object* object, const List<Value>& args, bool* success = nullptr) const;
+
+        //使用连续参数视图调用反射方法
+        Value Invoke(Object* object, std::span<const Value> args, bool* success = nullptr) const;
     };
 
     //类型的反射元数据集合
@@ -241,6 +304,12 @@ namespace Reflection
 
     //查找方法元数据
     const MethodInfo* FindMethod(Type* type, const std::string& name);
+
+    //按方法名和精确参数类型查找方法，返回空时可区分歧义。
+    const MethodInfo* FindMethod(Type* type, const std::string& name, std::span<const ValueKind> parameterKinds, bool* ambiguous = nullptr);
+
+    //获取反射注册表代次；任何类型注册或注销都会推进代次。
+    uint32 GetRegistryGeneration();
 
     //注册由代码生成器生成的反射元数据
     void RegisterGeneratedReflection();

@@ -44,6 +44,8 @@ public static class EditorRuntime
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
             EditorApplication.Initialize(api.Application);
+            EditorApplication.ClearDirty();
+            EditorPropertyHistory.Clear();
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
             EditorNativeComponents.Initialize(api.Components);
@@ -62,6 +64,7 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static unsafe void LoadGameAssembly(byte* assemblyPath, int assemblyPathLength, byte* sidecarPath, int sidecarPathLength)
     {
+        EditorPropertyHistory.Clear();
         EditorPanelRegistry.LoadGameAssembly(
             ReadUtf8(assemblyPath, assemblyPathLength),
             ReadUtf8(sidecarPath, sidecarPathLength));
@@ -71,17 +74,53 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static void UnloadGameAssembly()
     {
+        EditorPropertyHistory.Clear();
         EditorPanelRegistry.UnloadGameAssembly();
     }
 
+    /// <summary>把 sidecar 等托管编辑数据原子保存到磁盘。</summary>
+    [UnmanagedCallersOnly]
+    public static byte SaveProjectState()
+    {
+        try { return EditorPanelRegistry.SavePendingChanges() ? (byte)1 : (byte)0; }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor managed save failed: {ex}"); return 0; }
+    }
+
+    /// <summary>撤销最近一次属性或组件事务。</summary>
+    [UnmanagedCallersOnly]
+    public static byte Undo() => EditorPropertyHistory.Undo() ? (byte)1 : (byte)0;
+
+    /// <summary>重做最近一次属性或组件事务。</summary>
+    [UnmanagedCallersOnly]
+    public static byte Redo() => EditorPropertyHistory.Redo() ? (byte)1 : (byte)0;
+
+    /// <summary>通知托管 Editor 原生 World 已成功保存。</summary>
+    [UnmanagedCallersOnly]
+    public static void WorldSaved() => EditorApplication.ClearWorldDirty();
+
     /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
-    public static unsafe void DrawPanel(int handle, uint ensId, uint ensVersion, byte* stableId, int stableIdLength)
+    public static unsafe void DrawPanel(int handle,
+        uint ensId,
+        uint ensVersion,
+        EnsId* selectedEns,
+        int selectedEnsCount,
+        byte* selectedStableIds,
+        int selectedStableIdsLength,
+        byte* stableId,
+        int stableIdLength)
     {
         try
         {
+            EnsId[] selection = selectedEns == null || selectedEnsCount <= 0
+                ? []
+                : new ReadOnlySpan<EnsId>(selectedEns, selectedEnsCount).ToArray();
+            EnsId active = new(ensId, ensVersion);
+            if (selection.Length == 0 && !active.IsNull) selection = [active];
             EditorPanelContext context = new(
-                new EnsId(ensId, ensVersion),
+                active,
+                selection,
+                ReadUtf8List(selectedStableIds, selectedStableIdsLength, selection.Length),
                 ReadUtf8(stableId, stableIdLength));
             EditorPanelRegistry.DrawPanel(handle, context);
         }
@@ -154,6 +193,26 @@ public static class EditorRuntime
         return Encoding.UTF8.GetString(new ReadOnlySpan<byte>(text, length));
     }
 
+    //读取以 NUL 分隔并与 Ens 选择列表对齐的 UTF-8 字符串。
+    private static unsafe IReadOnlyList<string> ReadUtf8List(byte* value, int length, int expectedCount)
+    {
+        if (value == null || length <= 0 || expectedCount <= 0) return [];
+        List<string> result = new(expectedCount);
+        int start = 0;
+        for (int index = 0; index < length && result.Count < expectedCount; ++index)
+        {
+            if (value[index] != 0) continue;
+            result.Add(Encoding.UTF8.GetString(new ReadOnlySpan<byte>(value + start, index - start)));
+            start = index + 1;
+        }
+        if (start < length && result.Count < expectedCount)
+        {
+            result.Add(Encoding.UTF8.GetString(new ReadOnlySpan<byte>(value + start, length - start)));
+        }
+        while (result.Count < expectedCount) result.Add(string.Empty);
+        return result;
+    }
+
     //把 UTF-8 文本写入 C++ 提供的缓冲区。
     private static unsafe void WriteUtf8(byte* buffer, int bufferSize, string text)
     {
@@ -169,12 +228,12 @@ public static class EditorRuntime
     private static unsafe void ValidateNativeApiLayout()
     {
         ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 30);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 2);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 3);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 4);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 13);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 54);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 55);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

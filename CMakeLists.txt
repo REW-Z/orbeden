@@ -63,6 +63,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/SceneCuller.cpp
     OrbedenCore/Src/Rendering/TransformCache.cpp
     OrbedenCore/Src/Scripting/ScriptSystem.cpp
+    OrbedenCore/Src/Scripting/ScriptInterop.cpp
     OrbedenCore/Src/Scripting/ScriptBehaviour.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp

@@ -6,6 +6,10 @@
 #define ORBEDEN_SERIALIZE_FIELD
 
 class ScriptBehaviour;
+namespace Reflection
+{
+    class Value;
+}
 
 using ScriptCallback = void(*)(ScriptBehaviour*);
 using ScriptUpdateCallback = void(*)(ScriptBehaviour*, float32);
@@ -56,6 +60,12 @@ private:
 
     //写入 enabled 字段文本。
     static bool SetEnabledField(Object* object, const std::string& value);
+
+    //读取 enabled 类型化字段。
+    static Reflection::Value GetEnabledValue(Object* object);
+
+    //通过业务 setter 写入 enabled 类型化字段。
+    static bool SetEnabledValue(Object* object, const Reflection::Value& value);
 
 public:
     //注册 ScriptBehaviour 自身持久化字段。

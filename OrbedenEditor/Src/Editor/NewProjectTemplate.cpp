@@ -612,9 +612,9 @@ void SampleNativeBehaviour::OnEnd()
 
     constexpr const char* NativeGitIgnoreText = "Build/\n";
 
-    constexpr const char* SampleBehaviourText = R"ORB(using System.Collections.Generic;
-using Orbeden;
+    constexpr const char* SampleBehaviourText = R"ORB(using System;
 
+using Orbeden;
 namespace {{PROJECT_NAME}};
 
 /// <summary>示例托管脚本行为。</summary>
@@ -632,14 +632,6 @@ public sealed class SampleBehaviour : ScriptBehaviour
     /// <summary>创建示例托管脚本行为。</summary>
     public SampleBehaviour(Ens ens) : base(ens) {}
 
-    /// <summary>应用 world sidecar 中保存的序列化字段。</summary>
-    internal void ApplySerializedValues(IReadOnlyDictionary<string, string> values)
-    {
-        if (ScriptValueReader.TryGetVector3(values, nameof(startPosition), out vector3 startPositionValue)) startPosition = startPositionValue;
-        if (ScriptValueReader.TryGetFloat(values, nameof(totalTime), out float totalTimeValue)) totalTime = totalTimeValue;
-        if (ScriptValueReader.TryGetFloat(values, nameof(elapsedTime), out float elapsedTimeValue)) elapsedTime = elapsedTimeValue;
-        if (ScriptValueReader.TryGetInt(values, nameof(reportCount), out int reportCountValue)) reportCount = reportCountValue;
-    }
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()
@@ -680,7 +672,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
 }
 )ORB";
 
-    constexpr const char* CubeTestBehaviourText = R"ORB(using System.Collections.Generic;
+    constexpr const char* CubeTestBehaviourText = R"ORB(using System;
 using Orbeden;
 
 namespace {{PROJECT_NAME}};
@@ -709,15 +701,6 @@ public sealed class CubeTestBehaviour : ScriptBehaviour
     /// <summary>Inspector 中显示当前运行状态。</summary>
     public string Status => $"{label}: {updateCount} updates";
 
-    /// <summary>应用 world sidecar 中保存的序列化字段。</summary>
-    internal void ApplySerializedValues(IReadOnlyDictionary<string, string> values)
-    {
-        if (ScriptValueReader.TryGetString(values, nameof(label), out string labelValue)) label = labelValue;
-        if (ScriptValueReader.TryGetBool(values, nameof(animateScale), out bool animateScaleValue)) animateScale = animateScaleValue;
-        if (ScriptValueReader.TryGetFloat(values, nameof(pulseAmplitude), out float pulseAmplitudeValue)) pulseAmplitude = pulseAmplitudeValue;
-        if (ScriptValueReader.TryGetFloat(values, nameof(pulseSpeed), out float pulseSpeedValue)) pulseSpeed = pulseSpeedValue;
-        if (ScriptValueReader.TryGetVector3(values, nameof(debugOffset), out vector3 debugOffsetValue)) debugOffset = debugOffsetValue;
-    }
 
     /// <summary>脚本启动时调用。</summary>
     protected override void OnStart()

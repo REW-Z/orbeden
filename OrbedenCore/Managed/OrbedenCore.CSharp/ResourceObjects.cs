@@ -174,6 +174,23 @@ public abstract partial class Object
         return create(pointer);
     }
 
+    //按运行时 ID 获取已经存在的托管包装，不隐式猜测原生派生类型。
+    internal static Object? FindCachedObject(int id)
+    {
+        if (id == 0) return null;
+        lock (cacheLock)
+        {
+            return cache.TryGetValue(id, out WrapperEntry? entry)
+                && entry.wrapper.TryGetTarget(out Object? target)
+                && target.IsAlive
+                ? target
+                : null;
+        }
+    }
+
+    /// <summary>按运行时 ID 返回已存在的托管包装，不创建未知原生派生类型。</summary>
+    public static Object? FindLoadedObject(int id) => FindCachedObject(id);
+
     //收集当前活跃托管根
     internal static int[] CollectManagedRootIds()
     {

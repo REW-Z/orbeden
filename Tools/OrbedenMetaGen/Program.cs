@@ -558,6 +558,13 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine($"        return Reflection::ToXmlValue({getterExpression});");
             output.AppendLine("    }");
             output.AppendLine();
+            output.AppendLine($"    //直接读取 {classInfo.Name}.{field.Name} 字段");
+            output.AppendLine($"    static Reflection::Value GetValue_{classInfo.Name}_{field.Name}(Object* object)");
+            output.AppendLine("    {");
+            output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(object);");
+            output.AppendLine($"        return instance ? Reflection::ToValue({getterExpression}) : Reflection::Value();");
+            output.AppendLine("    }");
+            output.AppendLine();
             output.AppendLine($"    //写入 {classInfo.Name}.{field.Name} 字段");
             output.AppendLine($"    static bool Set_{classInfo.Name}_{field.Name}(Object* object, const std::string& value)");
             output.AppendLine("    {");
@@ -582,13 +589,38 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             }
             output.AppendLine("    }");
             output.AppendLine();
+            output.AppendLine($"    //直接写入 {classInfo.Name}.{field.Name} 字段");
+            output.AppendLine($"    static bool SetValue_{classInfo.Name}_{field.Name}(Object* object, const Reflection::Value& value)");
+            output.AppendLine("    {");
+            output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(object);");
+            output.AppendLine("        if (!instance) return false;");
+            if (setterBacked)
+            {
+                var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
+                output.AppendLine($"        {field.Type} parsedValue{{}};");
+                output.AppendLine("        if (!Reflection::SetFromValue(parsedValue, value)) return false;");
+                output.AppendLine($"        instance->{setterName}(parsedValue);");
+                output.AppendLine("        return true;");
+            }
+            else if (marksDirty)
+            {
+                output.AppendLine($"        if (!Reflection::SetFromValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine("        instance->MarkDirty();");
+                output.AppendLine("        return true;");
+            }
+            else
+            {
+                output.AppendLine($"        return Reflection::SetFromValue(instance->{field.Name}, value);");
+            }
+            output.AppendLine("    }");
+            output.AppendLine();
         }
 
         foreach (var method in classInfo.Methods)
         {
             var invokerName = $"Invoke_{classInfo.Name}_{method.Name}_{method.InvokerIndex}";
             output.AppendLine($"    //调用 {classInfo.Name}.{method.Name} 方法");
-            output.AppendLine($"    static Reflection::Value {invokerName}(Object* object, const List<Reflection::Value>& args, bool& success)");
+            output.AppendLine($"    static Reflection::Value {invokerName}(Object* object, std::span<const Reflection::Value> args, bool& success)");
             output.AppendLine("    {");
             output.AppendLine("        success = false;");
             output.AppendLine($"        {classInfo.Name}* instance = static_cast<{classInfo.Name}*>(object);");
@@ -659,7 +691,9 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             var getter = field.Persistent ? $"ReflectionGeneratedAccess::Get_{classInfo.Name}_{field.Name}" : "nullptr";
             var setter = field.Persistent ? $"ReflectionGeneratedAccess::Set_{classInfo.Name}_{field.Name}" : "nullptr";
             var objectRefTypeName = field.ObjectRefTypeName is null ? "nullptr" : $"\"{field.ObjectRefTypeName}\"";
-            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}),");
+            var valueGetter = field.Persistent ? $"ReflectionGeneratedAccess::GetValue_{classInfo.Name}_{field.Name}" : "nullptr";
+            var valueSetter = field.Persistent ? $"ReflectionGeneratedAccess::SetValue_{classInfo.Name}_{field.Name}" : "nullptr";
+            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}),");
         }
 
         output.AppendLine("            });");

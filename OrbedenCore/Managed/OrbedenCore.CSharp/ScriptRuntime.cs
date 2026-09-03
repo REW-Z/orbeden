@@ -107,7 +107,10 @@ internal static class ScriptRuntime
     public static void Initialize(IntPtr nativeApi)
     {
         OrbedenCoreRuntime.Initialize(nativeApi);
+        ManagedScriptInterop.Shutdown();
         ShutdownMountedScripts();
+        ScriptRuntimeRegistry.Clear();
+        ManagedScriptInterop.Initialize();
 
         string sidecarPath = GetStartupWorldSidecarPath();
         if (string.IsNullOrEmpty(sidecarPath) || !File.Exists(sidecarPath))
@@ -211,6 +214,51 @@ internal static class ScriptRuntime
         }
     }
 
+    /// <summary>在运行态挂载一个脚本，并在下一个脚本阶段参与 Start 和阶段表。</summary>
+    public static ScriptBehaviour? AddMountedScript(EnsId ensId,
+        string mountId,
+        string typeName,
+        bool enabled,
+        IReadOnlyDictionary<string, string>? serializedValues = null)
+    {
+        if (ensId.IsNull || string.IsNullOrWhiteSpace(mountId) || string.IsNullOrWhiteSpace(typeName)) return null;
+        Ens ens = Ens.FromId(ensId);
+        if (!ens.IsValid) return null;
+        if (scriptsByEns.TryGetValue(ensId, out List<ScriptInstance>? existing)
+            && existing.Any(instance => string.Equals(instance.Script.MountId, mountId, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
+        ScriptMount mount = new()
+        {
+            Id = mountId,
+            Type = typeName,
+            Enabled = enabled,
+            Values = serializedValues == null
+                ? []
+                : new Dictionary<string, string>(serializedValues, StringComparer.Ordinal),
+        };
+        ScriptInstance? instance = CreateScript(mount, ens);
+        if (instance == null) return null;
+        RegisterScript(instance);
+        invocationListsDirty = true;
+        return instance.Script;
+    }
+
+    /// <summary>从运行态移除指定挂载脚本；已 Start 的实例只执行一次 End。</summary>
+    public static bool RemoveMountedScript(EnsId ensId, string mountId)
+    {
+        if (!scriptsByEns.TryGetValue(ensId, out List<ScriptInstance>? instances)) return false;
+        ScriptInstance? instance = instances.FirstOrDefault(candidate =>
+            !candidate.Destroyed && string.Equals(candidate.Script.MountId, mountId, StringComparison.Ordinal));
+        if (instance == null) return false;
+        DestroyScript(instance);
+        invocationListsDirty = true;
+        if (dispatchDepth == 0) RemoveDestroyedScripts();
+        return true;
+    }
+
     /// <summary>响应 ScriptBehaviour.enabled 变化。</summary>
     internal static void OnEnabledChanged(ScriptBehaviour script)
     {
@@ -246,7 +294,10 @@ internal static class ScriptRuntime
     public static void Shutdown()
     {
         ShutdownMountedScripts();
+        ScriptRuntimeRegistry.Clear();
+        ManagedScriptInterop.Shutdown();
         scriptFactories.Clear();
+        ManagedTypeMetadataCache.Clear();
         gameAssembly = null;
         if (gameContext != null)
         {
@@ -273,6 +324,7 @@ internal static class ScriptRuntime
             gameContext = new GameAssemblyLoadContext(fullPath);
             gameAssembly = gameContext.LoadAssemblyFile(fullPath);
             scriptFactories.Clear();
+            ManagedTypeMetadataCache.Clear();
             return true;
         }
         catch (Exception exception)
@@ -334,7 +386,14 @@ internal static class ScriptRuntime
 
             script.SetMountId(mount.Id);
             script.enabled = mount.Enabled;
-            factory.SerializedValueApplier?.Invoke(script, [mount.Values]);
+            if (factory.SerializedValueApplier != null)
+            {
+                factory.SerializedValueApplier.Invoke(script, [mount.Values]);
+            }
+            else
+            {
+                ManagedTypeMetadataCache.ApplySerializedValues(script, mount.Values);
+            }
             return new ScriptInstance
             {
                 Script = script,

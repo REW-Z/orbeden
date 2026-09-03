@@ -28,11 +28,13 @@
 namespace
 {
     using ManagedInitializeEditorFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(void*);
-    using ManagedDrawPanelFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint32, uint32, const uint8*, int32);
+    using ManagedDrawPanelFn = void(CORECLR_DELEGATE_CALLTYPE*)(
+        int32, uint32, uint32, const EnsId*, int32, const uint8*, int32, const uint8*, int32);
     using ManagedSetPanelVisibleFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint8);
     using ManagedDrawEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedCommandFn = uint8(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
         const uint8*, int32,
         const uint8*, int32,
@@ -49,6 +51,10 @@ namespace
     constexpr const char* EditorUnloadGameAssemblyMethod = "UnloadGameAssembly";
     constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
     constexpr const char* EditorPublishGameAotMethod = "PublishGameAot";
+    constexpr const char* EditorSaveProjectStateMethod = "SaveProjectState";
+    constexpr const char* EditorUndoMethod = "Undo";
+    constexpr const char* EditorRedoMethod = "Redo";
+    constexpr const char* EditorWorldSavedMethod = "WorldSaved";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -103,6 +109,7 @@ namespace
     public:
         void* context = nullptr;
         void* requestRepaint = nullptr;
+        void* isPlaying = nullptr;
     };
 
     //传给 Editor C# 的原生函数表。
@@ -122,15 +129,15 @@ namespace
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 2);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 3);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 13);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 54);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 55);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 33);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 35);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 37);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 41);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 34);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 36);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 38);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 42);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -206,6 +213,13 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (editor) editor->RequestRepaint();
+    }
+
+    //查询当前是否处于 Play-In-Editor。
+    uint8 ORBEDEN_NATIVE_CALL IsManagedEditorPlaying(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && editor->IsPlaying() ? 1 : 0;
     }
 
     //重映射原生对象资源引用
@@ -439,7 +453,11 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorLoadGameAssemblyMethod, &LoadGameAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUnloadGameAssemblyMethod, &UnloadGameAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawSceneGizmosMethod, &DrawSceneGizmosFunction)
-        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction))
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorWorldSavedMethod, &WorldSavedFunction))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
         Shutdown();
@@ -454,6 +472,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.gui = editorGUI.GetNativeApi();
     editorApi.application.context = &editor;
     editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
+    editorApi.application.isPlaying = reinterpret_cast<void*>(&IsManagedEditorPlaying);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
@@ -493,11 +512,20 @@ void ManagedEditorBridge::Shutdown()
     LoadGameAssemblyFunction = nullptr;
     UnloadGameAssemblyFunction = nullptr;
     PublishGameAotFunction = nullptr;
+    SaveProjectStateFunction = nullptr;
+    UndoFunction = nullptr;
+    RedoFunction = nullptr;
+    WorldSavedFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
 
-void ManagedEditorBridge::DrawPanel(int32 handle, EnsId selectedEns, const std::string& stableId)
+void ManagedEditorBridge::DrawPanel(int32 handle,
+    EnsId selectedEns,
+    const EnsId* selectedEnsList,
+    int32 selectedEnsCount,
+    const std::string& selectedStableIds,
+    const std::string& stableId)
 {
     if (!initialized || !DrawPanelFunction) return;
 
@@ -505,6 +533,10 @@ void ManagedEditorBridge::DrawPanel(int32 handle, EnsId selectedEns, const std::
     drawPanel(handle,
         selectedEns.id,
         selectedEns.version,
+        selectedEnsList,
+        selectedEnsCount,
+        reinterpret_cast<const uint8*>(selectedStableIds.data()),
+        static_cast<int32>(selectedStableIds.size()),
         reinterpret_cast<const uint8*>(stableId.data()),
         static_cast<int32>(stableId.size()));
 }
@@ -542,6 +574,34 @@ void ManagedEditorBridge::DrawSceneGizmos()
 
     ManagedDrawEditorFn drawSceneGizmos = reinterpret_cast<ManagedDrawEditorFn>(DrawSceneGizmosFunction);
     drawSceneGizmos();
+}
+
+bool ManagedEditorBridge::SaveProjectState()
+{
+    if (!initialized || !SaveProjectStateFunction) return true;
+    ManagedCommandFn saveProjectState = reinterpret_cast<ManagedCommandFn>(SaveProjectStateFunction);
+    return saveProjectState() != 0;
+}
+
+bool ManagedEditorBridge::Undo()
+{
+    if (!initialized || !UndoFunction) return false;
+    ManagedCommandFn undo = reinterpret_cast<ManagedCommandFn>(UndoFunction);
+    return undo() != 0;
+}
+
+bool ManagedEditorBridge::Redo()
+{
+    if (!initialized || !RedoFunction) return false;
+    ManagedCommandFn redo = reinterpret_cast<ManagedCommandFn>(RedoFunction);
+    return redo() != 0;
+}
+
+void ManagedEditorBridge::NotifyWorldSaved()
+{
+    if (!initialized || !WorldSavedFunction) return;
+    ManagedDrawEditorFn worldSaved = reinterpret_cast<ManagedDrawEditorFn>(WorldSavedFunction);
+    worldSaved();
 }
 
 bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,

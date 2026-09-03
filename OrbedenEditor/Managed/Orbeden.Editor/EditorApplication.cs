@@ -9,6 +9,7 @@ internal unsafe struct EditorApplicationNativeApi
 {
     public IntPtr Context;
     public delegate* unmanaged[Cdecl]<IntPtr, void> RequestRepaint;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte> IsPlaying;
 }
 #pragma warning restore CS0649
 
@@ -16,6 +17,9 @@ internal unsafe struct EditorApplicationNativeApi
 public static unsafe class EditorApplication
 {
     private static EditorApplicationNativeApi api;
+    public static bool WorldDirty { get; private set; }
+    public static bool SidecarDirty { get; private set; }
+    public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 
     /// <summary>保存原生 Editor 应用 API。</summary>
     internal static void Initialize(EditorApplicationNativeApi value)
@@ -27,5 +31,15 @@ public static unsafe class EditorApplication
     public static void RequestRepaint()
     {
         if (api.RequestRepaint != null) api.RequestRepaint(api.Context);
+    }
+
+    internal static void MarkWorldDirty() { if (!IsPlaying) WorldDirty = true; }
+    internal static void MarkSidecarDirty() { if (!IsPlaying) SidecarDirty = true; }
+    internal static void ClearWorldDirty() => WorldDirty = false;
+    internal static void ClearSidecarDirty() => SidecarDirty = false;
+    internal static void ClearDirty()
+    {
+        WorldDirty = false;
+        SidecarDirty = false;
     }
 }

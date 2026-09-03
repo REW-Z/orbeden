@@ -2,6 +2,7 @@
 
 #include "Runtime/Gui/RuntimeGuiBridge.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
+#include "Scripting/ScriptInterop.h"
 
 #pragma pack(push, 8)
 
@@ -25,6 +26,7 @@ public:
     RuntimeGuiExtensionApi GuiExtension;
     RuntimeGuiAdvancedApi GuiAdvanced;
     ObjectExtensionBind ObjectExtension;
+    ScriptInterop::ScriptInteropApi ScriptInterop;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create();
@@ -32,7 +34,8 @@ public:
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 231);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 240);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Gui, 0);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 152);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 230);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptInterop, 231);

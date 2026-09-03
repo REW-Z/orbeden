@@ -48,12 +48,17 @@ internal readonly struct EditorPanelInfo
 internal readonly struct EditorPanelContext
 {
     public EnsId SelectedEns { get; }
+    public IReadOnlyList<EnsId> SelectedEnsList { get; }
+    public IReadOnlyList<string> SelectedStableIds { get; }
     public string SelectedStableId { get; }
 
     /// <summary>创建当前帧 Panel 上下文。</summary>
-    public EditorPanelContext(EnsId selectedEns, string selectedStableId)
+    public EditorPanelContext(EnsId selectedEns, IReadOnlyList<EnsId> selectedEnsList,
+        IReadOnlyList<string> selectedStableIds, string selectedStableId)
     {
         SelectedEns = selectedEns;
+        SelectedEnsList = selectedEnsList;
+        SelectedStableIds = selectedStableIds;
         SelectedStableId = selectedStableId;
     }
 }
@@ -80,6 +85,9 @@ internal abstract class EditorPanel
 
     /// <summary>资源路径变化后同步 Panel 内部缓存。</summary>
     public virtual void OnAssetReferencesRemapped(string oldKey, string newKey, bool prefix) { }
+
+    /// <summary>统一保存当前 Panel 暂存的项目数据。</summary>
+    public virtual bool SavePendingChanges() => true;
 }
 
 #pragma warning disable CS0649

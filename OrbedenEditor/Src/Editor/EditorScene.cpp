@@ -411,6 +411,12 @@ EnsId EditorScene::GetSelectedEns() const
     return activeEns;
 }
 
+//获取完整选择列表。
+const List<EnsId>& EditorScene::GetSelectedEnsList() const
+{
+    return selectedEns;
+}
+
 //判断指定 Ens 是否被选中。
 bool EditorScene::IsSelected(EnsId ens) const
 {
@@ -420,8 +426,14 @@ bool EditorScene::IsSelected(EnsId ens) const
 //获取当前活动选择的稳定 ID。
 std::string EditorScene::GetSelectedStableId() const
 {
-    if (activeEns.IsNull()) return std::string();
-    const TransformComponent* transform = app.GetWorld().GetTransformComponent(activeEns);
+    return GetStableId(activeEns);
+}
+
+//获取指定 Ens 的稳定 ID。
+std::string EditorScene::GetStableId(EnsId ens) const
+{
+    if (ens.IsNull()) return std::string();
+    const TransformComponent* transform = app.GetWorld().GetTransformComponent(ens);
     return transform ? transform->GetInstanceId().GetPath() : std::string();
 }
 

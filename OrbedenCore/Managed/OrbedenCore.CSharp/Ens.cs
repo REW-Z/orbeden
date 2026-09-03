@@ -172,6 +172,25 @@ public sealed partial class Ens : IEquatable<Ens>
     /// <summary>判断是否拥有指定类型组件。</summary>
     public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
 
+    /// <summary>按完整原生类型名获取可反射读写和调用的 C++ 组件。</summary>
+    public ComponentProxy? GetNativeComponent(string nativeTypeName, int occurrence = 0)
+    {
+        return ScriptInteropDispatch.FindNative(Id, nativeTypeName, occurrence);
+    }
+
+    /// <summary>按完整托管类型名获取可反射读写和调用的 C# 脚本。</summary>
+    public ComponentProxy? GetManagedComponent(string fullTypeName, int occurrence = 0)
+    {
+        return ScriptInteropDispatch.FindManaged(Id, fullTypeName, occurrence);
+    }
+
+    /// <summary>按脚本类型获取可反射读写和调用的 C# 脚本。</summary>
+    public ComponentProxy? GetManagedComponent<T>(int occurrence = 0) where T : ScriptBehaviour
+    {
+        string? fullName = typeof(T).FullName;
+        return string.IsNullOrEmpty(fullName) ? null : GetManagedComponent(fullName, occurrence);
+    }
+
     /// <summary>尝试获取组件包装。</summary>
     public bool TryGetComponent<T>(out T? component) where T : Component
     {
