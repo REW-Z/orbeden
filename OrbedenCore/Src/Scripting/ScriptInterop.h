@@ -138,6 +138,9 @@ namespace ScriptInterop
 
         //同步调用公开实例方法。
         InteropStatus Invoke(std::string_view name, std::span<const Reflection::Value> args, Reflection::Value& result) const;
+
+        //通过预解析方法句柄调用；适用于重复调用，避免再次处理方法名和参数签名。
+        InteropStatus Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const;
     };
 
     //按本进程 TypeId 查找原生组件。

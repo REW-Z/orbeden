@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Orbeden;
 
@@ -70,11 +71,27 @@ public static class ScriptRuntimeRegistry
         return false;
     }
 
-    internal static bool TryResolve(ComponentHandle handle, out ScriptBehaviour? script)
+    internal static bool TryResolve(ComponentHandle handle, [NotNullWhen(true)] out ScriptBehaviour? script)
     {
         if (handle.Domain == ComponentDomain.Managed && handle.Generation == generation && scriptsBySlot.TryGetValue(handle.Slot, out script)) return true;
         script = null;
         return false;
+    }
+
+    /// <summary>在当前 PIE 运行时挂载脚本，并在下一个脚本阶段加入调用表。</summary>
+    public static ScriptBehaviour? AddMountedScript(EnsId ens,
+        string mountId,
+        string typeName,
+        bool enabled,
+        IReadOnlyDictionary<string, string>? serializedValues = null)
+    {
+        return ScriptRuntime.AddMountedScript(ens, mountId, typeName, enabled, serializedValues);
+    }
+
+    /// <summary>从当前 PIE 运行时移除脚本，已启动实例只执行一次 End。</summary>
+    public static bool RemoveMountedScript(EnsId ens, string mountId)
+    {
+        return ScriptRuntime.RemoveMountedScript(ens, mountId);
     }
 
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>

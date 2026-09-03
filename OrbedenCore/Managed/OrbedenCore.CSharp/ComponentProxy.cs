@@ -143,6 +143,34 @@ public readonly struct InteropValue : IEquatable<InteropValue>
     public override string ToString() => data?.ToString() ?? string.Empty;
 }
 
+/// <summary>绑定到一个组件实例的预解析方法，可重复调用而不再按名称查找。</summary>
+public readonly struct ComponentMethod
+{
+    private readonly ComponentHandle component;
+    private readonly MemberHandle method;
+
+    internal ComponentMethod(ComponentHandle componentHandle, MemberHandle methodHandle)
+    {
+        component = componentHandle;
+        method = methodHandle;
+    }
+
+    /// <summary>判断所属组件是否仍然有效；方法会在调用时继续校验代次。</summary>
+    public bool IsValid => ScriptInteropDispatch.IsValid(component) == InteropStatus.Ok;
+
+    /// <summary>使用已解析的方法句柄同步调用。</summary>
+    public InteropStatus Invoke(ReadOnlySpan<InteropValue> arguments, out InteropValue result)
+    {
+        return ScriptInteropDispatch.Invoke(component, method, arguments, out result);
+    }
+
+    /// <summary>使用已解析的方法句柄同步调用。</summary>
+    public InteropStatus Invoke(out InteropValue result, params InteropValue[] arguments)
+    {
+        return Invoke(arguments.AsSpan(), out result);
+    }
+}
+
 /// <summary>预解析组件字段和方法的统一代理。</summary>
 public sealed class ComponentProxy
 {
@@ -165,6 +193,20 @@ public sealed class ComponentProxy
     public InteropStatus ResolveMethod(string name, params InteropValueKind[] parameterKinds)
     {
         return ResolveMethodHandle(name, parameterKinds, out _);
+    }
+
+    /// <summary>解析一次方法名和参数签名，返回可重复调用的方法对象。</summary>
+    public InteropStatus TryResolveMethod(string name, ReadOnlySpan<InteropValueKind> parameterKinds, out ComponentMethod method)
+    {
+        InteropStatus status = ResolveMethodHandle(name, parameterKinds, out MemberHandle member);
+        method = status == InteropStatus.Ok ? new ComponentMethod(handle, member) : default;
+        return status;
+    }
+
+    /// <summary>解析一次方法名和参数签名，返回可重复调用的方法对象。</summary>
+    public InteropStatus TryResolveMethod(string name, out ComponentMethod method, params InteropValueKind[] parameterKinds)
+    {
+        return TryResolveMethod(name, parameterKinds.AsSpan(), out method);
     }
 
     public InteropStatus TryGetField(string name, out InteropValue value)

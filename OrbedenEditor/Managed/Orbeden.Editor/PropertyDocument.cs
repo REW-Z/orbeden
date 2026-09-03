@@ -146,6 +146,7 @@ public sealed class PropertyDocument
     }
 
     public IReadOnlyList<PropertyValue> Properties => properties;
+    public bool HasPendingChanges => modified;
 
     public void Update()
     {

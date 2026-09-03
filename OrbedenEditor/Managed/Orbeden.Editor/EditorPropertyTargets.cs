@@ -210,7 +210,7 @@ internal static class EditorManagedInteropValue
         }
         else { result = null; return false; }
 
-        result = type.IsEnum ? Enum.ToObject(type, raw) : raw;
+        result = type.IsEnum ? Enum.ToObject(type, raw!) : raw;
         return true;
     }
 }

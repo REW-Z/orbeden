@@ -49,7 +49,9 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <!-- 自动导出通过扫描 .obj 生成 .def；CMake __create_def 无法读取 /GL LTCG 对象。 -->
+    <!-- Player 的静态 Core 由 CMake 单独构建，不受此 Editor DLL 设置影响。 -->
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -75,6 +77,9 @@
     <OrbedenCoreNativePlatform Condition="'$(Platform)'=='Win32'">WindowsX86</OrbedenCoreNativePlatform>
     <OrbedenCoreNativePlatform Condition="'$(OrbedenCoreNativePlatform)'==''">$(Platform)</OrbedenCoreNativePlatform>
     <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\Sdk\Native\$(OrbedenCoreNativePlatform)\$(Configuration)\</OrbedenCoreOutputDir>
+    <OrbedenEditorSdkDir>$(ProjectDir)..\OrbedenEditor\Sdk\</OrbedenEditorSdkDir>
+    <OrbedenNativeSdkIncludeDir>$(OrbedenEditorSdkDir)Native\Include\</OrbedenNativeSdkIncludeDir>
+    <OrbedenMetaGenSdkDir>$(OrbedenEditorSdkDir)Tools\OrbedenMetaGen\</OrbedenMetaGenSdkDir>
     <OutDir>$(OrbedenCoreOutputDir)</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -167,6 +172,7 @@
     <ClInclude Include="Src\Rendering\RenderScene.h" />
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptSystem.h" />
+    <ClInclude Include="Src\Scripting\ScriptInterop.h" />
     <ClInclude Include="Src\Scripting\ScriptBehaviour.h" />
     <ClInclude Include="Src\Scripting\NativeGameModule.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />
@@ -237,6 +243,7 @@
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
     <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
+    <ClCompile Include="Src\Scripting\ScriptInterop.cpp" />
     <ClCompile Include="Src\Scripting\ScriptBehaviour.cpp" />
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
     <ClCompile Include="Src\Rendering\TransformCache.cpp" />
@@ -283,6 +290,21 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
     <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;"
+          UseUtf8Encoding="Always"
+          StdOutEncoding="UTF-8"
+          StdErrEncoding="UTF-8" />
+  </Target>
+  <Target Name="PublishNativeGameSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <ItemGroup>
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.h" />
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.hpp" />
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.inl" />
+    </ItemGroup>
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir)" />
+    <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
+          DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;"
           UseUtf8Encoding="Always"
           StdOutEncoding="UTF-8"
           StdErrEncoding="UTF-8" />
