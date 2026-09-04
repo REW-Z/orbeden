@@ -1,302 +1,228 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text.Json;
 
 namespace Orbeden;
 
-/// <summary>管理当前 World 的托管脚本生命周期和预绑定回调表。</summary>
+/// <summary>管理绑定原生 ScriptBehaviour 宿主的 C# 脚本和预解析生命周期表。</summary>
 internal static class ScriptRuntime
 {
-    private const DynamicallyAccessedMemberTypes ScriptMemberTypes =
+    private const DynamicallyAccessedMemberTypes ScriptMembers =
         DynamicallyAccessedMemberTypes.PublicConstructors |
         DynamicallyAccessedMemberTypes.PublicMethods |
         DynamicallyAccessedMemberTypes.NonPublicMethods;
 
-    private sealed class GameAssemblyLoadContext : AssemblyLoadContext
+    private sealed class GameLoadContext(string assemblyPath) : AssemblyLoadContext(isCollectible: true)
     {
-        private readonly AssemblyDependencyResolver resolver;
+        private readonly AssemblyDependencyResolver resolver = new(assemblyPath);
 
-        /// <summary>创建可卸载的游戏程序集上下文。</summary>
-        public GameAssemblyLoadContext(string assemblyPath) : base(isCollectible: true)
+        [UnconditionalSuppressMessage("Trimming", "IL2026",
+            Justification = "Only the non-trimmed Editor CLR runtime loads files dynamically.")]
+        internal Assembly LoadFile(string path)
         {
-            resolver = new AssemblyDependencyResolver(assemblyPath);
+            using FileStream assembly = File.OpenRead(path);
+            string symbolsPath = Path.ChangeExtension(path, ".pdb");
+            if (!File.Exists(symbolsPath)) return LoadFromStream(assembly);
+            using FileStream symbols = File.OpenRead(symbolsPath);
+            return LoadFromStream(assembly, symbols);
         }
 
-        /// <summary>从内存加载程序集，避免锁定构建输出。</summary>
-        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "This path is used only by the non-trimmed Editor CLR runtime.")]
-        public Assembly LoadAssemblyFile(string assemblyPath)
+        protected override Assembly? Load(AssemblyName name)
         {
-            using FileStream assemblyStream = File.OpenRead(assemblyPath);
-            string symbolPath = Path.ChangeExtension(assemblyPath, ".pdb");
-            if (!File.Exists(symbolPath)) return LoadFromStream(assemblyStream);
-
-            using FileStream symbolStream = File.OpenRead(symbolPath);
-            return LoadFromStream(assemblyStream, symbolStream);
-        }
-
-        /// <summary>复用引擎托管程序集并解析游戏依赖。</summary>
-        protected override Assembly? Load(AssemblyName assemblyName)
-        {
-            Assembly runtimeAssembly = typeof(ScriptBehaviour).Assembly;
-            if (assemblyName.Name == runtimeAssembly.GetName().Name) return runtimeAssembly;
-
-            string? path = resolver.ResolveAssemblyToPath(assemblyName);
-            return path != null ? LoadAssemblyFile(path) : null;
+            Assembly core = typeof(ScriptBehaviour).Assembly;
+            if (name.Name == core.GetName().Name) return core;
+            string? path = resolver.ResolveAssemblyToPath(name);
+            return path == null ? null : LoadFile(path);
         }
     }
 
-    private sealed class ScriptMount
+    private sealed class ScriptFactory
     {
-        public string Id = string.Empty;
-        public string StableId = string.Empty;
-        public string Type = string.Empty;
-        public bool Enabled = true;
-        public Dictionary<string, string> Values = [];
-    }
-
-    private sealed class ScriptTypeFactory
-    {
-        public ConstructorInfo Constructor = null!;
-        public MethodInfo? SerializedValueApplier;
-        public MethodInfo? Start;
-        public MethodInfo? Update;
-        public MethodInfo? FixedUpdate;
-        public MethodInfo? LateUpdate;
-        public MethodInfo? DrawGUI;
-        public MethodInfo? End;
+        internal ConstructorInfo Constructor = null!;
+        internal MethodInfo? Start;
+        internal MethodInfo? Update;
+        internal MethodInfo? FixedUpdate;
+        internal MethodInfo? LateUpdate;
+        internal MethodInfo? DrawGUI;
+        internal MethodInfo? End;
     }
 
     private sealed class ScriptInstance
     {
-        public ScriptBehaviour Script = null!;
-        public Action? Start;
-        public Action<float>? Update;
-        public Action<float>? FixedUpdate;
-        public Action<float>? LateUpdate;
-        public Action? DrawGUI;
-        public Action? End;
-        public bool WorldActive;
-        public bool Started;
-        public bool Destroyed;
+        internal IntPtr Host;
+        internal ScriptBehaviour Script = null!;
+        internal Action? Start;
+        internal Action<float>? Update;
+        internal Action<float>? FixedUpdate;
+        internal Action<float>? LateUpdate;
+        internal Action? DrawGUI;
+        internal Action? End;
+        internal bool WorldActive;
+        internal bool Started;
+        internal bool Destroyed;
     }
 
-    private readonly record struct UpdateInvocation(ScriptInstance Instance, Action<float> Callback);
-    private readonly record struct Invocation(ScriptInstance Instance, Action Callback);
+    private readonly record struct TimedCall(ScriptInstance Instance, Action<float> Callback);
+    private readonly record struct Call(ScriptInstance Instance, Action Callback);
 
     private static readonly List<ScriptInstance> scripts = [];
-    private static readonly Dictionary<ScriptBehaviour, ScriptInstance> scriptByObject = [];
+    private static readonly Dictionary<IntPtr, ScriptInstance> scriptsByHost = [];
+    private static readonly Dictionary<ScriptBehaviour, ScriptInstance> scriptsByObject = [];
     private static readonly Dictionary<EnsId, List<ScriptInstance>> scriptsByEns = [];
-    private static readonly Dictionary<string, ScriptTypeFactory> scriptFactories = [];
-    private static readonly List<UpdateInvocation> updateInvocations = [];
-    private static readonly List<UpdateInvocation> fixedUpdateInvocations = [];
-    private static readonly List<UpdateInvocation> lateUpdateInvocations = [];
-    private static readonly List<Invocation> drawGuiInvocations = [];
-    private static GameAssemblyLoadContext? gameContext;
+    private static readonly Dictionary<string, ScriptFactory> factories = new(StringComparer.Ordinal);
+    private static readonly List<Action> pendingAdds = [];
+    private static readonly List<TimedCall> updates = [];
+    private static readonly List<TimedCall> fixedUpdates = [];
+    private static readonly List<TimedCall> lateUpdates = [];
+    private static readonly List<Call> guiCalls = [];
+    private static GameLoadContext? gameContext;
     private static Assembly? gameAssembly;
-    private static bool invocationListsDirty;
-    private static bool hasDestroyedScripts;
+    private static bool callsDirty;
+    private static bool hasDestroyed;
+    private static bool rebuilding;
     private static int dispatchDepth;
 
-    /// <summary>初始化原生绑定并创建当前 World 的 C# 脚本。</summary>
+    /// <summary>连接原生 API，并为当前 World 已有的全部托管宿主创建 Wrapper。</summary>
     public static void Initialize(IntPtr nativeApi)
     {
         OrbedenCoreRuntime.Initialize(nativeApi);
         ManagedScriptInterop.Shutdown();
-        ShutdownMountedScripts();
+        ShutdownScripts();
         ScriptRuntimeRegistry.Clear();
         ManagedScriptInterop.Initialize();
 
-        string sidecarPath = GetStartupWorldSidecarPath();
-        if (string.IsNullOrEmpty(sidecarPath) || !File.Exists(sidecarPath))
-        {
-            Console.WriteLine("ScriptRuntime: world script sidecar was not found.");
-            return;
-        }
-
-        foreach (ScriptMount mount in ReadScriptMounts(sidecarPath))
-        {
-            Ens ens = Ens.Find(mount.StableId);
-            if (!ens.IsValid)
-            {
-                Console.WriteLine($"ScriptRuntime: missing Ens stableId '{mount.StableId}'.");
-                continue;
-            }
-
-            ScriptInstance? instance = CreateScript(mount, ens);
-            if (instance == null)
-            {
-                Console.WriteLine($"ScriptRuntime: unsupported script type '{mount.Type}'.");
-                continue;
-            }
-
-            RegisterScript(instance);
-        }
-
-        invocationListsDirty = true;
-        RebuildInvocationLists();
+        foreach (IntPtr host in ScriptBehaviour.GetManagedHosts()) CreateForHost(host);
+        callsDirty = true;
+        RebuildCalls();
     }
 
-    /// <summary>执行预绑定的 Update delegate 表。</summary>
-    public static void Update(float deltaTime)
-    {
-        PreparePhase();
-        dispatchDepth++;
-        try
-        {
-            foreach (UpdateInvocation invocation in updateInvocations)
-            {
-                Invoke(invocation.Instance, invocation.Callback, deltaTime, "OnUpdate");
-            }
-        }
-        finally
-        {
-            CompletePhase();
-        }
-    }
+    /// <summary>执行 Update 表。</summary>
+    public static void Update(float deltaTime) => Dispatch(updates, deltaTime, "OnUpdate");
 
-    /// <summary>执行预绑定的 FixedUpdate delegate 表。</summary>
-    public static void FixedUpdate(float fixedDeltaTime)
-    {
-        PreparePhase();
-        dispatchDepth++;
-        try
-        {
-            foreach (UpdateInvocation invocation in fixedUpdateInvocations)
-            {
-                Invoke(invocation.Instance, invocation.Callback, fixedDeltaTime, "OnFixedUpdate");
-            }
-        }
-        finally
-        {
-            CompletePhase();
-        }
-    }
+    /// <summary>执行 FixedUpdate 表。</summary>
+    public static void FixedUpdate(float fixedDeltaTime) =>
+        Dispatch(fixedUpdates, fixedDeltaTime, "OnFixedUpdate");
 
-    /// <summary>执行预绑定的 LateUpdate delegate 表。</summary>
-    public static void LateUpdate(float deltaTime)
-    {
-        PreparePhase();
-        dispatchDepth++;
-        try
-        {
-            foreach (UpdateInvocation invocation in lateUpdateInvocations)
-            {
-                Invoke(invocation.Instance, invocation.Callback, deltaTime, "OnLateUpdate");
-            }
-        }
-        finally
-        {
-            CompletePhase();
-        }
-    }
+    /// <summary>执行 LateUpdate 表。</summary>
+    public static void LateUpdate(float deltaTime) =>
+        Dispatch(lateUpdates, deltaTime, "OnLateUpdate");
 
-    /// <summary>执行预绑定的 DrawGUI delegate 表。</summary>
+    /// <summary>执行 DrawGUI 表。</summary>
     public static void DrawGUI()
     {
         PreparePhase();
-        dispatchDepth++;
+        ++dispatchDepth;
         try
         {
-            foreach (Invocation invocation in drawGuiInvocations)
+            foreach (Call call in guiCalls)
             {
-                Invoke(invocation.Instance, invocation.Callback, "OnDrawGUI");
+                if (IsRunnable(call.Instance))
+                    Invoke(call.Instance, call.Callback, "OnDrawGUI");
             }
         }
-        finally
-        {
-            CompletePhase();
-        }
+        finally { CompletePhase(); }
     }
 
-    /// <summary>在运行态挂载一个脚本，并在下一个脚本阶段参与 Start 和阶段表。</summary>
-    public static ScriptBehaviour? AddMountedScript(EnsId ensId,
-        string mountId,
-        string typeName,
-        bool enabled,
-        IReadOnlyDictionary<string, string>? serializedValues = null)
+    /// <summary>创建一个具有独立原生组件身份的托管脚本。</summary>
+    internal static ScriptBehaviour? AddManagedScript(EnsId ens, Type type)
     {
-        if (ensId.IsNull || string.IsNullOrWhiteSpace(mountId) || string.IsNullOrWhiteSpace(typeName)) return null;
-        Ens ens = Ens.FromId(ensId);
-        if (!ens.IsValid) return null;
-        if (scriptsByEns.TryGetValue(ensId, out List<ScriptInstance>? existing)
-            && existing.Any(instance => string.Equals(instance.Script.MountId, mountId, StringComparison.Ordinal)))
+        if (ens.IsNull || type.IsAbstract || !typeof(ScriptBehaviour).IsAssignableFrom(type))
+            return null;
+        string? typeName = type.FullName;
+        if (string.IsNullOrEmpty(typeName) || !TryGetFactory(typeName, out _)) return null;
+
+        IntPtr host = ScriptBehaviour.CreateManagedHost(ens, typeName);
+        if (host == IntPtr.Zero) return null;
+        if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
+            instance = CreateForHost(host);
+        if (instance == null)
         {
+            ScriptBehaviour.RemoveManagedHost(host);
             return null;
         }
 
-        ScriptMount mount = new()
-        {
-            Id = mountId,
-            Type = typeName,
-            Enabled = enabled,
-            Values = serializedValues == null
-                ? []
-                : new Dictionary<string, string>(serializedValues, StringComparer.Ordinal),
-        };
-        ScriptInstance? instance = CreateScript(mount, ens);
-        if (instance == null) return null;
-        RegisterScript(instance);
-        invocationListsDirty = true;
+        ManagedTypeMetadataCache.WriteMissingHostFields(instance.Script, host);
         return instance.Script;
     }
 
-    /// <summary>从运行态移除指定挂载脚本；已 Start 的实例只执行一次 End。</summary>
-    public static bool RemoveMountedScript(EnsId ensId, string mountId)
+    /// <summary>移除 Wrapper 对应的原生宿主组件。</summary>
+    internal static bool RemoveManagedScript(ScriptBehaviour script)
     {
-        if (!scriptsByEns.TryGetValue(ensId, out List<ScriptInstance>? instances)) return false;
-        ScriptInstance? instance = instances.FirstOrDefault(candidate =>
-            !candidate.Destroyed && string.Equals(candidate.Script.MountId, mountId, StringComparison.Ordinal));
-        if (instance == null) return false;
-        DestroyScript(instance);
-        invocationListsDirty = true;
-        if (dispatchDepth == 0) RemoveDestroyedScripts();
-        return true;
+        IntPtr host = script.NativePtr;
+        return scriptsByObject.ContainsKey(script) && host != IntPtr.Zero
+            && ScriptBehaviour.RemoveManagedHost(host);
     }
 
-    /// <summary>响应 ScriptBehaviour.enabled 变化。</summary>
-    internal static void OnEnabledChanged(ScriptBehaviour script)
+    /// <summary>响应原生宿主挂载事件。</summary>
+    internal static InteropStatus OnHostAttached(IntPtr host)
     {
-        if (scriptByObject.ContainsKey(script)) invocationListsDirty = true;
-    }
-
-    /// <summary>响应原生 World 转发的 Ens 活动状态变化。</summary>
-    public static void OnEnsWorldActiveChanged(EnsId ens, bool worldActive)
-    {
-        if (!scriptsByEns.TryGetValue(ens, out List<ScriptInstance>? instances)) return;
-
-        foreach (ScriptInstance instance in instances)
+        if (host == IntPtr.Zero) return InteropStatus.InvalidArgument;
+        if (scriptsByHost.ContainsKey(host)) return InteropStatus.Ok;
+        if (dispatchDepth != 0 || rebuilding)
         {
-            instance.WorldActive = worldActive;
+            pendingAdds.Add(() => CreateForHost(host));
+            return InteropStatus.Ok;
         }
-        invocationListsDirty = true;
+        return CreateForHost(host) == null ? InteropStatus.NotFound : InteropStatus.Ok;
     }
 
-    /// <summary>响应原生 World 转发的 Ens 销毁事件。</summary>
+    /// <summary>响应原生宿主移除事件，并立即使旧代理失效。</summary>
+    internal static InteropStatus OnHostDetached(IntPtr host)
+    {
+        if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
+            return host == IntPtr.Zero ? InteropStatus.InvalidArgument : InteropStatus.NotFound;
+        DestroyScript(instance);
+        callsDirty = true;
+        if (dispatchDepth == 0 && !rebuilding) RemoveDestroyed();
+        return InteropStatus.Ok;
+    }
+
+    /// <summary>响应原生宿主 enabled 变化。</summary>
+    internal static InteropStatus OnHostEnabledChanged(IntPtr host)
+    {
+        if (!scriptsByHost.ContainsKey(host)) return InteropStatus.NotFound;
+        callsDirty = true;
+        return InteropStatus.Ok;
+    }
+
+    /// <summary>把宿主字段的新值同步到活跃 Wrapper。</summary>
+    internal static InteropStatus OnHostFieldChanged(IntPtr host, string fieldName)
+    {
+        if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
+            return InteropStatus.NotFound;
+        return ManagedTypeMetadataCache.ApplyHostField(instance.Script, host, fieldName)
+            ? InteropStatus.Ok
+            : InteropStatus.NotFound;
+    }
+
+    /// <summary>响应 Ens 世界活动状态变化。</summary>
+    public static void OnEnsWorldActiveChanged(EnsId ens, bool active)
+    {
+        if (!scriptsByEns.TryGetValue(ens, out List<ScriptInstance>? values)) return;
+        foreach (ScriptInstance value in values) value.WorldActive = active;
+        callsDirty = true;
+    }
+
+    /// <summary>响应 Ens 销毁事件。</summary>
     public static void OnEnsDestroyed(EnsId ens)
     {
-        if (!scriptsByEns.TryGetValue(ens, out List<ScriptInstance>? instances)) return;
-
-        foreach (ScriptInstance instance in instances.ToArray())
-        {
-            DestroyScript(instance);
-        }
-        invocationListsDirty = true;
-        if (dispatchDepth == 0) RemoveDestroyedScripts();
+        if (!scriptsByEns.TryGetValue(ens, out List<ScriptInstance>? values)) return;
+        foreach (ScriptInstance value in values.ToArray()) DestroyScript(value);
+        callsDirty = true;
+        if (dispatchDepth == 0 && !rebuilding) RemoveDestroyed();
     }
 
-    /// <summary>关闭当前 World 的脚本实例和程序集引用。</summary>
+    /// <summary>结束全部 Wrapper；原生宿主仍由 World 负责销毁。</summary>
     public static void Shutdown()
     {
-        ShutdownMountedScripts();
+        ShutdownScripts();
         ScriptRuntimeRegistry.Clear();
         ManagedScriptInterop.Shutdown();
-        scriptFactories.Clear();
+        factories.Clear();
         ManagedTypeMetadataCache.Clear();
         gameAssembly = null;
         if (gameContext != null)
@@ -304,26 +230,23 @@ internal static class ScriptRuntime
             gameContext.Unload();
             gameContext = null;
         }
+        ScriptBehaviour.InitializeNativeApi(default);
     }
 
-    /// <summary>装载 Editor CLR 模式下的用户游戏程序集。</summary>
+    /// <summary>加载 Editor CLR 模式使用的游戏程序集。</summary>
     internal static bool LoadGameAssembly(string assemblyPath)
     {
-        if (scripts.Count != 0 || string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath)) return false;
-
+        if (scripts.Count != 0 || string.IsNullOrWhiteSpace(assemblyPath)
+            || !File.Exists(assemblyPath))
+            return false;
         try
         {
             gameAssembly = null;
-            if (gameContext != null)
-            {
-                gameContext.Unload();
-                gameContext = null;
-            }
-
-            string fullPath = Path.GetFullPath(assemblyPath);
-            gameContext = new GameAssemblyLoadContext(fullPath);
-            gameAssembly = gameContext.LoadAssemblyFile(fullPath);
-            scriptFactories.Clear();
+            gameContext?.Unload();
+            string path = Path.GetFullPath(assemblyPath);
+            gameContext = new GameLoadContext(path);
+            gameAssembly = gameContext.LoadFile(path);
+            factories.Clear();
             ManagedTypeMetadataCache.Clear();
             return true;
         }
@@ -331,71 +254,56 @@ internal static class ScriptRuntime
         {
             Console.Error.WriteLine($"ScriptRuntime: game assembly load failed. {exception}");
             gameAssembly = null;
-            if (gameContext != null)
-            {
-                gameContext.Unload();
-                gameContext = null;
-            }
+            gameContext?.Unload();
+            gameContext = null;
             return false;
         }
     }
 
-    //注册脚本实例及其 Ens 索引
-    private static void RegisterScript(ScriptInstance instance)
+    //执行一个带时间参数的阶段表。
+    private static void Dispatch(List<TimedCall> calls, float deltaTime, string phase)
     {
-        scripts.Add(instance);
-        scriptByObject.Add(instance.Script, instance);
-        if (!scriptsByEns.TryGetValue(instance.Script.EnsId, out List<ScriptInstance>? instances))
+        PreparePhase();
+        ++dispatchDepth;
+        try
         {
-            instances = [];
-            scriptsByEns.Add(instance.Script.EnsId, instances);
+            foreach (TimedCall call in calls)
+            {
+                if (!IsRunnable(call.Instance)) continue;
+                try { call.Callback(deltaTime); }
+                catch (Exception exception) { LogFailure(call.Instance, phase, exception); }
+            }
         }
-        instances.Add(instance);
+        finally { CompletePhase(); }
     }
 
-    //结束并清空当前 World 的脚本实例
-    private static void ShutdownMountedScripts()
+    //在原生宿主上构造 Wrapper，并把生命周期方法绑定为闭合 delegate。
+    private static ScriptInstance? CreateForHost(IntPtr host)
     {
-        for (int index = scripts.Count - 1; index >= 0; index--)
-        {
-            DestroyScript(scripts[index]);
-        }
+        if (host == IntPtr.Zero) return null;
+        if (scriptsByHost.TryGetValue(host, out ScriptInstance? old)) return old;
 
-        scripts.Clear();
-        scriptByObject.Clear();
-        scriptsByEns.Clear();
-        updateInvocations.Clear();
-        fixedUpdateInvocations.Clear();
-        lateUpdateInvocations.Clear();
-        drawGuiInvocations.Clear();
-        invocationListsDirty = false;
-        hasDestroyedScripts = false;
-        dispatchDepth = 0;
-    }
+        EnsId ensId = ScriptBehaviour.GetHostEns(host);
+        string typeName = ScriptBehaviour.GetHostTypeName(host);
+        if (ensId.IsNull || string.IsNullOrEmpty(typeName)
+            || !TryGetFactory(typeName, out ScriptFactory? factory)
+            || factory == null)
+            return null;
 
-    //根据挂载类型创建脚本和闭合 delegate
-    private static ScriptInstance? CreateScript(ScriptMount mount, Ens ens)
-    {
-        if (!TryGetScriptFactory(mount.Type, out ScriptTypeFactory? factory) || factory == null) return null;
-
+        Ens ens = Ens.FromId(ensId);
+        if (!ens.IsValid) return null;
         ScriptBehaviour? script = null;
         try
         {
-            script = factory.Constructor.Invoke([ens]) as ScriptBehaviour;
+            using (ScriptBehaviour.BeginConstruction(ensId, host))
+                script = factory.Constructor.Invoke([ens]) as ScriptBehaviour;
             if (script == null) return null;
 
-            script.SetMountId(mount.Id);
-            script.enabled = mount.Enabled;
-            if (factory.SerializedValueApplier != null)
+            ManagedTypeMetadataCache.ApplyHostFields(script, host);
+            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
+            ScriptInstance instance = new()
             {
-                factory.SerializedValueApplier.Invoke(script, [mount.Values]);
-            }
-            else
-            {
-                ManagedTypeMetadataCache.ApplySerializedValues(script, mount.Values);
-            }
-            return new ScriptInstance
-            {
+                Host = host,
                 Script = script,
                 Start = factory.Start?.CreateDelegate<Action>(script),
                 Update = factory.Update?.CreateDelegate<Action<float>>(script),
@@ -405,384 +313,245 @@ internal static class ScriptRuntime
                 End = factory.End?.CreateDelegate<Action>(script),
                 WorldActive = ens.WorldActive,
             };
+            Register(instance);
+            callsDirty = true;
+            return instance;
         }
         catch (Exception exception)
         {
             script?.DetachRuntime();
-            Console.Error.WriteLine($"ScriptRuntime: create script '{mount.Type}' failed. {exception}");
+            Console.Error.WriteLine($"ScriptRuntime: create '{typeName}' failed. {exception}");
             return null;
         }
     }
 
-    //缓存脚本构造函数、序列化入口和具体生命周期方法
-    private static bool TryGetScriptFactory(string typeName, out ScriptTypeFactory? factory)
+    //注册宿主、Wrapper、ObjectId 和 Ens 索引。
+    private static void Register(ScriptInstance instance)
     {
-        if (scriptFactories.TryGetValue(typeName, out factory)) return true;
-
-        Type? scriptType = ResolveScriptType(typeName);
-        if (scriptType == null || scriptType.IsAbstract || !typeof(ScriptBehaviour).IsAssignableFrom(scriptType))
+        scripts.Add(instance);
+        scriptsByHost.Add(instance.Host, instance);
+        scriptsByObject.Add(instance.Script, instance);
+        ScriptRuntimeRegistry.Register(instance.Script);
+        if (!scriptsByEns.TryGetValue(instance.Script.EnsId, out List<ScriptInstance>? values))
         {
-            Console.WriteLine($"ScriptRuntime: unsupported script type '{typeName}'.");
-            return false;
+            values = [];
+            scriptsByEns.Add(instance.Script.EnsId, values);
         }
+        values.Add(instance);
+    }
 
-        ConstructorInfo? constructor = scriptType.GetConstructor([typeof(Ens)]);
+    //缓存脚本构造函数和具体的非虚生命周期方法。
+    private static bool TryGetFactory(string typeName, out ScriptFactory? factory)
+    {
+        if (factories.TryGetValue(typeName, out factory)) return true;
+        Type? type = ResolveType(typeName);
+        if (type == null || type.IsAbstract || !typeof(ScriptBehaviour).IsAssignableFrom(type))
+            return false;
+
+        ConstructorInfo? constructor = type.GetConstructor([typeof(Ens)]);
         if (constructor == null)
         {
-            Console.WriteLine($"ScriptRuntime: script '{typeName}' must declare a public constructor with an Ens parameter.");
+            Console.Error.WriteLine($"ScriptRuntime: '{typeName}' needs a public (Ens ens) constructor.");
             return false;
         }
 
-        if (!TryFindLifecycleMethod(scriptType, "OnStart", Type.EmptyTypes, out MethodInfo? start)
-            || !TryFindLifecycleMethod(scriptType, "OnUpdate", [typeof(float)], out MethodInfo? update)
-            || !TryFindLifecycleMethod(scriptType, "OnFixedUpdate", [typeof(float)], out MethodInfo? fixedUpdate)
-            || !TryFindLifecycleMethod(scriptType, "OnLateUpdate", [typeof(float)], out MethodInfo? lateUpdate)
-            || !TryFindLifecycleMethod(scriptType, "OnDrawGUI", Type.EmptyTypes, out MethodInfo? drawGUI)
-            || !TryFindLifecycleMethod(scriptType, "OnEnd", Type.EmptyTypes, out MethodInfo? end))
+        if (!FindLifecycle(type, "OnStart", Type.EmptyTypes, out MethodInfo? start)
+            || !FindLifecycle(type, "OnUpdate", [typeof(float)], out MethodInfo? update)
+            || !FindLifecycle(type, "OnFixedUpdate", [typeof(float)], out MethodInfo? fixedUpdate)
+            || !FindLifecycle(type, "OnLateUpdate", [typeof(float)], out MethodInfo? lateUpdate)
+            || !FindLifecycle(type, "OnDrawGUI", Type.EmptyTypes, out MethodInfo? drawGui)
+            || !FindLifecycle(type, "OnEnd", Type.EmptyTypes, out MethodInfo? end))
         {
-            Console.Error.WriteLine($"ScriptRuntime: script '{typeName}' contains an invalid lifecycle method.");
             factory = null;
             return false;
         }
 
-        factory = new ScriptTypeFactory
+        factory = new ScriptFactory
         {
             Constructor = constructor,
-            SerializedValueApplier = scriptType.GetMethod(
-                "ApplySerializedValues",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-                binder: null,
-                types: [typeof(IReadOnlyDictionary<string, string>)],
-                modifiers: null),
             Start = start,
             Update = update,
             FixedUpdate = fixedUpdate,
             LateUpdate = lateUpdate,
-            DrawGUI = drawGUI,
+            DrawGUI = drawGui,
             End = end,
         };
-        scriptFactories.Add(typeName, factory);
+        factories.Add(typeName, factory);
         return true;
     }
 
-    //沿脚本继承链查找最近声明的非虚生命周期方法
-    private static bool TryFindLifecycleMethod(
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] Type scriptType,
+    //沿继承链查找最近声明的约定生命周期方法。
+    private static bool FindLifecycle(
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicMethods |
+            DynamicallyAccessedMemberTypes.NonPublicMethods)] Type type,
         string name,
         Type[] parameters,
-        out MethodInfo? lifecycleMethod)
+        out MethodInfo? result)
     {
-        for (Type? current = scriptType;
+        for (Type? current = type;
              current != null && current != typeof(ScriptBehaviour);
              current = current.BaseType)
         {
             foreach (MethodInfo method in current.GetMethods(
-                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
+                BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             {
-                if (!string.Equals(method.Name, name, StringComparison.Ordinal)) continue;
-
-                ParameterInfo[] actualParameters = method.GetParameters();
-                if (actualParameters.Length != parameters.Length) continue;
-
-                bool signatureMatches = true;
-                for (int index = 0; index < parameters.Length; ++index)
-                {
-                    if (actualParameters[index].ParameterType == parameters[index]) continue;
-                    signatureMatches = false;
-                    break;
-                }
-                if (!signatureMatches) continue;
-
-                if (method.IsStatic || method.IsVirtual || method.IsGenericMethod || method.ReturnType != typeof(void))
+                if (method.Name != name) continue;
+                ParameterInfo[] actual = method.GetParameters();
+                if (actual.Length != parameters.Length
+                    || !actual.Select(value => value.ParameterType).SequenceEqual(parameters))
+                    continue;
+                if (method.IsStatic || method.IsVirtual || method.IsGenericMethod
+                    || method.ReturnType != typeof(void))
                 {
                     Console.Error.WriteLine(
-                        $"ScriptRuntime: lifecycle '{current.FullName}.{name}' must be a non-static, non-virtual void method with the required parameter signature.");
-                    lifecycleMethod = null;
+                        $"ScriptRuntime: '{current.FullName}.{name}' must be a non-static, non-virtual void method.");
+                    result = null;
                     return false;
                 }
-
-                lifecycleMethod = method;
+                result = method;
                 return true;
             }
         }
-
-        lifecycleMethod = null;
+        result = null;
         return true;
     }
 
-    //开始活动脚本并重建所有阶段调用表
-    private static void RebuildInvocationLists()
+    //启动首次变为活动的脚本，并重建紧凑阶段表。
+    private static void RebuildCalls()
     {
-        while (invocationListsDirty)
+        if (!callsDirty) return;
+        rebuilding = true;
+        try
         {
-            invocationListsDirty = false;
-            updateInvocations.Clear();
-            fixedUpdateInvocations.Clear();
-            lateUpdateInvocations.Clear();
-            drawGuiInvocations.Clear();
-
+            callsDirty = false;
+            updates.Clear();
+            fixedUpdates.Clear();
+            lateUpdates.Clear();
+            guiCalls.Clear();
             foreach (ScriptInstance instance in scripts.ToArray())
             {
                 if (!IsRunnable(instance)) continue;
-
                 if (!instance.Started)
                 {
                     instance.Started = true;
                     Invoke(instance, instance.Start, "OnStart");
                     if (!IsRunnable(instance)) continue;
                 }
-
-                if (instance.Update != null) updateInvocations.Add(new(instance, instance.Update));
-                if (instance.FixedUpdate != null) fixedUpdateInvocations.Add(new(instance, instance.FixedUpdate));
-                if (instance.LateUpdate != null) lateUpdateInvocations.Add(new(instance, instance.LateUpdate));
-                if (instance.DrawGUI != null) drawGuiInvocations.Add(new(instance, instance.DrawGUI));
+                if (instance.Update != null) updates.Add(new(instance, instance.Update));
+                if (instance.FixedUpdate != null) fixedUpdates.Add(new(instance, instance.FixedUpdate));
+                if (instance.LateUpdate != null) lateUpdates.Add(new(instance, instance.LateUpdate));
+                if (instance.DrawGUI != null) guiCalls.Add(new(instance, instance.DrawGUI));
             }
         }
+        finally { rebuilding = false; }
     }
 
-    //判断脚本是否允许参与当前阶段
+    //判断脚本是否可参与阶段。
     private static bool IsRunnable(ScriptInstance instance)
     {
-        return !instance.Destroyed && instance.WorldActive && instance.Script.enabled;
+        return !instance.Destroyed && instance.WorldActive
+            && instance.Script.IsAlive && instance.Script.enabled;
     }
 
-    //标记并结束一个脚本
+    //保证已 Start 的脚本只执行一次 End，并使注册表句柄立即失效。
     private static void DestroyScript(ScriptInstance instance)
     {
         if (instance.Destroyed) return;
-
         instance.Destroyed = true;
-        bool callEnd = instance.Started;
+        if (instance.Started) Invoke(instance, instance.End, "OnEnd");
         instance.Started = false;
-        if (callEnd) Invoke(instance, instance.End, "OnEnd");
         instance.Script.DetachRuntime();
-        hasDestroyedScripts = true;
+        scriptsByHost.Remove(instance.Host);
+        hasDestroyed = true;
     }
 
-    //清理已销毁脚本及其索引
-    private static void RemoveDestroyedScripts()
+    //移除所有已销毁记录。
+    private static void RemoveDestroyed()
     {
-        if (!hasDestroyedScripts) return;
-
-        scripts.RemoveAll(instance => instance.Destroyed);
-        foreach ((EnsId ens, List<ScriptInstance> instances) in scriptsByEns.ToArray())
+        if (!hasDestroyed) return;
+        scripts.RemoveAll(value => value.Destroyed);
+        foreach ((EnsId ens, List<ScriptInstance> values) in scriptsByEns.ToArray())
         {
-            instances.RemoveAll(instance => instance.Destroyed);
-            if (instances.Count == 0) scriptsByEns.Remove(ens);
+            values.RemoveAll(value => value.Destroyed);
+            if (values.Count == 0) scriptsByEns.Remove(ens);
         }
-        foreach ((ScriptBehaviour script, ScriptInstance instance) in scriptByObject.ToArray())
+        foreach ((ScriptBehaviour script, ScriptInstance value) in scriptsByObject.ToArray())
         {
-            if (instance.Destroyed) scriptByObject.Remove(script);
+            if (value.Destroyed) scriptsByObject.Remove(script);
         }
-        hasDestroyedScripts = false;
+        hasDestroyed = false;
     }
 
-    //在进入阶段前应用上一阶段积累的状态变化
+    //应用上一阶段产生的结构变化。
     private static void PreparePhase()
     {
         if (dispatchDepth != 0) return;
-        RemoveDestroyedScripts();
-        RebuildInvocationLists();
+        RemoveDestroyed();
+        if (pendingAdds.Count != 0)
+        {
+            Action[] changes = [.. pendingAdds];
+            pendingAdds.Clear();
+            foreach (Action change in changes) change();
+        }
+        RebuildCalls();
     }
 
-    //结束阶段并清理销毁记录
     private static void CompletePhase()
     {
-        dispatchDepth--;
-        if (dispatchDepth == 0) RemoveDestroyedScripts();
+        --dispatchDepth;
+        if (dispatchDepth == 0) RemoveDestroyed();
     }
 
-    //安全执行无参脚本回调
+    //安全执行无参生命周期。
     private static void Invoke(ScriptInstance instance, Action? callback, string phase)
     {
         if (callback == null) return;
-        try
-        {
-            callback();
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine($"C# script {instance.Script.GetType().FullName} failed in {phase}: {exception}");
-        }
+        try { callback(); }
+        catch (Exception exception) { LogFailure(instance, phase, exception); }
     }
 
-    //安全执行有参脚本回调
-    private static void Invoke(ScriptInstance instance, Action<float> callback, float deltaTime, string phase)
+    private static void LogFailure(ScriptInstance instance, string phase, Exception exception)
     {
-        try
-        {
-            callback(deltaTime);
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine($"C# script {instance.Script.GetType().FullName} failed in {phase}: {exception}");
-        }
+        Console.Error.WriteLine(
+            $"C# script {instance.Script.GetType().FullName} failed in {phase}: {exception}");
     }
 
-    //从已加载程序集里解析脚本类型
-    [return: DynamicallyAccessedMembers(ScriptMemberTypes)]
-    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The game and runtime assemblies are explicit TrimmerRootAssembly entries.")]
-    [UnconditionalSuppressMessage("Trimming", "IL2073", Justification = "The game and runtime assemblies are explicit TrimmerRootAssembly entries.")]
-    private static Type? ResolveScriptType(string typeName)
+    //结束 Wrapper 和阶段表，不销毁 World 中的宿主组件。
+    private static void ShutdownScripts()
     {
-        Type? scriptType = gameAssembly?.GetType(typeName, throwOnError: false);
-        if (scriptType != null) return scriptType;
+        pendingAdds.Clear();
+        for (int index = scripts.Count - 1; index >= 0; --index) DestroyScript(scripts[index]);
+        scripts.Clear();
+        scriptsByHost.Clear();
+        scriptsByObject.Clear();
+        scriptsByEns.Clear();
+        updates.Clear();
+        fixedUpdates.Clear();
+        lateUpdates.Clear();
+        guiCalls.Clear();
+        callsDirty = false;
+        hasDestroyed = false;
+        rebuilding = false;
+        dispatchDepth = 0;
+    }
 
+    [return: DynamicallyAccessedMembers(ScriptMembers)]
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "Game assemblies are explicit TrimmerRootAssembly entries.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2073",
+        Justification = "Game assemblies are explicit TrimmerRootAssembly entries.")]
+    private static Type? ResolveType(string typeName)
+    {
+        Type? type = gameAssembly?.GetType(typeName, throwOnError: false);
+        if (type != null) return type;
         foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             if (ReferenceEquals(assembly, typeof(ScriptRuntime).Assembly)) continue;
-
-            scriptType = assembly.GetType(typeName, throwOnError: false);
-            if (scriptType != null) return scriptType;
+            type = assembly.GetType(typeName, throwOnError: false);
+            if (type != null) return type;
         }
-
         return null;
-    }
-
-    //获取当前启动 World 的脚本挂载文件
-    private static string GetStartupWorldSidecarPath()
-    {
-        string projectRoot = PathDefines.ContentRoot;
-        if (string.IsNullOrWhiteSpace(projectRoot) || !Directory.Exists(projectRoot)) return string.Empty;
-
-        string? projectFile = Directory.EnumerateFiles(projectRoot, "*.oeproj", SearchOption.TopDirectoryOnly).FirstOrDefault();
-        if (string.IsNullOrEmpty(projectFile)) return string.Empty;
-
-        string startupWorld = ReadAttribute(File.ReadAllText(projectFile), "startupWorld");
-        if (string.IsNullOrWhiteSpace(startupWorld)) return string.Empty;
-
-        string worldPath = Path.Combine(projectRoot, startupWorld.Replace('/', Path.DirectorySeparatorChar));
-        return Path.GetFullPath(worldPath) + ".scripts.json";
-    }
-
-    //读取项目文件中的单行属性
-    private static string ReadAttribute(string text, string name)
-    {
-        string token = name + "=\"";
-        int start = text.IndexOf(token, StringComparison.Ordinal);
-        if (start < 0) return string.Empty;
-
-        start += token.Length;
-        int end = text.IndexOf('"', start);
-        return end > start ? text[start..end] : string.Empty;
-    }
-
-    //读取脚本挂载列表
-    private static IEnumerable<ScriptMount> ReadScriptMounts(string sidecarPath)
-    {
-        using JsonDocument document = JsonDocument.Parse(File.ReadAllText(sidecarPath));
-        if (!document.RootElement.TryGetProperty("scripts", out JsonElement scriptsElement)) yield break;
-        if (scriptsElement.ValueKind != JsonValueKind.Array) yield break;
-
-        foreach (JsonElement element in scriptsElement.EnumerateArray())
-        {
-            ScriptMount? mount = ReadScriptMount(element);
-            if (mount != null) yield return mount;
-        }
-    }
-
-    //读取单个脚本挂载项
-    private static ScriptMount? ReadScriptMount(JsonElement element)
-    {
-        string stableId = element.TryGetProperty("stableId", out JsonElement stableIdElement) ? stableIdElement.GetString() ?? string.Empty : string.Empty;
-        string type = element.TryGetProperty("type", out JsonElement typeElement) ? typeElement.GetString() ?? string.Empty : string.Empty;
-        if (string.IsNullOrWhiteSpace(stableId) || string.IsNullOrWhiteSpace(type)) return null;
-
-        string id = element.TryGetProperty("id", out JsonElement idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
-        if (string.IsNullOrWhiteSpace(id)) id = Guid.NewGuid().ToString("N");
-        bool enabled = !element.TryGetProperty("enabled", out JsonElement enabledElement)
-            || enabledElement.ValueKind != JsonValueKind.False;
-
-        ScriptMount mount = new() { Id = id, StableId = stableId, Type = StripAssemblyName(type), Enabled = enabled };
-        if (!element.TryGetProperty("values", out JsonElement valuesElement)) return mount;
-        if (valuesElement.ValueKind != JsonValueKind.Object) return mount;
-
-        foreach (JsonProperty property in valuesElement.EnumerateObject())
-        {
-            mount.Values[property.Name] = ReadSerializedValue(property.Value);
-        }
-
-        return mount;
-    }
-
-    //读取序列化字段文本
-    private static string ReadSerializedValue(JsonElement element)
-    {
-        if (element.ValueKind == JsonValueKind.Object && element.TryGetProperty("value", out JsonElement valueElement))
-        {
-            return GetJsonValueText(valueElement);
-        }
-
-        return GetJsonValueText(element);
-    }
-
-    //转换 Json 字段文本
-    private static string GetJsonValueText(JsonElement element)
-    {
-        return element.ValueKind == JsonValueKind.String ? element.GetString() ?? string.Empty : element.GetRawText();
-    }
-
-    //去掉脚本类型中的程序集后缀
-    private static string StripAssemblyName(string typeName)
-    {
-        string value = typeName.Trim();
-        int commaIndex = value.IndexOf(',');
-        return commaIndex >= 0 ? value[..commaIndex].Trim() : value;
-    }
-}
-
-/// <summary>读取脚本挂载中的基础字段值。</summary>
-public static class ScriptValueReader
-{
-    /// <summary>读取 string 字段。</summary>
-    public static bool TryGetString(IReadOnlyDictionary<string, string> values, string name, out string value)
-    {
-        if (values.TryGetValue(name, out string? text))
-        {
-            value = text;
-            return true;
-        }
-
-        value = string.Empty;
-        return false;
-    }
-
-    /// <summary>读取 bool 字段。</summary>
-    public static bool TryGetBool(IReadOnlyDictionary<string, string> values, string name, out bool value)
-    {
-        value = false;
-        return values.TryGetValue(name, out string? text) && bool.TryParse(text, out value);
-    }
-
-    /// <summary>读取 int 字段。</summary>
-    public static bool TryGetInt(IReadOnlyDictionary<string, string> values, string name, out int value)
-    {
-        value = 0;
-        return values.TryGetValue(name, out string? text)
-            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
-    }
-
-    /// <summary>读取 float 字段。</summary>
-    public static bool TryGetFloat(IReadOnlyDictionary<string, string> values, string name, out float value)
-    {
-        value = 0.0f;
-        return values.TryGetValue(name, out string? text)
-            && float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-    }
-
-    /// <summary>读取 vector3 字段。</summary>
-    public static bool TryGetVector3(IReadOnlyDictionary<string, string> values, string name, out vector3 value)
-    {
-        value = new vector3();
-        if (!values.TryGetValue(name, out string? text)) return false;
-
-        string[] parts = text.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 3) return false;
-        if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x)) return false;
-        if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y)) return false;
-        if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z)) return false;
-
-        value = new vector3(x, y, z);
-        return true;
     }
 }

@@ -9,7 +9,6 @@ public static class ScriptRuntimeRegistry
     private static readonly Dictionary<EnsId, List<ScriptBehaviour>> scriptsByEns = [];
     private static readonly Dictionary<ScriptBehaviour, ulong> slotsByScript = [];
     private static readonly Dictionary<ulong, ScriptBehaviour> scriptsBySlot = [];
-    private static ulong nextSlot = 1;
     private static uint generation = 1;
 
     /// <summary>注册脚本实例。</summary>
@@ -29,7 +28,8 @@ public static class ScriptRuntimeRegistry
         }
         if (!slotsByScript.ContainsKey(script))
         {
-            ulong slot = nextSlot++;
+            ulong slot = unchecked((uint)script.InstanceId);
+            if (slot == 0 || scriptsBySlot.ContainsKey(slot)) return;
             slotsByScript.Add(script, slot);
             scriptsBySlot.Add(slot, script);
         }
@@ -55,7 +55,6 @@ public static class ScriptRuntimeRegistry
         scriptsByEns.Clear();
         slotsByScript.Clear();
         scriptsBySlot.Clear();
-        nextSlot = 1;
         ++generation;
         if (generation == 0) generation = 1;
     }
@@ -78,20 +77,16 @@ public static class ScriptRuntimeRegistry
         return false;
     }
 
-    /// <summary>在当前 PIE 运行时挂载脚本，并在下一个脚本阶段加入调用表。</summary>
-    public static ScriptBehaviour? AddMountedScript(EnsId ens,
-        string mountId,
-        string typeName,
-        bool enabled,
-        IReadOnlyDictionary<string, string>? serializedValues = null)
+    /// <summary>创建具有独立原生组件身份的 C# 脚本。</summary>
+    public static T? AddScript<T>(EnsId ens) where T : ScriptBehaviour
     {
-        return ScriptRuntime.AddMountedScript(ens, mountId, typeName, enabled, serializedValues);
+        return ScriptRuntime.AddManagedScript(ens, typeof(T)) as T;
     }
 
-    /// <summary>从当前 PIE 运行时移除脚本，已启动实例只执行一次 End。</summary>
-    public static bool RemoveMountedScript(EnsId ens, string mountId)
+    /// <summary>移除 C# 脚本及其原生宿主；已启动实例只执行一次 End。</summary>
+    public static bool RemoveScript(ScriptBehaviour script)
     {
-        return ScriptRuntime.RemoveMountedScript(ens, mountId);
+        return ScriptRuntime.RemoveManagedScript(script);
     }
 
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>

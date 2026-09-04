@@ -10,6 +10,7 @@
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Reflection.h"
 
+class ScriptBehaviour;
 class World;
 
 namespace ScriptInterop
@@ -79,6 +80,10 @@ namespace ScriptInterop
         void* GetField = nullptr;
         void* SetField = nullptr;
         void* Invoke = nullptr;
+        void* HostAttached = nullptr;
+        void* HostDetached = nullptr;
+        void* HostEnabledChanged = nullptr;
+        void* HostFieldChanged = nullptr;
     };
 
     //随 OrbedenNativeApi 传入托管域的原生组件操作表。
@@ -160,7 +165,19 @@ namespace ScriptInterop
 
     //注册或清空托管组件函数表。
     InteropStatus RegisterManagedApi(const ManagedScriptInteropApi* api);
+
+    //通知托管域创建或配置了一个可运行的原生宿主。
+    void NotifyManagedHostAttached(ScriptBehaviour* host);
+
+    //通知托管域一个原生宿主即将销毁。
+    void NotifyManagedHostDetached(ScriptBehaviour* host);
+
+    //通知托管域宿主 enabled 已变化。
+    void NotifyManagedHostEnabledChanged(ScriptBehaviour* host);
+
+    //通知托管域宿主序列化字段已变化。
+    void NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName);
 }
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 7);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 11);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ScriptInteropApi, 9);

@@ -78,7 +78,7 @@ internal abstract class EditorPanel
     public virtual void OnHidden() { }
 
     /// <summary>用户游戏程序集加载时调用。</summary>
-    public virtual void OnGameAssemblyLoaded(string assemblyPath, string sidecarPath) { }
+    public virtual void OnGameAssemblyLoaded(string assemblyPath) { }
 
     /// <summary>用户游戏程序集卸载时调用。</summary>
     public virtual void OnGameAssemblyUnloaded() { }

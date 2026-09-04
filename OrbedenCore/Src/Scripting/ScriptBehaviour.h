@@ -2,17 +2,37 @@
 
 #include "Runtime/EnsId.h"
 
+#include <string>
+
 //显式标记需要序列化的非 public 字段，由 OrbedenMetaGen 识别。
 #define ORBEDEN_SERIALIZE_FIELD
 
 class ScriptBehaviour;
 namespace Reflection
 {
+    enum class FieldKind;
     class Value;
 }
 
 using ScriptCallback = void(*)(ScriptBehaviour*);
 using ScriptUpdateCallback = void(*)(ScriptBehaviour*, float32);
+
+//脚本组件的执行域；精确 ScriptBehaviour 实例属于托管域，原生派生类属于原生域。
+enum class ScriptDomain : uint32
+{
+    Native,
+    Managed,
+};
+
+//托管脚本字段在原生组件中的持久化快照。
+struct ManagedScriptField
+{
+    std::string name;
+    std::string typeName;
+    Reflection::FieldKind kind;
+    std::string value;
+    bool inspectorVisible = true;
+};
 
 //单个 C++ 脚本类型在各生命周期阶段的非虚调用入口。
 struct ScriptCallbackTable
@@ -37,12 +57,15 @@ ScriptCallbackTable ResolveScriptCallbacks(Type* type);
 //原生游戏脚本组件基类，生命周期由 ScriptSystem 的函数指针表调度。
 class ScriptBehaviour : public Component
 {
-    OBJECT_TYPE_DECLARE_ABSTRACT(ScriptBehaviour)
+    OBJECT_TYPE_DECLARE_BASE(ScriptBehaviour)
 
 private:
     friend class ScriptSystem;
 
     bool enabled = true;
+    ScriptDomain domain = ScriptDomain::Native;
+    std::string managedTypeName;
+    List<ManagedScriptField> managedFields;
     bool scriptStarted = false;
     bool runtimeRegistered = false;
 
@@ -76,4 +99,35 @@ public:
 
     //设置脚本启用状态并刷新阶段表。
     void SetEnabled(bool value);
+
+    //获取由实际原生类型确定的脚本执行域。
+    ScriptDomain GetDomain() const;
+
+    //判断当前组件是否是 C# 脚本使用的精确原生宿主。
+    bool IsManagedHost() const;
+
+    //获取宿主绑定的 C# 完整类型名。
+    const std::string& GetManagedTypeName() const;
+
+    //配置宿主绑定的 C# 完整类型名。
+    bool SetManagedTypeName(const std::string& value);
+
+    //获取宿主持有的全部 C# 序列化字段。
+    const List<ManagedScriptField>& GetManagedFields() const;
+
+    //按字段名查找 C# 序列化字段。
+    const ManagedScriptField* FindManagedField(const std::string& name) const;
+
+    //新增或覆盖一个 C# 序列化字段。
+    bool SetManagedField(const std::string& name,
+        const std::string& typeName,
+        Reflection::FieldKind kind,
+        const std::string& value,
+        bool inspectorVisible = true);
+
+    //只更新一个已经存在的 C# 序列化字段值。
+    bool SetManagedFieldValue(const std::string& name, const std::string& value);
+
+    //把受支持的字段类型名转换为原生 Inspector 字段分类。
+    static Reflection::FieldKind GetManagedFieldKind(const std::string& typeName);
 };

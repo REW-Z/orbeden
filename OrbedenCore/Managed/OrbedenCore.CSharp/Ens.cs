@@ -300,7 +300,8 @@ public sealed partial class Ens : IEquatable<Ens>
     //判断类型是否具有原生工厂
     private static bool HasNativeFactory(Type componentType)
     {
-        return componentType == typeof(TransformComponent) ||
+        return typeof(ScriptBehaviour).IsAssignableFrom(componentType) ||
+               componentType == typeof(TransformComponent) ||
                componentType == typeof(StaticMeshRenderer) ||
                componentType == typeof(RigidBody) ||
                componentType == typeof(BoxCollider) ||
@@ -314,6 +315,7 @@ public sealed partial class Ens : IEquatable<Ens>
     //创建一个原生组件实例
     private Component? CreateNativeComponent(Type componentType)
     {
+        if (typeof(ScriptBehaviour).IsAssignableFrom(componentType)) return ScriptRuntime.AddManagedScript(Id, componentType);
         if (componentType == typeof(TransformComponent)) return Transform;
         if (componentType == typeof(StaticMeshRenderer)) return StaticMeshRenderer.FromNative(this, AddStaticMeshRenderer(Id));
         if (componentType == typeof(RigidBody)) return RigidBody.FromNative(this, RigidBody.AddComponent(Id));

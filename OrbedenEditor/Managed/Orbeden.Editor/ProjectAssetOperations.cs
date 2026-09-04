@@ -462,7 +462,6 @@ internal sealed class ReferenceRewritePlan
     {
         string lowerPath = path.ToLowerInvariant();
         if (lowerPath.EndsWith(".world")) return RewriteWorld(content);
-        if (lowerPath.EndsWith(".scripts.json")) return RewriteSidecar(content);
         if (lowerPath.EndsWith(".orbshader")) return RewriteRegexDependency(content, IncludeRegex, oldOwnerKey, newOwnerKey, relative: true);
         if (lowerPath.EndsWith(".mtl"))
         {
@@ -490,40 +489,6 @@ internal sealed class ReferenceRewritePlan
                 return valueMatch.Groups["prefix"].Value + (SecurityElement.Escape(mapped) ?? string.Empty) + valueMatch.Groups["suffix"].Value;
             }, 1);
         });
-    }
-
-    //更新 C# sidecar 中资源对象类型字段。
-    private string RewriteSidecar(string content)
-    {
-        try
-        {
-            JsonNode? root = JsonNode.Parse(content);
-            JsonArray? scripts = root?["scripts"] as JsonArray;
-            if (scripts == null) return content;
-
-            bool changed = false;
-            foreach (JsonNode? script in scripts)
-            {
-                JsonObject? values = script?["values"] as JsonObject;
-                if (values == null) continue;
-                foreach ((_, JsonNode? node) in values)
-                {
-                    if (node is not JsonObject serialized) continue;
-                    string type = serialized["type"]?.GetValue<string>() ?? string.Empty;
-                    string value = serialized["value"]?.GetValue<string>() ?? string.Empty;
-                    if (!IsManagedResourceType(type) || !TryMapSoftReference(value, out string mapped)) continue;
-                    serialized["value"] = mapped;
-                    ChangedReferenceCount++;
-                    changed = true;
-                }
-            }
-
-            return changed ? root!.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) : content;
-        }
-        catch
-        {
-            return content;
-        }
     }
 
     //更新一类单路径文本依赖。
@@ -723,20 +688,12 @@ internal sealed class ReferenceRewritePlan
         return true;
     }
 
-    //判断 sidecar 类型是否是当前支持的资源对象。
-    private static bool IsManagedResourceType(string type)
-    {
-        string value = type.Split(',')[0].Trim();
-        return value is "Orbeden.Mesh" or "Orbeden.Material" or "Orbeden.Shader";
-    }
-
     //判断文件是否包含首版支持的资源引用语法。
     private bool ShouldInspect(string path)
     {
         if (ProjectAssetOperations.IsSameOrChild(path, Path.Combine(projectRoot, "Managed"))) return false;
         string lower = path.ToLowerInvariant();
         return lower.EndsWith(".world")
-            || lower.EndsWith(".scripts.json")
             || lower.EndsWith(".orbshader")
             || lower.EndsWith(".mtl")
             || lower.EndsWith(".obj")

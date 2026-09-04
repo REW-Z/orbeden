@@ -1,41 +1,26 @@
+using System;
+
 namespace Orbeden;
 
-/// <summary>托管脚本行为基类；生命周期由派生脚本按约定名称声明为非虚实例方法。</summary>
-public abstract class ScriptBehaviour : Component
+/// <summary>C# 脚本对一个原生 ScriptBehaviour 组件的强类型包装。</summary>
+public abstract unsafe partial class ScriptBehaviour : Component
 {
-    private bool isEnabled = true;
-
     /// <summary>脚本所属 EnsId。</summary>
     public EnsId EnsId => Ens.Id;
 
-    /// <summary>脚本挂载实例的持久化标识。</summary>
-    public string MountId { get; private set; } = string.Empty;
-
-    /// <summary>创建托管脚本行为。</summary>
-    protected ScriptBehaviour(Ens ens) : base(ens)
+    /// <summary>创建与原生宿主绑定的脚本包装；只能由脚本运行时调用。</summary>
+    protected ScriptBehaviour(Ens ens) : base(ens, ConsumeConstructionHost(ens))
     {
-        ScriptRuntimeRegistry.Register(this);
     }
 
-    /// <summary>由脚本装载器设置挂载实例标识。</summary>
-    internal void SetMountId(string? mountId)
-    {
-        MountId = mountId ?? string.Empty;
-    }
-
-    /// <summary>脚本是否参与生命周期阶段。</summary>
+    /// <summary>脚本是否参与生命周期阶段；值唯一存储在原生宿主。</summary>
     public bool enabled
     {
-        get => isEnabled;
-        set
-        {
-            if (isEnabled == value) return;
-            isEnabled = value;
-            ScriptRuntime.OnEnabledChanged(this);
-        }
+        get => GetHostEnabled(NativePtr);
+        set => SetHostEnabled(NativePtr, value);
     }
 
-    //结束运行时注册，供 ScriptRuntime 在 End 后调用
+    //结束运行时注册，供 ScriptRuntime 在 End 后调用。
     internal void DetachRuntime()
     {
         ScriptRuntimeRegistry.Unregister(this);
