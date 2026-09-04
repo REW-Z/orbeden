@@ -758,114 +758,8 @@ public sealed class SampleBehaviour : ScriptBehaviour
 }
 )ORB";
 
-    constexpr const char* CubeTestBehaviourText = R"ORB(using System;
-using Orbeden;
-
-namespace {{PROJECT_NAME}};
-
-/// <summary>挂在示例 Cube 上的脚本组件测试。</summary>
-public sealed class CubeTestBehaviour : ScriptBehaviour
-{
-    [SerializeField]
-    private string label = "Cube script component";
-    [SerializeField]
-    private bool animateScale = true;
-    [SerializeField]
-    private float pulseAmplitude = 0.18f;
-    [SerializeField]
-    private float pulseSpeed = 2.5f;
-    [SerializeField]
-    private vector3 debugOffset = new(0.0f, 0.0f, 0.0f);
-
-    private vector3 baseScale;
-    private float elapsedTime;
-    private int updateCount;
-
-    /// <summary>创建 Cube 脚本组件测试。</summary>
-    public CubeTestBehaviour(Ens ens) : base(ens) {}
-
-    /// <summary>Inspector 中显示当前运行状态。</summary>
-    public string Status => $"{label}: {updateCount} updates";
-
-
-    /// <summary>脚本启动时调用。</summary>
-    protected void OnStart()
-    {
-        baseScale = Ens.Transform.localScale;
-        Console.WriteLine($"CubeTestBehaviour start: {label}");
-    }
-
-    /// <summary>脚本每帧更新时调用。</summary>
-    protected void OnUpdate(float deltaTime)
-    {
-        elapsedTime += deltaTime;
-        updateCount++;
-
-        if (animateScale)
-        {
-            float scale = 1.0f + MathF.Sin(elapsedTime * pulseSpeed) * pulseAmplitude;
-            Ens.Transform.localScale = new vector3(baseScale.x * scale, baseScale.y * scale, baseScale.z * scale);
-        }
-
-        if (debugOffset.x != 0.0f || debugOffset.y != 0.0f || debugOffset.z != 0.0f)
-        {
-            vector3 position = Ens.Transform.localPosition;
-            position.x += debugOffset.x * deltaTime;
-            position.y += debugOffset.y * deltaTime;
-            position.z += debugOffset.z * deltaTime;
-            Ens.Transform.localPosition = position;
-        }
-    }
-
-    /// <summary>脚本结束时调用。</summary>
-    protected void OnEnd()
-    {
-        Ens.Transform.localScale = baseScale;
-        Console.WriteLine($"CubeTestBehaviour end: {label}");
-    }
-}
-)ORB";
-
     constexpr const char* ScriptGitIgnoreText = "bin/\nobj/\n";
     constexpr const char* ManagedGitIgnoreText = "*\n!.gitignore\n";
-    constexpr const char* WorldScriptsText = R"ORB({
-  "scripts": [
-    {
-      "id": "sample-behaviour",
-      "stableId": "world://{{PROJECT_NAME}}/main/cube",
-      "type": "{{PROJECT_NAME}}.SampleBehaviour"
-    },
-    {
-      "id": "cube-test-behaviour",
-      "stableId": "world://{{PROJECT_NAME}}/main/cube",
-      "type": "{{PROJECT_NAME}}.CubeTestBehaviour",
-      "values": {
-        "label": {
-          "type": "string",
-          "value": "Cube sidecar test"
-        },
-        "animateScale": {
-          "type": "bool",
-          "value": "true"
-        },
-        "pulseAmplitude": {
-          "type": "float",
-          "value": "0.18"
-        },
-        "pulseSpeed": {
-          "type": "float",
-          "value": "2.5"
-        },
-        "debugOffset": {
-          "type": "vector3",
-          "value": "0 0 0"
-        }
-      }
-    }
-  ]
-}
-)ORB";
-
     constexpr unsigned char SkyBluePngBytes[] =
     {
         0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
@@ -1004,10 +898,8 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     succeeded = WriteTextFile(root / "Script/Directory.Build.props", DirectoryBuildPropsText) && succeeded;
     succeeded = WriteTextFile(root / "Script/OrbedenAotExports.cs", AotExportsText) && succeeded;
     succeeded = WriteTextFile(root / "Script/SampleBehaviour.cs", ExpandTemplate(SampleBehaviourText, projectName)) && succeeded;
-    succeeded = WriteTextFile(root / "Script/CubeTestBehaviour.cs", ExpandTemplate(CubeTestBehaviourText, projectName)) && succeeded;
     succeeded = WriteTextFile(root / "Script/.gitignore", ScriptGitIgnoreText) && succeeded;
     succeeded = WriteTextFile(root / "Managed/.gitignore", ManagedGitIgnoreText) && succeeded;
-    succeeded = WriteTextFile(root / "World/main.world.scripts.json", ExpandTemplate(WorldScriptsText, projectName)) && succeeded;
 
     //写入 C++ 游戏模块、示例原生脚本和 MetaGen 构建步骤。
     succeeded = WriteTextFile(root / "Native/CMakeLists.txt", ExpandTemplate(NativeCMakeTemplate, projectName)) && succeeded;
@@ -1072,6 +964,15 @@ static bool GenerateWorldFile(const std::string& projectRoot, const std::string&
         "            <Component type=\"SampleNativeBehaviour\">\n"
         "                <Field name=\"enabled\" type=\"bool\" value=\"true\" />\n"
         "                <Field name=\"speed\" type=\"float32\" value=\"2\" />\n"
+        "            </Component>\n"
+        "            <Component type=\"ScriptBehaviour\">\n"
+        "                <Field name=\"domain\" type=\"ScriptDomain\" value=\"Managed\" />\n"
+        "                <Field name=\"managedTypeName\" type=\"string\" value=\"" << projectName << ".SampleBehaviour\" />\n"
+        "                <Field name=\"enabled\" type=\"bool\" value=\"true\" />\n"
+        "                <Field name=\"startPosition\" type=\"vector3\" value=\"0 0 0\" />\n"
+        "                <Field name=\"totalTime\" type=\"float32\" value=\"0\" />\n"
+        "                <Field name=\"elapsedTime\" type=\"float32\" value=\"0\" />\n"
+        "                <Field name=\"reportCount\" type=\"int32\" value=\"0\" />\n"
         "            </Component>\n"
         "        </Ens>\n"
         "        <Ens stableId=\"" << stableIdPrefix << "ground\" name=\"Ground\">\n"

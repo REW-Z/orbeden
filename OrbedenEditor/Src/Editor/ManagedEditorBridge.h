@@ -51,7 +51,7 @@ public:
     void SetPanelVisible(int32 handle, bool visible);
 
     // 加载用户游戏程序集。
-    void LoadGameAssembly(const std::string& assemblyPath, const std::string& sidecarPath);
+    void LoadGameAssembly(const std::string& assemblyPath);
 
     // 卸载用户游戏程序集引用。
     void UnloadGameAssembly();

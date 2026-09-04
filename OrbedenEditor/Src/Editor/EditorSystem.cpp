@@ -677,7 +677,7 @@ void EditorSystem::RequestPlay()
         return;
     }
 
-    managedBridge.LoadGameAssembly(playMode.GetShadowAssemblyPath(), GetProjectScriptSidecarPath());
+    managedBridge.LoadGameAssembly(playMode.GetShadowAssemblyPath());
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
     projectStatus = "Play-In-Editor started.";
@@ -968,11 +968,6 @@ std::string EditorSystem::GetProjectGameAssemblyPath() const
     return ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / Utf8Path::FromUtf8(assemblyName + ".dll"));
 }
 
-std::string EditorSystem::GetProjectScriptSidecarPath() const
-{
-    std::string worldPath = project.GetStartupWorldPath();
-    return worldPath.empty() ? std::string() : worldPath + ".scripts.json";
-}
 
 bool EditorSystem::RefreshInspectorGameAssembly()
 {
@@ -983,14 +978,13 @@ bool EditorSystem::RefreshInspectorGameAssembly()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
-    std::string sidecarPath = GetProjectScriptSidecarPath();
     if (!FileExists(assemblyPath))
     {
-        managedBridge.LoadGameAssembly(std::string(), sidecarPath);
+        managedBridge.LoadGameAssembly(std::string());
         return false;
     }
 
-    managedBridge.LoadGameAssembly(assemblyPath, sidecarPath);
+    managedBridge.LoadGameAssembly(assemblyPath);
     return true;
 }
 
@@ -1144,12 +1138,12 @@ bool EditorSystem::SaveCurrentWorld()
     World& world = app.GetWorld();
     bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
 
-    bool sidecarSaved = managedBridge.SaveProjectState();
-    bool worldSaved = project.SaveStartupWorld();
+    bool managedSaved = managedBridge.SaveProjectState();
+    bool worldSaved = managedSaved && project.SaveStartupWorld();
     if (worldSaved) managedBridge.NotifyWorldSaved();
-    bool saved = sidecarSaved && worldSaved;
+    bool saved = managedSaved && worldSaved;
     projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath())
-        : (worldSaved ? "Managed project data save failed." : project.GetLastError());
+        : (managedSaved ? project.GetLastError() : "Managed project data save failed.");
 
     if (hadEditorCamera) editorScene.RestoreCamera(world);
     editorScene.CancelInteraction();

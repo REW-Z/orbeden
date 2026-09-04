@@ -62,12 +62,10 @@ public static class EditorRuntime
 
     /// <summary>加载当前项目的用户游戏程序集。</summary>
     [UnmanagedCallersOnly]
-    public static unsafe void LoadGameAssembly(byte* assemblyPath, int assemblyPathLength, byte* sidecarPath, int sidecarPathLength)
+    public static unsafe void LoadGameAssembly(byte* assemblyPath, int assemblyPathLength)
     {
         EditorPropertyHistory.Clear();
-        EditorPanelRegistry.LoadGameAssembly(
-            ReadUtf8(assemblyPath, assemblyPathLength),
-            ReadUtf8(sidecarPath, sidecarPathLength));
+        EditorPanelRegistry.LoadGameAssembly(ReadUtf8(assemblyPath, assemblyPathLength));
     }
 
     /// <summary>卸载当前用户游戏程序集引用。</summary>
@@ -78,7 +76,7 @@ public static class EditorRuntime
         EditorPanelRegistry.UnloadGameAssembly();
     }
 
-    /// <summary>把 sidecar 等托管编辑数据原子保存到磁盘。</summary>
+    /// <summary>保存托管 Editor 面板暂存的项目数据。</summary>
     [UnmanagedCallersOnly]
     public static byte SaveProjectState()
     {
@@ -232,8 +230,8 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 4);
-        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 13);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 55);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 15);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 57);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

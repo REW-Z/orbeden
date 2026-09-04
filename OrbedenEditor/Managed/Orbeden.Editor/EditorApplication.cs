@@ -18,7 +18,6 @@ public static unsafe class EditorApplication
 {
     private static EditorApplicationNativeApi api;
     public static bool WorldDirty { get; private set; }
-    public static bool SidecarDirty { get; private set; }
     public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 
     /// <summary>保存原生 Editor 应用 API。</summary>
@@ -34,12 +33,9 @@ public static unsafe class EditorApplication
     }
 
     internal static void MarkWorldDirty() { if (!IsPlaying) WorldDirty = true; }
-    internal static void MarkSidecarDirty() { if (!IsPlaying) SidecarDirty = true; }
     internal static void ClearWorldDirty() => WorldDirty = false;
-    internal static void ClearSidecarDirty() => SidecarDirty = false;
     internal static void ClearDirty()
     {
         WorldDirty = false;
-        SidecarDirty = false;
     }
 }

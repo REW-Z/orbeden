@@ -133,7 +133,7 @@ public sealed class PropertyValue
     }
 }
 
-/// <summary>统一编辑 C++ 活组件、C# sidecar 和 PIE 托管组件的事务文档。</summary>
+/// <summary>统一编辑 Edit/PIE World 中 C++ 与 C# 组件的事务文档。</summary>
 public sealed class PropertyDocument
 {
     private readonly IReadOnlyList<IPropertyTarget> targets;

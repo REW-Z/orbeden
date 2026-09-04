@@ -12,6 +12,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/TransformComponent.h"
+#include "Scripting/ScriptBehaviour.h"
 
 namespace
 {
@@ -310,6 +311,20 @@ namespace
         WriteIndent(output, depth);
         output << "<Component type=\"" << EscapeXml(type->GetName()) << "\">\n";
 
+        ScriptBehaviour* script = component->Cast<ScriptBehaviour>();
+        if (script)
+        {
+            WriteIndent(output, depth + 1);
+            output << "<Field name=\"domain\" type=\"ScriptDomain\" value=\""
+                << (script->GetDomain() == ScriptDomain::Managed ? "Managed" : "Native") << "\" />\n";
+            if (script->IsManagedHost())
+            {
+                WriteIndent(output, depth + 1);
+                output << "<Field name=\"managedTypeName\" type=\"string\" value=\""
+                    << EscapeXml(script->GetManagedTypeName()) << "\" />\n";
+            }
+        }
+
         //按反射元数据写入持久化字段
         List<const Reflection::FieldInfo*> fields;
         Reflection::CollectFields(type, fields);
@@ -321,6 +336,17 @@ namespace
             output << "<Field name=\"" << EscapeXml(field->name ? field->name : "") << "\" type=\""
                 << EscapeXml(field->typeName ? field->typeName : "") << "\" value=\""
                 << EscapeXml(field->getter(component)) << "\" />\n";
+        }
+
+        if (script && script->IsManagedHost())
+        {
+            for (const ManagedScriptField& field : script->GetManagedFields())
+            {
+                WriteIndent(output, depth + 1);
+                output << "<Field name=\"" << EscapeXml(field.name) << "\" type=\""
+                    << EscapeXml(field.typeName) << "\" value=\"" << EscapeXml(field.value)
+                    << "\" inspectorVisible=\"" << (field.inspectorVisible ? "true" : "false") << "\" />\n";
+            }
         }
 
         WriteIndent(output, depth);
@@ -368,16 +394,32 @@ namespace
         if (!component) return false;
 
         const std::string& name = GetAttribute(token, "name");
+        const std::string& typeName = GetAttribute(token, "type");
         const std::string& value = GetAttribute(token, "value");
         if (name.empty()) return false;
 
-        const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), name);
-        if (!field || !field->persistent || !field->setter)
+        ScriptBehaviour* script = component->Cast<ScriptBehaviour>();
+        if (script && name == "domain")
         {
-            return true;
+            const char* expected = script->GetDomain() == ScriptDomain::Managed ? "Managed" : "Native";
+            return value == expected;
+        }
+        if (script && script->IsManagedHost() && name == "managedTypeName")
+        {
+            return script->SetManagedTypeName(value);
         }
 
-        return field->setter(component, value);
+        const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), name);
+        if (field && field->persistent && field->setter)
+        {
+            return field->setter(component, value);
+        }
+        if (!script || !script->IsManagedHost()) return true;
+
+        Reflection::FieldKind kind = ScriptBehaviour::GetManagedFieldKind(typeName);
+        const std::string& visible = GetAttribute(token, "inspectorVisible");
+        bool inspectorVisible = visible != "false" && visible != "0";
+        return script->SetManagedField(name, typeName, kind, value, inspectorVisible);
     }
 
     //读取组件节点并应用字段

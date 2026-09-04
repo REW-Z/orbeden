@@ -12,11 +12,13 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, int> GetComponentCount;
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, int, int> GetComponentObjectId;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetComponentTypeName;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetComponentDomain;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetFieldCount;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldName;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int, int> GetFieldKind;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldValue;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, byte> SetFieldValue;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte*, int, byte, byte> SetManagedField;
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetAddableTypeCount;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetAddableTypeName;
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, int> AddComponent;
@@ -43,7 +45,7 @@ internal enum NativeFieldKind
 }
 
 /// <summary>一个无需 C# binding 的原生组件实例。</summary>
-internal readonly record struct NativeComponentInfo(int ObjectId, string TypeName);
+internal readonly record struct NativeComponentInfo(int ObjectId, string TypeName, bool IsManaged);
 
 /// <summary>Editor 通用原生组件检查桥。</summary>
 internal static unsafe class EditorNativeComponents
@@ -71,7 +73,7 @@ internal static unsafe class EditorNativeComponents
             int objectId = api.GetComponentObjectId(api.Context, ens.id, ens.version, index);
             if (objectId == 0) continue;
             string typeName = ReadText((byte* buffer, int size) => api.GetComponentTypeName(api.Context, objectId, buffer, size));
-            if (!string.IsNullOrEmpty(typeName)) result.Add(new NativeComponentInfo(objectId, typeName));
+            if (!string.IsNullOrEmpty(typeName)) result.Add(new NativeComponentInfo(objectId, typeName, api.GetComponentDomain(api.Context, objectId) != 0));
         }
         return result;
     }
@@ -136,11 +138,40 @@ internal static unsafe class EditorNativeComponents
     /// <summary>按原生类型名新增组件。</summary>
     internal static bool AddComponent(EnsId ens, string typeName)
     {
-        if (api.AddComponent == null || string.IsNullOrEmpty(typeName)) return false;
+        return AddComponentAndGetId(ens, typeName) != 0;
+    }
+
+    /// <summary>按类型名新增组件并返回其原生对象 ID。</summary>
+    internal static int AddComponentAndGetId(EnsId ens, string typeName)
+    {
+        if (api.AddComponent == null || string.IsNullOrEmpty(typeName)) return 0;
         byte[] bytes = Encoding.UTF8.GetBytes(typeName);
         fixed (byte* pointer = bytes)
         {
-            return api.AddComponent(api.Context, ens.id, ens.version, pointer, bytes.Length) != 0;
+            return api.AddComponent(api.Context, ens.id, ens.version, pointer, bytes.Length);
+        }
+    }
+
+    /// <summary>新增或覆盖 C# 脚本宿主持有的序列化字段。</summary>
+    internal static bool SetManagedField(int objectId, string name, string typeName, string value, bool inspectorVisible)
+    {
+        if (api.SetManagedField == null || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(typeName)) return false;
+        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
+        byte[] typeBytes = Encoding.UTF8.GetBytes(typeName);
+        byte[] valueBytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        fixed (byte* namePointer = nameBytes)
+        fixed (byte* typePointer = typeBytes)
+        fixed (byte* valuePointer = valueBytes)
+        {
+            return api.SetManagedField(api.Context,
+                objectId,
+                namePointer,
+                nameBytes.Length,
+                typePointer,
+                typeBytes.Length,
+                valuePointer,
+                valueBytes.Length,
+                inspectorVisible ? (byte)1 : (byte)0) != 0;
         }
     }
 

@@ -133,13 +133,13 @@ internal static unsafe class EditorPanelRegistry
     }
 
     /// <summary>向全部 C# Panel 广播游戏程序集加载事件。</summary>
-    public static void LoadGameAssembly(string assemblyPath, string sidecarPath)
+    public static void LoadGameAssembly(string assemblyPath)
     {
         foreach (EditorPanel panel in panels)
         {
             try
             {
-                panel.OnGameAssemblyLoaded(assemblyPath, sidecarPath);
+                panel.OnGameAssemblyLoaded(assemblyPath);
             }
             catch (Exception ex)
             {

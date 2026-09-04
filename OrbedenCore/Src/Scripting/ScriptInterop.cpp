@@ -8,6 +8,7 @@
 
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
+#include "Scripting/ScriptBehaviour.h"
 
 namespace
 {
@@ -20,6 +21,8 @@ namespace
     using GetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, InteropValueAbi*);
     using SetFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const InteropValueAbi*);
     using InvokeFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(ComponentHandle, MemberHandle, const InteropValueAbi*, int32, InteropValueAbi*);
+    using HostFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(void*);
+    using HostFieldFunction = InteropStatus(ORBEDEN_NATIVE_CALL*)(void*, const uint8*, int32);
 
     World* currentWorld = nullptr;
     std::thread::id mainThread;
@@ -688,5 +691,30 @@ namespace ScriptInterop
         if (status != InteropStatus::Ok) return status;
         managedApi = api ? *api : ManagedScriptInteropApi();
         return InteropStatus::Ok;
+    }
+
+    void NotifyManagedHostAttached(ScriptBehaviour* host)
+    {
+        if (!host || !host->IsManagedHost() || host->GetManagedTypeName().empty()) return;
+        CallManaged<HostFunction>(managedApi.HostAttached, host);
+    }
+
+    void NotifyManagedHostDetached(ScriptBehaviour* host)
+    {
+        if (!host || !host->IsManagedHost()) return;
+        CallManaged<HostFunction>(managedApi.HostDetached, host);
+    }
+
+    void NotifyManagedHostEnabledChanged(ScriptBehaviour* host)
+    {
+        if (!host || !host->IsManagedHost()) return;
+        CallManaged<HostFunction>(managedApi.HostEnabledChanged, host);
+    }
+
+    void NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName)
+    {
+        if (!host || !host->IsManagedHost() || fieldName.empty()) return;
+        CallManaged<HostFieldFunction>(managedApi.HostFieldChanged, host,
+            reinterpret_cast<const uint8*>(fieldName.data()), static_cast<int32>(fieldName.size()));
     }
 }

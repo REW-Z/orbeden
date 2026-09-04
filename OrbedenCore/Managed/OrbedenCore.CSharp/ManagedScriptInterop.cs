@@ -36,7 +36,7 @@ internal sealed class ManagedTypeMetadata
 }
 
 /// <summary>程序集加载时建立一次、运行期只查表的托管脚本元数据缓存。</summary>
-internal static class ManagedTypeMetadataCache
+internal static partial class ManagedTypeMetadataCache
 {
     private static readonly Dictionary<Type, ManagedTypeMetadata> cache = [];
 
@@ -141,13 +141,13 @@ internal static class ManagedTypeMetadataCache
         return result == null ? !valueType.IsValueType : valueType.IsInstanceOfType(result);
     }
 
-    internal static void ApplySerializedValues(ScriptBehaviour script, IReadOnlyDictionary<string, string> values)
+    internal static void ApplyHostFields(ScriptBehaviour script, IntPtr host)
     {
         ManagedTypeMetadata metadata = Get(script.GetType());
-        foreach ((string name, string text) in values)
+        foreach ((string name, ManagedHostField stored) in ScriptBehaviour.ReadHostFields(host))
         {
             if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)) continue;
-            if (!TryParseSerialized(field.Kind, text, out InteropValue value)) continue;
+            if (!TryParseSerialized(field.Kind, stored.Value, out InteropValue value)) continue;
             if (!TryFromInterop(value, field.FieldType, out object? converted)) continue;
             field.Setter(script, converted);
         }
@@ -242,7 +242,7 @@ internal static class ManagedTypeMetadataCache
     {
         switch (kind)
         {
-            case InteropValueKind.Bool when bool.TryParse(text, out bool boolean): value = InteropValue.From(boolean); return true;
+            case InteropValueKind.Bool when text is "true" or "false" or "1" or "0": value = InteropValue.From(text is "true" or "1"); return true;
             case InteropValueKind.Int32 when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integer): value = InteropValue.From(integer); return true;
             case InteropValueKind.UInt32 when uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint unsigned): value = InteropValue.From(unsigned); return true;
             case InteropValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = InteropValue.From(unsignedLong); return true;
@@ -252,6 +252,7 @@ internal static class ManagedTypeMetadataCache
             case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color4(color[0], color[1], color[2], color[3])); return true;
             case InteropValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = InteropValue.From(new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3])); return true;
             case InteropValueKind.EnsId:
+            case InteropValueKind.Object when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int objectId): value = InteropValue.FromObjectId(objectId); return true;
             {
                 string[] parts = text.Split(':');
                 if (parts.Length == 2 && uint.TryParse(parts[0], out uint id) && uint.TryParse(parts[1], out uint version))
@@ -279,7 +280,7 @@ internal static class ManagedTypeMetadataCache
     }
 }
 
-internal static unsafe class ManagedScriptInterop
+internal static unsafe partial class ManagedScriptInterop
 {
     private sealed class MemberEntry
     {
@@ -308,6 +309,10 @@ internal static unsafe class ManagedScriptInterop
             GetField = &GetFieldAbi,
             SetField = &SetFieldAbi,
             Invoke = &InvokeAbi,
+            HostAttached = &HostAttachedAbi,
+            HostDetached = &HostDetachedAbi,
+            HostEnabledChanged = &HostEnabledChangedAbi,
+            HostFieldChanged = &HostFieldChangedAbi,
         };
         ScriptInteropDispatch.RegisterManaged(&api);
     }
@@ -402,6 +407,8 @@ internal static unsafe class ManagedScriptInterop
         try
         {
             field.Setter(script, converted);
+            if (!ManagedTypeMetadataCache.WriteHostField(script, script.NativePtr, field))
+                return InteropStatus.InvocationFailed;
             return InteropStatus.Ok;
         }
         catch { return InteropStatus.InvocationFailed; }

@@ -32,7 +32,7 @@ namespace
         int32, uint32, uint32, const EnsId*, int32, const uint8*, int32, const uint8*, int32);
     using ManagedSetPanelVisibleFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint8);
     using ManagedDrawEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)();
-    using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, const uint8*, int32);
+    using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedCommandFn = uint8(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
@@ -92,11 +92,13 @@ namespace
         void* getComponentCount = nullptr;
         void* getComponentObjectId = nullptr;
         void* getComponentTypeName = nullptr;
+        void* getComponentDomain = nullptr;
         void* getFieldCount = nullptr;
         void* getFieldName = nullptr;
         void* getFieldKind = nullptr;
         void* getFieldValue = nullptr;
         void* setFieldValue = nullptr;
+        void* setManagedField = nullptr;
         void* getAddableTypeCount = nullptr;
         void* getAddableTypeName = nullptr;
         void* addComponent = nullptr;
@@ -130,8 +132,8 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 3);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 13);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 55);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 15);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 57);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 34);
@@ -277,6 +279,25 @@ namespace
         if (component) Reflection::CollectFields(component->GetType(), fields);
         return fields;
     }
+    //把精确 ScriptBehaviour 识别为 C# 脚本宿主。
+    ScriptBehaviour* AsManagedScriptHost(Component* component)
+    {
+        ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
+        return script && script->IsManagedHost() ? script : nullptr;
+    }
+
+    //收集允许在 Inspector 显示的 C# 动态字段。
+    List<const ManagedScriptField*> GetManagedScriptFields(ScriptBehaviour* host)
+    {
+        List<const ManagedScriptField*> fields;
+        if (!host) return fields;
+        for (const ManagedScriptField& field : host->GetManagedFields())
+        {
+            if (field.inspectorVisible) fields.push_back(&field);
+        }
+        return fields;
+    }
+
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentCount(void* context, uint32 ensId, uint32 ensVersion)
     {
@@ -298,24 +319,61 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentTypeName(void* context, int32 objectId, uint8* buffer, int32 bufferSize)
     {
         Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        if (host)
+        {
+            const std::string& typeName = host->GetManagedTypeName();
+            return CopyUtf8(typeName.empty() ? std::string("Missing Script") : typeName, buffer, bufferSize);
+        }
         return component ? CopyUtf8(component->GetType()->GetName(), buffer, bufferSize) : 0;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL GetManagedComponentDomain(void* context, int32 objectId)
+    {
+        return AsManagedScriptHost(FindEditorComponent(context, objectId)) ? 1 : 0;
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldCount(void* context, int32 objectId)
     {
-        return static_cast<int32>(GetEditorComponentFields(FindEditorComponent(context, objectId)).size());
+        Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        if (host) return 1 + static_cast<int32>(GetManagedScriptFields(host).size());
+        return static_cast<int32>(GetEditorComponentFields(component).size());
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldName(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
     {
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(FindEditorComponent(context, objectId));
+        Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        if (host)
+        {
+            if (fieldIndex == 0) return CopyUtf8("enabled", buffer, bufferSize);
+            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
+            --fieldIndex;
+            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
+            return CopyUtf8(fields[fieldIndex]->name, buffer, bufferSize);
+        }
+
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
         if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
         return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
     {
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(FindEditorComponent(context, objectId));
+        Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        if (host)
+        {
+            if (fieldIndex == 0) return static_cast<int32>(Reflection::FieldKind::Bool);
+            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
+            --fieldIndex;
+            return fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size())
+                ? static_cast<int32>(fields[fieldIndex]->kind)
+                : 0;
+        }
+
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
         if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
         return static_cast<int32>(fields[fieldIndex]->kind);
     }
@@ -323,6 +381,16 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldValue(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
     {
         Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        if (host)
+        {
+            if (fieldIndex == 0) return CopyUtf8(host->GetEnabled() ? "true" : "false", buffer, bufferSize);
+            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
+            --fieldIndex;
+            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
+            return CopyUtf8(fields[fieldIndex]->value, buffer, bufferSize);
+        }
+
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
         if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
         return CopyUtf8(fields[fieldIndex]->GetValueAsString(component), buffer, bufferSize);
@@ -335,9 +403,48 @@ namespace
         int32 valueLength)
     {
         Component* component = FindEditorComponent(context, objectId);
+        ScriptBehaviour* host = AsManagedScriptHost(component);
+        std::string valueText = ReadUtf8(value, valueLength);
+        if (host)
+        {
+            if (fieldIndex == 0)
+            {
+                if (valueText != "true" && valueText != "false" && valueText != "1" && valueText != "0") return 0;
+                host->SetEnabled(valueText == "true" || valueText == "1");
+                return 1;
+            }
+
+            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
+            --fieldIndex;
+            return fieldIndex >= 0
+                && fieldIndex < static_cast<int32>(fields.size())
+                && host->SetManagedFieldValue(fields[fieldIndex]->name, valueText) ? 1 : 0;
+        }
+
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
         if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
-        return fields[fieldIndex]->SetValueFromString(component, ReadUtf8(value, valueLength)) ? 1 : 0;
+        return fields[fieldIndex]->SetValueFromString(component, valueText) ? 1 : 0;
+    }
+
+    uint8 ORBEDEN_NATIVE_CALL SetManagedScriptField(void* context,
+        int32 objectId,
+        const uint8* name,
+        int32 nameLength,
+        const uint8* typeName,
+        int32 typeNameLength,
+        const uint8* value,
+        int32 valueLength,
+        uint8 inspectorVisible)
+    {
+        ScriptBehaviour* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
+        if (!host) return 0;
+        std::string fieldType = ReadUtf8(typeName, typeNameLength);
+        return host->SetManagedField(
+            ReadUtf8(name, nameLength),
+            fieldType,
+            ScriptBehaviour::GetManagedFieldKind(fieldType),
+            ReadUtf8(value, valueLength),
+            inspectorVisible != 0) ? 1 : 0;
     }
 
     //按类型注册顺序枚举可创建的原生组件类型。
@@ -347,7 +454,7 @@ namespace
         for (TypeId typeId = 0; typeId < Object::GetTypeCount(); ++typeId)
         {
             Type* type = Object::FindType(typeId);
-            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType()) continue;
+            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType() || type == ScriptBehaviour::StaticType()) continue;
             if (type->Is(Component::StaticType()) && type->CanCreateObject()) types.push_back(type);
         }
         return types;
@@ -373,12 +480,24 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
-        Type* type = Object::FindType(ReadUtf8(typeName, typeNameLength));
-        if (!ens || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return 0;
+        if (!ens) return 0;
 
-        Component* component = type->Is(ScriptBehaviour::StaticType())
-            ? ens->AddComponentInstance(type)
-            : ens->AddComponent(type);
+        std::string requestedType = ReadUtf8(typeName, typeNameLength);
+        Type* type = Object::FindType(requestedType);
+        Component* component = nullptr;
+        if (type && type->Is(Component::StaticType()) && type->CanCreateObject())
+        {
+            component = type->Is(ScriptBehaviour::StaticType())
+                ? ens->AddComponentInstance(type)
+                : ens->AddComponent(type);
+        }
+        else
+        {
+            Component* createdHost = ens->AddComponentInstance(ScriptBehaviour::StaticType());
+            ScriptBehaviour* host = createdHost ? createdHost->Cast<ScriptBehaviour>() : nullptr;
+            if (host && host->SetManagedTypeName(requestedType)) component = host;
+            else if (host) ens->RemoveComponent(host);
+        }
         return component ? component->GetObjectId() : 0;
     }
 
@@ -484,11 +603,13 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
     editorApi.components.getComponentTypeName = reinterpret_cast<void*>(&GetManagedComponentTypeName);
+    editorApi.components.getComponentDomain = reinterpret_cast<void*>(&GetManagedComponentDomain);
     editorApi.components.getFieldCount = reinterpret_cast<void*>(&GetManagedComponentFieldCount);
     editorApi.components.getFieldName = reinterpret_cast<void*>(&GetManagedComponentFieldName);
     editorApi.components.getFieldKind = reinterpret_cast<void*>(&GetManagedComponentFieldKind);
     editorApi.components.getFieldValue = reinterpret_cast<void*>(&GetManagedComponentFieldValue);
     editorApi.components.setFieldValue = reinterpret_cast<void*>(&SetManagedComponentFieldValue);
+    editorApi.components.setManagedField = reinterpret_cast<void*>(&SetManagedScriptField);
     editorApi.components.getAddableTypeCount = reinterpret_cast<void*>(&GetManagedAddableComponentTypeCount);
     editorApi.components.getAddableTypeName = reinterpret_cast<void*>(&GetManagedAddableComponentTypeName);
     editorApi.components.addComponent = reinterpret_cast<void*>(&AddManagedNativeComponent);
@@ -549,15 +670,13 @@ void ManagedEditorBridge::SetPanelVisible(int32 handle, bool visible)
     setPanelVisible(handle, visible ? 1 : 0);
 }
 
-void ManagedEditorBridge::LoadGameAssembly(const std::string& assemblyPath, const std::string& sidecarPath)
+void ManagedEditorBridge::LoadGameAssembly(const std::string& assemblyPath)
 {
     if (!initialized || !LoadGameAssemblyFunction) return;
 
     ManagedLoadGameAssemblyFn loadGameAssembly = reinterpret_cast<ManagedLoadGameAssemblyFn>(LoadGameAssemblyFunction);
     loadGameAssembly(reinterpret_cast<const uint8*>(assemblyPath.data()),
-        static_cast<int32>(assemblyPath.size()),
-        reinterpret_cast<const uint8*>(sidecarPath.data()),
-        static_cast<int32>(sidecarPath.size()));
+        static_cast<int32>(assemblyPath.size()));
 }
 
 void ManagedEditorBridge::UnloadGameAssembly()

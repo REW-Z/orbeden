@@ -287,6 +287,10 @@ internal unsafe struct ManagedScriptInteropApi
     public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> GetField;
     public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, InteropStatus> SetField;
     public delegate* unmanaged[Cdecl]<ComponentHandle, MemberHandle, InteropValueAbi*, int, InteropValueAbi*, InteropStatus> Invoke;
+    public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostAttached;
+    public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostDetached;
+    public delegate* unmanaged[Cdecl]<IntPtr, InteropStatus> HostEnabledChanged;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, InteropStatus> HostFieldChanged;
 }
 
 internal static unsafe class ScriptInteropDispatch

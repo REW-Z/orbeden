@@ -276,7 +276,7 @@ void ScriptSystem::InitializeNativeScripts()
             for (Component* component : ens.GetComponents())
             {
                 ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
-                if (script) AttachNativeScript(script);
+                if (script && script->GetDomain() == ScriptDomain::Native) AttachNativeScript(script);
             }
         });
 
@@ -366,7 +366,7 @@ void ScriptSystem::TombstoneNativeInvocations(ScriptBehaviour* script)
 
 bool ScriptSystem::IsNativeScriptRunnable(ScriptBehaviour* script) const
 {
-    if (!script || !script->runtimeRegistered || !script->enabled) return false;
+    if (!script || script->GetDomain() != ScriptDomain::Native || !script->runtimeRegistered || !script->enabled) return false;
     Ens* owner = script->GetEns();
     return owner && owner->GetWorldActive();
 }
@@ -379,7 +379,7 @@ ScriptBehaviour* ScriptSystem::ResolveNativeScript(int32 objectId) const
 
 void ScriptSystem::AttachNativeScript(ScriptBehaviour* script)
 {
-    if (!initialized || !script || script->runtimeRegistered) return;
+    if (!initialized || !script || script->GetDomain() != ScriptDomain::Native || script->runtimeRegistered) return;
 
     script->runtimeRegistered = true;
     script->scriptStarted = false;
@@ -506,7 +506,7 @@ void ScriptSystem::ManagedUpdateDomain(void* context, float32 deltaTime)
 void ScriptSystem::ManagedStartDomain(void* context)
 {
     ScriptSystem* system = static_cast<ScriptSystem*>(context);
-    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create();
+    OrbedenNativeApi nativeApi = OrbedenNativeApi::Create(system->world);
     if (system->entryPoints.initialize) system->entryPoints.initialize(&nativeApi);
 }
 

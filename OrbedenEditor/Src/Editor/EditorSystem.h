@@ -150,8 +150,6 @@ private:
     //获取当前项目游戏程序集路径
     std::string GetProjectGameAssemblyPath() const;
 
-    //获取当前 world 脚本 sidecar 路径
-    std::string GetProjectScriptSidecarPath() const;
 
     //刷新 Inspector 使用的用户游戏程序集
     bool RefreshInspectorGameAssembly();
