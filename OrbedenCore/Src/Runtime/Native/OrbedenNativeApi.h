@@ -26,6 +26,7 @@ struct ScriptBehaviourBindApi
     void* GetFieldKind = nullptr;
     void* GetFieldValue = nullptr;
     void* SetField = nullptr;
+    void* ResolveReference = nullptr;
 
     //创建绑定到指定 World 的宿主函数表。
     static ScriptBehaviourBindApi Create(World* world);
@@ -55,13 +56,13 @@ public:
     ScriptBehaviourBindApi ScriptBehaviour;
 
     //创建完整原生 API 函数表。
-    static OrbedenNativeApi Create(World* world);
+    static OrbedenNativeApi Create(::World* world);
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBehaviourBindApi, 15);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 255);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBehaviourBindApi, 16);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 256);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Gui, 0);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 152);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 230);

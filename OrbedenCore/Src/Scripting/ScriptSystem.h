@@ -86,6 +86,7 @@ private:
     bool nativeListsDirty = false;
     bool domainDispatching = false;
     bool applyingDeferredMutations = false;
+    bool shuttingDown = false;
     List<int32> deferredComponentRemovals;
     List<EnsId> deferredEnsDestructions;
 

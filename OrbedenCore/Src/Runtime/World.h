@@ -31,6 +31,9 @@ private:
 	List<Object*> ownedObjects;//world拥有的运行时对象
     List<ITransformListener*> transformListeners;//变换监听器
     List<class IWorldLifecycleListener*> lifecycleListeners;//Ens生命周期监听器
+    List<int32> removingComponents;
+    List<EnsId> destroyingEns;
+    List<EnsId> pendingEnsDestructions;
 
     //使用指定稳定ID创建Ens
     Ens* CreateEnsInternal(const std::string& name, const std::string& stableId);
@@ -131,7 +134,7 @@ public:
     Component* AddComponent(EnsId ens, Type* type);
 
     //添加同类型的独立组件实例
-    Component* AddComponentInstance(EnsId ens, Type* type);
+    Component* AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath = "");
 
     //获取组件
     Component* GetComponent(EnsId ens, Type* type) const;

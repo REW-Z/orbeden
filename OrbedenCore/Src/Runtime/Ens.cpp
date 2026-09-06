@@ -2,6 +2,9 @@
 
 #include "Runtime/Object/TransformComponent.h"
 #include "Runtime/World.h"
+#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/ScriptInterop.h"
+#include "Scripting/ScriptSystem.h"
 
 #include <algorithm>
 #include <cassert>
@@ -191,4 +194,18 @@ const List<TypeId>& Ens::GetComponentTypes() const
 const List<Component*>& Ens::GetComponents() const
 {
     return componentInstances;
+}
+
+bool Ens::MoveComponent(Component* component, int32 index)
+{
+    auto found = std::find(componentInstances.begin(), componentInstances.end(), component);
+    if (found == componentInstances.end() || index < 0 || index >= static_cast<int32>(componentInstances.size())) return false;
+    componentInstances.erase(found);
+    componentInstances.insert(componentInstances.begin() + index, component);
+    if (ScriptBehaviour* script = component->Cast<ScriptBehaviour>())
+    {
+        if (script->IsManagedHost()) ScriptInterop::NotifyManagedHostAttached(script);
+        else if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(script);
+    }
+    return true;
 }

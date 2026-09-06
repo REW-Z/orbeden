@@ -7,6 +7,7 @@ namespace Orbeden;
 
 public abstract unsafe partial class ScriptBehaviour
 {
+    private sealed class NativeObjectReference(IntPtr pointer) : Object(pointer);
     private sealed class ConstructionFrame
     {
         internal EnsId Ens;
@@ -202,6 +203,68 @@ public abstract unsafe partial class ScriptBehaviour
             activeFrame = null;
         }
     }
+
+    /// <summary>临时使用 Editor 宿主表构造默认值，结束后释放反射 Wrapper。</summary>
+    internal static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, Type type)
+    {
+        if (binding == IntPtr.Zero || host == IntPtr.Zero || !typeof(ScriptBehaviour).IsAssignableFrom(type))
+            throw new InvalidOperationException("Invalid Editor script host.");
+        if (Object.FindCachedObject(Object.GetInstanceId(host)) is ScriptBehaviour) return;
+        ScriptBehaviourBindApi previous = api;
+        bool wasInitialized = initialized;
+        ScriptBehaviour? script = null;
+        api = *(ScriptBehaviourBindApi*)binding;
+        initialized = true;
+        try
+        {
+            using (BeginConstruction(ens.Id, host))
+                script = type.GetConstructor([typeof(Ens)])?.Invoke([ens]) as ScriptBehaviour;
+            if (script == null) throw new InvalidOperationException("Script requires a public (Ens ens) constructor.");
+            ManagedTypeMetadataCache.ApplyHostFields(script, host);
+            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
+        }
+        finally
+        {
+            script?.DisconnectNative();
+            ManagedTypeMetadataCache.Remove(type);
+            api = previous;
+            initialized = wasInitialized;
+        }
+    }
+
+    /// <summary>按稳定路径恢复资源或组件引用。</summary>
+    internal static Object? ResolveReference(string key, Type type)
+    {
+        if (!initialized || api.ResolveReference == null || string.IsNullOrEmpty(key)) return null;
+        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+        byte[] typeBytes = Encoding.UTF8.GetBytes(type.FullName ?? type.Name);
+        EnsId ens;
+        int kind;
+        IntPtr pointer;
+        fixed (byte* keyPointer = keyBytes)
+        fixed (byte* typePointer = typeBytes)
+            pointer = api.ResolveReference(api.Context, keyPointer, keyBytes.Length,
+                typePointer, typeBytes.Length, &ens, &kind);
+        if (pointer == IntPtr.Zero) return null;
+        Object? value = Object.FindCachedObject(Object.GetInstanceId(pointer));
+        if (value != null) return type.IsInstanceOfType(value) ? value : null;
+        Ens owner = Ens.FromId(ens);
+        value = kind switch
+        {
+            1 => Mesh.FromNative(pointer),
+            2 => Material.FromNative(pointer),
+            3 => Shader.FromNative(pointer),
+            4 => TransformComponent.FromNative(owner, pointer),
+            5 => StaticMeshRenderer.FromNative(owner, pointer),
+            6 => RigidBody.FromNative(owner, pointer),
+            7 => CharacterController.FromNative(owner, pointer),
+            8 => Collider.FromNative(owner, pointer),
+            9 => ScriptRuntime.GetOrCreateHost(pointer),
+            _ when type == typeof(Object) => Object.FromNative(pointer, value => new NativeObjectReference(value)),
+            _ => null,
+        };
+        return value != null && type.IsInstanceOfType(value) ? value : null;
+    }
 }
 
 internal readonly record struct ManagedHostField(string TypeName, string Value);
@@ -225,5 +288,6 @@ internal unsafe struct ScriptBehaviourBindApi
     public delegate* unmanaged[Cdecl]<void*, IntPtr, int, int> GetFieldKind;
     public delegate* unmanaged[Cdecl]<void*, IntPtr, int, byte*, int, int> GetFieldValue;
     public delegate* unmanaged[Cdecl]<void*, IntPtr, byte*, int, byte*, int, byte*, int, byte, byte> SetField;
+    public delegate* unmanaged[Cdecl]<void*, byte*, int, byte*, int, EnsId*, int*, IntPtr> ResolveReference;
 }
 #pragma warning restore CS0649

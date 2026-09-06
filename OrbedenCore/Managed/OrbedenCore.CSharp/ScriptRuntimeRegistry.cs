@@ -7,7 +7,7 @@ namespace Orbeden;
 public static class ScriptRuntimeRegistry
 {
     private static readonly Dictionary<EnsId, List<ScriptBehaviour>> scriptsByEns = [];
-    private static readonly Dictionary<ScriptBehaviour, ulong> slotsByScript = [];
+    private static readonly Dictionary<ScriptBehaviour, ulong> slotsByScript = new(ReferenceEqualityComparer.Instance);
     private static readonly Dictionary<ulong, ScriptBehaviour> scriptsBySlot = [];
     private static uint generation = 1;
 
@@ -92,7 +92,15 @@ public static class ScriptRuntimeRegistry
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>
     public static IReadOnlyList<ScriptBehaviour> GetScripts(EnsId ens)
     {
-        return scriptsByEns.TryGetValue(ens, out List<ScriptBehaviour>? scripts) ? scripts : [];
+        if (!scriptsByEns.TryGetValue(ens, out List<ScriptBehaviour>? scripts)) return [];
+        List<ScriptBehaviour> ordered = [];
+        foreach (IntPtr host in ScriptBehaviour.GetManagedHosts())
+        {
+            int id = Object.GetInstanceId(host);
+            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out ScriptBehaviour? script) && script.EnsId.Equals(ens))
+                ordered.Add(script);
+        }
+        return ordered;
     }
 
     /// <summary>获取当前所有运行态脚本实例快照。</summary>

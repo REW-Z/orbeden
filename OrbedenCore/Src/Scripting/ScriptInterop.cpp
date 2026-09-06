@@ -711,10 +711,12 @@ namespace ScriptInterop
         CallManaged<HostFunction>(managedApi.HostEnabledChanged, host);
     }
 
-    void NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName)
+    bool NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName)
     {
-        if (!host || !host->IsManagedHost() || fieldName.empty()) return;
-        CallManaged<HostFieldFunction>(managedApi.HostFieldChanged, host,
+        if (!host || !host->IsManagedHost() || fieldName.empty()) return false;
+        if (!managedApi.HostFieldChanged) return true;
+        InteropStatus status = CallManaged<HostFieldFunction>(managedApi.HostFieldChanged, host,
             reinterpret_cast<const uint8*>(fieldName.data()), static_cast<int32>(fieldName.size()));
+        return status == InteropStatus::Ok || status == InteropStatus::NotFound;
     }
 }

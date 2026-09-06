@@ -2,6 +2,8 @@
 
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
+#include "Runtime/Reflection.h"
+#include "Runtime/ResourceManager.h"
 #include "Scripting/ScriptBehaviour.h"
 
 #include <algorithm>
@@ -158,6 +160,41 @@ namespace
         Reflection::FieldKind kind = ScriptBehaviour::GetManagedFieldKind(fieldType);
         return host && host->SetManagedField(field, fieldType, kind, ReadUtf8(value, valueLength), inspectorVisible != 0) ? 1 : 0;
     }
+
+    //解析稳定引用，返回已校验的原生对象、组件所属 Ens 和绑定类型。
+    void* ORBEDEN_NATIVE_CALL ResolveScriptReference(void* context, const uint8* key, int32 length,
+        const uint8* typeName, int32 typeLength, EnsId* ens, int32* bindingKind)
+    {
+        if (!ens || !bindingKind) return nullptr;
+        *ens = EnsId();
+        *bindingKind = 0;
+        std::string path = ReadUtf8(key, length);
+        if (path.empty()) return nullptr;
+        Object* object = Object::FindObject(StringId(path));
+        if (!object && !path.starts_with("world://"))
+        {
+            std::string name = ReadUtf8(typeName, typeLength);
+            if (name.starts_with("Orbeden.")) name.erase(0, 8);
+            if (Type* type = Object::FindType(name)) object = ResourceManager::Load(type, path);
+        }
+        if (!object) return nullptr;
+        if (Component* component = object->Cast<Component>())
+        {
+            if (component->GetWorld() != static_cast<World*>(context)) return nullptr;
+            *ens = component->GetEnsId();
+        }
+        const std::string name = object->GetType()->GetName();
+        if (name == "Mesh") *bindingKind = 1;
+        else if (name == "Material") *bindingKind = 2;
+        else if (name == "Shader") *bindingKind = 3;
+        else if (name == "TransformComponent") *bindingKind = 4;
+        else if (name == "StaticMeshRenderer") *bindingKind = 5;
+        else if (name == "RigidBodyComponent") *bindingKind = 6;
+        else if (name == "CharacterControllerComponent") *bindingKind = 7;
+        else if (name.find("ColliderComponent") != std::string::npos) *bindingKind = 8;
+        else if (name == "ScriptBehaviour") *bindingKind = 9;
+        return object;
+    }
 }
 
 OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
@@ -197,11 +234,12 @@ ScriptBehaviourBindApi ScriptBehaviourBindApi::Create(World* world)
     api.GetFieldKind = reinterpret_cast<void*>(&GetScriptHostFieldKind);
     api.GetFieldValue = reinterpret_cast<void*>(&GetScriptHostFieldValue);
     api.SetField = reinterpret_cast<void*>(&SetScriptHostField);
+    api.ResolveReference = reinterpret_cast<void*>(&ResolveScriptReference);
     return api;
 }
 
 
-OrbedenNativeApi OrbedenNativeApi::Create(World* world)
+OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
 {
     OrbedenNativeApi api;
     api.Gui = RuntimeGuiBridge::GetApi();

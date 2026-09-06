@@ -24,5 +24,6 @@ public abstract unsafe partial class ScriptBehaviour : Component
     internal void DetachRuntime()
     {
         ScriptRuntimeRegistry.Unregister(this);
+        DisconnectNative();
     }
 }

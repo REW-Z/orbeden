@@ -62,6 +62,7 @@ internal static class ScriptRuntime
         internal Action? DrawGUI;
         internal Action? End;
         internal bool WorldActive;
+        internal bool Enabled;
         internal bool Started;
         internal bool Destroyed;
     }
@@ -71,10 +72,10 @@ internal static class ScriptRuntime
 
     private static readonly List<ScriptInstance> scripts = [];
     private static readonly Dictionary<IntPtr, ScriptInstance> scriptsByHost = [];
-    private static readonly Dictionary<ScriptBehaviour, ScriptInstance> scriptsByObject = [];
+    private static readonly Dictionary<ScriptBehaviour, ScriptInstance> scriptsByObject = new(ReferenceEqualityComparer.Instance);
     private static readonly Dictionary<EnsId, List<ScriptInstance>> scriptsByEns = [];
     private static readonly Dictionary<string, ScriptFactory> factories = new(StringComparer.Ordinal);
-    private static readonly List<Action> pendingAdds = [];
+    private static readonly HashSet<IntPtr> pendingAdds = [];
     private static readonly List<TimedCall> updates = [];
     private static readonly List<TimedCall> fixedUpdates = [];
     private static readonly List<TimedCall> lateUpdates = [];
@@ -85,13 +86,14 @@ internal static class ScriptRuntime
     private static bool hasDestroyed;
     private static bool rebuilding;
     private static int dispatchDepth;
+    private static bool shuttingDown;
 
     /// <summary>连接原生 API，并为当前 World 已有的全部托管宿主创建 Wrapper。</summary>
     public static void Initialize(IntPtr nativeApi)
     {
+        ShutdownScripts();
         OrbedenCoreRuntime.Initialize(nativeApi);
         ManagedScriptInterop.Shutdown();
-        ShutdownScripts();
         ScriptRuntimeRegistry.Clear();
         ManagedScriptInterop.Initialize();
 
@@ -160,11 +162,15 @@ internal static class ScriptRuntime
     /// <summary>响应原生宿主挂载事件。</summary>
     internal static InteropStatus OnHostAttached(IntPtr host)
     {
-        if (host == IntPtr.Zero) return InteropStatus.InvalidArgument;
-        if (scriptsByHost.ContainsKey(host)) return InteropStatus.Ok;
+        if (shuttingDown || host == IntPtr.Zero) return InteropStatus.InvalidArgument;
+        if (scriptsByHost.ContainsKey(host))
+        {
+            callsDirty = true;
+            return InteropStatus.Ok;
+        }
         if (dispatchDepth != 0 || rebuilding)
         {
-            pendingAdds.Add(() => CreateForHost(host));
+            pendingAdds.Add(host);
             return InteropStatus.Ok;
         }
         return CreateForHost(host) == null ? InteropStatus.NotFound : InteropStatus.Ok;
@@ -173,6 +179,7 @@ internal static class ScriptRuntime
     /// <summary>响应原生宿主移除事件，并立即使旧代理失效。</summary>
     internal static InteropStatus OnHostDetached(IntPtr host)
     {
+        pendingAdds.Remove(host);
         if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
             return host == IntPtr.Zero ? InteropStatus.InvalidArgument : InteropStatus.NotFound;
         DestroyScript(instance);
@@ -184,7 +191,8 @@ internal static class ScriptRuntime
     /// <summary>响应原生宿主 enabled 变化。</summary>
     internal static InteropStatus OnHostEnabledChanged(IntPtr host)
     {
-        if (!scriptsByHost.ContainsKey(host)) return InteropStatus.NotFound;
+        if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance)) return InteropStatus.NotFound;
+        instance.Enabled = ScriptBehaviour.GetHostEnabled(host);
         callsDirty = true;
         return InteropStatus.Ok;
     }
@@ -194,9 +202,11 @@ internal static class ScriptRuntime
     {
         if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
             return InteropStatus.NotFound;
+        if (!ManagedTypeMetadataCache.Get(instance.Script.GetType()).Fields.ContainsKey(fieldName))
+            return InteropStatus.NotFound;
         return ManagedTypeMetadataCache.ApplyHostField(instance.Script, host, fieldName)
             ? InteropStatus.Ok
-            : InteropStatus.NotFound;
+            : InteropStatus.InvocationFailed;
     }
 
     /// <summary>响应 Ens 世界活动状态变化。</summary>
@@ -280,7 +290,8 @@ internal static class ScriptRuntime
     //在原生宿主上构造 Wrapper，并把生命周期方法绑定为闭合 delegate。
     private static ScriptInstance? CreateForHost(IntPtr host)
     {
-        if (host == IntPtr.Zero) return null;
+        if (shuttingDown || host == IntPtr.Zero) return null;
+        pendingAdds.Remove(host);
         if (scriptsByHost.TryGetValue(host, out ScriptInstance? old)) return old;
 
         EnsId ensId = ScriptBehaviour.GetHostEns(host);
@@ -299,8 +310,6 @@ internal static class ScriptRuntime
                 script = factory.Constructor.Invoke([ens]) as ScriptBehaviour;
             if (script == null) return null;
 
-            ManagedTypeMetadataCache.ApplyHostFields(script, host);
-            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
             ScriptInstance instance = new()
             {
                 Host = host,
@@ -312,20 +321,26 @@ internal static class ScriptRuntime
                 DrawGUI = factory.DrawGUI?.CreateDelegate<Action>(script),
                 End = factory.End?.CreateDelegate<Action>(script),
                 WorldActive = ens.WorldActive,
+                Enabled = ScriptBehaviour.GetHostEnabled(host),
             };
             Register(instance);
+            ManagedTypeMetadataCache.ApplyHostFields(script, host);
+            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
             callsDirty = true;
             return instance;
         }
         catch (Exception exception)
         {
-            script?.DetachRuntime();
+            if (scriptsByHost.TryGetValue(host, out ScriptInstance? failed)) DestroyScript(failed);
+            else script?.DetachRuntime();
             Console.Error.WriteLine($"ScriptRuntime: create '{typeName}' failed. {exception}");
             return null;
         }
     }
 
     //注册宿主、Wrapper、ObjectId 和 Ens 索引。
+    internal static ScriptBehaviour? GetOrCreateHost(IntPtr host) => CreateForHost(host)?.Script;
+
     private static void Register(ScriptInstance instance)
     {
         scripts.Add(instance);
@@ -426,6 +441,10 @@ internal static class ScriptRuntime
         try
         {
             callsDirty = false;
+            Dictionary<IntPtr, int> order = [];
+            foreach (IntPtr host in ScriptBehaviour.GetManagedHosts()) order[host] = order.Count;
+            scripts.Sort((left, right) => order.GetValueOrDefault(left.Host, int.MaxValue)
+                .CompareTo(order.GetValueOrDefault(right.Host, int.MaxValue)));
             updates.Clear();
             fixedUpdates.Clear();
             lateUpdates.Clear();
@@ -452,7 +471,7 @@ internal static class ScriptRuntime
     private static bool IsRunnable(ScriptInstance instance)
     {
         return !instance.Destroyed && instance.WorldActive
-            && instance.Script.IsAlive && instance.Script.enabled;
+            && instance.Enabled;
     }
 
     //保证已 Start 的脚本只执行一次 End，并使注册表句柄立即失效。
@@ -462,6 +481,7 @@ internal static class ScriptRuntime
         instance.Destroyed = true;
         if (instance.Started) Invoke(instance, instance.End, "OnEnd");
         instance.Started = false;
+        scriptsByObject.Remove(instance.Script);
         instance.Script.DetachRuntime();
         scriptsByHost.Remove(instance.Host);
         hasDestroyed = true;
@@ -491,9 +511,11 @@ internal static class ScriptRuntime
         RemoveDestroyed();
         if (pendingAdds.Count != 0)
         {
-            Action[] changes = [.. pendingAdds];
-            pendingAdds.Clear();
-            foreach (Action change in changes) change();
+            IntPtr[] changes = [.. pendingAdds];
+            foreach (IntPtr host in changes)
+            {
+                if (pendingAdds.Remove(host)) CreateForHost(host);
+            }
         }
         RebuildCalls();
     }
@@ -521,8 +543,9 @@ internal static class ScriptRuntime
     //结束 Wrapper 和阶段表，不销毁 World 中的宿主组件。
     private static void ShutdownScripts()
     {
+        shuttingDown = true;
         pendingAdds.Clear();
-        for (int index = scripts.Count - 1; index >= 0; --index) DestroyScript(scripts[index]);
+        foreach (ScriptInstance instance in scripts.ToArray().Reverse()) DestroyScript(instance);
         scripts.Clear();
         scriptsByHost.Clear();
         scriptsByObject.Clear();
@@ -535,6 +558,7 @@ internal static class ScriptRuntime
         hasDestroyed = false;
         rebuilding = false;
         dispatchDepth = 0;
+        shuttingDown = false;
     }
 
     [return: DynamicallyAccessedMembers(ScriptMembers)]

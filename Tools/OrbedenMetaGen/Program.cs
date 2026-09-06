@@ -38,6 +38,11 @@ if (classes.Count == 0)
 var errors = new List<string>();
 foreach (var classInfo in classes)
 {
+    if (classInfo.Name is "ScriptBehaviour" or "OrbedenObject" or "Object" or "Component")
+    {
+        classInfo.Fields.Clear();
+        classInfo.Methods.Clear();
+    }
     foreach (var field in classInfo.Fields)
     {
         field.Persistent = IsPersistentField(classInfo.Name, field.Name)
@@ -410,7 +415,8 @@ static string NormalizeValueType(string type)
 //判断字段是否进入持久化
 static bool IsPersistentField(string className, string fieldName)
 {
-    if (className == "Object" && (fieldName == "instanceId" || fieldName == "ownerWorld")) return false;
+    if (className == "ScriptBehaviour") return false;
+    if (className is "Object" or "OrbedenObject") return false;
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
     if (className == "StaticMeshRenderer" && fieldName == "renderState") return false;
@@ -681,6 +687,11 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
     foreach (var classInfo in classes)
     {
         //注册字段元数据
+        if (classInfo.Name == "ScriptBehaviour")
+        {
+            output.AppendLine("        ScriptBehaviour::RegisterReflection();");
+            continue;
+        }
         output.AppendLine($"        RegisterTypeFields({classInfo.Name}::StaticType(),");
         output.AppendLine("            {");
 

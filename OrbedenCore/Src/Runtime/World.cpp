@@ -253,9 +253,8 @@ void World::Clear()
         DELETE(storage);
     }
 
-    ensSlots.clear();
+    //保留空槽位的版本，防止 World 重载后旧 EnsId 重新命中新实体。
     liveEns.clear();
-    freeEnsIds.clear();
     componentStorages.clear();
     renderSettings = RenderSettings();
 }
@@ -330,6 +329,18 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
 //销毁Ens
 bool World::DestroyEns(EnsId ens)
 {
+    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end()) return true;
+    for (int32 objectId : removingComponents)
+    {
+        Object* object = Object::FindObjectById(objectId);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (component && component->GetEnsId() == ens)
+        {
+            if (std::find(pendingEnsDestructions.begin(), pendingEnsDestructions.end(), ens) == pendingEnsDestructions.end())
+                pendingEnsDestructions.push_back(ens);
+            return true;
+        }
+    }
     if (ScriptSystem* scripts = ScriptSystem::Current())
     {
         if (scripts->DeferEnsDestruction(ens)) return true;
@@ -342,6 +353,7 @@ bool World::DestroyEns(EnsId ens)
     if (!transform) return false;
 
     //停用待销毁 Ens
+    destroyingEns.push_back(ens);
     SetEnsLocalActive(ens, false);
 
     //解除子级关系
@@ -358,9 +370,13 @@ bool World::DestroyEns(EnsId ens)
     SetParent(ens, EnsId());
 
     //销毁额外组件实例
-    List<Component*> componentInstances = storedEns->componentInstances;
-    for (Component* component : componentInstances)
+    List<int32> componentIds;
+    for (Component* component : storedEns->componentInstances)
+        if (component && component != transform) componentIds.push_back(component->GetObjectId());
+    for (int32 objectId : componentIds)
     {
+        Object* object = Object::FindObjectById(objectId);
+        Component* component = object ? object->Cast<Component>() : nullptr;
         if (component && component != transform)
         {
             RemoveComponent(component);
@@ -385,6 +401,7 @@ bool World::DestroyEns(EnsId ens)
     assert(transformDeleted);
 
     storedEns->alive = false;
+    destroyingEns.erase(std::remove(destroyingEns.begin(), destroyingEns.end(), ens), destroyingEns.end());
 
     EnsSlot& slot = ensSlots[ens.id];
     assert(slot.denseIndex < liveEns.size());
@@ -592,8 +609,9 @@ Component* World::AddComponent(EnsId ens, Type* type)
 }
 
 //添加同类型的独立组件实例
-Component* World::AddComponentInstance(EnsId ens, Type* type)
+Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath)
 {
+    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end()) return nullptr;
     TransformComponent* transform = GetTransformComponent(ens);
     if (!transform || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return nullptr;
     if (type == TransformComponent::StaticType()) return transform;
@@ -602,7 +620,9 @@ Component* World::AddComponentInstance(EnsId ens, Type* type)
     if (!storedEns) return nullptr;
 
     //创建并注册组件
-    std::string instancePath = Object::CreateRuntimeInstancePath(transform->GetInstanceId().GetPath(), type);
+    std::string instancePath = stablePath.empty()
+        ? Object::CreateRuntimeInstancePath(transform->GetInstanceId().GetPath(), type) : stablePath;
+    if (Object::FindObject(StringId(instancePath))) return nullptr;
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
     Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
     if (!component) return nullptr;
@@ -616,19 +636,20 @@ Component* World::AddComponentInstance(EnsId ens, Type* type)
 Component* World::GetComponent(EnsId ens, Type* type) const
 {
     if (!type || !IsAlive(ens)) return nullptr;
-
-    ComponentStorage* storage = FindComponentStorage(type);
-    return storage ? storage->Get(ens) : nullptr;
+    Ens* owner = const_cast<World*>(this)->GetEns(ens);
+    for (Component* component : owner->GetComponents())
+        if (component && component->GetType() == type) return component;
+    return nullptr;
 }
 
 //获取指定类型的全部组件实例
 void World::GetComponentInstances(EnsId ens, Type* type, List<Component*>& output) const
 {
     output.clear();
-    if (!type) return;
-
-    ComponentStorage* storage = FindComponentStorage(type);
-    if (storage) storage->GetAll(ens, output);
+    Ens* owner = const_cast<World*>(this)->GetEns(ens);
+    if (!type || !owner) return;
+    for (Component* component : owner->GetComponents())
+        if (component && component->GetType() == type) output.push_back(component);
 }
 
 //移除组件
@@ -641,6 +662,9 @@ bool World::RemoveComponent(EnsId ens, Type* type)
 //移除指定组件实例
 bool World::RemoveComponent(Component* component)
 {
+    if (!component) return false;
+    int32 objectId = component->GetObjectId();
+    if (std::find(removingComponents.begin(), removingComponents.end(), objectId) != removingComponents.end()) return true;
     if (ScriptSystem* scripts = ScriptSystem::Current())
     {
         if (scripts->DeferComponentRemoval(component)) return true;
@@ -656,10 +680,12 @@ bool World::RemoveComponent(Component* component)
     if (!storage) return false;
 
     //执行组件卸载回调
+    removingComponents.push_back(objectId);
     component->OnDetach();
 
     //移除组件索引和对象
     Component* removedComponent = storage->Remove(component);
+    removingComponents.erase(std::remove(removingComponents.begin(), removingComponents.end(), objectId), removingComponents.end());
     if (removedComponent != component) return false;
 
     Ens* storedEns = GetEns(ens);
@@ -669,6 +695,12 @@ bool World::RemoveComponent(Component* component)
     component->SetOwnership(Object::Ownership::None);
     bool deleted = Object::DestroyDetachedInstance(component);
     assert(deleted);
+    if (removingComponents.empty())
+    {
+        List<EnsId> pending;
+        pending.swap(pendingEnsDestructions);
+        for (EnsId id : pending) DestroyEns(id);
+    }
     return deleted;
 }
 

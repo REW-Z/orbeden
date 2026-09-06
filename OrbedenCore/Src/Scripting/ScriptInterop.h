@@ -176,7 +176,7 @@ namespace ScriptInterop
     void NotifyManagedHostEnabledChanged(ScriptBehaviour* host);
 
     //通知托管域宿主序列化字段已变化。
-    void NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName);
+    bool NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName);
 }
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 11);

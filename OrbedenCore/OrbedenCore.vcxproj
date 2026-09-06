@@ -282,7 +282,7 @@
   </ItemGroup>
   <Target Name="GenerateOrbedenCoreExportDefinition" BeforeTargets="Link" Condition="'$(Platform)'=='x64'">
     <ItemGroup>
-      <OrbedenCoreObjectFiles Include="$(IntDir)*.obj" />
+      <OrbedenCoreObjectFiles Include="@(ClCompile->'$(IntDir)%(Filename).obj')" />
     </ItemGroup>
     <WriteLinesToFile File="$(IntDir)OrbedenCore.objects.txt" Lines="@(OrbedenCoreObjectFiles)" Overwrite="true" />
     <Exec Command="&quot;$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe&quot; -E __create_def &quot;$(IntDir)OrbedenCore.exports.def&quot; &quot;$(IntDir)OrbedenCore.objects.txt&quot;" />
