@@ -272,21 +272,30 @@ public sealed partial class Ens : IEquatable<Ens>
         BuildComponentAddOrder(componentType, [], [], order);
 
         Component? requested = null;
-        foreach (Type type in order)
+        List<Component> createdComponents = [];
+        try
         {
-            Component? existing = GetFirstNativeComponent(type);
-            bool isRequestedType = type == componentType;
-            if ((!isRequestedType || type.GetCustomAttribute<UniqueComponentAttribute>(true) != null) && existing != null)
+            foreach (Type type in order)
             {
-                if (isRequestedType) requested = existing;
-                continue;
+                Component? existing = GetFirstNativeComponent(type);
+                bool isRequestedType = type == componentType;
+                if ((!isRequestedType || type.GetCustomAttribute<UniqueComponentAttribute>(true) != null) && existing != null)
+                {
+                    if (isRequestedType) requested = existing;
+                    continue;
+                }
+                Component? created = CreateNativeComponent(type);
+                if (created == null) throw new InvalidOperationException($"原生组件 {type.FullName} 创建失败。");
+                if (!ReferenceEquals(created, existing)) createdComponents.Add(created);
+                if (isRequestedType) requested = created;
             }
-
-            Component? created = CreateNativeComponent(type);
-            if (created == null) throw new InvalidOperationException($"原生组件 {type.FullName} 创建失败。");
-            if (isRequestedType) requested = created;
         }
-
+        catch
+        {
+            for (int index = createdComponents.Count - 1; index >= 0; --index)
+                Object.Destroy(createdComponents[index]);
+            throw;
+        }
         return requested ?? GetFirstNativeComponent(componentType);
     }
 

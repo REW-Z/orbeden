@@ -45,28 +45,19 @@ internal sealed class InspectorPanel : EditorPanel
         bool IsManaged,
         Type? ManagedType);
 
-    private sealed class FieldSnapshot
-    {
-        public string Name = string.Empty;
-        public NativeFieldKind Kind;
-        public string TypeName = string.Empty;
-        public string Value = string.Empty;
-    }
-
     private sealed class ComponentSnapshot
     {
         public EnsId Ens;
-        public string TypeName = string.Empty;
-        public bool IsManaged;
         public int ObjectId;
-        public List<FieldSnapshot> Fields = [];
+        public int Index;
+        public string Xml = string.Empty;
     }
-
     private readonly List<Type> scriptTypes = [];
     private GameAssemblyLoadContext? gameContext;
     private Assembly? gameAssembly;
     private string componentSearch = string.Empty;
     private string status = "Game assembly is not loaded.";
+    private static string propertyError = string.Empty;
 
     public override EditorPanelInfo Info => new(
         "inspector",
@@ -116,6 +107,7 @@ internal sealed class InspectorPanel : EditorPanel
         Ens active = Ens.FromId(context.SelectedEns);
         DrawObjectHeader(active, selection, context.SelectedStableId);
         if (!string.IsNullOrWhiteSpace(status)) EditorGUI.Label($"C# Assembly: {status}");
+        if (propertyError.Length != 0) EditorGUI.Label(propertyError);
         DrawComponents(selection);
         DrawAddComponent(selection);
     }
@@ -308,7 +300,7 @@ internal sealed class InspectorPanel : EditorPanel
                         component,
                         EditorApplication.MarkWorldDirty))
                     .ToList();
-                DrawPropertyDocument(new PropertyDocument(targets), title);
+                DrawPropertyDocument(new PropertyDocument(targets), title, primary.IsManaged ? "" : primary.TypeName);
             }
         }
         finally
@@ -323,25 +315,62 @@ internal sealed class InspectorPanel : EditorPanel
     private string GetComponentTitle(NativeComponentInfo component)
     {
         if (!component.IsManaged) return $"[C++] {GetShortTypeName(component.TypeName)}";
-        bool missing = gameAssembly != null && FindScriptType(component.TypeName) == null;
+        bool missing = FindScriptType(component.TypeName) == null;
         return missing
             ? $"[C#] Missing Script ({GetShortTypeName(component.TypeName)})"
             : $"[C#] {GetShortTypeName(component.TypeName)}";
     }
 
     //绘制 PropertyDocument 支持的全部基础值。
-    private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix)
+    private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "")
     {
         document.Update();
-        foreach (PropertyValue property in document.Properties)
+        string[] order = nativeType switch
+        {
+            "TransformComponent" => ["localPosition", "localRotation", "localScale"],
+            "StaticMeshRenderer" => ["enabled", "mesh", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
+            "RigidBodyComponent" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
+            "CharacterControllerComponent" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
+            _ when nativeType.EndsWith("ColliderComponent", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
+            _ => [],
+        };
+        foreach (PropertyValue property in document.Properties.OrderBy(value =>
+            Array.IndexOf(order, value.Name) is int index && index >= 0 ? index : int.MaxValue).ToArray())
         {
             string label = property.HasMultipleDifferentValues
                 ? $"{property.Name} (Mixed)"
                 : property.Name;
-            if (!TryDrawProperty(label, property, out InteropValue value)) continue;
+            InteropValue value;
+            if (nativeType.Length != 0 && property.Name == "mesh" && property.Kind == InteropValueKind.StringId)
+            {
+                property.Value.TryGet(out string key);
+                Orbeden.Object? mesh = EditorGUI.LoadObjectFieldAsset(typeof(Mesh), key);
+                if (!EditorGUI.ObjectField(label, typeof(Mesh), ref mesh, ref key)) continue;
+                value = InteropValue.FromStringId(key);
+            }
+            else if (property.Kind == InteropValueKind.UInt32 && nativeType.Length != 0
+                && property.Name is "drawQueue" or "bodyType" or "shape")
+            {
+                string[] labels = property.Name == "drawQueue" ? ["Opaque", "Transparent", "Refraction"]
+                    : property.Name == "bodyType" ? ["Static", "Dynamic", "Kinematic"] : ["Capsule", "Box"];
+                property.Value.TryGet(out uint current);
+                uint selected = current;
+                if (!EditorGUI.BeginCombo(label, current < labels.Length ? labels[current] : current.ToString())) continue;
+                try
+                {
+                    for (uint index = 0; index < labels.Length; ++index)
+                        if (EditorGUI.Selectable(labels[index], index == current)) selected = index;
+                }
+                finally { EditorGUI.EndCombo(); }
+                if (selected == current) continue;
+                value = InteropValue.From(selected);
+            }
+            else if (!TryDrawProperty(label, property, out value)) continue;
             property.SetValue(value);
-            document.ApplyChanges($"Edit {undoPrefix}.{property.Name}");
         }
+        if (document.HasPendingChanges)
+            propertyError = document.ApplyChanges($"Edit {undoPrefix}") ? string.Empty
+                : $"Failed to apply {undoPrefix}; changes were rolled back.";
     }
 
     //绘制单个属性并返回用户提交的新值。
@@ -376,6 +405,30 @@ internal sealed class InspectorPanel : EditorPanel
                 property.Value.TryGet(out vector3 current);
                 if (!EditorGUI.InputVector3(label, ref current)) return false;
                 value = InteropValue.From(current);
+                return true;
+            }
+            case InteropValueKind.Quaternion:
+            {
+                property.Value.TryGet(out quaternion rotation);
+                vector3 xyz = new(rotation.x, rotation.y, rotation.z);
+                float w = rotation.w;
+                bool changed = EditorGUI.InputVector3(label + " XYZ", ref xyz);
+                changed |= EditorGUI.InputFloat(label + " W", ref w);
+                if (!changed) return false;
+                float length = MathF.Sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z + w * w);
+                if (length < 0.000001f) return false;
+                value = InteropValue.From(new quaternion(xyz.x / length, xyz.y / length, xyz.z / length, w / length));
+                return true;
+            }
+            case InteropValueKind.Color:
+            {
+                property.Value.TryGet(out color4 color);
+                vector3 rgb = new(color.r, color.g, color.b);
+                float alpha = color.a;
+                bool changed = EditorGUI.InputVector3(label + " RGB", ref rgb);
+                changed |= EditorGUI.InputFloat(label + " Alpha", ref alpha);
+                if (!changed) return false;
+                value = InteropValue.From(new color4(rgb.x, rgb.y, rgb.z, alpha));
                 return true;
             }
             case InteropValueKind.String:
@@ -451,23 +504,44 @@ internal sealed class InspectorPanel : EditorPanel
     private void AddComponentGroup(IReadOnlyList<EnsId> selection, ComponentAddChoice choice)
     {
         List<ComponentSnapshot> created = [];
-        foreach (EnsId ens in selection)
+        try
         {
-            int objectId = EditorNativeComponents.AddComponentAndGetId(ens, choice.TypeName);
-            if (objectId == 0)
+            //先验证全部目标和依赖图，任何 Unique 冲突都不修改 World。
+            List<ComponentAddChoice> order = [];
+            BuildAddOrder(choice, [], [], order);
+            foreach (EnsId ens in selection)
             {
-                RemoveSnapshots(created);
-                status = $"Component add failed: {choice.TypeName}";
-                return;
+                List<NativeComponentInfo> existing = EditorNativeComponents.GetComponents(ens);
+                bool unique = choice.ManagedType?.GetCustomAttribute<UniqueComponentAttribute>(true) != null
+                    || !choice.IsManaged && choice.TypeName is "TransformComponent" or "StaticMeshRenderer"
+                        or "RigidBodyComponent" or "CharacterControllerComponent" or "Camera";
+                if (unique && existing.Any(value => value.IsManaged == choice.IsManaged && value.TypeName == choice.TypeName))
+                    throw new InvalidOperationException($"Unique component already exists: {choice.TypeName}");
             }
-
-            if (choice.IsManaged && choice.ManagedType != null)
-                InitializeManagedFields(objectId, choice.ManagedType);
-
-            NativeComponentInfo component = new(objectId, choice.TypeName, choice.IsManaged);
-            created.Add(CaptureComponent(ens, component));
+            foreach (EnsId ens in selection)
+            {
+                foreach (ComponentAddChoice item in order)
+                {
+                    List<NativeComponentInfo> before = EditorNativeComponents.GetComponents(ens);
+                    if (item.TypeName != choice.TypeName && before.Any(value => value.IsManaged == item.IsManaged && value.TypeName == item.TypeName))
+                        continue;
+                    int objectId = EditorNativeComponents.AddComponentAndGetId(ens, item.TypeName, item.IsManaged);
+                    if (objectId == 0 || before.Any(value => value.ObjectId == objectId))
+                        throw new InvalidOperationException($"Component add failed: {item.TypeName}");
+                    NativeComponentInfo component = new(objectId, item.TypeName, item.IsManaged);
+                    ComponentSnapshot snapshot = CaptureComponent(ens, component);
+                    created.Add(snapshot);
+                    if (item.IsManaged && item.ManagedType != null) EditorNativeComponents.InitializeManagedFields(ens, objectId, item.ManagedType);
+                    snapshot.Xml = EditorNativeComponents.CaptureComponent(objectId);
+                }
+            }
         }
-
+        catch (Exception exception)
+        {
+            RemoveSnapshots(created);
+            status = exception.Message;
+            return;
+        }
         TouchWorld();
         string label = $"Add {choice.Label}";
         EditorPropertyHistory.PushAction(
@@ -484,28 +558,38 @@ internal sealed class InspectorPanel : EditorPanel
             });
     }
 
-    //把 C# 可序列化字段定义和默认值写进新原生宿主。
-    private static void InitializeManagedFields(int objectId, Type type)
+    /// <summary>验证依赖图并生成依赖优先的创建顺序。</summary>
+    private static void BuildAddOrder(ComponentAddChoice choice, HashSet<string> visiting,
+        HashSet<string> visited, List<ComponentAddChoice> order)
     {
-        HashSet<string> existing = [];
-        int existingCount = EditorNativeComponents.GetFieldCount(objectId);
-        for (int index = 0; index < existingCount; ++index)
-            existing.Add(EditorNativeComponents.GetFieldName(objectId, index));
-
-        foreach (FieldInfo field in GetSerializableFields(type))
+        string key = $"{choice.IsManaged}:{choice.TypeName}";
+        if (visited.Contains(key)) return;
+        if (!visiting.Add(key)) throw new InvalidOperationException($"Cyclic component dependency: {choice.TypeName}");
+        Type? type = choice.ManagedType;
+        if (type != null)
         {
-            if (existing.Contains(field.Name)) continue;
-            InteropValueKind kind = EditorManagedInteropValue.GetKind(field.FieldType);
-            if (kind == InteropValueKind.Empty) continue;
-            EditorNativeComponents.SetManagedField(
-                objectId,
-                field.Name,
-                GetManagedFieldTypeName(field.FieldType, kind),
-                GetDefaultSerializedValue(kind),
-                field.GetCustomAttribute<HideInInspectorAttribute>() == null);
+            if (type.IsAbstract || type.ContainsGenericParameters || !typeof(Component).IsAssignableFrom(type))
+                throw new InvalidOperationException($"Invalid component type: {type.FullName}");
+            foreach (DependsOnComponentAttribute dependency in type.GetCustomAttributes<DependsOnComponentAttribute>(true))
+            {
+                foreach (Type required in dependency.ComponentTypes)
+                {
+                    if (required == null) throw new InvalidOperationException("Null component dependency.");
+                    bool managed = typeof(ScriptBehaviour).IsAssignableFrom(required);
+                    string name = managed ? GetScriptTypeName(required) : required == typeof(RigidBody) ? "RigidBodyComponent"
+                        : required == typeof(CharacterController) ? "CharacterControllerComponent"
+                        : typeof(Collider).IsAssignableFrom(required) ? required.Name + "Component" : required.Name;
+                    if (managed && required.GetConstructor([typeof(Ens)]) == null
+                        || !managed && name != "TransformComponent" && !EditorNativeComponents.GetAddableTypes().Contains(name))
+                        throw new InvalidOperationException($"Component has no factory: {name}");
+                    BuildAddOrder(new(name, name, managed, required), visiting, visited, order);
+                }
+            }
         }
+        visiting.Remove(key);
+        visited.Add(key);
+        order.Add(choice);
     }
-
     //原子删除一组匹配的组件，并把可恢复快照压入 Undo。
     private void RemoveComponentGroup(
         IReadOnlyList<EnsId> selection,
@@ -540,81 +624,46 @@ internal sealed class InspectorPanel : EditorPanel
             });
     }
 
-    //捕获一个组件所有可见持久化字段。
+    /// <summary>捕获完整组件快照和原挂载位置。</summary>
     private static ComponentSnapshot CaptureComponent(EnsId ens, NativeComponentInfo component)
     {
-        ComponentSnapshot snapshot = new()
+        return new ComponentSnapshot
         {
             Ens = ens,
-            TypeName = component.TypeName,
-            IsManaged = component.IsManaged,
             ObjectId = component.ObjectId,
+            Index = EditorNativeComponents.GetComponents(ens).FindIndex(value => value.ObjectId == component.ObjectId),
+            Xml = EditorNativeComponents.CaptureComponent(component.ObjectId),
         };
-        int count = EditorNativeComponents.GetFieldCount(component.ObjectId);
-        for (int index = 0; index < count; ++index)
-        {
-            NativeFieldKind kind = EditorNativeComponents.GetFieldKind(component.ObjectId, index);
-            snapshot.Fields.Add(new FieldSnapshot
-            {
-                Name = EditorNativeComponents.GetFieldName(component.ObjectId, index),
-                Kind = kind,
-                TypeName = GetNativeFieldTypeName(kind),
-                Value = EditorNativeComponents.GetFieldValue(component.ObjectId, index),
-            });
-        }
-        return snapshot;
     }
 
-    //删除快照当前指向的组件实例。
+    /// <summary>按依赖的逆序移除组件，失败时保留身份以便报告。</summary>
     private static void RemoveSnapshots(IEnumerable<ComponentSnapshot> snapshots)
     {
         foreach (ComponentSnapshot snapshot in snapshots.Reverse())
         {
-            if (snapshot.ObjectId != 0) EditorNativeComponents.RemoveComponent(snapshot.ObjectId);
+            if (snapshot.ObjectId == 0) continue;
+            if (!EditorNativeComponents.RemoveComponent(snapshot.ObjectId))
+                throw new InvalidOperationException("Component removal failed.");
             snapshot.ObjectId = 0;
         }
     }
 
-    //重新创建组件并恢复字段值。
+    /// <summary>按原顺序恢复完整快照；任一恢复失败则回滚本次恢复。</summary>
     private static void RestoreSnapshots(IEnumerable<ComponentSnapshot> values)
     {
+        List<ComponentSnapshot> restored = [];
         foreach (ComponentSnapshot snapshot in values)
         {
-            int objectId = EditorNativeComponents.AddComponentAndGetId(snapshot.Ens, snapshot.TypeName);
-            if (objectId == 0) continue;
+            int objectId = EditorNativeComponents.RestoreComponent(snapshot.Ens, snapshot.Xml, snapshot.Index);
+            if (objectId == 0)
+            {
+                RemoveSnapshots(restored);
+                throw new InvalidOperationException("Component restore failed; restored components were rolled back.");
+            }
             snapshot.ObjectId = objectId;
-
-            if (snapshot.IsManaged)
-            {
-                foreach (FieldSnapshot field in snapshot.Fields)
-                {
-                    if (field.Name == "enabled" || field.Kind == NativeFieldKind.Unsupported) continue;
-                    EditorNativeComponents.SetManagedField(
-                        objectId,
-                        field.Name,
-                        field.TypeName,
-                        field.Value,
-                        true);
-                }
-            }
-
-            int fieldCount = EditorNativeComponents.GetFieldCount(objectId);
-            foreach (FieldSnapshot field in snapshot.Fields)
-            {
-                for (int index = 0; index < fieldCount; ++index)
-                {
-                    if (!string.Equals(
-                        EditorNativeComponents.GetFieldName(objectId, index),
-                        field.Name,
-                        StringComparison.Ordinal))
-                        continue;
-                    EditorNativeComponents.SetFieldValue(objectId, index, field.Value);
-                    break;
-                }
-            }
+            restored.Add(snapshot);
         }
     }
-
     //标记 World 并刷新 Inspector；PIE 中 MarkWorldDirty 会自动忽略磁盘 Dirty。
     private static void TouchWorld()
     {
@@ -627,86 +676,6 @@ internal sealed class InspectorPanel : EditorPanel
     {
         return scriptTypes.FirstOrDefault(type =>
             string.Equals(GetScriptTypeName(type), typeName, StringComparison.Ordinal));
-    }
-
-    //枚举从基类到派生类声明的可序列化字段。
-    private static IEnumerable<FieldInfo> GetSerializableFields(Type type)
-    {
-        List<Type> chain = [];
-        for (Type? current = type;
-             current != null && current != typeof(ScriptBehaviour) && current != typeof(Component);
-             current = current.BaseType)
-            chain.Add(current);
-        chain.Reverse();
-
-        foreach (Type current in chain)
-        {
-            foreach (FieldInfo field in current.GetFields(
-                BindingFlags.Instance | BindingFlags.Public |
-                BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-            {
-                if (field.IsStatic || field.IsInitOnly) continue;
-                if (field.IsPublic || field.GetCustomAttribute<SerializeFieldAttribute>() != null)
-                    yield return field;
-            }
-        }
-    }
-
-    //获取宿主字段使用的稳定类型名。
-    private static string GetManagedFieldTypeName(Type type, InteropValueKind kind)
-    {
-        return kind switch
-        {
-            InteropValueKind.Bool => "bool",
-            InteropValueKind.Int32 => "int32",
-            InteropValueKind.UInt32 => "uint32",
-            InteropValueKind.UInt64 => "uint64",
-            InteropValueKind.Float32 => "float32",
-            InteropValueKind.String => "string",
-            InteropValueKind.Vector3 => "vector3",
-            InteropValueKind.Color => "color",
-            InteropValueKind.Quaternion => "quaternion",
-            InteropValueKind.EnsId => "EnsId",
-            InteropValueKind.Object => $"Ref<{type.FullName}>",
-            _ => string.Empty,
-        };
-    }
-
-    //把原生字段分类转换为宿主可恢复的类型名。
-    private static string GetNativeFieldTypeName(NativeFieldKind kind)
-    {
-        return kind switch
-        {
-            NativeFieldKind.Bool => "bool",
-            NativeFieldKind.Int32 => "int32",
-            NativeFieldKind.UInt32 => "uint32",
-            NativeFieldKind.UInt64 => "uint64",
-            NativeFieldKind.Float32 => "float32",
-            NativeFieldKind.String => "string",
-            NativeFieldKind.StringId => "StringId",
-            NativeFieldKind.ObjectRef => "Ref<Orbeden.Object>",
-            NativeFieldKind.Vector3 => "vector3",
-            NativeFieldKind.Color => "color",
-            NativeFieldKind.Quaternion => "quaternion",
-            NativeFieldKind.EnsId => "EnsId",
-            _ => string.Empty,
-        };
-    }
-
-    //获取新字段的稳定默认文本。
-    private static string GetDefaultSerializedValue(InteropValueKind kind)
-    {
-        return kind switch
-        {
-            InteropValueKind.Bool => "false",
-            InteropValueKind.Int32 or InteropValueKind.UInt32 or
-                InteropValueKind.UInt64 or InteropValueKind.Float32 or
-                InteropValueKind.Object => "0",
-            InteropValueKind.Vector3 => "0 0 0",
-            InteropValueKind.Color or InteropValueKind.Quaternion => "0 0 0 1",
-            InteropValueKind.EnsId => $"{uint.MaxValue}:0",
-            _ => string.Empty,
-        };
     }
 
     //读取脚本稳定完整类型名。

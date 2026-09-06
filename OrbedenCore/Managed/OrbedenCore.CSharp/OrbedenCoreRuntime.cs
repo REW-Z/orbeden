@@ -161,9 +161,9 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<RuntimeGuiAdvancedApi>(nameof(RuntimeGuiAdvancedApi), 17);
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
-        ValidateFunctionTable<ScriptBehaviourBindApi>(nameof(ScriptBehaviourBindApi), 15);
+        ValidateFunctionTable<ScriptBehaviourBindApi>(nameof(ScriptBehaviourBindApi), 16);
         ValidateFunctionTable<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 199);
-        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 255);
+        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 256);
 
         nativeAbiValidated = true;
     }

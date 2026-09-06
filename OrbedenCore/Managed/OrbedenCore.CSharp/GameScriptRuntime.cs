@@ -5,6 +5,10 @@ namespace Orbeden;
 /// <summary>供游戏主程序集的固定 NativeAOT 导出薄层调用。</summary>
 public static class GameScriptRuntime
 {
+    /// <summary>供 Editor 为新宿主补齐构造函数和字段初始化器的默认值。</summary>
+    public static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, Type type) =>
+        ScriptBehaviour.InitializeEditorHost(binding, host, ens, type);
+
     /// <summary>初始化当前 World 的脚本运行时。</summary>
     public static void Initialize(IntPtr nativeApi) => ScriptRuntime.Initialize(nativeApi);
 

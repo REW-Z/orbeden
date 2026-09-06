@@ -309,7 +309,8 @@ namespace
         //写入组件起始节点
         Type* type = component->GetType();
         WriteIndent(output, depth);
-        output << "<Component type=\"" << EscapeXml(type->GetName()) << "\">\n";
+        output << "<Component type=\"" << EscapeXml(type->GetName()) << "\" stableId=\""
+            << EscapeXml(component->GetInstanceId().GetPath()) << "\">\n";
 
         ScriptBehaviour* script = component->Cast<ScriptBehaviour>();
         if (script)
@@ -451,7 +452,8 @@ namespace
         }
 
         //创建组件实例
-        Component* component = type == TransformComponent::StaticType() ? ens.Transform() : ens.AddComponentInstance(type);
+        Component* component = type == TransformComponent::StaticType() ? ens.Transform()
+            : world.AddComponentInstance(ens.GetId(), type, GetAttribute(startToken, "stableId"));
         if (!component)
         {
             LogSerializerError("World XML failed to create component: " + typeName);
@@ -594,6 +596,19 @@ namespace
     {
         if (!object) return;
 
+        ScriptBehaviour* host = object->Cast<ScriptBehaviour>();
+        if (host && host->IsManagedHost())
+        {
+            for (const ManagedScriptField& field : host->GetManagedFields())
+            {
+                if (field.kind != Reflection::FieldKind::ObjectRef || field.value.empty()
+                    || IsWorldObjectRef(field.value) || !field.typeName.starts_with("Ref<")) continue;
+                std::string name = field.typeName.substr(4, field.typeName.size() - 5);
+                if (name.starts_with("Orbeden.")) name.erase(0, 8);
+                if (Type* type = Object::FindType(name)) ResourceManager::Load(type, field.value);
+            }
+        }
+
         const Reflection::TypeInfo* typeInfo = Reflection::FindTypeInfo(object->GetType());
         if (!typeInfo) return;
 
@@ -629,6 +644,31 @@ namespace
 }
 
 //从 XML 文件反序列化 World
+std::string WorldSerializer::CaptureComponent(Component* component)
+{
+    std::ostringstream output;
+    WriteComponent(output, component, 0);
+    return output.str();
+}
+
+Component* WorldSerializer::RestoreComponent(Ens& ens, const std::string& snapshot, int32 index)
+{
+    XmlReader reader(snapshot);
+    XmlToken token;
+    if (!reader.Next(token) || token.name != "Component" || !ens.GetWorld()) return nullptr;
+    usize oldCount = ens.GetComponents().size();
+    bool success = ReadComponent(reader, *ens.GetWorld(), ens, token);
+    if (ens.GetComponents().size() != oldCount + 1) return nullptr;
+    Component* component = ens.GetComponents().back();
+    if (!success || !ens.MoveComponent(component, index))
+    {
+        ens.RemoveComponent(component);
+        return nullptr;
+    }
+    LoadResourceRefsFromObject(*ens.GetWorld(), component);
+    return component;
+}
+
 bool WorldSerializer::LoadXml(World& world, const std::string& path)
 {
     Reflection::RegisterGeneratedReflection();

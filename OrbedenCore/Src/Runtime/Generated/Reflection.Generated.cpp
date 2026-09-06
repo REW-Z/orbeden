@@ -1004,56 +1004,6 @@ public:
         return Reflection::SetFromValue(instance->lockFlags, value);
     }
 
-    //调用 Component.GetEnsId 方法
-    static Reflection::Value Invoke_Component_GetEnsId_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetEnsId();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 Component.OnAttach 方法
-    static Reflection::Value Invoke_Component_OnAttach_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnAttach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Component.OnDetach 方法
-    static Reflection::Value Invoke_Component_OnDetach_2(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnDetach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 Component.OnWorldActiveChanged 方法
-    static Reflection::Value Invoke_Component_OnWorldActiveChanged_3(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        Component* instance = static_cast<Component*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        bool arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->OnWorldActiveChanged(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
     //读取 Camera.enabled 字段
     static std::string Get_Camera_enabled(Object* object)
     {
@@ -2125,90 +2075,6 @@ public:
         return Reflection::Value(result);
     }
 
-    //读取 OrbedenObject.instanceId 字段
-    static std::string Get_OrbedenObject_instanceId(Object* object)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return Reflection::ToXmlValue(instance->instanceId);
-    }
-
-    //直接读取 OrbedenObject.instanceId 字段
-    static Reflection::Value GetValue_OrbedenObject_instanceId(Object* object)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return instance ? Reflection::ToValue(instance->instanceId) : Reflection::Value();
-    }
-
-    //写入 OrbedenObject.instanceId 字段
-    static bool Set_OrbedenObject_instanceId(Object* object, const std::string& value)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return Reflection::SetFromXmlValue(instance->instanceId, value);
-    }
-
-    //直接写入 OrbedenObject.instanceId 字段
-    static bool SetValue_OrbedenObject_instanceId(Object* object, const Reflection::Value& value)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->instanceId, value);
-    }
-
-    //读取 OrbedenObject.objectId 字段
-    static std::string Get_OrbedenObject_objectId(Object* object)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return Reflection::ToXmlValue(instance->objectId);
-    }
-
-    //直接读取 OrbedenObject.objectId 字段
-    static Reflection::Value GetValue_OrbedenObject_objectId(Object* object)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return instance ? Reflection::ToValue(instance->objectId) : Reflection::Value();
-    }
-
-    //写入 OrbedenObject.objectId 字段
-    static bool Set_OrbedenObject_objectId(Object* object, const std::string& value)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        return Reflection::SetFromXmlValue(instance->objectId, value);
-    }
-
-    //直接写入 OrbedenObject.objectId 字段
-    static bool SetValue_OrbedenObject_objectId(Object* object, const Reflection::Value& value)
-    {
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->objectId, value);
-    }
-
-    //调用 OrbedenObject.GetObjectId 方法
-    static Reflection::Value Invoke_OrbedenObject_GetObjectId_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetObjectId();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 OrbedenObject.SetInstanceId 方法
-    static Reflection::Value Invoke_OrbedenObject_SetInstanceId_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        StringId arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetInstanceId(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
     //读取 Shader.name 字段
     static std::string Get_Shader_name(Object* object)
     {
@@ -3176,119 +3042,6 @@ public:
         return Reflection::Value();
     }
 
-    //读取 ScriptBehaviour.enabled 字段
-    static std::string Get_ScriptBehaviour_enabled(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 ScriptBehaviour.enabled 字段
-    static Reflection::Value GetValue_ScriptBehaviour_enabled(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 ScriptBehaviour.enabled 字段
-    static bool Set_ScriptBehaviour_enabled(Object* object, const std::string& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 ScriptBehaviour.enabled 字段
-    static bool SetValue_ScriptBehaviour_enabled(Object* object, const Reflection::Value& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 ScriptBehaviour.scriptStarted 字段
-    static std::string Get_ScriptBehaviour_scriptStarted(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::ToXmlValue(instance->scriptStarted);
-    }
-
-    //直接读取 ScriptBehaviour.scriptStarted 字段
-    static Reflection::Value GetValue_ScriptBehaviour_scriptStarted(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return instance ? Reflection::ToValue(instance->scriptStarted) : Reflection::Value();
-    }
-
-    //写入 ScriptBehaviour.scriptStarted 字段
-    static bool Set_ScriptBehaviour_scriptStarted(Object* object, const std::string& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::SetFromXmlValue(instance->scriptStarted, value);
-    }
-
-    //直接写入 ScriptBehaviour.scriptStarted 字段
-    static bool SetValue_ScriptBehaviour_scriptStarted(Object* object, const Reflection::Value& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->scriptStarted, value);
-    }
-
-    //读取 ScriptBehaviour.runtimeRegistered 字段
-    static std::string Get_ScriptBehaviour_runtimeRegistered(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::ToXmlValue(instance->runtimeRegistered);
-    }
-
-    //直接读取 ScriptBehaviour.runtimeRegistered 字段
-    static Reflection::Value GetValue_ScriptBehaviour_runtimeRegistered(Object* object)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return instance ? Reflection::ToValue(instance->runtimeRegistered) : Reflection::Value();
-    }
-
-    //写入 ScriptBehaviour.runtimeRegistered 字段
-    static bool Set_ScriptBehaviour_runtimeRegistered(Object* object, const std::string& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        return Reflection::SetFromXmlValue(instance->runtimeRegistered, value);
-    }
-
-    //直接写入 ScriptBehaviour.runtimeRegistered 字段
-    static bool SetValue_ScriptBehaviour_runtimeRegistered(Object* object, const Reflection::Value& value)
-    {
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->runtimeRegistered, value);
-    }
-
-    //调用 ScriptBehaviour.GetEnabled 方法
-    static Reflection::Value Invoke_ScriptBehaviour_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetEnabled();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 ScriptBehaviour.SetEnabled 方法
-    static Reflection::Value Invoke_ScriptBehaviour_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        ScriptBehaviour* instance = static_cast<ScriptBehaviour*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        bool arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->SetEnabled(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
 };
 
 namespace Reflection
@@ -3403,15 +3156,10 @@ namespace Reflection
 
         RegisterTypeFields(Component::StaticType(),
             {
-                FieldInfo("owner", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Component::StaticType(),
             {
-                MethodInfo("GetEnsId", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_GetEnsId_0),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnAttach_1),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Component_OnDetach_2),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Component_OnWorldActiveChanged_3),
             });
 
         RegisterTypeFields(Camera::StaticType(),
@@ -3514,18 +3262,10 @@ namespace Reflection
 
         RegisterTypeFields(OrbedenObject::StaticType(),
             {
-                FieldInfo("instanceId", "StringId", Reflection::FieldKind::StringId, true, ReflectionGeneratedAccess::Get_OrbedenObject_instanceId, ReflectionGeneratedAccess::Set_OrbedenObject_instanceId, nullptr, ReflectionGeneratedAccess::GetValue_OrbedenObject_instanceId, ReflectionGeneratedAccess::SetValue_OrbedenObject_instanceId),
-                FieldInfo("objectId", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_OrbedenObject_objectId, ReflectionGeneratedAccess::Set_OrbedenObject_objectId, nullptr, ReflectionGeneratedAccess::GetValue_OrbedenObject_objectId, ReflectionGeneratedAccess::SetValue_OrbedenObject_objectId),
-                FieldInfo("managedWrapper", "void*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("ownerWorld", "World*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("ownership", "Ownership", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("allocationChunk", "IChunk*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(OrbedenObject::StaticType(),
             {
-                MethodInfo("GetObjectId", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_OrbedenObject_GetObjectId_0),
-                MethodInfo("SetInstanceId", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("id", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_OrbedenObject_SetInstanceId_1),
             });
 
         RegisterTypeFields(Shader::StaticType(),
@@ -3633,18 +3373,6 @@ namespace Reflection
                 MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalScale_5),
             });
 
-        RegisterTypeFields(ScriptBehaviour::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_enabled, ReflectionGeneratedAccess::Set_ScriptBehaviour_enabled, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_enabled, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_enabled),
-                FieldInfo("scriptStarted", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_scriptStarted, ReflectionGeneratedAccess::Set_ScriptBehaviour_scriptStarted, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_scriptStarted, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_scriptStarted),
-                FieldInfo("runtimeRegistered", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ScriptBehaviour_runtimeRegistered, ReflectionGeneratedAccess::Set_ScriptBehaviour_runtimeRegistered, nullptr, ReflectionGeneratedAccess::GetValue_ScriptBehaviour_runtimeRegistered, ReflectionGeneratedAccess::SetValue_ScriptBehaviour_runtimeRegistered),
-            });
-
-        RegisterTypeMethods(ScriptBehaviour::StaticType(),
-            {
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ScriptBehaviour_GetEnabled_0),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ScriptBehaviour_SetEnabled_1),
-            });
-
+        ScriptBehaviour::RegisterReflection();
     }
 }

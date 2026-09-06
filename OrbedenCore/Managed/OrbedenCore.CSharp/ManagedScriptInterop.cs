@@ -39,6 +39,7 @@ internal sealed class ManagedTypeMetadata
 internal static partial class ManagedTypeMetadataCache
 {
     private static readonly Dictionary<Type, ManagedTypeMetadata> cache = [];
+    internal static void Remove(Type type) => cache.Remove(type);
 
     internal static ManagedTypeMetadata Get(Type type)
     {
@@ -147,8 +148,7 @@ internal static partial class ManagedTypeMetadataCache
         foreach ((string name, ManagedHostField stored) in ScriptBehaviour.ReadHostFields(host))
         {
             if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)) continue;
-            if (!TryParseSerialized(field.Kind, stored.Value, out InteropValue value)) continue;
-            if (!TryFromInterop(value, field.FieldType, out object? converted)) continue;
+            if (!TryReadHostValue(field, stored, out object? converted)) continue;
             field.Setter(script, converted);
         }
     }
@@ -163,7 +163,7 @@ internal static partial class ManagedTypeMetadataCache
         {
             foreach (FieldInfo field in current.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             {
-                if (field.IsStatic || field.IsInitOnly) continue;
+                if (field.IsStatic || field.IsInitOnly || field.Name is "domain" or "managedTypeName" or "enabled") continue;
                 bool serialized = field.IsPublic || field.GetCustomAttribute<SerializeFieldAttribute>() != null;
                 if (!serialized || !TryGetKind(field.FieldType, out InteropValueKind kind)) continue;
 
@@ -252,7 +252,6 @@ internal static partial class ManagedTypeMetadataCache
             case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color4(color[0], color[1], color[2], color[3])); return true;
             case InteropValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = InteropValue.From(new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3])); return true;
             case InteropValueKind.EnsId:
-            case InteropValueKind.Object when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int objectId): value = InteropValue.FromObjectId(objectId); return true;
             {
                 string[] parts = text.Split(':');
                 if (parts.Length == 2 && uint.TryParse(parts[0], out uint id) && uint.TryParse(parts[1], out uint version))
@@ -406,9 +405,13 @@ internal static unsafe partial class ManagedScriptInterop
         if (!ManagedTypeMetadataCache.TryFromInterop(value, field.FieldType, out object? converted)) return InteropStatus.TypeMismatch;
         try
         {
+            object? previous = field.Getter(script);
             field.Setter(script, converted);
             if (!ManagedTypeMetadataCache.WriteHostField(script, script.NativePtr, field))
+            {
+                field.Setter(script, previous);
                 return InteropStatus.InvocationFailed;
+            }
             return InteropStatus.Ok;
         }
         catch { return InteropStatus.InvocationFailed; }

@@ -72,18 +72,18 @@ public sealed class MoveBehaviour : ScriptBehaviour
 
     public MoveBehaviour(Ens ens) : base(ens) {}
 
-    protected void OnStart()
+    private void OnStart()
     {
     }
 
-    protected void OnUpdate(float deltaTime)
+    private void OnUpdate(float deltaTime)
     {
         vector3 position = Ens.Transform.localPosition;
         position.x += speed * deltaTime;
         Ens.Transform.localPosition = position;
     }
 
-    protected void OnEnd()
+    private void OnEnd()
     {
     }
 }
@@ -101,6 +101,12 @@ OnEnd()
 ```
 
 public 字段会进入序列化和 Inspector。private/protected 字段需要添加 `[SerializeField]`。
+
+每个 C# 脚本都绑定一个独立的原生 `ScriptBehaviour` 组件，`InstanceId` 就是宿主的原生 ObjectId。请通过 `ens.AddComponent<MoveBehaviour>()` 创建脚本，不要直接 `new`。构造函数内可以访问 `Ens`、`InstanceId` 和 `enabled`；场景行为应放入 `OnStart`，因为 Editor 添加组件时也会执行构造函数来取得字段默认值。
+
+`ens.GetComponent<MoveBehaviour>()` 返回最先挂载的实例，`ens.GetComponents<MoveBehaviour>()` 返回按挂载顺序排列的全部实例。同一个 Ens 可以添加多个同类型脚本；用 `[UniqueComponent]` 限制唯一实例，用 `[DependsOnComponent(typeof(...))]` 声明依赖。
+
+`[HideInInspector]` 只隐藏字段，字段仍可保存并随删除 Undo 恢复。不要声明名为 `domain`、`managedTypeName` 或 `enabled` 的序列化字段，这些名称由宿主管理。
 
 C# 文件修改后：
 
@@ -170,6 +176,16 @@ C++ 文件修改后：
 
 不要手动编辑 MetaGen 生成的 `Reflection.Generated.cpp`。
 
+Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本只显示一个组件卡片。多选添加会检查唯一性和依赖，失败时回滚本次创建。删除组件后 Undo 会恢复完整字段和原挂载位置。属性提交失败会显示错误信息。
+
+两种语言的组件和字段都保存在 `.world` 中，按 `Ctrl+S` 统一保存，不再生成独立脚本文件。对象引用保存资源 Key 或 World 稳定路径；不要把运行时 `InstanceId` 当作持久化引用。缺少 C# 类型时会显示 `Missing Script`，已有字段保留，修复并重新加载程序集后可重新连接。
+
+### C++ / C# 互操作
+
+C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
+
+重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，不能继续使用旧句柄。完整示例见 [脚本系统](ScriptSystem.md)。
+
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 
 ## 6. 运行和调试
@@ -183,6 +199,8 @@ C++ 文件修改后：
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
 构建结果和错误会显示在 Build Game 面板的状态区域以及日志中。
+
+各生命周期阶段固定先执行 C++，再批量执行 C#。禁用后重新启用不会重复 Start；已启动脚本在移除、Ens 销毁或停止运行时执行一次 End。PIE Inspector 修改会同时更新原生宿主和当前 C# 对象；游戏代码直接修改普通 C# 字段只影响本次运行，不自动写回保存数据。
 
 ## 7. 构建 Player
 

@@ -10,12 +10,14 @@
 #include "Log/Log.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/Ens.h"
+#include "Runtime/WorldSerializer.h"
 #include "Runtime/Object/TransformComponent.h"
 #include "Runtime/ResourceManager.h"
 #include "Scripting/ScriptBehaviour.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
+#include "Runtime/Native/OrbedenNativeApi.h"
 
 #include <coreclr_delegates.h>
 #include <algorithm>
@@ -103,6 +105,10 @@ namespace
         void* getAddableTypeName = nullptr;
         void* addComponent = nullptr;
         void* removeComponent = nullptr;
+        void* captureComponent = nullptr;
+        void* restoreComponent = nullptr;
+        void* findComponent = nullptr;
+        void* getHostBinding = nullptr;
     };
 
     //传给 Editor C# 的应用函数表。
@@ -132,8 +138,8 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 3);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 15);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 57);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 19);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 61);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 34);
@@ -245,6 +251,19 @@ namespace
             const List<Reflection::FieldInfo>& fields = type->GetFields();
             type->ForEachLiveObject([&](Object* object)
             {
+                ScriptBehaviour* host = object->Cast<ScriptBehaviour>();
+                if (host && host->IsManagedHost())
+                {
+                    List<ManagedScriptField> stored = host->GetManagedFields();
+                    for (const ManagedScriptField& field : stored)
+                    {
+                        std::string mapped;
+                        if (field.kind == Reflection::FieldKind::ObjectRef
+                            && !field.value.starts_with("world://")
+                            && TryMapResourceKey(field.value, oldKey, newKey, prefix != 0, mapped)
+                            && host->SetManagedFieldValue(field.name, mapped)) ++changed;
+                    }
+                }
                 for (const Reflection::FieldInfo& field : fields)
                 {
                     if (field.kind != Reflection::FieldKind::ObjectRef || !field.getter || !field.setter) continue;
@@ -277,6 +296,8 @@ namespace
     {
         List<const Reflection::FieldInfo*> fields;
         if (component) Reflection::CollectFields(component->GetType(), fields);
+        fields.erase(std::remove_if(fields.begin(), fields.end(), [](const Reflection::FieldInfo* field)
+            { return !field || !field->persistent || !field->getter || !field->setter; }), fields.end());
         return fields;
     }
     //把精确 ScriptBehaviour 识别为 C# 脚本宿主。
@@ -476,7 +497,8 @@ namespace
         uint32 ensId,
         uint32 ensVersion,
         const uint8* typeName,
-        int32 typeNameLength)
+        int32 typeNameLength,
+        uint8 isManaged)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
@@ -485,13 +507,12 @@ namespace
         std::string requestedType = ReadUtf8(typeName, typeNameLength);
         Type* type = Object::FindType(requestedType);
         Component* component = nullptr;
-        if (type && type->Is(Component::StaticType()) && type->CanCreateObject())
+        if (!isManaged && type && type != ScriptBehaviour::StaticType()
+            && type->Is(Component::StaticType()) && type->CanCreateObject())
         {
-            component = type->Is(ScriptBehaviour::StaticType())
-                ? ens->AddComponentInstance(type)
-                : ens->AddComponent(type);
+            component = ens->AddComponentInstance(type);
         }
-        else
+        else if (isManaged)
         {
             Component* createdHost = ens->AddComponentInstance(ScriptBehaviour::StaticType());
             ScriptBehaviour* host = createdHost ? createdHost->Cast<ScriptBehaviour>() : nullptr;
@@ -507,6 +528,38 @@ namespace
         if (!component || component->GetType() == TransformComponent::StaticType()) return 0;
         Ens* ens = component->GetEns();
         return ens && ens->RemoveComponent(component) ? 1 : 0;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL CaptureManagedComponent(void* context, int32 objectId, uint8* buffer, int32 size)
+    {
+        return CopyUtf8(WorldSerializer::CaptureComponent(FindEditorComponent(context, objectId)), buffer, size);
+    }
+
+    int32 ORBEDEN_NATIVE_CALL FindManagedComponent(void* context, const uint8* key, int32 length)
+    {
+        Object* object = Object::FindObject(StringId(ReadUtf8(key, length)));
+        Component* component = object ? FindEditorComponent(context, object->GetObjectId()) : nullptr;
+        return component ? component->GetObjectId() : 0;
+    }
+
+    void* ORBEDEN_NATIVE_CALL GetEditorHostBinding(void* context, int32 objectId, void** pointer)
+    {
+        if (!pointer) return nullptr;
+        ScriptBehaviour* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
+        *pointer = host;
+        if (!host) return nullptr;
+        static ScriptBehaviourBindApi api;
+        api = ScriptBehaviourBindApi::Create(host->GetWorld());
+        return &api;
+    }
+
+    int32 ORBEDEN_NATIVE_CALL RestoreManagedComponent(void* context, uint32 id, uint32 version,
+        const uint8* snapshot, int32 length, int32 index)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Ens* ens = editor ? editor->GetWorld().GetEns({ id, version }) : nullptr;
+        Component* component = ens ? WorldSerializer::RestoreComponent(*ens, ReadUtf8(snapshot, length), index) : nullptr;
+        return component ? component->GetObjectId() : 0;
     }
 
     //把一个 C# Panel 注册到原生 PanelManager
@@ -614,6 +667,10 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.getAddableTypeName = reinterpret_cast<void*>(&GetManagedAddableComponentTypeName);
     editorApi.components.addComponent = reinterpret_cast<void*>(&AddManagedNativeComponent);
     editorApi.components.removeComponent = reinterpret_cast<void*>(&RemoveManagedNativeComponent);
+    editorApi.components.captureComponent = reinterpret_cast<void*>(&CaptureManagedComponent);
+    editorApi.components.restoreComponent = reinterpret_cast<void*>(&RestoreManagedComponent);
+    editorApi.components.findComponent = reinterpret_cast<void*>(&FindManagedComponent);
+    editorApi.components.getHostBinding = reinterpret_cast<void*>(&GetEditorHostBinding);
     if (initializeEditor(&editorApi) == 0)
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed runtime rejected initialization.");

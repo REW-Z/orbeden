@@ -61,8 +61,8 @@ public static class EditorPropertyHistory
     {
         if (undo.Count == 0) return false;
         EditorChange change = undo[^1];
-        undo.RemoveAt(undo.Count - 1);
         change.Undo();
+        undo.RemoveAt(undo.Count - 1);
         redo.Add(change);
         EditorApplication.RequestRepaint();
         return true;
@@ -72,8 +72,8 @@ public static class EditorPropertyHistory
     {
         if (redo.Count == 0) return false;
         EditorChange change = redo[^1];
-        redo.RemoveAt(redo.Count - 1);
         change.Redo();
+        redo.RemoveAt(redo.Count - 1);
         undo.Add(change);
         EditorApplication.RequestRepaint();
         return true;
@@ -253,10 +253,23 @@ public sealed class PropertyDocument
 
     private static void ApplyHistory(IReadOnlyList<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> writes, bool useNewValue)
     {
+        List<InteropValue> previous = [];
         foreach (var write in writes)
         {
-            write.Target.Set(write.Name, useNewValue ? write.NewValue : write.OldValue);
-            write.Target.MarkDirty();
+            InteropValue value = useNewValue ? write.NewValue : write.OldValue;
+            if (write.Target.Validate(write.Name, value) != InteropStatus.Ok
+                || write.Target.TryGet(write.Name, out InteropValue current) != InteropStatus.Ok)
+                throw new InvalidOperationException($"Cannot restore property {write.Name}.");
+            previous.Add(current);
         }
+        for (int index = 0; index < writes.Count; ++index)
+        {
+            var write = writes[index];
+            if (write.Target.Set(write.Name, useNewValue ? write.NewValue : write.OldValue) == InteropStatus.Ok) continue;
+            for (int rollback = index - 1; rollback >= 0; --rollback)
+                writes[rollback].Target.Set(writes[rollback].Name, previous[rollback]);
+            throw new InvalidOperationException($"Property restore failed: {write.Name}.");
+        }
+        foreach (IPropertyTarget target in writes.Select(write => write.Target).Distinct()) target.MarkDirty();
     }
 }

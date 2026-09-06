@@ -1113,6 +1113,15 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
         {
             for (Component* component : ens.GetComponents())
             {
+                ScriptBehaviour* host = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                if (host && host->IsManagedHost())
+                {
+                    for (const ManagedScriptField& field : host->GetManagedFields())
+                    {
+                        if (field.kind == Reflection::FieldKind::ObjectRef)
+                            ResourceManager::MarkObjectGraph(Object::FindObject(StringId(field.value)), marked);
+                    }
+                }
                 ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
                 if (!collider) continue;
 

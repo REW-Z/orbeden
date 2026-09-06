@@ -2,6 +2,7 @@
 
 #include "Runtime/Reflection.h"
 #include "Scripting/ScriptSystem.h"
+#include "Scripting/ScriptInterop.h"
 
 #include <unordered_map>
 
@@ -155,12 +156,12 @@ void ScriptBehaviour::SetEnabled(bool value)
 
 ScriptDomain ScriptBehaviour::GetDomain() const
 {
-    return domain;
+    return GetType() == StaticType() ? ScriptDomain::Managed : ScriptDomain::Native;
 }
 
 bool ScriptBehaviour::IsManagedHost() const
 {
-    return domain == ScriptDomain::Managed && GetType() == StaticType();
+    return GetType() == StaticType();
 }
 
 const std::string& ScriptBehaviour::GetManagedTypeName() const
@@ -170,9 +171,10 @@ const std::string& ScriptBehaviour::GetManagedTypeName() const
 
 bool ScriptBehaviour::SetManagedTypeName(const std::string& value)
 {
-    if (!IsManagedHost() || value.empty()) return false;
+    if (!IsManagedHost()) return false;
     if (managedTypeName == value) return true;
 
+    ScriptInterop::NotifyManagedHostDetached(this);
     managedTypeName = value;
     ScriptInterop::NotifyManagedHostAttached(this);
     return true;
@@ -200,21 +202,28 @@ bool ScriptBehaviour::SetManagedField(const std::string& name,
 {
     if (!IsManagedHost() || name.empty() || typeName.empty() || kind == Reflection::FieldKind::Unsupported) return false;
     if (name == "domain" || name == "managedTypeName" || name == "enabled") return false;
+    Reflection::Value parsed;
+    if (kind != Reflection::FieldKind::EnsId && !Reflection::Value::FromString(kind, value, parsed)) return false;
 
     for (ManagedScriptField& field : managedFields)
     {
         if (field.name != name) continue;
+        if (field.typeName == typeName && field.kind == kind && field.value == value
+            && field.inspectorVisible == inspectorVisible) return true;
+        ManagedScriptField previous = field;
         field.typeName = typeName;
         field.kind = kind;
         field.value = value;
         field.inspectorVisible = inspectorVisible;
-        ScriptInterop::NotifyManagedHostFieldChanged(this, name);
-        return true;
+        if (ScriptInterop::NotifyManagedHostFieldChanged(this, name)) return true;
+        field = std::move(previous);
+        return false;
     }
 
     managedFields.push_back({ name, typeName, kind, value, inspectorVisible });
-    ScriptInterop::NotifyManagedHostFieldChanged(this, name);
-    return true;
+    if (ScriptInterop::NotifyManagedHostFieldChanged(this, name)) return true;
+    managedFields.pop_back();
+    return false;
 }
 
 bool ScriptBehaviour::SetManagedFieldValue(const std::string& name, const std::string& value)
@@ -222,9 +231,13 @@ bool ScriptBehaviour::SetManagedFieldValue(const std::string& name, const std::s
     for (ManagedScriptField& field : managedFields)
     {
         if (field.name != name) continue;
+        Reflection::Value parsed;
+        if (field.kind != Reflection::FieldKind::EnsId && !Reflection::Value::FromString(field.kind, value, parsed)) return false;
+        std::string previous = field.value;
         field.value = value;
-        ScriptInterop::NotifyManagedHostFieldChanged(this, name);
-        return true;
+        if (ScriptInterop::NotifyManagedHostFieldChanged(this, name)) return true;
+        field.value = std::move(previous);
+        return false;
     }
     return false;
 }

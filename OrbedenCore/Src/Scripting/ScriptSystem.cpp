@@ -200,6 +200,7 @@ bool ScriptSystem::Initialize()
 
 void ScriptSystem::Shutdown()
 {
+    shuttingDown = true;
     if (initialized)
     {
         ApplyDeferredMutations();
@@ -227,6 +228,7 @@ void ScriptSystem::Shutdown()
     applyingDeferredMutations = false;
     deferredComponentRemovals.clear();
     deferredEnsDestructions.clear();
+    shuttingDown = false;
 }
 
 bool ScriptSystem::DeferComponentRemoval(Component* component)
@@ -311,7 +313,7 @@ void ScriptSystem::ShutdownNativeScripts()
 
 void ScriptSystem::RebuildNativeInvocations()
 {
-    while (nativeListsDirty)
+    if (nativeListsDirty)
     {
         nativeListsDirty = false;
         nativeUpdateInvocations.clear();
@@ -319,7 +321,16 @@ void ScriptSystem::RebuildNativeInvocations()
         nativeLateUpdateInvocations.clear();
         nativeDrawGuiInvocations.clear();
 
-        List<int32> scriptIds = nativeScriptIds;
+        List<int32> scriptIds;
+        world->ForEachEns([&](Ens& ens)
+        {
+            for (Component* component : ens.GetComponents())
+            {
+                ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                if (script && script->GetDomain() == ScriptDomain::Native && script->runtimeRegistered)
+                    scriptIds.push_back(script->GetObjectId());
+            }
+        });
         for (int32 objectId : scriptIds)
         {
             ScriptBehaviour* script = ResolveNativeScript(objectId);
@@ -379,7 +390,7 @@ ScriptBehaviour* ScriptSystem::ResolveNativeScript(int32 objectId) const
 
 void ScriptSystem::AttachNativeScript(ScriptBehaviour* script)
 {
-    if (!initialized || !script || script->GetDomain() != ScriptDomain::Native || script->runtimeRegistered) return;
+    if (!initialized || shuttingDown || !script || script->GetDomain() != ScriptDomain::Native || script->runtimeRegistered) return;
 
     script->runtimeRegistered = true;
     script->scriptStarted = false;
@@ -409,6 +420,7 @@ void ScriptSystem::DetachNativeScript(ScriptBehaviour* script)
 void ScriptSystem::RefreshNativeScript(ScriptBehaviour* script)
 {
     if (!initialized || !script || !script->runtimeRegistered) return;
+    if (!IsNativeScriptRunnable(script)) TombstoneNativeInvocations(script);
     nativeListsDirty = true;
 }
 

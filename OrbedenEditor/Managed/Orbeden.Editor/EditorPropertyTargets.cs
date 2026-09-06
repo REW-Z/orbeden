@@ -95,14 +95,15 @@ internal static class EditorInteropValueText
 
 internal sealed class NativeComponentPropertyTarget : IPropertyTarget
 {
-    private readonly int objectId;
+    private readonly string stableId;
+    private int objectId => EditorNativeComponents.FindComponent(stableId);
     private readonly Dictionary<string, (int Index, InteropValueKind Kind)> fields = new(StringComparer.Ordinal);
     private readonly IReadOnlyList<PropertyDescriptor> properties;
     private readonly Action dirty;
 
     internal NativeComponentPropertyTarget(NativeComponentInfo component, Action markDirty)
     {
-        objectId = component.ObjectId;
+        stableId = (string?)System.Xml.Linq.XElement.Parse(EditorNativeComponents.CaptureComponent(component.ObjectId)).Attribute("stableId") ?? string.Empty;
         dirty = markDirty;
         List<PropertyDescriptor> descriptors = [];
         int count = EditorNativeComponents.GetFieldCount(objectId);
@@ -110,6 +111,7 @@ internal sealed class NativeComponentPropertyTarget : IPropertyTarget
         {
             string name = EditorNativeComponents.GetFieldName(objectId, index);
             InteropValueKind kind = EditorInteropValueText.ToInteropKind(EditorNativeComponents.GetFieldKind(objectId, index));
+            if (component.IsManaged && kind == InteropValueKind.EnsId) kind = InteropValueKind.StringId;
             if (string.IsNullOrEmpty(name) || kind == InteropValueKind.Empty) continue;
             fields[name] = (index, kind);
             descriptors.Add(new PropertyDescriptor(name, kind));
@@ -117,12 +119,13 @@ internal sealed class NativeComponentPropertyTarget : IPropertyTarget
         properties = descriptors;
     }
 
-    public string Identity => $"native:{objectId}";
+    public string Identity => $"native:{stableId}";
     public IReadOnlyList<PropertyDescriptor> Properties => properties;
 
     public InteropStatus TryGet(string name, out InteropValue value)
     {
         value = default;
+        if (objectId == 0) return InteropStatus.NotFound;
         if (!fields.TryGetValue(name, out var field)) return InteropStatus.NotFound;
         return EditorInteropValueText.TryParse(field.Kind, EditorNativeComponents.GetFieldValue(objectId, field.Index), out value)
             ? InteropStatus.Ok

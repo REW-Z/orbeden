@@ -115,6 +115,9 @@ public:
     //获取按挂载顺序排列的所有组件实例
     const List<Component*>& GetComponents() const;
 
+    //恢复组件在所属 Ens 中的挂载位置。
+    bool MoveComponent(Component* component, int32 index);
+
     //添加组件
     template<typename T>
     T* AddComponent()

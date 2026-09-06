@@ -21,8 +21,12 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte*, int, byte, byte> SetManagedField;
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetAddableTypeCount;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetAddableTypeName;
-    public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, int> AddComponent;
+    public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, byte, int> AddComponent;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte> RemoveComponent;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> CaptureComponent;
+    public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, int, int> RestoreComponent;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> FindComponent;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr*, IntPtr> GetHostBinding;
 }
 #pragma warning restore CS0649
 
@@ -142,13 +146,13 @@ internal static unsafe class EditorNativeComponents
     }
 
     /// <summary>按类型名新增组件并返回其原生对象 ID。</summary>
-    internal static int AddComponentAndGetId(EnsId ens, string typeName)
+    internal static int AddComponentAndGetId(EnsId ens, string typeName, bool isManaged = false)
     {
         if (api.AddComponent == null || string.IsNullOrEmpty(typeName)) return 0;
         byte[] bytes = Encoding.UTF8.GetBytes(typeName);
         fixed (byte* pointer = bytes)
         {
-            return api.AddComponent(api.Context, ens.id, ens.version, pointer, bytes.Length);
+            return api.AddComponent(api.Context, ens.id, ens.version, pointer, bytes.Length, isManaged ? (byte)1 : (byte)0);
         }
     }
 
@@ -179,6 +183,36 @@ internal static unsafe class EditorNativeComponents
     internal static bool RemoveComponent(int objectId)
     {
         return api.RemoveComponent != null && api.RemoveComponent(api.Context, objectId) != 0;
+    }
+
+    /// <summary>捕获完整组件 XML，包括不可见字段和稳定身份。</summary>
+    internal static string CaptureComponent(int objectId) => api.CaptureComponent == null ? string.Empty
+        : ReadText((byte* buffer, int size) => api.CaptureComponent(api.Context, objectId, buffer, size));
+
+    /// <summary>按快照恢复组件和挂载位置。</summary>
+    internal static int RestoreComponent(EnsId ens, string snapshot, int index)
+    {
+        if (api.RestoreComponent == null) return 0;
+        byte[] bytes = Encoding.UTF8.GetBytes(snapshot);
+        fixed (byte* pointer = bytes)
+            return api.RestoreComponent(api.Context, ens.id, ens.version, pointer, bytes.Length, index);
+    }
+
+    /// <summary>使用稳定身份重新定位经过 Undo 恢复的组件。</summary>
+    internal static int FindComponent(string key)
+    {
+        if (api.FindComponent == null) return 0;
+        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        fixed (byte* pointer = bytes) return api.FindComponent(api.Context, pointer, bytes.Length);
+    }
+
+    /// <summary>在真实宿主上构造字段默认值，不启动生命周期。</summary>
+    internal static void InitializeManagedFields(EnsId ens, int objectId, Type type)
+    {
+        if (api.GetHostBinding == null) throw new InvalidOperationException("Script host binding is unavailable.");
+        IntPtr host;
+        IntPtr binding = api.GetHostBinding(api.Context, objectId, &host);
+        GameScriptRuntime.InitializeEditorHost(binding, host, Ens.FromId(ens), type);
     }
 
     //用先查询长度再写入的 ABI 读取 UTF-8 文本。

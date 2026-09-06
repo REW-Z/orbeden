@@ -51,7 +51,7 @@ public abstract partial class Object
         if (target == null || !target.IsAlive) return false;
 
         bool destroyed = Object.Destroy(target.NativePtr);
-        target.DisconnectNative();
+        if (!target.IsAlive) target.DisconnectNative();
         return destroyed;
     }
 
@@ -126,7 +126,7 @@ public abstract partial class Object
     }
 
     //断开原生对象
-    private void DisconnectNative()
+    internal void DisconnectNative()
     {
         if (instanceId == 0) return;
 

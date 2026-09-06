@@ -230,8 +230,8 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 4);
-        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 15);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 57);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 19);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 61);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

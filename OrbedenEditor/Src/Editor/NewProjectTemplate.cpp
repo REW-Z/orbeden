@@ -596,6 +596,7 @@ public:
 private:
     float32 elapsedTime = 0.0f;
     float32 interopTimer = 0.0f;
+    bool interopResolved = false;
     ScriptInterop::ComponentProxy managedSample;
     ScriptInterop::MemberHandle managedPingMethod;
 
@@ -623,16 +624,19 @@ void SampleNativeBehaviour::OnStart()
 {
     elapsedTime = 0.0f;
     interopTimer = 0.0f;
-    managedSample = ScriptInterop::FindManagedComponent(GetEnsId(), "{{PROJECT_NAME}}.SampleBehaviour");
-    constexpr Reflection::ValueKind signature[]{ Reflection::ValueKind::Float32 };
-    if (managedSample.IsValid())
-    {
-        managedSample.ResolveMethod("ReceiveNativePing", signature, managedPingMethod);
-    }
+    interopResolved = false;
 }
 
 void SampleNativeBehaviour::OnUpdate(float32 deltaTime)
 {
+    //首次 Update 时两端均已初始化；Native OnStart 早于 Managed 初始化。
+    if (!interopResolved)
+    {
+        interopResolved = true;
+        managedSample = ScriptInterop::FindManagedComponent(GetEnsId(), "{{PROJECT_NAME}}.SampleBehaviour");
+        constexpr Reflection::ValueKind signature[]{ Reflection::ValueKind::Float32 };
+        if (managedSample.IsValid()) managedSample.ResolveMethod("ReceiveNativePing", signature, managedPingMethod);
+    }
     elapsedTime += deltaTime * speed;
     Ens* ens = GetEns();
     TransformComponent* transform = ens ? ens->Transform() : nullptr;
@@ -700,7 +704,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
 
 
     /// <summary>脚本启动时调用。</summary>
-    protected void OnStart()
+    private void OnStart()
     {
         startPosition = Ens.Transform.localPosition;
 
@@ -714,7 +718,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
     }
 
     /// <summary>脚本每帧更新时调用。</summary>
-    protected void OnUpdate(float deltaTime)
+    private void OnUpdate(float deltaTime)
     {
         totalTime += deltaTime;
         TransformComponent transform = Ens.Transform;
@@ -751,7 +755,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
     }
 
     /// <summary>脚本结束时调用。</summary>
-    protected void OnEnd()
+    private void OnEnd()
     {
         Console.WriteLine("SampleBehaviour end");
     }

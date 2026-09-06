@@ -14,8 +14,7 @@ internal static partial class ManagedTypeMetadataCache
         IReadOnlyDictionary<string, ManagedHostField> values = ScriptBehaviour.ReadHostFields(host);
         if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)
             || !values.TryGetValue(name, out ManagedHostField stored)
-            || !TryParseSerialized(field.Kind, stored.Value, out InteropValue value)
-            || !TryFromInterop(value, field.FieldType, out object? converted))
+            || !TryReadHostValue(field, stored, out object? converted))
             return false;
 
         field.Setter(script, converted);
@@ -28,8 +27,11 @@ internal static partial class ManagedTypeMetadataCache
         IReadOnlyDictionary<string, ManagedHostField> stored = ScriptBehaviour.ReadHostFields(host);
         foreach (ManagedFieldMetadata field in Get(script.GetType()).Fields.Values)
         {
-            if (field.Name == "enabled" || stored.ContainsKey(field.Name)) continue;
-            WriteHostField(script, host, field);
+            if (field.Name == "enabled") continue;
+            bool success = stored.TryGetValue(field.Name, out ManagedHostField existing)
+                ? ScriptBehaviour.WriteHostField(host, field.Name, existing.TypeName, existing.Value, field.InspectorVisible)
+                : WriteHostField(script, host, field);
+            if (!success) throw new InvalidOperationException($"Cannot persist script field '{field.Name}'.");
         }
     }
 
@@ -37,6 +39,19 @@ internal static partial class ManagedTypeMetadataCache
     internal static bool WriteHostField(ScriptBehaviour script, IntPtr host, ManagedFieldMetadata field)
     {
         if (field.Name == "enabled") return true;
+        if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
+        {
+            string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).Transform?.ResourceKey ?? string.Empty;
+            return ScriptBehaviour.WriteHostField(host, field.Name, "EnsId", key, field.InspectorVisible);
+        }
+        if (field.Kind == InteropValueKind.Object)
+        {
+            Object? reference = field.Getter(script) as Object;
+            string key = reference?.ResourceKey ?? string.Empty;
+            if (key.StartsWith("orphan://", StringComparison.Ordinal)) return false;
+            return ScriptBehaviour.WriteHostField(host, field.Name,
+                GetSerializedTypeName(field.FieldType, field.Kind), key, field.InspectorVisible);
+        }
         if (!TryToInterop(field.Getter(script), field.FieldType, out InteropValue value)) return false;
         return ScriptBehaviour.WriteHostField(host, field.Name,
             GetSerializedTypeName(field.FieldType, field.Kind),
@@ -95,4 +110,22 @@ internal static partial class ManagedTypeMetadataCache
 
     private static string FormatFloat(float value) =>
         value.ToString("R", CultureInfo.InvariantCulture);
+
+    /// <summary>区分持久化引用和只用于互操作的运行时 ObjectId。</summary>
+    private static bool TryReadHostValue(ManagedFieldMetadata field, ManagedHostField stored, out object? result)
+    {
+        if (field.Kind == InteropValueKind.EnsId)
+        {
+            result = string.IsNullOrEmpty(stored.Value) ? EnsId.Null : Ens.Find(stored.Value).Id;
+            return true;
+        }
+        if (field.Kind == InteropValueKind.Object)
+        {
+            result = ScriptBehaviour.ResolveReference(stored.Value, field.FieldType);
+            return true;
+        }
+        result = null;
+        return TryParseSerialized(field.Kind, stored.Value, out InteropValue value)
+            && TryFromInterop(value, field.FieldType, out result);
+    }
 }
