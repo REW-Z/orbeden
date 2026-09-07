@@ -97,6 +97,8 @@ copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDi
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -124,6 +126,8 @@ copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDi
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -150,6 +154,8 @@ copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDi
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -178,6 +184,8 @@ copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDi
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

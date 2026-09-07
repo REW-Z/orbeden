@@ -260,5 +260,6 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.ObjectExtension = ObjectExtensionBind::Create();
     api.ScriptInterop = ScriptInterop::ScriptInteropApi::Create();
     api.ScriptBehaviour = ScriptBehaviourBindApi::Create(world);
+    api.GuiDraw = RuntimeGuiBridge::GetDrawApi();
     return api;
 }

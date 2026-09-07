@@ -54,6 +54,7 @@ public:
     ObjectExtensionBind ObjectExtension;
     ScriptInterop::ScriptInteropApi ScriptInterop;
     ScriptBehaviourBindApi ScriptBehaviour;
+    RuntimeGuiDrawApi GuiDraw;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create(::World* world);
@@ -62,9 +63,9 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBehaviourBindApi, 16);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 256);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 274);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Gui, 0);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 152);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 230);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptInterop, 231);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptBehaviour, 240);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 155);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 233);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptInterop, 234);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptBehaviour, 243);

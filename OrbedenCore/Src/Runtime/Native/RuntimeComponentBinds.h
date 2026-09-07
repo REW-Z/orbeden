@@ -115,6 +115,9 @@ public:
     void* SetContinuousCollisionDetection = nullptr;
     void* GetLockFlags = nullptr;
     void* SetLockFlags = nullptr;
+    void* AddForce = nullptr;
+    void* AddTorque = nullptr;
+    void* AddForceAtPosition = nullptr;
 
     //创建 RigidBodyComponent 函数表。
     static RigidBodyBind Create();
@@ -202,7 +205,7 @@ ORBEDEN_ASSERT_NATIVE_API_TABLE(PathDefinesBind, 2);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 11);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(TransformComponentBind, 10);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(StaticMeshRendererBind, 10);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(RigidBodyBind, 23);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RigidBodyBind, 26);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ColliderBind, 32);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(CharacterControllerBind, 25);
 

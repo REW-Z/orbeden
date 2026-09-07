@@ -115,6 +115,24 @@ public sealed partial class RigidBody : Component
         get => GetLockFlags(Ens.Id);
         set => SetLockFlags(Ens.Id, value);
     }
+
+    /// <summary>累积一个作用于质心的力，在下一物理步施加。</summary>
+    public void AddForce(vector3 force)
+    {
+        AddForce(Ens.Id, force);
+    }
+
+    /// <summary>累积一个绕质心的力矩，在下一物理步施加。</summary>
+    public void AddTorque(vector3 torque)
+    {
+        AddTorque(Ens.Id, torque);
+    }
+
+    /// <summary>累积一个作用于世界空间位置的力，在下一物理步施加。</summary>
+    public void AddForceAtPosition(vector3 force, vector3 worldPosition)
+    {
+        AddForceAtPosition(Ens.Id, force, worldPosition);
+    }
 }
 
 /// <summary>碰撞体组件的抽象基类。</summary>
@@ -370,6 +388,9 @@ internal unsafe struct RigidBodyBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetContinuousCollisionDetection;
     public delegate* unmanaged[Cdecl]<EnsId, uint> GetLockFlags;
     public delegate* unmanaged[Cdecl]<EnsId, uint, void> SetLockFlags;
+    public delegate* unmanaged[Cdecl]<EnsId, vector3, void> AddForce;
+    public delegate* unmanaged[Cdecl]<EnsId, vector3, void> AddTorque;
+    public delegate* unmanaged[Cdecl]<EnsId, vector3, vector3, void> AddForceAtPosition;
 }
 #pragma warning restore CS0649
 
@@ -524,6 +545,24 @@ private static RigidBodyBindApi api;
     internal static void SetLockFlags(EnsId ens, PhysicsLockFlags value)
     {
         if (initialized && api.SetLockFlags != null) api.SetLockFlags(ens, (uint)value);
+    }
+
+    //累积一个作用于质心的力
+    internal static void AddForce(EnsId ens, vector3 force)
+    {
+        if (initialized && api.AddForce != null) api.AddForce(ens, force);
+    }
+
+    //累积一个绕质心的力矩
+    internal static void AddTorque(EnsId ens, vector3 torque)
+    {
+        if (initialized && api.AddTorque != null) api.AddTorque(ens, torque);
+    }
+
+    //累积一个作用于世界空间位置的力
+    internal static void AddForceAtPosition(EnsId ens, vector3 force, vector3 worldPosition)
+    {
+        if (initialized && api.AddForceAtPosition != null) api.AddForceAtPosition(ens, force, worldPosition);
     }
 }
 

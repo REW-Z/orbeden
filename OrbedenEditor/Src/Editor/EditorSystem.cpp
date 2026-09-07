@@ -329,7 +329,11 @@ namespace
     std::string GetCMakeCommand()
     {
         std::string bundled = GetBundledCMakePath();
+#if defined(_WIN32)
+        return bundled.empty() ? "cmake" : "call " + Quote(bundled);
+#else
         return bundled.empty() ? "cmake" : Quote(bundled);
+#endif
     }
 
 }
@@ -526,6 +530,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     if (nativeRoot.empty())
     {
         if (!nativeGameModule.IsLoaded()) return true;
+        project.MarkStartupWorldPendingReload();
         app.GetWorld().Clear();
         std::string unloadError;
         if (!nativeGameModule.Unload(unloadError))
@@ -545,6 +550,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     //项目切换时先移除旧模块，避免新 World 误用同名旧类型。
     if (!saveWorldBeforeReload && nativeGameModule.IsLoaded())
     {
+        project.MarkStartupWorldPendingReload();
         app.GetWorld().Clear();
         std::string unloadError;
         if (!nativeGameModule.Unload(unloadError))
@@ -552,17 +558,13 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
             projectStatus = unloadError;
             return false;
         }
-        if (!project.ReloadStartupWorld())
-        {
-            projectStatus = project.GetLastError();
-            return false;
-        }
     }
 
     //手动热重载时记录当前 World 实际依赖的游戏模块组件类型。
+    bool preserveLoadedWorld = saveWorldBeforeReload && project.IsStartupWorldLoaded();
     List<std::string> requiredTypes;
     std::unordered_set<std::string> requiredTypeSet;
-    if (saveWorldBeforeReload) app.GetWorld().ForEachEns([&](Ens& ens)
+    if (preserveLoadedWorld) app.GetWorld().ForEachEns([&](Ens& ens)
         {
             for (Component* component : ens.GetComponents())
             {
@@ -572,7 +574,11 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
             }
         });
 
-    if (saveWorldBeforeReload && !SaveCurrentWorld()) return false;
+    if (preserveLoadedWorld && !SaveCurrentWorld()) return false;
+    if (saveWorldBeforeReload && !preserveLoadedWorld)
+    {
+        Log::Info("Startup World is waiting for Native scripts; skipped the pre-build save.");
+    }
 
     std::string repositoryRoot = FindRepositoryRoot();
     if (repositoryRoot.empty())
@@ -606,6 +612,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     std::string shadowDirectory = ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".native-pie");
 
     //清空全部模块实例后替换 DLL，再从 .world 恢复字段和挂载顺序
+    project.MarkStartupWorldPendingReload();
     app.GetWorld().Clear();
     std::string reloadError;
     bool loaded = nativeGameModule.Reload(modulePath, shadowDirectory, requiredTypes, reloadError);
@@ -680,6 +687,12 @@ void EditorSystem::RequestPlay()
     managedBridge.LoadGameAssembly(playMode.GetShadowAssemblyPath());
     app.SetPaused(false);
     app.SetSimulationEnabled(true);
+    InputManager::SetEnabled(true);
+
+    //记录面板布局并隐藏全部编辑器面板，停止 Play 后恢复。
+    panelManager.WriteLayout(playPanelLayout);
+    panelManager.HideAllPanels();
+
     projectStatus = "Play-In-Editor started.";
     RequestRepaint();
 }
@@ -691,6 +704,11 @@ void EditorSystem::RequestStop()
     app.SetPaused(false);
     app.SetSimulationEnabled(false);
     playMode.Stop();
+    InputManager::SetEnabled(false);
+
+    //恢复 Play 前的面板布局。
+    panelManager.ApplyLayout(playPanelLayout);
+
     managedBridge.UnloadGameAssembly();
     if (project.HasProject())
     {
@@ -1203,8 +1221,9 @@ void EditorSystem::OpenNewProjectDialog()
 void EditorSystem::DrawMainMenuBar()
 {
     //文本控件编辑时保留 ImGui 自身的 Undo，其余情况处理全局项目快捷键。
+    //Play 期间屏蔽编辑器快捷键，按键交由游戏读取。
     const ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantTextInput && io.KeyCtrl)
+    if (!playMode.IsPlaying() && !io.WantTextInput && io.KeyCtrl)
     {
         if (ImGui::IsKeyPressed(ImGuiKey_S, false))
         {
@@ -1267,6 +1286,10 @@ void EditorSystem::DrawMainMenuBar()
 
     if (ImGui::BeginMenu("Edit"))
     {
+        if (playMode.IsPlaying())
+        {
+            ImGui::BeginDisabled();
+        }
         if (ImGui::MenuItem("Undo", "Ctrl+Z"))
         {
             managedBridge.Undo();
@@ -1274,6 +1297,10 @@ void EditorSystem::DrawMainMenuBar()
         if (ImGui::MenuItem("Redo", "Ctrl+Y / Ctrl+Shift+Z"))
         {
             managedBridge.Redo();
+        }
+        if (playMode.IsPlaying())
+        {
+            ImGui::EndDisabled();
         }
         ImGui::EndMenu();
     }
@@ -1438,7 +1465,10 @@ void EditorSystem::DrawProjectDialog()
                 projectStatus += " Core C# sync failed: " + runtimeSyncError;
                 Log::Warning(runtimeSyncError.c_str());
             }
-            BuildNativeGameModule(false);
+            if (!BuildNativeGameModule(false))
+            {
+                projectStatus = "Project opened. Native scripts still need to be compiled. " + projectStatus;
+            }
             ApplyEditorLayout();
             RefreshInspectorGameAssembly();
             ImGui::CloseCurrentPopup();
@@ -1526,8 +1556,17 @@ void EditorSystem::DrawNewProjectDialog()
 
             std::string projectRoot;
             std::string error;
-            if (NewProjectGenerator::CreateProject(dialogDirectory, newProjectNameBuffer, runtimeDllPath, projectRoot, error)
-                && project.LoadProjectFolder(projectRoot))
+            std::string templateDirectory = GetProjectTemplateDirectory();
+            if (templateDirectory.empty())
+            {
+                error = "Project template directory was not found next to the Editor executable. Rebuild OrbedenEditor.";
+            }
+            else
+            {
+                NewProjectGenerator::CreateProject(dialogDirectory, newProjectNameBuffer, runtimeDllPath, templateDirectory, projectRoot, error);
+            }
+
+            if (error.empty() && project.LoadProjectFolder(projectRoot))
             {
                 editorScene.ClearSceneState();
                 dialogError.clear();
@@ -1539,7 +1578,10 @@ void EditorSystem::DrawNewProjectDialog()
                     projectStatus += " Core C# sync failed: " + runtimeSyncError;
                     Log::Warning(runtimeSyncError.c_str());
                 }
-                BuildNativeGameModule(false);
+                if (!BuildNativeGameModule(false))
+                {
+                    projectStatus = "Project created. Native scripts still need to be compiled. " + projectStatus;
+                }
                 ApplyEditorLayout();
                 RefreshInspectorGameAssembly();
                 ImGui::CloseCurrentPopup();
@@ -1566,4 +1608,21 @@ void EditorSystem::SetDialogDirectory(const std::string& path)
 {
     dialogDirectory = ToCleanPath(Utf8Path::FromUtf8(path));
     CopyToBuffer(pathBuffer, sizeof(pathBuffer), dialogDirectory);
+}
+
+//定位新项目模板目录：优先 exe 旁的分发副本，回退源码树开发环境。
+std::string EditorSystem::GetProjectTemplateDirectory() const
+{
+    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    const std::array<std::filesystem::path, 2> candidates =
+    {
+        executableDirectory / "Templates" / "FlightTraining",
+        executableDirectory.parent_path().parent_path() / "Templates" / "FlightTraining",
+    };
+    for (const std::filesystem::path& candidate : candidates)
+    {
+        if (std::filesystem::is_directory(candidate)) return ToCleanPath(candidate);
+    }
+
+    return std::string();
 }

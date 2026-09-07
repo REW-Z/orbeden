@@ -29,7 +29,7 @@ public:
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenEngineNativeApi, 199);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenEngineNativeApi, 202);
 ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, World, 0);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, Collider, 141);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, ObjectExtension, 198);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, Collider, 144);
+ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, ObjectExtension, 201);

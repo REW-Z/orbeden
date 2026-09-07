@@ -27,6 +27,9 @@ public:
     PhysicsSystem& operator=(const PhysicsSystem&) = delete;
     ~PhysicsSystem() override;
 
+    //获取当前 Application 拥有的 PhysicsSystem。
+    static PhysicsSystem* Current();
+
     //创建并初始化物理系统
     bool OnInitialize(Application& app) override;
 

@@ -16,6 +16,9 @@
 
 namespace
 {
+    //记录最近一次 World 加载缺失的组件类型，供 Editor 区分待编译与文件损坏。
+    std::string lastUnregisteredComponentType;
+
     //XML Token 类型
     enum class XmlTokenKind
     {
@@ -440,7 +443,9 @@ namespace
         Type* type = Object::FindType(typeName);
         if (!type || !type->Is(Component::StaticType()))
         {
-            LogSerializerError("World XML references unknown component type: " + typeName);
+            lastUnregisteredComponentType = typeName;
+            Log::Warning(("World XML component type is not registered yet: " + typeName
+                + ". Build Game C++ if this component is defined by the project Native module.").c_str());
             if (!startToken.emptyElement) reader.SkipElement(startToken.name);
             return false;
         }
@@ -669,8 +674,16 @@ Component* WorldSerializer::RestoreComponent(Ens& ens, const std::string& snapsh
     return component;
 }
 
+//获取最近一次 World 加载遇到的未注册组件类型。
+const std::string& WorldSerializer::GetLastUnregisteredComponentType()
+{
+    return lastUnregisteredComponentType;
+}
+
 bool WorldSerializer::LoadXml(World& world, const std::string& path)
 {
+    lastUnregisteredComponentType.clear();
+
     Reflection::RegisterGeneratedReflection();
 
     //读取 World XML 文件

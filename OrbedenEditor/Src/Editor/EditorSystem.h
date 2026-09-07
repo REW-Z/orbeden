@@ -31,6 +31,7 @@ private:
     bool openProjectDialog = false;
     bool newProjectDialog = false;
     bool previousInputEnabled = true;
+    EditorLayoutState playPanelLayout;
     PanelManager panelManager;
     EditorClrHost clrHost;
     ManagedEditorBridge managedBridge;
@@ -104,6 +105,9 @@ public:
 
     //获取项目 C++ 代码根目录。
     std::string GetProjectNativeRootPath() const;
+
+    //定位新项目模板目录（优先 exe 旁的分发副本，回退源码树）。
+    std::string GetProjectTemplateDirectory() const;
 
     //获取启动场景完整路径
     std::string GetStartupWorldPath() const;

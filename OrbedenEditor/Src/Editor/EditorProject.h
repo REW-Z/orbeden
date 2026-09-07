@@ -21,6 +21,7 @@ private:
     std::string projectFilePath;
     EditorLayoutState editorLayout;
     std::string lastError;
+    bool startupWorldLoaded = false;
 
 public:
     explicit EditorProject(Application& application);
@@ -36,6 +37,12 @@ public:
 
     //重新读取项目启动场景
     bool ReloadStartupWorld();
+
+    //判断启动 World 是否已经完整加载到内存。
+    bool IsStartupWorldLoaded() const;
+
+    //标记内存 World 已清空，保存必须等待磁盘重载。
+    void MarkStartupWorldPendingReload();
 
     //保存编辑器布局状态到项目文件
     bool SaveEditorLayout(const EditorLayoutState& layout);

@@ -342,7 +342,7 @@ flowchart LR
     PIE -.-> GameDll
 ```
 
-- 非 Play 状态下，Inspector 使用用户 Game Assembly 反射脚本类型，并通过 world sidecar 显示和编辑挂载的 C# 脚本组件。
+- 非 Play 状态下，Inspector 使用用户 Game Assembly 反射脚本类型，并通过 `.world` 中的原生 `ScriptBehaviour` 宿主显示和编辑 C# 脚本组件。
 - Play 状态下，Editor 绑定用户 Game Assembly 的 `OrbedenGame_Initialize`、`OrbedenGame_Update`、`OrbedenGame_DrawGui`、`OrbedenGame_Shutdown`。
 - Inspector 同时显示原生 C++ 组件块和用户 C# 组件块。
 
@@ -400,10 +400,6 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 
 ### 修改脚本挂载或 Inspector 字段后
 
-脚本挂载和默认序列化字段保存在 world sidecar，例如：
+两种语言的脚本挂载和序列化字段都直接保存在项目的 `.world` 文件中，不再生成 `.world.scripts.json` sidecar。
 
-```text
-{ProjectRoot}/World/main.world.scripts.json
-```
-
-只改字段值不需要重新构建 C++ 或 C#。新增、删除或重命名脚本类型后，需要先 `Build Game C#`，让 Editor 重新反射最新的 Game Assembly。
+只改字段值不需要重新构建 C++ 或 C#。新增、删除或重命名 C# 脚本类型后，需要先 `Build Game C#`；修改 C++ 组件类型或字段后，需要执行 `Build Game C++`，让 MetaGen 和游戏模块反映最新代码。

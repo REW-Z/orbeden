@@ -3,7 +3,9 @@
 #include "Log/Log.h"
 #include "Physics/CharacterControllerComponent.h"
 #include "Physics/ColliderComponent.h"
+#include "Physics/HeightFieldComponent.h"
 #include "Physics/RigidBodyComponent.h"
+#include "Physics/WheelColliderComponent.h"
 #include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/Mesh.h"
@@ -20,6 +22,7 @@
 #include "extensions/PxRigidBodyExt.h"
 
 #include <algorithm>
+#include <string>
 #include <bit>
 #include <cmath>
 #include <memory>
@@ -32,7 +35,58 @@ using namespace physx;
 namespace
 {
     constexpr float32 MinimumDimension = 0.001f;
+    constexpr float32 Pi = 3.14159265358979323846f;
     constexpr uint32 BindingMagic = 0x4F524250u;
+
+    //当前 Application 拥有的 PhysicsSystem，供游戏模块访问。
+    PhysicsSystem* currentPhysicsSystem = nullptr;
+
+    //机轮模拟使用的向量工具。
+    vector3 Add(const vector3& a, const vector3& b)
+    {
+        return { a.x + b.x, a.y + b.y, a.z + b.z };
+    }
+
+    vector3 Scale(const vector3& value, float32 scale)
+    {
+        return { value.x * scale, value.y * scale, value.z * scale };
+    }
+
+    vector3 Cross(const vector3& a, const vector3& b)
+    {
+        return
+        {
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x,
+        };
+    }
+
+    float32 Dot(const vector3& a, const vector3& b)
+    {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    vector3 Rotate(const quaternion& rotation, const vector3& value)
+    {
+        vector3 axis{ rotation.x, rotation.y, rotation.z };
+        vector3 doubledCross = Scale(Cross(axis, value), 2.0f);
+        return Add(value, Add(Scale(doubledCross, rotation.w), Cross(axis, doubledCross)));
+    }
+
+    vector3 NormalizeSafe(const vector3& value, const vector3& fallback)
+    {
+        float32 length = std::sqrt(Dot(value, value));
+        return length > 0.0001f ? Scale(value, 1.0f / length) : fallback;
+    }
+
+    //绕单位轴旋转向量。
+    vector3 RotateAxis(const vector3& value, const vector3& axis, float32 angle)
+    {
+        float32 cosine = std::cos(angle);
+        float32 sine = std::sin(angle);
+        return Add(Add(Scale(value, cosine), Scale(Cross(axis, value), sine)), Scale(axis, Dot(axis, value) * (1.0f - cosine)));
+    }
 
     uint64 EnsKey(EnsId ens)
     {
@@ -207,6 +261,15 @@ public:
         bool lastPoseValid = false;
     };
 
+    struct HeightFieldRecord
+    {
+        NativeBinding binding;
+        PxRigidActor* actor = nullptr;
+        PxHeightField* heightField = nullptr;
+        uint64 configurationHash = 0;
+        uint32 generation = 0;
+    };
+
     struct ControllerRecord
     {
         NativeBinding binding;
@@ -308,6 +371,7 @@ public:
     PxControllerManager* controllerManager = nullptr;
     std::unique_ptr<PxCookingParams> cookingParams;
     std::unordered_map<uint64, std::unique_ptr<BodyRecord>> bodies;
+    std::unordered_map<uint64, std::unique_ptr<HeightFieldRecord>> heightFields;
     std::unordered_map<uint64, std::unique_ptr<ControllerRecord>> controllers;
     std::unordered_map<Mesh*, PxConvexMesh*> convexMeshes;
     std::unordered_map<Mesh*, PxTriangleMesh*> triangleMeshes;
@@ -436,6 +500,8 @@ public:
         controllers.clear();
         for (auto& entry : bodies) DestroyBody(*entry.second);
         bodies.clear();
+        for (auto& entry : heightFields) DestroyHeightField(*entry.second);
+        heightFields.clear();
         for (auto& entry : convexMeshes) entry.second->release();
         convexMeshes.clear();
         for (auto& entry : triangleMeshes) entry.second->release();
@@ -709,7 +775,10 @@ public:
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
         if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
         {
-            Log::Warning("Dynamic rigid bodies must be root entities; the collider was skipped.");
+            Ens* ens = body->GetEns();
+            std::string message = "Dynamic rigid bodies must be root entities; the collider was skipped";
+            if (ens) message += " (" + ens->GetName() + ")";
+            Log::Warning(message.c_str());
             return nullptr;
         }
 
@@ -787,6 +856,148 @@ public:
         record.actor = nullptr;
     }
 
+    void DestroyHeightField(HeightFieldRecord& record)
+    {
+        if (record.actor)
+        {
+            record.actor->userData = nullptr;
+            record.actor->release();
+            record.actor = nullptr;
+        }
+        if (record.heightField)
+        {
+            record.heightField->release();
+            record.heightField = nullptr;
+        }
+    }
+
+    //计算 HeightField 物理参数哈希。
+    uint64 CalculateHeightFieldHash(const HeightFieldComponent& component) const
+    {
+        uint64 hash = 0xCBF29CE484222325ull;
+        hash = MixHash(hash, static_cast<uint32>(component.seed));
+        hash = MixFloat(hash, component.sizeX);
+        hash = MixFloat(hash, component.sizeZ);
+        hash = MixHash(hash, static_cast<uint32>(component.rowCount));
+        hash = MixHash(hash, static_cast<uint32>(component.columnCount));
+        hash = MixFloat(hash, component.amplitude);
+        hash = MixFloat(hash, component.frequency);
+        hash = MixHash(hash, static_cast<uint32>(component.octaves));
+        hash = MixFloat(hash, component.flattenMinX);
+        hash = MixFloat(hash, component.flattenMaxX);
+        hash = MixFloat(hash, component.flattenMinZ);
+        hash = MixFloat(hash, component.flattenMaxZ);
+        hash = MixFloat(hash, component.flattenHeight);
+        return MixHash(hash, component.collisionLayer);
+    }
+
+    //创建 HeightField 静态碰撞体。
+    std::unique_ptr<HeightFieldRecord> CreateHeightField(HeightFieldComponent& component, TransformComponent& transform, uint64 configurationHash)
+    {
+        int32 rows = std::max(component.rowCount, 2);
+        int32 columns = std::max(component.columnCount, 2);
+        const std::vector<float32>& heights = component.GetHeights();
+        if (heights.size() != static_cast<size_t>(rows) * columns) return nullptr;
+
+        float32 maxSample = 0.0f;
+        for (float32 height : heights) maxSample = std::max(maxSample, std::abs(height));
+        float32 heightScale = std::max((maxSample + 0.25f) / 32000.0f, PX_MIN_HEIGHTFIELD_Y_SCALE);
+
+        std::vector<PxHeightFieldSample> samples(heights.size());
+        for (size_t index = 0; index < heights.size(); index++)
+        {
+            float32 clamped = std::clamp(heights[index] / heightScale, -32767.0f, 32767.0f);
+            samples[index] = PxHeightFieldSample();
+            samples[index].height = static_cast<PxI16>(std::lround(clamped));
+            samples[index].materialIndex0 = PxBitAndByte(0);
+            samples[index].materialIndex1 = PxBitAndByte(0);
+        }
+
+        PxHeightFieldDesc desc;
+        desc.nbRows = rows;
+        desc.nbColumns = columns;
+        desc.format = PxHeightFieldFormat::eS16_TM;
+        desc.samples.data = samples.data();
+        desc.samples.stride = sizeof(PxHeightFieldSample);
+        desc.flags = PxHeightFieldFlag::eNO_BOUNDARY_EDGES;
+
+        PxHeightField* heightField = PxCreateHeightField(desc, physics->getPhysicsInsertionCallback());
+        if (!heightField)
+        {
+            Log::Error("PhysX heightfield creation failed.");
+            return nullptr;
+        }
+
+        PxHeightFieldGeometry geometry(heightField, PxMeshGeometryFlags(), heightScale, component.GetRowScale(), component.GetColumnScale());
+
+        PxMaterial* material = physics->createMaterial(0.6f, 0.6f, 0.0f);
+        if (!material)
+        {
+            heightField->release();
+            return nullptr;
+        }
+
+        PxShape* shape = physics->createShape(geometry, *material, true,
+            PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE);
+        material->release();
+        if (!shape)
+        {
+            heightField->release();
+            return nullptr;
+        }
+
+        PxFilterData filter(component.collisionLayer, 0xFFFFFFFFu, 0, 0);
+        shape->setSimulationFilterData(filter);
+        shape->setQueryFilterData(filter);
+
+        PxRigidStatic* actor = physics->createRigidStatic(PxTransform(ToPx(transform.worldPosition), ToPx(transform.worldRotation)));
+        if (!actor)
+        {
+            shape->release();
+            heightField->release();
+            return nullptr;
+        }
+        actor->attachShape(*shape);
+        shape->release();
+
+        std::unique_ptr<HeightFieldRecord> record = std::make_unique<HeightFieldRecord>();
+        record->binding.kind = BindingKind::Body;
+        record->binding.ens = component.GetEnsId();
+        record->binding.owner = this;
+        record->actor = actor;
+        record->heightField = heightField;
+        record->configurationHash = configurationHash;
+        record->generation = component.GetGeneration();
+        actor->userData = &record->binding;
+        scene->addActor(*actor);
+        return record;
+    }
+
+    //同步 HeightField 静态体。
+    void SyncHeightField(HeightFieldComponent& component, TransformComponent& transform, uint64 key)
+    {
+        component.SyncPendingGeneration();
+
+        uint64 hash = CalculateHeightFieldHash(component);
+        auto found = heightFields.find(key);
+        if (found != heightFields.end()
+            && (found->second->configurationHash != hash || found->second->generation != component.GetGeneration()))
+        {
+            DestroyHeightField(*found->second);
+            heightFields.erase(found);
+            found = heightFields.end();
+        }
+        if (found == heightFields.end())
+        {
+            std::unique_ptr<HeightFieldRecord> created = CreateHeightField(component, transform, hash);
+            if (created) heightFields.emplace(key, std::move(created));
+            return;
+        }
+
+        PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
+        if (found->second->actor) found->second->actor->setGlobalPose(pose);
+    }
+
     void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBodyComponent* body, TransformComponent& transform)
     {
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
@@ -811,6 +1022,18 @@ public:
                 {
                     dynamic->setLinearVelocity(ToPx(body->linearVelocity), false);
                     dynamic->setAngularVelocity(ToPx(body->angularVelocity), false);
+
+                    //施加脚本累积的力/力矩，然后清零；下一物理步积分。
+                    if (body->pendingForce.x != 0.0f || body->pendingForce.y != 0.0f || body->pendingForce.z != 0.0f)
+                    {
+                        dynamic->addForce(ToPx(body->pendingForce), PxForceMode::eFORCE, true);
+                        body->pendingForce = vector3();
+                    }
+                    if (body->pendingTorque.x != 0.0f || body->pendingTorque.y != 0.0f || body->pendingTorque.z != 0.0f)
+                    {
+                        dynamic->addTorque(ToPx(body->pendingTorque), PxForceMode::eFORCE, true);
+                        body->pendingTorque = vector3();
+                    }
                 }
             }
         }
@@ -822,12 +1045,23 @@ public:
     void SyncBodies(World& currentWorld)
     {
         std::unordered_set<uint64> seen;
+        std::unordered_set<uint64> heightFieldSeen;
         std::unordered_set<Mesh*> dirtyMeshes;
         currentWorld.ForEachEns([&](Ens& ens)
         {
             TransformComponent* transform = ens.Transform();
             RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
             if (!transform || (body && !body->enabled)) return;
+
+            //HeightField 地形使用独立静态体，与普通 collider body 分开管理。
+            HeightFieldComponent* heightField = ens.GetComponent<HeightFieldComponent>();
+            if (heightField && heightField->enabled
+                && (!body || body->bodyType == PhysicsBodyType::Static))
+            {
+                uint64 key = EnsKey(ens.GetId());
+                heightFieldSeen.insert(key);
+                SyncHeightField(*heightField, *transform, key);
+            }
 
             List<ColliderComponent*> colliders;
             List<Mesh*> sourceMeshes;
@@ -883,6 +1117,17 @@ public:
             }
             DestroyBody(*it->second);
             it = bodies.erase(it);
+        }
+
+        for (auto it = heightFields.begin(); it != heightFields.end();)
+        {
+            if (heightFieldSeen.contains(it->first))
+            {
+                ++it;
+                continue;
+            }
+            DestroyHeightField(*it->second);
+            it = heightFields.erase(it);
         }
 
         for (Mesh* mesh : dirtyMeshes)
@@ -1062,6 +1307,7 @@ public:
         scene->simulate(deltaTime);
         scene->fetchResults(true);
         WriteDynamicPoses(currentWorld);
+        SyncWheels(currentWorld, deltaTime);
     }
 
     bool FillHit(const PxLocationHit& nativeHit, const PxRigidActor* actor, PhysicsQueryHit& hit) const
@@ -1073,6 +1319,74 @@ public:
         hit.normal = FromPx(nativeHit.normal);
         hit.distance = nativeHit.distance;
         return true;
+    }
+
+    //机轮向下探测地面。
+    bool WheelRaycast(const vector3& origin, float32 distance, PhysicsQueryHit& hit, uint32 layerMask) const
+    {
+        PxVec3 unitDirection = ToPx(vector3{ 0.0f, -1.0f, 0.0f });
+        LayerQueryFilter callback(layerMask, false);
+        PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
+        PxRaycastBuffer result;
+        if (!scene->raycast(ToPx(origin), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
+        return FillHit(result.block, result.block.actor, hit);
+    }
+
+    //模拟全部机轮：弹簧阻尼悬挂 + 地面摩擦 + 转向侧向力。
+    void SyncWheels(World& currentWorld, float32 deltaTime)
+    {
+        currentWorld.ForEachEns([&](Ens& ens)
+        {
+            WheelColliderComponent* wheel = ens.GetComponent<WheelColliderComponent>();
+            RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
+            TransformComponent* transform = ens.Transform();
+            if (!wheel || !wheel->enabled || !body || body->bodyType != PhysicsBodyType::Dynamic || !transform) return;
+
+            wheel->grounded = false;
+            wheel->compression = 0.0f;
+
+            //从悬挂安装点向下探测地面。
+            vector3 mountWorld = Add(transform->worldPosition, Rotate(transform->worldRotation, wheel->wheelOffset));
+            PhysicsQueryHit hit;
+            if (!WheelRaycast(mountWorld, wheel->raycastDistance, hit, wheel->groundQueryLayer)) return;
+
+            float32 compression = std::clamp(wheel->suspensionRestLength - hit.distance, 0.0f, wheel->suspensionTravel);
+            if (compression <= 0.0f) return;
+
+            //悬挂弹簧阻尼力沿地面法线，阻尼用压缩速度。
+            vector3 velocity = body->linearVelocity;
+            float32 compressionRate = (compression - wheel->previousCompression) / std::max(deltaTime, 0.0001f);
+            float32 normalForce = std::max(wheel->suspensionStiffness * compression
+                + wheel->suspensionDamping * std::max(0.0f, -compressionRate), 0.0f);
+            body->AddForceAtPosition(Scale(hit.normal, normalForce), hit.position);
+
+            //地面切向速度与轮子朝向（转向轮按 steerAngle 旋转）。
+            vector3 normal = hit.normal;
+            vector3 tangentVelocity = Add(velocity, Scale(normal, -Dot(velocity, normal)));
+            quaternion rotation = transform->worldRotation;
+            vector3 forwardWorld = Rotate(rotation, { 0.0f, 0.0f, -1.0f });
+            vector3 forwardGround = NormalizeSafe(
+                Add(forwardWorld, Scale(normal, -Dot(forwardWorld, normal))),
+                Rotate(rotation, { 1.0f, 0.0f, 0.0f }));
+            if (wheel->steeringWheel && wheel->steerAngle != 0.0f)
+            {
+                forwardGround = RotateAxis(forwardGround, normal, wheel->steerAngle * Pi / 180.0f);
+            }
+            vector3 rightGround = Cross(forwardGround, normal);
+            float32 forwardComponent = Dot(tangentVelocity, forwardGround);
+            float32 lateralComponent = Dot(tangentVelocity, rightGround);
+
+            //纵向滚动阻力 + 横向防滑（转向轮产生转向侧向力，绕质心形成偏航力矩）。
+            vector3 friction = Scale(forwardGround, -forwardComponent * wheel->rollingFriction * 150.0f);
+            float32 lateralMagnitude = std::clamp(std::abs(lateralComponent) * wheel->lateralFriction * 150.0f,
+                0.0f, wheel->lateralFriction * normalForce);
+            friction = Add(friction, Scale(rightGround, -std::copysign(lateralMagnitude, lateralComponent)));
+            body->AddForceAtPosition(friction, hit.position);
+
+            wheel->grounded = true;
+            wheel->compression = compression;
+            wheel->previousCompression = compression;
+        });
     }
 };
 
@@ -1089,9 +1403,16 @@ PhysicsSystem::~PhysicsSystem()
 }
 
 //创建并初始化物理系统
+//获取当前 Application 拥有的 PhysicsSystem。
+PhysicsSystem* PhysicsSystem::Current()
+{
+    return currentPhysicsSystem;
+}
+
 bool PhysicsSystem::OnInitialize(Application& app)
 {
     (void)app;
+    currentPhysicsSystem = this;
     return Initialize();
 }
 
@@ -1099,6 +1420,7 @@ bool PhysicsSystem::OnInitialize(Application& app)
 void PhysicsSystem::OnShutdown()
 {
     Shutdown();
+    if (currentPhysicsSystem == this) currentPhysicsSystem = nullptr;
 }
 
 //创建 PhysX Foundation、Scene、Cooking 和 CCT 状态

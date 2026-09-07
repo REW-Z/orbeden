@@ -1,6 +1,7 @@
 #include "Rendering/ForwardPipeline.h"
 
 #include "Log/Log.h"
+#include "FileSystem/PathDefines.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/ResourceManager.h"
@@ -383,6 +384,9 @@ void ForwardPipeline::RenderQueueItems(
 void ForwardPipeline::LoadBuiltinShaders()
 {
     if (!builtinShadersInvalidated) return;
+
+    //Editor 尚未打开项目时没有内容根；等项目加载后再解析项目内置 Shader。
+    if (!PathDefines::HasContentRoot()) return;
 
     //阴影深度
     shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));

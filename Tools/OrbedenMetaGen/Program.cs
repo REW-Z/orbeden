@@ -554,6 +554,7 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             var setterBacked = classInfo.Name == "TransformComponent"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
             var marksDirty = classInfo.Name == "Material" && field.Name == "shader";
+            var regenerateOnSet = classInfo.Name == "HeightFieldComponent" && field.Name != "enabled";
             var getterExpression = setterBacked
                 ? $"instance->Get{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}()"
                 : $"instance->{field.Name}";
@@ -589,6 +590,12 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
                 output.AppendLine("        instance->MarkDirty();");
                 output.AppendLine("        return true;");
             }
+            else if (regenerateOnSet)
+            {
+                output.AppendLine($"        if (!Reflection::SetFromXmlValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine("        instance->Regenerate();");
+                output.AppendLine("        return true;");
+            }
             else
             {
                 output.AppendLine($"        return Reflection::SetFromXmlValue(instance->{field.Name}, value);");
@@ -612,6 +619,12 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             {
                 output.AppendLine($"        if (!Reflection::SetFromValue(instance->{field.Name}, value)) return false;");
                 output.AppendLine("        instance->MarkDirty();");
+                output.AppendLine("        return true;");
+            }
+            else if (regenerateOnSet)
+            {
+                output.AppendLine($"        if (!Reflection::SetFromValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine("        instance->Regenerate();");
                 output.AppendLine("        return true;");
             }
             else

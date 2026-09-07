@@ -604,6 +604,27 @@ namespace
         if (body) body->lockFlags = value;
     }
 
+    //累积 RigidBody 力。
+    void ORBEDEN_NATIVE_CALL NativeRigidBodyAddForce(EnsId ens, vector3 force)
+    {
+        RigidBodyComponent* body = GetNativeRigidBody(ens);
+        if (body) body->AddForce(force);
+    }
+
+    //累积 RigidBody 力矩。
+    void ORBEDEN_NATIVE_CALL NativeRigidBodyAddTorque(EnsId ens, vector3 torque)
+    {
+        RigidBodyComponent* body = GetNativeRigidBody(ens);
+        if (body) body->AddTorque(torque);
+    }
+
+    //累积作用于世界空间位置的 RigidBody 力。
+    void ORBEDEN_NATIVE_CALL NativeRigidBodyAddForceAtPosition(EnsId ens, vector3 force, vector3 worldPosition)
+    {
+        RigidBodyComponent* body = GetNativeRigidBody(ens);
+        if (body) body->AddForceAtPosition(force, worldPosition);
+    }
+
     //读取 Collider.enabled。
     uint8 ORBEDEN_NATIVE_CALL NativeColliderGetEnabled(void* pointer)
     {
@@ -1051,6 +1072,9 @@ RigidBodyBind RigidBodyBind::Create()
     bind.SetContinuousCollisionDetection = reinterpret_cast<void*>(&NativeRigidBodySetContinuousCollisionDetection);
     bind.GetLockFlags = reinterpret_cast<void*>(&NativeRigidBodyGetLockFlags);
     bind.SetLockFlags = reinterpret_cast<void*>(&NativeRigidBodySetLockFlags);
+    bind.AddForce = reinterpret_cast<void*>(&NativeRigidBodyAddForce);
+    bind.AddTorque = reinterpret_cast<void*>(&NativeRigidBodyAddTorque);
+    bind.AddForceAtPosition = reinterpret_cast<void*>(&NativeRigidBodyAddForceAtPosition);
     return bind;
 }
 

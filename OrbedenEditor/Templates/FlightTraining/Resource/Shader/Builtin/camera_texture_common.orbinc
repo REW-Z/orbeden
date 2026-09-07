@@ -1,0 +1,32 @@
+--------frag
+uniform sampler2D u_CameraColorTexture;
+uniform sampler2D u_CameraDepthTexture;
+uniform bool u_UseCameraTextures;
+uniform float u_CameraNearPlane;
+uniform float u_CameraFarPlane;
+
+vec2 GetCameraScreenUv(vec4 clipPosition)
+{
+    vec2 ndc = clipPosition.xy / max(clipPosition.w, 0.00001);
+    return ndc * 0.5 + 0.5;
+}
+
+vec2 ClampCameraScreenUv(vec2 uv)
+{
+    return clamp(uv, vec2(0.001), vec2(0.999));
+}
+
+float LinearizeCameraDepth(float depth)
+{
+    float ndcDepth = depth * 2.0 - 1.0;
+    float denominator = u_CameraFarPlane + u_CameraNearPlane - ndcDepth * (u_CameraFarPlane - u_CameraNearPlane);
+    return (2.0 * u_CameraNearPlane * u_CameraFarPlane) / max(denominator, 0.00001);
+}
+
+vec2 RejectForegroundCameraUv(vec2 baseUv, vec2 distortedUv, float surfaceDepth)
+{
+    float sceneDepth = LinearizeCameraDepth(texture(u_CameraDepthTexture, distortedUv).r);
+    float refractorDepth = LinearizeCameraDepth(surfaceDepth);
+    float depthBias = max(u_CameraNearPlane * 0.25, 0.01);
+    return sceneDepth + depthBias < refractorDepth ? baseUv : distortedUv;
+}

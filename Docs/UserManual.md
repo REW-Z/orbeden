@@ -23,6 +23,10 @@ Windows Editor 开发需要：
 
 新项目会自动创建默认 World、资源、C# 脚本和 C++ 脚本，并直接在 Editor 中打开。
 
+默认模板是一个飞行训练小游戏，包含可操控飞机、第三人称相机、跑道、机库、四个检查点和圈速 HUD。World 会直接挂载项目的 C++ `FlightController` 与 C# `FlightHud`。
+
+创建完成后，Editor 会自动运行 MetaGen、编译并加载项目 C++ 模块，再重新加载启动 World；不需要在 Editor 外手动运行命令。如果本机 C++ 工具链不完整，项目仍会打开，Build Game 面板会显示“Native scripts still need to be compiled”，修复环境后点击 `Build Game C++` 即可重试。
+
 ### 打开已有项目
 
 选择 `Project > Load...`，然后选择包含 `.oeproj` 文件的项目根目录。
@@ -99,6 +103,8 @@ OnLateUpdate(float deltaTime)
 OnDrawGUI()
 OnEnd()
 ```
+
+`OnDrawGUI()` 在引擎 GUI 帧内执行，除标准控件外还可使用 `GUI` 自由绘制 API（线段、圆弧、文本、裁剪区、固定位置窗口）绘制 PFD、仪表等 HUD，详见 [脚本系统](ScriptSystem.md)。
 
 public 字段会进入序列化和 Inspector。private/protected 字段需要添加 `[SerializeField]`。
 
@@ -196,6 +202,16 @@ C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNative
 - Pause：暂停游戏模拟。
 - Stop：结束运行并恢复磁盘中保存的 World。
 
+默认飞行 Demo 采用真实物理：飞机由 RigidBody + Collider 驱动，升力按升力曲线采样（约 15° 迎角失速，螺旋桨推力随速度衰减、低速推重比大于 1），地面是带噪声贴图的 HeightField 地形，起落架由 WheelCollider 组件驱动（射线悬挂、地面摩擦与转向）。操作：
+
+- `Left Shift / Left Ctrl`：增加 / 减少油门。
+- `W / S`：俯冲 / 拉升（滑跑中 S 为拉起离地）。
+- `A / D`：左滚 / 右滚。
+- `Q / E`：左偏航 / 右偏航（接地时为机轮转向）。
+- `R`：重置飞机和当前航线进度。
+
+起飞：满油门沿跑道加速，约 30 m/s 时按 S 拉起；硬撞击或飞出训练区会自动重置回跑道起点。HUD 在屏幕底部用自由绘制 API 绘制 PFD（姿态仪、速度带、高度带、航向带）与空速/油门表盘，并记录当前圈速、最佳圈速、完成圈数和坠毁次数。依次穿过四个黄色检查点门完成一圈。
+
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
 构建结果和错误会显示在 Build Game 面板的状态区域以及日志中。
@@ -234,6 +250,14 @@ OrbedenGame/Build/windows-x64-clang-cl/bin/OrbedenGame.exe
 因此当前产物适合在开发机器上验证。要复制到其他机器直接运行，还需要后续实现“复制项目数据并使用相对路径”的正式打包步骤。
 
 ## 8. 常见问题
+
+### 新项目提示需要编译 Native 脚本
+
+这是 World 硬挂载项目 C++ 组件时的正常首次构建状态。Editor 会自动尝试 MetaGen、编译、加载 DLL 并重载 World；如果自动构建失败，打开 `Views > Build Game` 查看状态，修复 Visual Studio C++、CMake 或 SDK 路径后点击 `Build Game C++`。项目本身仍然保持打开；在启动 World 完整重载前，Save 和构建前保存都不会覆盖磁盘中的 World。
+
+### 新项目打开前出现内置 Shader 缺失
+
+Editor 没有内容根时不会解析项目内置 Shader；如果在项目成功打开后仍出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，请确认项目的 `Resource/Shader` 目录未被删除。
 
 ### Inspector 中看不到新 C# 脚本
 

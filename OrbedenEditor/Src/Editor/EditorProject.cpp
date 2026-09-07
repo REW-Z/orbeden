@@ -6,6 +6,7 @@
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/ResourceManager.h"
+#include "Runtime/WorldSerializer.h"
 
 #include <cctype>
 #include <cstdlib>
@@ -433,9 +434,19 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     editorLayout = parsedLayout;
     lastError.clear();
+    startupWorldLoaded = loaded;
 
     if (!loaded)
     {
+        const std::string& unregisteredType = WorldSerializer::GetLastUnregisteredComponentType();
+        if (!nativeRoot.empty() && !unregisteredType.empty())
+        {
+            lastError = "Project opened. Native component '" + unregisteredType
+                + "' needs to be compiled. Editor will run Build Game C++ now.";
+            Log::Warning(lastError.c_str());
+            return true;
+        }
+
         lastError = "Project loaded, but startup world failed: " + worldPath;
         Log::Error(lastError.c_str());
         return false;
@@ -451,6 +462,12 @@ bool EditorProject::SaveStartupWorld()
     {
         lastError = "No project is open.";
         Log::Error(lastError.c_str());
+        return false;
+    }
+    if (!startupWorldLoaded)
+    {
+        lastError = "Startup world is waiting for Native scripts and cannot be saved until Build Game C++ succeeds.";
+        Log::Warning(lastError.c_str());
         return false;
     }
 
@@ -498,6 +515,7 @@ bool EditorProject::ReloadStartupWorld()
         renderSystem->InvalidateResourceCaches();
     }
 
+    startupWorldLoaded = false;
     app.GetWorld().Clear();
     ResourceManager::Shutdown();
     PathDefines::SetContentRoot(projectRoot, resourceRoot);
@@ -511,9 +529,22 @@ bool EditorProject::ReloadStartupWorld()
         return false;
     }
 
+    startupWorldLoaded = true;
     lastError.clear();
     Log::Info(("Startup world reloaded: " + worldPath).c_str());
     return true;
+}
+
+//判断启动 World 是否已经完整加载到内存。
+bool EditorProject::IsStartupWorldLoaded() const
+{
+    return startupWorldLoaded;
+}
+
+//标记内存 World 已清空，保存必须等待磁盘重载。
+void EditorProject::MarkStartupWorldPendingReload()
+{
+    startupWorldLoaded = false;
 }
 
 //保存编辑器布局状态到项目文件

@@ -54,6 +54,7 @@
 - [x] 删除 `SidecarDirty`、MountId、独立托管挂载列表和 `ApplySerializedValues` 特殊入口。
 - [x] 删除新项目模板中的 sidecar 文件生成。
 - [x] 新项目模板包含简单 C# 脚本、简单 C++ 脚本和双向互操作示例。
+- [x] 新项目模板升级为飞行训练 Demo，并保留 World 对项目原生组件的硬挂载；首次加载会在 Editor 内自动完成 MetaGen、编译、模块加载和 World 重载。
 - [x] 模板 World 直接挂载 C# 脚本的原生 `ScriptBehaviour` 宿主。
 - [x] 静态搜索未发现旧 sidecar/MountId 主路径残留。
 - [x] 工作区没有 `.patch`、`.rej` 或 `.orig` 残留文件。
@@ -87,6 +88,8 @@
 - [x] 更新 `Docs/ScriptSystem.md`：改成“C# Wrapper 绑定原生宿主”的新模型。
 - [x] 更新 `Docs/UserManual.md`：删除 sidecar 描述，补充 C++/C# 添加组件、互操作和保存方式。
 - [x] 复核新项目模板的 World 层级、CMake/MetaGen 步骤、AOT 导出文件和示例代码能够互相对应。
+- [x] 修正未编译原生类型被报告为项目加载错误的问题，改为待编译提示并允许项目保持打开。
+- [x] 修正 Windows CMake 路径首引号被 cmd 截断的问题，并禁止待 Native 重载的空 World 覆盖模板场景。
 - [x] 说明高频互操作应缓存成员句柄；动态 `Invoke(name)` 只用于低频通用调用。
 
 ## 编译与验收记录（运行测试按用户要求不执行）

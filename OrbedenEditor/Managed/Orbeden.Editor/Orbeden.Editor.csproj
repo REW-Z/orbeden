@@ -14,4 +14,9 @@
       <Private>true</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- 游戏项目模板的 C# 源码不属于 Editor 程序集，明确排除编译。 -->
+  <ItemGroup>
+    <Compile Remove="..\..\Templates\**\*.cs" />
+  </ItemGroup>
 </Project>

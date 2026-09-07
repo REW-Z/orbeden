@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -337,6 +338,168 @@ namespace
     {
         ImGui::EndDisabled();
     }
+
+    //获取当前绘制窗口内容区域的原点。
+    ImVec2 GetDrawOrigin()
+    {
+        ImVec2 position = ImGui::GetWindowPos();
+        ImVec2 padding = ImGui::GetStyle().WindowPadding;
+        return ImVec2(position.x + padding.x, position.y + padding.y);
+    }
+
+    //平移一个 ImVec2，避免依赖 ImGui 的可选运算符重载。
+    ImVec2 Offset(const ImVec2& value, float32 x, float32 y)
+    {
+        return ImVec2(value.x + x, value.y + y);
+    }
+
+    //开始一个固定位置、无边框、不响应输入的绘制窗口。
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiBeginFixedWindow(const uint8* title, int32 length, float32 x, float32 y, float32 width, float32 height)
+    {
+        std::string value = ReadUtf8Text(title, length);
+        ImGui::SetNextWindowPos(ImVec2(x, y), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(width, height), ImGuiCond_Always);
+        constexpr ImGuiWindowFlags flags =
+            ImGuiWindowFlags_NoDecoration |
+            ImGuiWindowFlags_NoBackground |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoScrollWithMouse |
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav |
+            ImGuiWindowFlags_NoInputs;
+        bool open = ImGui::Begin(value.empty() ? "##FixedWindow" : value.c_str(), nullptr, flags);
+        return open ? 1 : 0;
+    }
+
+    //结束固定绘制窗口。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiEndFixedWindow()
+    {
+        ImGui::End();
+    }
+
+    //获取主视口工作区尺寸。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiGetViewportSize(float32* width, float32* height)
+    {
+        if (!width || !height) return;
+
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        if (!viewport)
+        {
+            *width = 0.0f;
+            *height = 0.0f;
+            return;
+        }
+
+        *width = viewport->WorkSize.x;
+        *height = viewport->WorkSize.y;
+    }
+
+    //绘制线段。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawLine(float32 x0, float32 y0, float32 x1, float32 y1, uint32 color, float32 thickness)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddLine(Offset(origin, x0, y0), Offset(origin, x1, y1), color, thickness);
+    }
+
+    //绘制折线。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawPolyline(const vector2* points, int32 count, uint32 color, float32 thickness, uint8 closed)
+    {
+        if (!points || count < 2) return;
+
+        ImVec2 origin = GetDrawOrigin();
+        std::vector<ImVec2> converted;
+        converted.reserve(static_cast<size_t>(count));
+        for (int32 index = 0; index < count; index++)
+        {
+            converted.push_back(Offset(origin, points[index].x, points[index].y));
+        }
+
+        ImDrawFlags flags = closed != 0 ? ImDrawFlags_Closed : ImDrawFlags_None;
+        ImGui::GetWindowDrawList()->AddPolyline(converted.data(), count, color, flags, thickness);
+    }
+
+    //绘制矩形边框。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawRect(float32 minX, float32 minY, float32 maxX, float32 maxY, uint32 color, float32 thickness, float32 rounding)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddRect(Offset(origin, minX, minY), Offset(origin, maxX, maxY), color, rounding, 0, thickness);
+    }
+
+    //绘制实心矩形。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawRectFilled(float32 minX, float32 minY, float32 maxX, float32 maxY, uint32 color, float32 rounding)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddRectFilled(Offset(origin, minX, minY), Offset(origin, maxX, maxY), color, rounding);
+    }
+
+    //绘制圆形边框。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawCircle(float32 cx, float32 cy, float32 radius, uint32 color, float32 thickness, int32 segments)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddCircle(Offset(origin, cx, cy), radius, color, std::max(segments, 3), thickness);
+    }
+
+    //绘制实心圆。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawCircleFilled(float32 cx, float32 cy, float32 radius, uint32 color, int32 segments)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddCircleFilled(Offset(origin, cx, cy), radius, color, std::max(segments, 3));
+    }
+
+    //绘制圆弧。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawArc(float32 cx, float32 cy, float32 radius, float32 minAngle, float32 maxAngle, uint32 color, float32 thickness, int32 segments)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->PathClear();
+        drawList->PathArcTo(Offset(origin, cx, cy), radius, minAngle, maxAngle, std::max(segments, 3));
+        drawList->PathStroke(color, ImDrawFlags_None, thickness);
+    }
+
+    //绘制实心三角形。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawTriangleFilled(float32 x0, float32 y0, float32 x1, float32 y1, float32 x2, float32 y2, uint32 color)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->AddTriangleFilled(Offset(origin, x0, y0), Offset(origin, x1, y1), Offset(origin, x2, y2), color);
+    }
+
+    //绘制文本，字号按默认字体大小缩放。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiDrawText(const uint8* text, int32 length, float32 x, float32 y, uint32 color, float32 fontScale)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        std::string value = ReadUtf8Text(text, length);
+        float32 fontSize = ImGui::GetFontSize() * std::max(fontScale, 0.01f);
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), fontSize, Offset(origin, x, y), color, value.c_str());
+    }
+
+    //获取文本绘制尺寸。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiGetTextSize(const uint8* text, int32 length, float32 fontScale, float32* width, float32* height)
+    {
+        if (!width || !height) return;
+
+        std::string value = ReadUtf8Text(text, length);
+        ImVec2 size = ImGui::CalcTextSize(value.c_str());
+        float32 scale = std::max(fontScale, 0.01f);
+        *width = size.x * scale;
+        *height = size.y * scale;
+    }
+
+    //推入裁剪区域。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiPushClipRect(float32 minX, float32 minY, float32 maxX, float32 maxY, uint8 intersectWithCurrent)
+    {
+        ImVec2 origin = GetDrawOrigin();
+        ImGui::GetWindowDrawList()->PushClipRect(Offset(origin, minX, minY), Offset(origin, maxX, maxY), intersectWithCurrent != 0);
+    }
+
+    //弹出裁剪区域。
+    void ORBEDEN_NATIVE_CALL RuntimeGuiPopClipRect()
+    {
+        ImGui::GetWindowDrawList()->PopClipRect();
+    }
 }
 
 RuntimeGuiApi RuntimeGuiBridge::GetApi()
@@ -386,5 +549,26 @@ RuntimeGuiAdvancedApi RuntimeGuiBridge::GetAdvancedApi()
     api.SetClipboardText = reinterpret_cast<void*>(&RuntimeGuiSetClipboardText);
     api.BeginDisabled = reinterpret_cast<void*>(&RuntimeGuiBeginDisabled);
     api.EndDisabled = reinterpret_cast<void*>(&RuntimeGuiEndDisabled);
+    return api;
+}
+
+RuntimeGuiDrawApi RuntimeGuiBridge::GetDrawApi()
+{
+    RuntimeGuiDrawApi api;
+    api.BeginFixedWindow = reinterpret_cast<void*>(&RuntimeGuiBeginFixedWindow);
+    api.EndFixedWindow = reinterpret_cast<void*>(&RuntimeGuiEndFixedWindow);
+    api.GetViewportSize = reinterpret_cast<void*>(&RuntimeGuiGetViewportSize);
+    api.Line = reinterpret_cast<void*>(&RuntimeGuiDrawLine);
+    api.Polyline = reinterpret_cast<void*>(&RuntimeGuiDrawPolyline);
+    api.Rect = reinterpret_cast<void*>(&RuntimeGuiDrawRect);
+    api.RectFilled = reinterpret_cast<void*>(&RuntimeGuiDrawRectFilled);
+    api.Circle = reinterpret_cast<void*>(&RuntimeGuiDrawCircle);
+    api.CircleFilled = reinterpret_cast<void*>(&RuntimeGuiDrawCircleFilled);
+    api.Arc = reinterpret_cast<void*>(&RuntimeGuiDrawArc);
+    api.TriangleFilled = reinterpret_cast<void*>(&RuntimeGuiDrawTriangleFilled);
+    api.Text = reinterpret_cast<void*>(&RuntimeGuiDrawText);
+    api.GetTextSize = reinterpret_cast<void*>(&RuntimeGuiGetTextSize);
+    api.PushClipRect = reinterpret_cast<void*>(&RuntimeGuiPushClipRect);
+    api.PopClipRect = reinterpret_cast<void*>(&RuntimeGuiPopClipRect);
     return api;
 }

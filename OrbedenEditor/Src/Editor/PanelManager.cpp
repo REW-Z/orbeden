@@ -246,6 +246,20 @@ void PanelManager::SetPanelVisible(const char* id, bool visible)
     }
 }
 
+//隐藏全部面板
+void PanelManager::HideAllPanels()
+{
+    List<std::string> visibleIds;
+    for (const PanelEntry& entry : panels)
+    {
+        if (entry.visible) visibleIds.push_back(entry.info.id);
+    }
+    for (const std::string& id : visibleIds)
+    {
+        SetPanelVisible(id.c_str(), false);
+    }
+}
+
 //判断鼠标是否位于中央编辑器工作区
 bool PanelManager::IsMouseOverWorkspace() const
 {

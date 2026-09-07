@@ -127,6 +127,17 @@ void MoveBehaviour::OnUpdate(float32 deltaTime)
 
 没有配置 `managedTypeName` 或找不到对应 C# 类型的宿主不进入调度。
 
+### GUI 绘制
+
+`OnDrawGUI()` 在引擎 ImGui 帧内执行，可以调用 C# `GUI` 静态类。除标准控件（Label、Button、BeginPanel、Table 等）外，`GUI` 还提供自由绘制 API，用于 PFD、仪表等自定义 HUD：
+
+- `GUI.Rgba(r, g, b, a)` 把颜色打包为原生字节序（0xAABBGGRR）。
+- `GUI.BeginFixedWindow(title, x, y, w, h)` / `GUI.EndFixedWindow()` 创建固定位置、无边框、不响应输入的绘制窗口；`GUI.GetViewportSize()` 获取主视口尺寸用于锚定。
+- 图元：`Line`、`Polyline`、`Rect`、`RectFilled`、`Circle`、`CircleFilled`、`Arc`、`TriangleFilled`、`Text`、`GetTextSize`。
+- `GUI.PushClipRect(minX, minY, maxX, maxY)` / `GUI.PopClipRect()` 裁剪后续绘制（PFD 姿态区必需）。
+
+坐标相对当前绘制窗口内容区域左上角，角度使用弧度，字号通过 fontScale 按默认字体大小缩放。默认飞行 Demo 的 FlightHud 是完整示例。
+
 ## 5. 添加、查询和删除
 
 ```csharp
@@ -212,11 +223,15 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 旧 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或旧代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 ScriptBehaviour 宿主表为 16 个指针槽，完整运行时表为 256 个；Editor 组件表为 19 个，完整 Editor 表为 61 个。C++ static_assert 和 C# 初始化布局检查保持对应。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 ScriptBehaviour 宿主表为 16 个指针槽，完整运行时表为 274 个；Editor 组件表为 19 个，完整 Editor 表为 202 个。C++ static_assert 和 C# 初始化布局检查保持对应。
 
 ## 10. 模板与构建
 
-新项目模板在同一 Cube 上挂载 `SampleNativeBehaviour` 和项目命名空间的 `SampleBehaviour`，包含字段读写和双向方法调用示例；World 直接保存 C# 宿主。
+新项目模板以真实文件形式存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、CMake 配置），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
+
+模板生成一个可游玩的飞行训练 Demo：World 在玩家飞机上硬挂载项目原生 `FlightController`，并挂载项目命名空间的托管 `FlightHud` 宿主。原生控制器用 RigidBody 物理处理升力曲线、舵面、起落架悬挂、检查点、圈速和复位；托管 HUD 使用预解析方法句柄读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD 和仪表盘。
+
+首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、CMake 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`；未知原生类型不会再被误报成项目文件损坏。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
 游戏 C++ CMake 步骤先运行 MetaGen 生成反射/生命周期 thunk，再编译游戏模块。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
 

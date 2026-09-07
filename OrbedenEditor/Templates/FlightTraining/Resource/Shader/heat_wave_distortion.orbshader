@@ -1,0 +1,62 @@
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 2) in vec2 a_TexCoord;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+
+out vec2 v_TexCoord;
+out vec4 v_ClipPosition;
+
+void main()
+{
+    v_TexCoord = a_TexCoord;
+    v_ClipPosition = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+    gl_Position = v_ClipPosition;
+}
+
+--------frag
+#version 430 core
+
+#include "Builtin/camera_texture_common.orbinc"
+
+in vec2 v_TexCoord;
+in vec4 v_ClipPosition;
+
+uniform float u_Time;
+uniform float u_DistortionStrength;
+uniform float u_NoiseScale;
+uniform float u_DistortionSpeed;
+uniform float u_EdgeFade;
+uniform float u_Opacity;
+uniform vec4 u_TintColor;
+
+out vec4 FragColor;
+
+void main()
+{
+    float opacity = clamp(u_Opacity, 0.0, 1.0);
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(u_TintColor.rgb, opacity * 0.08);
+        return;
+    }
+
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    float scale = max(u_NoiseScale, 1.0);
+    float phase = u_Time * u_DistortionSpeed;
+    float waveX = sin(v_TexCoord.y * scale + phase * 1.7);
+    float waveY = sin(v_TexCoord.x * scale * 0.73 - phase);
+
+    float edgeDistance = min(min(v_TexCoord.x, 1.0 - v_TexCoord.x), min(v_TexCoord.y, 1.0 - v_TexCoord.y));
+    float edgeMask = smoothstep(0.0, max(u_EdgeFade, 0.0001), edgeDistance);
+    vec2 offset = vec2(waveX, waveY) * max(u_DistortionStrength, 0.0) * edgeMask;
+
+    vec2 distortedUv = ClampCameraScreenUv(screenUv + offset);
+    distortedUv = RejectForegroundCameraUv(screenUv, distortedUv, gl_FragCoord.z);
+    vec3 sceneColor = texture(u_CameraColorTexture, distortedUv).rgb;
+    vec3 tintedColor = mix(sceneColor, sceneColor * u_TintColor.rgb, 0.15);
+    FragColor = vec4(tintedColor, opacity * edgeMask);
+}

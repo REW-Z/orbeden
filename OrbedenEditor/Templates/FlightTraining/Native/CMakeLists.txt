@@ -1,0 +1,78 @@
+cmake_minimum_required(VERSION 3.26)
+
+project({{PROJECT_NAME}}Native LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(ORBEDEN_ENGINE_ROOT "" CACHE PATH "Orbeden repository root")
+set(ORBEDEN_CORE_LIB "" CACHE FILEPATH "Editor OrbedenCore import library")
+
+if(NOT ORBEDEN_ENGINE_ROOT)
+    message(FATAL_ERROR "ORBEDEN_ENGINE_ROOT is invalid")
+endif()
+if(NOT ORBEDEN_CORE_LIB OR NOT EXISTS "${ORBEDEN_CORE_LIB}")
+    message(FATAL_ERROR "ORBEDEN_CORE_LIB is invalid")
+endif()
+
+# 游戏工程只引用 Editor 随引擎统一发布的 Native SDK，不复制 Core 头文件和 MetaGen。
+set(ORBEDEN_SDK_ROOT "${ORBEDEN_ENGINE_ROOT}/OrbedenEditor/Sdk")
+set(ORBEDEN_NATIVE_INCLUDE_ROOT "${ORBEDEN_SDK_ROOT}/Native/Include")
+if(NOT EXISTS "${ORBEDEN_NATIVE_INCLUDE_ROOT}/Scripting/ScriptBehaviour.h")
+    # 保留源码树开发环境兼容入口。
+    set(ORBEDEN_NATIVE_INCLUDE_ROOT "${ORBEDEN_ENGINE_ROOT}/OrbedenCore/Src")
+endif()
+if(NOT EXISTS "${ORBEDEN_NATIVE_INCLUDE_ROOT}/Scripting/ScriptBehaviour.h")
+    message(FATAL_ERROR "Orbeden Native SDK headers were not found; build OrbedenCore first")
+endif()
+
+set(ORBEDEN_METAGEN_EXE "${ORBEDEN_SDK_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.exe")
+set(ORBEDEN_METAGEN_DLL "${ORBEDEN_SDK_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.dll")
+if(EXISTS "${ORBEDEN_METAGEN_EXE}")
+    set(ORBEDEN_METAGEN_COMMAND "${ORBEDEN_METAGEN_EXE}")
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_METAGEN_EXE}")
+elseif(EXISTS "${ORBEDEN_METAGEN_DLL}")
+    set(ORBEDEN_METAGEN_COMMAND dotnet "${ORBEDEN_METAGEN_DLL}")
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_METAGEN_DLL}")
+elseif(EXISTS "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj")
+    # 兼容尚未发布 SDK 工具的引擎源码开发环境。
+    set(ORBEDEN_METAGEN_COMMAND dotnet run --project "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" --)
+    set(ORBEDEN_METAGEN_DEPENDENCY "${ORBEDEN_ENGINE_ROOT}/Tools/OrbedenMetaGen/Program.cs")
+else()
+    message(FATAL_ERROR "OrbedenMetaGen was not found; build OrbedenCore first")
+endif()
+
+file(GLOB_RECURSE GAME_NATIVE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+set(GAME_NATIVE_PROJECT_SOURCES)
+foreach(GAME_NATIVE_SOURCE IN LISTS GAME_NATIVE_SOURCES)
+    cmake_path(IS_PREFIX CMAKE_CURRENT_BINARY_DIR "${GAME_NATIVE_SOURCE}" NORMALIZE GAME_NATIVE_SOURCE_IS_GENERATED)
+    if(NOT GAME_NATIVE_SOURCE_IS_GENERATED)
+        list(APPEND GAME_NATIVE_PROJECT_SOURCES "${GAME_NATIVE_SOURCE}")
+    endif()
+endforeach()
+set(GAME_NATIVE_SOURCES ${GAME_NATIVE_PROJECT_SOURCES})
+
+set(GENERATED_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Generated")
+set(GENERATED_REFLECTION "${GENERATED_DIRECTORY}/Reflection.Generated.cpp")
+
+add_custom_command(
+    OUTPUT "${GENERATED_REFLECTION}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${GENERATED_DIRECTORY}"
+    COMMAND ${ORBEDEN_METAGEN_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}" "${GENERATED_DIRECTORY}" --game-module
+    DEPENDS ${GAME_NATIVE_SOURCES} "${ORBEDEN_METAGEN_DEPENDENCY}"
+    VERBATIM)
+
+add_library({{PROJECT_NAME}}Native SHARED ${GAME_NATIVE_SOURCES} "${GENERATED_REFLECTION}")
+target_include_directories({{PROJECT_NAME}}Native PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/PhysX/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/glfw/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/glad/include"
+    "${ORBEDEN_NATIVE_INCLUDE_ROOT}/ThirdParty/imgui")
+target_link_libraries({{PROJECT_NAME}}Native PRIVATE "${ORBEDEN_CORE_LIB}")
+target_compile_options({{PROJECT_NAME}}Native PRIVATE /utf-8)
+set_target_properties({{PROJECT_NAME}}Native PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_BINARY_DIR}/bin"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")

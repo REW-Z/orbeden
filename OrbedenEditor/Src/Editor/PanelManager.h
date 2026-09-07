@@ -98,6 +98,9 @@ public:
     //设置面板可见状态
     void SetPanelVisible(const char* id, bool visible);
 
+    //隐藏全部面板（进入 Play 前调用，布局恢复由调用方负责）
+    void HideAllPanels();
+
     //判断鼠标是否位于中央编辑器工作区
     bool IsMouseOverWorkspace() const;
 

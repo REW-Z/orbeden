@@ -43,6 +43,7 @@ internal unsafe struct OrbedenNativeApi
     public ObjectExtensionBindApi ObjectExtension;
     public NativeScriptInteropApi ScriptInterop;
     public ScriptBehaviourBindApi ScriptBehaviour;
+    public RuntimeGuiDrawApi GuiDraw;
 }
 #pragma warning restore CS0649
 
@@ -62,6 +63,7 @@ public static unsafe class OrbedenCoreRuntime
             ScriptInteropDispatch.Initialize(default);
             ScriptBehaviour.InitializeNativeApi(default);
             GUI.InitializeNativeApi(default, default, default);
+            GUI.InitializeDrawApi(default);
             return;
         }
 
@@ -70,6 +72,7 @@ public static unsafe class OrbedenCoreRuntime
         ScriptInteropDispatch.Initialize(api.ScriptInterop);
         ScriptBehaviour.InitializeNativeApi(api.ScriptBehaviour);
         GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
+        GUI.InitializeDrawApi(api.GuiDraw);
     }
 
     /// <summary>初始化引擎对象和组件绑定。</summary>
@@ -153,17 +156,18 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<MeshBindApi>(nameof(MeshBindApi), 28);
         ValidateFunctionTable<MaterialBindApi>(nameof(MaterialBindApi), 20);
         ValidateFunctionTable<ShaderBindApi>(nameof(ShaderBindApi), 27);
-        ValidateFunctionTable<RigidBodyBindApi>(nameof(RigidBodyBindApi), 23);
+        ValidateFunctionTable<RigidBodyBindApi>(nameof(RigidBodyBindApi), 26);
         ValidateFunctionTable<ColliderBindApi>(nameof(ColliderBindApi), 32);
         ValidateFunctionTable<CharacterControllerBindApi>(nameof(CharacterControllerBindApi), 25);
         ValidateFunctionTable<RuntimeGuiApi>(nameof(RuntimeGuiApi), 11);
         ValidateFunctionTable<RuntimeGuiExtensionApi>(nameof(RuntimeGuiExtensionApi), 4);
         ValidateFunctionTable<RuntimeGuiAdvancedApi>(nameof(RuntimeGuiAdvancedApi), 17);
+        ValidateFunctionTable<RuntimeGuiDrawApi>(nameof(RuntimeGuiDrawApi), 15);
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
         ValidateFunctionTable<ScriptBehaviourBindApi>(nameof(ScriptBehaviourBindApi), 16);
-        ValidateFunctionTable<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 199);
-        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 256);
+        ValidateFunctionTable<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 202);
+        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 274);
 
         nativeAbiValidated = true;
     }

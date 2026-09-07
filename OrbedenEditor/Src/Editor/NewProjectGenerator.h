@@ -9,6 +9,7 @@ namespace NewProjectGenerator
     bool CreateProject(const std::string& parentDirectory,
         const std::string& projectName,
         const std::string& runtimeDllPath,
+        const std::string& templateDirectory,
         std::string& outProjectRoot,
         std::string& outError);
 

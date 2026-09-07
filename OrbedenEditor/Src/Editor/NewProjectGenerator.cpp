@@ -162,6 +162,7 @@ namespace
 bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
     const std::string& projectName,
     const std::string& runtimeDllPath,
+    const std::string& templateDirectory,
     std::string& outProjectRoot,
     std::string& outError)
 {
@@ -223,7 +224,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, outError)) return false;
+    if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, templateDirectory, outError)) return false;
 
     outProjectRoot = ToCleanPath(projectRoot);
     Log::Info(("New project created: " + outProjectRoot).c_str());
