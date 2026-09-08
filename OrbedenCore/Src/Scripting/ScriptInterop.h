@@ -89,7 +89,7 @@ namespace ScriptInterop
     //随 OrbedenNativeApi 传入托管域的原生组件操作表。
     struct ScriptInteropApi
     {
-        void* FindNativeByTypeId = nullptr;
+        void* FindNativeByTypeRuntimeId = nullptr;
         void* FindNativeByName = nullptr;
         void* IsValid = nullptr;
         void* ResolveField = nullptr;
@@ -148,8 +148,8 @@ namespace ScriptInterop
         InteropStatus Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const;
     };
 
-    //按本进程 TypeId 查找原生组件。
-    ComponentProxy FindNativeComponent(EnsId ens, TypeId typeId, int32 occurrence = 0);
+    //按本进程 TypeRuntimeId 查找原生组件。
+    ComponentProxy FindNativeComponent(EnsId ens, TypeRuntimeId typeRuntimeId, int32 occurrence = 0);
 
     //按完整原生类型名查找原生组件。
     ComponentProxy FindNativeComponent(EnsId ens, std::string_view typeName, int32 occurrence = 0);

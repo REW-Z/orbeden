@@ -266,7 +266,7 @@ public sealed class ComponentProxy
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct NativeScriptInteropApi
 {
-    public delegate* unmanaged[Cdecl]<EnsId, uint, int, ComponentHandle*, InteropStatus> FindNativeByTypeId;
+    public delegate* unmanaged[Cdecl]<EnsId, uint, int, ComponentHandle*, InteropStatus> FindNativeByTypeRuntimeId;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int, ComponentHandle*, InteropStatus> FindNativeByName;
     public delegate* unmanaged[Cdecl]<ComponentHandle, InteropStatus> IsValid;
     public delegate* unmanaged[Cdecl]<ComponentHandle, byte*, int, MemberHandle*, InteropStatus> ResolveField;

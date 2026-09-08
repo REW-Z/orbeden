@@ -9,9 +9,9 @@
 namespace
 {
     //获取全局反射注册表
-    std::unordered_map<TypeId, Reflection::TypeInfo>& GetReflectionRegistry()
+    std::unordered_map<TypeRuntimeId, Reflection::TypeInfo>& GetReflectionRegistry()
     {
-        static std::unordered_map<TypeId, Reflection::TypeInfo> registry;
+        static std::unordered_map<TypeRuntimeId, Reflection::TypeInfo> registry;
         return registry;
     }
 

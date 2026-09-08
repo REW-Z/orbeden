@@ -10,9 +10,9 @@ OBJECT_TYPE_IMPLEMENT(ScriptBehaviour, Component)
 
 namespace
 {
-    std::unordered_map<TypeId, ScriptCallbackTable>& GetScriptCallbackRegistry()
+    std::unordered_map<TypeRuntimeId, ScriptCallbackTable>& GetScriptCallbackRegistry()
     {
-        static std::unordered_map<TypeId, ScriptCallbackTable> registry;
+        static std::unordered_map<TypeRuntimeId, ScriptCallbackTable> registry;
         return registry;
     }
 

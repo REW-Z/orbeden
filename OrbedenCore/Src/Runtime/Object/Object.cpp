@@ -351,7 +351,7 @@ Type::Type(const char* typeName, Type* base, uint32 size, uint32 alignment, Obje
 }
 
 //获取类型ID
-TypeId Type::GetId() const
+TypeRuntimeId Type::GetId() const
 {
     return id;
 }
@@ -667,8 +667,8 @@ void Object::RegisterType(Type* type)
 
     auto emptySlot = std::find(runtime.types.begin(), runtime.types.end(), nullptr);
     type->id = emptySlot == runtime.types.end()
-        ? static_cast<TypeId>(runtime.types.size())
-        : static_cast<TypeId>(std::distance(runtime.types.begin(), emptySlot));
+        ? static_cast<TypeRuntimeId>(runtime.types.size())
+        : static_cast<TypeRuntimeId>(std::distance(runtime.types.begin(), emptySlot));
     type->mask = type->id < 64 ? (1ull << type->id) : 0;
     type->moduleOwner = runtime.currentModuleOwner;
 
@@ -735,12 +735,12 @@ bool Object::UnregisterModuleTypes(void* moduleOwner)
 }
 
 //查找类型
-Type* Object::FindType(TypeId typeId)
+Type* Object::FindType(TypeRuntimeId typeRuntimeId)
 {
     ObjectRuntime& runtime = GetObjectRuntime();
-    if (typeId >= runtime.types.size()) return nullptr;
+    if (typeRuntimeId >= runtime.types.size()) return nullptr;
 
-    return runtime.types[typeId];
+    return runtime.types[typeRuntimeId];
 }
 
 //查找类型

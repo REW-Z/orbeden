@@ -18,7 +18,7 @@ namespace Reflection
 	struct FieldInfo;
 	struct MethodInfo;
 }
-typedef uint32 TypeId;
+typedef uint32 TypeRuntimeId;
 typedef Object* (*ObjectConstructorFunction)(IChunk* chunk);
 typedef void (*ObjectDestructorFunction)(Object* object);
 typedef void (*ObjectVisitorFunction)(Object* object, void* userData);
@@ -68,7 +68,7 @@ class Type
     friend class ComponentStorage;
 
 private:
-    TypeId id = 0;//运行时临时ID（依赖静态初始化顺序）
+    TypeRuntimeId id = 0;//运行时临时ID（依赖静态初始化顺序）
     uint64 mask = 0;
     const char* name = nullptr;
     Type* baseType = nullptr;
@@ -101,7 +101,7 @@ public:
     Type& operator=(const Type&) = delete;
 
     //获取类型ID
-    TypeId GetId() const;
+    TypeRuntimeId GetId() const;
 
     //获取类型Mask
     uint64 GetMask() const;
@@ -357,7 +357,7 @@ public:
     static bool UnregisterModuleTypes(void* moduleOwner);
 
     //查找类型
-    static Type* FindType(TypeId typeId);
+    static Type* FindType(TypeRuntimeId typeRuntimeId);
 
     //查找类型
     static Type* FindType(const std::string& typeName);

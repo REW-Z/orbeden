@@ -27,7 +27,7 @@ private:
     List<Ens*> liveEns;//所有存活Ens指针
     List<uint32> freeEnsIds;//等待复用的EnsId槽位
 
-    List<ComponentStorage*> componentStorages;//按TypeId索引的组件稀疏集
+    List<ComponentStorage*> componentStorages;//按TypeRuntimeId索引的组件稀疏集
 	List<Object*> ownedObjects;//world拥有的运行时对象
     List<ITransformListener*> transformListeners;//变换监听器
     List<class IWorldLifecycleListener*> lifecycleListeners;//Ens生命周期监听器

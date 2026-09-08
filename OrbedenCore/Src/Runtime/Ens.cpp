@@ -185,7 +185,7 @@ bool Ens::HasComponent(Type* type) const
 }
 
 //获取组件类型列表
-const List<TypeId>& Ens::GetComponentTypes() const
+const List<TypeRuntimeId>& Ens::GetComponentTypes() const
 {
     return componentTypes;
 }

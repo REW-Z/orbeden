@@ -36,7 +36,7 @@ Windows Editor 开发需要：
 ```text
 MyGame/
 ├─ MyGame.oeproj    项目配置和启动 World
-├─ World/           场景文件及 C# 脚本挂载数据
+├─ World/           场景、组件及其字段数据
 ├─ Resource/        模型、材质、贴图和 Shader
 ├─ Script/          C# 游戏代码
 ├─ Native/          C++ 游戏代码和 CMake 配置
@@ -53,7 +53,8 @@ MyGame/
 3. 使用 `Add Component` 添加组件：
    - `[C#]` 表示 C# 脚本组件。
    - `[C++]` 表示原生 C++ 组件。
-4. 使用 `Ctrl+S` 或 `Project > Save` 保存 World 和 C# 脚本挂载数据。
+4. 使用 `Ctrl+S` 或 `Project > Save` 保存 World，其中包含场景组件及其字段数据。
+
 模型、材质、贴图和 Shader 放在 `Resource` 目录中，再通过 Project 面板和 Inspector 使用。
 
 
@@ -184,13 +185,13 @@ C++ 文件修改后：
 
 Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本只显示一个组件卡片。多选添加会检查唯一性和依赖，失败时回滚本次创建。删除组件后 Undo 会恢复完整字段和原挂载位置。属性提交失败会显示错误信息。
 
-两种语言的组件和字段都保存在 `.world` 中，按 `Ctrl+S` 统一保存，不再生成独立脚本文件。对象引用保存资源 Key 或 World 稳定路径；不要把运行时 `InstanceId` 当作持久化引用。缺少 C# 类型时会显示 `Missing Script`，已有字段保留，修复并重新加载程序集后可重新连接。
+两种语言的组件和字段都保存在 `.world` 中，按 `Ctrl+S` 保存。对象引用保存资源 Key 或 World 稳定路径；不要把运行时 `InstanceId` 当作持久化引用。缺少 C# 类型时会显示 `Missing Script`，已有字段保留，修复并重新加载程序集后可重新连接。
 
 ### C++ / C# 互操作
 
 C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
-重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，不能继续使用旧句柄。完整示例见 [脚本系统](ScriptSystem.md)。
+重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](ScriptSystem.md)。
 
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 
@@ -202,7 +203,7 @@ C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNative
 - Pause：暂停游戏模拟。
 - Stop：结束运行并恢复磁盘中保存的 World。
 
-默认模板使用 PhysX 刚体和简化气动模型。机翼升力垂直于气流和翼展；垂直安定面根据尾部侧向气流产生回正力矩，配合偏航、滚转和俯仰阻尼。场景采用自由飞行，没有航路门、圈速任务或水平距离/高度越界限制。
+默认模板使用 PhysX 刚体和简化气动模型。机翼升力垂直于气流和翼展；垂直安定面根据尾部侧向气流产生回正力矩，配合偏航、滚转和俯仰阻尼。场景采用自由飞行，地图随飞机位置动态扩展。
 
 - `Left Shift / Left Ctrl`：增加 / 减少油门，初始油门为零。
 - `W / S`：压低 / 抬高机头。
@@ -221,11 +222,9 @@ Play 中的受力线从飞机原点出发：红色为阻力（包含垂尾侧向
 
 `FlightTerrainStreamer` 在 Play 中围绕飞机生成地形，每块 512 × 512 米、65 × 65 个高度样本，目标加载范围为 7 × 7 块，每个物理步最多新增 2 块。外围保留一圈卸载缓冲，机场块固定保留以供返回；CPU 网格、GPU 资源及碰撞体随远块卸载回收。邻块使用全局噪声坐标、连续法线和 UV，并共享同一张可平铺噪声纹理。编辑模式预览机场所在的一块地形，Play 才扩展周围地图。
 
-飞行超过浮动原点阈值（默认 4096 米）时，世界根节点按整块距离平移，飞机速度保持不变，地形继续按原来的全局块索引生成。因此地图可以随飞行持续扩展，而不是一次性分配巨大网格；坐标与块索引仍受数值类型范围限制。当前分块生成在主线程按预算执行，并非后台异步流送。`chunkSize` 与 `samplesPerSide` 在进入 Play 时确定；修改后重新进入 Play 生效。
+飞行超过浮动原点阈值（默认 4096 米）时，世界根节点按整块距离平移，飞机速度保持不变，地形继续按原来的全局块索引生成。地图随飞行持续扩展；坐标与块索引仍受数值类型范围限制。分块生成在主线程按预算执行。`chunkSize` 与 `samplesPerSide` 在进入 Play 时确定；修改后重新进入 Play 生效。
 
 原生脚本可通过 `RenderSystem::Current()->DrawLine(world, start, end, color, depthTest, drawLayer)` 提交世界空间线条。线条在当前帧的全部相机目标中绘制后清除，推荐从 `OnLateUpdate` 提交；调用者需检查当前渲染系统指针。
-
-本轮还修正了 Core 的刚体重建：缩放不再按旋转矩阵浮点数的逐位哈希判断，新建或重建刚体会在同一物理步施加并清空待施加力。使用旧引擎二进制时，仅更新模板脚本无法获得这一修复。
 
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
@@ -262,7 +261,7 @@ OrbedenGame/Build/windows-x64-clang-cl/bin/OrbedenGame.exe
 
 `Build Player` 当前完成代码构建，但不会自动生成完整的可分发目录。Player 在构建时绑定当前打开的项目路径，并从该项目读取 `.oeproj`、`World` 和 `Resource`。
 
-因此当前产物适合在开发机器上验证。要复制到其他机器直接运行，还需要后续实现“复制项目数据并使用相对路径”的正式打包步骤。
+产物适合在开发机器上验证，运行时需要保留构建时绑定的项目路径及项目数据，不能直接作为独立发行包复制到其他机器。
 
 ## 8. 常见问题
 
@@ -270,9 +269,9 @@ OrbedenGame/Build/windows-x64-clang-cl/bin/OrbedenGame.exe
 
 这是 World 硬挂载项目 C++ 组件时的正常首次构建状态。Editor 会自动尝试 MetaGen、编译、加载 DLL 并重载 World；如果自动构建失败，打开 `Views > Build Game` 查看状态，修复 Visual Studio C++、CMake 或 SDK 路径后点击 `Build Game C++`。项目本身仍然保持打开；在启动 World 完整重载前，Save 和构建前保存都不会覆盖磁盘中的 World。
 
-### 新项目打开前出现内置 Shader 缺失
+### 项目提示内置 Shader 缺失
 
-Editor 没有内容根时不会解析项目内置 Shader；如果在项目成功打开后仍出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，请确认项目的 `Resource/Shader` 目录未被删除。
+如果项目打开后出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，请确认项目的 `Resource/Shader` 目录未被删除。
 
 ### Inspector 中看不到新 C# 脚本
 
@@ -290,14 +289,8 @@ Editor 没有内容根时不会解析项目内置 Shader；如果在项目成功
 
 这是预期行为。需要持久化的修改应在非 Play 状态下完成并按 `Ctrl+S` 保存。
 
+### 飞行地形材质和机轮参数
+
+地形材质引用使用 `Resource/Mesh/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，应使用 OBJ 下的材质资源路径。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
+
 更深入的实现说明见 [脚本系统](ScriptSystem.md)，平台工具链和目录说明见 [构建与打包](BuildAndPackaging.md)。
-
-### 飞行模板修复与旧项目迁移
-
-模板依赖 Core 的 HeightField/WheelCollider 字段注册、三轮悬挂和地形网格生成。源码环境修改后先构建 Core，再构建 Editor，确保输出目录的 DLL 和 Templates 一起更新；新建项目会使用修复后的模板。
-
-已有项目不会自动覆盖。备份后同步模板的 `Native/FlightController.*`、`Native/FlightTerrainStreamer.*`、`Native/FlightOrbitCamera.*` 和 `Script/FlightHud.cs`，并合并 `World/main.world` 中新的飞行参数、Streamer 组件、相机上的 FlightOrbitCamera 组件及机场 HeightField 配置；删除所有旧航路门实体和其碰撞组件。跑道标线与座舱现在使用 `Resource/Mesh/marking.obj` 和 `Resource/Material/marking.mtl`，需一并同步。若直接替换 World，将 `{{PROJECT_NAME}}` 替换成现有项目名；自定义场景请合并，避免覆盖自己的内容。
-
-地形材质引用使用 `Resource/Mesh/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，不能引用 `ground.mtl//Material/...`。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
-
-仓库中的独立辅助程序位于 `Tests/FlightTrainingRegression.cpp` 和 `Tests/FlightTrainingRenderSmoke.cpp`。它们直接链接 Core 并编译模板原生脚本，不经过 Player 打包，也不启动 Editor Play。前者模拟输入并推进物理，后者创建随后隐藏的 GLFW 窗口、调用真实 OpenGL 渲染并读回帧缓冲。CLI 是启动入口，不代表不使用图形 API。这些辅助程序不能替代完整的 Editor Play、C# HUD 和交互手感验证。本次自由飞行改动未运行测试或构建。

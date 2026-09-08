@@ -243,9 +243,9 @@ namespace
         if (oldKey.empty()) return 0;
 
         int32 changed = 0;
-        for (TypeId typeId = 0; typeId < Object::GetTypeCount(); ++typeId)
+        for (TypeRuntimeId typeRuntimeId = 0; typeRuntimeId < Object::GetTypeCount(); ++typeRuntimeId)
         {
-            Type* type = Object::FindType(typeId);
+            Type* type = Object::FindType(typeRuntimeId);
             if (!type) continue;
 
             const List<Reflection::FieldInfo>& fields = type->GetFields();
@@ -472,9 +472,9 @@ namespace
     List<Type*> GetAddableNativeComponentTypes()
     {
         List<Type*> types;
-        for (TypeId typeId = 0; typeId < Object::GetTypeCount(); ++typeId)
+        for (TypeRuntimeId typeRuntimeId = 0; typeRuntimeId < Object::GetTypeCount(); ++typeRuntimeId)
         {
-            Type* type = Object::FindType(typeId);
+            Type* type = Object::FindType(typeRuntimeId);
             if (!type || type == Component::StaticType() || type == TransformComponent::StaticType() || type == ScriptBehaviour::StaticType()) continue;
             if (type->Is(Component::StaticType()) && type->CanCreateObject()) types.push_back(type);
         }

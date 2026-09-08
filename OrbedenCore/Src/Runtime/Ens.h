@@ -24,7 +24,7 @@ private:
     bool worldActive = true;
     std::string name;
     uint64 componentMask = 0;
-    List<TypeId> componentTypes;
+    List<TypeRuntimeId> componentTypes;
     List<Component*> componentInstances;
 
     //记录组件类型
@@ -110,7 +110,7 @@ public:
     bool HasComponent(Type* type) const;
 
     //获取组件类型列表
-    const List<TypeId>& GetComponentTypes() const;
+    const List<TypeRuntimeId>& GetComponentTypes() const;
 
     //获取按挂载顺序排列的所有组件实例
     const List<Component*>& GetComponents() const;

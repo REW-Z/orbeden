@@ -35,7 +35,7 @@ NpcAiComponent(C#)
 - 精确 `ScriptBehaviour` 不出现在普通 `[C++]` 添加菜单中，只在选择 C# 类型时由 Editor/Runtime 创建。
 - 未配置 `managedTypeName` 的精确实例属于无效 Managed 宿主，不进入生命周期调度。
 - 每个 C# 脚本拥有独立的原生宿主、`ObjectId` 和挂载位置。
-- 所有 C# 脚本共享原生 `ScriptBehaviour::TypeId`；具体类型由 `managedTypeName` 区分。
+- 所有 C# 脚本共享原生 `ScriptBehaviour::TypeRuntimeId`；具体类型由 `managedTypeName` 区分。
 
 ## C# Wrapper 与生命周期
 

@@ -32,13 +32,13 @@ ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
 {
     if (!type || !type->Is(Component::StaticType())) return nullptr;
 
-    TypeId typeId = type->GetId();
-    if (typeId >= componentStorages.size())
+    TypeRuntimeId typeRuntimeId = type->GetId();
+    if (typeRuntimeId >= componentStorages.size())
     {
-        componentStorages.resize(static_cast<usize>(typeId) + 1, nullptr);
+        componentStorages.resize(static_cast<usize>(typeRuntimeId) + 1, nullptr);
     }
 
-    ComponentStorage*& storage = componentStorages[typeId];
+    ComponentStorage*& storage = componentStorages[typeRuntimeId];
     if (!storage)
     {
         storage = NEW(ComponentStorage)ComponentStorage(this, type);

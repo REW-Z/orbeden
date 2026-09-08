@@ -389,12 +389,12 @@ namespace
         }
     }
 
-    InteropStatus ORBEDEN_NATIVE_CALL NativeFindByTypeId(EnsId ens, uint32 typeId, int32 occurrence, ComponentHandle* output)
+    InteropStatus ORBEDEN_NATIVE_CALL NativeFindByTypeRuntimeId(EnsId ens, uint32 typeRuntimeId, int32 occurrence, ComponentHandle* output)
     {
         CallGuard guard;
         InteropStatus status = guard.Enter();
         if (status != InteropStatus::Ok) return status;
-        try { return FindNative(ens, Object::FindType(typeId), occurrence, output); }
+        try { return FindNative(ens, Object::FindType(typeRuntimeId), occurrence, output); }
         catch (...) { return InteropStatus::InvocationFailed; }
     }
 
@@ -522,7 +522,7 @@ namespace ScriptInterop
     ScriptInteropApi ScriptInteropApi::Create()
     {
         ScriptInteropApi api;
-        api.FindNativeByTypeId = reinterpret_cast<void*>(&NativeFindByTypeId);
+        api.FindNativeByTypeRuntimeId = reinterpret_cast<void*>(&NativeFindByTypeRuntimeId);
         api.FindNativeByName = reinterpret_cast<void*>(&NativeFindByName);
         api.IsValid = reinterpret_cast<void*>(&NativeIsValid);
         api.ResolveField = reinterpret_cast<void*>(&NativeResolveField);
@@ -646,10 +646,10 @@ namespace ScriptInterop
         return DecodeValue(output, result) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
     }
 
-    ComponentProxy FindNativeComponent(EnsId ens, TypeId typeId, int32 occurrence)
+    ComponentProxy FindNativeComponent(EnsId ens, TypeRuntimeId typeRuntimeId, int32 occurrence)
     {
         ComponentHandle handle;
-        return NativeFindByTypeId(ens, typeId, occurrence, &handle) == InteropStatus::Ok ? ComponentProxy(handle) : ComponentProxy();
+        return NativeFindByTypeRuntimeId(ens, typeRuntimeId, occurrence, &handle) == InteropStatus::Ok ? ComponentProxy(handle) : ComponentProxy();
     }
 
     ComponentProxy FindNativeComponent(EnsId ens, std::string_view typeName, int32 occurrence)

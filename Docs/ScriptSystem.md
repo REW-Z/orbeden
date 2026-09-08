@@ -1,6 +1,6 @@
 # 脚本系统
 
-更新：2026-09-07。本文描述原生宿主重构后的唯一实现路径。
+本文说明 C++ 与 C# 脚本的组件模型、生命周期、场景存储、跨语言调用和构建方式。
 
 ## 1. 组件与身份
 
@@ -16,17 +16,18 @@ Ens
 
 原生 `ScriptBehaviour` 可以通过反射工厂构造，基类没有虚生命周期方法。`domain` 根据实际原生类型确定：精确宿主是 Managed，C++ 派生类型是 Native，外部不能修改域。
 
-每个宿主有独立的 `ObjectId`、稳定路径和组件挂载位置。C# Wrapper 的 `InstanceId` 等于宿主的 `ObjectId`。所有 C# 脚本共享原生 `ScriptBehaviour::TypeId`，具体托管类型由 `managedTypeName` 区分。同一 Ens 可以挂载多个两种语言的脚本，包括多个同类型 C# 脚本。
+每个宿主有独立的 `ObjectId`、稳定路径和组件挂载位置。C# Wrapper 的 `InstanceId` 等于宿主的 `ObjectId`。所有 C# 脚本共享原生 `ScriptBehaviour::TypeRuntimeId`，具体托管类型由 `managedTypeName` 区分。同一 Ens 可以挂载多个两种语言的脚本，包括多个同类型 C# 脚本。
 
 | 身份 | 用途 | 是否持久化 |
 | --- | --- | --- |
 | ObjectId / InstanceId | 本进程互操作、Wrapper、组件句柄 | 否 |
-| TypeId | 本进程原生类型注册表 | 否 |
+| TypeRuntimeId | 本进程原生类型注册表的数字索引 | 否 |
+| 原生类型名 | `.world` 中 Component 的 `type` 属性，用于加载时查找类型 | 是 |
 | Component stableId | 保存、引用、删除恢复、属性历史 | 是 |
 | managedTypeName | C# 完整类型名 | 是 |
 | generation | 检测重载后的过期代理和成员句柄 | 否 |
 
-不再使用独立托管挂载列表、MountId 或 `.world.scripts.json`。不提供旧格式检测、迁移或兼容读取。
+`TypeRuntimeId` 按运行时类型注册表的槽位分配，不保证跨进程或重新构建后保持一致。组件序列化使用注册类型名，例如 `<Component type="TransformComponent">`；加载时通过类型名查找当前注册的 `Type`，再创建组件并读取字段。因此，TypeRuntimeId 的数值变化不影响场景加载。类型名必须能在加载时解析，重命名组件类型时需要同步修改场景中的类型引用。`stableId` 标识具体组件实例，类型名标识组件的种类。
 
 ## 2. 编写 C# 脚本
 
@@ -125,6 +126,8 @@ void MoveBehaviour::OnUpdate(float32 deltaTime)
 
 回调内创建的新组件可以立即取得 Wrapper，但阶段表在后续边界更新，不能把新回调插入当前正在遍历的列表。删除请求在原生域边界处理，避免用户代码仍在执行时释放组件内存。启停和层级活动变化通过事件更新调度状态。End 内重复删除自身、删除其他组件或销毁 Ens 时有重入保护。
 
+> 也就是说，脚本回调里"加组件、删组件、开关组件"，运行时不会当场改结构，而是先记下来，等这一轮回调全部跑完再统一处理。  
+
 没有配置 `managedTypeName` 或找不到对应 C# 类型的宿主不进入调度。
 
 ### GUI 绘制
@@ -153,7 +156,7 @@ C++ 用 `ens->AddComponentInstance<MoveBehaviour>()` 显式添加独立实例，
 
 Editor 多选添加先检查全部目标的 Unique 冲突及依赖图，再按依赖优先顺序创建；任一失败回滚本次创建。撤销同时移除这次新增的依赖，保留原有依赖。删除/恢复使用完整组件快照并恢复原挂载位置。
 
-## 6. 统一 .world 存储
+## 6. 场景存储
 
 ```xml
 <Ens stableId="world://ens/npc" name="Npc">
@@ -169,7 +172,7 @@ Editor 多选添加先检查全部目标的 Unique 冲突及依赖图，再按�
 </Ens>
 ```
 
-上述是组件存储片段，完整 World 仍包含 Transform、World 根节点和场景层级。保存时 C++ 和 C# 组件共用 `<Component>/<Field>` 表达。读取时检查 domain 与真实原生类型一致。
+上述是组件存储片段，完整 World 包含 Transform、World 根节点和场景层级。保存时 C++ 和 C# 组件共用 `<Component>/<Field>` 表达。读取时检查 domain 与真实原生类型一致。
 
 Object 引用保存资源 Key 或组件稳定路径，不保存运行时 ObjectId。组件稳定路径随组件保存和恢复，因此跨 Ens 和同类型多实例引用不会依赖本次加载的 ObjectId。托管 EnsId 字段保存目标 Ens 的稳定路径，进入运行态再解析。空引用使用空字符串。临时 orphan 资源没有可持久化身份，不能写入宿主引用字段。
 
@@ -181,11 +184,11 @@ Object 引用保存资源 Key 或组件稳定路径，不保存运行时 ObjectI
 
 Inspector 按原生挂载顺序显示 `[C++] Type` 或 `[C#] Type`，每个 C# 宿主只显示一个卡片。找不到类型时显示 `Missing Script`，允许查看保存字段、删除和撤销恢复；重新加载有效程序集后可重新建立 Wrapper。
 
-Transform、Renderer、RigidBody、Collider、CharacterController 使用相应字段顺序、资源选择和枚举控件。所有写入继续经过 `PropertyDocument`：读取多目标快照、显示 Mixed、验证、提交；失败时回滚并显示错误。
+Transform、Renderer、RigidBody、Collider、CharacterController 使用相应字段顺序、资源选择和枚举控件。所有写入经过 `PropertyDocument`：读取多目标快照、显示 Mixed、验证、提交；失败时回滚并显示错误。
 
 属性历史以组件稳定身份定位目标，因此“编辑字段 → 删除组件 → Undo 删除 → Undo 字段编辑”不依赖已过期的 ObjectId。完整组件 XML 快照包含隐藏字段。Undo/Redo 失败不应提前弹出历史记录。
 
-C# 组件修改只设置 WorldDirty。保存不生成第二份脚本文件，也不存在两份 Inspector 数据合并。
+C# 组件修改会设置 WorldDirty，组件字段随 World 保存到 `.world` 文件中。
 
 ## 8. 跨语言代理
 
@@ -219,20 +222,18 @@ native?.SetField("speed", InteropValue.From(4.0f));
 
 Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成的 NativeAOT 静态导出薄层。两者都调用 `GameScriptRuntime`，使用同一套宿主模型、生命周期和互操作函数表。
 
-初始化顺序为：结束旧 Wrapper → 连接原生函数表 → 清理旧成员缓存和 generation → 注册托管函数表 → 枚举现存宿主并构造 Wrapper → 构建阶段表。关闭时先 End 和断开 Wrapper，再清空 Registry/托管函数表/元数据，最后卸载程序集。宿主由 World 持有。
+初始化顺序为：结束现有 Wrapper → 连接原生函数表 → 清理成员缓存和 generation → 注册托管函数表 → 枚举现存宿主并构造 Wrapper → 构建阶段表。关闭时先 End 和断开 Wrapper，再清空 Registry/托管函数表/元数据，最后卸载程序集。宿主由 World 持有。
 
-旧 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或旧代理。
+Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
 ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 ScriptBehaviour 宿主表为 16 个指针槽，完整运行时表为 274 个；Editor 组件表为 19 个，完整 Editor 表为 202 个。C++ static_assert 和 C# 初始化布局检查保持对应。
 
 ## 10. 模板与构建
 
-新项目模板以真实文件形式存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、CMake 配置），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
+新项目模板存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、CMake 配置），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
 
-模板生成一个可游玩的飞行训练 Demo：World 在玩家飞机上硬挂载项目原生 `FlightController`，并挂载项目命名空间的托管 `FlightHud` 宿主。原生控制器用 RigidBody 物理处理升力曲线、舵面、起落架悬挂、检查点、圈速和复位；托管 HUD 使用预解析方法句柄读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD 和仪表盘。
+模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 使用预解析方法句柄读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](UserManual.md#6-运行和调试)。
 
-首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、CMake 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`；未知原生类型不会再被误报成项目文件损坏。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
+首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、CMake 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
 游戏 C++ CMake 步骤先运行 MetaGen 生成反射/生命周期 thunk，再编译游戏模块。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
-
-本轮按用户要求仅进行编译验证，不执行 Editor/Player 运行、性能或 Undo 场景测试。构建结果和尚未执行的验收项见 [重构 TODO](ScriptSystemRefactor/ScriptBehaviourHostRefactorTODO.md)。
