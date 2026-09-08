@@ -5,9 +5,9 @@
 
 class PhysicsSystem;
 
-//射线悬挂机轮组件：由 PhysicsSystem 在每次物理模拟后驱动。
+//射线悬挂机轮组件：由 PhysicsSystem 在每次物理模拟前驱动。
 //通过向下射线检测地面，施加弹簧阻尼悬挂力、地面摩擦与转向侧向力，
-//力作用到同 Ens 的 RigidBodyComponent 上（下一物理步生效）。
+//力作用到同 Ens 的 RigidBodyComponent 上（当前物理步生效）。
 //需要挂载在根节点 Dynamic 刚体所在的 Ens 上。
 class WheelColliderComponent final : public Component
 {
@@ -22,7 +22,7 @@ public:
     //机轮半径，参与接地几何计算。
     float32 wheelRadius = 0.3f;
 
-    //悬挂静止长度（安装点到地面的距离，含轮半径）。
+    //悬挂静止长度（安装点到轮心的距离，不含轮半径）。
     float32 suspensionRestLength = 0.55f;
 
     //悬挂最大压缩行程。

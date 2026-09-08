@@ -7,6 +7,7 @@
 #include "Runtime/Object/TransformComponent.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
+#include "Physics/HeightFieldComponent.h"
 
 #include <algorithm>
 #include <cmath>
@@ -76,6 +77,12 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     FlushPendingChanges();
     renderSettings = currentWorld.renderSettings;
     transformCache.Update(currentWorld);
+
+    //编辑模式也完成资源解析后待生成的地形，无需启动物理模拟。
+    currentWorld.ForEachComponent<HeightFieldComponent>([](HeightFieldComponent* terrain)
+    {
+        if (terrain->enabled) terrain->SyncPendingGeneration();
+    });
 
     //刷新脏 Mesh 渲染器
     for (StaticMeshRenderer* renderer : renderers)

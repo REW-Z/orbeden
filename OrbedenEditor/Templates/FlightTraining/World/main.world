@@ -23,8 +23,8 @@
             <Component type="HeightFieldComponent">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="seed" type="int32" value="1337" />
-                <Field name="sizeX" type="float32" value="400" />
-                <Field name="sizeZ" type="float32" value="400" />
+                <Field name="sizeX" type="float32" value="1600" />
+                <Field name="sizeZ" type="float32" value="1600" />
                 <Field name="rowCount" type="int32" value="129" />
                 <Field name="columnCount" type="int32" value="129" />
                 <Field name="amplitude" type="float32" value="3.5" />
@@ -32,11 +32,11 @@
                 <Field name="octaves" type="int32" value="4" />
                 <Field name="flattenMinX" type="float32" value="-24" />
                 <Field name="flattenMaxX" type="float32" value="24" />
-                <Field name="flattenMinZ" type="float32" value="-85" />
-                <Field name="flattenMaxZ" type="float32" value="65" />
+                <Field name="flattenMinZ" type="float32" value="-180" />
+                <Field name="flattenMaxZ" type="float32" value="180" />
                 <Field name="flattenHeight" type="float32" value="0" />
                 <Field name="collisionLayer" type="uint32" value="1" />
-                <Field name="material" type="Ref&lt;Material&gt;" value="Resource/Material/ground.mtl//Material/GroundMaterial" />
+                <Field name="material" type="Ref&lt;Material&gt;" value="Resource/Mesh/ground.obj//Material/GroundMaterial" />
                 <Field name="generateNoiseTexture" type="bool" value="true" />
                 <Field name="noiseTextureSize" type="int32" value="256" />
                 <Field name="noiseLowColor" type="color" value="0.24 0.32 0.22 1" />
@@ -48,7 +48,7 @@
             <Component type="TransformComponent">
                 <Field name="localPosition" type="vector3" value="0 0.05 -10" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="4 0.05 140" />
+                <Field name="localScale" type="vector3" value="6 0.05 140" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -67,7 +67,7 @@
                 <Field name="restitution" type="float32" value="0" />
                 <Field name="collisionLayer" type="uint32" value="1" />
                 <Field name="collisionMask" type="uint32" value="4294967295" />
-                <Field name="halfExtents" type="vector3" value="0.5 2 0.5" />
+                <Field name="halfExtents" type="vector3" value="1 1 1" />
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/runway_stripe_1" name="RunwayStripe01">
@@ -169,9 +169,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_left" name="Gate01Left">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-6 8 -35" />
+                <Field name="localPosition" type="vector3" value="-12 18 -130" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -184,9 +184,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_right" name="Gate01Right">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="6 8 -35" />
+                <Field name="localPosition" type="vector3" value="12 18 -130" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -199,9 +199,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_top" name="Gate01Top">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0 14 -35" />
+                <Field name="localPosition" type="vector3" value="0 28 -130" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="6.35 0.35 0.35" />
+                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -214,9 +214,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_left" name="Gate02Left">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="24 12 -70" />
+                <Field name="localPosition" type="vector3" value="88 35 -260" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -229,9 +229,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_right" name="Gate02Right">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="36 12 -70" />
+                <Field name="localPosition" type="vector3" value="112 35 -260" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -244,9 +244,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_top" name="Gate02Top">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="30 18 -70" />
+                <Field name="localPosition" type="vector3" value="100 45 -260" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="6.35 0.35 0.35" />
+                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -259,9 +259,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_left" name="Gate03Left">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-31 16 -105" />
+                <Field name="localPosition" type="vector3" value="-112 50 -420" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -274,9 +274,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_right" name="Gate03Right">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-19 16 -105" />
+                <Field name="localPosition" type="vector3" value="-88 50 -420" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -289,9 +289,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_top" name="Gate03Top">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-25 22 -105" />
+                <Field name="localPosition" type="vector3" value="-100 60 -420" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="6.35 0.35 0.35" />
+                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -304,9 +304,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_left" name="Gate04Left">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-6 10 -140" />
+                <Field name="localPosition" type="vector3" value="-12 30 -560" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -319,9 +319,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_right" name="Gate04Right">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="6 10 -140" />
+                <Field name="localPosition" type="vector3" value="12 30 -560" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 6 0.35" />
+                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -334,9 +334,9 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_top" name="Gate04Top">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0 16 -140" />
+                <Field name="localPosition" type="vector3" value="0 40 -560" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="6.35 0.35 0.35" />
+                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
@@ -367,26 +367,27 @@
     </Ens>
     <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft" name="PlayerAircraft">
         <Component type="TransformComponent">
-            <Field name="localPosition" type="vector3" value="0 1.0 20" />
+            <Field name="localPosition" type="vector3" value="0 1.22 60" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
         </Component>
         <Component type="FlightController">
             <Field name="enabled" type="bool" value="true" />
-            <Field name="checkpointRadius" type="float32" value="7" />
+            <Field name="checkpointRadius" type="float32" value="12" />
             <Field name="throttleRate" type="float32" value="1.0" />
             <Field name="maxThrust" type="float32" value="13000" />
-            <Field name="wingArea" type="float32" value="14" />
+            <Field name="wingArea" type="float32" value="20" />
             <Field name="liftSlope" type="float32" value="0.105" />
+            <Field name="liftMultiplier" type="float32" value="1.15" />
             <Field name="zeroLiftAngle" type="float32" value="-4" />
             <Field name="stallAngle" type="float32" value="15" />
             <Field name="postStallCl" type="float32" value="0.9" />
             <Field name="dragCoefficient" type="float32" value="0.03" />
-            <Field name="elevatorAuthority" type="float32" value="9" />
+            <Field name="elevatorAuthority" type="float32" value="6" />
             <Field name="aileronAuthority" type="float32" value="7" />
             <Field name="rudderAuthority" type="float32" value="5" />
             <Field name="pitchStability" type="float32" value="0.6" />
-            <Field name="pitchDamping" type="float32" value="2000" />
+            <Field name="pitchDamping" type="float32" value="4000" />
             <Field name="steeringAngle" type="float32" value="30" />
             <Field name="crashImpulseThreshold" type="float32" value="15000" />
         </Component>
@@ -599,7 +600,7 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_nose" name="WheelNose">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0 -0.42 -2.15" />
+                <Field name="localPosition" type="vector3" value="0 -0.87 -2.15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.24 0.24" />
             </Component>
@@ -614,7 +615,7 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_left" name="WheelLeft">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-0.75 -0.42 0.55" />
+                <Field name="localPosition" type="vector3" value="-0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
             </Component>
@@ -629,7 +630,7 @@
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_right" name="WheelRight">
             <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0.75 -0.42 0.55" />
+                <Field name="localPosition" type="vector3" value="0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
             </Component>
@@ -652,7 +653,7 @@
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="fieldOfView" type="float32" value="68" />
                 <Field name="nearPlane" type="float32" value="0.1" />
-                <Field name="farPlane" type="float32" value="400" />
+                <Field name="farPlane" type="float32" value="1200" />
                 <Field name="depth" type="float32" value="0" />
                 <Field name="drawLayerMask" type="uint32" value="4294967295" />
                 <Field name="clearMode" type="ClearMode" value="2" />

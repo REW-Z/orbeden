@@ -234,11 +234,11 @@ void HeightFieldComponent::RebuildRenderMesh()
             uint32 c = a + static_cast<uint32>(columns);
             uint32 d = c + 1;
             indices[indexOffset++] = a;
-            indices[indexOffset++] = c;
-            indices[indexOffset++] = b;
             indices[indexOffset++] = b;
             indices[indexOffset++] = c;
+            indices[indexOffset++] = b;
             indices[indexOffset++] = d;
+            indices[indexOffset++] = c;
         }
     }
 

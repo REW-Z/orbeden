@@ -23,10 +23,10 @@ namespace
     constexpr float32 TorqueScale = 350.0f;
     constexpr std::array<vector3, 4> Checkpoints =
     {
-        vector3{ 0.0f, 8.0f, -35.0f },
-        vector3{ 30.0f, 12.0f, -70.0f },
-        vector3{ -25.0f, 16.0f, -105.0f },
-        vector3{ 0.0f, 10.0f, -140.0f },
+        vector3{ 0.0f, 18.0f, -130.0f },
+        vector3{ 100.0f, 35.0f, -260.0f },
+        vector3{ -100.0f, 50.0f, -420.0f },
+        vector3{ 0.0f, 30.0f, -560.0f },
     };
 
     vector3 Add(const vector3& a, const vector3& b)
@@ -105,8 +105,9 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
 
     float32 pitchInput = (Input::Key(KeyEnum::S) ? 1.0f : 0.0f)
         - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
-    float32 rollInput = (Input::Key(KeyEnum::A) ? 1.0f : 0.0f)
-        - (Input::Key(KeyEnum::D) ? 1.0f : 0.0f);
+    //前轴为 -Z，正滚转力矩压低右翼：D 右倾，A 左倾。
+    float32 rollInput = (Input::Key(KeyEnum::D) ? 1.0f : 0.0f)
+        - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
     float32 yawInput = (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f)
         - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
 
@@ -122,7 +123,7 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
     vector3 velocityBody = Rotate(inverse, velocity);
     float32 forwardSpeed = -velocityBody.z;
     float32 alphaDegrees = forwardSpeed > 0.5f
-        ? std::atan2(velocityBody.y, forwardSpeed) * 180.0f / Pi
+        ? std::atan2(-velocityBody.y, forwardSpeed) * 180.0f / Pi
         : 0.0f;
 
     //升力曲线采样：线性段 → stallAngle 失速 → 线性衰减到失速后保留值。
@@ -134,7 +135,7 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
     }
 
     float32 dynamicPressure = 0.5f * AirDensity * speed * speed;
-    float32 lift = dynamicPressure * wingArea * cl;
+    float32 lift = dynamicPressure * wingArea * cl * liftMultiplier;
     float32 drag = dynamicPressure * wingArea * dragCoefficient * (1.0f + 4.0f * cl * cl);
     //螺旋桨推力随速度衰减：低速推重比 > 1，高速收敛到巡航速度。
     float32 thrust = maxThrust * throttle * std::clamp(1.0f - speed / 60.0f, 0.0f, 1.0f);
@@ -181,8 +182,8 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
         }
     }
     vector3 position = transform->GetLocalPosition();
-    if (position.y < -5.0f || position.y > 95.0f
-        || std::abs(position.x) > 190.0f || std::abs(position.z) > 190.0f)
+    if (position.y < -5.0f || position.y > 400.0f
+        || std::abs(position.x) > 750.0f || std::abs(position.z) > 750.0f)
     {
         crashCount++;
         ResetFlight();
@@ -292,7 +293,7 @@ void FlightController::ResetAircraft()
     TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
 
-    throttle = 0.55f;
+    throttle = 0.0f;
     transform->SetLocalPosition(spawnPosition);
     transform->SetLocalRotation(spawnRotation);
 

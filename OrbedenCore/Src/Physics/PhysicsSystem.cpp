@@ -946,6 +946,9 @@ public:
             return nullptr;
         }
 
+        //PhysX 高度场从角落开始采样，渲染网格以中心为原点。
+        shape->setLocalPose(PxTransform(PxVec3(-component.sizeX * 0.5f, 0.0f, -component.sizeZ * 0.5f)));
+
         PxFilterData filter(component.collisionLayer, 0xFFFFFFFFu, 0, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
@@ -1304,10 +1307,10 @@ public:
         transformCache.Update(currentWorld);
         SyncBodies(currentWorld);
         SyncControllers(currentWorld);
+        SyncWheels(currentWorld);
         scene->simulate(deltaTime);
         scene->fetchResults(true);
         WriteDynamicPoses(currentWorld);
-        SyncWheels(currentWorld, deltaTime);
     }
 
     bool FillHit(const PxLocationHit& nativeHit, const PxRigidActor* actor, PhysicsQueryHit& hit) const
@@ -1333,32 +1336,32 @@ public:
     }
 
     //模拟全部机轮：弹簧阻尼悬挂 + 地面摩擦 + 转向侧向力。
-    void SyncWheels(World& currentWorld, float32 deltaTime)
+    void SyncWheels(World& currentWorld)
     {
-        currentWorld.ForEachEns([&](Ens& ens)
+        currentWorld.ForEachComponent<WheelColliderComponent>([&](WheelColliderComponent* wheel)
         {
-            WheelColliderComponent* wheel = ens.GetComponent<WheelColliderComponent>();
+            Ens& ens = *wheel->GetEns();
             RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
             TransformComponent* transform = ens.Transform();
-            if (!wheel || !wheel->enabled || !body || body->bodyType != PhysicsBodyType::Dynamic || !transform) return;
-
             wheel->grounded = false;
             wheel->compression = 0.0f;
+            wheel->previousCompression = 0.0f;
+            if (!ens.GetWorldActive() || !wheel->enabled || !body || !body->enabled
+                || body->bodyType != PhysicsBodyType::Dynamic || !transform) return;
 
             //从悬挂安装点向下探测地面。
             vector3 mountWorld = Add(transform->worldPosition, Rotate(transform->worldRotation, wheel->wheelOffset));
             PhysicsQueryHit hit;
             if (!WheelRaycast(mountWorld, wheel->raycastDistance, hit, wheel->groundQueryLayer)) return;
 
-            float32 compression = std::clamp(wheel->suspensionRestLength - hit.distance, 0.0f, wheel->suspensionTravel);
+            float32 compression = std::clamp(wheel->suspensionRestLength + wheel->wheelRadius - hit.distance, 0.0f, wheel->suspensionTravel);
             if (compression <= 0.0f) return;
 
-            //悬挂弹簧阻尼力沿地面法线，阻尼用压缩速度。
-            vector3 velocity = body->linearVelocity;
-            float32 compressionRate = (compression - wheel->previousCompression) / std::max(deltaTime, 0.0001f);
+            //接触点速度包含角速度；阻尼抵抗压缩和回弹，避免接地差分尖峰。
+            vector3 offset = Add(hit.position, Scale(transform->worldPosition, -1.0f));
+            vector3 velocity = Add(body->linearVelocity, Cross(body->angularVelocity, offset));
             float32 normalForce = std::max(wheel->suspensionStiffness * compression
-                + wheel->suspensionDamping * std::max(0.0f, -compressionRate), 0.0f);
-            body->AddForceAtPosition(Scale(hit.normal, normalForce), hit.position);
+                - wheel->suspensionDamping * Dot(velocity, hit.normal), 0.0f);
 
             //地面切向速度与轮子朝向（转向轮按 steerAngle 旋转）。
             vector3 normal = hit.normal;
@@ -1381,7 +1384,13 @@ public:
             float32 lateralMagnitude = std::clamp(std::abs(lateralComponent) * wheel->lateralFriction * 150.0f,
                 0.0f, wheel->lateralFriction * normalForce);
             friction = Add(friction, Scale(rightGround, -std::copysign(lateralMagnitude, lateralComponent)));
-            body->AddForceAtPosition(friction, hit.position);
+            //当前物理步直接提交轮力，避免上一帧变换和延迟悬挂力。
+            auto found = bodies.find(EnsKey(ens.GetId()));
+            if (found == bodies.end()) return;
+            PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(found->second->actor);
+            vector3 force = Add(Scale(hit.normal, normalForce), friction);
+            dynamic->addForce(ToPx(force), PxForceMode::eFORCE, true);
+            dynamic->addTorque(ToPx(Cross(offset, force)), PxForceMode::eFORCE, true);
 
             wheel->grounded = true;
             wheel->compression = compression;

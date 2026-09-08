@@ -202,15 +202,17 @@ C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNative
 - Pause：暂停游戏模拟。
 - Stop：结束运行并恢复磁盘中保存的 World。
 
-默认飞行 Demo 采用真实物理：飞机由 RigidBody + Collider 驱动，升力按升力曲线采样（约 15° 迎角失速，螺旋桨推力随速度衰减、低速推重比大于 1），地面是带噪声贴图的 HeightField 地形，起落架由 WheelCollider 组件驱动（射线悬挂、地面摩擦与转向）。操作：
+默认飞行 Demo 采用简化气动模型和 PhysX 刚体物理：飞机由 RigidBody + Collider 驱动，升力按升力曲线采样（约 15° 迎角失速，螺旋桨推力随速度衰减、低速推重比大于 1），地面是带噪声贴图的 HeightField 地形，起落架由 WheelCollider 组件驱动（射线悬挂、地面摩擦与转向）。操作：
 
 - `Left Shift / Left Ctrl`：增加 / 减少油门。
 - `W / S`：俯冲 / 拉升（滑跑中 S 为拉起离地）。
-- `A / D`：左滚 / 右滚。
+- `A / D`：左滚 / 右滚（A 压低左翼，D 压低右翼）。
 - `Q / E`：左偏航 / 右偏航（接地时为机轮转向）。
 - `R`：重置飞机和当前航线进度。
 
-起飞：满油门沿跑道加速，约 30 m/s 时按 S 拉起；硬撞击或飞出训练区会自动重置回跑道起点。HUD 在屏幕底部用自由绘制 API 绘制 PFD（姿态仪、速度带、高度带、航向带）与空速/油门表盘，并记录当前圈速、最佳圈速、完成圈数和坠毁次数。依次穿过四个黄色检查点门完成一圈。
+训练机的 `FlightController.liftMultiplier` 默认为 `1.15`，在相同空速和迎角下增加 15% 升力，便于爬升；可在 Inspector 中微调。
+
+起飞：初始油门为零，按住 Left Shift 加到满油门，沿跑道加速到约 25 m/s 后按 S 拉起。将机头保持在约 10–15°，抬头过多时轻按 W 修正；硬撞击或飞出训练区会自动重置回跑道起点。HUD 在屏幕底部用自由绘制 API 绘制 PFD（姿态仪、速度带、高度带、航向带）与空速/油门表盘，并记录当前圈速、最佳圈速、完成圈数和坠毁次数。训练区地形为 1600 × 1600 米，四个黄色检查点门从跑道前方 130 米处开始；依次穿过四个门完成一圈。
 
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
@@ -276,3 +278,13 @@ Editor 没有内容根时不会解析项目内置 Shader；如果在项目成功
 这是预期行为。需要持久化的修改应在非 Play 状态下完成并按 `Ctrl+S` 保存。
 
 更深入的实现说明见 [脚本系统](ScriptSystem.md)，平台工具链和目录说明见 [构建与打包](BuildAndPackaging.md)。
+
+### 飞行模板修复与旧项目迁移
+
+模板依赖 Core 的 HeightField/WheelCollider 字段注册、三轮悬挂和地形网格生成。源码环境修改后先构建 Core，再构建 Editor，确保输出目录的 DLL 和 Templates 一起更新；新建项目会使用修复后的模板。
+
+已有项目不会自动覆盖。先备份项目，再将新模板的 `Native/FlightController.cpp`、`Native/FlightController.h` 和 `Resource/Mesh/ground.obj` 同步到项目。若使用新的训练场布局，还需同步 `World/main.world`，将其中 `{{PROJECT_NAME}}` 替换成现有项目名，然后执行 `Build Game C++`。自定义过场景的项目应合并相关字段，避免覆盖自己的内容。
+
+地形材质引用使用 `Resource/Mesh/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，不能引用 `ground.mtl//Material/...`。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
+
+回归验证：完成 Core Debug x64 构建后运行 `powershell -ExecutionPolicy Bypass -File Tests/RunFlightTrainingRegression.ps1 -Render`。测试直接加载模板 World 和原生脚本，覆盖字段解析、地形法线与碰撞对齐、三轮静止支撑、起飞及持续飞行，并使用真实 OpenGL 管线输出 `.tmp/flight-regression-generated/terrain.ppm` 供画面检查。
