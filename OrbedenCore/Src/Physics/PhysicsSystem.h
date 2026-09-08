@@ -45,6 +45,9 @@ public:
     //判断物理系统是否可用
     bool IsInitialized() const;
 
+    /// <summary>读取物理场景当前重力加速度。</summary>
+    vector3 GetGravity() const;
+
     //清空当前 World 对应的原生 Actor、CCT 和事件
     void ResetWorld();
 

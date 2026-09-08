@@ -11,6 +11,9 @@ class OpenGLRenderBackend : public RenderBackend
 {
 private:
     OpenGLContext context;
+    GpuShaderProgramID debugLineShader;
+    uint32 debugLineVertexArray = 0;
+    uint32 debugLineVertexBuffer = 0;
     GpuShaderProgramID currentShaderProgram;
     GpuVertexInputID currentVertexInput;
     uint32 currentTextureSlot = 0;
@@ -68,6 +71,9 @@ public:
     void SetBlend(bool enabled) override;
     void SetCullMode(CullMode mode) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
+
+    /// <summary>在当前相机目标绘制世界空间调试线。</summary>
+    void DrawLines(const List<DebugLine>& lines, const matrix4x4& viewProjection, uint32 layerMask);
 
 private:
     void ActivateTextureSlot(uint32 slot);

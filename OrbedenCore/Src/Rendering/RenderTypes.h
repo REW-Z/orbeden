@@ -8,6 +8,16 @@ class Material;
 class Mesh;
 class StaticMeshRenderer;
 
+//当前帧的世界空间调试线。
+struct DebugLine
+{
+    vector3 start;
+    vector3 end;
+    color tint;
+    bool depthTest = false;
+    uint32 drawLayer = 1u;
+};
+
 //相机清屏方式
 enum class ClearMode : uint32
 {

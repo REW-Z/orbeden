@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     world.ForEachComponent<FlightController>([&](FlightController* value) { flight = value; });
     world.ForEachComponent<HeightFieldComponent>([&](HeightFieldComponent* value) { terrain = value; });
     Require(flight && terrain, "Template components exist");
-    Require(terrain->flattenMinZ == -180 && terrain->flattenMaxZ == 180, "Deserialize runway flatten region");
+    Require(terrain->flattenMinZ == -200 && terrain->flattenMaxZ == 200, "Deserialize runway flatten region");
     Require(terrain->material.Get() != nullptr, "Deserialize and resolve terrain material");
 
     //只更新渲染场景，不启动物理，确认编辑模式也生成地形。
@@ -54,7 +54,7 @@ int main(int argc, char** argv)
     TransformCache cache;
     scene.Update(world, cache);
     Mesh* mesh = terrain->GetEns()->GetComponent<StaticMeshRenderer>()->mesh.Get();
-    Require(mesh && mesh->vertices.size() == 129 * 129, "Generate terrain in edit mode");
+    Require(mesh && mesh->vertices.size() == 65 * 65, "Generate terrain in edit mode");
     for (const vector3& normal : mesh->normals) Require(normal.y > 0, "Terrain normals face upward");
     std::printf("terrain: %zu vertices, upward normals, material resolved\n", mesh->vertices.size());
 

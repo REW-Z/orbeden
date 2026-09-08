@@ -3,64 +3,76 @@
 #include "Scripting/ScriptBehaviour.h"
 #include "Runtime/EngineTypes.h"
 
-//飞行训练 Demo 的物理气动控制器；飞机由 RigidBody + Collider 驱动，
-//升力采用升力曲线采样（15 度失速），起落架为弹簧阻尼悬挂。
+class RigidBodyComponent;
+
+//自由飞行控制器：气动力、尾翼稳定与运行时受力可视化。
 class FlightController final : public ScriptBehaviour
 {
     OBJECT_TYPE_DECLARE(FlightController)
 
 public:
-    //航线
-    float32 checkpointRadius = 12.0f;
-    //推进（推重比 > 1：13000N / 1200kg ≈ 1.1g）
     float32 throttleRate = 1.0f;
-    float32 maxThrust = 13000.0f;
-    //气动
-    float32 wingArea = 20.0f;
+    float32 maxThrust = 15000.0f;
+    float32 thrustFadeSpeed = 90.0f;
+    float32 wingArea = 24.0f;
     float32 liftSlope = 0.105f;
-    //训练机升力倍率，改善低速爬升。
-    float32 liftMultiplier = 1.15f;
-    float32 zeroLiftAngle = -4.0f;
+    float32 liftMultiplier = 1.3f;
+    float32 zeroLiftAngle = -5.0f;
     float32 stallAngle = 15.0f;
-    float32 postStallCl = 0.9f;
-    float32 dragCoefficient = 0.03f;
+    float32 postStallCl = 0.45f;
+    float32 dragCoefficient = 0.028f;
+    float32 inducedDragCoefficient = 0.045f;
     float32 elevatorAuthority = 6.0f;
     float32 aileronAuthority = 7.0f;
     float32 rudderAuthority = 5.0f;
     float32 pitchStability = 0.6f;
+    float32 pitchTrimAngle = 2.0f;
     float32 pitchDamping = 4000.0f;
-    //地面转向（写入转向轮的 WheelCollider.steerAngle）。
+    float32 rollDamping = 1200.0f;
+    float32 yawDamping = 1400.0f;
+    float32 verticalFinArea = 2.2f;
+    float32 sideForceSlope = 2.0f;
+    float32 verticalFinArm = 2.2f;
     float32 steeringAngle = 30.0f;
     float32 crashImpulseThreshold = 15000.0f;
+    bool showForces = true;
+    //米/牛顿；所有箭头使用同一比例，不分别归一化。
+    float32 forceDrawScale = 0.0005f;
 
-    //以下公开方法供 C# HUD 通过预解析句柄读取。
     float32 GetAirspeed();
     float32 GetThrottle();
-    float32 GetLapTime();
-    float32 GetBestLapTime();
-    int32 GetCheckpointIndex();
-    int32 GetCheckpointCount();
-    int32 GetCompletedLaps();
     int32 GetCrashCount();
     float32 GetPitchDegrees();
     float32 GetRollDegrees();
     float32 GetHeadingDegrees();
     float32 GetAltitude();
+    float32 GetClimbRate();
+    float32 GetSideslipDegrees();
+    float32 GetLiftNewtons();
+    float32 GetDragNewtons();
+    float32 GetThrustNewtons();
+    float32 GetWeightNewtons();
     void ResetFlight();
 
 private:
     vector3 spawnPosition;
     quaternion spawnRotation;
     float32 throttle = 0.0f;
-    float32 lapTime = 0.0f;
-    float32 bestLapTime = 0.0f;
-    int32 checkpointIndex = 0;
-    int32 completedLaps = 0;
+    float32 sideslipDegrees = 0.0f;
     int32 crashCount = 0;
+    vector3 liftForce;
+    vector3 dragForce;
+    vector3 thrustForce;
+    vector3 gravityForce;
+    vector3 finTorque;
+    float32 alphaDegrees = 0;
 
-    void ResetAircraft();
+    /// <summary>按当前速度和姿态计算受力，不向刚体重复施力。</summary>
+    void EvaluateForces(const RigidBodyComponent& body, const quaternion& rotation);
 
 protected:
     void OnStart();
+    void OnUpdate(float32 deltaTime);
     void OnFixedUpdate(float32 deltaTime);
+    void OnLateUpdate(float32 deltaTime);
 };

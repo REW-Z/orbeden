@@ -27,7 +27,7 @@ try {
             '/IOrbedenCore/Src', '/IOrbedenCore/Src/ThirdParty/glad/include',
             '/IOrbedenCore/Src/ThirdParty/glfw/include', "/I$flightTemplate/Native",
             "Tests/$target.cpp", "$flightTemplate/Native/FlightController.cpp",
-            "$flightTemplate/Native/SampleNativeBehaviour.cpp", "$testOutput/Reflection.Generated.cpp",
+            "$flightTemplate/Native/SampleNativeBehaviour.cpp", "$flightTemplate/Native/FlightTerrainStreamer.cpp", "$flightTemplate/Native/FlightOrbitCamera.cpp", "$testOutput/Reflection.Generated.cpp",
             "/Fo$testOutput/", "/Fd$testOutput/compiler.pdb", "/Fe$testOutput/$target.exe",
             '/link', "$nativeSdk/OrbedenCore.lib", "$glfwDirectory/glfw3dll.lib"
         )

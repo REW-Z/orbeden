@@ -23,7 +23,7 @@ Windows Editor 开发需要：
 
 新项目会自动创建默认 World、资源、C# 脚本和 C++ 脚本，并直接在 Editor 中打开。
 
-默认模板是一个飞行训练小游戏，包含可操控飞机、第三人称相机、跑道、机库、四个检查点和圈速 HUD。World 会直接挂载项目的 C++ `FlightController` 与 C# `FlightHud`。
+默认模板是自由飞行场景，包含飞机、第三人称相机、机场、分块噪声地形和飞行仪表。World 挂载 C++ `FlightController`、`FlightTerrainStreamer`、`FlightOrbitCamera` 与 C# `FlightHud`。
 
 创建完成后，Editor 会自动运行 MetaGen、编译并加载项目 C++ 模块，再重新加载启动 World；不需要在 Editor 外手动运行命令。如果本机 C++ 工具链不完整，项目仍会打开，Build Game 面板会显示“Native scripts still need to be compiled”，修复环境后点击 `Build Game C++` 即可重试。
 
@@ -202,17 +202,30 @@ C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNative
 - Pause：暂停游戏模拟。
 - Stop：结束运行并恢复磁盘中保存的 World。
 
-默认飞行 Demo 采用简化气动模型和 PhysX 刚体物理：飞机由 RigidBody + Collider 驱动，升力按升力曲线采样（约 15° 迎角失速，螺旋桨推力随速度衰减、低速推重比大于 1），地面是带噪声贴图的 HeightField 地形，起落架由 WheelCollider 组件驱动（射线悬挂、地面摩擦与转向）。操作：
+默认模板使用 PhysX 刚体和简化气动模型。机翼升力垂直于气流和翼展；垂直安定面根据尾部侧向气流产生回正力矩，配合偏航、滚转和俯仰阻尼。场景采用自由飞行，没有航路门、圈速任务或水平距离/高度越界限制。
 
-- `Left Shift / Left Ctrl`：增加 / 减少油门。
-- `W / S`：俯冲 / 拉升（滑跑中 S 为拉起离地）。
-- `A / D`：左滚 / 右滚（A 压低左翼，D 压低右翼）。
-- `Q / E`：左偏航 / 右偏航（接地时为机轮转向）。
-- `R`：重置飞机和当前航线进度。
+- `Left Shift / Left Ctrl`：增加 / 减少油门，初始油门为零。
+- `W / S`：压低 / 抬高机头。
+- `A / D`：左倾 / 右倾（A 压低左翼，D 压低右翼）。
+- `Q / E`：左 / 右方向舵，接地时同时控制前轮转向。
+- `R`：返回机场并清空速度与油门。
+- `F`：切换受力箭头，默认开启。
+- 按住鼠标右键拖动：围绕飞机观察，松开后保持观察方向；相机跟随位置，不继承机身滚转。
+- `C`：将环绕相机恢复到当前机尾方向。
 
-训练机的 `FlightController.liftMultiplier` 默认为 `1.15`，在相同空速和迎角下增加 15% 升力，便于爬升；可在 Inspector 中微调。
+Play 中的受力线从飞机原点出发：红色为阻力（包含垂尾侧向阻力），蓝色为升力，黄色为推力，黑色为重力。全部箭头使用相同的 `forceDrawScale`，默认 `0.0005` 米/牛顿，即 1 kN 对应 0.5 米；箭头关闭深度测试，便于从机身和地面遮挡中观察。箭头和 HUD 在物理更新后按当前姿态、速度重新计算瞬时受力，不额外施力，也不进行显示平滑；黄色推力箭头始终沿当前机头正前方，长度随油门及前向速度变化。HUD 同步显示四种力的 kN 数值、爬升率与侧滑角。重力读取 PhysX 配置，仅绘制，不重复施加；起落架地面支持力和舵面力矩不包含在这四个箭头内。
 
-起飞：初始油门为零，按住 Left Shift 加到满油门，沿跑道加速到约 25 m/s 后按 S 拉起。将机头保持在约 10–15°，抬头过多时轻按 W 修正；硬撞击或飞出训练区会自动重置回跑道起点。HUD 在屏幕底部用自由绘制 API 绘制 PFD（姿态仪、速度带、高度带、航向带）与空速/油门表盘，并记录当前圈速、最佳圈速、完成圈数和坠毁次数。训练区地形为 1600 × 1600 米，四个黄色检查点门从跑道前方 130 米处开始；依次穿过四个门完成一圈。
+`FlightController` 的翼面积默认 24 m²、升力倍率 1.3，阻力使用 `Cd0 + k × Cl²`，推力随前向速度衰减。模板刚体关闭额外线性阻尼，使空中平移受力与箭头一致。可在 Inspector 调整 `verticalFinArea`、`sideForceSlope`、`yawDamping`、`liftMultiplier` 和 `inducedDragCoefficient`。垂尾消除侧滑，不会自动把滚转姿态摆平；转弯时升力倾斜，仍需保留空速并适当拉杆。
+
+`FlightOrbitCamera` 挂在飞机下的相机实体上，启动时记录父级飞机并脱离层级，以世界竖直方向保持地平线稳定。可调整 `distance`、`sensitivity` 和 `defaultElevation`；停止时恢复原来的父级及局部姿态。
+
+`FlightTerrainStreamer` 在 Play 中围绕飞机生成地形，每块 512 × 512 米、65 × 65 个高度样本，目标加载范围为 7 × 7 块，每个物理步最多新增 2 块。外围保留一圈卸载缓冲，机场块固定保留以供返回；CPU 网格、GPU 资源及碰撞体随远块卸载回收。邻块使用全局噪声坐标、连续法线和 UV，并共享同一张可平铺噪声纹理。编辑模式预览机场所在的一块地形，Play 才扩展周围地图。
+
+飞行超过浮动原点阈值（默认 4096 米）时，世界根节点按整块距离平移，飞机速度保持不变，地形继续按原来的全局块索引生成。因此地图可以随飞行持续扩展，而不是一次性分配巨大网格；坐标与块索引仍受数值类型范围限制。当前分块生成在主线程按预算执行，并非后台异步流送。`chunkSize` 与 `samplesPerSide` 在进入 Play 时确定；修改后重新进入 Play 生效。
+
+原生脚本可通过 `RenderSystem::Current()->DrawLine(world, start, end, color, depthTest, drawLayer)` 提交世界空间线条。线条在当前帧的全部相机目标中绘制后清除，推荐从 `OnLateUpdate` 提交；调用者需检查当前渲染系统指针。
+
+本轮还修正了 Core 的刚体重建：缩放不再按旋转矩阵浮点数的逐位哈希判断，新建或重建刚体会在同一物理步施加并清空待施加力。使用旧引擎二进制时，仅更新模板脚本无法获得这一修复。
 
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
@@ -283,8 +296,8 @@ Editor 没有内容根时不会解析项目内置 Shader；如果在项目成功
 
 模板依赖 Core 的 HeightField/WheelCollider 字段注册、三轮悬挂和地形网格生成。源码环境修改后先构建 Core，再构建 Editor，确保输出目录的 DLL 和 Templates 一起更新；新建项目会使用修复后的模板。
 
-已有项目不会自动覆盖。先备份项目，再将新模板的 `Native/FlightController.cpp`、`Native/FlightController.h` 和 `Resource/Mesh/ground.obj` 同步到项目。若使用新的训练场布局，还需同步 `World/main.world`，将其中 `{{PROJECT_NAME}}` 替换成现有项目名，然后执行 `Build Game C++`。自定义过场景的项目应合并相关字段，避免覆盖自己的内容。
+已有项目不会自动覆盖。备份后同步模板的 `Native/FlightController.*`、`Native/FlightTerrainStreamer.*`、`Native/FlightOrbitCamera.*` 和 `Script/FlightHud.cs`，并合并 `World/main.world` 中新的飞行参数、Streamer 组件、相机上的 FlightOrbitCamera 组件及机场 HeightField 配置；删除所有旧航路门实体和其碰撞组件。跑道标线与座舱现在使用 `Resource/Mesh/marking.obj` 和 `Resource/Material/marking.mtl`，需一并同步。若直接替换 World，将 `{{PROJECT_NAME}}` 替换成现有项目名；自定义场景请合并，避免覆盖自己的内容。
 
 地形材质引用使用 `Resource/Mesh/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，不能引用 `ground.mtl//Material/...`。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
 
-回归验证：完成 Core Debug x64 构建后运行 `powershell -ExecutionPolicy Bypass -File Tests/RunFlightTrainingRegression.ps1 -Render`。测试直接加载模板 World 和原生脚本，覆盖字段解析、地形法线与碰撞对齐、三轮静止支撑、起飞及持续飞行，并使用真实 OpenGL 管线输出 `.tmp/flight-regression-generated/terrain.ppm` 供画面检查。
+仓库中的独立辅助程序位于 `Tests/FlightTrainingRegression.cpp` 和 `Tests/FlightTrainingRenderSmoke.cpp`。它们直接链接 Core 并编译模板原生脚本，不经过 Player 打包，也不启动 Editor Play。前者模拟输入并推进物理，后者创建随后隐藏的 GLFW 窗口、调用真实 OpenGL 渲染并读回帧缓冲。CLI 是启动入口，不代表不使用图形 API。这些辅助程序不能替代完整的 Editor Play、C# HUD 和交互手感验证。本次自由飞行改动未运行测试或构建。

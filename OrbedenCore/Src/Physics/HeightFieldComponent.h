@@ -19,6 +19,9 @@ class HeightFieldComponent final : public Component
 public:
     bool enabled = true;
     int32 seed = 1337;
+    //全局采样块坐标；使用双精度计算噪声位置，浮动原点不改变地形。
+    int32 sampleTileX = 0;
+    int32 sampleTileZ = 0;
     float32 sizeX = 400.0f;
     float32 sizeZ = 400.0f;
     int32 rowCount = 129;
@@ -31,6 +34,7 @@ public:
     float32 flattenMinZ = -34.0f;
     float32 flattenMaxZ = 10.0f;
     float32 flattenHeight = 0.0f;
+    float32 flattenBlendDistance = 24.0f;
     uint32 collisionLayer = 1u;
     Ref<Material> material;
     bool generateNoiseTexture = true;
@@ -41,6 +45,9 @@ public:
 
     //按当前参数重建高度场、渲染网格与噪声贴图。
     void Regenerate();
+
+    /// <summary>获取生成的表面材质，供相邻地形块共享噪声纹理。</summary>
+    Material* GetSurfaceMaterial() const;
 
     //双线性采样世界 XZ 处的高度（解析兜底）。
     float32 GetHeightAtWorldXZ(float32 x, float32 z) const;
@@ -66,7 +73,10 @@ protected:
 
 private:
     //确定性二维 value noise，输出 [0,1]。
-    float32 SampleNoise(float32 x, float32 z, int32 noiseSeed) const;
+    float32 SampleNoise(double x, double z, int32 noiseSeed) const;
+
+    /// <summary>采样全局坐标的连续地形高度。</summary>
+    float32 SampleHeight(double x, double z) const;
 
     //按当前参数重建高度采样。
     void RebuildHeights();
@@ -83,4 +93,5 @@ private:
     Mesh* generatedMesh = nullptr;
     Texture2D* noiseTexture = nullptr;
     Material* runtimeMaterial = nullptr;
+    bool ownsRuntimeMaterial = false;
 };

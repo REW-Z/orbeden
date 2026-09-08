@@ -45,6 +45,8 @@ private:
 
     //窗口提供的 framebuffer 尺寸和生命周期入口
     IWindow* window = nullptr;
+    World* debugLineWorld = nullptr;
+    List<DebugLine> debugLines;
 
     //OpenGL 后端
     OpenGLRenderBackend backend;
@@ -109,6 +111,13 @@ private:
     ManagedCameraFrameTextures* FindCameraFrameTextures(EnsId cameraEns);
 
 public:
+    /// <summary>获取活动渲染系统。</summary>
+    static RenderSystem* Current();
+
+    /// <summary>提交当前帧世界空间线条；全部相机绘制完成后清除。</summary>
+    void DrawLine(World& world, const vector3& start, const vector3& end, const color& tint,
+        bool depthTest = false, uint32 drawLayer = 1u);
+
     //获取资源依赖并初始化窗口渲染后端
     bool OnInitialize(Application& app) override;
 

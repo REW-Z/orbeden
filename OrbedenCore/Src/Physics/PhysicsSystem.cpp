@@ -130,6 +130,12 @@ namespace
 
     vector3 GetWorldScale(const TransformComponent& transform)
     {
+        //根节点直接使用局部缩放，避免旋转矩阵的舍入误差进入碰撞形状尺寸。
+        if (transform.parent.IsNull())
+        {
+            const vector3& scale = transform.GetLocalScale();
+            return { std::abs(scale.x), std::abs(scale.y), std::abs(scale.z) };
+        }
         const float32* m = transform.worldMatrix.m;
         return
         {
@@ -256,6 +262,7 @@ public:
         PhysicsBodyType bodyType = PhysicsBodyType::Static;
         List<Mesh*> sourceMeshes;
         bool sourceMeshInvalidated = false;
+        vector3 shapeScale;
         vector3 lastPosition;
         quaternion lastRotation;
         bool lastPoseValid = false;
@@ -545,7 +552,7 @@ public:
         return nullptr;
     }
 
-    uint64 CalculateColliderHash(const ColliderComponent& collider, const vector3& scale) const
+    uint64 CalculateColliderHash(const ColliderComponent& collider) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(collider.GetGeometryType()));
@@ -556,7 +563,6 @@ public:
         hash = MixFloat(hash, collider.restitution);
         hash = MixHash(hash, collider.collisionLayer);
         hash = MixHash(hash, collider.collisionMask);
-        hash = MixVector(hash, scale);
 
         if (const BoxColliderComponent* box = collider.Cast<BoxColliderComponent>())
         {
@@ -578,13 +584,12 @@ public:
         return hash;
     }
 
-    uint64 CalculateBodyHash(const List<ColliderComponent*>& colliders, const RigidBodyComponent* body, const TransformComponent& transform) const
+    uint64 CalculateBodyHash(const List<ColliderComponent*>& colliders, const RigidBodyComponent* body) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
-        vector3 scale = GetWorldScale(transform);
         for (const ColliderComponent* collider : colliders)
         {
-            if (collider) hash = MixHash(hash, CalculateColliderHash(*collider, scale));
+            if (collider) hash = MixHash(hash, CalculateColliderHash(*collider));
         }
 
         PhysicsBodyType type = body ? body->bodyType : PhysicsBodyType::Static;
@@ -798,6 +803,7 @@ public:
 
         bool hasShape = false;
         vector3 scale = GetWorldScale(transform);
+        record->shapeScale = scale;
         for (ColliderComponent* collider : colliders)
         {
             if (!collider) continue;
@@ -876,6 +882,9 @@ public:
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(component.seed));
+        hash = MixHash(hash, static_cast<uint32>(component.sampleTileX));
+        hash = MixHash(hash, static_cast<uint32>(component.sampleTileZ));
+        hash = MixFloat(hash, component.flattenBlendDistance);
         hash = MixFloat(hash, component.sizeX);
         hash = MixFloat(hash, component.sizeZ);
         hash = MixHash(hash, static_cast<uint32>(component.rowCount));
@@ -899,7 +908,8 @@ public:
         const std::vector<float32>& heights = component.GetHeights();
         if (heights.size() != static_cast<size_t>(rows) * columns) return nullptr;
 
-        float32 maxSample = 0.0f;
+        //同一地形配置使用一致量化尺度，避免相邻块的公共边出现碰撞高度缝隙。
+        float32 maxSample = std::max(std::abs(component.amplitude), std::abs(component.flattenHeight));
         for (float32 height : heights) maxSample = std::max(maxSample, std::abs(height));
         float32 heightScale = std::max((maxSample + 0.25f) / 32000.0f, PX_MIN_HEIGHTFIELD_Y_SCALE);
 
@@ -1092,11 +1102,13 @@ public:
 
             uint64 key = EnsKey(ens.GetId());
             seen.insert(key);
-            uint64 hash = CalculateBodyHash(colliders, body, *transform);
+            uint64 hash = CalculateBodyHash(colliders, body);
             auto found = bodies.find(key);
             bool meshChanged = found != bodies.end()
                 && (found->second->sourceMeshes != sourceMeshes || found->second->sourceMeshInvalidated);
-            if (found != bodies.end() && (found->second->configurationHash != hash || meshDirty || meshChanged))
+            //缩放采用容差比较；姿态变化产生的微小数值误差不应销毁 Actor。
+            bool scaleChanged = found != bodies.end() && !NearlyEqual(found->second->shapeScale, GetWorldScale(*transform));
+            if (found != bodies.end() && (found->second->configurationHash != hash || meshDirty || meshChanged || scaleChanged))
             {
                 DestroyBody(*found->second);
                 bodies.erase(found);
@@ -1105,7 +1117,12 @@ public:
             if (found == bodies.end())
             {
                 std::unique_ptr<BodyRecord> created = CreateBody(colliders, body, *transform, hash, sourceMeshes);
-                if (created) bodies.emplace(key, std::move(created));
+                if (created)
+                {
+                    //新建或重建的刚体也必须在本步施加并清空待施加力，避免跨步累积爆发。
+                    SyncBodyPoseAndVelocity(*created, body, *transform);
+                    bodies.emplace(key, std::move(created));
+                }
                 return;
             }
             SyncBodyPoseAndVelocity(*found->second, body, *transform);
@@ -1631,4 +1648,10 @@ PxController* PhysicsSystem::GetController(EnsId ens) const
     if (!impl) return nullptr;
     auto found = impl->controllers.find(EnsKey(ens));
     return found != impl->controllers.end() ? found->second->controller : nullptr;
+}
+
+/// <summary>读取 PhysX 场景重力，未初始化时返回默认值。</summary>
+vector3 PhysicsSystem::GetGravity() const
+{
+    return impl && impl->scene ? FromPx(impl->scene->getGravity()) : vector3{ 0.0f, -9.81f, 0.0f };
 }

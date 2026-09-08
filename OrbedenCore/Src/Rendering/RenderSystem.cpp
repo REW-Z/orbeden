@@ -9,6 +9,7 @@
 
 namespace
 {
+    RenderSystem* currentRenderSystem = nullptr;
     //计算视口轴像素范围
     void CalculateViewportAxis(float32 normalizedStart, float32 normalizedSize, int32 targetSize, int32& start, int32& size)
     {
@@ -100,11 +101,15 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
     }
 
     initialized = true;
+    currentRenderSystem = this;
     return true;
 }
 
 void RenderSystem::Shutdown()
 {
+    if (currentRenderSystem == this) currentRenderSystem = nullptr;
+    debugLines.clear();
+    debugLineWorld = nullptr;
     //释放渲染系统资源
     imguiLayer.Shutdown();
     ReleaseCameraFrameTextures();
@@ -283,6 +288,8 @@ void RenderSystem::Render(World& world, float deltaTime)
         RenderOverlayPass();
         backend.EndFrame();
         scene.EndRead();
+        debugLines.clear();
+        debugLineWorld = nullptr;
         return;
     }
 
@@ -299,12 +306,27 @@ void RenderSystem::Render(World& world, float deltaTime)
         scene.BuildRenderItems(visibleSet);
         sorter.Sort(visibleSet);//排序
         forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
+        if (debugLineWorld == &world && !debugLines.empty())
+        {
+            RenderPassDesc pass;
+            pass.renderTarget = camera.renderTarget;
+            pass.x = camera.viewportX;
+            pass.y = camera.viewportY;
+            pass.width = camera.viewportWidth;
+            pass.height = camera.viewportHeight;
+            pass.clearMode = ClearMode::None;
+            backend.BeginPass(pass);
+            backend.DrawLines(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
+            backend.EndPass();
+        }
     }
 
     //结束渲染帧
     RenderOverlayPass();
     backend.EndFrame();
     scene.EndRead();
+    debugLines.clear();
+    debugLineWorld = nullptr;
 }
 
 void RenderSystem::OnWindowResize(int width, int height)
@@ -508,4 +530,24 @@ void RenderSystem::RenderOverlayPass()
     //结束 GUI 覆盖层 Pass
     imguiLayer.Render();
     backend.EndPass();
+}
+
+/// <summary>获取当前渲染系统。</summary>
+RenderSystem* RenderSystem::Current()
+{
+    return currentRenderSystem;
+}
+
+/// <summary>记录当前帧的世界空间调试线。</summary>
+void RenderSystem::DrawLine(World& world, const vector3& start, const vector3& end, const color& tint,
+    bool depthTest, uint32 drawLayer)
+{
+    if (!initialized) return;
+    if (debugLineWorld != &world)
+    {
+        debugLines.clear();
+        debugLineWorld = &world;
+    }
+    if (debugLines.size() >= 4096) return;
+    debugLines.push_back({ start, end, tint, depthTest, drawLayer });
 }

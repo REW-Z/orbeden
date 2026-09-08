@@ -1,15 +1,14 @@
 #include "FlightController.h"
-
+#include "FlightTerrainStreamer.h"
 #include "Physics/PhysicsSystem.h"
 #include "Physics/PhysicsTypes.h"
 #include "Physics/RigidBodyComponent.h"
 #include "Physics/WheelColliderComponent.h"
 #include "Platform/InputManager.h"
+#include "Rendering/RenderSystem.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/TransformComponent.h"
-
 #include <algorithm>
-#include <array>
 #include <cmath>
 
 OBJECT_TYPE_IMPLEMENT(FlightController, ScriptBehaviour)
@@ -19,36 +18,27 @@ namespace
     constexpr float32 Pi = 3.14159265358979323846f;
     constexpr float32 AirDensity = 1.225f;
     constexpr float32 ClMax = 1.6f;
-    //舵面力矩换算系数，权威度字段乘以该值得到 N·m 量级力矩。
     constexpr float32 TorqueScale = 350.0f;
-    constexpr std::array<vector3, 4> Checkpoints =
-    {
-        vector3{ 0.0f, 18.0f, -130.0f },
-        vector3{ 100.0f, 35.0f, -260.0f },
-        vector3{ -100.0f, 50.0f, -420.0f },
-        vector3{ 0.0f, 30.0f, -560.0f },
-    };
 
+    /// <summary>相加向量。</summary>
     vector3 Add(const vector3& a, const vector3& b)
     {
         return { a.x + b.x, a.y + b.y, a.z + b.z };
     }
 
+    /// <summary>缩放向量。</summary>
     vector3 Scale(const vector3& value, float32 scale)
     {
         return { value.x * scale, value.y * scale, value.z * scale };
     }
 
+    /// <summary>计算向量叉积。</summary>
     vector3 Cross(const vector3& a, const vector3& b)
     {
-        return
-        {
-            a.y * b.z - a.z * b.y,
-            a.z * b.x - a.x * b.z,
-            a.x * b.y - a.y * b.x,
-        };
+        return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x };
     }
 
+    /// <summary>用四元数旋转向量。</summary>
     vector3 Rotate(const quaternion& rotation, const vector3& value)
     {
         vector3 axis{ rotation.x, rotation.y, rotation.z };
@@ -56,194 +46,205 @@ namespace
         return Add(value, Add(Scale(doubledCross, rotation.w), Cross(axis, doubledCross)));
     }
 
+    /// <summary>计算向量点积。</summary>
     float32 Dot(const vector3& a, const vector3& b)
     {
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
+    /// <summary>计算向量长度。</summary>
     float32 Length(const vector3& value)
     {
         return std::sqrt(Dot(value, value));
     }
-
-    float32 DistanceSquared(const vector3& a, const vector3& b)
-    {
-        float32 x = a.x - b.x;
-        float32 y = a.y - b.y;
-        float32 z = a.z - b.z;
-        return x * x + y * y + z * z;
-    }
 }
 
+/// <summary>记录机场初始姿态。</summary>
 void FlightController::OnStart()
 {
     TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
-
     spawnPosition = transform->GetLocalPosition();
     spawnRotation = transform->GetLocalRotation();
-    ResetAircraft();
+    ResetFlight();
 }
 
+/// <summary>逐帧处理重置和受力显示开关，避免固定步重复消费按键。</summary>
+void FlightController::OnUpdate(float32 deltaTime)
+{
+    (void)deltaTime;
+    if (Input::KeyDown(KeyEnum::R)) ResetFlight();
+    if (Input::KeyDown(KeyEnum::F)) showForces = !showForces;
+}
+
+/// <summary>计算并施加机翼、垂尾、螺旋桨和舵面作用。</summary>
 void FlightController::OnFixedUpdate(float32 deltaTime)
 {
     TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
-    if (!transform || !body) return;
-
-    float32 step = std::clamp(deltaTime, 0.0f, 0.05f);
-    if (Input::KeyDown(KeyEnum::R))
-    {
-        ResetFlight();
-        return;
-    }
-
-    float32 throttleInput = (Input::Key(KeyEnum::LSHIFT) ? 1.0f : 0.0f)
-        - (Input::Key(KeyEnum::LCTRL) ? 1.0f : 0.0f);
+    if (!transform || !body || !body->enabled) return;
+    float32 step = std::max(deltaTime, 0.0f);
+    float32 throttleInput = (Input::Key(KeyEnum::LSHIFT) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::LCTRL) ? 1.0f : 0.0f);
     throttle = std::clamp(throttle + throttleInput * throttleRate * step, 0.0f, 1.0f);
-    lapTime += step;
+    float32 pitchInput = (Input::Key(KeyEnum::S) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
+    float32 rollInput = (Input::Key(KeyEnum::D) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
+    float32 yawInput = (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
 
-    float32 pitchInput = (Input::Key(KeyEnum::S) ? 1.0f : 0.0f)
-        - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
-    //前轴为 -Z，正滚转力矩压低右翼：D 右倾，A 左倾。
-    float32 rollInput = (Input::Key(KeyEnum::D) ? 1.0f : 0.0f)
-        - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
-    float32 yawInput = (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f)
-        - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
-
-    vector3 velocity = body->linearVelocity;
-    float32 speed = Length(velocity);
     quaternion rotation = transform->GetLocalRotation();
-    quaternion inverse{ -rotation.x, -rotation.y, -rotation.z, rotation.w };
-    vector3 forward = Rotate(rotation, { 0.0f, 0.0f, -1.0f });
-    vector3 up = Rotate(rotation, { 0.0f, 1.0f, 0.0f });
-    vector3 right = Rotate(rotation, { 1.0f, 0.0f, 0.0f });
+    EvaluateForces(*body, rotation);
+    body->AddForce(liftForce);
+    body->AddForce(dragForce);
+    body->AddForce(thrustForce);
+    body->AddTorque(finTorque);
+    vector3 right = Rotate(rotation, { 1, 0, 0 });
+    vector3 up = Rotate(rotation, { 0, 1, 0 });
+    vector3 forward = Rotate(rotation, { 0, 0, -1 });
+    float32 forwardSpeed = Dot(body->linearVelocity, forward);
+    float32 airFactor = std::clamp(std::abs(forwardSpeed) / 12.0f, 0.0f, 1.0f);
+    body->AddTorque(Scale(right, (pitchInput * elevatorAuthority - (alphaDegrees - pitchTrimAngle) * pitchStability)
+        * TorqueScale * airFactor - Dot(body->angularVelocity, right) * pitchDamping));
+    body->AddTorque(Scale(forward, rollInput * aileronAuthority * TorqueScale * airFactor
+        - Dot(body->angularVelocity, forward) * rollDamping));
+    body->AddTorque(Scale(up, yawInput * rudderAuthority * TorqueScale * airFactor
+        - Dot(body->angularVelocity, up) * yawDamping));
 
-    //机体系速度与迎角（抬头为正）。
-    vector3 velocityBody = Rotate(inverse, velocity);
-    float32 forwardSpeed = -velocityBody.z;
-    float32 alphaDegrees = forwardSpeed > 0.5f
-        ? std::atan2(-velocityBody.y, forwardSpeed) * 180.0f / Pi
-        : 0.0f;
-
-    //升力曲线采样：线性段 → stallAngle 失速 → 线性衰减到失速后保留值。
-    float32 cl = std::clamp(liftSlope * (alphaDegrees - zeroLiftAngle), 0.0f, ClMax);
-    if (alphaDegrees > stallAngle)
-    {
-        float32 falloff = std::clamp((alphaDegrees - stallAngle) / 10.0f, 0.0f, 1.0f);
-        cl = ClMax * (1.0f - falloff) + ClMax * postStallCl * falloff;
-    }
-
-    float32 dynamicPressure = 0.5f * AirDensity * speed * speed;
-    float32 lift = dynamicPressure * wingArea * cl * liftMultiplier;
-    float32 drag = dynamicPressure * wingArea * dragCoefficient * (1.0f + 4.0f * cl * cl);
-    //螺旋桨推力随速度衰减：低速推重比 > 1，高速收敛到巡航速度。
-    float32 thrust = maxThrust * throttle * std::clamp(1.0f - speed / 60.0f, 0.0f, 1.0f);
-
-    //推力沿机头、升力沿机体上方（作用于翼点）、阻力沿速度反方向。
-    body->AddForce(Scale(forward, thrust));
-    body->AddForceAtPosition(Scale(up, lift), Add(transform->GetLocalPosition(), Rotate(rotation, { 0.0f, 0.05f, 0.0f })));
-    if (speed > 0.1f) body->AddForce(Scale(velocity, -drag / speed));
-
-    //舵面力矩：W/S 俯仰（绕右轴）、A/D 滚转（绕前轴）、Q/E 偏航（绕上轴）。
-    float32 airFactor = std::clamp(speed / 12.0f, 0.0f, 1.0f);
-    body->AddTorque(Scale(right, pitchInput * elevatorAuthority * TorqueScale * airFactor));
-    body->AddTorque(Scale(forward, rollInput * aileronAuthority * TorqueScale * airFactor));
-    body->AddTorque(Scale(up, yawInput * rudderAuthority * TorqueScale * airFactor));
-
-    //俯仰稳定与阻尼：机头追随速度方向，抑制滑跑海豚跳。
-    float32 pitchRate = Dot(body->angularVelocity, right);
-    body->AddTorque(Scale(right, -alphaDegrees * pitchStability * TorqueScale * airFactor - pitchRate * pitchDamping));
-
-    //起落架：机轮由 WheelCollider 驱动（悬挂/摩擦/转向侧向力），这里只写入转向角。
+    PhysicsSystem* physics = PhysicsSystem::Current();
     List<WheelColliderComponent*> wheels;
     GetEns()->GetComponentInstances(wheels);
     for (WheelColliderComponent* wheel : wheels)
-    {
-        if (wheel && wheel->steeringWheel)
-        {
-            wheel->steerAngle = yawInput * steeringAngle;
-        }
-    }
+        if (wheel && wheel->steeringWheel) wheel->steerAngle = yawInput * steeringAngle;
 
-    //坠毁判定：硬撞击（上一物理步的碰撞事件）或飞出训练区。
-    if (PhysicsSystem* physics = PhysicsSystem::Current())
+    if (physics)
     {
         for (const PhysicsEvent& event : physics->GetEvents())
         {
-            if (event.type == PhysicsEventType::ContactEnter
-                && (event.first == GetEnsId() || event.second == GetEnsId())
+            if (event.type == PhysicsEventType::ContactEnter && (event.first == GetEnsId() || event.second == GetEnsId())
                 && event.impulse > crashImpulseThreshold)
             {
-                crashCount++;
+                ++crashCount;
                 ResetFlight();
                 return;
             }
         }
     }
-    vector3 position = transform->GetLocalPosition();
-    if (position.y < -5.0f || position.y > 400.0f
-        || std::abs(position.x) > 750.0f || std::abs(position.z) > 750.0f)
+    //自由飞行不再限制水平距离或飞行高度，仅在跌穿地面后复位。
+    if (transform->GetLocalPosition().y < -200.0f)
     {
-        crashCount++;
+        ++crashCount;
         ResetFlight();
-        return;
-    }
-
-    //检查点圈速。
-    float32 radiusSquared = checkpointRadius * checkpointRadius;
-    if (DistanceSquared(position, Checkpoints[static_cast<usize>(checkpointIndex)]) <= radiusSquared)
-    {
-        checkpointIndex++;
-        if (checkpointIndex == static_cast<int32>(Checkpoints.size()))
-        {
-            checkpointIndex = 0;
-            completedLaps++;
-            if (bestLapTime <= 0.0f || lapTime < bestLapTime) bestLapTime = lapTime;
-            lapTime = 0.0f;
-        }
     }
 }
 
+/// <summary>从同一时刻的速度和姿态计算气动力，供物理施力和帧末诊断共用。</summary>
+void FlightController::EvaluateForces(const RigidBodyComponent& body, const quaternion& rotation)
+{
+    vector3 velocity = body.linearVelocity;
+    float32 speed = Length(velocity);
+    quaternion inverse{ -rotation.x, -rotation.y, -rotation.z, rotation.w };
+    vector3 forward = Rotate(rotation, { 0, 0, -1 });
+    vector3 right = Rotate(rotation, { 1, 0, 0 });
+    vector3 velocityBody = Rotate(inverse, velocity);
+    float32 forwardSpeed = -velocityBody.z;
+    alphaDegrees = forwardSpeed > 0.5f ? std::atan2(-velocityBody.y, forwardSpeed) * 180.0f / Pi : 0.0f;
+    sideslipDegrees = std::atan2(velocityBody.x, std::max(std::abs(forwardSpeed), 0.5f)) * 180.0f / Pi;
+
+    //升力与气流、翼展同时垂直；负迎角允许负升力，失速平滑衰减。
+    float32 cl = std::clamp(liftSlope * (alphaDegrees - zeroLiftAngle), -ClMax, ClMax);
+    float32 stall = std::max(stallAngle, 1.0f);
+    if (std::abs(alphaDegrees) > stall)
+    {
+        float32 stallCl = std::clamp(liftSlope * (std::copysign(stall, alphaDegrees) - zeroLiftAngle), -ClMax, ClMax);
+        float32 falloff = std::clamp((std::abs(alphaDegrees) - stall) / 20.0f, 0.0f, 1.0f);
+        cl = stallCl * (1.0f - falloff * (1.0f - std::clamp(postStallCl, 0.0f, 1.0f)));
+    }
+    float32 wingSpeedSquared = forwardSpeed > 0.5f ? forwardSpeed * forwardSpeed + velocityBody.y * velocityBody.y : 0.0f;
+    float32 wingPressure = 0.5f * AirDensity * wingSpeedSquared;
+    float32 effectiveCl = cl * std::max(liftMultiplier, 0.0f);
+    vector3 liftDirection = Cross(right, velocity);
+    float32 liftDirectionLength = Length(liftDirection);
+    liftForce = liftDirectionLength > 0.01f
+        ? Scale(liftDirection, wingPressure * wingArea * effectiveCl / liftDirectionLength) : vector3();
+
+    //阻力采用 Cd0 + k*Cl²，避免拉杆时旧公式过大的诱导阻力耗尽空速。
+    float32 dynamicPressure = 0.5f * AirDensity * speed * speed;
+    float32 drag = dynamicPressure * wingArea * (std::max(dragCoefficient, 0.0f)
+        + std::max(inducedDragCoefficient, 0.0f) * effectiveCl * effectiveCl);
+    dragForce = speed > 0.01f ? Scale(velocity, -drag / speed) : vector3();
+    float32 thrust = maxThrust * throttle * std::clamp(1.0f - std::max(forwardSpeed, 0.0f) / std::max(thrustFadeSpeed, 1.0f), 0.0f, 1.0f);
+    thrustForce = Scale(forward, thrust);
+
+    //垂尾位于质心后方；侧向气流产生回正力矩，并通过局部角速度阻尼偏航。
+    vector3 finOffset = Scale(forward, -std::max(verticalFinArm, 0.0f));
+    vector3 finVelocity = Add(velocity, Cross(body.angularVelocity, finOffset));
+    float32 finSideslip = std::atan2(Dot(finVelocity, right), std::max(std::abs(Dot(finVelocity, forward)), 1.0f));
+    float32 finPressure = 0.5f * AirDensity * Dot(finVelocity, finVelocity);
+    vector3 finForce = Scale(right, -finPressure * std::max(verticalFinArea, 0.0f)
+        * std::max(sideForceSlope, 0.0f) * std::clamp(finSideslip, -0.7f, 0.7f));
+    dragForce = Add(dragForce, finForce);
+    finTorque = Cross(finOffset, finForce);
+
+    PhysicsSystem* physics = PhysicsSystem::Current();
+    vector3 gravity = physics ? physics->GetGravity() : vector3{ 0, -9.81f, 0 };
+    gravityForce = body.useGravity ? Scale(gravity, body.mass) : vector3();
+}
+
+/// <summary>每帧绘制实际受力箭头；红阻力、蓝升力、黄推力、黑重力。</summary>
+void FlightController::OnLateUpdate(float32 deltaTime)
+{
+    (void)deltaTime;
+    RenderSystem* renderer = RenderSystem::Current();
+    if (!GetEns() || !GetWorld()) return;
+    RigidBodyComponent* body = GetEns()->GetComponent<RigidBodyComponent>();
+    if (!body || !body->enabled) return;
+    //使用模拟完成后的姿态与速度，避免旧力方向与新飞机姿态错位。
+    EvaluateForces(*body, GetEns()->Transform()->GetLocalRotation());
+    if (!showForces || !renderer) return;
+    vector3 origin = GetEns()->Transform()->GetLocalPosition();
+    const vector3 forces[] = { dragForce, liftForce, thrustForce, gravityForce };
+    const color colors[] = { { 1, 0, 0, 1 }, { 0, 0, 1, 1 }, { 1, 1, 0, 1 }, { 0, 0, 0, 1 } };
+    for (int i = 0; i < 4; ++i)
+    {
+        vector3 line = Scale(forces[i], std::max(forceDrawScale, 0.0f));
+        float32 length = Length(line);
+        if (length < 0.001f) continue;
+        vector3 end = Add(origin, line);
+        renderer->DrawLine(*GetWorld(), origin, end, colors[i]);
+        vector3 direction = Scale(line, 1.0f / length);
+        vector3 side = Cross(direction, std::abs(direction.y) < 0.9f ? vector3{ 0, 1, 0 } : vector3{ 1, 0, 0 });
+        float32 head = std::min(length * 0.2f, 0.45f);
+        side = Scale(side, head * 0.4f / std::max(Length(side), 0.001f));
+        vector3 base = Add(end, Scale(direction, -head));
+        renderer->DrawLine(*GetWorld(), end, Add(base, side), colors[i]);
+        renderer->DrawLine(*GetWorld(), end, Add(base, Scale(side, -1)), colors[i]);
+    }
+}
+
+/// <summary>读取空速。</summary>
 float32 FlightController::GetAirspeed()
 {
     RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
     return body ? Length(body->linearVelocity) : 0.0f;
 }
 
-float32 FlightController::GetThrottle()
+/// <summary>读取油门。</summary>
+float32 FlightController::GetThrottle() { return throttle; }
+/// <summary>读取坠毁次数。</summary>
+int32 FlightController::GetCrashCount() { return crashCount; }
+/// <summary>读取侧滑角。</summary>
+float32 FlightController::GetSideslipDegrees() { return sideslipDegrees; }
+/// <summary>读取升力牛顿数。</summary>
+float32 FlightController::GetLiftNewtons() { return Length(liftForce); }
+/// <summary>读取阻力及垂尾侧向阻力合力牛顿数。</summary>
+float32 FlightController::GetDragNewtons() { return Length(dragForce); }
+/// <summary>读取推力牛顿数。</summary>
+float32 FlightController::GetThrustNewtons() { return Length(thrustForce); }
+/// <summary>读取重力牛顿数。</summary>
+float32 FlightController::GetWeightNewtons() { return Length(gravityForce); }
+/// <summary>读取垂直爬升速度。</summary>
+float32 FlightController::GetClimbRate()
 {
-    return throttle;
-}
-
-float32 FlightController::GetLapTime()
-{
-    return lapTime;
-}
-
-float32 FlightController::GetBestLapTime()
-{
-    return bestLapTime;
-}
-
-int32 FlightController::GetCheckpointIndex()
-{
-    return checkpointIndex;
-}
-
-int32 FlightController::GetCheckpointCount()
-{
-    return static_cast<int32>(Checkpoints.size());
-}
-
-int32 FlightController::GetCompletedLaps()
-{
-    return completedLaps;
-}
-
-int32 FlightController::GetCrashCount()
-{
-    return crashCount;
+    RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
+    return body ? body->linearVelocity.y : 0.0f;
 }
 
 float32 FlightController::GetPitchDegrees()
@@ -281,28 +282,24 @@ float32 FlightController::GetAltitude()
     return transform ? transform->GetLocalPosition().y : 0.0f;
 }
 
-void FlightController::ResetFlight()
-{
-    checkpointIndex = 0;
-    lapTime = 0.0f;
-    ResetAircraft();
-}
 
-void FlightController::ResetAircraft()
+/// <summary>复位到机场并清空力和速度，不保留航路任务。</summary>
+void FlightController::ResetFlight()
 {
     TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
-
-    throttle = 0.0f;
+    if (FlightTerrainStreamer* terrain = GetEns()->GetComponent<FlightTerrainStreamer>()) terrain->ResetOrigin();
+    throttle = 0;
+    sideslipDegrees = 0;
+    liftForce = dragForce = thrustForce = gravityForce = finTorque = vector3();
+    alphaDegrees = 0;
     transform->SetLocalPosition(spawnPosition);
     transform->SetLocalRotation(spawnRotation);
-
-    RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
-    if (body)
+    if (RigidBodyComponent* body = GetEns()->GetComponent<RigidBodyComponent>())
     {
-        body->linearVelocity = vector3();
-        body->angularVelocity = vector3();
-        body->pendingForce = vector3();
-        body->pendingTorque = vector3();
+        body->linearVelocity = {};
+        body->angularVelocity = {};
+        body->pendingForce = {};
+        body->pendingTorque = {};
     }
 }

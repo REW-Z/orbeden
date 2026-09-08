@@ -149,6 +149,12 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
 
 void OpenGLRenderBackend::Shutdown()
 {
+    DeleteShaderProgram(debugLineShader);
+    debugLineShader = {};
+    if (debugLineVertexArray) glDeleteVertexArrays(1, &debugLineVertexArray);
+    if (debugLineVertexBuffer) glDeleteBuffers(1, &debugLineVertexBuffer);
+    debugLineVertexArray = 0;
+    debugLineVertexBuffer = 0;
     for (auto& pair : renderTargetColorAttachments)
     {
         GLuint framebuffer = pair.first;
@@ -760,4 +766,44 @@ int32 OpenGLRenderBackend::GetUniformLocation(const char* name)
     int32 location = glGetUniformLocation(currentShaderProgram.id, name);
     locations.emplace(name, location);
     return location;
+}
+
+/// <summary>绘制不受光照影响的调试线，使用相机矩阵进行三维裁剪。</summary>
+void OpenGLRenderBackend::DrawLines(const List<DebugLine>& lines, const matrix4x4& viewProjection, uint32 layerMask)
+{
+    if (lines.empty()) return;
+    if (!debugLineShader.IsValid())
+    {
+        GpuShaderProgramDesc desc;
+        desc.vertexSource = "#version 430 core\nlayout(location=0) in vec3 a_Position; uniform mat4 u_ViewProjection; void main(){gl_Position=u_ViewProjection*vec4(a_Position,1.0);}";
+        desc.fragmentSource = "#version 430 core\nuniform vec4 u_Color; out vec4 FragColor; void main(){FragColor=u_Color;}";
+        debugLineShader = CreateShaderProgram(desc);
+        if (!debugLineShader.IsValid()) return;
+        glGenVertexArrays(1, &debugLineVertexArray);
+        glGenBuffers(1, &debugLineVertexBuffer);
+        glBindVertexArray(debugLineVertexArray);
+        glBindBuffer(GL_ARRAY_BUFFER, debugLineVertexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * 2, nullptr, GL_STREAM_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), nullptr);
+        glEnableVertexAttribArray(0);
+    }
+
+    BindShaderProgram(debugLineShader);
+    SetUniformMatrix4("u_ViewProjection", viewProjection);
+    SetDepthWrite(false);
+    SetBlend(true);
+    SetCullMode(CullMode::None);
+    glBindVertexArray(debugLineVertexArray);
+    glBindBuffer(GL_ARRAY_BUFFER, debugLineVertexBuffer);
+    for (const DebugLine& line : lines)
+    {
+        if ((line.drawLayer & layerMask) == 0) continue;
+        const vector3 points[2] = { line.start, line.end };
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
+        SetDepthTest(line.depthTest);
+        SetUniformColor("u_Color", line.tint);
+        glDrawArrays(GL_LINES, 0, 2);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(currentVertexInput.id);
 }

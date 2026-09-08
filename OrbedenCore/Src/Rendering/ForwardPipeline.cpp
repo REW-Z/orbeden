@@ -137,7 +137,7 @@ vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
 matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light) const
 {
     //计算光源观察参数
-    vector3 center = CalculateSceneCenter(scene);
+    vector3 center = scene.cameras.empty() ? CalculateSceneCenter(scene) : scene.cameras.front().position;
     vector3 direction = RenderMath::Normalize(light.direction);
     if (IsZero(direction)) direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
 

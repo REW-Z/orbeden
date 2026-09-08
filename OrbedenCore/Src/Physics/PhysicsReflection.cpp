@@ -64,6 +64,8 @@ namespace PhysicsReflection
         {
             PHYSICS_FIELD(HeightFieldComponent, enabled, "bool", Bool),
             HEIGHT_FIELD(seed, "int32", Int32),
+            HEIGHT_FIELD(sampleTileX, "int32", Int32),
+            HEIGHT_FIELD(sampleTileZ, "int32", Int32),
             HEIGHT_FIELD(sizeX, "float32", Float32),
             HEIGHT_FIELD(sizeZ, "float32", Float32),
             HEIGHT_FIELD(rowCount, "int32", Int32),
@@ -76,6 +78,7 @@ namespace PhysicsReflection
             HEIGHT_FIELD(flattenMinZ, "float32", Float32),
             HEIGHT_FIELD(flattenMaxZ, "float32", Float32),
             HEIGHT_FIELD(flattenHeight, "float32", Float32),
+            HEIGHT_FIELD(flattenBlendDistance, "float32", Float32),
             HEIGHT_FIELD(collisionLayer, "uint32", UInt32),
             HEIGHT_FIELD(generateNoiseTexture, "bool", Bool),
             HEIGHT_FIELD(noiseTextureSize, "int32", Int32),

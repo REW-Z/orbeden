@@ -1,5 +1,5 @@
-mtllib ../Material/checkpoint.mtl
-o CheckpointCube
+mtllib ../Material/marking.mtl
+o MarkingCube
 v -1.0 -1.0 1.0
 v 1.0 -1.0 1.0
 v 1.0 1.0 1.0
@@ -34,7 +34,7 @@ vn -1.0 0.0 0.0
 vn 1.0 0.0 0.0
 vn 0.0 1.0 0.0
 vn 0.0 -1.0 0.0
-usemtl CheckpointMaterial
+usemtl MarkingMaterial
 f 1/1/1 2/2/1 3/3/1 4/4/1
 f 5/1/2 6/2/2 7/3/2 8/4/2
 f 9/1/3 10/2/3 11/3/3 12/4/3

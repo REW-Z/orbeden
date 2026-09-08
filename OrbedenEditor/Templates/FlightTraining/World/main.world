@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <World version="1">
-    <Ens stableId="world://{{PROJECT_NAME}}/main/root" name="FlightTraining">
+    <Ens stableId="world://{{PROJECT_NAME}}/main/root" name="FreeFlight">
         <Component type="TransformComponent">
             <Field name="localPosition" type="vector3" value="0 0 0" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
@@ -23,18 +23,19 @@
             <Component type="HeightFieldComponent">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="seed" type="int32" value="1337" />
-                <Field name="sizeX" type="float32" value="1600" />
-                <Field name="sizeZ" type="float32" value="1600" />
-                <Field name="rowCount" type="int32" value="129" />
-                <Field name="columnCount" type="int32" value="129" />
-                <Field name="amplitude" type="float32" value="3.5" />
-                <Field name="frequency" type="float32" value="0.02" />
+                <Field name="sizeX" type="float32" value="512" />
+                <Field name="sizeZ" type="float32" value="512" />
+                <Field name="rowCount" type="int32" value="65" />
+                <Field name="columnCount" type="int32" value="65" />
+                <Field name="amplitude" type="float32" value="36" />
+                <Field name="frequency" type="float32" value="0.003" />
                 <Field name="octaves" type="int32" value="4" />
-                <Field name="flattenMinX" type="float32" value="-24" />
-                <Field name="flattenMaxX" type="float32" value="24" />
-                <Field name="flattenMinZ" type="float32" value="-180" />
-                <Field name="flattenMaxZ" type="float32" value="180" />
+                <Field name="flattenMinX" type="float32" value="-32" />
+                <Field name="flattenMaxX" type="float32" value="32" />
+                <Field name="flattenMinZ" type="float32" value="-200" />
+                <Field name="flattenMaxZ" type="float32" value="200" />
                 <Field name="flattenHeight" type="float32" value="0" />
+                <Field name="flattenBlendDistance" type="float32" value="80" />
                 <Field name="collisionLayer" type="uint32" value="1" />
                 <Field name="material" type="Ref&lt;Material&gt;" value="Resource/Mesh/ground.obj//Material/GroundMaterial" />
                 <Field name="generateNoiseTexture" type="bool" value="true" />
@@ -78,7 +79,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/marking.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -93,7 +94,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/marking.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -108,7 +109,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/marking.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -167,186 +168,6 @@
                 <Field name="halfExtents" type="vector3" value="1 1 1" />
             </Component>
         </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_left" name="Gate01Left">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-12 18 -130" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_right" name="Gate01Right">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="12 18 -130" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_1_top" name="Gate01Top">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0 28 -130" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_left" name="Gate02Left">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="88 35 -260" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_right" name="Gate02Right">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="112 35 -260" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_2_top" name="Gate02Top">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="100 45 -260" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_left" name="Gate03Left">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-112 50 -420" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_right" name="Gate03Right">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-88 50 -420" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_3_top" name="Gate03Top">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-100 60 -420" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_left" name="Gate04Left">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="-12 30 -560" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_right" name="Gate04Right">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="12 30 -560" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.35 10 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
-        <Ens stableId="world://{{PROJECT_NAME}}/main/gate_4_top" name="Gate04Top">
-            <Component type="TransformComponent">
-                <Field name="localPosition" type="vector3" value="0 40 -560" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="12.35 0.35 0.35" />
-            </Component>
-            <Component type="StaticMeshRenderer">
-                <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
-                <Field name="drawLayer" type="uint32" value="1" />
-                <Field name="drawQueue" type="DrawQueue" value="0" />
-                <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
-            </Component>
-        </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/directional_light" name="Sun">
             <Component type="TransformComponent">
                 <Field name="localPosition" type="vector3" value="0 50 0" />
@@ -371,32 +192,49 @@
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
         </Component>
+        <Component type="FlightTerrainStreamer">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="chunkSize" type="float32" value="512" />
+            <Field name="samplesPerSide" type="int32" value="65" />
+            <Field name="loadRadius" type="int32" value="3" />
+            <Field name="chunksPerStep" type="int32" value="2" />
+            <Field name="rebaseDistance" type="float32" value="4096" />
+        </Component>
         <Component type="FlightController">
             <Field name="enabled" type="bool" value="true" />
-            <Field name="checkpointRadius" type="float32" value="12" />
-            <Field name="throttleRate" type="float32" value="1.0" />
-            <Field name="maxThrust" type="float32" value="13000" />
-            <Field name="wingArea" type="float32" value="20" />
+            <Field name="showForces" type="bool" value="true" />
+            <Field name="maxThrust" type="float32" value="15000" />
+            <Field name="thrustFadeSpeed" type="float32" value="90" />
+            <Field name="wingArea" type="float32" value="24" />
             <Field name="liftSlope" type="float32" value="0.105" />
-            <Field name="liftMultiplier" type="float32" value="1.15" />
-            <Field name="zeroLiftAngle" type="float32" value="-4" />
+            <Field name="liftMultiplier" type="float32" value="1.3" />
+            <Field name="zeroLiftAngle" type="float32" value="-5" />
             <Field name="stallAngle" type="float32" value="15" />
-            <Field name="postStallCl" type="float32" value="0.9" />
-            <Field name="dragCoefficient" type="float32" value="0.03" />
+            <Field name="postStallCl" type="float32" value="0.45" />
+            <Field name="dragCoefficient" type="float32" value="0.028" />
+            <Field name="inducedDragCoefficient" type="float32" value="0.045" />
             <Field name="elevatorAuthority" type="float32" value="6" />
             <Field name="aileronAuthority" type="float32" value="7" />
             <Field name="rudderAuthority" type="float32" value="5" />
             <Field name="pitchStability" type="float32" value="0.6" />
+            <Field name="pitchTrimAngle" type="float32" value="2" />
             <Field name="pitchDamping" type="float32" value="4000" />
+            <Field name="rollDamping" type="float32" value="1200" />
+            <Field name="yawDamping" type="float32" value="1400" />
+            <Field name="verticalFinArea" type="float32" value="2.2" />
+            <Field name="sideForceSlope" type="float32" value="2" />
+            <Field name="verticalFinArm" type="float32" value="2.2" />
             <Field name="steeringAngle" type="float32" value="30" />
             <Field name="crashImpulseThreshold" type="float32" value="15000" />
+            <Field name="throttleRate" type="float32" value="1" />
+            <Field name="forceDrawScale" type="float32" value="0.0005" />
         </Component>
         <Component type="RigidBodyComponent">
             <Field name="enabled" type="bool" value="true" />
             <Field name="bodyType" type="PhysicsBodyType" value="1" />
             <Field name="mass" type="float32" value="1200" />
             <Field name="useGravity" type="bool" value="true" />
-            <Field name="linearDamping" type="float32" value="0.05" />
+            <Field name="linearDamping" type="float32" value="0" />
             <Field name="angularDamping" type="float32" value="0.3" />
             <Field name="linearVelocity" type="vector3" value="0 0 0" />
             <Field name="angularVelocity" type="vector3" value="0 0 0" />
@@ -591,7 +429,7 @@
             </Component>
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/checkpoint.obj//Mesh/Main" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Resource/Mesh/marking.obj//Mesh/Main" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -649,11 +487,17 @@
                 <Field name="localRotation" type="quaternion" value="-0.1305 0 0 0.9914" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
+            <Component type="FlightOrbitCamera">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="distance" type="float32" value="10" />
+                <Field name="sensitivity" type="float32" value="0.25" />
+                <Field name="defaultElevation" type="float32" value="18" />
+            </Component>
             <Component type="Camera">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="fieldOfView" type="float32" value="68" />
                 <Field name="nearPlane" type="float32" value="0.1" />
-                <Field name="farPlane" type="float32" value="1200" />
+                <Field name="farPlane" type="float32" value="1400" />
                 <Field name="depth" type="float32" value="0" />
                 <Field name="drawLayerMask" type="uint32" value="4294967295" />
                 <Field name="clearMode" type="ClearMode" value="2" />
