@@ -83,9 +83,9 @@ public sealed class MoveBehaviour : Script
 
     private void OnUpdate(float deltaTime)
     {
-        vector3 position = Ens.Transform.localPosition;
+        vector3 position = Ens.Transform.GetLocalPosition();
         position.x += speed * deltaTime;
-        Ens.Transform.localPosition = position;
+        Ens.Transform.SetLocalPosition(position);
     }
 
     private void OnEnd()
@@ -189,7 +189,7 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 
 ### C++ / C# 互操作
 
-C# 调用没有强类型 Binding 的 C++ 游戏组件时，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
+Object 派生的 C++ 组件由 MetaGen 自动生成强类型 C# 包装，直接 `ens.AddComponent<MoveBehaviour>()` 并使用类型化成员。对没有生成 Binding 的 C++ API（非 Object 派生类）使用 `ens.GetNativeComponent("MoveBehaviour")` 得到动态代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
 重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](ScriptSystem.md)。
 

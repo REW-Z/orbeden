@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Orbeden;
 
 /// <summary>C# 脚本对一个原生 Script 组件的强类型包装。</summary>
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)]
 public abstract unsafe partial class Script : Component
 {
     /// <summary>脚本所属 EnsId。</summary>

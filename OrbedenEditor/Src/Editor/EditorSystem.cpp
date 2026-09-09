@@ -817,7 +817,9 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     std::string cmakeCommand = GetCMakeCommand();
-    std::string configureCommand = cmakeCommand + " --preset " + Quote(target.cmakePreset)
+    //preset 文件位于仓库根目录，用 -S 指定源目录避免依赖 Editor 启动目录。
+    std::string configureCommand = cmakeCommand + " -S " + Quote(repoRoot)
+        + " --preset " + Quote(target.cmakePreset)
         + " " + CMakeDefine("CMAKE_BUILD_TYPE", "STRING", BuildConfiguration)
         + " " + CMakeDefine("ORBEDEN_GAME_AOT_LIB", "FILEPATH", aotLibraryPath)
         + " " + CMakeDefine("ORBEDEN_PROJECT_DIR", "PATH", project.GetProjectRoot());
@@ -834,6 +836,12 @@ void EditorSystem::RequestBuildPlayer()
             configureCommand += " " + CMakeDefine("CMAKE_C_COMPILER", "FILEPATH", clangClPath);
             configureCommand += " " + CMakeDefine("CMAKE_CXX_COMPILER", "FILEPATH", clangClPath);
         }
+        else
+        {
+            projectStatus = "Build Player failed: clang-cl was not found. Install the 'C++ Clang tools for Windows' Visual Studio component and retry.";
+            Log::Error(projectStatus.c_str());
+            return;
+        }
     }
     if (!RunCommand(configureCommand, "Configure Player"))
     {
@@ -841,7 +849,7 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string buildCommand = cmakeCommand + " --build --preset " + Quote(target.cmakePreset);
+    std::string buildCommand = cmakeCommand + " -S " + Quote(repoRoot) + " --build --preset " + Quote(target.cmakePreset);
     if (!RunCommand(buildCommand, "Build Player"))
     {
         projectStatus = "Build Player failed for " + std::string(target.displayName) + ".";

@@ -40,11 +40,9 @@ C++ 根对象的实际类名为 `Orbeden::Object`，头文件通过 `using Orbed
 
 继承关系不要求 TypeRuntimeId 相等。`MoveBehaviour::StaticType()->Is(Script::StaticType())` 为 true，但两个类型的 ID 不同。基类查询可以匹配派生实例，成员解析仍使用实例的 `GetType()`。互操作组件句柄保存的是域、generation 和 ObjectId，并不是 TypeRuntimeId。
 
-目前 MetaGen 只生成 C++ 反射及生命周期 thunk，不生成任意 C++ 游戏脚本的强类型 C# Binding。现有入口是 `ens.GetNativeComponent("MoveBehaviour")`；可以用普通 C# 类组合这个 `ComponentProxy`，缓存字段或方法句柄，提供有类型的业务方法。
+MetaGen 为全部 Object 派生类生成强类型 C# 包装、原生调用入口和注册清单。C++ `MoveBehaviour` 会生成同名 C# 包装，可直接 `ens.AddComponent<MoveBehaviour>()`、访问属性和调用方法；基类查询返回派生包装并保持同一原生实例的包装身份。生成的原生脚本包装继承 `Orbeden.Script` 但只参与 Native 生命周期，不作为托管脚本启动；手写托管脚本继承原生包装的声明会被拒绝。`ens.GetNativeComponent("MoveBehaviour")` 的动态代理保留给没有生成 Binding 的 C++ API（非 Object 派生类）。
 
-不要让这种原生脚本包装继承 `Orbeden.Script`：当前 `Ens.AddComponent<T>()` 会把所有 Script 派生类交给托管脚本工厂，构造函数也要求精确托管宿主上下文。内置原生组件包装继承 `Component`，但任意自定义 `Component` 包装目前也没有自动接入泛型创建和查询的工厂。若要完整支持生成式 Binding，需要增加原生类型与包装工厂的映射，包装现有原生实例，并保持生命周期只由 Native 域调度。
-
-本次将基类名由 `ScriptBehaviour` 改为 `Script`，仓库模板已同步。已有外部项目需要更新源码及 `.world` 中精确宿主的 `type="ScriptBehaviour"` 为 `type="Script"`，然后重新构建；具体 C++ 派生类名与 C# `managedTypeName` 不变。
+本次迁移的 API 变化：基类名由 `ScriptBehaviour` 改为 `Script`，外部项目需更新源码及 `.world` 中精确宿主的 `type="ScriptBehaviour"` 为 `type="Script"`；具体 C++ 派生类名与 C# `managedTypeName` 不变。C# 颜色类型 `color4` 改为 `color`；`Mesh.Load` / `Material.Load` / `Shader.Load` 静态加载改为 `Resources.Load<T>(key)`；Transform 的本地/世界变换不再以字段属性暴露，统一使用 `GetLocalPosition` / `SetLocalPosition` 等 getter/setter 方法；全部 Object 派生组件改用生成式强类型 Binding，旧的逐类型 Binding 已删除。原生模块 ABI 已升至 2（表头、尺寸、偏移校验），Core、Editor 与外部游戏模块必须一起重建，旧 ABI 模块会被拒绝加载。
 
 ## 2. 编写 C# 脚本
 
@@ -67,9 +65,9 @@ public sealed class NpcAi : Script
 
     private void OnUpdate(float deltaTime)
     {
-        vector3 position = Ens.Transform.localPosition;
+        vector3 position = Ens.Transform.GetLocalPosition();
         position.x += speed * deltaTime;
-        Ens.Transform.localPosition = position;
+        Ens.Transform.SetLocalPosition(position);
     }
 
     public void AddCounter(int amount) => savedCounter += amount;
@@ -84,7 +82,7 @@ public sealed class NpcAi : Script
 
 public 的受支持字段参与序列化；非 public 字段需要 `[SerializeField]`。`[HideInInspector]` 只隐藏字段，不取消持久化，也不影响删除 Undo 的快照。`domain`、`managedTypeName`、`enabled` 是保留字段名，不要在派生类声明同名字段。
 
-支持基本数值、字符串、vector3、color4、quaternion、EnsId 和可绑定的原生 Object 引用。数组、列表、自定义结构体、委托和任意托管对象图不属于当前字段协议。
+支持基本数值、字符串、vector3、color、quaternion、EnsId 和可绑定的原生 Object 引用。数组、列表、自定义结构体、委托和任意托管对象图不属于当前字段协议。
 
 ## 3. 编写 C++ 脚本
 
@@ -261,8 +259,8 @@ ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改
 
 新项目模板存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、CMake 配置），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
 
-模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 使用预解析方法句柄读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](UserManual.md#6-运行和调试)。
+模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 通过生成的 `Native.FlightController` 强类型包装直接读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](UserManual.md#6-运行和调试)。
 
 首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、CMake 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
-游戏 C++ CMake 步骤先运行 MetaGen 生成反射/生命周期 thunk，再编译游戏模块。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
+游戏 C++ CMake 步骤先运行 MetaGen 生成反射、生命周期 thunk 和 Binding 注册，再编译游戏模块。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。

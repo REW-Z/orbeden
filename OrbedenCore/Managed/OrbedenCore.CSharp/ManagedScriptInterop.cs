@@ -41,7 +41,7 @@ internal static partial class ManagedTypeMetadataCache
     private static readonly Dictionary<Type, ManagedTypeMetadata> cache = [];
     internal static void Remove(Type type) => cache.Remove(type);
 
-    internal static ManagedTypeMetadata Get(Type type)
+    internal static ManagedTypeMetadata Get([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)] Type type)
     {
         if (cache.TryGetValue(type, out ManagedTypeMetadata? metadata)) return metadata;
         metadata = Build(type);
@@ -153,7 +153,7 @@ internal static partial class ManagedTypeMetadataCache
         }
     }
 
-    private static ManagedTypeMetadata Build(Type type)
+    private static ManagedTypeMetadata Build([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields)] Type type)
     {
         ManagedTypeMetadata metadata = new();
         Stack<Type> chain = new();

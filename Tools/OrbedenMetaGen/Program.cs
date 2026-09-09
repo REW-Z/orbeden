@@ -2,6 +2,13 @@ using OrbedenMetaGen;
 using System.Text;
 using System.Text.RegularExpressions;
 
+//规范化路径盘符大小写，保证不同 shell 下生成文本一致。
+static string CanonicalPath(string path)
+{
+    string full = Path.GetFullPath(path);
+    return full.Length >= 2 && full[1] == ':' ? char.ToUpperInvariant(full[0]) + full[1..] : full;
+}
+
 //解析命令行参数
 if (args.Length < 2)
 {
@@ -9,8 +16,8 @@ if (args.Length < 2)
     return 1;
 }
 
-var sourceRoot = Path.GetFullPath(args[0]);
-var outputDir = Path.GetFullPath(args[1]);
+var sourceRoot = CanonicalPath(args[0]);
+var outputDir = CanonicalPath(args[1]);
 var gameModule = args.Skip(2).Any(value => value == "--game-module");
 
 if (!Directory.Exists(sourceRoot))

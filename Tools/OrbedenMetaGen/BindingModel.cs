@@ -50,6 +50,12 @@ internal sealed class BindingModel
             if (colliding != null)
                 throw new InvalidDataException($"{type.File}:{type.Line}: {type.QualifiedName}: native type name '{type.Name}' collides with '{colliding.QualifiedName}'; the runtime resolves wrappers by short type name, so rename one of them");
         }
+        foreach (IGrouping<string, CppType> collision in localTypes.Where(type => type.IsObject)
+            .GroupBy(ManagedName, StringComparer.Ordinal).Where(group => group.Count() > 1))
+        {
+            CppType second = collision.Skip(1).First();
+            throw new InvalidDataException($"{second.File}:{second.Line}: {second.QualifiedName}: managed class name '{collision.Key}' collides with '{collision.First().QualifiedName}'; rename the type or its namespace");
+        }
         ObjectTypes = localTypes.Where(type => type.IsObject).OrderBy(type => Depth(type)).ThenBy(type => type.QualifiedName, StringComparer.Ordinal).ToList();
         foreach (var type in ObjectTypes)
         {
@@ -84,7 +90,10 @@ internal sealed class BindingModel
     internal string ManagedName(CppType type)
     {
         string prefix = ImportedNamespaces.TryGetValue(type.QualifiedName, out string? imported) ? imported : ManagedNamespace;
-        string name = type.QualifiedName.StartsWith("Orbeden::", StringComparison.Ordinal) ? type.QualifiedName[9..] : type.QualifiedName;
+        //C++ 根命名空间与模块短名一致时并入托管根命名空间，保留其余子命名空间。
+        string name = type.QualifiedName;
+        string root = prefix[(prefix.LastIndexOf('.') + 1)..];
+        if (name.StartsWith(root + "::", StringComparison.Ordinal)) name = name[(root.Length + 2)..];
         return "global::" + prefix + "." + name.Replace("::", ".");
     }
     internal bool IsImported(CppType type) => ImportedNamespaces.ContainsKey(type.QualifiedName);

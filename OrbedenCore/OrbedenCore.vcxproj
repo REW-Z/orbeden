@@ -315,6 +315,7 @@
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
           DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command &quot;$root = (Resolve-Path '$(ProjectDir)Src').Path; $sdk = (Resolve-Path '$(OrbedenNativeSdkIncludeDir)').Path; $keep = Get-ChildItem $root -Recurse -File -Include *.h,*.hpp,*.inl | ForEach-Object { $_.FullName.Replace($root, '') }; Get-ChildItem $sdk -Recurse -File -Include *.h,*.hpp,*.inl | Where-Object { $keep -notcontains $_.FullName.Replace($sdk, '') } | Remove-Item -Force&quot;" />
     <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;"
           UseUtf8Encoding="Always"
           StdOutEncoding="UTF-8"

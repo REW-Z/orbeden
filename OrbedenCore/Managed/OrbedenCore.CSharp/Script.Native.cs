@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -199,7 +200,7 @@ public abstract unsafe partial class Script
     }
 
     /// <summary>临时使用 Editor 宿主表构造默认值，结束后释放反射 Wrapper。</summary>
-    internal static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, Type type)
+    internal static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
     {
         if (binding == IntPtr.Zero || host == IntPtr.Zero || !NativeBindingRuntime.IsManagedScript(type))
             throw new InvalidOperationException("Invalid Editor script host.");

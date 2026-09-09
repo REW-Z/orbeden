@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Orbeden;
 
@@ -6,7 +7,7 @@ namespace Orbeden;
 public static class GameScriptRuntime
 {
     /// <summary>供 Editor 为新宿主补齐构造函数和字段初始化器的默认值。</summary>
-    public static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, Type type) =>
+    public static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type) =>
         Script.InitializeEditorHost(binding, host, ens, type);
 
     /// <summary>初始化当前 World 的脚本运行时。</summary>
