@@ -66,9 +66,19 @@ void BuildGamePanel::DrawPanel()
         for (int32 index = 0; index < editor.GetPlayerTargetPlatformCount(); ++index)
         {
             bool selected = index == selectedIndex;
+            if (!editor.IsPlayerTargetPlatformAvailable(index))
+            {
+                ImGui::BeginDisabled();
+            }
+
             if (ImGui::Selectable(editor.GetPlayerTargetPlatformName(index), selected))
             {
                 editor.SetSelectedPlayerTargetPlatformIndex(index);
+            }
+
+            if (!editor.IsPlayerTargetPlatformAvailable(index))
+            {
+                ImGui::EndDisabled();
             }
 
             if (selected)

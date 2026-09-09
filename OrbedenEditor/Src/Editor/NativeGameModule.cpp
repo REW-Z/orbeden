@@ -155,7 +155,7 @@ bool NativeGameModule::Unload(std::string& error)
     if (!IsLoaded()) return true;
     if (!Object::UnregisterModuleTypes(this))
     {
-        error = "Native game module still owns live objects.";
+        error = "Native game module still owns live objects or is a base of another loaded module.";
         return false;
     }
 

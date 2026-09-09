@@ -38,7 +38,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
                         string valueType = parameter.Name == member.Buffer ? parameter.Type.TrimEnd('*') : parameter.Type;
                         BindingValue value = types.Resolve(valueType, type);
                         if (value.Kind == "recordptr") throw new InvalidDataException($"{type.File}:{member.Line}: borrowed value pointers are only supported as return snapshots");
-                        if (parameter.Name == member.Buffer && value.IsEncoded)
+                        if (parameter.Name == member.Buffer && !types.IsBufferElement(value))
                             throw new InvalidDataException($"{type.File}:{member.Line}: {type.QualifiedName}.{member.Name}: buffer '{parameter.Name}' must be a blittable scalar, enum or value struct, got '{parameter.Type}'");
                         parameters.Add((parameter, value));
                     }
@@ -146,7 +146,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
     {
         List<string> signature = ["int32 objectId"];
         foreach (var parameter in call.Parameters)
-            signature.Add(parameter.Parameter.Name == call.Member.Buffer ? $"const {parameter.Value.Cpp}* {parameter.Parameter.Name}" : $"{parameter.Value.WireCpp} {parameter.Parameter.Name}");
+            signature.Add(parameter.Parameter.Name == call.Member.Buffer && !parameter.Value.IsEncoded ? $"const {parameter.Value.Cpp}* {parameter.Parameter.Name}" : $"{parameter.Value.WireCpp} {parameter.Parameter.Name}");
         if (call.Result.Cpp != "void") signature.Add($"{(call.Result.IsEncoded ? "NativeBindingBuffer" : call.Result.WireCpp)}* result");
         output.AppendLine($"NativeBindingStatus ORBEDEN_NATIVE_CALL Call_{Symbol(type)}_{index}({string.Join(", ", signature)})\n{{\n    try\n    {{");
         if (!call.Member.IsStatic) output.AppendLine($"        auto* instance = NativeBindings::Require<{type.QualifiedName}>(objectId);");
@@ -158,8 +158,17 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
             BindingValue value = parameter.Value;
             if (name == call.Member.Buffer)
             {
-                output.AppendLine($"        if ({call.Member.Count} < 0 || ({call.Member.Count} != 0 && !{name})) return NativeBindingStatus::InvalidArgument;");
-                arguments.Add(name); continue;
+                if (value.Kind == "record")
+                {
+                    output.AppendLine($"        NativeBindingReader reader_{name}({name});\n        int32 length_{name} = reader_{name}.Count();\n        if (length_{name} != {call.Member.Count}) return NativeBindingStatus::InvalidArgument;\n        std::vector<{value.Cpp}> decoded_{name};\n        decoded_{name}.reserve(length_{name});\n        for (int32 index = 0; index < length_{name}; ++index) decoded_{name}.push_back(Read_{value.Key}(reader_{name}));\n        reader_{name}.Complete();");
+                    arguments.Add($"decoded_{name}.data()");
+                }
+                else
+                {
+                    output.AppendLine($"        if ({call.Member.Count} < 0 || ({call.Member.Count} != 0 && !{name})) return NativeBindingStatus::InvalidArgument;");
+                    arguments.Add(name);
+                }
+                continue;
             }
             if (value.IsEncoded)
             { output.AppendLine($"        NativeBindingReader reader_{name}({name});\n        auto decoded_{name} = Read_{value.Key}(reader_{name});\n        reader_{name}.Complete();"); arguments.Add("decoded_" + name); }
@@ -210,20 +219,21 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
         output.AppendLine("    }\n}\n}");
         foreach (BindingValue value in types.Values.Values.Where(value => value.Declaration != null && value.Kind is "record" or "enum").DistinctBy(value => value.Cpp))
         {
-            if (model.IsImported(value.Declaration!)) continue;
-            string managed = model.ManagedName(value.Declaration)[8..];
+            CppType declaration = value.Declaration!;
+            if (model.IsImported(declaration)) continue;
+            string managed = model.ManagedName(declaration)[8..];
             string scope = managed[..managed.LastIndexOf('.')]; string name = managed[(managed.LastIndexOf('.') + 1)..];
             output.AppendLine($"namespace {scope}\n{{");
             if (value.Kind == "enum")
             {
                 output.AppendLine($"public enum {name} : {value.WireManaged}\n{{");
-                foreach (var item in value.Declaration.EnumValues) output.AppendLine($"    {item.Key}{(item.Value.Length == 0 ? "" : " = " + item.Value.Replace("::", "."))},");
+                foreach (var item in declaration.EnumValues) output.AppendLine($"    {item.Key}{(item.Value.Length == 0 ? "" : " = " + item.Value.Replace("::", "."))},");
             }
             else
             {
                 output.AppendLine($"public struct {name}\n{{");
-                foreach (var member in model.ExportedMembers(value.Declaration).Where(member => !member.IsMethod && !member.IsStatic))
-                    output.AppendLine($"    public {types.Resolve(member.Type, value.Declaration).Managed} @{member.Name};");
+                foreach (var member in model.ExportedMembers(declaration).Where(member => !member.IsMethod && !member.IsStatic))
+                    output.AppendLine($"    public {types.Resolve(member.Type, declaration).Managed} @{member.Name};");
             }
             output.AppendLine("}\n}");
         }
@@ -303,7 +313,22 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types)
             string name = parameter.Parameter.Name; BindingValue value = parameter.Value;
             if (name == call.Member.Count) { wireTypes.Add(value.WireManaged); arguments.Add("@" + call.Member.Buffer + ".Length"); continue; }
             if (name == call.Member.Buffer)
-            { output.AppendLine($"        fixed ({value.WireManaged}* pointer_{name} = @{name})\n        {{"); ++fixedBlocks; wireTypes.Add(value.WireManaged + "*"); arguments.Add("pointer_" + name); continue; }
+            {
+                if (value.Kind == "record")
+                {
+                    output.AppendLine($"        var writer_{name} = new NativeBindingWriter();\n        writer_{name}.Scalar(@{name}.Length);\n        foreach (var item in @{name}) {codecs}.Write_{value.Key}(writer_{name}, item);\n        byte[] bytes_{name} = writer_{name}.ToArray();\n        fixed (byte* pointer_{name} = bytes_{name})\n        {{");
+                    wireTypes.Add("NativeBindingSlice");
+                    arguments.Add($"new NativeBindingSlice(pointer_{name}, bytes_{name}.Length)");
+                }
+                else
+                {
+                    output.AppendLine($"        fixed ({value.Managed}* pointer_{name} = @{name})\n        {{");
+                    wireTypes.Add(value.Managed + "*");
+                    arguments.Add("pointer_" + name);
+                }
+                ++fixedBlocks;
+                continue;
+            }
             wireTypes.Add(value.WireManaged);
             if (value.IsEncoded)
             {

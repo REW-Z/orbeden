@@ -60,8 +60,30 @@ internal sealed class BindingTypes(BindingModel model)
         string key = declaration.QualifiedName;
         if (Values.TryGetValue(key, out var existing)) return existing;
         BindingValue record = Remember(new("record", key, model.ManagedName(declaration), "NativeBindingSlice", "NativeBindingSlice", declaration));
-        foreach (CppMember field in model.ExportedMembers(declaration).Where(member => !member.IsMethod && !member.IsStatic)) Resolve(field.Type, declaration);
+        foreach (CppMember field in model.ExportedMembers(declaration).Where(member => !member.IsMethod && !member.IsStatic))
+        {
+            if (field.FixedArray)
+                throw new InvalidDataException($"{declaration.File}:{field.Line}: {declaration.QualifiedName}.{field.Name}: fixed C arrays are not supported; use List<> or exclude with ORBEDEN_BIND_IGNORE");
+            Resolve(field.Type, declaration);
+        }
         return record;
     }
+    /// <summary>递归检查缓冲元素；普通值结构通过字段编码传输，不依赖两侧内存布局。</summary>
+    internal bool IsBufferElement(BindingValue value, HashSet<string>? visiting = null)
+    {
+        if (value.Kind is "bool" or "builtin" or "enum") return true;
+        if (value.Kind == "scalar") return value.Cpp != "void";
+        if (value.Kind != "record" || value.Declaration is not CppType declaration || declaration.BaseName.Length != 0) return false;
+        visiting ??= [];
+        if (!visiting.Add(value.Cpp)) return false;
+        bool supported = declaration.Members.Any(member => !member.IsMethod && !member.IsStatic)
+            && !declaration.Members.Any(member => member.IsVirtual)
+            && declaration.Members.Where(member => !member.IsMethod && !member.IsStatic).All(member =>
+                member.Access == "public" && !member.IgnoreBinding && !member.FixedArray
+                && IsBufferElement(Resolve(member.Type, declaration), visiting));
+        visiting.Remove(value.Cpp);
+        return supported;
+    }
+
     private BindingValue Remember(BindingValue value) { Values.TryAdd(value.Cpp, value); return value; }
 }

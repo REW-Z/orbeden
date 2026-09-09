@@ -367,7 +367,7 @@ public:
     ORBEDEN_BIND_IGNORE
     static bool EndModuleTypeRegistration(bool commit);
 
-    //在无存活实例时注销指定动态模块的全部类型和元数据。
+    //在无存活实例且无外部派生类型时注销指定模块的全部类型和元数据。
     ORBEDEN_BIND_IGNORE
     static bool UnregisterModuleTypes(void* moduleOwner);
 

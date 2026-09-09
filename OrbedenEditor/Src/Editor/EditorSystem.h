@@ -124,6 +124,9 @@ public:
     //获取 Player 目标平台显示名
     const char* GetPlayerTargetPlatformName(int32 index) const;
 
+    //判断 Player 目标平台当前是否可用（未接通的平台在打包界面置灰）
+    bool IsPlayerTargetPlatformAvailable(int32 index) const;
+
     //设置当前 Player 目标平台
     void SetSelectedPlayerTargetPlatformIndex(int32 index);
 

@@ -84,3 +84,19 @@
 ## 剩余工作
 
 仅剩 Editor 内的 Inspector 菜单/默认字段/依赖检查手验，以及 Editor Build Player 在 VS2026 更新后的发布路径复核。本文档随验收推进同步更新。
+
+## 后续 review 打磨（不涉及项目打包）
+
+针对 review 发现的问题，本轮只调整生成器和模块卸载逻辑：
+
+- Object::UnregisterModuleTypes 在任何注销操作前检查其他模块的完整基类链。即使没有实例，只要外部派生类型仍注册，也拒绝卸载其基类模块；NativeGameModule 的错误提示同步说明依赖原因。
+- 固定数组检查递归进入导出的值结构，报出实际所属结构及字段，不再生成将数组当标量赋值的非法代码。
+- 普通值结构可作为 Span 缓冲元素：按字段编码、在原生侧还原到临时数组，不共享 C++/C# 结构内存布局。包含字符串/对象引用/隐藏字段等非支持元素仍明确拒绝。
+- 修正枚举、布尔 Span 的固定指针类型，清理生成器可空分析警告。
+
+验证：
+- MetaGenRegression：包含新增嵌套结构缓冲、嵌套固定数组诊断的全部回归通过。
+- 直接编译修改后的 Object.cpp 运行三层跨模块继承测试：提前卸载被拒绝，失败不改变类型表，按派生到基类顺序卸载通过。夹具保留在本地 Tests/BindingRegression/ModuleDependency.cpp。
+- 独立 Binding 真实调用：结构字段、空缓冲、枚举、布尔 Span 均通过，11 次分配/11 次释放；运行入口为 dotnet run --project .tmp/binding-polish/BufferTest.csproj（需 Core/GLFW DLL 搜索路径）。
+- 完整 RunBindingRegression.ps1 本次未通过：在新增缓冲测试之前的 “Transform setters roundtrip and world transform” 断言停止，详情见 .tmp/binding-polish/runtime.log。未将此记录为全套通过，Transform 问题留待单独核查。
+- 未修改或运行用户正在调整的项目打包工程；未重建、发布 Core SDK，模块依赖测试直接编译源码，生成验证写入独立 .tmp 目录。

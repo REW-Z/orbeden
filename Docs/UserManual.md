@@ -7,7 +7,7 @@
 Windows Editor 开发需要：
 
 - .NET 10 SDK，用于编译 C# 脚本。
-- CMake 和 Visual Studio 2022 C++ 工具链，用于编译 C++ 游戏模块。
+- Visual Studio 2022+ 的 MSBuild C++ 工具链，用于编译 C++ 游戏模块（游戏 C++ 代码使用 vcxproj 工程）。
 - 已构建或正式分发的 Orbeden Editor。源码环境第一次使用时，应先构建 `OrbedenCore.vcxproj`，再构建 `OrbedenEditor.vcxproj`。
 
 ## 2. 创建和打开项目
@@ -39,7 +39,7 @@ MyGame/
 ├─ World/           场景、组件及其字段数据
 ├─ Resource/        模型、材质、贴图和 Shader
 ├─ Script/          C# 游戏代码
-├─ Native/          C++ 游戏代码和 CMake 配置
+├─ Native/          C++ 游戏代码和 vcxproj 工程
 ├─ Managed/         C# 开发构建输出
 └─ Aot/             Player 的 C# NativeAOT 构建输出
 ```
@@ -269,7 +269,7 @@ OrbedenGame/Build/windows-x64-clang-cl/bin/OrbedenGame.exe
 
 ### 新项目提示需要编译 Native 脚本
 
-这是 World 硬挂载项目 C++ 组件时的正常首次构建状态。Editor 会自动尝试 MetaGen、编译、加载 DLL 并重载 World；如果自动构建失败，打开 `Views > Build Game` 查看状态，修复 Visual Studio C++、CMake 或 SDK 路径后点击 `Build Game C++`。项目本身仍然保持打开；在启动 World 完整重载前，Save 和构建前保存都不会覆盖磁盘中的 World。
+这是 World 硬挂载项目 C++ 组件时的正常首次构建状态。Editor 会自动尝试 MetaGen、编译、加载 DLL 并重载 World；如果自动构建失败，打开 `Views > Build Game` 查看状态，修复 Visual Studio C++ 或 SDK 路径后点击 `Build Game C++`。项目本身仍然保持打开；在启动 World 完整重载前，Save 和构建前保存都不会覆盖磁盘中的 World。
 
 ### 项目提示内置 Shader 缺失
 

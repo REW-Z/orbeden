@@ -25,18 +25,18 @@ namespace
     {
         const char* displayName;
         const char* scriptName;
-        const char* cmakePreset;
-        const char* cmakeBuildDirectory;
         const char* aotDirectory;
+        bool available = false;
     };
 
+    //目前只有 Windows 走完整发布流程；其余目标保留入口但置灰。
     constexpr std::array<PlayerTargetPlatformInfo, 5> PlayerTargetPlatforms =
     {
-        PlayerTargetPlatformInfo { "Windows x64", "WindowsX64", "player-windows-x64-clang-cl", "windows-x64-clang-cl", "windows-x64" },
-        PlayerTargetPlatformInfo { "Linux x64", "LinuxX64", "player-linux-x64-clang", "linux-x64-clang", "linux-x64-clang" },
-        PlayerTargetPlatformInfo { "Linux x64 GCC", "LinuxX64Gcc", "player-linux-x64-gcc", "linux-x64-gcc", "linux-x64-gcc" },
-        PlayerTargetPlatformInfo { "FreeBSD x64", "FreeBsdX64", "player-freebsd-x64-clang", "freebsd-x64-clang", "freebsd-x64" },
-        PlayerTargetPlatformInfo { "Switch", "Switch", "player-switch", "switch", "switch" },
+        PlayerTargetPlatformInfo { "Windows x64", "WindowsX64", "windows-x64", true },
+        PlayerTargetPlatformInfo { "Linux x64", "LinuxX64", "linux-x64-clang" },
+        PlayerTargetPlatformInfo { "Linux x64 GCC", "LinuxX64Gcc", "linux-x64-gcc" },
+        PlayerTargetPlatformInfo { "FreeBSD x64", "FreeBsdX64", "freebsd-x64" },
+        PlayerTargetPlatformInfo { "Switch", "Switch", "switch" },
     };
 
     enum class ToolbarIcon
@@ -187,11 +187,6 @@ namespace
         return "\"" + value + "\"";
     }
 
-    std::string CMakeDefine(const char* name, const char* type, const std::string& value)
-    {
-        return Quote("-D" + std::string(name) + ":" + type + "=" + value);
-    }
-
     std::string FindFirstCsproj(const std::filesystem::path& directory)
     {
         if (!std::filesystem::is_directory(directory)) return std::string();
@@ -300,40 +295,22 @@ namespace
         return std::filesystem::exists(path) ? ToCleanPath(path) : std::string();
     }
 
-    std::string GetBundledNinjaPath()
+    std::string GetBundledMSBuildPath()
     {
-        std::filesystem::path path = GetVisualStudioRoot() / "Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe";
-        return std::filesystem::exists(path) ? ToCleanPath(path) : std::string();
+        std::filesystem::path path = GetVisualStudioRoot() / "MSBuild/Current/Bin/MSBuild.exe";
+        return std::filesystem::exists(path) ? ToCleanPath(path) : "msbuild";
     }
 
-    std::string GetBundledClangClPath()
+    //判断原生目录是否包含游戏 C++ 工程文件。
+    bool HasNativeVcxProject(const std::string& nativeRoot)
     {
-        const std::array<std::filesystem::path, 3> candidates =
+        if (nativeRoot.empty()) return false;
+        std::error_code error;
+        for (const auto& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(nativeRoot), error))
         {
-            GetVisualStudioRoot() / "VC/Tools/Llvm/bin/clang-cl.exe",
-            GetVisualStudioRoot() / "VC/Tools/Llvm/x64/bin/clang-cl.exe",
-            GetVisualStudioRoot() / "VC/Tools/Llvm/x86/bin/clang-cl.exe",
-        };
-
-        for (const std::filesystem::path& path : candidates)
-        {
-            if (std::filesystem::exists(path))
-            {
-                return ToCleanPath(path);
-            }
+            if (entry.is_regular_file() && entry.path().extension() == ".vcxproj") return true;
         }
-
-        return std::string();
-    }
-
-    std::string GetCMakeCommand()
-    {
-        std::string bundled = GetBundledCMakePath();
-#if defined(_WIN32)
-        return bundled.empty() ? "cmake" : "call " + Quote(bundled);
-#else
-        return bundled.empty() ? "cmake" : Quote(bundled);
-#endif
+        return false;
     }
 
 }
@@ -540,9 +517,9 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         }
         return project.ReloadStartupWorld();
     }
-    if (!std::filesystem::exists(Utf8Path::FromUtf8(nativeRoot) / "CMakeLists.txt"))
+    if (!HasNativeVcxProject(nativeRoot))
     {
-        projectStatus = "Native project is missing CMakeLists.txt: " + nativeRoot;
+        projectStatus = "Native project is missing a .vcxproj: " + nativeRoot;
         Log::Error(projectStatus.c_str());
         return false;
     }
@@ -588,22 +565,31 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     }
 
     std::filesystem::path buildDirectory = Utf8Path::FromUtf8(nativeRoot) / "Build/Editor";
-    std::string cmakeCommand = GetCMakeCommand();
-    std::string coreLibrary = ToCleanPath(Utf8Path::FromUtf8(repositoryRoot)
-        / "OrbedenEditor/Sdk/Native/WindowsX64"
-        / BuildConfiguration
-        / "OrbedenCore.lib");
-    std::string configureCommand = cmakeCommand
-        + " -S " + Quote(nativeRoot)
-        + " -B " + Quote(ToCleanPath(buildDirectory))
-        + " -G \"Visual Studio 17 2022\" -A x64"
-        + " " + CMakeDefine("ORBEDEN_ENGINE_ROOT", "PATH", repositoryRoot)
-        + " " + CMakeDefine("ORBEDEN_CORE_LIB", "FILEPATH", coreLibrary);
+    //定位唯一的游戏 C++ 工程文件，模块名随工程文件名。
+    std::filesystem::path vcxProject;
+    std::error_code scanError;
+    for (const auto& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(nativeRoot), scanError))
+    {
+        if (entry.is_regular_file() && entry.path().extension() == ".vcxproj")
+        {
+            vcxProject = entry.path();
+            break;
+        }
+    }
+    if (vcxProject.empty())
+    {
+        projectStatus = "Native project is missing a .vcxproj: " + nativeRoot;
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    std::string sdkRoot = ToCleanPath(Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk");
+    std::string buildCommand = GetBundledMSBuildPath()
+        + " " + Quote(ToCleanPath(vcxProject))
+        + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
+        + " -p:OrbedenSdkRoot=" + Quote(sdkRoot);
 
     //构建期间继续保留旧 shadow DLL，源输出可以直接覆盖
-    if (!RunCommand(configureCommand, "Configure Game C++")) return false;
-    std::string buildCommand = cmakeCommand + " --build " + Quote(ToCleanPath(buildDirectory))
-        + " --config " + BuildConfiguration;
     if (!RunCommand(buildCommand, "Build Game C++")) return false;
 
     std::string modulePath = ToCleanPath(buildDirectory
@@ -752,6 +738,12 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     const PlayerTargetPlatformInfo& target = GetPlayerTargetPlatformInfo(selectedPlayerTargetPlatform);
+    if (!target.available)
+    {
+        projectStatus = "The selected target platform is not available yet: " + std::string(target.displayName);
+        Log::Error(projectStatus.c_str());
+        return;
+    }
     if (std::strcmp(target.scriptName, "Switch") == 0)
     {
         projectStatus = "Switch Player build requires vendor SDK/RID integration. No DLL fallback was attempted.";
@@ -816,47 +808,32 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string cmakeCommand = GetCMakeCommand();
-    //preset 文件位于仓库根目录，用 -S 指定源目录避免依赖 Editor 启动目录。
-    std::string configureCommand = cmakeCommand + " -S " + Quote(repoRoot)
-        + " --preset " + Quote(target.cmakePreset)
-        + " " + CMakeDefine("CMAKE_BUILD_TYPE", "STRING", BuildConfiguration)
-        + " " + CMakeDefine("ORBEDEN_GAME_AOT_LIB", "FILEPATH", aotLibraryPath)
-        + " " + CMakeDefine("ORBEDEN_PROJECT_DIR", "PATH", project.GetProjectRoot());
-    std::string ninjaPath = GetBundledNinjaPath();
-    if (!ninjaPath.empty())
+    //AOT 共享库与导入库同目录，构建完成后拷贝到 Player 输出目录。
+    std::filesystem::path aotLibrary = Utf8Path::FromUtf8(aotLibraryPath);
+    std::filesystem::path aotDll = aotLibrary;
+    aotDll.replace_extension(".dll");
+
+    std::string playerProject = ToCleanPath(Utf8Path::FromUtf8(repoRoot) / "OrbedenGame/OrbedenGame.vcxproj");
+    if (!std::filesystem::exists(Utf8Path::FromUtf8(playerProject)))
     {
-        configureCommand += " " + CMakeDefine("CMAKE_MAKE_PROGRAM", "FILEPATH", ninjaPath);
-    }
-    if (std::strcmp(target.scriptName, "WindowsX64") == 0)
-    {
-        std::string clangClPath = GetBundledClangClPath();
-        if (!clangClPath.empty())
-        {
-            configureCommand += " " + CMakeDefine("CMAKE_C_COMPILER", "FILEPATH", clangClPath);
-            configureCommand += " " + CMakeDefine("CMAKE_CXX_COMPILER", "FILEPATH", clangClPath);
-        }
-        else
-        {
-            projectStatus = "Build Player failed: clang-cl was not found. Install the 'C++ Clang tools for Windows' Visual Studio component and retry.";
-            Log::Error(projectStatus.c_str());
-            return;
-        }
-    }
-    if (!RunCommand(configureCommand, "Configure Player"))
-    {
-        projectStatus = "Configure Player failed for " + std::string(target.displayName) + ". Check CMake, Ninja, toolchain, and GLFW dependencies.";
+        projectStatus = "Player project was not found: " + playerProject;
+        Log::Error(projectStatus.c_str());
         return;
     }
 
-    std::string buildCommand = cmakeCommand + " -S " + Quote(repoRoot) + " --build --preset " + Quote(target.cmakePreset);
+    std::string buildCommand = GetBundledMSBuildPath()
+        + " " + Quote(playerProject)
+        + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
+        + " -p:OrbedenProjectDir=" + Quote(project.GetProjectRoot())
+        + " -p:OrbedenGameAotLib=" + Quote(aotLibraryPath)
+        + " -p:OrbedenGameAotDll=" + Quote(ToCleanPath(aotDll));
     if (!RunCommand(buildCommand, "Build Player"))
     {
         projectStatus = "Build Player failed for " + std::string(target.displayName) + ".";
         return;
     }
 
-    projectStatus = "Built Player (" + std::string(target.displayName) + "): OrbedenGame/Build/" + target.cmakeBuildDirectory + "/bin/OrbedenGame";
+    projectStatus = "Built Player (" + std::string(target.displayName) + "): OrbedenGame/Build/windows-x64/bin/OrbedenGame";
 }
 
 bool EditorSystem::IsPlaying() const
@@ -919,9 +896,15 @@ const char* EditorSystem::GetPlayerTargetPlatformName(int32 index) const
     return GetPlayerTargetPlatformInfo(index).displayName;
 }
 
+bool EditorSystem::IsPlayerTargetPlatformAvailable(int32 index) const
+{
+    return GetPlayerTargetPlatformInfo(index).available;
+}
+
 void EditorSystem::SetSelectedPlayerTargetPlatformIndex(int32 index)
 {
     if (index < 0 || index >= GetPlayerTargetPlatformCount()) return;
+    if (!IsPlayerTargetPlatformAvailable(index)) return;
 
     selectedPlayerTargetPlatform = index;
 }

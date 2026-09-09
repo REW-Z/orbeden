@@ -124,16 +124,16 @@ internal static class OrbedenAotExports
     {
         std::filesystem::path extension = relativePath.extension();
         if (extension == ".cs" || extension == ".cpp" || extension == ".h"
-            || extension == ".csproj" || extension == ".props" || extension == ".world"
-            || extension == ".oeproj" || extension == ".obj" || extension == ".mtl"
-            || extension == ".orbshader" || extension == ".orbinc")
+            || extension == ".csproj" || extension == ".vcxproj" || extension == ".props"
+            || extension == ".world" || extension == ".oeproj" || extension == ".obj"
+            || extension == ".mtl" || extension == ".orbshader" || extension == ".orbinc")
         {
             return true;
         }
 
-        //无扩展名的文本文件（CMakeLists.txt、.gitignore）。
+        //无扩展名的文本文件（.gitignore）。
         std::string fileName = Utf8Path::ToUtf8(relativePath.filename());
-        return fileName == "CMakeLists.txt" || fileName == ".gitignore";
+        return fileName == ".gitignore";
     }
 
     //模板中文件名随项目名变化的映射。
@@ -142,6 +142,7 @@ internal static class OrbedenAotExports
         std::string fileName = Utf8Path::ToUtf8(relativePath);
         if (fileName == "Project.oeproj") return Utf8Path::FromUtf8(projectName + ".oeproj");
         if (fileName == "Script/Project.csproj") return Utf8Path::FromUtf8("Script/" + projectName + ".csproj");
+        if (fileName == "Native/GameNative.vcxproj") return Utf8Path::FromUtf8("Native/" + projectName + "Native.vcxproj");
         return relativePath;
     }
 }

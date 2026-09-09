@@ -721,6 +721,14 @@ bool Object::UnregisterModuleTypes(void* moduleOwner)
         if (type->HasLiveObjects()) return false;
     }
 
+    //其他模块仍有派生类型时保留基类模块，避免类型链和继承回调悬垂。
+    for (Type* type : runtime.types)
+    {
+        if (!type || type->GetModuleOwner() == moduleOwner) continue;
+        for (Type* base = type->GetBaseType(); base; base = base->GetBaseType())
+            if (base->GetModuleOwner() == moduleOwner) return false;
+    }
+
     //清空各 World 中属于该模块的空组件存储，避免卸载后存储仍引用已卸载的类型。
     for (World* world : runtime.worlds)
     {
