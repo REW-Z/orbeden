@@ -54,17 +54,18 @@ foreach (var classInfo in classes)
         field.Persistent = IsPersistentField(classInfo.Name, field.Name)
             && (!gameModule || field.Access == "public" || field.ExplicitPersistent);
         field.ObjectRefTypeName = GetObjectRefTypeName(field.Type);
-        field.Kind = GetFieldKind(field.Type);
+        field.Kind = field.FixedArray ? null : GetFieldKind(field.Type);
 
         if (field.Persistent && field.Kind is null)
         {
+            string reason = field.FixedArray ? "fixed C arrays are not supported" : $"field type '{field.Type}' is unsupported";
             if (field.ExplicitPersistent)
             {
-                errors.Add($"{classInfo.File}: {classInfo.Name}.{field.Name}: explicitly serialized field type '{field.Type}' is unsupported");
+                errors.Add($"{classInfo.File}:{field.Line}: {classInfo.Name}.{field.Name}: explicitly serialized field: {reason}");
             }
             else
             {
-                Console.Error.WriteLine($"warning: {classInfo.File}: {classInfo.Name}.{field.Name}: public field type '{field.Type}' is unsupported and will be ignored");
+                Console.Error.WriteLine($"warning: {classInfo.File}:{field.Line}: {classInfo.Name}.{field.Name}: public {reason} and will be ignored");
                 field.Persistent = false;
             }
         }
@@ -86,7 +87,7 @@ foreach (ClassInfo classInfo in classes)
 
     foreach (ScriptCallbackInfo callback in classInfo.ScriptCallbacks.Where(value => value.IsVirtual))
     {
-        errors.Add($"{classInfo.File}: {classInfo.Name}.{callback.Name}: C++ script callbacks must not use virtual or override");
+        errors.Add($"{classInfo.File}:{callback.Line}: {classInfo.Name}.{callback.Name}: C++ script callbacks must not use virtual or override");
     }
 }
 
@@ -109,9 +110,16 @@ if (args.Contains("--bindings", StringComparer.Ordinal))
         int index = Array.IndexOf(args, key);
         return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
+    List<string> Imports()
+    {
+        List<string> paths = [];
+        for (int index = 0; index + 1 < args.Length; ++index)
+            if (args[index] == "--import") paths.Add(args[index + 1]);
+        return paths;
+    }
     try
     {
-        BindingModel bindings = new(declarations, Option("--namespace") ?? (gameModule ? "Game.Native" : "Orbeden"), Option("--import"));
+        BindingModel bindings = new(declarations, Option("--namespace") ?? (gameModule ? "Game.Native" : "Orbeden"), Imports());
         bindingModule = bindings.ManagedNamespace.Replace('.', '_');
         BindingTypes bindingTypes = new(bindings);
         foreach (CppType type in bindings.ObjectTypes)
@@ -153,7 +161,7 @@ static IEnumerable<ClassInfo> ParseClasses(List<CppType> declarations, string fi
             if (!member.IsMethod)
             {
                 if (!member.IsStatic)
-                    result.Fields.Add(new FieldInfo { Name = member.Name, Type = NormalizeType(member.Type), Access = member.Access, ExplicitPersistent = member.Serialize, Changed = member.Changed });
+                    result.Fields.Add(new FieldInfo { Name = member.Name, Type = NormalizeType(member.Type), Access = member.Access, ExplicitPersistent = member.Serialize, Changed = member.Changed, Line = member.Line, FixedArray = member.FixedArray });
                 continue;
             }
             bool timed = member.Name is "OnUpdate" or "OnFixedUpdate" or "OnLateUpdate";
@@ -162,7 +170,7 @@ static IEnumerable<ClassInfo> ParseClasses(List<CppType> declarations, string fi
             {
                 bool signature = member.Type == "void" && !member.IsStatic && member.Parameters.Count == (timed ? 1 : 0)
                     && (!timed || member.Parameters[0].Type is "float32" or "float");
-                if (signature) result.ScriptCallbacks.Add(new ScriptCallbackInfo { Name = member.Name, IsVirtual = member.IsVirtual });
+                if (signature) result.ScriptCallbacks.Add(new ScriptCallbackInfo { Name = member.Name, IsVirtual = member.IsVirtual, Line = member.Line });
                 continue;
             }
             if (member.Access != "public" || member.IsStatic || member.IsTemplate) continue;
@@ -586,8 +594,10 @@ sealed class FieldInfo
     public string Type { get; set; } = "";
     public string Access { get; set; } = "";
     public string Changed { get; set; } = "";
+    public int Line { get; set; }
     public bool ExplicitPersistent { get; set; }
     public bool Persistent { get; set; }
+    public bool FixedArray { get; set; }
     public FieldKindInfo? Kind { get; set; }
     public string? ObjectRefTypeName { get; set; }
 }
@@ -596,6 +606,7 @@ sealed class ScriptCallbackInfo
 {
     public string Name { get; set; } = "";
     public bool IsVirtual { get; set; }
+    public int Line { get; set; }
 }
 
 sealed class FieldKindInfo(string cppName)

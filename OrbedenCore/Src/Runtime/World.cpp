@@ -39,6 +39,13 @@ ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
     }
 
     ComponentStorage*& storage = componentStorages[typeRuntimeId];
+    if (storage && storage->GetType() != type)
+    {
+        //模块重载复用类型槽位时旧存储应已在卸载时清空；防御性重建空存储。
+        assert(storage->GetCount() == 0);
+        DELETE(storage);
+    }
+
     if (!storage)
     {
         storage = NEW(ComponentStorage)ComponentStorage(this, type);
@@ -217,9 +224,16 @@ void World::NotifyTransformChanged(EnsId ens)
     }
 }
 
+//创建世界并向对象运行时注册，使模块卸载能清空本世界的空组件存储
+World::World()
+{
+    Object::RegisterWorld(this);
+}
+
 //销毁世界及其运行时对象
 World::~World()
 {
+    Object::UnregisterWorld(this);
     Clear();
 
     if (CurrentWorld() == this)

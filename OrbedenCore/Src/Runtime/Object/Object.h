@@ -371,6 +371,14 @@ public:
     ORBEDEN_BIND_IGNORE
     static bool UnregisterModuleTypes(void* moduleOwner);
 
+    //注册持有组件存储的 World；卸载模块时清空其中该模块的空存储。
+    ORBEDEN_BIND_IGNORE
+    static void RegisterWorld(World* world);
+
+    //注销 World；销毁世界时调用。
+    ORBEDEN_BIND_IGNORE
+    static void UnregisterWorld(World* world);
+
     //查找类型
     ORBEDEN_BIND_IGNORE
     static Type* FindType(TypeRuntimeId typeRuntimeId);

@@ -71,7 +71,7 @@ private:
 public:
     RenderSettings renderSettings;
 
-    World() = default;
+    World();
 
     //销毁世界及其运行时对象
     ~World();

@@ -14,33 +14,47 @@ internal sealed class BindingModel
     internal List<CppType> LocalTypes { get; }
     internal List<CppType> ObjectTypes { get; }
     internal Dictionary<string, CppType> Types { get; } = new(StringComparer.Ordinal);
-    internal HashSet<string> ImportedNames { get; } = new(StringComparer.Ordinal);
+    internal Dictionary<string, string> ImportedNamespaces { get; } = new(StringComparer.Ordinal);
     internal string ManagedNamespace { get; }
-    internal string ImportedNamespace { get; } = "Orbeden";
     internal static readonly HashSet<string> LifecycleNames = new(StringComparer.Ordinal)
     { "OnAttach", "OnDetach", "OnWorldActiveChanged", "OnStart", "OnUpdate", "OnFixedUpdate", "OnLateUpdate", "OnDrawGUI", "OnEnd" };
 
-    /// <summary>合并模块类型清单并解析 Object 继承关系。</summary>
-    internal BindingModel(List<CppType> localTypes, string managedNamespace, string? importPath)
+    /// <summary>合并多个模块清单并解析 Object 继承关系。</summary>
+    internal BindingModel(List<CppType> localTypes, string managedNamespace, List<string>? importPaths)
     {
         LocalTypes = localTypes; ManagedNamespace = managedNamespace;
-        if (importPath != null)
+        foreach (string importPath in importPaths ?? [])
         {
             BindingManifest imported = JsonSerializer.Deserialize<BindingManifest>(File.ReadAllText(importPath)) ?? throw new InvalidDataException("Empty binding manifest");
             if (imported.Version != 1) throw new InvalidDataException("Unsupported binding manifest version");
-            ImportedNamespace = imported.ManagedNamespace;
-            foreach (var type in imported.Types) { Types.Add(type.QualifiedName, type); ImportedNames.Add(type.QualifiedName); }
+            foreach (var type in imported.Types)
+            {
+                if (!Types.TryAdd(type.QualifiedName, type))
+                    throw new InvalidDataException($"duplicate type {type.QualifiedName} in imported manifests");
+                ImportedNamespaces[type.QualifiedName] = imported.ManagedNamespace;
+            }
         }
         foreach (var type in localTypes)
         {
             if (!Types.TryAdd(type.QualifiedName, type))
                 throw new InvalidDataException($"{type.File}:{type.Line}: duplicate type {type.QualifiedName}");
         }
+        foreach (CppType type in localTypes.Where(type => !type.IsObject && type.Kind == "class" && type.BaseName.Length != 0))
+        {
+            if (Resolve(type.BaseName, type) is CppType parent && parent.IsObject)
+                throw new InvalidDataException($"{type.File}:{type.Line}: {type.QualifiedName} derives from Object type '{parent.QualifiedName}' but does not declare OBJECT_TYPE_DECLARE");
+        }
+        foreach (CppType type in localTypes.Where(type => type.IsObject))
+        {
+            CppType? colliding = Types.Values.FirstOrDefault(other => other.IsObject && other.Name == type.Name && other.QualifiedName != type.QualifiedName);
+            if (colliding != null)
+                throw new InvalidDataException($"{type.File}:{type.Line}: {type.QualifiedName}: native type name '{type.Name}' collides with '{colliding.QualifiedName}'; the runtime resolves wrappers by short type name, so rename one of them");
+        }
         ObjectTypes = localTypes.Where(type => type.IsObject).OrderBy(type => Depth(type)).ThenBy(type => type.QualifiedName, StringComparer.Ordinal).ToList();
         foreach (var type in ObjectTypes)
         {
             if (type.Name != "Object" && (Resolve(type.BaseName, type) is not CppType parent || !parent.IsObject))
-                throw new InvalidDataException($"{type.File}:{type.Line}: unresolved Object base '{type.BaseName}'; supply the Core binding manifest");
+                throw new InvalidDataException($"{type.File}:{type.Line}: unresolved Object base '{type.BaseName}'; supply the binding manifest of the module that declares it");
         }
     }
 
@@ -69,10 +83,11 @@ internal sealed class BindingModel
     }
     internal string ManagedName(CppType type)
     {
-        string prefix = ImportedNames.Contains(type.QualifiedName) ? ImportedNamespace : ManagedNamespace;
+        string prefix = ImportedNamespaces.TryGetValue(type.QualifiedName, out string? imported) ? imported : ManagedNamespace;
         string name = type.QualifiedName.StartsWith("Orbeden::", StringComparison.Ordinal) ? type.QualifiedName[9..] : type.QualifiedName;
         return "global::" + prefix + "." + name.Replace("::", ".");
     }
+    internal bool IsImported(CppType type) => ImportedNamespaces.ContainsKey(type.QualifiedName);
     internal IEnumerable<CppMember> ExportedMembers(CppType type) => type.Members.Where(member => member.Access == "public"
         && !member.IgnoreBinding && !member.IsTemplate && !LifecycleNames.Contains(member.Name));
     internal void WriteManifest(string path)

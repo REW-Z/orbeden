@@ -39,6 +39,7 @@ namespace
         std::unordered_map<int32, Object*> objectById;
         List<Object*> orphanObjects;
         List<IObjectDestroyListener*> destroyListeners;
+        List<World*> worlds;
         int32 nextObjectId = 1;
         void* currentModuleOwner = nullptr;
         List<Type*> pendingModuleTypes;
@@ -720,6 +721,18 @@ bool Object::UnregisterModuleTypes(void* moduleOwner)
         if (type->HasLiveObjects()) return false;
     }
 
+    //清空各 World 中属于该模块的空组件存储，避免卸载后存储仍引用已卸载的类型。
+    for (World* world : runtime.worlds)
+    {
+        if (!world) continue;
+        for (ComponentStorage*& storage : world->componentStorages)
+        {
+            if (!storage || !storage->GetType() || storage->GetType()->GetModuleOwner() != moduleOwner) continue;
+            assert(storage->GetCount() == 0);
+            DELETE(storage);
+        }
+    }
+
     for (auto it = ownedTypes.rbegin(); it != ownedTypes.rend(); ++it)
     {
         Type* type = *it;
@@ -734,6 +747,22 @@ bool Object::UnregisterModuleTypes(void* moduleOwner)
         type->moduleOwner = nullptr;
     }
     return true;
+}
+
+//注册持有组件存储的 World
+void Object::RegisterWorld(World* world)
+{
+    if (!world) return;
+    List<World*>& worlds = GetObjectRuntime().worlds;
+    if (std::find(worlds.begin(), worlds.end(), world) == worlds.end()) worlds.push_back(world);
+}
+
+//注销持有组件存储的 World
+void Object::UnregisterWorld(World* world)
+{
+    if (!world) return;
+    List<World*>& worlds = GetObjectRuntime().worlds;
+    worlds.erase(std::remove(worlds.begin(), worlds.end(), world), worlds.end());
 }
 
 //查找类型

@@ -22,6 +22,7 @@ internal sealed class CppMember
     public string Setter { get; set; } = "";
     public string Buffer { get; set; } = "";
     public string Count { get; set; } = "";
+    public bool FixedArray { get; set; }
     public List<CppParameter> Parameters { get; set; } = [];
 }
 internal sealed class CppType
@@ -270,6 +271,13 @@ internal static class CppDeclarations
         {
             int initializer = declaration.FindIndex(value => value.Text is "=" or "{");
             var signature = initializer < 0 ? declaration : declaration[..initializer];
+            int subscript = signature.FindIndex(value => value.Text == "[");
+            member.FixedArray = subscript >= 0;
+            if (member.FixedArray)
+            {
+                if (subscript <= 0) return null;
+                signature = signature[..subscript];
+            }
             if (signature.Count < 2) return null;
             member.Name = signature[^1].Text;
             member.Type = Join(signature.Take(signature.Count - 1).Where(value => value.Text is not ("static" or "mutable" or "constexpr" or "inline")).ToList());
