@@ -28,9 +28,9 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     /// <summary>按资源 Key 加载一个强类型资源包装。</summary>
     public Orbeden.Object? Load(Type objectType, string resourceKey)
     {
-        if (objectType == typeof(Mesh)) return Mesh.Load(resourceKey);
-        if (objectType == typeof(Material)) return Material.Load(resourceKey);
-        if (objectType == typeof(Shader)) return Shader.Load(resourceKey);
+        if (objectType == typeof(Mesh)) return Resources.Load<Mesh>(resourceKey);
+        if (objectType == typeof(Material)) return Resources.Load<Material>(resourceKey);
+        if (objectType == typeof(Shader)) return Resources.Load<Shader>(resourceKey);
         return null;
     }
 

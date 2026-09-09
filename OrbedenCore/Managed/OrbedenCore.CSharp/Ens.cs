@@ -78,71 +78,8 @@ public sealed partial class Ens : IEquatable<Ens>
         return DestroyEns(Id);
     }
 
-    /// <summary>变换组件。</summary>
-    public TransformComponent Transform => TransformComponent.FromNative(this, GetTransformComponent(Id))!;
-
-    /// <summary>判断是否拥有 TransformComponent。</summary>
-    public bool HasTransformComponent => NativeHasTransformComponent(Id);
-
-    /// <summary>判断是否拥有 StaticMeshRenderer。</summary>
-    public bool HasStaticMeshRenderer => NativeHasStaticMeshRenderer(Id);
-
-    /// <summary>判断是否拥有 RigidBody。</summary>
-    public bool HasRigidBody => HasComponent<RigidBody>();
-
-    /// <summary>判断是否拥有任意 Collider。</summary>
-    public bool HasCollider => GetComponents<Collider>().Length != 0;
-
-    /// <summary>判断是否拥有 CharacterController。</summary>
-    public bool HasCharacterController => HasComponent<CharacterController>();
-
-    /// <summary>添加静态网格渲染组件。</summary>
-    public StaticMeshRenderer? AddStaticMeshRenderer()
-    {
-        return AddComponent<StaticMeshRenderer>();
-    }
-
-    /// <summary>添加刚体组件。</summary>
-    public RigidBody? AddRigidBody()
-    {
-        return AddComponent<RigidBody>();
-    }
-
-    /// <summary>添加盒形碰撞体组件。</summary>
-    public BoxCollider? AddBoxCollider()
-    {
-        return AddComponent<BoxCollider>();
-    }
-
-    /// <summary>添加球形碰撞体组件。</summary>
-    public SphereCollider? AddSphereCollider()
-    {
-        return AddComponent<SphereCollider>();
-    }
-
-    /// <summary>添加胶囊碰撞体组件。</summary>
-    public CapsuleCollider? AddCapsuleCollider()
-    {
-        return AddComponent<CapsuleCollider>();
-    }
-
-    /// <summary>添加凸包网格碰撞体组件。</summary>
-    public ConvexMeshCollider? AddConvexMeshCollider()
-    {
-        return AddComponent<ConvexMeshCollider>();
-    }
-
-    /// <summary>添加三角网格碰撞体组件。</summary>
-    public TriangleMeshCollider? AddTriangleMeshCollider()
-    {
-        return AddComponent<TriangleMeshCollider>();
-    }
-
-    /// <summary>添加角色控制器组件。</summary>
-    public CharacterController? AddCharacterController()
-    {
-        return AddComponent<CharacterController>();
-    }
+    /// <summary>取得已有的变换组件包装。</summary>
+    public TransformComponent Transform => GetComponent<TransformComponent>()!;
 
     /// <summary>添加组件，并自动补齐其依赖。</summary>
     public T? AddComponent<T>() where T : Component
@@ -185,8 +122,9 @@ public sealed partial class Ens : IEquatable<Ens>
     }
 
     /// <summary>按脚本类型获取可反射读写和调用的 C# 脚本。</summary>
-    public ComponentProxy? GetManagedComponent<T>(int occurrence = 0) where T : ScriptBehaviour
+    public ComponentProxy? GetManagedComponent<T>(int occurrence = 0) where T : Script
     {
+        if (!NativeBindingRuntime.IsManagedScript(typeof(T))) throw new ArgumentException("The requested type is a native Script binding.");
         string? fullName = typeof(T).FullName;
         return string.IsNullOrEmpty(fullName) ? null : GetManagedComponent(fullName, occurrence);
     }
@@ -198,46 +136,8 @@ public sealed partial class Ens : IEquatable<Ens>
         return component != null;
     }
 
-    //收集原生组件包装
-    private List<Component> GetNativeComponents(Type requestedType)
-    {
-        List<Component> result = [];
-        if (requestedType.IsAssignableFrom(typeof(TransformComponent)) && HasTransformComponent)
-        {
-            TransformComponent? transform = TransformComponent.FromNative(this, GetTransformComponent(Id));
-            if (transform != null) result.Add(transform);
-        }
-
-        if (requestedType.IsAssignableFrom(typeof(StaticMeshRenderer)) && HasStaticMeshRenderer)
-        {
-            StaticMeshRenderer? renderer = StaticMeshRenderer.FromNative(this, GetStaticMeshRenderer(Id));
-            if (renderer != null) result.Add(renderer);
-        }
-
-        if (requestedType.IsAssignableFrom(typeof(RigidBody)) && RigidBody.HasComponent(Id))
-        {
-            RigidBody? body = RigidBody.FromNative(this, RigidBody.GetComponent(Id));
-            if (body != null) result.Add(body);
-        }
-
-        foreach (Collider collider in Collider.GetComponents(this))
-        {
-            if (requestedType.IsAssignableFrom(collider.GetType())) result.Add(collider);
-        }
-
-        if (requestedType.IsAssignableFrom(typeof(CharacterController)) && CharacterController.HasComponent(Id))
-        {
-            CharacterController? controller = CharacterController.FromNative(this, CharacterController.GetComponent(Id));
-            if (controller != null) result.Add(controller);
-        }
-
-        foreach (ScriptBehaviour script in ScriptRuntimeRegistry.GetScripts(Id))
-        {
-            if (requestedType.IsAssignableFrom(script.GetType())) result.Add(script);
-        }
-
-        return result;
-    }
+    //按实际原生类型枚举，并合并托管宿主的具体包装。
+    private List<Component> GetNativeComponents(Type requestedType) => NativeBindingRuntime.GetComponents(Id, requestedType);
 
     //验证组件依赖图并生成创建顺序
     private static void BuildComponentAddOrder(Type componentType, HashSet<Type> visiting, HashSet<Type> visited, List<Type> order)
@@ -306,37 +206,15 @@ public sealed partial class Ens : IEquatable<Ens>
         return components.Count != 0 ? components[0] : null;
     }
 
-    //判断类型是否具有原生工厂
-    private static bool HasNativeFactory(Type componentType)
-    {
-        return typeof(ScriptBehaviour).IsAssignableFrom(componentType) ||
-               componentType == typeof(TransformComponent) ||
-               componentType == typeof(StaticMeshRenderer) ||
-               componentType == typeof(RigidBody) ||
-               componentType == typeof(BoxCollider) ||
-               componentType == typeof(SphereCollider) ||
-               componentType == typeof(CapsuleCollider) ||
-               componentType == typeof(ConvexMeshCollider) ||
-               componentType == typeof(TriangleMeshCollider) ||
-               componentType == typeof(CharacterController);
-    }
+    //生成类型与手写托管脚本使用不同的工厂。
+    private static bool HasNativeFactory(Type componentType) => NativeBindingRuntime.IsNativeType(componentType) || NativeBindingRuntime.IsManagedScript(componentType);
 
-    //创建一个原生组件实例
     private Component? CreateNativeComponent(Type componentType)
     {
-        if (typeof(ScriptBehaviour).IsAssignableFrom(componentType)) return ScriptRuntime.AddManagedScript(Id, componentType);
-        if (componentType == typeof(TransformComponent)) return Transform;
-        if (componentType == typeof(StaticMeshRenderer)) return StaticMeshRenderer.FromNative(this, AddStaticMeshRenderer(Id));
-        if (componentType == typeof(RigidBody)) return RigidBody.FromNative(this, RigidBody.AddComponent(Id));
-        if (componentType == typeof(BoxCollider)) return Collider.AddBoxCollider(this);
-        if (componentType == typeof(SphereCollider)) return Collider.AddSphereCollider(this);
-        if (componentType == typeof(CapsuleCollider)) return Collider.AddCapsuleCollider(this);
-        if (componentType == typeof(ConvexMeshCollider)) return Collider.AddConvexMeshCollider(this);
-        if (componentType == typeof(TriangleMeshCollider)) return Collider.AddTriangleMeshCollider(this);
-        if (componentType == typeof(CharacterController)) return CharacterController.FromNative(this, CharacterController.AddComponent(Id));
-        return null;
+        return NativeBindingRuntime.IsManagedScript(componentType)
+            ? ScriptRuntime.AddManagedScript(Id, componentType)
+            : NativeBindingRuntime.AddComponent(Id, componentType);
     }
-
     /// <summary>判断两个 Ens 是否相同。</summary>
     public bool Equals(Ens? other)
     {
@@ -366,11 +244,6 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetLocalActive;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
-    public delegate* unmanaged[Cdecl]<EnsId, byte> HasTransformComponent;
-    public delegate* unmanaged[Cdecl]<EnsId, byte> HasStaticMeshRenderer;
-    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> AddStaticMeshRenderer;
-    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetTransformComponent;
-    public delegate* unmanaged[Cdecl]<EnsId, IntPtr> GetStaticMeshRenderer;
 }
 #pragma warning restore CS0649
 
@@ -459,35 +332,6 @@ public sealed unsafe partial class Ens
         }
     }
 
-    //判断 Ens 是否拥有 TransformComponent
-    internal static bool NativeHasTransformComponent(EnsId ens)
-    {
-        return ensApiInitialized && ensApi.HasTransformComponent != null && ensApi.HasTransformComponent(ens) != 0;
-    }
-
-    //判断 Ens 是否拥有 StaticMeshRenderer
-    internal static bool NativeHasStaticMeshRenderer(EnsId ens)
-    {
-        return ensApiInitialized && ensApi.HasStaticMeshRenderer != null && ensApi.HasStaticMeshRenderer(ens) != 0;
-    }
-
-    //添加 StaticMeshRenderer
-    internal static IntPtr AddStaticMeshRenderer(EnsId ens)
-    {
-        return ensApiInitialized && ensApi.AddStaticMeshRenderer != null ? ensApi.AddStaticMeshRenderer(ens) : IntPtr.Zero;
-    }
-
-    //获取 TransformComponent 指针
-    internal static IntPtr GetTransformComponent(EnsId ens)
-    {
-        return ensApiInitialized && ensApi.GetTransformComponent != null ? ensApi.GetTransformComponent(ens) : IntPtr.Zero;
-    }
-
-    //获取 StaticMeshRenderer 指针
-    internal static IntPtr GetStaticMeshRenderer(EnsId ens)
-    {
-        return ensApiInitialized && ensApi.GetStaticMeshRenderer != null ? ensApi.GetStaticMeshRenderer(ens) : IntPtr.Zero;
-    }
 }
 
 public sealed unsafe partial class Ens

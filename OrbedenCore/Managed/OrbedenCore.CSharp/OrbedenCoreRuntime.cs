@@ -7,42 +7,32 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct OrbedenEngineNativeApi
 {
+    public uint AbiVersion;
+    public uint StructSize;
     public WorldBindApi World;
     public PathDefinesBindApi PathDefines;
     public EnsBindApi Ens;
-    public TransformComponentBindApi TransformComponent;
-    public StaticMeshRendererBindApi StaticMeshRenderer;
     public ObjectBindApi Object;
-    public MeshBindApi Mesh;
-    public MaterialBindApi Material;
-    public ShaderBindApi Shader;
-    public RigidBodyBindApi RigidBody;
-    public ColliderBindApi Collider;
-    public CharacterControllerBindApi CharacterController;
     public ObjectExtensionBindApi ObjectExtension;
+    public NativeBindingsApi Bindings;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct OrbedenNativeApi
 {
+    public uint AbiVersion;
+    public uint StructSize;
     public RuntimeGuiApi Gui;
     public WorldBindApi World;
     public PathDefinesBindApi PathDefines;
     public EnsBindApi Ens;
-    public TransformComponentBindApi TransformComponent;
-    public StaticMeshRendererBindApi StaticMeshRenderer;
     public ObjectBindApi Object;
-    public MeshBindApi Mesh;
-    public MaterialBindApi Material;
-    public ShaderBindApi Shader;
-    public RigidBodyBindApi RigidBody;
-    public ColliderBindApi Collider;
-    public CharacterControllerBindApi CharacterController;
     public RuntimeGuiExtensionApi GuiExtension;
     public RuntimeGuiAdvancedApi GuiAdvanced;
     public ObjectExtensionBindApi ObjectExtension;
+    public NativeBindingsApi Bindings;
     public NativeScriptInteropApi ScriptInterop;
-    public ScriptBehaviourBindApi ScriptBehaviour;
+    public ScriptBindApi Script;
     public RuntimeGuiDrawApi GuiDraw;
 }
 #pragma warning restore CS0649
@@ -61,16 +51,17 @@ public static unsafe class OrbedenCoreRuntime
         {
             InitializeEngineBindings(default(OrbedenNativeApi));
             ScriptInteropDispatch.Initialize(default);
-            ScriptBehaviour.InitializeNativeApi(default);
+            Script.InitializeNativeApi(default);
             GUI.InitializeNativeApi(default, default, default);
             GUI.InitializeDrawApi(default);
             return;
         }
 
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi));
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         InitializeEngineBindings(api);
         ScriptInteropDispatch.Initialize(api.ScriptInterop);
-        ScriptBehaviour.InitializeNativeApi(api.ScriptBehaviour);
+        Script.InitializeNativeApi(api.Script);
         GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
         GUI.InitializeDrawApi(api.GuiDraw);
     }
@@ -85,18 +76,12 @@ public static unsafe class OrbedenCoreRuntime
             Ens.InitializeWorldNativeApi(default);
             PathDefines.InitializeNativeApi(default);
             Ens.InitializeEnsNativeApi(default);
-            TransformComponent.InitializeNativeApi(default);
-            StaticMeshRenderer.InitializeNativeApi(default);
             Object.InitializeNativeApi(default, default);
-            Mesh.InitializeNativeApi(default);
-            Material.InitializeNativeApi(default);
-            Shader.InitializeNativeApi(default);
-            RigidBody.InitializeNativeApi(default);
-            Collider.InitializeNativeApi(default);
-            CharacterController.InitializeNativeApi(default);
+            NativeBindingRuntime.Initialize(default);
             return;
         }
 
+        ValidateNativeApiHeader(nativeApi, sizeof(OrbedenEngineNativeApi));
         OrbedenEngineNativeApi api = *(OrbedenEngineNativeApi*)nativeApi;
         InitializeEngineBindings(api);
     }
@@ -107,15 +92,8 @@ public static unsafe class OrbedenCoreRuntime
         Ens.InitializeWorldNativeApi(api.World);
         PathDefines.InitializeNativeApi(api.PathDefines);
         Ens.InitializeEnsNativeApi(api.Ens);
-        TransformComponent.InitializeNativeApi(api.TransformComponent);
-        StaticMeshRenderer.InitializeNativeApi(api.StaticMeshRenderer);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
-        Mesh.InitializeNativeApi(api.Mesh);
-        Material.InitializeNativeApi(api.Material);
-        Shader.InitializeNativeApi(api.Shader);
-        RigidBody.InitializeNativeApi(api.RigidBody);
-        Collider.InitializeNativeApi(api.Collider);
-        CharacterController.InitializeNativeApi(api.CharacterController);
+        NativeBindingRuntime.Initialize(api.Bindings);
     }
 
     /// <summary>初始化 Game 使用的引擎对象和组件绑定。</summary>
@@ -124,15 +102,16 @@ public static unsafe class OrbedenCoreRuntime
         Ens.InitializeWorldNativeApi(api.World);
         PathDefines.InitializeNativeApi(api.PathDefines);
         Ens.InitializeEnsNativeApi(api.Ens);
-        TransformComponent.InitializeNativeApi(api.TransformComponent);
-        StaticMeshRenderer.InitializeNativeApi(api.StaticMeshRenderer);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
-        Mesh.InitializeNativeApi(api.Mesh);
-        Material.InitializeNativeApi(api.Material);
-        Shader.InitializeNativeApi(api.Shader);
-        RigidBody.InitializeNativeApi(api.RigidBody);
-        Collider.InitializeNativeApi(api.Collider);
-        CharacterController.InitializeNativeApi(api.CharacterController);
+        NativeBindingRuntime.Initialize(api.Bindings);
+    }
+
+    /// <summary>读取函数表前拒绝旧 ABI 或不同尺寸的引擎模块。</summary>
+    private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize)
+    {
+        uint* header = (uint*)pointer;
+        if (header[0] != 2 || header[1] != expectedSize)
+            throw new TypeLoadException("Native API version or layout mismatch. Rebuild Core, Editor and game modules together.");
     }
 
     //在读取 C++ 函数表前验证托管 ABI 的固定尺寸。
@@ -140,34 +119,29 @@ public static unsafe class OrbedenCoreRuntime
     {
         if (nativeAbiValidated) return;
 
+        ValidateSize<NativeBindingSlice>(nameof(NativeBindingSlice), IntPtr.Size == 8 ? 16 : 8);
+        ValidateSize<NativeBindingBuffer>(nameof(NativeBindingBuffer), IntPtr.Size == 8 ? 16 : 8);
         ValidateSize<EnsId>(nameof(EnsId), 8);
         ValidateSize<vector2>(nameof(vector2), 8);
         ValidateSize<vector3>(nameof(vector3), 12);
         ValidateSize<quaternion>(nameof(quaternion), 16);
-        ValidateSize<color4>(nameof(color4), 16);
+        ValidateSize<color>(nameof(color), 16);
 
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 4);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
-        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 11);
-        ValidateFunctionTable<TransformComponentBindApi>(nameof(TransformComponentBindApi), 10);
-        ValidateFunctionTable<StaticMeshRendererBindApi>(nameof(StaticMeshRendererBindApi), 10);
+        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 6);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 6);
+        ValidateFunctionTable<NativeBindingsApi>(nameof(NativeBindingsApi), 10);
         ValidateFunctionTable<ObjectExtensionBindApi>(nameof(ObjectExtensionBindApi), 1);
-        ValidateFunctionTable<MeshBindApi>(nameof(MeshBindApi), 28);
-        ValidateFunctionTable<MaterialBindApi>(nameof(MaterialBindApi), 20);
-        ValidateFunctionTable<ShaderBindApi>(nameof(ShaderBindApi), 27);
-        ValidateFunctionTable<RigidBodyBindApi>(nameof(RigidBodyBindApi), 26);
-        ValidateFunctionTable<ColliderBindApi>(nameof(ColliderBindApi), 32);
-        ValidateFunctionTable<CharacterControllerBindApi>(nameof(CharacterControllerBindApi), 25);
         ValidateFunctionTable<RuntimeGuiApi>(nameof(RuntimeGuiApi), 11);
         ValidateFunctionTable<RuntimeGuiExtensionApi>(nameof(RuntimeGuiExtensionApi), 4);
         ValidateFunctionTable<RuntimeGuiAdvancedApi>(nameof(RuntimeGuiAdvancedApi), 17);
         ValidateFunctionTable<RuntimeGuiDrawApi>(nameof(RuntimeGuiDrawApi), 15);
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
-        ValidateFunctionTable<ScriptBehaviourBindApi>(nameof(ScriptBehaviourBindApi), 16);
-        ValidateFunctionTable<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 202);
-        ValidateFunctionTable<OrbedenNativeApi>(nameof(OrbedenNativeApi), 274);
+        ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 16);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 29 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 101 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

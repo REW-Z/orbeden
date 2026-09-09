@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <OrbedenSdkRoot Condition="'$(OrbedenSdkRoot)' == '' and Exists('$(MSBuildThisFileDirectory)OrbedenSdk.path')">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)OrbedenSdk.path').Trim())</OrbedenSdkRoot>
+    <OrbedenNativeSource>$(MSBuildProjectDirectory)/../Native</OrbedenNativeSource>
+    <OrbedenBindingOutput>$(OrbedenNativeSource)/Generated</OrbedenBindingOutput>
+    <OrbedenBindingNamespace>$(RootNamespace).Native</OrbedenBindingNamespace>
+  </PropertyGroup>
+  <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="Exists('$(OrbedenNativeSource)/CMakeLists.txt')">
+    <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Rebuild Core and refresh the game project in Editor." />
+    <Exec Command="dotnet &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll&quot; &quot;$(OrbedenNativeSource)&quot; &quot;$(OrbedenBindingOutput)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)/Native/Bindings.Manifest.json&quot;" />
+    <ItemGroup>
+      <Compile Include="$(OrbedenBindingOutput)/Bindings.Generated.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -10,7 +10,7 @@
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Reflection.h"
 
-class ScriptBehaviour;
+class Script;
 class World;
 
 namespace ScriptInterop
@@ -167,16 +167,16 @@ namespace ScriptInterop
     InteropStatus RegisterManagedApi(const ManagedScriptInteropApi* api);
 
     //通知托管域创建或配置了一个可运行的原生宿主。
-    void NotifyManagedHostAttached(ScriptBehaviour* host);
+    void NotifyManagedHostAttached(Script* host);
 
     //通知托管域一个原生宿主即将销毁。
-    void NotifyManagedHostDetached(ScriptBehaviour* host);
+    void NotifyManagedHostDetached(Script* host);
 
     //通知托管域宿主 enabled 已变化。
-    void NotifyManagedHostEnabledChanged(ScriptBehaviour* host);
+    void NotifyManagedHostEnabledChanged(Script* host);
 
     //通知托管域宿主序列化字段已变化。
-    bool NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName);
+    bool NotifyManagedHostFieldChanged(Script* host, std::string_view fieldName);
 }
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 11);

@@ -95,7 +95,7 @@ public struct quaternion
 
 /// <summary>线性颜色，布局需要与 C++ 托管桥接结构一致。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
-public struct color4
+public struct color
 {
     public float r;
     public float g;
@@ -103,7 +103,7 @@ public struct color4
     public float a;
 
     /// <summary>创建线性颜色。</summary>
-    public color4(float r, float g, float b, float a = 1.0f)
+    public color(float r, float g, float b, float a = 1.0f)
     {
         this.r = r;
         this.g = g;

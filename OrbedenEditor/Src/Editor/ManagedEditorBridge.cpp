@@ -13,7 +13,7 @@
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Object/TransformComponent.h"
 #include "Runtime/ResourceManager.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
@@ -251,7 +251,7 @@ namespace
             const List<Reflection::FieldInfo>& fields = type->GetFields();
             type->ForEachLiveObject([&](Object* object)
             {
-                ScriptBehaviour* host = object->Cast<ScriptBehaviour>();
+                Script* host = object->Cast<Script>();
                 if (host && host->IsManagedHost())
                 {
                     List<ManagedScriptField> stored = host->GetManagedFields();
@@ -300,15 +300,15 @@ namespace
             { return !field || !field->persistent || !field->getter || !field->setter; }), fields.end());
         return fields;
     }
-    //把精确 ScriptBehaviour 识别为 C# 脚本宿主。
-    ScriptBehaviour* AsManagedScriptHost(Component* component)
+    //把精确 Script 识别为 C# 脚本宿主。
+    Script* AsManagedScriptHost(Component* component)
     {
-        ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
+        Script* script = component ? component->Cast<Script>() : nullptr;
         return script && script->IsManagedHost() ? script : nullptr;
     }
 
     //收集允许在 Inspector 显示的 C# 动态字段。
-    List<const ManagedScriptField*> GetManagedScriptFields(ScriptBehaviour* host)
+    List<const ManagedScriptField*> GetManagedScriptFields(Script* host)
     {
         List<const ManagedScriptField*> fields;
         if (!host) return fields;
@@ -340,7 +340,7 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentTypeName(void* context, int32 objectId, uint8* buffer, int32 bufferSize)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         if (host)
         {
             const std::string& typeName = host->GetManagedTypeName();
@@ -357,7 +357,7 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldCount(void* context, int32 objectId)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         if (host) return 1 + static_cast<int32>(GetManagedScriptFields(host).size());
         return static_cast<int32>(GetEditorComponentFields(component).size());
     }
@@ -365,7 +365,7 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldName(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         if (host)
         {
             if (fieldIndex == 0) return CopyUtf8("enabled", buffer, bufferSize);
@@ -383,7 +383,7 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         if (host)
         {
             if (fieldIndex == 0) return static_cast<int32>(Reflection::FieldKind::Bool);
@@ -402,7 +402,7 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldValue(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         if (host)
         {
             if (fieldIndex == 0) return CopyUtf8(host->GetEnabled() ? "true" : "false", buffer, bufferSize);
@@ -424,7 +424,7 @@ namespace
         int32 valueLength)
     {
         Component* component = FindEditorComponent(context, objectId);
-        ScriptBehaviour* host = AsManagedScriptHost(component);
+        Script* host = AsManagedScriptHost(component);
         std::string valueText = ReadUtf8(value, valueLength);
         if (host)
         {
@@ -457,13 +457,13 @@ namespace
         int32 valueLength,
         uint8 inspectorVisible)
     {
-        ScriptBehaviour* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
+        Script* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
         if (!host) return 0;
         std::string fieldType = ReadUtf8(typeName, typeNameLength);
         return host->SetManagedField(
             ReadUtf8(name, nameLength),
             fieldType,
-            ScriptBehaviour::GetManagedFieldKind(fieldType),
+            Script::GetManagedFieldKind(fieldType),
             ReadUtf8(value, valueLength),
             inspectorVisible != 0) ? 1 : 0;
     }
@@ -475,7 +475,7 @@ namespace
         for (TypeRuntimeId typeRuntimeId = 0; typeRuntimeId < Object::GetTypeCount(); ++typeRuntimeId)
         {
             Type* type = Object::FindType(typeRuntimeId);
-            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType() || type == ScriptBehaviour::StaticType()) continue;
+            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType() || type == Script::StaticType()) continue;
             if (type->Is(Component::StaticType()) && type->CanCreateObject()) types.push_back(type);
         }
         return types;
@@ -507,15 +507,15 @@ namespace
         std::string requestedType = ReadUtf8(typeName, typeNameLength);
         Type* type = Object::FindType(requestedType);
         Component* component = nullptr;
-        if (!isManaged && type && type != ScriptBehaviour::StaticType()
+        if (!isManaged && type && type != Script::StaticType()
             && type->Is(Component::StaticType()) && type->CanCreateObject())
         {
             component = ens->AddComponentInstance(type);
         }
         else if (isManaged)
         {
-            Component* createdHost = ens->AddComponentInstance(ScriptBehaviour::StaticType());
-            ScriptBehaviour* host = createdHost ? createdHost->Cast<ScriptBehaviour>() : nullptr;
+            Component* createdHost = ens->AddComponentInstance(Script::StaticType());
+            Script* host = createdHost ? createdHost->Cast<Script>() : nullptr;
             if (host && host->SetManagedTypeName(requestedType)) component = host;
             else if (host) ens->RemoveComponent(host);
         }
@@ -545,11 +545,11 @@ namespace
     void* ORBEDEN_NATIVE_CALL GetEditorHostBinding(void* context, int32 objectId, void** pointer)
     {
         if (!pointer) return nullptr;
-        ScriptBehaviour* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
+        Script* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
         *pointer = host;
         if (!host) return nullptr;
-        static ScriptBehaviourBindApi api;
-        api = ScriptBehaviourBindApi::Create(host->GetWorld());
+        static ScriptBindApi api;
+        api = ScriptBindApi::Create(host->GetWorld());
         return &api;
     }
 

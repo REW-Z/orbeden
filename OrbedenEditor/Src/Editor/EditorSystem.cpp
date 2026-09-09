@@ -286,7 +286,7 @@ namespace
             }
         }
 
-        return true;
+        return NewProjectGenerator::SyncBindingBuildFiles(csproj, runtimeDllPath, outError);
     }
 
     std::filesystem::path GetVisualStudioRoot()
@@ -780,6 +780,12 @@ void EditorSystem::RequestBuildPlayer()
     {
         projectStatus = "Build Player project migration failed: " + projectRepairError;
         Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    if (!RefreshLocalRuntimeDllReference(scriptProject, FindRuntimeCSharpDll(), projectRepairError))
+    {
+        projectStatus = "Build Player SDK refresh failed: " + projectRepairError;
         return;
     }
 

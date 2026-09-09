@@ -6,17 +6,17 @@ namespace Orbeden;
 /// <summary>记录当前托管运行态脚本实例，供 Editor CLR Inspector 查询。</summary>
 public static class ScriptRuntimeRegistry
 {
-    private static readonly Dictionary<EnsId, List<ScriptBehaviour>> scriptsByEns = [];
-    private static readonly Dictionary<ScriptBehaviour, ulong> slotsByScript = new(ReferenceEqualityComparer.Instance);
-    private static readonly Dictionary<ulong, ScriptBehaviour> scriptsBySlot = [];
+    private static readonly Dictionary<EnsId, List<Script>> scriptsByEns = [];
+    private static readonly Dictionary<Script, ulong> slotsByScript = new(ReferenceEqualityComparer.Instance);
+    private static readonly Dictionary<ulong, Script> scriptsBySlot = [];
     private static uint generation = 1;
 
     /// <summary>注册脚本实例。</summary>
-    internal static void Register(ScriptBehaviour script)
+    internal static void Register(Script script)
     {
         if (script.EnsId.IsNull) return;
 
-        if (!scriptsByEns.TryGetValue(script.EnsId, out List<ScriptBehaviour>? scripts))
+        if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts))
         {
             scripts = [];
             scriptsByEns.Add(script.EnsId, scripts);
@@ -36,10 +36,10 @@ public static class ScriptRuntimeRegistry
     }
 
     /// <summary>注销脚本实例。</summary>
-    internal static void Unregister(ScriptBehaviour script)
+    internal static void Unregister(Script script)
     {
         if (script.EnsId.IsNull) return;
-        if (!scriptsByEns.TryGetValue(script.EnsId, out List<ScriptBehaviour>? scripts)) return;
+        if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts)) return;
 
         scripts.Remove(script);
         if (scripts.Count == 0)
@@ -59,7 +59,7 @@ public static class ScriptRuntimeRegistry
         if (generation == 0) generation = 1;
     }
 
-    internal static bool TryGetHandle(ScriptBehaviour script, out ComponentHandle handle)
+    internal static bool TryGetHandle(Script script, out ComponentHandle handle)
     {
         if (slotsByScript.TryGetValue(script, out ulong slot))
         {
@@ -70,7 +70,7 @@ public static class ScriptRuntimeRegistry
         return false;
     }
 
-    internal static bool TryResolve(ComponentHandle handle, [NotNullWhen(true)] out ScriptBehaviour? script)
+    internal static bool TryResolve(ComponentHandle handle, [NotNullWhen(true)] out Script? script)
     {
         if (handle.Domain == ComponentDomain.Managed && handle.Generation == generation && scriptsBySlot.TryGetValue(handle.Slot, out script)) return true;
         script = null;
@@ -78,36 +78,36 @@ public static class ScriptRuntimeRegistry
     }
 
     /// <summary>创建具有独立原生组件身份的 C# 脚本。</summary>
-    public static T? AddScript<T>(EnsId ens) where T : ScriptBehaviour
+    public static T? AddScript<T>(EnsId ens) where T : Script
     {
         return ScriptRuntime.AddManagedScript(ens, typeof(T)) as T;
     }
 
     /// <summary>移除 C# 脚本及其原生宿主；已启动实例只执行一次 End。</summary>
-    public static bool RemoveScript(ScriptBehaviour script)
+    public static bool RemoveScript(Script script)
     {
         return ScriptRuntime.RemoveManagedScript(script);
     }
 
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>
-    public static IReadOnlyList<ScriptBehaviour> GetScripts(EnsId ens)
+    public static IReadOnlyList<Script> GetScripts(EnsId ens)
     {
-        if (!scriptsByEns.TryGetValue(ens, out List<ScriptBehaviour>? scripts)) return [];
-        List<ScriptBehaviour> ordered = [];
-        foreach (IntPtr host in ScriptBehaviour.GetManagedHosts())
+        if (!scriptsByEns.TryGetValue(ens, out List<Script>? scripts)) return [];
+        List<Script> ordered = [];
+        foreach (IntPtr host in Script.GetManagedHosts())
         {
             int id = Object.GetInstanceId(host);
-            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out ScriptBehaviour? script) && script.EnsId.Equals(ens))
+            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out Script? script) && script.EnsId.Equals(ens))
                 ordered.Add(script);
         }
         return ordered;
     }
 
     /// <summary>获取当前所有运行态脚本实例快照。</summary>
-    public static IReadOnlyList<ScriptBehaviour> GetAllScripts()
+    public static IReadOnlyList<Script> GetAllScripts()
     {
-        List<ScriptBehaviour> result = [];
-        foreach (List<ScriptBehaviour> scripts in scriptsByEns.Values)
+        List<Script> result = [];
+        foreach (List<Script> scripts in scriptsByEns.Values)
         {
             result.AddRange(scripts);
         }

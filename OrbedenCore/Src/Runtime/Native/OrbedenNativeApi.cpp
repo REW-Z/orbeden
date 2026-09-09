@@ -4,7 +4,7 @@
 #include "Runtime/World.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 #include <algorithm>
 #include <cstring>
@@ -28,21 +28,21 @@ namespace
         return count;
     }
 
-    ScriptBehaviour* ResolveManagedHost(World* world, void* pointer)
+    Script* ResolveManagedHost(World* world, void* pointer)
     {
-        ScriptBehaviour* host = static_cast<ScriptBehaviour*>(pointer);
+        Script* host = static_cast<Script*>(pointer);
         return world && host && host->GetWorld() == world && host->IsManagedHost() ? host : nullptr;
     }
 
-    List<ScriptBehaviour*> CollectManagedHosts(World* world)
+    List<Script*> CollectManagedHosts(World* world)
     {
-        List<ScriptBehaviour*> hosts;
+        List<Script*> hosts;
         if (!world) return hosts;
         world->ForEachEns([&hosts](Ens& ens)
             {
                 for (Component* component : ens.GetComponents())
                 {
-                    ScriptBehaviour* host = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                    Script* host = component ? component->Cast<Script>() : nullptr;
                     if (host && host->IsManagedHost()) hosts.push_back(host);
                 }
             });
@@ -56,7 +56,7 @@ namespace
 
     void* ORBEDEN_NATIVE_CALL GetScriptHostAt(void* context, int32 index)
     {
-        List<ScriptBehaviour*> hosts = CollectManagedHosts(static_cast<World*>(context));
+        List<Script*> hosts = CollectManagedHosts(static_cast<World*>(context));
         return index >= 0 && index < static_cast<int32>(hosts.size()) ? hosts[index] : nullptr;
     }
 
@@ -67,7 +67,7 @@ namespace
         std::string managedTypeName = ReadUtf8(typeName, typeNameLength);
         if (!ens || managedTypeName.empty()) return nullptr;
 
-        ScriptBehaviour* host = ens->AddComponentInstance<ScriptBehaviour>();
+        Script* host = ens->AddComponentInstance<Script>();
         if (!host || !host->SetManagedTypeName(managedTypeName))
         {
             if (host) ens->RemoveComponent(host);
@@ -79,43 +79,43 @@ namespace
     uint8 ORBEDEN_NATIVE_CALL RemoveScriptHost(void* context, void* pointer)
     {
         World* world = static_cast<World*>(context);
-        ScriptBehaviour* host = ResolveManagedHost(world, pointer);
+        Script* host = ResolveManagedHost(world, pointer);
         return host && world->RemoveComponent(host) ? 1 : 0;
     }
 
     EnsId ORBEDEN_NATIVE_CALL GetScriptHostEns(void* context, void* pointer)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         return host ? host->GetEnsId() : EnsId();
     }
 
     int32 ORBEDEN_NATIVE_CALL GetScriptHostTypeName(void* context, void* pointer, uint8* buffer, int32 bufferSize)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         return host ? CopyUtf8(host->GetManagedTypeName(), buffer, bufferSize) : 0;
     }
 
     uint8 ORBEDEN_NATIVE_CALL GetScriptHostEnabled(void* context, void* pointer)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         return host && host->GetEnabled() ? 1 : 0;
     }
 
     void ORBEDEN_NATIVE_CALL SetScriptHostEnabled(void* context, void* pointer, uint8 value)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         if (host) host->SetEnabled(value != 0);
     }
 
     int32 ORBEDEN_NATIVE_CALL GetScriptHostFieldCount(void* context, void* pointer)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         return host ? static_cast<int32>(host->GetManagedFields().size()) : 0;
     }
 
     const ManagedScriptField* GetScriptHostField(void* context, void* pointer, int32 index)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         if (!host || index < 0 || index >= static_cast<int32>(host->GetManagedFields().size())) return nullptr;
         return &host->GetManagedFields()[index];
     }
@@ -154,10 +154,10 @@ namespace
         int32 valueLength,
         uint8 inspectorVisible)
     {
-        ScriptBehaviour* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
         std::string field = ReadUtf8(fieldName, fieldNameLength);
         std::string fieldType = ReadUtf8(typeName, typeNameLength);
-        Reflection::FieldKind kind = ScriptBehaviour::GetManagedFieldKind(fieldType);
+        Reflection::FieldKind kind = Script::GetManagedFieldKind(fieldType);
         return host && host->SetManagedField(field, fieldType, kind, ReadUtf8(value, valueLength), inspectorVisible != 0) ? 1 : 0;
     }
 
@@ -192,7 +192,7 @@ namespace
         else if (name == "RigidBodyComponent") *bindingKind = 6;
         else if (name == "CharacterControllerComponent") *bindingKind = 7;
         else if (name.find("ColliderComponent") != std::string::npos) *bindingKind = 8;
-        else if (name == "ScriptBehaviour") *bindingKind = 9;
+        else if (name == "Script") *bindingKind = 9;
         return object;
     }
 }
@@ -203,22 +203,15 @@ OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
     api.World = WorldBind::Create();
     api.PathDefines = PathDefinesBind::Create();
     api.Ens = EnsBind::Create();
-    api.TransformComponent = TransformComponentBind::Create();
-    api.StaticMeshRenderer = StaticMeshRendererBind::Create();
     api.Object = ObjectBind::Create();
-    api.Mesh = MeshBind::Create();
-    api.Material = MaterialBind::Create();
-    api.Shader = ShaderBind::Create();
-    api.RigidBody = RigidBodyBind::Create();
-    api.Collider = ColliderBind::Create();
-    api.CharacterController = CharacterControllerBind::Create();
     api.ObjectExtension = ObjectExtensionBind::Create();
+    api.Bindings = NativeBindingsApi::Create();
     return api;
 }
 
-ScriptBehaviourBindApi ScriptBehaviourBindApi::Create(World* world)
+ScriptBindApi ScriptBindApi::Create(World* world)
 {
-    ScriptBehaviourBindApi api;
+    ScriptBindApi api;
     api.Context = world;
     api.GetHostCount = reinterpret_cast<void*>(&GetScriptHostCount);
     api.GetHostAt = reinterpret_cast<void*>(&GetScriptHostAt);
@@ -246,20 +239,13 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.World = WorldBind::Create();
     api.PathDefines = PathDefinesBind::Create();
     api.Ens = EnsBind::Create();
-    api.TransformComponent = TransformComponentBind::Create();
-    api.StaticMeshRenderer = StaticMeshRendererBind::Create();
     api.Object = ObjectBind::Create();
-    api.Mesh = MeshBind::Create();
-    api.Material = MaterialBind::Create();
-    api.Shader = ShaderBind::Create();
-    api.RigidBody = RigidBodyBind::Create();
-    api.Collider = ColliderBind::Create();
-    api.CharacterController = CharacterControllerBind::Create();
     api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();
     api.GuiAdvanced = RuntimeGuiBridge::GetAdvancedApi();
     api.ObjectExtension = ObjectExtensionBind::Create();
+    api.Bindings = NativeBindingsApi::Create();
     api.ScriptInterop = ScriptInterop::ScriptInteropApi::Create();
-    api.ScriptBehaviour = ScriptBehaviourBindApi::Create(world);
+    api.Script = ScriptBindApi::Create(world);
     api.GuiDraw = RuntimeGuiBridge::GetDrawApi();
     return api;
 }

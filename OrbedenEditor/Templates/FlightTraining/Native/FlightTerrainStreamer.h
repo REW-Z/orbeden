@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Runtime/EngineTypes.h"
 #include <vector>
 
 class HeightFieldComponent;
 
 //围绕飞机加载连续地形，并通过浮动原点保持物理精度。
-class FlightTerrainStreamer final : public ScriptBehaviour
+class FlightTerrainStreamer final : public Script
 {
     OBJECT_TYPE_DECLARE(FlightTerrainStreamer)
 

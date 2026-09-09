@@ -4,7 +4,7 @@ using Orbeden;
 namespace {{PROJECT_NAME}};
 
 /// <summary>示例托管脚本行为。</summary>
-public sealed class SampleBehaviour : ScriptBehaviour
+public sealed class SampleBehaviour : Script
 {
     [SerializeField]
     private vector3 startPosition;
@@ -25,7 +25,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
     /// <summary>脚本启动时调用。</summary>
     private void OnStart()
     {
-        startPosition = Ens.Transform.localPosition;
+        startPosition = Ens.Transform.GetLocalPosition();
 
         //按名称只解析一次；后续通过 ComponentMethod 调用 C++ public 方法。
         nativeSample = Ens.GetNativeComponent("SampleNativeBehaviour");
@@ -43,7 +43,7 @@ public sealed class SampleBehaviour : ScriptBehaviour
         TransformComponent transform = Ens.Transform;
         vector3 position = startPosition;
         position.y += MathF.Sin(totalTime) * 0.25f;
-        transform.localPosition = position;
+        transform.SetLocalPosition(position);
 
         StaticMeshRenderer? renderer = Ens.GetComponent<StaticMeshRenderer>();
         if (renderer != null)

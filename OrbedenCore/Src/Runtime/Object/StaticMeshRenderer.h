@@ -22,6 +22,7 @@ struct StaticMeshRendererRenderState
 class StaticMeshRenderer : public Component
 {
     OBJECT_TYPE_DECLARE(StaticMeshRenderer)
+    ORBEDEN_COMPONENT_UNIQUE
 
 private:
     friend class RenderScene;

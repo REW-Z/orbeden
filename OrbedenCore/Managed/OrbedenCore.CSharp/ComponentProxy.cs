@@ -120,7 +120,7 @@ public readonly struct InteropValue : IEquatable<InteropValue>
     public static InteropValue From(string? value) => new(InteropValueKind.String, value ?? string.Empty);
     public static InteropValue FromStringId(string? value) => new(InteropValueKind.StringId, value ?? string.Empty);
     public static InteropValue From(vector3 value) => new(InteropValueKind.Vector3, value);
-    public static InteropValue From(color4 value) => new(InteropValueKind.Color, value);
+    public static InteropValue From(color value) => new(InteropValueKind.Color, value);
     public static InteropValue From(quaternion value) => new(InteropValueKind.Quaternion, value);
     public static InteropValue From(EnsId value) => new(InteropValueKind.EnsId, value);
     public static InteropValue FromObject(Object? value) => new(InteropValueKind.Object, value?.InstanceId ?? 0);
@@ -530,7 +530,7 @@ internal static unsafe class InteropAbiConverter
                     if (value.TryGet(out string text)) result.Pin(Encoding.UTF8.GetBytes(text)); else result.Success = false;
                     break;
                 case InteropValueKind.Vector3: if (value.TryGet(out vector3 v)) *(vector3*)payload = v; else result.Success = false; break;
-                case InteropValueKind.Color: if (value.TryGet(out color4 c)) *(color4*)payload = c; else result.Success = false; break;
+                case InteropValueKind.Color: if (value.TryGet(out color c)) *(color*)payload = c; else result.Success = false; break;
                 case InteropValueKind.Quaternion: if (value.TryGet(out quaternion q)) *(quaternion*)payload = q; else result.Success = false; break;
                 case InteropValueKind.EnsId: if (value.TryGet(out EnsId ens)) *(EnsId*)payload = ens; else result.Success = false; break;
                 case InteropValueKind.Object: if (value.TryGet(out int objectId)) *(int*)payload = objectId; else result.Success = false; break;
@@ -557,7 +557,7 @@ internal static unsafe class InteropAbiConverter
                 InteropValueKind.String => InteropValue.From(ReadUtf8(payload)),
                 InteropValueKind.StringId => InteropValue.FromStringId(ReadUtf8(payload)),
                 InteropValueKind.Vector3 => InteropValue.From(*(vector3*)payload),
-                InteropValueKind.Color => InteropValue.From(*(color4*)payload),
+                InteropValueKind.Color => InteropValue.From(*(color*)payload),
                 InteropValueKind.Quaternion => InteropValue.From(*(quaternion*)payload),
                 InteropValueKind.EnsId => InteropValue.From(*(EnsId*)payload),
                 InteropValueKind.Object => InteropValue.FromObjectId(*(int*)payload),

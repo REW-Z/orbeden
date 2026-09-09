@@ -8,6 +8,7 @@
 class TransformComponent : public Component
 {
     OBJECT_TYPE_DECLARE(TransformComponent)
+    ORBEDEN_COMPONENT_UNIQUE
 
 private:
     vector3 localPosition;
@@ -15,19 +16,36 @@ private:
     vector3 localScale = { 1.0f, 1.0f, 1.0f };
 
 public:
+    ORBEDEN_BIND_IGNORE
     EnsId parent;
+    ORBEDEN_BIND_IGNORE
     EnsId firstChild;
+    ORBEDEN_BIND_IGNORE
     EnsId lastChild;
+    ORBEDEN_BIND_IGNORE
     EnsId prev;
+    ORBEDEN_BIND_IGNORE
     EnsId next;
 
+    ORBEDEN_BIND_IGNORE
     matrix4x4 localMatrix;
+    ORBEDEN_BIND_IGNORE
     matrix4x4 worldMatrix;
+    ORBEDEN_BIND_IGNORE
     vector3 worldPosition;
+    ORBEDEN_BIND_IGNORE
     quaternion worldRotation;
 
+    ORBEDEN_BIND_IGNORE
     bool transformCacheInitialized = false;
+    ORBEDEN_BIND_IGNORE
     bool transformDirty = true;
+
+    //读取和修改父级，修改经过 World 层级逻辑。
+    EnsId GetParent() const;
+    void SetParent(EnsId value);
+    vector3 GetWorldPosition() const;
+    quaternion GetWorldRotation() const;
 
     //获取本地位置
     const vector3& GetLocalPosition() const;

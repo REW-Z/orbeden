@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-OBJECT_TYPE_IMPLEMENT(FlightOrbitCamera, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(FlightOrbitCamera, Script)
 
 /// <summary>记录飞机目标，将相机作为独立根节点跟随。</summary>
 void FlightOrbitCamera::OnStart()

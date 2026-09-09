@@ -52,11 +52,17 @@ private:
 
 public:
     std::string name;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexPositions)
     List<vector3> vertices;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexTexcoords)
     List<vector2> texcoords;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexNormals)
     List<vector3> normals;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexTangents)
     List<vector3> tangents;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetIndexData)
     List<uint32> indices;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetSubMeshes)
     List<SubMesh> subMeshes;
 
     //获取按脏标记缓存的本地包围盒
@@ -78,22 +84,30 @@ public:
     void ClearGeometry();
 
     //写入顶点位置
+    ORBEDEN_BIND_BUFFER(data, count)
     bool SetVertexPositions(const vector3* data, int32 count);
 
     //写入顶点法线
+    ORBEDEN_BIND_BUFFER(data, count)
     bool SetVertexNormals(const vector3* data, int32 count);
 
     //写入顶点 UV
+    ORBEDEN_BIND_BUFFER(data, count)
     bool SetVertexTexcoords(const vector2* data, int32 count);
 
     //写入顶点切线
+    ORBEDEN_BIND_BUFFER(data, count)
     bool SetVertexTangents(const vector3* data, int32 count);
 
     //写入索引数据
+    ORBEDEN_BIND_BUFFER(data, count)
     bool SetIndexData(const uint32* data, int32 count);
 
     //调整子网格数量
     bool ResizeSubMeshes(int32 count);
+
+    //替换子网格快照并通知所有数据消费方。
+    bool SetSubMeshes(const List<SubMesh>& value);
 
     //配置子网格
     bool ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount, Material* material);

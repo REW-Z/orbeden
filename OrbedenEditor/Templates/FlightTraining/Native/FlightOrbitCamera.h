@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/EngineTypes.h"
 
 //保持地平线稳定的自由环绕相机，目标为场景中的父级飞机。
-class FlightOrbitCamera final : public ScriptBehaviour
+class FlightOrbitCamera final : public Script
 {
     OBJECT_TYPE_DECLARE(FlightOrbitCamera)
 

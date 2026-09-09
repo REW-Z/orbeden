@@ -64,14 +64,14 @@ Play 模式中的属性修改只影响本次运行。停止 Play 后会重新加
 
 ## 4. 编写 C# 脚本
 
-在 `Script` 目录中创建 `.cs` 文件，并继承 `ScriptBehaviour`：
+在 `Script` 目录中创建 `.cs` 文件，并继承 `Script`：
 
 ```csharp
 using Orbeden;
 
 namespace MyGame;
 
-public sealed class MoveBehaviour : ScriptBehaviour
+public sealed class MoveBehaviour : Script
 {
     public float speed = 2.0f;
 
@@ -109,7 +109,7 @@ OnEnd()
 
 public 字段会进入序列化和 Inspector。private/protected 字段需要添加 `[SerializeField]`。
 
-每个 C# 脚本都绑定一个独立的原生 `ScriptBehaviour` 组件，`InstanceId` 就是宿主的原生 ObjectId。请通过 `ens.AddComponent<MoveBehaviour>()` 创建脚本，不要直接 `new`。构造函数内可以访问 `Ens`、`InstanceId` 和 `enabled`；场景行为应放入 `OnStart`，因为 Editor 添加组件时也会执行构造函数来取得字段默认值。
+每个 C# 脚本都绑定一个独立的原生 `Script` 组件，`InstanceId` 就是宿主的原生 ObjectId。请通过 `ens.AddComponent<MoveBehaviour>()` 创建脚本，不要直接 `new`。构造函数内可以访问 `Ens`、`InstanceId` 和 `enabled`；场景行为应放入 `OnStart`，因为 Editor 添加组件时也会执行构造函数来取得字段默认值。
 
 `ens.GetComponent<MoveBehaviour>()` 返回最先挂载的实例，`ens.GetComponents<MoveBehaviour>()` 返回按挂载顺序排列的全部实例。同一个 Ens 可以添加多个同类型脚本；用 `[UniqueComponent]` 限制唯一实例，用 `[DependsOnComponent(typeof(...))]` 声明依赖。
 
@@ -131,9 +131,9 @@ C# 文件修改后：
 // MoveBehaviour.h
 #pragma once
 
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
-class MoveBehaviour final : public ScriptBehaviour
+class MoveBehaviour final : public Script
 {
     OBJECT_TYPE_DECLARE(MoveBehaviour)
 
@@ -153,7 +153,7 @@ protected:
 #include "Runtime/Ens.h"
 #include "Runtime/Object/TransformComponent.h"
 
-OBJECT_TYPE_IMPLEMENT(MoveBehaviour, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(MoveBehaviour, Script)
 
 void MoveBehaviour::OnStart()
 {
@@ -231,6 +231,8 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 构建结果和错误会显示在 Build Game 面板的状态区域以及日志中。
 
 各生命周期阶段固定先执行 C++，再批量执行 C#。禁用后重新启用不会重复 Start；已启动脚本在移除、Ens 销毁或停止运行时执行一次 End。PIE Inspector 修改会同时更新原生宿主和当前 C# 对象；游戏代码直接修改普通 C# 字段只影响本次运行，不自动写回保存数据。
+
+脚本只需在 `OnEnd()` 中释放自己持有的资源，无需手动注销运行时或断开 Wrapper。从未启动的脚本不会调用 `OnEnd()`。停止或重载后，旧 C# Wrapper 会失效，应重新获取组件引用。
 
 ## 7. 构建 Player
 

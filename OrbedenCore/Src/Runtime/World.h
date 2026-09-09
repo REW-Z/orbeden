@@ -12,7 +12,7 @@
 class World
 {
     friend class Ens;
-    friend class OrbedenObject;
+    friend class Orbeden::Object;
 
 private:
     //Ens ID槽位，保存版本和紧凑列表索引

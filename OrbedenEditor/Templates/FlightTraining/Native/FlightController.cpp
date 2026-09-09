@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <cmath>
 
-OBJECT_TYPE_IMPLEMENT(FlightController, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(FlightController, Script)
 
 namespace
 {

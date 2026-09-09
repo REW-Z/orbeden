@@ -342,7 +342,7 @@ flowchart LR
     PIE -.-> GameDll
 ```
 
-- 非 Play 状态下，Inspector 使用用户 Game Assembly 反射脚本类型，并通过 `.world` 中的原生 `ScriptBehaviour` 宿主显示和编辑 C# 脚本组件。
+- 非 Play 状态下，Inspector 使用用户 Game Assembly 反射脚本类型，并通过 `.world` 中的原生 `Script` 宿主显示和编辑 C# 脚本组件。
 - Play 状态下，Editor 绑定用户 Game Assembly 的 `OrbedenGame_Initialize`、`OrbedenGame_Update`、`OrbedenGame_DrawGui`、`OrbedenGame_Shutdown`。
 - Inspector 同时显示原生 C++ 组件块和用户 C# 组件块。
 

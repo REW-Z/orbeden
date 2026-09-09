@@ -1,12 +1,15 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/Native/BindingAnnotations.h"
 
 #include <string>
 #include <type_traits>
 
-class OrbedenObject;
-using Object = OrbedenObject;
+namespace Orbeden { class Object; }
+using Orbeden::Object;
+class ResourceManager;
+class ReflectionGeneratedAccess;
 class Component;
 class Type;
 class IChunk;
@@ -64,8 +67,8 @@ public:
 //运行时类型信息
 class Type
 {
-    friend class OrbedenObject;
-    friend class ComponentStorage;
+    friend class Orbeden::Object;
+    friend class ::ComponentStorage;
 
 private:
     TypeRuntimeId id = 0;//运行时临时ID（依赖静态初始化顺序）
@@ -119,6 +122,7 @@ public:
     uint32 GetObjectAlignment() const;
 
     //判断继承关系
+    ORBEDEN_BIND_IGNORE
     bool Is(Type* type) const;
 
     //获取字段元数据
@@ -177,7 +181,7 @@ public:
 
 //声明对象类型
 #define OBJECT_TYPE_DECLARE_ROOT(CLASS) \
-    friend class ReflectionGeneratedAccess; \
+    friend class ::ReflectionGeneratedAccess; \
 protected: \
     CLASS() = default; \
     virtual ~CLASS() = default; \
@@ -190,7 +194,7 @@ public: \
 
 //声明可派生对象类型
 #define OBJECT_TYPE_DECLARE_BASE(CLASS) \
-    friend class ReflectionGeneratedAccess; \
+    friend class ::ReflectionGeneratedAccess; \
 protected: \
     CLASS() = default; \
     ~CLASS() override = default; \
@@ -203,7 +207,7 @@ public: \
 
 //声明不可直接创建的抽象对象类型
 #define OBJECT_TYPE_DECLARE_ABSTRACT(CLASS) \
-    friend class ReflectionGeneratedAccess; \
+    friend class ::ReflectionGeneratedAccess; \
 protected: \
     CLASS() = default; \
     ~CLASS() override = default; \
@@ -214,7 +218,7 @@ public: \
 
 //声明叶子对象类型
 #define OBJECT_TYPE_DECLARE(CLASS) \
-    friend class ReflectionGeneratedAccess; \
+    friend class ::ReflectionGeneratedAccess; \
 private: \
     CLASS() = default; \
     ~CLASS() override = default; \
@@ -253,9 +257,11 @@ public: \
 
 
 //基础对象
-class OrbedenObject
+namespace Orbeden
 {
-    OBJECT_TYPE_DECLARE_ROOT(OrbedenObject)
+class Object
+{
+    OBJECT_TYPE_DECLARE_ROOT(Object)
 
 private:
     enum class Ownership
@@ -273,11 +279,11 @@ private:
     Ownership ownership = Ownership::None;
     IChunk* allocationChunk = nullptr;
 
-    friend class World;
-    friend class ResourceManager;
-    friend class AssetPipelineObjectFactory;
-    friend class ComponentStorage;
-    friend class Type;
+    friend class ::World;
+    friend class ::ResourceManager;
+    friend class ::AssetPipelineObjectFactory;
+    friend class ::ComponentStorage;
+    friend class ::Type;
 
     //设置所属世界
     void SetWorld(World* world);
@@ -297,8 +303,7 @@ private:
     //生成运行时对象ID
     static std::string CreateRuntimeInstancePath(const std::string& prefix, Type* type);
 
-    //创建运行时对象并自动归属当前World或孤儿表
-    static Object* CreateRuntimeInstance(Type* type);
+
 
     //创建资源对象
     static Object* CreateResourceInstance(Type* type, const std::string& instancePath);
@@ -314,18 +319,22 @@ public:
     int32 GetObjectId() const;
 
     //获取托管包装缓存
+    ORBEDEN_BIND_IGNORE
     void* GetManagedWrapper() const;
 
     //设置托管包装缓存
+    ORBEDEN_BIND_IGNORE
     void SetManagedWrapper(void* value);
 
     //设置实例ID
     void SetInstanceId(const StringId& id);
 
     //获取所属世界
+    ORBEDEN_BIND_IGNORE
     World* GetWorld() const;
 
     //判断类型
+    ORBEDEN_BIND_IGNORE
     bool Is(Type* type) const;
 
     //转换类型
@@ -333,6 +342,7 @@ public:
     T* Cast()
     {
         static_assert(std::is_base_of_v<Object, T>);
+    ORBEDEN_BIND_IGNORE
         return GetType()->Is(T::StaticType()) ? static_cast<T*>(this) : nullptr;
     }
 
@@ -341,34 +351,44 @@ public:
     const T* Cast() const
     {
         static_assert(std::is_base_of_v<Object, T>);
+    ORBEDEN_BIND_IGNORE
         return GetType()->Is(T::StaticType()) ? static_cast<const T*>(this) : nullptr;
     }
 
     //注册类型
+    ORBEDEN_BIND_IGNORE
     static void RegisterType(Type* type);
 
     //开始把随后静态初始化的类型归属到指定动态模块。
+    ORBEDEN_BIND_IGNORE
     static void BeginModuleTypeRegistration(void* moduleOwner);
 
     //结束动态模块类型归属范围；仅在 DLL 加载成功时提交暂存类型。
+    ORBEDEN_BIND_IGNORE
     static bool EndModuleTypeRegistration(bool commit);
 
     //在无存活实例时注销指定动态模块的全部类型和元数据。
+    ORBEDEN_BIND_IGNORE
     static bool UnregisterModuleTypes(void* moduleOwner);
 
     //查找类型
+    ORBEDEN_BIND_IGNORE
     static Type* FindType(TypeRuntimeId typeRuntimeId);
 
     //查找类型
+    ORBEDEN_BIND_IGNORE
     static Type* FindType(const std::string& typeName);
 
     //获取类型数量
+    ORBEDEN_BIND_IGNORE
     static uint32 GetTypeCount();
 
     //注册对象销毁监听器
+    ORBEDEN_BIND_IGNORE
     static void AddDestroyListener(IObjectDestroyListener* listener);
 
     //注销对象销毁监听器
+    ORBEDEN_BIND_IGNORE
     static void RemoveDestroyListener(IObjectDestroyListener* listener);
 
     //查找对象
@@ -384,31 +404,41 @@ public:
     static bool IsObjectAlive(int32 id);
 
     //从绑定层销毁对象
+    ORBEDEN_BIND_IGNORE
     static bool DestroyObjectFromBinding(Object* object);
+
+    //按运行时类型创建对象，沿用 World 或孤儿所有权。
+    ORBEDEN_BIND_IGNORE
+    static Object* CreateInstance(Type* type);
 
     //创建运行时对象
     template<typename T>
     static T* CreateInstance()
     {
         static_assert(std::is_base_of_v<Object, T>);
-        return static_cast<T*>(CreateRuntimeInstance(T::StaticType()));
+        return static_cast<T*>(CreateInstance(T::StaticType()));
     }
 
     //销毁对象
     static bool DeleteInstance(Object* object);
 
     //释放所有孤儿对象
+    ORBEDEN_BIND_IGNORE
     static void ReleaseOrphanInstances();
 
     //判断对象ID是否为运行时对象ID
     static bool IsRuntimeInstancePath(const std::string& instancePath);
 
     //判断运行时对象是否允许参与托管生命周期管理
+    ORBEDEN_BIND_IGNORE
     static bool IsManagedRuntimeResource(Object* object);
 
     //释放未使用的对象
+    ORBEDEN_BIND_BUFFER(managedRootIds, count)
     static uint32 UnloadUnusedObjects(const int32* managedRootIds, int32 count);
 };
+
+}
 
 //对象软引用
 template<typename T>

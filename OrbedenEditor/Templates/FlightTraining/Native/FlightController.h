@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Runtime/EngineTypes.h"
 
 class RigidBodyComponent;
 
 //自由飞行控制器：气动力、尾翼稳定与运行时受力可视化。
-class FlightController final : public ScriptBehaviour
+class FlightController final : public Script
 {
     OBJECT_TYPE_DECLARE(FlightController)
 

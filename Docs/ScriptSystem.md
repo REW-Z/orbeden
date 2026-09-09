@@ -4,19 +4,19 @@
 
 ## 1. 组件与身份
 
-C++ 脚本继承原生 `ScriptBehaviour`；C# 脚本继承 `Orbeden.ScriptBehaviour`，每个实例绑定一个精确类型为原生 `ScriptBehaviour` 的组件。
+C++ 脚本继承原生 `Script`；C# 脚本继承 `Orbeden.Script`，每个实例绑定一个精确类型为原生 `Script` 的组件。
 
 ```text
 Ens
 ├─ TransformComponent
 ├─ MoveBehaviour (C++ 派生组件，Native)
-├─ ScriptBehaviour (Managed，Game.NpcAi)
-└─ ScriptBehaviour (Managed，Game.NpcAi)
+├─ Script (Managed，Game.NpcAi)
+└─ Script (Managed，Game.NpcAi)
 ```
 
-原生 `ScriptBehaviour` 可以通过反射工厂构造，基类没有虚生命周期方法。`domain` 根据实际原生类型确定：精确宿主是 Managed，C++ 派生类型是 Native，外部不能修改域。
+原生 `Script` 可以通过反射工厂构造，基类没有虚生命周期方法。`domain` 根据实际原生类型确定：精确宿主是 Managed，C++ 派生类型是 Native，外部不能修改域。
 
-每个宿主有独立的 `ObjectId`、稳定路径和组件挂载位置。C# Wrapper 的 `InstanceId` 等于宿主的 `ObjectId`。所有 C# 脚本共享原生 `ScriptBehaviour::TypeRuntimeId`，具体托管类型由 `managedTypeName` 区分。同一 Ens 可以挂载多个两种语言的脚本，包括多个同类型 C# 脚本。
+每个宿主有独立的 `ObjectId`、稳定路径和组件挂载位置。C# Wrapper 的 `InstanceId` 等于宿主的 `ObjectId`。所有 C# 脚本共享原生 `Script::StaticType()->GetId()`，具体托管类型由 `managedTypeName` 区分。同一 Ens 可以挂载多个两种语言的脚本，包括多个同类型 C# 脚本。
 
 | 身份 | 用途 | 是否持久化 |
 | --- | --- | --- |
@@ -29,6 +29,23 @@ Ens
 
 `TypeRuntimeId` 按运行时类型注册表的槽位分配，不保证跨进程或重新构建后保持一致。组件序列化使用注册类型名，例如 `<Component type="TransformComponent">`；加载时通过类型名查找当前注册的 `Type`，再创建组件并读取字段。因此，TypeRuntimeId 的数值变化不影响场景加载。类型名必须能在加载时解析，重命名组件类型时需要同步修改场景中的类型引用。`stableId` 标识具体组件实例，类型名标识组件的种类。
 
+### 原生脚本 Binding 与类型身份
+
+C++ 根对象的实际类名为 `Orbeden::Object`，头文件通过 `using Orbeden::Object` 允许现有原生代码简写为 `Object`；反射注册名仍为 `Object`。C# 根对象为 `Orbeden.Object`。
+
+| 实例 | 实际原生类型 / TypeRuntimeId | 托管侧表示 | 生命周期执行域 |
+| --- | --- | --- | --- |
+| C++ `MoveBehaviour : Script` | `MoveBehaviour::StaticType()->GetId()` | `ComponentProxy`，或调用者自行封装的普通 C# 类 | Native |
+| C# `Game.NpcAi : Orbeden.Script` | `Script::StaticType()->GetId()` | `Game.NpcAi`，由 `managedTypeName` 与 CLR Type 区分 | Managed |
+
+继承关系不要求 TypeRuntimeId 相等。`MoveBehaviour::StaticType()->Is(Script::StaticType())` 为 true，但两个类型的 ID 不同。基类查询可以匹配派生实例，成员解析仍使用实例的 `GetType()`。互操作组件句柄保存的是域、generation 和 ObjectId，并不是 TypeRuntimeId。
+
+目前 MetaGen 只生成 C++ 反射及生命周期 thunk，不生成任意 C++ 游戏脚本的强类型 C# Binding。现有入口是 `ens.GetNativeComponent("MoveBehaviour")`；可以用普通 C# 类组合这个 `ComponentProxy`，缓存字段或方法句柄，提供有类型的业务方法。
+
+不要让这种原生脚本包装继承 `Orbeden.Script`：当前 `Ens.AddComponent<T>()` 会把所有 Script 派生类交给托管脚本工厂，构造函数也要求精确托管宿主上下文。内置原生组件包装继承 `Component`，但任意自定义 `Component` 包装目前也没有自动接入泛型创建和查询的工厂。若要完整支持生成式 Binding，需要增加原生类型与包装工厂的映射，包装现有原生实例，并保持生命周期只由 Native 域调度。
+
+本次将基类名由 `ScriptBehaviour` 改为 `Script`，仓库模板已同步。已有外部项目需要更新源码及 `.world` 中精确宿主的 `type="ScriptBehaviour"` 为 `type="Script"`，然后重新构建；具体 C++ 派生类名与 C# `managedTypeName` 不变。
+
 ## 2. 编写 C# 脚本
 
 ```csharp
@@ -36,7 +53,7 @@ using Orbeden;
 
 namespace Game;
 
-public sealed class NpcAi : ScriptBehaviour
+public sealed class NpcAi : Script
 {
     public float speed = 2.0f;
     [SerializeField, HideInInspector] private int savedCounter;
@@ -74,9 +91,9 @@ public 的受支持字段参与序列化；非 public 字段需要 `[SerializeFi
 ```cpp
 // MoveBehaviour.h
 #pragma once
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
-class MoveBehaviour final : public ScriptBehaviour
+class MoveBehaviour final : public Script
 {
     OBJECT_TYPE_DECLARE(MoveBehaviour)
 public:
@@ -92,7 +109,7 @@ protected:
 #include "Runtime/Ens.h"
 #include "Runtime/Object/TransformComponent.h"
 
-OBJECT_TYPE_IMPLEMENT(MoveBehaviour, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(MoveBehaviour, Script)
 
 void MoveBehaviour::OnUpdate(float32 deltaTime)
 {
@@ -105,7 +122,7 @@ void MoveBehaviour::OnUpdate(float32 deltaTime)
 
 游戏模块的 MetaGen 收集 public 受支持字段；非 public 字段用 `ORBEDEN_SERIALIZE_FIELD` 标记。MetaGen 为声明的生命周期生成静态 thunk，注册到类型回调表；未声明的阶段沿继承链解析。
 
-引擎基类的身份、宿主字段表及运行时状态不自动生成持久化字段。`ScriptBehaviour.enabled` 由手写反射注册，写入经过 `SetEnabled`。修改头文件后重新运行 MetaGen，不手改 `Reflection.Generated.cpp`。
+引擎基类的身份、宿主字段表及运行时状态不自动生成持久化字段。`Script.enabled` 由手写反射注册，写入经过 `SetEnabled`。修改头文件后重新运行 MetaGen，不手改 `Reflection.Generated.cpp`。
 
 ## 4. 生命周期与结构变化
 
@@ -152,7 +169,7 @@ if (created != null) ScriptRuntimeRegistry.RemoveScript(created);
 
 查询返回真实 C# 实例，多个同类型实例按原生挂载顺序返回。`[UniqueComponent]` 声明唯一组件；`[DependsOnComponent(typeof(...))]` 声明依赖。依赖图先验证后创建，循环依赖被拒绝。
 
-C++ 用 `ens->AddComponentInstance<MoveBehaviour>()` 显式添加独立实例，`GetComponentInstances` 枚举同类型组件。精确 `ScriptBehaviour` 不出现在普通 C++ 添加菜单中。
+C++ 用 `ens->AddComponentInstance<MoveBehaviour>()` 显式添加独立实例，`GetComponentInstances` 枚举同类型组件。精确 `Script` 不出现在普通 C++ 添加菜单中。
 
 Editor 多选添加先检查全部目标的 Unique 冲突及依赖图，再按依赖优先顺序创建；任一失败回滚本次创建。撤销同时移除这次新增的依赖，保留原有依赖。删除/恢复使用完整组件快照并恢复原挂载位置。
 
@@ -160,7 +177,7 @@ Editor 多选添加先检查全部目标的 Unique 冲突及依赖图，再按�
 
 ```xml
 <Ens stableId="world://ens/npc" name="Npc">
-    <Component type="ScriptBehaviour" stableId="world://ens/npc/ScriptBehaviour/ai">
+    <Component type="Script" stableId="world://ens/npc/Script/ai">
         <Field name="domain" type="ScriptDomain" value="Managed" />
         <Field name="managedTypeName" type="string" value="Game.NpcAi" />
         <Field name="enabled" type="bool" value="true" />
@@ -226,7 +243,19 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 ScriptBehaviour 宿主表为 16 个指针槽，完整运行时表为 274 个；Editor 组件表为 19 个，完整 Editor 表为 202 个。C++ static_assert 和 C# 初始化布局检查保持对应。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 274 个；Editor 组件表为 19 个，完整 Editor 表为 202 个。C++ static_assert 和 C# 初始化布局检查保持对应。
+
+### 生命周期清理入口
+
+原生宿主由 World 持有，托管 Wrapper 由 ScriptRuntime 持有。移除组件会删除宿主；停止或重载脚本只结束运行态，宿主仍可用于下一次初始化。
+
+- C# 单实例清理统一在 `DestroyScript`：标记已销毁 → 已启动时调用 `OnEnd` → 移除实例及宿主、Ens 索引 → 注销互操作句柄 → 断开原生 Wrapper。
+- 宿主移除事件 `OnHostDetached`、Ens 销毁通知和批量 `ShutdownScripts` 都复用这个入口。`RemoveManagedScript` 只向 World 请求删除宿主，由宿主事件触发清理。
+- 实例及索引立即移除；正在使用的阶段表通过 `Destroyed` 跳过旧记录，并在后续阶段边界重建，不再执行第二轮已销毁实例清扫。
+- C++ 的单组件移除和 `ShutdownNativeScripts` 统一调用 `DetachNativeScript`，先注销调度，再对已启动实例调用一次 `OnEnd`。
+- `ShutdownScripts` 只释放实例和阶段表，供初始化和关闭复用；`Shutdown` 还清理互操作、类型缓存并卸载游戏程序集。
+
+销毁标记在用户 `OnEnd` 前设置，防止重入导致重复结束；Wrapper 在回调结束后断开，使 `OnEnd` 仍可访问宿主。
 
 ## 10. 模板与构建
 

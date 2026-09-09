@@ -226,6 +226,8 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
 
     if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, templateDirectory, outError)) return false;
 
+    if (!SyncBindingBuildFiles(ToCleanPath(projectRoot / ("Script/" + projectName + ".csproj")), runtimeDllPath, outError)) return false;
+
     outProjectRoot = ToCleanPath(projectRoot);
     Log::Info(("New project created: " + outProjectRoot).c_str());
     return true;
@@ -246,6 +248,13 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
     std::string content = ReadTextFile(projectPath);
     bool hasLateBuildProps = content.find("<MSBuildProjectExtensionsPath>") != std::string::npos;
     bool changed = EnsureRuntimeReferenceCopyLocal(content);
+    if (content.find("Orbeden.Bindings.targets") == std::string::npos)
+    {
+        size_t end = content.rfind("</Project>");
+        if (end == std::string::npos) { outError = "Invalid script project XML"; return false; }
+        content.insert(end, "  <Import Project=\"Lib/Orbeden.Bindings.targets\" />\n");
+        changed = true;
+    }
     changed = RemoveLinesContaining(content, "Orbeden.ScriptGenerator.dll") || changed;
     changed = EnsureScriptAssemblyAotRoot(content) || changed;
     if (hasLateBuildProps)
@@ -272,4 +281,20 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
         && !WriteTextFile(aotExportsPath, NewProjectTemplate::GetAotExportsText(), outError)) return false;
 
     return true;
+}
+
+//同步项目所需的生成目标；工具与类型清单始终读取当前 SDK。
+bool NewProjectGenerator::SyncBindingBuildFiles(const std::string& scriptProjectPath,
+    const std::string& runtimeDllPath, std::string& outError)
+{
+    std::filesystem::path sdkRoot = Utf8Path::FromUtf8(runtimeDllPath).parent_path().parent_path().parent_path();
+    std::filesystem::path source = sdkRoot / "Tools/OrbedenMetaGen/Orbeden.Bindings.targets";
+    if (!std::filesystem::exists(source) || !std::filesystem::exists(sdkRoot / "Native/Bindings.Manifest.json"))
+    {
+        outError = "Binding SDK was not found. Rebuild OrbedenCore first.";
+        return false;
+    }
+    std::filesystem::path library = Utf8Path::FromUtf8(scriptProjectPath).parent_path() / "Lib";
+    return WriteTextFile(library / "Orbeden.Bindings.targets", ReadTextFile(source), outError)
+        && WriteTextFile(library / "OrbedenSdk.path", ToCleanPath(std::filesystem::absolute(sdkRoot)), outError);
 }

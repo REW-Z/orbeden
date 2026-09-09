@@ -2,6 +2,7 @@
 
 #include "Runtime/Native/RuntimeComponentBinds.h"
 #include "Runtime/Native/RuntimeResourceBinds.h"
+#include "Runtime/Native/NativeBindings.h"
 
 #pragma pack(push, 8)
 
@@ -9,19 +10,14 @@
 struct OrbedenEngineNativeApi
 {
 public:
+    uint32 abiVersion = 2;
+    uint32 structSize = sizeof(OrbedenEngineNativeApi);
     WorldBind World;
     PathDefinesBind PathDefines;
     EnsBind Ens;
-    TransformComponentBind TransformComponent;
-    StaticMeshRendererBind StaticMeshRenderer;
     ObjectBind Object;
-    MeshBind Mesh;
-    MaterialBind Material;
-    ShaderBind Shader;
-    RigidBodyBind RigidBody;
-    ColliderBind Collider;
-    CharacterControllerBind CharacterController;
     ObjectExtensionBind ObjectExtension;
+    NativeBindingsApi Bindings;
 
     //创建引擎原生 API 函数表。
     static OrbedenEngineNativeApi Create();
@@ -29,7 +25,6 @@ public:
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenEngineNativeApi, 202);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, World, 0);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, Collider, 144);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenEngineNativeApi, ObjectExtension, 201);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 29);
+static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
+static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 19);

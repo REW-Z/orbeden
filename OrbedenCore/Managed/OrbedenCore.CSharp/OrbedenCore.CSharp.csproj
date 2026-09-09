@@ -25,4 +25,10 @@
     <MakeDir Directories="$(GameSdkOutputPath)" />
     <Copy SourceFiles="@(RuntimeSdkFiles)" DestinationFolder="$(GameSdkOutputPath)" SkipUnchangedFiles="true" />
   </Target>
+  <ItemGroup>
+    <Compile Include="../../Src/Runtime/Generated/Bindings.Generated.cs" Link="Generated/Bindings.Generated.cs" />
+  </ItemGroup>
+  <Target Name="GenerateObjectBindings" BeforeTargets="BeforeCompile">
+    <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(MSBuildThisFileDirectory)..\..\Src&quot; &quot;$(MSBuildThisFileDirectory)..\..\Src\Runtime\Generated&quot; --bindings" />
+  </Target>
 </Project>

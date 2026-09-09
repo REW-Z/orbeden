@@ -3,22 +3,9 @@ using Orbeden;
 namespace {{PROJECT_NAME}};
 
 /// <summary>自由飞行 HUD；用 Runtime GUI 自由绘制 API 在屏幕底部绘制 PFD 和仪表盘。</summary>
-public sealed class FlightHud : ScriptBehaviour
+public sealed class FlightHud : Script
 {
-    private ComponentProxy? controller;
-    private ComponentMethod getAirspeed;
-    private ComponentMethod getThrottle;
-    private ComponentMethod getCrashCount;
-    private ComponentMethod getPitchDegrees;
-    private ComponentMethod getRollDegrees;
-    private ComponentMethod getHeadingDegrees;
-    private ComponentMethod getAltitude;
-    private ComponentMethod getClimbRate;
-    private ComponentMethod getSideslipDegrees;
-    private ComponentMethod getLiftNewtons;
-    private ComponentMethod getDragNewtons;
-    private ComponentMethod getThrustNewtons;
-    private ComponentMethod getWeightNewtons;
+    private Native.FlightController? controller;
 
     private const float WindowHeight = 232.0f;
     private const float PixelsPerDegree = 3.0f;
@@ -37,20 +24,7 @@ public sealed class FlightHud : ScriptBehaviour
 
     private void OnStart()
     {
-        controller = Ens.GetNativeComponent("FlightController");
-        controller?.TryResolveMethod("GetAirspeed", out getAirspeed);
-        controller?.TryResolveMethod("GetThrottle", out getThrottle);
-        controller?.TryResolveMethod("GetCrashCount", out getCrashCount);
-        controller?.TryResolveMethod("GetPitchDegrees", out getPitchDegrees);
-        controller?.TryResolveMethod("GetRollDegrees", out getRollDegrees);
-        controller?.TryResolveMethod("GetHeadingDegrees", out getHeadingDegrees);
-        controller?.TryResolveMethod("GetAltitude", out getAltitude);
-        controller?.TryResolveMethod("GetClimbRate", out getClimbRate);
-        controller?.TryResolveMethod("GetSideslipDegrees", out getSideslipDegrees);
-        controller?.TryResolveMethod("GetLiftNewtons", out getLiftNewtons);
-        controller?.TryResolveMethod("GetDragNewtons", out getDragNewtons);
-        controller?.TryResolveMethod("GetThrustNewtons", out getThrustNewtons);
-        controller?.TryResolveMethod("GetWeightNewtons", out getWeightNewtons);
+        controller = Ens.GetComponent<Native.FlightController>();
     }
 
     private void OnDrawGUI()
@@ -70,25 +44,25 @@ public sealed class FlightHud : ScriptBehaviour
             return;
         }
 
-        float airspeed = ReadFloat(getAirspeed);
-        float throttle = ReadFloat(getThrottle);
-        int crashCount = ReadInt(getCrashCount);
-        float pitch = ReadFloat(getPitchDegrees);
-        float roll = ReadFloat(getRollDegrees);
-        float heading = ReadFloat(getHeadingDegrees);
-        float altitude = ReadFloat(getAltitude);
+        float airspeed = controller.GetAirspeed();
+        float throttle = controller.GetThrottle();
+        int crashCount = controller.GetCrashCount();
+        float pitch = controller.GetPitchDegrees();
+        float roll = controller.GetRollDegrees();
+        float heading = controller.GetHeadingDegrees();
+        float altitude = controller.GetAltitude();
 
-        DrawStatusLine(ReadFloat(getClimbRate), ReadFloat(getSideslipDegrees), crashCount);
+        DrawStatusLine(controller.GetClimbRate(), controller.GetSideslipDegrees(), crashCount);
         DrawAirspeedDial(airspeed);
         DrawThrottleDial(width, throttle);
         DrawPfd(width, airspeed, altitude, heading, pitch, roll);
 
         //四色数值与世界空间箭头对应，单位为 kN。
-        GUI.Text($"DRAG {ReadFloat(getDragNewtons) / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
-        GUI.Text($"LIFT {ReadFloat(getLiftNewtons) / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
-        GUI.Text($"THRUST {ReadFloat(getThrustNewtons) / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
+        GUI.Text($"DRAG {controller.GetDragNewtons() / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
+        GUI.Text($"LIFT {controller.GetLiftNewtons() / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
+        GUI.Text($"THRUST {controller.GetThrustNewtons() / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
         GUI.RectFilled(width * 0.75f - 4, 199, width - 8, 222, GUI.Rgba(205, 205, 205), 3);
-        GUI.Text($"WEIGHT {ReadFloat(getWeightNewtons) / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
+        GUI.Text($"WEIGHT {controller.GetWeightNewtons() / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
         GUI.EndFixedWindow();
     }
 
@@ -372,23 +346,4 @@ public sealed class FlightHud : ScriptBehaviour
         vector2 size = GUI.GetTextSize(text, fontScale);
         GUI.Text(text, cx - size.x * 0.5f, y - size.y * 0.5f, color, fontScale);
     }
-
-    private static float ReadFloat(ComponentMethod method)
-    {
-        return method.IsValid
-            && method.Invoke(out InteropValue value) == InteropStatus.Ok
-            && value.TryGet(out float result)
-            ? result
-            : 0.0f;
-    }
-
-    private static int ReadInt(ComponentMethod method)
-    {
-        return method.IsValid
-            && method.Invoke(out InteropValue value) == InteropStatus.Ok
-            && value.TryGet(out int result)
-            ? result
-            : 0;
-    }
-
 }

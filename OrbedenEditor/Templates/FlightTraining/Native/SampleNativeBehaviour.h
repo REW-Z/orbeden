@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Scripting/ScriptInterop.h"
 
 //无需 C# binding 的高性能原生脚本；同时演示预解析后调用 C# 方法。
-class SampleNativeBehaviour final : public ScriptBehaviour
+class SampleNativeBehaviour final : public Script
 {
     OBJECT_TYPE_DECLARE(SampleNativeBehaviour)
 

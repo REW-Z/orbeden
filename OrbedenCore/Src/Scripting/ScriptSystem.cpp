@@ -25,13 +25,13 @@ namespace
 {
     ScriptSystem* currentScriptSystem = nullptr;
 
-    void LogNativeScriptException(ScriptBehaviour* script, const char* phase, const char* message)
+    void LogNativeScriptException(Script* script, const char* phase, const char* message)
     {
         std::string typeName = script && script->GetType() ? script->GetType()->GetName() : "<unknown>";
         Log::Error(("C++ script " + typeName + " failed in " + phase + ": " + (message ? message : "unknown exception")).c_str());
     }
 
-    void InvokeNativeScript(ScriptBehaviour* script, ScriptCallback callback, const char* phase)
+    void InvokeNativeScript(Script* script, ScriptCallback callback, const char* phase)
     {
         if (!script || !callback) return;
 
@@ -49,7 +49,7 @@ namespace
         }
     }
 
-    void InvokeNativeScript(ScriptBehaviour* script, ScriptUpdateCallback callback, float32 deltaTime, const char* phase)
+    void InvokeNativeScript(Script* script, ScriptUpdateCallback callback, float32 deltaTime, const char* phase)
     {
         if (!script || !callback) return;
 
@@ -121,7 +121,7 @@ bool ScriptSystem::OnInitialize(Application& app)
     world = &app.GetWorld();
     world->AddLifecycleListener(this);
     runtimeMode = app.GetScriptRuntimeMode();
-    ScriptBehaviour::RegisterReflection();
+    Script::RegisterReflection();
     ScriptInterop::Initialize(world);
     currentScriptSystem = this;
 
@@ -277,7 +277,7 @@ void ScriptSystem::InitializeNativeScripts()
         {
             for (Component* component : ens.GetComponents())
             {
-                ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                Script* script = component ? component->Cast<Script>() : nullptr;
                 if (script && script->GetDomain() == ScriptDomain::Native) AttachNativeScript(script);
             }
         });
@@ -290,17 +290,7 @@ void ScriptSystem::ShutdownNativeScripts()
     List<int32> scriptIds = nativeScriptIds;
     for (int32 objectId : scriptIds)
     {
-        ScriptBehaviour* script = ResolveNativeScript(objectId);
-        if (!script || !script->runtimeRegistered) continue;
-
-        script->runtimeRegistered = false;
-        bool callEnd = script->scriptStarted;
-        script->scriptStarted = false;
-        if (callEnd)
-        {
-            ScriptCallbackTable callbacks = ResolveScriptCallbacks(script->GetType());
-            InvokeNativeScript(script, callbacks.end, "OnEnd");
-        }
+        DetachNativeScript(ResolveNativeScript(objectId));
     }
 
     nativeScriptIds.clear();
@@ -326,14 +316,14 @@ void ScriptSystem::RebuildNativeInvocations()
         {
             for (Component* component : ens.GetComponents())
             {
-                ScriptBehaviour* script = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                Script* script = component ? component->Cast<Script>() : nullptr;
                 if (script && script->GetDomain() == ScriptDomain::Native && script->runtimeRegistered)
                     scriptIds.push_back(script->GetObjectId());
             }
         });
         for (int32 objectId : scriptIds)
         {
-            ScriptBehaviour* script = ResolveNativeScript(objectId);
+            Script* script = ResolveNativeScript(objectId);
             if (!IsNativeScriptRunnable(script)) continue;
 
             ScriptCallbackTable callbacks = ResolveScriptCallbacks(script->GetType());
@@ -355,7 +345,7 @@ void ScriptSystem::RebuildNativeInvocations()
     }
 }
 
-void ScriptSystem::TombstoneNativeInvocations(ScriptBehaviour* script)
+void ScriptSystem::TombstoneNativeInvocations(Script* script)
 {
     for (NativeScriptUpdateInvocation& invocation : nativeUpdateInvocations)
     {
@@ -375,20 +365,20 @@ void ScriptSystem::TombstoneNativeInvocations(ScriptBehaviour* script)
     }
 }
 
-bool ScriptSystem::IsNativeScriptRunnable(ScriptBehaviour* script) const
+bool ScriptSystem::IsNativeScriptRunnable(Script* script) const
 {
     if (!script || script->GetDomain() != ScriptDomain::Native || !script->runtimeRegistered || !script->enabled) return false;
     Ens* owner = script->GetEns();
     return owner && owner->GetWorldActive();
 }
 
-ScriptBehaviour* ScriptSystem::ResolveNativeScript(int32 objectId) const
+Script* ScriptSystem::ResolveNativeScript(int32 objectId) const
 {
     Object* object = Object::FindObjectById(objectId);
-    return object ? object->Cast<ScriptBehaviour>() : nullptr;
+    return object ? object->Cast<Script>() : nullptr;
 }
 
-void ScriptSystem::AttachNativeScript(ScriptBehaviour* script)
+void ScriptSystem::AttachNativeScript(Script* script)
 {
     if (!initialized || shuttingDown || !script || script->GetDomain() != ScriptDomain::Native || script->runtimeRegistered) return;
 
@@ -398,7 +388,7 @@ void ScriptSystem::AttachNativeScript(ScriptBehaviour* script)
     nativeListsDirty = true;
 }
 
-void ScriptSystem::DetachNativeScript(ScriptBehaviour* script)
+void ScriptSystem::DetachNativeScript(Script* script)
 {
     if (!script || !script->runtimeRegistered) return;
 
@@ -417,7 +407,7 @@ void ScriptSystem::DetachNativeScript(ScriptBehaviour* script)
     nativeListsDirty = true;
 }
 
-void ScriptSystem::RefreshNativeScript(ScriptBehaviour* script)
+void ScriptSystem::RefreshNativeScript(Script* script)
 {
     if (!initialized || !script || !script->runtimeRegistered) return;
     if (!IsNativeScriptRunnable(script)) TombstoneNativeInvocations(script);

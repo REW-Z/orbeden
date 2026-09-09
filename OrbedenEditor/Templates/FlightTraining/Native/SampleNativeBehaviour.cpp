@@ -7,7 +7,7 @@
 #include <cmath>
 #include <span>
 
-OBJECT_TYPE_IMPLEMENT(SampleNativeBehaviour, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(SampleNativeBehaviour, Script)
 
 void SampleNativeBehaviour::OnStart()
 {

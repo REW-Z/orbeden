@@ -46,6 +46,7 @@ private:
 
 public:
     //获取所属Ens
+    ORBEDEN_BIND_IGNORE
     Ens* GetEns() const;
 
     //获取所属句柄

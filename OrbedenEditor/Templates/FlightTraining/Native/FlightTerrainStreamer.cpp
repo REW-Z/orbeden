@@ -8,7 +8,7 @@
 #include <cmath>
 #include <string>
 
-OBJECT_TYPE_IMPLEMENT(FlightTerrainStreamer, ScriptBehaviour)
+OBJECT_TYPE_IMPLEMENT(FlightTerrainStreamer, Script)
 
 /// <summary>接管场景中的机场地形块，预加载最近邻。</summary>
 void FlightTerrainStreamer::OnStart()

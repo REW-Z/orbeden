@@ -19,4 +19,5 @@
     <TrimmerRootAssembly Include="$(AssemblyName)" />
     <TrimmerRootAssembly Include="OrbedenCore.CSharp" />
   </ItemGroup>
+  <Import Project="Lib/Orbeden.Bindings.targets" />
 </Project>

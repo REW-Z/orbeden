@@ -32,7 +32,7 @@ internal sealed class InspectorPanel : EditorPanel
         /// <summary>解析用户游戏程序集依赖。</summary>
         protected override Assembly? Load(AssemblyName assemblyName)
         {
-            Assembly runtimeAssembly = typeof(ScriptBehaviour).Assembly;
+            Assembly runtimeAssembly = typeof(Script).Assembly;
             if (assemblyName.Name == runtimeAssembly.GetName().Name) return runtimeAssembly;
             string? path = resolver.ResolveAssemblyToPath(assemblyName);
             return path != null ? LoadAssemblyFile(path) : null;
@@ -129,7 +129,7 @@ internal sealed class InspectorPanel : EditorPanel
             gameAssembly = gameContext.LoadAssemblyFile(Path.GetFullPath(assemblyPath));
             foreach (Type type in GetLoadableTypes(gameAssembly))
             {
-                if (type.IsAbstract || !typeof(ScriptBehaviour).IsAssignableFrom(type)) continue;
+                if (type.IsAbstract || !NativeBindingRuntime.IsManagedScript(type)) continue;
                 if (type.GetConstructor([typeof(Ens)]) == null) continue;
                 scriptTypes.Add(type);
             }
@@ -157,6 +157,7 @@ internal sealed class InspectorPanel : EditorPanel
     //卸载仅供 Inspector 反射的可收集程序集上下文。
     private void UnloadReflectionAssembly()
     {
+        if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
         gameAssembly = null;
         if (gameContext == null) return;
         gameContext.Unload();
@@ -422,13 +423,13 @@ internal sealed class InspectorPanel : EditorPanel
             }
             case InteropValueKind.Color:
             {
-                property.Value.TryGet(out color4 color);
+                property.Value.TryGet(out color color);
                 vector3 rgb = new(color.r, color.g, color.b);
                 float alpha = color.a;
                 bool changed = EditorGUI.InputVector3(label + " RGB", ref rgb);
                 changed |= EditorGUI.InputFloat(label + " Alpha", ref alpha);
                 if (!changed) return false;
-                value = InteropValue.From(new color4(rgb.x, rgb.y, rgb.z, alpha));
+                value = InteropValue.From(new color(rgb.x, rgb.y, rgb.z, alpha));
                 return true;
             }
             case InteropValueKind.String:
@@ -575,10 +576,8 @@ internal sealed class InspectorPanel : EditorPanel
                 foreach (Type required in dependency.ComponentTypes)
                 {
                     if (required == null) throw new InvalidOperationException("Null component dependency.");
-                    bool managed = typeof(ScriptBehaviour).IsAssignableFrom(required);
-                    string name = managed ? GetScriptTypeName(required) : required == typeof(RigidBody) ? "RigidBodyComponent"
-                        : required == typeof(CharacterController) ? "CharacterControllerComponent"
-                        : typeof(Collider).IsAssignableFrom(required) ? required.Name + "Component" : required.Name;
+                    bool managed = NativeBindingRuntime.IsManagedScript(required);
+                    string name = managed ? GetScriptTypeName(required) : required.Name;
                     if (managed && required.GetConstructor([typeof(Ens)]) == null
                         || !managed && name != "TransformComponent" && !EditorNativeComponents.GetAddableTypes().Contains(name))
                         throw new InvalidOperationException($"Component has no factory: {name}");

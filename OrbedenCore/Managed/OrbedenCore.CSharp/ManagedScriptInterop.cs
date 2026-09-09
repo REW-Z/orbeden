@@ -16,8 +16,8 @@ internal sealed class ManagedFieldMetadata
     internal Type FieldType = null!;
     internal InteropValueKind Kind;
     internal bool InspectorVisible;
-    internal Func<ScriptBehaviour, object?> Getter = null!;
-    internal Action<ScriptBehaviour, object?> Setter = null!;
+    internal Func<Script, object?> Getter = null!;
+    internal Action<Script, object?> Setter = null!;
 }
 
 internal sealed class ManagedMethodMetadata
@@ -66,7 +66,7 @@ internal static partial class ManagedTypeMetadataCache
         else if (valueType == typeof(float)) kind = InteropValueKind.Float32;
         else if (valueType == typeof(string)) kind = InteropValueKind.String;
         else if (valueType == typeof(vector3)) kind = InteropValueKind.Vector3;
-        else if (valueType == typeof(color4)) kind = InteropValueKind.Color;
+        else if (valueType == typeof(color)) kind = InteropValueKind.Color;
         else if (valueType == typeof(quaternion)) kind = InteropValueKind.Quaternion;
         else if (valueType == typeof(EnsId)) kind = InteropValueKind.EnsId;
         else if (typeof(Object).IsAssignableFrom(valueType)) kind = InteropValueKind.Object;
@@ -101,7 +101,7 @@ internal static partial class ManagedTypeMetadataCache
             InteropValueKind.Float32 => InteropValue.From((float)input),
             InteropValueKind.String => InteropValue.From((string)input),
             InteropValueKind.Vector3 => InteropValue.From((vector3)input),
-            InteropValueKind.Color => InteropValue.From((color4)input),
+            InteropValueKind.Color => InteropValue.From((color)input),
             InteropValueKind.Quaternion => InteropValue.From((quaternion)input),
             InteropValueKind.EnsId => InteropValue.From((EnsId)input),
             InteropValueKind.Object => InteropValue.FromObject((Object)input),
@@ -142,10 +142,10 @@ internal static partial class ManagedTypeMetadataCache
         return result == null ? !valueType.IsValueType : valueType.IsInstanceOfType(result);
     }
 
-    internal static void ApplyHostFields(ScriptBehaviour script, IntPtr host)
+    internal static void ApplyHostFields(Script script, IntPtr host)
     {
         ManagedTypeMetadata metadata = Get(script.GetType());
-        foreach ((string name, ManagedHostField stored) in ScriptBehaviour.ReadHostFields(host))
+        foreach ((string name, ManagedHostField stored) in Script.ReadHostFields(host))
         {
             if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)) continue;
             if (!TryReadHostValue(field, stored, out object? converted)) continue;
@@ -157,7 +157,7 @@ internal static partial class ManagedTypeMetadataCache
     {
         ManagedTypeMetadata metadata = new();
         Stack<Type> chain = new();
-        for (Type? current = type; current != null && typeof(ScriptBehaviour).IsAssignableFrom(current); current = current.BaseType) chain.Push(current);
+        for (Type? current = type; current != null && typeof(Script).IsAssignableFrom(current); current = current.BaseType) chain.Push(current);
 
         while (chain.TryPop(out Type? current))
         {
@@ -187,8 +187,8 @@ internal static partial class ManagedTypeMetadataCache
             FieldType = typeof(bool),
             Kind = InteropValueKind.Bool,
             InspectorVisible = true,
-            Getter = script => script.enabled,
-            Setter = (script, value) => script.enabled = value is bool enabled && enabled,
+            Getter = script => script.GetEnabled(),
+            Setter = (script, value) => script.SetEnabled(value is bool enabled && enabled),
         };
 
         metadata.InspectorFields.AddRange(metadata.Fields.Values.Where(field => field.InspectorVisible));
@@ -249,7 +249,7 @@ internal static partial class ManagedTypeMetadataCache
             case InteropValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = InteropValue.From(number); return true;
             case InteropValueKind.String: value = InteropValue.From(text); return true;
             case InteropValueKind.Vector3 when TryParseFloats(text, 3, out float[] vector): value = InteropValue.From(new vector3(vector[0], vector[1], vector[2])); return true;
-            case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color4(color[0], color[1], color[2], color[3])); return true;
+            case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color(color[0], color[1], color[2], color[3])); return true;
             case InteropValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = InteropValue.From(new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3])); return true;
             case InteropValueKind.EnsId:
             {
@@ -333,7 +333,7 @@ internal static unsafe partial class ManagedScriptInterop
         handle = default;
         if (occurrence < 0 || string.IsNullOrWhiteSpace(typeName)) return InteropStatus.InvalidArgument;
         int found = 0;
-        foreach (ScriptBehaviour script in ScriptRuntimeRegistry.GetScripts(ens))
+        foreach (Script script in ScriptRuntimeRegistry.GetScripts(ens))
         {
             if (!string.Equals(script.GetType().FullName, typeName, StringComparison.Ordinal)) continue;
             if (found++ != occurrence) continue;
@@ -350,7 +350,7 @@ internal static unsafe partial class ManagedScriptInterop
     internal static InteropStatus ResolveField(ComponentHandle component, string name, out MemberHandle handle)
     {
         handle = default;
-        if (!ScriptRuntimeRegistry.TryResolve(component, out ScriptBehaviour? script)) return InteropStatus.StaleHandle;
+        if (!ScriptRuntimeRegistry.TryResolve(component, out Script? script)) return InteropStatus.StaleHandle;
         if (string.IsNullOrEmpty(name)) return InteropStatus.InvalidArgument;
         ManagedTypeMetadata metadata = ManagedTypeMetadataCache.Get(script.GetType());
         if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)) return InteropStatus.NotFound;
@@ -364,7 +364,7 @@ internal static unsafe partial class ManagedScriptInterop
     internal static InteropStatus ResolveMethod(ComponentHandle component, string name, ReadOnlySpan<InteropValueKind> kinds, out MemberHandle handle)
     {
         handle = default;
-        if (!ScriptRuntimeRegistry.TryResolve(component, out ScriptBehaviour? script)) return InteropStatus.StaleHandle;
+        if (!ScriptRuntimeRegistry.TryResolve(component, out Script? script)) return InteropStatus.StaleHandle;
         ManagedTypeMetadata metadata = ManagedTypeMetadataCache.Get(script.GetType());
         if (!metadata.Methods.TryGetValue(name, out List<ManagedMethodMetadata>? methods)) return InteropStatus.NotFound;
 
@@ -387,7 +387,7 @@ internal static unsafe partial class ManagedScriptInterop
     internal static InteropStatus GetField(ComponentHandle component, MemberHandle member, out InteropValue value)
     {
         value = default;
-        if (!TryResolveMember(component, member, InteropMemberKind.Field, out ScriptBehaviour? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
+        if (!TryResolveMember(component, member, InteropMemberKind.Field, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
         try
         {
             ManagedFieldMetadata field = entry.Field!;
@@ -400,7 +400,7 @@ internal static unsafe partial class ManagedScriptInterop
 
     internal static InteropStatus SetField(ComponentHandle component, MemberHandle member, InteropValue value)
     {
-        if (!TryResolveMember(component, member, InteropMemberKind.Field, out ScriptBehaviour? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
+        if (!TryResolveMember(component, member, InteropMemberKind.Field, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
         ManagedFieldMetadata field = entry.Field!;
         if (!ManagedTypeMetadataCache.TryFromInterop(value, field.FieldType, out object? converted)) return InteropStatus.TypeMismatch;
         try
@@ -420,7 +420,7 @@ internal static unsafe partial class ManagedScriptInterop
     internal static InteropStatus Invoke(ComponentHandle component, MemberHandle member, ReadOnlySpan<InteropValue> arguments, out InteropValue result)
     {
         result = default;
-        if (!TryResolveMember(component, member, InteropMemberKind.Method, out ScriptBehaviour? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
+        if (!TryResolveMember(component, member, InteropMemberKind.Method, out Script? script, out MemberEntry? entry)) return InteropStatus.StaleHandle;
         ManagedMethodMetadata method = entry.Method!;
         if (arguments.Length != method.ParameterTypes.Length) return InteropStatus.TypeMismatch;
 
@@ -453,7 +453,7 @@ internal static unsafe partial class ManagedScriptInterop
         return handle;
     }
 
-    private static bool TryResolveMember(ComponentHandle component, MemberHandle member, InteropMemberKind kind, [NotNullWhen(true)] out ScriptBehaviour? script, [NotNullWhen(true)] out MemberEntry? entry)
+    private static bool TryResolveMember(ComponentHandle component, MemberHandle member, InteropMemberKind kind, [NotNullWhen(true)] out Script? script, [NotNullWhen(true)] out MemberEntry? entry)
     {
         entry = null;
         if (!ScriptRuntimeRegistry.TryResolve(component, out script)) return false;

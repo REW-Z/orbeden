@@ -7,17 +7,17 @@
 //显式标记需要序列化的非 public 字段，由 OrbedenMetaGen 识别。
 #define ORBEDEN_SERIALIZE_FIELD
 
-class ScriptBehaviour;
+class Script;
 namespace Reflection
 {
     enum class FieldKind;
     class Value;
 }
 
-using ScriptCallback = void(*)(ScriptBehaviour*);
-using ScriptUpdateCallback = void(*)(ScriptBehaviour*, float32);
+using ScriptCallback = void(*)(Script*);
+using ScriptUpdateCallback = void(*)(Script*, float32);
 
-//脚本组件的执行域；精确 ScriptBehaviour 实例属于托管域，原生派生类属于原生域。
+//脚本组件的执行域；精确 Script 实例属于托管域，原生派生类属于原生域。
 enum class ScriptDomain : uint32
 {
     Native,
@@ -55,9 +55,9 @@ void UnregisterScriptCallbacks(Type* type);
 ScriptCallbackTable ResolveScriptCallbacks(Type* type);
 
 //原生游戏脚本组件基类，生命周期由 ScriptSystem 的函数指针表调度。
-class ScriptBehaviour : public Component
+class Script : public Component
 {
-    OBJECT_TYPE_DECLARE_BASE(ScriptBehaviour)
+    OBJECT_TYPE_DECLARE_BASE(Script)
 
 private:
     friend class ScriptSystem;
@@ -91,7 +91,8 @@ private:
     static bool SetEnabledValue(Object* object, const Reflection::Value& value);
 
 public:
-    //注册 ScriptBehaviour 自身持久化字段。
+    //注册 Script 自身持久化字段。
+    ORBEDEN_BIND_IGNORE
     static void RegisterReflection();
 
     //获取脚本启用状态。
@@ -104,18 +105,23 @@ public:
     ScriptDomain GetDomain() const;
 
     //判断当前组件是否是 C# 脚本使用的精确原生宿主。
+    ORBEDEN_BIND_IGNORE
     bool IsManagedHost() const;
 
     //获取宿主绑定的 C# 完整类型名。
+    ORBEDEN_BIND_IGNORE
     const std::string& GetManagedTypeName() const;
 
     //配置宿主绑定的 C# 完整类型名。
+    ORBEDEN_BIND_IGNORE
     bool SetManagedTypeName(const std::string& value);
 
     //获取宿主持有的全部 C# 序列化字段。
+    ORBEDEN_BIND_IGNORE
     const List<ManagedScriptField>& GetManagedFields() const;
 
     //按字段名查找 C# 序列化字段。
+    ORBEDEN_BIND_IGNORE
     const ManagedScriptField* FindManagedField(const std::string& name) const;
 
     //新增或覆盖一个 C# 序列化字段。
@@ -126,8 +132,10 @@ public:
         bool inspectorVisible = true);
 
     //只更新一个已经存在的 C# 序列化字段值。
+    ORBEDEN_BIND_IGNORE
     bool SetManagedFieldValue(const std::string& name, const std::string& value);
 
     //把受支持的字段类型名转换为原生 Inspector 字段分类。
+    ORBEDEN_BIND_IGNORE
     static Reflection::FieldKind GetManagedFieldKind(const std::string& typeName);
 };

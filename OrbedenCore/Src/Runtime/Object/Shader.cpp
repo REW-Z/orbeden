@@ -343,3 +343,15 @@ void Shader::ClearDirty()
 {
     gpuDirty = false;
 }
+
+//创建运行时 Shader，并复用正常源码更新路径。
+Shader* Shader::CreateFromSource(const std::string& name, const std::string& vertex, const std::string& fragment)
+{
+    Shader* shader = Object::CreateInstance<Shader>();
+    if (!shader) return nullptr;
+    shader->name = name.empty() ? "Shader" : name;
+    shader->vertexPath = "runtime://shader/" + shader->name + "/vertex";
+    shader->fragmentPath = "runtime://shader/" + shader->name + "/fragment";
+    shader->ReplaceSource(vertex, fragment);
+    return shader;
+}

@@ -5,9 +5,8 @@ using System.Text;
 
 namespace Orbeden;
 
-public abstract unsafe partial class ScriptBehaviour
+public abstract unsafe partial class Script
 {
-    private sealed class NativeObjectReference(IntPtr pointer) : Object(pointer);
     private sealed class ConstructionFrame
     {
         internal EnsId Ens;
@@ -16,11 +15,11 @@ public abstract unsafe partial class ScriptBehaviour
     }
 
     [ThreadStatic] private static Stack<ConstructionFrame>? constructionFrames;
-    private static ScriptBehaviourBindApi api;
+    private static ScriptBindApi api;
     private static bool initialized;
 
-    //保存 C++ 传入的 ScriptBehaviour 宿主函数表。
-    internal static void InitializeNativeApi(ScriptBehaviourBindApi value)
+    //保存 C++ 传入的 Script 宿主函数表。
+    internal static void InitializeNativeApi(ScriptBindApi value)
     {
         api = value;
         initialized = api.GetHostCount != null;
@@ -31,7 +30,7 @@ public abstract unsafe partial class ScriptBehaviour
     internal static IDisposable BeginConstruction(EnsId ens, IntPtr host)
     {
         if (!initialized || host == IntPtr.Zero)
-            throw new InvalidOperationException("ScriptBehaviour native host is unavailable.");
+            throw new InvalidOperationException("Script native host is unavailable.");
 
         ConstructionFrame frame = new() { Ens = ens, Host = host };
         (constructionFrames ??= new Stack<ConstructionFrame>()).Push(frame);
@@ -52,7 +51,7 @@ public abstract unsafe partial class ScriptBehaviour
         return hosts;
     }
 
-    //创建绑定到 Ens 的原生 ScriptBehaviour 宿主。
+    //创建绑定到 Ens 的原生 Script 宿主。
     internal static IntPtr CreateManagedHost(EnsId ens, string typeName)
     {
         if (!initialized || api.CreateHost == null || ens.IsNull || string.IsNullOrWhiteSpace(typeName))
@@ -65,7 +64,7 @@ public abstract unsafe partial class ScriptBehaviour
         }
     }
 
-    //移除原生 ScriptBehaviour 宿主。
+    //移除原生 Script 宿主。
     internal static bool RemoveManagedHost(IntPtr host)
     {
         return initialized && host != IntPtr.Zero && api.RemoveHost != null
@@ -94,11 +93,6 @@ public abstract unsafe partial class ScriptBehaviour
     }
 
     //写入宿主启用状态。
-    internal static void SetHostEnabled(IntPtr host, bool enabled)
-    {
-        if (initialized && host != IntPtr.Zero && api.SetEnabled != null)
-            api.SetEnabled(api.Context, host, enabled ? (byte)1 : (byte)0);
-    }
 
     //读取宿主保存的动态脚本字段。
     internal static IReadOnlyDictionary<string, ManagedHostField> ReadHostFields(IntPtr host)
@@ -144,12 +138,12 @@ public abstract unsafe partial class ScriptBehaviour
     {
         if (constructionFrames == null || constructionFrames.Count == 0)
             throw new InvalidOperationException(
-                "C# ScriptBehaviour cannot be created without a native ScriptBehaviour host.");
+                "C# Script cannot be created without a native Script host.");
 
         ConstructionFrame frame = constructionFrames.Peek();
         if (frame.Consumed || frame.Host == IntPtr.Zero || !frame.Ens.Equals(ens.Id))
             throw new InvalidOperationException(
-                "C# ScriptBehaviour construction context does not match its Ens.");
+                "C# Script construction context does not match its Ens.");
 
         frame.Consumed = true;
         return frame.Host;
@@ -197,7 +191,7 @@ public abstract unsafe partial class ScriptBehaviour
             if (constructionFrames == null || constructionFrames.Count == 0
                 || !ReferenceEquals(constructionFrames.Peek(), activeFrame))
                 throw new InvalidOperationException(
-                    "ScriptBehaviour construction scopes must be disposed in stack order.");
+                    "Script construction scopes must be disposed in stack order.");
 
             constructionFrames.Pop();
             activeFrame = null;
@@ -207,18 +201,18 @@ public abstract unsafe partial class ScriptBehaviour
     /// <summary>临时使用 Editor 宿主表构造默认值，结束后释放反射 Wrapper。</summary>
     internal static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, Type type)
     {
-        if (binding == IntPtr.Zero || host == IntPtr.Zero || !typeof(ScriptBehaviour).IsAssignableFrom(type))
+        if (binding == IntPtr.Zero || host == IntPtr.Zero || !NativeBindingRuntime.IsManagedScript(type))
             throw new InvalidOperationException("Invalid Editor script host.");
-        if (Object.FindCachedObject(Object.GetInstanceId(host)) is ScriptBehaviour) return;
-        ScriptBehaviourBindApi previous = api;
+        if (Object.FindCachedObject(Object.GetInstanceId(host)) is Script) return;
+        ScriptBindApi previous = api;
         bool wasInitialized = initialized;
-        ScriptBehaviour? script = null;
-        api = *(ScriptBehaviourBindApi*)binding;
+        Script? script = null;
+        api = *(ScriptBindApi*)binding;
         initialized = true;
         try
         {
             using (BeginConstruction(ens.Id, host))
-                script = type.GetConstructor([typeof(Ens)])?.Invoke([ens]) as ScriptBehaviour;
+                script = type.GetConstructor([typeof(Ens)])?.Invoke([ens]) as Script;
             if (script == null) throw new InvalidOperationException("Script requires a public (Ens ens) constructor.");
             ManagedTypeMetadataCache.ApplyHostFields(script, host);
             ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
@@ -248,21 +242,7 @@ public abstract unsafe partial class ScriptBehaviour
         if (pointer == IntPtr.Zero) return null;
         Object? value = Object.FindCachedObject(Object.GetInstanceId(pointer));
         if (value != null) return type.IsInstanceOfType(value) ? value : null;
-        Ens owner = Ens.FromId(ens);
-        value = kind switch
-        {
-            1 => Mesh.FromNative(pointer),
-            2 => Material.FromNative(pointer),
-            3 => Shader.FromNative(pointer),
-            4 => TransformComponent.FromNative(owner, pointer),
-            5 => StaticMeshRenderer.FromNative(owner, pointer),
-            6 => RigidBody.FromNative(owner, pointer),
-            7 => CharacterController.FromNative(owner, pointer),
-            8 => Collider.FromNative(owner, pointer),
-            9 => ScriptRuntime.GetOrCreateHost(pointer),
-            _ when type == typeof(Object) => Object.FromNative(pointer, value => new NativeObjectReference(value)),
-            _ => null,
-        };
+        value = NativeBindingRuntime.Wrap(Object.GetInstanceId(pointer));
         return value != null && type.IsInstanceOfType(value) ? value : null;
     }
 }
@@ -271,7 +251,7 @@ internal readonly record struct ManagedHostField(string TypeName, string Value);
 
 #pragma warning disable CS0649
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
-internal unsafe struct ScriptBehaviourBindApi
+internal unsafe struct ScriptBindApi
 {
     public void* Context;
     public delegate* unmanaged[Cdecl]<void*, int> GetHostCount;

@@ -52,3 +52,11 @@ void TransformComponent::SetLocalScale(const vector3& value)
     World* world = GetWorld();
     if (world) world->NotifyTransformChanged(GetEnsId());
 }
+
+EnsId TransformComponent::GetParent() const { return parent; }
+void TransformComponent::SetParent(EnsId value)
+{
+    if (World* world = GetWorld()) world->SetParent(GetEnsId(), value);
+}
+vector3 TransformComponent::GetWorldPosition() const { return worldPosition; }
+quaternion TransformComponent::GetWorldRotation() const { return worldRotation; }

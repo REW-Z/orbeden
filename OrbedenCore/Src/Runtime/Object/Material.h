@@ -51,9 +51,13 @@ private:
 
 public:
     std::string name;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<MaterialTextureSlot> textureSlots;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<MaterialColorSlot> colorSlots;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<MaterialFloatSlot> floatSlots;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetShader)
     Ref<Shader> shader;
 
     //设置材质使用的 Shader

@@ -148,8 +148,8 @@ public static class EditorRuntime
     {
         try
         {
-            Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color4(0.95f, 0.25f, 0.20f, 1.0f));
-            Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color4(0.20f, 0.80f, 0.95f, 1.0f));
+            Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color(0.95f, 0.25f, 0.20f, 1.0f));
+            Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color(0.20f, 0.80f, 0.95f, 1.0f));
             Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
         }
         catch (Exception ex)

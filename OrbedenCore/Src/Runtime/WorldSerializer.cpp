@@ -12,7 +12,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/Object/TransformComponent.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 namespace
 {
@@ -315,7 +315,7 @@ namespace
         output << "<Component type=\"" << EscapeXml(type->GetName()) << "\" stableId=\""
             << EscapeXml(component->GetInstanceId().GetPath()) << "\">\n";
 
-        ScriptBehaviour* script = component->Cast<ScriptBehaviour>();
+        Script* script = component->Cast<Script>();
         if (script)
         {
             WriteIndent(output, depth + 1);
@@ -402,7 +402,7 @@ namespace
         const std::string& value = GetAttribute(token, "value");
         if (name.empty()) return false;
 
-        ScriptBehaviour* script = component->Cast<ScriptBehaviour>();
+        Script* script = component->Cast<Script>();
         if (script && name == "domain")
         {
             const char* expected = script->GetDomain() == ScriptDomain::Managed ? "Managed" : "Native";
@@ -420,7 +420,7 @@ namespace
         }
         if (!script || !script->IsManagedHost()) return true;
 
-        Reflection::FieldKind kind = ScriptBehaviour::GetManagedFieldKind(typeName);
+        Reflection::FieldKind kind = Script::GetManagedFieldKind(typeName);
         const std::string& visible = GetAttribute(token, "inspectorVisible");
         bool inspectorVisible = visible != "false" && visible != "0";
         return script->SetManagedField(name, typeName, kind, value, inspectorVisible);
@@ -601,7 +601,7 @@ namespace
     {
         if (!object) return;
 
-        ScriptBehaviour* host = object->Cast<ScriptBehaviour>();
+        Script* host = object->Cast<Script>();
         if (host && host->IsManagedHost())
         {
             for (const ManagedScriptField& field : host->GetManagedFields())

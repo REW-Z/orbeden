@@ -175,7 +175,7 @@
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptInterop.h" />
-    <ClInclude Include="Src\Scripting\ScriptBehaviour.h" />
+    <ClInclude Include="Src\Scripting\Script.h" />
     <ClInclude Include="Src\Scripting\NativeGameModule.h" />
     <ClInclude Include="Src\Rendering\RenderTypes.h" />
     <ClInclude Include="Src\Rendering\SceneCuller.h" />
@@ -248,7 +248,7 @@
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
     <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
     <ClCompile Include="Src\Scripting\ScriptInterop.cpp" />
-    <ClCompile Include="Src\Scripting\ScriptBehaviour.cpp" />
+    <ClCompile Include="Src\Scripting\Script.cpp" />
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
     <ClCompile Include="Src\Rendering\TransformCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
@@ -262,6 +262,8 @@
     <ClCompile Include="Src\Runtime\Ens.cpp" />
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
+    <ClCompile Include="Src\Runtime\Generated\Bindings.Generated.cpp" />
+    <ClCompile Include="Src\Runtime\Native\NativeBindings.cpp" />
     <ClCompile Include="Src\Runtime\Object\Object.cpp" />
     <ClCompile Include="Src\FileSystem\PathDefines.cpp" />
     <ClCompile Include="Src\Runtime\Reflection.cpp" />
@@ -292,6 +294,9 @@
     <Exec Command="&quot;$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe&quot; -E __create_def &quot;$(IntDir)OrbedenCore.exports.def&quot; &quot;$(IntDir)OrbedenCore.objects.txt&quot;" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="GenerateObjectBindings" BeforeTargets="ClCompile">
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src&quot; &quot;$(ProjectDir)Src\Runtime\Generated&quot; --bindings" UseUtf8Encoding="Always" />
+  </Target>
   <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
     <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;"
           UseUtf8Encoding="Always"
@@ -305,6 +310,8 @@
       <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.inl" />
     </ItemGroup>
     <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir)" />
+    <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenEditorSdkDir)Native\" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
           DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />

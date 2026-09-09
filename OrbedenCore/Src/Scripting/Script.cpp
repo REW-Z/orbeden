@@ -1,4 +1,4 @@
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 #include "Runtime/Reflection.h"
 #include "Scripting/ScriptSystem.h"
@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-OBJECT_TYPE_IMPLEMENT(ScriptBehaviour, Component)
+OBJECT_TYPE_IMPLEMENT(Script, Component)
 
 namespace
 {
@@ -20,7 +20,7 @@ namespace
     TCallback ResolveInheritedCallback(Type* type, TCallback ScriptCallbackTable::* member)
     {
         auto& registry = GetScriptCallbackRegistry();
-        for (Type* current = type; current && current->Is(ScriptBehaviour::StaticType()); current = current->GetBaseType())
+        for (Type* current = type; current && current->Is(Script::StaticType()); current = current->GetBaseType())
         {
             auto found = registry.find(current->GetId());
             if (found != registry.end() && found->second.*member)
@@ -35,7 +35,7 @@ namespace
 
 void RegisterScriptCallbacks(Type* type, const ScriptCallbackTable& callbacks)
 {
-    if (!type || !type->Is(ScriptBehaviour::StaticType())) return;
+    if (!type || !type->Is(Script::StaticType())) return;
     GetScriptCallbackRegistry()[type->GetId()] = callbacks;
 }
 
@@ -47,7 +47,7 @@ void UnregisterScriptCallbacks(Type* type)
 ScriptCallbackTable ResolveScriptCallbacks(Type* type)
 {
     ScriptCallbackTable callbacks;
-    if (!type || !type->Is(ScriptBehaviour::StaticType())) return callbacks;
+    if (!type || !type->Is(Script::StaticType())) return callbacks;
 
     callbacks.start = ResolveInheritedCallback(type, &ScriptCallbackTable::start);
     callbacks.update = ResolveInheritedCallback(type, &ScriptCallbackTable::update);
@@ -58,7 +58,7 @@ ScriptCallbackTable ResolveScriptCallbacks(Type* type)
     return callbacks;
 }
 
-void ScriptBehaviour::OnAttach()
+void Script::OnAttach()
 {
     domain = GetType() == StaticType() ? ScriptDomain::Managed : ScriptDomain::Native;
     if (domain == ScriptDomain::Managed)
@@ -69,7 +69,7 @@ void ScriptBehaviour::OnAttach()
     if (ScriptSystem* system = ScriptSystem::Current()) system->AttachNativeScript(this);
 }
 
-void ScriptBehaviour::OnDetach()
+void Script::OnDetach()
 {
     if (domain == ScriptDomain::Managed)
     {
@@ -79,14 +79,14 @@ void ScriptBehaviour::OnDetach()
     if (ScriptSystem* system = ScriptSystem::Current()) system->DetachNativeScript(this);
 }
 
-void ScriptBehaviour::OnWorldActiveChanged(bool worldActive)
+void Script::OnWorldActiveChanged(bool worldActive)
 {
     (void)worldActive;
     if (domain == ScriptDomain::Managed) return;
     if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(this);
 }
 
-void ScriptBehaviour::RegisterReflection()
+void Script::RegisterReflection()
 {
     static bool registered = false;
     if (registered) return;
@@ -95,20 +95,20 @@ void ScriptBehaviour::RegisterReflection()
     Reflection::RegisterTypeFields(StaticType(),
         {
             Reflection::FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true,
-                &ScriptBehaviour::GetEnabledField, &ScriptBehaviour::SetEnabledField, nullptr,
-                &ScriptBehaviour::GetEnabledValue, &ScriptBehaviour::SetEnabledValue),
+                &Script::GetEnabledField, &Script::SetEnabledField, nullptr,
+                &Script::GetEnabledValue, &Script::SetEnabledValue),
         });
 }
 
-std::string ScriptBehaviour::GetEnabledField(Object* object)
+std::string Script::GetEnabledField(Object* object)
 {
-    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    Script* script = object ? object->Cast<Script>() : nullptr;
     return Reflection::ToXmlValue(script && script->GetEnabled());
 }
 
-bool ScriptBehaviour::SetEnabledField(Object* object, const std::string& value)
+bool Script::SetEnabledField(Object* object, const std::string& value)
 {
-    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    Script* script = object ? object->Cast<Script>() : nullptr;
     if (!script) return false;
 
     bool parsed = false;
@@ -118,16 +118,16 @@ bool ScriptBehaviour::SetEnabledField(Object* object, const std::string& value)
 }
 
 //读取 enabled 类型化字段
-Reflection::Value ScriptBehaviour::GetEnabledValue(Object* object)
+Reflection::Value Script::GetEnabledValue(Object* object)
 {
-    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    Script* script = object ? object->Cast<Script>() : nullptr;
     return script ? Reflection::Value(script->GetEnabled()) : Reflection::Value();
 }
 
 //通过业务 setter 写入 enabled 类型化字段
-bool ScriptBehaviour::SetEnabledValue(Object* object, const Reflection::Value& value)
+bool Script::SetEnabledValue(Object* object, const Reflection::Value& value)
 {
-    ScriptBehaviour* script = object ? object->Cast<ScriptBehaviour>() : nullptr;
+    Script* script = object ? object->Cast<Script>() : nullptr;
     if (!script) return false;
 
     bool enabledValue = false;
@@ -136,12 +136,12 @@ bool ScriptBehaviour::SetEnabledValue(Object* object, const Reflection::Value& v
     return true;
 }
 
-bool ScriptBehaviour::GetEnabled() const
+bool Script::GetEnabled() const
 {
     return enabled;
 }
 
-void ScriptBehaviour::SetEnabled(bool value)
+void Script::SetEnabled(bool value)
 {
     if (enabled == value) return;
 
@@ -154,22 +154,22 @@ void ScriptBehaviour::SetEnabled(bool value)
     if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(this);
 }
 
-ScriptDomain ScriptBehaviour::GetDomain() const
+ScriptDomain Script::GetDomain() const
 {
     return GetType() == StaticType() ? ScriptDomain::Managed : ScriptDomain::Native;
 }
 
-bool ScriptBehaviour::IsManagedHost() const
+bool Script::IsManagedHost() const
 {
     return GetType() == StaticType();
 }
 
-const std::string& ScriptBehaviour::GetManagedTypeName() const
+const std::string& Script::GetManagedTypeName() const
 {
     return managedTypeName;
 }
 
-bool ScriptBehaviour::SetManagedTypeName(const std::string& value)
+bool Script::SetManagedTypeName(const std::string& value)
 {
     if (!IsManagedHost()) return false;
     if (managedTypeName == value) return true;
@@ -180,12 +180,12 @@ bool ScriptBehaviour::SetManagedTypeName(const std::string& value)
     return true;
 }
 
-const List<ManagedScriptField>& ScriptBehaviour::GetManagedFields() const
+const List<ManagedScriptField>& Script::GetManagedFields() const
 {
     return managedFields;
 }
 
-const ManagedScriptField* ScriptBehaviour::FindManagedField(const std::string& name) const
+const ManagedScriptField* Script::FindManagedField(const std::string& name) const
 {
     for (const ManagedScriptField& field : managedFields)
     {
@@ -194,7 +194,7 @@ const ManagedScriptField* ScriptBehaviour::FindManagedField(const std::string& n
     return nullptr;
 }
 
-bool ScriptBehaviour::SetManagedField(const std::string& name,
+bool Script::SetManagedField(const std::string& name,
     const std::string& typeName,
     Reflection::FieldKind kind,
     const std::string& value,
@@ -226,7 +226,7 @@ bool ScriptBehaviour::SetManagedField(const std::string& name,
     return false;
 }
 
-bool ScriptBehaviour::SetManagedFieldValue(const std::string& name, const std::string& value)
+bool Script::SetManagedFieldValue(const std::string& name, const std::string& value)
 {
     for (ManagedScriptField& field : managedFields)
     {
@@ -242,7 +242,7 @@ bool ScriptBehaviour::SetManagedFieldValue(const std::string& name, const std::s
     return false;
 }
 
-Reflection::FieldKind ScriptBehaviour::GetManagedFieldKind(const std::string& typeName)
+Reflection::FieldKind Script::GetManagedFieldKind(const std::string& typeName)
 {
     if (typeName == "bool") return Reflection::FieldKind::Bool;
     if (typeName == "int" || typeName == "int32") return Reflection::FieldKind::Int32;

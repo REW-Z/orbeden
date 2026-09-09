@@ -266,3 +266,12 @@ bool Mesh::RefreshNormals()
     MarkDirty(MeshDirtyFlags::Gpu);
     return true;
 }
+
+bool Mesh::SetSubMeshes(const List<SubMesh>& value)
+{
+    for (const SubMesh& item : value)
+        if (item.indexStart > indices.size() || item.indexCount > indices.size() - item.indexStart) return false;
+    subMeshes = value;
+    MarkDirty();
+    return true;
+}

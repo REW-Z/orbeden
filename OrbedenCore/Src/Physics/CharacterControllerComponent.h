@@ -6,6 +6,7 @@
 class CharacterControllerComponent : public Component
 {
     OBJECT_TYPE_DECLARE(CharacterControllerComponent)
+    ORBEDEN_COMPONENT_UNIQUE
 
 public:
     bool enabled = true;

@@ -18,29 +18,52 @@ class HeightFieldComponent final : public Component
 
 public:
     bool enabled = true;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 seed = 1337;
     //全局采样块坐标；使用双精度计算噪声位置，浮动原点不改变地形。
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 sampleTileX = 0;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 sampleTileZ = 0;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 sizeX = 400.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 sizeZ = 400.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 rowCount = 129;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 columnCount = 129;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 amplitude = 3.5f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 frequency = 0.02f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 octaves = 4;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenMinX = -24.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenMaxX = 24.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenMinZ = -34.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenMaxZ = 10.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenHeight = 0.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 flattenBlendDistance = 24.0f;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     uint32 collisionLayer = 1u;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     Ref<Material> material;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     bool generateNoiseTexture = true;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     int32 noiseTextureSize = 256;
+    ORBEDEN_BIND_CHANGED(Regenerate)
     color noiseLowColor = { 0.24f, 0.32f, 0.22f, 1.0f };
+    ORBEDEN_BIND_CHANGED(Regenerate)
     color noiseHighColor = { 0.62f, 0.58f, 0.42f, 1.0f };
+    ORBEDEN_BIND_CHANGED(Regenerate)
     float32 tileSize = 96.0f;
 
     //按当前参数重建高度场、渲染网格与噪声贴图。

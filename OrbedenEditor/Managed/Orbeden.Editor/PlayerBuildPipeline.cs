@@ -55,7 +55,7 @@ internal static class PlayerBuildPipeline
             }
 
             //检查 Core C# SDK 并计算发布目录。
-            string sdkPath = Path.Combine(fullRepositoryRoot, "OrbedenGame", "Sdk");
+            string sdkPath = Path.Combine(fullRepositoryRoot, "OrbedenEditor", "Sdk");
             string runtimeAssembly = Path.Combine(sdkPath, "Managed", "OrbedenCore.CSharp", "OrbedenCore.CSharp.dll");
             if (!File.Exists(runtimeAssembly))
             {
@@ -86,7 +86,6 @@ internal static class PlayerBuildPipeline
                 $"/p:NativeLib={nativeLibraryKind}",
                 $"/p:OrbedenSdkPath={sdkProperty}",
                 $"/p:CustomAfterMicrosoftCommonTargets={runtimeManifestTargets}",
-                "/p:RestoreSources=",
             ];
             if (!RunDotnet(restoreArguments, out string restoreError))
             {
@@ -106,7 +105,6 @@ internal static class PlayerBuildPipeline
                 $"/p:NativeLib={nativeLibraryKind}",
                 $"/p:OrbedenSdkPath={sdkProperty}",
                 $"/p:CustomAfterMicrosoftCommonTargets={runtimeManifestTargets}",
-                "/p:RestoreSources=",
                 "-o", outputDirectory,
             ];
             if (!RunDotnet(publishArguments, out string publishError))

@@ -296,7 +296,7 @@
             <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="radius" type="float32" value="0.3" />
         </Component>
-        <Component type="ScriptBehaviour">
+        <Component type="Script">
             <Field name="domain" type="ScriptDomain" value="Managed" />
             <Field name="managedTypeName" type="string" value="{{PROJECT_NAME}}.FlightHud" />
             <Field name="enabled" type="bool" value="true" />

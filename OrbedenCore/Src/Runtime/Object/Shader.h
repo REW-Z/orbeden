@@ -39,7 +39,9 @@ struct ShaderPass
 public:
     std::string name = "Default";
     ShaderPassState state;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string vertexSource;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string fragmentSource;
 };
 
@@ -89,12 +91,21 @@ public:
     std::string name;
     std::string vertexPath;
     std::string fragmentPath;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string vertexSource;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string fragmentSource;
+    ORBEDEN_BIND_ACCESSORS(Direct, ReplacePasses)
     List<ShaderPass> passes;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<ShaderTextureSlot> textureSlots;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<ShaderColorSlot> colorSlots;
+    ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<ShaderFloatSlot> floatSlots;
+
+    //创建带运行时路径的 Shader，并刷新源码反射。
+    static Shader* CreateFromSource(const std::string& name, const std::string& vertex, const std::string& fragment);
 
     //从 GLSL 源码刷新材质槽反射结果
     bool ReflectSlotsFromSource();

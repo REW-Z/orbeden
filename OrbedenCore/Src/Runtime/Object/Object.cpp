@@ -1,4 +1,5 @@
 #include "Runtime/Object/Object.h"
+#include "Runtime/Native/NativeBindings.h"
 
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
@@ -12,7 +13,7 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/ResourceManager.h"
 #include "Runtime/World.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 #include <algorithm>
 #include <array>
@@ -576,28 +577,28 @@ void Type::VisitLiveObjects(ObjectVisitorFunction visitor, void* userData) const
     }
 }
 
-Type OrbedenObject::type("Object", nullptr, sizeof(OrbedenObject), alignof(OrbedenObject),
-    OrbedenObject::ConstructObject, OrbedenObject::DestructObject);
+Type Orbeden::Object::type("Object", nullptr, sizeof(Orbeden::Object), alignof(Orbeden::Object),
+    Orbeden::Object::ConstructObject, Orbeden::Object::DestructObject);
 
-Type* OrbedenObject::StaticType()
+Type* Orbeden::Object::StaticType()
 {
-    return &OrbedenObject::type;
+    return &Orbeden::Object::type;
 }
 
-Type* OrbedenObject::GetType() const
+Type* Orbeden::Object::GetType() const
 {
-    return &OrbedenObject::type;
+    return &Orbeden::Object::type;
 }
 
-Object* OrbedenObject::ConstructObject(IChunk* chunk)
+Object* Orbeden::Object::ConstructObject(IChunk* chunk)
 {
-    return new (OrbedenObject::type.AllocateMemory(chunk)) OrbedenObject();
+    return new (Orbeden::Object::type.AllocateMemory(chunk)) Orbeden::Object();
 }
 
-void OrbedenObject::DestructObject(Object* object)
+void Orbeden::Object::DestructObject(Object* object)
 {
-    OrbedenObject* instance = static_cast<OrbedenObject*>(object);
-    instance->~OrbedenObject();
+    Orbeden::Object* instance = static_cast<Orbeden::Object*>(object);
+    instance->~Object();
 }
 
 //获取实例ID
@@ -724,6 +725,7 @@ bool Object::UnregisterModuleTypes(void* moduleOwner)
         Type* type = *it;
         Reflection::UnregisterType(type);
         UnregisterScriptCallbacks(type);
+        NativeBindings::Unregister(type);
         type->ReleaseStorage();
 
         auto namedType = runtime.typeByName.find(type->GetName());
@@ -913,7 +915,7 @@ bool Object::IsManagedRuntimeResource(Object* object)
 }
 
 //创建运行时对象并自动归属当前World或孤儿表
-Object* Object::CreateRuntimeInstance(Type* type)
+Object* Object::CreateInstance(Type* type)
 {
     if (!type) return nullptr;
     if (type->Is(Component::StaticType()))
@@ -1113,7 +1115,7 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
         {
             for (Component* component : ens.GetComponents())
             {
-                ScriptBehaviour* host = component ? component->Cast<ScriptBehaviour>() : nullptr;
+                Script* host = component ? component->Cast<Script>() : nullptr;
                 if (host && host->IsManagedHost())
                 {
                     for (const ManagedScriptField& field : host->GetManagedFields())

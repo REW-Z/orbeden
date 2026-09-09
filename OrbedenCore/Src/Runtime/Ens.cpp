@@ -2,7 +2,7 @@
 
 #include "Runtime/Object/TransformComponent.h"
 #include "Runtime/World.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 #include "Scripting/ScriptInterop.h"
 #include "Scripting/ScriptSystem.h"
 
@@ -202,7 +202,7 @@ bool Ens::MoveComponent(Component* component, int32 index)
     if (found == componentInstances.end() || index < 0 || index >= static_cast<int32>(componentInstances.size())) return false;
     componentInstances.erase(found);
     componentInstances.insert(componentInstances.begin() + index, component);
-    if (ScriptBehaviour* script = component->Cast<ScriptBehaviour>())
+    if (Script* script = component->Cast<Script>())
     {
         if (script->IsManagedHost()) ScriptInterop::NotifyManagedHostAttached(script);
         else if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(script);

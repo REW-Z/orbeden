@@ -10,7 +10,7 @@ namespace OrbedenEditor;
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorGizmoApi
 {
-    public delegate* unmanaged[Cdecl]<vector3, vector3, color4, void> Line3D;
+    public delegate* unmanaged[Cdecl]<vector3, vector3, color, void> Line3D;
     public delegate* unmanaged[Cdecl]<vector3, byte*, int, void> Label3D;
 }
 #pragma warning restore CS0649
@@ -29,7 +29,7 @@ public static unsafe class Gizmos
     }
 
     /// <summary>绘制三维线段。</summary>
-    public static void Line(vector3 a, vector3 b, color4 color)
+    public static void Line(vector3 a, vector3 b, color color)
     {
         if (!initialized || api.Line3D == null) return;
         api.Line3D(a, b, color);

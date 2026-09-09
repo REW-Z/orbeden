@@ -37,6 +37,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(ORBEDEN_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/OrbedenCore")
 set(ORBEDEN_GAME_DIR "${CMAKE_CURRENT_SOURCE_DIR}/OrbedenGame")
 
+file(GLOB ORBEDEN_METAGEN_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Tools/OrbedenMetaGen/*.cs")
+add_custom_target(orbeden_generate_core_bindings
+    COMMAND dotnet run --project "${CMAKE_CURRENT_SOURCE_DIR}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" --
+        "${ORBEDEN_CORE_DIR}/Src" "${ORBEDEN_CORE_DIR}/Src/Runtime/Generated" --bindings
+    VERBATIM)
+
 set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Application.cpp
     OrbedenCore/Src/FileSystem/FileSystem.cpp
@@ -44,6 +50,8 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Log/Log.cpp
     OrbedenCore/Src/Memory/MemoryManager.cpp
     OrbedenCore/Src/Physics/CharacterControllerComponent.cpp
+    OrbedenCore/Src/Physics/HeightFieldComponent.cpp
+    OrbedenCore/Src/Physics/WheelColliderComponent.cpp
     OrbedenCore/Src/Physics/ColliderComponent.cpp
     OrbedenCore/Src/Physics/PhysicsReflection.cpp
     OrbedenCore/Src/Physics/PhysicsSystem.cpp
@@ -64,12 +72,14 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/TransformCache.cpp
     OrbedenCore/Src/Scripting/ScriptSystem.cpp
     OrbedenCore/Src/Scripting/ScriptInterop.cpp
-    OrbedenCore/Src/Scripting/ScriptBehaviour.cpp
+    OrbedenCore/Src/Scripting/Script.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp
     OrbedenCore/Src/Runtime/Ens.cpp
     OrbedenCore/Src/Runtime/EnsId.cpp
     OrbedenCore/Src/Runtime/Generated/Reflection.Generated.cpp
+    OrbedenCore/Src/Runtime/Generated/Bindings.Generated.cpp
+    OrbedenCore/Src/Runtime/Native/NativeBindings.cpp
     OrbedenCore/Src/Runtime/Gui/RuntimeGuiBridge.cpp
     OrbedenCore/Src/Runtime/Native/OrbedenNativeApi.cpp
     OrbedenCore/Src/Runtime/Native/RuntimeComponentBinds.cpp
@@ -111,16 +121,25 @@ if(EXISTS "${ORBEDEN_PROJECT_NATIVE_DIR}/CMakeLists.txt")
     list(FILTER ORBEDEN_PROJECT_NATIVE_SOURCES EXCLUDE REGEX "[/\\]Build[/\\]")
     list(FILTER ORBEDEN_PROJECT_NATIVE_SOURCES EXCLUDE REGEX "[/\\]GameModule\\.cpp$")
 
-    set(ORBEDEN_PROJECT_NATIVE_GENERATED_DIR "${CMAKE_BINARY_DIR}/Generated/ProjectNative")
+    list(FILTER ORBEDEN_PROJECT_NATIVE_SOURCES EXCLUDE REGEX "/(Generated|obj|bin)/")
+    set(ORBEDEN_PROJECT_NATIVE_GENERATED_DIR "${ORBEDEN_PROJECT_NATIVE_DIR}/Generated")
+    set(ORBEDEN_PROJECT_BINDING_MANIFEST "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}/Bindings.Manifest.json")
+    if(NOT EXISTS "${ORBEDEN_PROJECT_BINDING_MANIFEST}")
+        message(FATAL_ERROR "Build the game C# project before configuring Player to generate its Binding manifest.")
+    endif()
+    file(READ "${ORBEDEN_PROJECT_BINDING_MANIFEST}" ORBEDEN_PROJECT_BINDING_JSON)
+    string(JSON ORBEDEN_PROJECT_BINDING_NAMESPACE GET "${ORBEDEN_PROJECT_BINDING_JSON}" ManagedNamespace)
+    set(ORBEDEN_PROJECT_NATIVE_BINDINGS "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}/Bindings.Generated.cpp")
     set(ORBEDEN_PROJECT_NATIVE_REFLECTION "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}/Reflection.Generated.cpp")
     add_custom_command(
-        OUTPUT "${ORBEDEN_PROJECT_NATIVE_REFLECTION}"
+        OUTPUT "${ORBEDEN_PROJECT_NATIVE_REFLECTION}" "${ORBEDEN_PROJECT_NATIVE_BINDINGS}"
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}"
         COMMAND dotnet run --project "${CMAKE_CURRENT_SOURCE_DIR}/Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" --
-            "${ORBEDEN_PROJECT_NATIVE_DIR}" "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}" --game-module
-        DEPENDS ${ORBEDEN_PROJECT_NATIVE_SOURCES} Tools/OrbedenMetaGen/Program.cs
+            "${ORBEDEN_PROJECT_NATIVE_DIR}" "${ORBEDEN_PROJECT_NATIVE_GENERATED_DIR}" --game-module --bindings
+            --namespace "${ORBEDEN_PROJECT_BINDING_NAMESPACE}" --import "${ORBEDEN_CORE_DIR}/Src/Runtime/Generated/Bindings.Manifest.json"
+        DEPENDS ${ORBEDEN_PROJECT_NATIVE_SOURCES} ${ORBEDEN_METAGEN_SOURCES} orbeden_generate_core_bindings
         VERBATIM)
-    list(APPEND ORBEDEN_GAME_SOURCES ${ORBEDEN_PROJECT_NATIVE_SOURCES} "${ORBEDEN_PROJECT_NATIVE_REFLECTION}")
+    list(APPEND ORBEDEN_GAME_SOURCES ${ORBEDEN_PROJECT_NATIVE_SOURCES} "${ORBEDEN_PROJECT_NATIVE_REFLECTION}" "${ORBEDEN_PROJECT_NATIVE_BINDINGS}")
     set(ORBEDEN_HAS_NATIVE_GAME TRUE)
 endif()
 
@@ -158,6 +177,7 @@ if(NOT ORBEDEN_AOT_SHARED)
 endif()
 
 add_library(orbeden_core STATIC ${ORBEDEN_CORE_SOURCES})
+add_dependencies(orbeden_core orbeden_generate_core_bindings)
 target_include_directories(orbeden_core PUBLIC
     "${ORBEDEN_CORE_DIR}/Src"
     "${ORBEDEN_PHYSX_ROOT}/include"

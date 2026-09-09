@@ -3,7 +3,7 @@
 #include "Application.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 //托管脚本域的固定原生入口。
 struct ScriptEntryPoints
@@ -56,14 +56,14 @@ struct ScriptDomainEntry
 //C++ 有参生命周期函数的预绑定调用项。
 struct NativeScriptUpdateInvocation
 {
-    ScriptBehaviour* instance = nullptr;
+    Script* instance = nullptr;
     ScriptUpdateCallback callback = nullptr;
 };
 
 //C++ 无参生命周期函数的预绑定调用项。
 struct NativeScriptInvocation
 {
-    ScriptBehaviour* instance = nullptr;
+    Script* instance = nullptr;
     ScriptCallback callback = nullptr;
 };
 
@@ -105,13 +105,13 @@ private:
     void RebuildNativeInvocations();
 
     //把已经卸载的脚本从全部调用表中置空。
-    void TombstoneNativeInvocations(ScriptBehaviour* script);
+    void TombstoneNativeInvocations(Script* script);
 
     //判断脚本当前是否允许参与生命周期阶段。
-    bool IsNativeScriptRunnable(ScriptBehaviour* script) const;
+    bool IsNativeScriptRunnable(Script* script) const;
 
     //按 Object ID 解析仍然存活的 C++ 脚本。
-    ScriptBehaviour* ResolveNativeScript(int32 objectId) const;
+    Script* ResolveNativeScript(int32 objectId) const;
 
     //执行 C++ 脚本阶段。
     void DispatchNativeUpdate(float32 deltaTime);
@@ -180,13 +180,13 @@ public:
     void DrawOverlay() override;
 
     //记录运行期间新挂载的 C++ 脚本。
-    void AttachNativeScript(ScriptBehaviour* script);
+    void AttachNativeScript(Script* script);
 
     //在组件销毁前移除 C++ 脚本并调用 End。
-    void DetachNativeScript(ScriptBehaviour* script);
+    void DetachNativeScript(Script* script);
 
     //响应 enabled 或 worldActive 变化。
-    void RefreshNativeScript(ScriptBehaviour* script);
+    void RefreshNativeScript(Script* script);
 
     //把 Ens 活动状态转发给 C# 脚本域。
     void OnEnsWorldActiveChanged(EnsId ens, bool worldActive) override;

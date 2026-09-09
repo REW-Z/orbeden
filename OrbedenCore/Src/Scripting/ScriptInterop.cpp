@@ -8,7 +8,7 @@
 
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
-#include "Scripting/ScriptBehaviour.h"
+#include "Scripting/Script.h"
 
 namespace
 {
@@ -693,25 +693,25 @@ namespace ScriptInterop
         return InteropStatus::Ok;
     }
 
-    void NotifyManagedHostAttached(ScriptBehaviour* host)
+    void NotifyManagedHostAttached(Script* host)
     {
         if (!host || !host->IsManagedHost() || host->GetManagedTypeName().empty()) return;
         CallManaged<HostFunction>(managedApi.HostAttached, host);
     }
 
-    void NotifyManagedHostDetached(ScriptBehaviour* host)
+    void NotifyManagedHostDetached(Script* host)
     {
         if (!host || !host->IsManagedHost()) return;
         CallManaged<HostFunction>(managedApi.HostDetached, host);
     }
 
-    void NotifyManagedHostEnabledChanged(ScriptBehaviour* host)
+    void NotifyManagedHostEnabledChanged(Script* host)
     {
         if (!host || !host->IsManagedHost()) return;
         CallManaged<HostFunction>(managedApi.HostEnabledChanged, host);
     }
 
-    bool NotifyManagedHostFieldChanged(ScriptBehaviour* host, std::string_view fieldName)
+    bool NotifyManagedHostFieldChanged(Script* host, std::string_view fieldName)
     {
         if (!host || !host->IsManagedHost() || fieldName.empty()) return false;
         if (!managedApi.HostFieldChanged) return true;

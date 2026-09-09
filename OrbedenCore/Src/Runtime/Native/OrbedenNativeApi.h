@@ -8,8 +8,8 @@ class World;
 
 #pragma pack(push, 8)
 
-//C# ScriptBehaviour Wrapper 使用的原生宿主函数表。
-struct ScriptBehaviourBindApi
+//C# Script Wrapper 使用的原生宿主函数表。
+struct ScriptBindApi
 {
     void* Context = nullptr;
     void* GetHostCount = nullptr;
@@ -29,31 +29,26 @@ struct ScriptBehaviourBindApi
     void* ResolveReference = nullptr;
 
     //创建绑定到指定 World 的宿主函数表。
-    static ScriptBehaviourBindApi Create(World* world);
+    static ScriptBindApi Create(World* world);
 };
 
 //传给 AOT GameModule 的引擎原生 API。
 struct OrbedenNativeApi
 {
 public:
+    uint32 abiVersion = 2;
+    uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;
     PathDefinesBind PathDefines;
     EnsBind Ens;
-    TransformComponentBind TransformComponent;
-    StaticMeshRendererBind StaticMeshRenderer;
     ObjectBind Object;
-    MeshBind Mesh;
-    MaterialBind Material;
-    ShaderBind Shader;
-    RigidBodyBind RigidBody;
-    ColliderBind Collider;
-    CharacterControllerBind CharacterController;
     RuntimeGuiExtensionApi GuiExtension;
     RuntimeGuiAdvancedApi GuiAdvanced;
     ObjectExtensionBind ObjectExtension;
+    NativeBindingsApi Bindings;
     ScriptInterop::ScriptInteropApi ScriptInterop;
-    ScriptBehaviourBindApi ScriptBehaviour;
+    ScriptBindApi Script;
     RuntimeGuiDrawApi GuiDraw;
 
     //创建完整原生 API 函数表。
@@ -62,10 +57,7 @@ public:
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBehaviourBindApi, 16);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(OrbedenNativeApi, 274);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Gui, 0);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, Collider, 155);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ObjectExtension, 233);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptInterop, 234);
-ORBEDEN_ASSERT_NATIVE_API_SLOT(OrbedenNativeApi, ScriptBehaviour, 243);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 16);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 101);
+static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
+static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 51);

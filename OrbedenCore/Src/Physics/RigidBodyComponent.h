@@ -6,6 +6,7 @@
 class RigidBodyComponent : public Component
 {
     OBJECT_TYPE_DECLARE(RigidBodyComponent)
+    ORBEDEN_COMPONENT_UNIQUE
 
 public:
     bool enabled = true;
@@ -21,7 +22,9 @@ public:
 
     //累积本帧待施加的力，PhysicsSystem 在下一物理步施加后清零。
     //瞬态数据：不参与序列化（字段注册由 PhysicsReflection 手工表覆盖）和 body 重建哈希。
+    ORBEDEN_BIND_IGNORE
     vector3 pendingForce;
+    ORBEDEN_BIND_IGNORE
     vector3 pendingTorque;
 
     //累积一个作用于质心的力。
