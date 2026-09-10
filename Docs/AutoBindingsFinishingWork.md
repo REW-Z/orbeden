@@ -100,3 +100,11 @@
 - 独立 Binding 真实调用：结构字段、空缓冲、枚举、布尔 Span 均通过，11 次分配/11 次释放；运行入口为 dotnet run --project .tmp/binding-polish/BufferTest.csproj（需 Core/GLFW DLL 搜索路径）。
 - 完整 RunBindingRegression.ps1 本次未通过：在新增缓冲测试之前的 “Transform setters roundtrip and world transform” 断言停止，详情见 .tmp/binding-polish/runtime.log。未将此记录为全套通过，Transform 问题留待单独核查。
 - 未修改或运行用户正在调整的项目打包工程；未重建、发布 Core SDK，模块依赖测试直接编译源码，生成验证写入独立 .tmp 目录。
+
+## 2026-09-10 二次复核修复
+
+修复 MetaGen 仅扫描本模块类来识别 Script 的遗漏：反射阶段现在共享导入后的 BindingModel，跨模块派生 Script 正确注册自身生命周期，也恢复 virtual/override 的错误诊断。专项生成测试与既有 MetaGenRegression 全部通过；实际 DLL 回归夹具重新编译成功。
+
+回归夹具补上 TransformCache 生命周期和更新点，验证父子世界变换；地形采样前也刷新缓存。Mesh 测试的三个索引原先引用了只有两个顶点的数组，已补齐第三个顶点。
+
+完整运行仍未通过，当前失败点为可回收程序集释放断言（ReloadChecks.CreateAndUnload）。此前组件与资源断言已执行通过，后续 Script 边界和 DLL 重载本轮未执行。当前源码独立编译的托管 Core 与 Release 测试也复现；不能将本次记为全套验收通过。准确下一步和日志路径见 AutoBindingsTODO.md 的二次复核记录。未修改项目打包或发布 SDK。

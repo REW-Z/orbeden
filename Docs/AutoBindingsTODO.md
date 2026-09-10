@@ -137,3 +137,13 @@ NativeAOT 还原说明：仓库 NuGet.config 清空了源，首次还原缺少 .
 - [x] **7. 最终清理与文档。** 旧绑定/分派审计完成（SDK 头文件残留 ScriptBehaviour.h 已清理并给 SDK 发布目标加过期文件清理）；ScriptSystem/UserManual 已更新 API 变化清单（ScriptBehaviour→Script、color4→color、静态 Load→Resources.Load<T>、Transform getter/setter、ABI 2 共同重建）；迁移矩阵已落实验收证据。
 
 准确下一步：在 Editor 中做 Inspector 菜单/默认字段/依赖检查验收，并复核 Editor 的 Build Player 在 VS2026 更新后的发布路径。
+
+## 2026-09-10 二次复核修复（覆盖上述历史验收结论）
+
+- [x] 跨模块 Script 生命周期识别：Program.cs 在反射判断前建立含导入清单的 BindingModel；派生类型回调注册与 virtual/override 诊断使用同一继承关系。
+- [x] 专项验证：`dotnet build Tools/OrbedenMetaGen/OrbedenMetaGen.csproj --no-restore`（0 警告/错误）；`Tests/RunScriptInheritanceRegression.ps1`（跨模块 OnStart 注册、重复输出一致、virtual 诊断通过）；`dotnet run --project Tests/MetaGenRegression/MetaGenRegression.csproj -- OrbedenCore/Src`（全部通过）。测试按原约定保留在本地 Tests，不入库。
+- [x] 修复回归夹具：原生测试桥维护 TransformCache，检查世界变换与地形采样前显式更新；增加父子变换传播断言；Mesh 三角形补齐第三个顶点。
+- [ ] 完整 Binding 回归仍未通过：修复后执行到 `Collectible assembly is not rooted by binding factories or wrappers` 失败。此前的组件/资源断言已执行通过；该断言之后的托管生命周期和 DLL 重载尚未在本轮执行，不沿用上表的全套“通过”结论。
+- [ ] 下一步：追查 ReloadChecks.CreateAndUnload 的程序集保留引用，修复后重跑 Tests/RunBindingRegression.ps1，再更新 Script 边界和模块重载验收。独立编译当前托管 Core、Release 测试与延长 GC 等待均复现，尚未确定根因。日志：.tmp/review-finishing-2/{runtime-fixed,managed-fixed,fresh-core,release}.log。
+
+本轮仅修改生成器、文档及本地测试；未改项目打包文件、未发布 SDK。临时托管 Core 使用 .tmp/review-finishing-2/Core.csproj 独立构建。

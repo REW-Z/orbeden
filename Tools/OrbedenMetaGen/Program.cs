@@ -79,10 +79,43 @@ foreach (var classInfo in classes)
     }
 }
 
+//反射与 Binding 共用导入后的类型模型，识别跨模块脚本基类。
+BindingModel? bindings = null;
+if (args.Contains("--bindings", StringComparer.Ordinal))
+{
+    string? Option(string key)
+    {
+        int index = Array.IndexOf(args, key);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+    }
+    List<string> Imports()
+    {
+        List<string> paths = [];
+        for (int index = 0; index + 1 < args.Length; ++index)
+            if (args[index] == "--import") paths.Add(args[index + 1]);
+        return paths;
+    }
+    try
+    {
+        bindings = new BindingModel(declarations, Option("--namespace") ?? (gameModule ? "Game.Native" : "Orbeden"), Imports());
+    }
+    catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
+}
+
 //识别脚本继承关系并校验生命周期函数不能声明为 virtual。
 var classByName = classes.ToDictionary(value => value.CppName, StringComparer.Ordinal);
 bool IsScriptClass(ClassInfo value)
 {
+    if (bindings != null)
+    {
+        CppType type = bindings.Types[value.CppName];
+        while (bindings.Resolve(type.BaseName, type) is CppType parent)
+        {
+            if (parent.QualifiedName is "Script" or "Orbeden::Script") return true;
+            type = parent;
+        }
+        return false;
+    }
     if (value.BaseName is "Script" or "Orbeden::Script") return true;
     string scope = value.CppName.Contains("::") ? value.CppName[..value.CppName.LastIndexOf("::", StringComparison.Ordinal)] + "::" : "";
     return (classByName.TryGetValue(scope + value.BaseName, out ClassInfo? baseClass) || classByName.TryGetValue(value.BaseName, out baseClass)) && IsScriptClass(baseClass);
@@ -110,23 +143,10 @@ if (errors.Count > 0)
 
 string? bindingModule = null;
 //生成 Binding 类型清单时严格校验全部公开签名。
-if (args.Contains("--bindings", StringComparer.Ordinal))
+if (bindings != null)
 {
-    string? Option(string key)
-    {
-        int index = Array.IndexOf(args, key);
-        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
-    }
-    List<string> Imports()
-    {
-        List<string> paths = [];
-        for (int index = 0; index + 1 < args.Length; ++index)
-            if (args[index] == "--import") paths.Add(args[index + 1]);
-        return paths;
-    }
     try
     {
-        BindingModel bindings = new(declarations, Option("--namespace") ?? (gameModule ? "Game.Native" : "Orbeden"), Imports());
         bindingModule = bindings.ManagedNamespace.Replace('.', '_');
         BindingTypes bindingTypes = new(bindings);
         foreach (CppType type in bindings.ObjectTypes)
