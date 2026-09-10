@@ -322,6 +322,19 @@
           StdOutEncoding="UTF-8"
           StdErrEncoding="UTF-8" />
   </Target>
+  <!--Player 用静态库由同一批 obj 归档：DLL 与静态库共享一次编译，不重复编译 Core 源码。-->
+  <Target Name="ArchiveCoreStaticLibrary" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <PropertyGroup>
+      <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == '' and Exists('$(VCToolsInstallDir)bin\HostX64\x64\lib.exe')">$(VCToolsInstallDir)bin\HostX64\x64\</OrbedenLibToolDir>
+      <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == ''">$(VCToolsInstallDir)bin\HostX86\x64\</OrbedenLibToolDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <OrbedenCoreArchiveObject Include="$(IntDir)*.obj" />
+    </ItemGroup>
+    <Error Condition="'@(OrbedenCoreArchiveObject)' == ''" Text="No Core object files were found in $(IntDir); the Player static library cannot be archived." />
+    <WriteLinesToFile File="$(IntDir)OrbedenCoreStatic.rsp" Lines="@(OrbedenCoreArchiveObject-&gt;'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(OrbedenLibToolDir)lib.exe&quot; /NOLOGO /OUT:&quot;$(OrbedenCoreOutputDir)OrbedenCoreStatic.lib&quot; @&quot;$(IntDir)OrbedenCoreStatic.rsp&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

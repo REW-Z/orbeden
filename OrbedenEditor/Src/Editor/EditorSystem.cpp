@@ -825,6 +825,17 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
+    //Player 只链接 SDK 预编译的 Core 静态库；缺失时直接失败，不触发 Core 源码编译。
+    std::filesystem::path coreStaticLibrary = Utf8Path::FromUtf8(repoRoot)
+        / "OrbedenEditor/Sdk/Native/WindowsX64" / BuildConfiguration / "OrbedenCoreStatic.lib";
+    if (!std::filesystem::exists(coreStaticLibrary))
+    {
+        projectStatus = "Build Player failed: Orbeden Core static library was not found: "
+            + ToCleanPath(coreStaticLibrary) + ". Build OrbedenCore (x64|" + BuildConfiguration + ") to refresh the SDK.";
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
     std::string buildCommand = Quote(GetBundledMSBuildPath())
         + " " + Quote(playerProject)
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"

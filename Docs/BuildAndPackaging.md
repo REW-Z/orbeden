@@ -90,7 +90,7 @@ flowchart LR
 | 目标 | 构建方式 | 入口 | 输出 |
 | --- | --- | --- | --- |
 | Core C++/C# SDK for Editor | MSVC Static Library + CLR Assembly | Visual Studio `OrbedenCore.vcxproj` | Native SDK `OrbedenCore.lib`，并自动生成和同步 `OrbedenCore.CSharp.dll` |
-| Core C++ for Player | MSVC Static Library（`OrbedenCoreStatic.vcxproj`） | Release Editor `Build Player`（作为 Player 工程的 ProjectReference 自动构建） | `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCoreStatic.lib` |
+| Core C++ for Player | MSVC Static Library（`ArchiveCoreStaticLibrary`，归档同一批 obj） | 构建 `OrbedenCore.vcxproj` 时自动归档（x64） | `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCoreStatic.lib` |
 | PhysX CPU SDK | CMake/Ninja Static Libraries | `Build/BuildPhysX.ps1` / `Build/BuildPhysXLinux.sh` | `OrbedenCore/Src/ThirdParty/PhysX/lib/{Platform}/{Compiler?}/{Configuration}` |
 | Core C# SDK | Debug CLR / Release AOT 输入 | 构建 `OrbedenCore.vcxproj` 时自动执行 | Debug 为 `OrbedenCore.CSharp.dll`；Release 发布时作为 Game NativeAOT 的引用输入，不单独进入 Player |
 | Editor C++ | MSVC Executable | VS 解决方案 / Editor 工程 | `OrbedenEditor/x64/{Configuration}/OrbedenEditor.exe`，链接 `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib` |
@@ -111,7 +111,7 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 
 3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Script/Lib/`。点击 `Build Game C#` 生成 `{ProjectRoot}/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。
 
-4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程自动构建 Player 版 Core 静态库 `OrbedenCoreStatic.lib`，直接编译游戏 C++ 源码，链接静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。
+4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
 
 5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Resource/`、`World/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
@@ -147,6 +147,14 @@ Game C# NativeAOT 发布不是 PowerShell 脚本入口。Editor 的 `Build Playe
 Editor 不直接引用 `OrbedenCore.vcxproj`，只链接已经构建好的 WindowsX64 静态库。修改 Editor C++ 时，构建 `OrbedenEditor` 不会重新编译 Core。
 
 修改 Core C++ 或 Core C# 后，在 Visual Studio 中构建对应配置的 `OrbedenCore.vcxproj`。该工程会同时刷新 Core C++ 静态库和 Core C# SDK。
+
+## Player 版 Core 静态库与分层
+
+`OrbedenCore.vcxproj` 构建后自动把本次编译产出的 obj 归档为 `OrbedenCoreStatic.lib`（同一批对象，不重复编译）。DLL 与静态库共享一次编译的前提是 Core 不引用用户层符号：
+
+- Core 是底层 SDK，**不引用 `OrbedenGame`（Player）的任何符号**，也不引用游戏程序集的 AOT 导出。
+- 脚本入口由宿主在运行前注入：Editor 走 `SetClrEntryPoints`，Player 在 `game_main.cpp` 里声明 AOT 导出并调用 `SetAotEntryPoints`。
+- 因此 `ORBEDEN_PLAYER` 编译分支已移除，两个消费者使用完全相同的 Core 对象；静态库缺失时 Player 构建直接报错。
 
 输出目录固定为：
 
@@ -318,7 +326,7 @@ RigidBody? sameBody = bodyEns.GetComponent<RigidBody>();
 `Build Player` 的流程固定为：
 
 1. C++ Editor 将项目、配置和目标传给 `Orbeden.Editor`，由 C# `PlayerBuildPipeline` 直接执行 `dotnet restore/publish` 并校验 Game NativeAOT 库。
-2. 以 MSBuild 构建 `OrbedenGame/OrbedenGame.vcxproj`：作为 ProjectReference 先构建 `OrbedenCoreStatic.vcxproj`（Core 静态库，输出到 SDK），再编译游戏 C++ 源码并链接静态库、第三方库与 AOT 导入库，最后拷贝 AOT DLL 与 `glfw3.dll` 到输出目录。
+2. 以 MSBuild 构建 `OrbedenGame/OrbedenGame.vcxproj`：编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方库与 AOT 导入库，最后拷贝 AOT DLL 与 `glfw3.dll` 到输出目录。Core 静态库缺失时构建失败并提示先构建 `OrbedenCore.vcxproj`。
 
 NativeAOT 命令参数、RID 和输出目录集中在 `OrbedenEditor/Managed/Orbeden.Editor/PlayerBuildPipeline.cs`，可直接随 Editor C# 代码定制。失败时不会回退到 PowerShell、DLL 或 CLR 工作流。
 
@@ -368,7 +376,7 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 
 如果验证 Editor：先在 Visual Studio 中构建对应配置的 `OrbedenCore.vcxproj`，同时生成新的 Editor 版 `OrbedenCore.lib` 与 `OrbedenCore.CSharp.dll`；再构建或启动 `OrbedenEditor`，然后重启 Editor。
 
-如果验证 Player：在 Editor 里选择目标平台并点击 `Build Player`，MSBuild 会通过 `OrbedenCoreStatic.vcxproj` 重新构建 Player 版 Core 静态库并重新链接 Player。
+如果验证 Player：先构建 `OrbedenCore.vcxproj`（自动同步 Player 版 Core 静态库到 SDK），再在 Editor 里选择目标平台并点击 `Build Player`。Player 只链接该静态库，不编译 Core 源码；静态库缺失时会直接报错。
 
 如果修改了暴露给 C# 的 Native API：同步修改 `OrbedenCore.CSharp` 的 delegate / wrapper，然后构建 `OrbedenCore.vcxproj`、Editor C#、Game C#，最后再测试 Editor 或打包 Player。
 

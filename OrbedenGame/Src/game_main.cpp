@@ -15,6 +15,20 @@
 extern "C" void OrbedenGameNative_RegisterReflection();
 #endif
 
+//游戏 C# 程序集 NativeAOT 导出的脚本入口；只有 Player 链接这些符号。
+//Core 是底层 SDK，不引用用户层符号，因此入口由本层运行时注入。
+extern "C"
+{
+    void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_Shutdown();
+    void ORBEDEN_NATIVE_CALL OrbedenGame_Update(float32 deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_FixedUpdate(float32 deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_LateUpdate(float32 deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_EnsWorldActiveChanged(EnsId ens, uint8 worldActive);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_EnsDestroyed(EnsId ens);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_DrawGui();
+}
+
 #if !defined(ORBEDEN_PROJECT_DIR)
 #error ORBEDEN_PROJECT_DIR must identify the project packaged with this player.
 #endif
@@ -132,7 +146,24 @@ int main()
     }
 
     ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
-    if (!scriptSystem || !scriptSystem->Initialize())
+    if (!scriptSystem)
+    {
+        Log::Error("Game startup failed: script system was not found.");
+        app.Quit();
+        return 1;
+    }
+
+    //把本层链接的 AOT 导出入口注入 Core，再启动脚本域。
+    ScriptEntryPoints aotEntryPoints;
+    aotEntryPoints.initialize = &OrbedenGame_Initialize;
+    aotEntryPoints.shutdown = &OrbedenGame_Shutdown;
+    aotEntryPoints.update = &OrbedenGame_Update;
+    aotEntryPoints.fixedUpdate = &OrbedenGame_FixedUpdate;
+    aotEntryPoints.lateUpdate = &OrbedenGame_LateUpdate;
+    aotEntryPoints.ensWorldActiveChanged = &OrbedenGame_EnsWorldActiveChanged;
+    aotEntryPoints.ensDestroyed = &OrbedenGame_EnsDestroyed;
+    aotEntryPoints.drawGui = &OrbedenGame_DrawGui;
+    if (!scriptSystem->SetAotEntryPoints(aotEntryPoints) || !scriptSystem->Initialize())
     {
         Log::Error("Game startup failed: script domains could not initialize.");
         app.Quit();

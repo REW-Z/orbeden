@@ -284,6 +284,16 @@ static bool IsPersistentField(string className, string fieldName)
         return fieldName is "name" or "vertexPath" or "fragmentPath" or "vertexSource" or "fragmentSource";
     }
 
+    //HeightField 的运行时数据由 Regenerate 管理，不参与序列化。
+    if (className == "HeightField")
+    {
+        return fieldName is not ("heights" or "generatedMesh" or "noiseTexture" or "runtimeMaterial");
+    }
+
+    //物理枚举字段由 PhysicsReflection.cpp 的手工表注册，MetaGen 不重复处理。
+    if (className == "RigidBody" && fieldName == "bodyType") return false;
+    if (className == "CharacterController" && fieldName == "shape") return false;
+
     return true;
 }
 

@@ -15,6 +15,8 @@
     <RootNamespace>OrbedenGame</RootNamespace>
     <!--Player 工程位于 OrbedenGame/ 下，仓库根为上一级目录。-->
     <OrbedenEngineRoot Condition="'$(OrbedenEngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</OrbedenEngineRoot>
+    <!--Player 只链接 SDK 预编译的 Core 静态库；缺失即报错，不回退到编译 Core 源码。-->
+    <OrbedenCoreStaticLib Condition="'$(OrbedenCoreStaticLib)' == ''">$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Native\WindowsX64\$(Configuration)\OrbedenCoreStatic.lib</OrbedenCoreStaticLib>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -55,7 +57,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Native\WindowsX64\$(Configuration)\OrbedenCoreStatic.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3dll.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OrbedenCoreStaticLib);$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3dll.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <!--同一 PostBuildEvent 里多个 Command 元数据会互相覆盖，改用 Copy 任务拷贝运行时依赖。-->
     <PostBuildEvent>
@@ -72,11 +74,13 @@
     <ClInclude Include="Src\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OrbedenCore\OrbedenCoreStatic.vcxproj">
-      <Project>{9C1E7B52-4A8D-4C3F-9B6E-2D5A8C1F7E64}</Project>
-    </ProjectReference>
+    <ClInclude Include="$(OrbedenProjectDir)\Native\*.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!--Player 不感知 Core 源码：SDK 缺少静态库时直接失败，不触发 Core 源码编译。-->
+  <Target Name="ValidateCoreStaticLibrary" BeforeTargets="ClCompile">
+    <Error Condition="!Exists('$(OrbedenCoreStaticLib)')" Text="Orbeden Core static library was not found: $(OrbedenCoreStaticLib). Build OrbedenCore (x64|$(Configuration)) to refresh the SDK; the Player links the prebuilt SDK library and never compiles Core sources." />
+  </Target>
   <Target Name="CopyAotRuntime" AfterTargets="Build">
     <Copy SourceFiles="$(OrbedenGameAotDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'$(OrbedenGameAotDll)' != ''" />
     <Copy SourceFiles="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />

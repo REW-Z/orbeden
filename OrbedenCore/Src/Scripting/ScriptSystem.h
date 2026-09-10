@@ -90,11 +90,6 @@ private:
     List<int32> deferredComponentRemovals;
     List<EnsId> deferredEnsDestructions;
 
-#if defined(ORBEDEN_PLAYER)
-    //绑定 NativeAOT 游戏模块的链接期导出入口。
-    void SetAotEntryPoints();
-#endif
-
     //扫描当前 World 并启动全部活动 C++ 脚本。
     void InitializeNativeScripts();
 
@@ -160,6 +155,10 @@ public:
 
     //设置 CLR 游戏程序集导出的完整入口。
     bool SetClrEntryPoints(const ScriptEntryPoints& value);
+
+    //设置 NativeAOT 游戏模块导出的完整入口；由 Player 等宿主在 Initialize 前注入。
+    //Core 不引用宿主符号，因此 AOT 入口必须运行时提供。
+    bool SetAotEntryPoints(const ScriptEntryPoints& value);
 
     //在 World 加载完成后启动 C++ 与 C# 脚本域。
     bool Initialize();

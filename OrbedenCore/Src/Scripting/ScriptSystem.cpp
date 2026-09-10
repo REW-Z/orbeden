@@ -7,20 +7,6 @@
 #include <algorithm>
 #include <exception>
 
-#if defined(ORBEDEN_PLAYER)
-extern "C"
-{
-    void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_Shutdown();
-    void ORBEDEN_NATIVE_CALL OrbedenGame_Update(float32 deltaTime);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_FixedUpdate(float32 fixedDeltaTime);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_LateUpdate(float32 deltaTime);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_EnsWorldActiveChanged(EnsId ens, uint8 worldActive);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_EnsDestroyed(EnsId ens);
-    void ORBEDEN_NATIVE_CALL OrbedenGame_DrawGui();
-}
-#endif
-
 namespace
 {
     ScriptSystem* currentScriptSystem = nullptr;
@@ -80,19 +66,13 @@ bool ScriptEntryPoints::IsValid() const
         && drawGui;
 }
 
-#if defined(ORBEDEN_PLAYER)
-void ScriptSystem::SetAotEntryPoints()
+bool ScriptSystem::SetAotEntryPoints(const ScriptEntryPoints& value)
 {
-    entryPoints.initialize = &OrbedenGame_Initialize;
-    entryPoints.shutdown = &OrbedenGame_Shutdown;
-    entryPoints.update = &OrbedenGame_Update;
-    entryPoints.fixedUpdate = &OrbedenGame_FixedUpdate;
-    entryPoints.lateUpdate = &OrbedenGame_LateUpdate;
-    entryPoints.ensWorldActiveChanged = &OrbedenGame_EnsWorldActiveChanged;
-    entryPoints.ensDestroyed = &OrbedenGame_EnsDestroyed;
-    entryPoints.drawGui = &OrbedenGame_DrawGui;
+    if (runtimeMode != ScriptRuntimeMode::AOT || initialized || !value.IsValid()) return false;
+
+    entryPoints = value;
+    return true;
 }
-#endif
 
 ScriptSystem* ScriptSystem::Current()
 {
@@ -125,15 +105,9 @@ bool ScriptSystem::OnInitialize(Application& app)
     ScriptInterop::Initialize(world);
     currentScriptSystem = this;
 
-    if (runtimeMode == ScriptRuntimeMode::CLR) return true;
-
-#if defined(ORBEDEN_PLAYER)
-    SetAotEntryPoints();
+    //AOT 入口由宿主（Player）在 Initialize 前通过 SetAotEntryPoints 注入；
+    //此处不校验，Initialize 统一检查入口完整性并给出明确错误。
     return true;
-#else
-    Log::Error("ScriptSystem AOT mode is unavailable in this Core build.");
-    return false;
-#endif
 }
 
 void ScriptSystem::OnShutdown()
@@ -151,7 +125,7 @@ bool ScriptSystem::Initialize()
     if (initialized) return true;
     if (!world || !renderSystem || !entryPoints.IsValid())
     {
-        Log::Error("ScriptSystem initialize failed: script domains are incomplete.");
+        Log::Error("ScriptSystem initialize failed: script domains are incomplete; the host must supply entry points (CLR or AOT) before Initialize.");
         return false;
     }
 
