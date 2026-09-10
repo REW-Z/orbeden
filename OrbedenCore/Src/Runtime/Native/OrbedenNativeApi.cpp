@@ -3,8 +3,8 @@
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Reflection.h"
-#include "Runtime/ResourceManager.h"
-#include "Scripting/Script.h"
+#include "ResourceManager/ResourceManager.h"
+#include "Runtime/Object/Script.h"
 
 #include <algorithm>
 #include <cstring>
@@ -187,11 +187,11 @@ namespace
         if (name == "Mesh") *bindingKind = 1;
         else if (name == "Material") *bindingKind = 2;
         else if (name == "Shader") *bindingKind = 3;
-        else if (name == "TransformComponent") *bindingKind = 4;
+        else if (name == "Transform") *bindingKind = 4;
         else if (name == "StaticMeshRenderer") *bindingKind = 5;
-        else if (name == "RigidBodyComponent") *bindingKind = 6;
-        else if (name == "CharacterControllerComponent") *bindingKind = 7;
-        else if (name.find("ColliderComponent") != std::string::npos) *bindingKind = 8;
+        else if (name == "RigidBody") *bindingKind = 6;
+        else if (name == "CharacterController") *bindingKind = 7;
+        else if (name.find("Collider") != std::string::npos) *bindingKind = 8;
         else if (name == "Script") *bindingKind = 9;
         return object;
     }

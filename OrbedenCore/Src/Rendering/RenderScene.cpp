@@ -4,10 +4,10 @@
 #include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/Camera.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
-#include "Physics/HeightFieldComponent.h"
+#include "Runtime/Object/HeightField.h"
 
 #include <algorithm>
 #include <cmath>
@@ -79,7 +79,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     transformCache.Update(currentWorld);
 
     //编辑模式也完成资源解析后待生成的地形，无需启动物理模拟。
-    currentWorld.ForEachComponent<HeightFieldComponent>([](HeightFieldComponent* terrain)
+    currentWorld.ForEachComponent<HeightField>([](HeightField* terrain)
     {
         if (terrain->enabled) terrain->SyncPendingGeneration();
     });
@@ -418,7 +418,7 @@ void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransf
 
     if (updateTransform)
     {
-        TransformComponent* transform = world->GetTransformComponent(renderer->GetEnsId());
+        Transform* transform = world->GetTransform(renderer->GetEnsId());
         state.localToWorld = transform ? transform->worldMatrix : matrix4x4();
     }
 

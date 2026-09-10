@@ -15,7 +15,7 @@
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"

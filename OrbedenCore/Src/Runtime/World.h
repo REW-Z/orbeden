@@ -119,7 +119,7 @@ public:
     const Ens* GetEns(EnsId ens) const;
 
     //获取变换组件
-    TransformComponent* GetTransformComponent(EnsId ens) const;
+    Transform* GetTransform(EnsId ens) const;
 
     //设置父级
     void SetParent(EnsId child, EnsId parent);

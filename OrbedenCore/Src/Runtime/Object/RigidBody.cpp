@@ -1,9 +1,9 @@
-#include "Physics/RigidBodyComponent.h"
+#include "Runtime/Object/RigidBody.h"
 
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
-OBJECT_TYPE_IMPLEMENT(RigidBodyComponent, Component)
+OBJECT_TYPE_IMPLEMENT(RigidBody, Component)
 
 namespace
 {
@@ -20,7 +20,7 @@ namespace
 }
 
 //累积一个作用于质心的力
-void RigidBodyComponent::AddForce(const vector3& force)
+void RigidBody::AddForce(const vector3& force)
 {
     pendingForce.x += force.x;
     pendingForce.y += force.y;
@@ -28,7 +28,7 @@ void RigidBodyComponent::AddForce(const vector3& force)
 }
 
 //累积一个绕质心的力矩
-void RigidBodyComponent::AddTorque(const vector3& torque)
+void RigidBody::AddTorque(const vector3& torque)
 {
     pendingTorque.x += torque.x;
     pendingTorque.y += torque.y;
@@ -36,7 +36,7 @@ void RigidBodyComponent::AddTorque(const vector3& torque)
 }
 
 //累积一个作用于世界空间位置的力
-void RigidBodyComponent::AddForceAtPosition(const vector3& force, const vector3& worldPosition)
+void RigidBody::AddForceAtPosition(const vector3& force, const vector3& worldPosition)
 {
     AddForce(force);
 

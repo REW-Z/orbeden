@@ -10,9 +10,9 @@
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
-#include "Runtime/ResourceManager.h"
-#include "Runtime/Object/TransformComponent.h"
-#include "Scripting/Script.h"
+#include "ResourceManager/ResourceManager.h"
+#include "Runtime/Object/Transform.h"
+#include "Runtime/Object/Script.h"
 
 namespace
 {
@@ -360,7 +360,7 @@ namespace
     //递归写入 Ens 层级
     void WriteEns(std::ostream& output, Ens& ens, int depth)
     {
-        TransformComponent* transform = ens.Transform();
+        Transform* transform = ens.Transform();
         if (!transform) return;
 
         //写入当前 Ens 和它的组件
@@ -379,7 +379,7 @@ namespace
         while (!child.IsNull())
         {
             Ens* childEns = ens.GetWorld() ? ens.GetWorld()->GetEns(child) : nullptr;
-            TransformComponent* childTransform = childEns ? childEns->Transform() : nullptr;
+            Transform* childTransform = childEns ? childEns->Transform() : nullptr;
             EnsId nextChild = childTransform ? childTransform->next : EnsId();
             if (childEns)
             {
@@ -457,7 +457,7 @@ namespace
         }
 
         //创建组件实例
-        Component* component = type == TransformComponent::StaticType() ? ens.Transform()
+        Component* component = type == Transform::StaticType() ? ens.Transform()
             : world.AddComponentInstance(ens.GetId(), type, GetAttribute(startToken, "stableId"));
         if (!component)
         {

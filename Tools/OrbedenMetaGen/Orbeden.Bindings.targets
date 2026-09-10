@@ -5,7 +5,11 @@
     <OrbedenBindingOutput>$(OrbedenNativeSource)/Generated</OrbedenBindingOutput>
     <OrbedenBindingNamespace>$(RootNamespace).Native</OrbedenBindingNamespace>
   </PropertyGroup>
-  <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="Exists('$(OrbedenNativeSource)/CMakeLists.txt')">
+  <!--游戏 C++ 工程已迁移为 vcxproj；以 Native 目录下的 vcxproj 判断是否存在原生模块。-->
+  <ItemGroup>
+    <NativeVcxProject Include="$(OrbedenNativeSource)/*.vcxproj" />
+  </ItemGroup>
+  <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="'@(NativeVcxProject)' != ''">
     <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Rebuild Core and refresh the game project in Editor." />
     <Exec Command="dotnet &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll&quot; &quot;$(OrbedenNativeSource)&quot; &quot;$(OrbedenBindingOutput)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)/Native/Bindings.Manifest.json&quot;" />
     <ItemGroup>

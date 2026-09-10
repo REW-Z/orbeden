@@ -8,7 +8,7 @@
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -86,7 +86,7 @@ namespace examples
         World::SetCurrentWorld(&world);
 
         Ens* ens = world.CreateEnsWithStableId("world://examples/reflection_ens", "ReflectionEns");
-        TransformComponent* transform = ens ? ens->Transform() : nullptr;
+        Transform* transform = ens ? ens->Transform() : nullptr;
         if (!transform)
         {
             Log::Error("反射示例创建 Ens 失败");

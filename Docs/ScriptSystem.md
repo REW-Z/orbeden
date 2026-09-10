@@ -8,7 +8,7 @@ C++ 脚本继承原生 `Script`；C# 脚本继承 `Orbeden.Script`，每个实�
 
 ```text
 Ens
-├─ TransformComponent
+├─ Transform
 ├─ MoveBehaviour (C++ 派生组件，Native)
 ├─ Script (Managed，Game.NpcAi)
 └─ Script (Managed，Game.NpcAi)
@@ -27,7 +27,7 @@ Ens
 | managedTypeName | C# 完整类型名 | 是 |
 | generation | 检测重载后的过期代理和成员句柄 | 否 |
 
-`TypeRuntimeId` 按运行时类型注册表的槽位分配，不保证跨进程或重新构建后保持一致。组件序列化使用注册类型名，例如 `<Component type="TransformComponent">`；加载时通过类型名查找当前注册的 `Type`，再创建组件并读取字段。因此，TypeRuntimeId 的数值变化不影响场景加载。类型名必须能在加载时解析，重命名组件类型时需要同步修改场景中的类型引用。`stableId` 标识具体组件实例，类型名标识组件的种类。
+`TypeRuntimeId` 按运行时类型注册表的槽位分配，不保证跨进程或重新构建后保持一致。组件序列化使用注册类型名，例如 `<Component type="Transform">`；加载时通过类型名查找当前注册的 `Type`，再创建组件并读取字段。因此，TypeRuntimeId 的数值变化不影响场景加载。类型名必须能在加载时解析，重命名组件类型时需要同步修改场景中的类型引用。`stableId` 标识具体组件实例，类型名标识组件的种类。
 
 ### 原生脚本 Binding 与类型身份
 
@@ -89,7 +89,7 @@ public 的受支持字段参与序列化；非 public 字段需要 `[SerializeFi
 ```cpp
 // MoveBehaviour.h
 #pragma once
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 class MoveBehaviour final : public Script
 {
@@ -105,13 +105,13 @@ protected:
 // MoveBehaviour.cpp
 #include "MoveBehaviour.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 OBJECT_TYPE_IMPLEMENT(MoveBehaviour, Script)
 
 void MoveBehaviour::OnUpdate(float32 deltaTime)
 {
-    TransformComponent* transform = GetEns()->Transform();
+    Transform* transform = GetEns()->Transform();
     vector3 position = transform->GetLocalPosition();
     position.x += speed * deltaTime;
     transform->SetLocalPosition(position);

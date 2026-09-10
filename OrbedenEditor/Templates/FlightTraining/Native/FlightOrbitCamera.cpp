@@ -1,8 +1,8 @@
 #include "FlightOrbitCamera.h"
-#include "Platform/InputManager.h"
+#include "InputManager/InputManager.h"
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include <algorithm>
 #include <cmath>
 
@@ -55,7 +55,7 @@ void FlightOrbitCamera::OnLateUpdate(float32 deltaTime)
     float32 pitch = elevation * DegreesToRadians;
     float32 radius = std::max(distance, 3.0f);
     vector3 center = aircraft->Transform()->GetLocalPosition();
-    TransformComponent* camera = GetEns()->Transform();
+    Transform* camera = GetEns()->Transform();
     camera->SetLocalPosition({ center.x + std::sin(yaw) * std::cos(pitch) * radius,
         center.y + std::sin(pitch) * radius, center.z + std::cos(yaw) * std::cos(pitch) * radius });
     //Yaw * Pitch：相机 -Z 始终指向飞机，极角限幅避免倒置。

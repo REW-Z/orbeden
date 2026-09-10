@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 #include "Scripting/ScriptInterop.h"
 
 //无需 C# binding 的高性能原生脚本；同时演示预解析后调用 C# 方法。

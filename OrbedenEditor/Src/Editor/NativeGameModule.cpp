@@ -2,7 +2,7 @@
 
 #include "FileSystem/Utf8Path.h"
 #include "Runtime/Object/Object.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Scripting/NativeGameModule.h"
 
 #include <filesystem>

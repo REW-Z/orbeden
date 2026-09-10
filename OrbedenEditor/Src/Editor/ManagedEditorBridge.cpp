@@ -11,9 +11,9 @@
 #include "Runtime/Reflection.h"
 #include "Runtime/Ens.h"
 #include "Runtime/WorldSerializer.h"
-#include "Runtime/Object/TransformComponent.h"
-#include "Runtime/ResourceManager.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Transform.h"
+#include "ResourceManager/ResourceManager.h"
+#include "Runtime/Object/Script.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
@@ -475,7 +475,7 @@ namespace
         for (TypeRuntimeId typeRuntimeId = 0; typeRuntimeId < Object::GetTypeCount(); ++typeRuntimeId)
         {
             Type* type = Object::FindType(typeRuntimeId);
-            if (!type || type == Component::StaticType() || type == TransformComponent::StaticType() || type == Script::StaticType()) continue;
+            if (!type || type == Component::StaticType() || type == Transform::StaticType() || type == Script::StaticType()) continue;
             if (type->Is(Component::StaticType()) && type->CanCreateObject()) types.push_back(type);
         }
         return types;
@@ -525,7 +525,7 @@ namespace
     uint8 ORBEDEN_NATIVE_CALL RemoveManagedNativeComponent(void* context, int32 objectId)
     {
         Component* component = FindEditorComponent(context, objectId);
-        if (!component || component->GetType() == TransformComponent::StaticType()) return 0;
+        if (!component || component->GetType() == Transform::StaticType()) return 0;
         Ens* ens = component->GetEns();
         return ens && ens->RemoveComponent(component) ? 1 : 0;
     }

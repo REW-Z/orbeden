@@ -3,7 +3,7 @@
 #include "Application.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 //托管脚本域的固定原生入口。
 struct ScriptEntryPoints

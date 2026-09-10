@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 
 //相机组件，保存渲染视角的公开参数
 class Camera : public Component

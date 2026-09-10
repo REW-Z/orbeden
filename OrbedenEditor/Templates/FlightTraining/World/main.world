@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <World version="1">
     <Ens stableId="world://{{PROJECT_NAME}}/main/root" name="FreeFlight">
-        <Component type="TransformComponent">
+        <Component type="Transform">
             <Field name="localPosition" type="vector3" value="0 0 0" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
         </Component>
         <Ens stableId="world://{{PROJECT_NAME}}/main/terrain" name="Terrain">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
@@ -20,7 +20,7 @@
                 <Field name="castShadows" type="bool" value="false" />
                 <Field name="receiveShadows" type="bool" value="true" />
             </Component>
-            <Component type="HeightFieldComponent">
+            <Component type="HeightField">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="seed" type="int32" value="1337" />
                 <Field name="sizeX" type="float32" value="512" />
@@ -46,7 +46,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/runway" name="Runway">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.05 -10" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="6 0.05 140" />
@@ -59,7 +59,7 @@
                 <Field name="castShadows" type="bool" value="false" />
                 <Field name="receiveShadows" type="bool" value="true" />
             </Component>
-            <Component type="BoxColliderComponent">
+            <Component type="BoxCollider">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="isTrigger" type="bool" value="false" />
                 <Field name="center" type="vector3" value="0 0 0" />
@@ -72,7 +72,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/runway_stripe_1" name="RunwayStripe01">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.12 15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -87,7 +87,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/runway_stripe_2" name="RunwayStripe02">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.12 4" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -102,7 +102,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/runway_stripe_3" name="RunwayStripe03">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.12 -7" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -117,7 +117,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/hangar_1" name="Hangar01">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="-15 2 -4" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="5 2 7" />
@@ -130,7 +130,7 @@
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
             </Component>
-            <Component type="BoxColliderComponent">
+            <Component type="BoxCollider">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="isTrigger" type="bool" value="false" />
                 <Field name="center" type="vector3" value="0 0 0" />
@@ -143,7 +143,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/hangar_2" name="Hangar02">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="15 1.5 -15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="4 1.5 5" />
@@ -156,7 +156,7 @@
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
             </Component>
-            <Component type="BoxColliderComponent">
+            <Component type="BoxCollider">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="isTrigger" type="bool" value="false" />
                 <Field name="center" type="vector3" value="0 0 0" />
@@ -169,7 +169,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/directional_light" name="Sun">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 50 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
@@ -187,7 +187,7 @@
         </Ens>
     </Ens>
     <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft" name="PlayerAircraft">
-        <Component type="TransformComponent">
+        <Component type="Transform">
             <Field name="localPosition" type="vector3" value="0 1.22 60" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
@@ -229,7 +229,7 @@
             <Field name="throttleRate" type="float32" value="1" />
             <Field name="forceDrawScale" type="float32" value="0.0005" />
         </Component>
-        <Component type="RigidBodyComponent">
+        <Component type="RigidBody">
             <Field name="enabled" type="bool" value="true" />
             <Field name="bodyType" type="PhysicsBodyType" value="1" />
             <Field name="mass" type="float32" value="1200" />
@@ -241,7 +241,7 @@
             <Field name="continuousCollisionDetection" type="bool" value="true" />
             <Field name="lockFlags" type="uint32" value="0" />
         </Component>
-        <Component type="BoxColliderComponent">
+        <Component type="BoxCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="isTrigger" type="bool" value="false" />
             <Field name="center" type="vector3" value="0 0.1 -0.1" />
@@ -252,7 +252,7 @@
             <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="halfExtents" type="vector3" value="0.3 0.26 1.15" />
         </Component>
-        <Component type="BoxColliderComponent">
+        <Component type="BoxCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="isTrigger" type="bool" value="false" />
             <Field name="center" type="vector3" value="0 0.05 0" />
@@ -263,7 +263,7 @@
             <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="halfExtents" type="vector3" value="1.7 0.08 0.4" />
         </Component>
-        <Component type="SphereColliderComponent">
+        <Component type="SphereCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="isTrigger" type="bool" value="false" />
             <Field name="center" type="vector3" value="0 -0.30 -2.15" />
@@ -274,7 +274,7 @@
             <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="radius" type="float32" value="0.24" />
         </Component>
-        <Component type="SphereColliderComponent">
+        <Component type="SphereCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="isTrigger" type="bool" value="false" />
             <Field name="center" type="vector3" value="-0.75 -0.30 0.55" />
@@ -285,7 +285,7 @@
             <Field name="collisionMask" type="uint32" value="4294967295" />
             <Field name="radius" type="float32" value="0.3" />
         </Component>
-        <Component type="SphereColliderComponent">
+        <Component type="SphereCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="isTrigger" type="bool" value="false" />
             <Field name="center" type="vector3" value="0.75 -0.30 0.55" />
@@ -301,7 +301,7 @@
             <Field name="managedTypeName" type="string" value="{{PROJECT_NAME}}.FlightHud" />
             <Field name="enabled" type="bool" value="true" />
         </Component>
-        <Component type="WheelColliderComponent">
+        <Component type="WheelCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="wheelOffset" type="vector3" value="0 -0.42 -2.15" />
             <Field name="wheelRadius" type="float32" value="0.24" />
@@ -316,7 +316,7 @@
             <Field name="steeringWheel" type="bool" value="true" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
-        <Component type="WheelColliderComponent">
+        <Component type="WheelCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="wheelOffset" type="vector3" value="-0.75 -0.42 0.55" />
             <Field name="wheelRadius" type="float32" value="0.3" />
@@ -331,7 +331,7 @@
             <Field name="steeringWheel" type="bool" value="false" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
-        <Component type="WheelColliderComponent">
+        <Component type="WheelCollider">
             <Field name="enabled" type="bool" value="true" />
             <Field name="wheelOffset" type="vector3" value="0.75 -0.42 0.55" />
             <Field name="wheelRadius" type="float32" value="0.3" />
@@ -347,7 +347,7 @@
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_body" name="AircraftBody">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.55 0.42 2.1" />
@@ -362,7 +362,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_nose" name="AircraftNose">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 -0.05 -2.35" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.42 0.32 0.42" />
@@ -377,7 +377,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_wing" name="AircraftWing">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="3.4 0.09 0.72" />
@@ -392,7 +392,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_tail_wing" name="AircraftTailWing">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.15 1.72" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1.35 0.07 0.42" />
@@ -407,7 +407,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_tail_fin" name="AircraftTailFin">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.72 1.72" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.10 0.75 0.42" />
@@ -422,7 +422,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/aircraft_cockpit" name="AircraftCockpit">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 0.48 -0.62" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.36 0.25 0.58" />
@@ -437,7 +437,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_nose" name="WheelNose">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 -0.87 -2.15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.24 0.24" />
@@ -452,7 +452,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_left" name="WheelLeft">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="-0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
@@ -467,7 +467,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/wheel_right" name="WheelRight">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
@@ -482,7 +482,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://{{PROJECT_NAME}}/main/flight_camera" name="ChaseCamera">
-            <Component type="TransformComponent">
+            <Component type="Transform">
                 <Field name="localPosition" type="vector3" value="0 3.2 9" />
                 <Field name="localRotation" type="quaternion" value="-0.1305 0 0 0.9914" />
                 <Field name="localScale" type="vector3" value="1 1 1" />

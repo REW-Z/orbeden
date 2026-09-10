@@ -79,7 +79,7 @@ public sealed partial class Ens : IEquatable<Ens>
     }
 
     /// <summary>取得已有的变换组件包装。</summary>
-    public TransformComponent Transform => GetComponent<TransformComponent>()!;
+    public Transform Transform => GetComponent<Transform>()!;
 
     /// <summary>添加组件，并自动补齐其依赖。</summary>
     public T? AddComponent<T>() where T : Component

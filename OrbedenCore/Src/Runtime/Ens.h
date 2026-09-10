@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/EngineTypes.h"
 
 #include <string>
@@ -8,7 +8,7 @@
 
 class Ens;
 class World;
-class TransformComponent;
+class Transform;
 
 typedef void (*EnsVisitorFunction)(Ens* ens, void* userData);
 
@@ -65,7 +65,7 @@ public:
     EnsId GetId() const;
 
     //获取变换组件
-    TransformComponent* Transform() const;
+    Transform* Transform() const;
 
     //获取名称
     const std::string& GetName() const;

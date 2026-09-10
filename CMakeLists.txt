@@ -49,16 +49,16 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/FileSystem/PathDefines.cpp
     OrbedenCore/Src/Log/Log.cpp
     OrbedenCore/Src/Memory/MemoryManager.cpp
-    OrbedenCore/Src/Physics/CharacterControllerComponent.cpp
-    OrbedenCore/Src/Physics/HeightFieldComponent.cpp
-    OrbedenCore/Src/Physics/WheelColliderComponent.cpp
-    OrbedenCore/Src/Physics/ColliderComponent.cpp
+    OrbedenCore/Src/Runtime/Object/CharacterController.cpp
+    OrbedenCore/Src/Runtime/Object/HeightField.cpp
+    OrbedenCore/Src/Runtime/Object/WheelCollider.cpp
+    OrbedenCore/Src/Runtime/Object/Collider.cpp
     OrbedenCore/Src/Physics/PhysicsReflection.cpp
     OrbedenCore/Src/Physics/PhysicsSystem.cpp
-    OrbedenCore/Src/Physics/RigidBodyComponent.cpp
+    OrbedenCore/Src/Runtime/Object/RigidBody.cpp
     OrbedenCore/Src/Platform/DynamicLibrary.cpp
     OrbedenCore/Src/Platform/GlfwWindow.cpp
-    OrbedenCore/Src/Platform/InputManager.cpp
+    OrbedenCore/Src/InputManager/InputManager.cpp
     OrbedenCore/Src/Rendering/Backend/OpenGLContext.cpp
     OrbedenCore/Src/Rendering/Backend/OpenGLRenderBackend.cpp
     OrbedenCore/Src/Rendering/ForwardPipeline.cpp
@@ -72,7 +72,7 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Rendering/TransformCache.cpp
     OrbedenCore/Src/Scripting/ScriptSystem.cpp
     OrbedenCore/Src/Scripting/ScriptInterop.cpp
-    OrbedenCore/Src/Scripting/Script.cpp
+    OrbedenCore/Src/Runtime/Object/Script.cpp
     OrbedenCore/Src/Runtime/AssetPipeline.cpp
     OrbedenCore/Src/Runtime/ComponentStorage.cpp
     OrbedenCore/Src/Runtime/Ens.cpp
@@ -85,17 +85,18 @@ set(ORBEDEN_CORE_SOURCES
     OrbedenCore/Src/Runtime/Native/RuntimeComponentBinds.cpp
     OrbedenCore/Src/Runtime/Native/RuntimeResourceBinds.cpp
     OrbedenCore/Src/Runtime/Object/Camera.cpp
+    OrbedenCore/Src/Runtime/Object/Component.cpp
     OrbedenCore/Src/Runtime/Object/DirectionalLight.cpp
     OrbedenCore/Src/Runtime/Object/Material.cpp
     OrbedenCore/Src/Runtime/Object/Mesh.cpp
     OrbedenCore/Src/Runtime/Object/Object.cpp
     OrbedenCore/Src/Runtime/Object/Shader.cpp
     OrbedenCore/Src/Runtime/Object/Skybox.cpp
-    OrbedenCore/Src/Runtime/Object/TransformComponent.cpp
+    OrbedenCore/Src/Runtime/Object/Transform.cpp
     OrbedenCore/Src/Runtime/Object/StaticMeshRenderer.cpp
     OrbedenCore/Src/Runtime/Object/Texture2D.cpp
     OrbedenCore/Src/Runtime/Reflection.cpp
-    OrbedenCore/Src/Runtime/ResourceManager.cpp
+    OrbedenCore/Src/ResourceManager/ResourceManager.cpp
     OrbedenCore/Src/Runtime/World.cpp
     OrbedenCore/Src/Runtime/WorldSerializer.cpp
     OrbedenCore/Src/Profiler/Profiler.cpp

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/Material.h"
 
 #include <vector>
@@ -12,9 +12,9 @@ class Texture2D;
 //运行时生成渲染网格（写入同 Ens 的 StaticMeshRenderer）与 PhysX HeightField 碰撞体
 //（由 PhysicsSystem 消费），可选生成平铺噪声贴图并绑定到指定材质。
 //修改参数字段会立即调用 Regenerate 重建（由 MetaGen 生成的 setter 触发）。
-class HeightFieldComponent final : public Component
+class HeightField final : public Component
 {
-    OBJECT_TYPE_DECLARE(HeightFieldComponent)
+    OBJECT_TYPE_DECLARE(HeightField)
 
 public:
     bool enabled = true;

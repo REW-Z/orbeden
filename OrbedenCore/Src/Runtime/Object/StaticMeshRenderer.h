@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/Mesh.h"
 
 class RenderScene;

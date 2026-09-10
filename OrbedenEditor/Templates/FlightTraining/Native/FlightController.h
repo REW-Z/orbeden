@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 #include "Runtime/EngineTypes.h"
 
-class RigidBodyComponent;
+class RigidBody;
 
 //自由飞行控制器：气动力、尾翼稳定与运行时受力可视化。
 class FlightController final : public Script
@@ -68,7 +68,7 @@ private:
     float32 alphaDegrees = 0;
 
     /// <summary>按当前速度和姿态计算受力，不向刚体重复施力。</summary>
-    void EvaluateForces(const RigidBodyComponent& body, const quaternion& rotation);
+    void EvaluateForces(const RigidBody& body, const quaternion& rotation);
 
 protected:
     void OnStart();

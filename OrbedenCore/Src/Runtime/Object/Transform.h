@@ -2,12 +2,12 @@
 
 #include "Rendering/RenderTypes.h"
 #include "Runtime/EngineTypes.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 
 //Ens变换组件，保存场景层级和本地变换
-class TransformComponent : public Component
+class Transform : public Component
 {
-    OBJECT_TYPE_DECLARE(TransformComponent)
+    OBJECT_TYPE_DECLARE(Transform)
     ORBEDEN_COMPONENT_UNIQUE
 
 private:

@@ -1,4 +1,4 @@
-#include "Platform/InputManager.h"
+#include "InputManager/InputManager.h"
 
 #include <array>
 

@@ -1,17 +1,17 @@
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 #include "Runtime/World.h"
 
-OBJECT_TYPE_IMPLEMENT(TransformComponent, Component)
+OBJECT_TYPE_IMPLEMENT(Transform, Component)
 
 //获取本地位置
-const vector3& TransformComponent::GetLocalPosition() const
+const vector3& Transform::GetLocalPosition() const
 {
     return localPosition;
 }
 
 //设置本地位置并通知变换缓存
-void TransformComponent::SetLocalPosition(const vector3& value)
+void Transform::SetLocalPosition(const vector3& value)
 {
     if (localPosition.x == value.x && localPosition.y == value.y && localPosition.z == value.z) return;
 
@@ -21,13 +21,13 @@ void TransformComponent::SetLocalPosition(const vector3& value)
 }
 
 //获取本地旋转
-const quaternion& TransformComponent::GetLocalRotation() const
+const quaternion& Transform::GetLocalRotation() const
 {
     return localRotation;
 }
 
 //设置本地旋转并通知变换缓存
-void TransformComponent::SetLocalRotation(const quaternion& value)
+void Transform::SetLocalRotation(const quaternion& value)
 {
     if (localRotation.x == value.x && localRotation.y == value.y &&
         localRotation.z == value.z && localRotation.w == value.w) return;
@@ -38,13 +38,13 @@ void TransformComponent::SetLocalRotation(const quaternion& value)
 }
 
 //获取本地缩放
-const vector3& TransformComponent::GetLocalScale() const
+const vector3& Transform::GetLocalScale() const
 {
     return localScale;
 }
 
 //设置本地缩放并通知变换缓存
-void TransformComponent::SetLocalScale(const vector3& value)
+void Transform::SetLocalScale(const vector3& value)
 {
     if (localScale.x == value.x && localScale.y == value.y && localScale.z == value.z) return;
 
@@ -53,10 +53,10 @@ void TransformComponent::SetLocalScale(const vector3& value)
     if (world) world->NotifyTransformChanged(GetEnsId());
 }
 
-EnsId TransformComponent::GetParent() const { return parent; }
-void TransformComponent::SetParent(EnsId value)
+EnsId Transform::GetParent() const { return parent; }
+void Transform::SetParent(EnsId value)
 {
     if (World* world = GetWorld()) world->SetParent(GetEnsId(), value);
 }
-vector3 TransformComponent::GetWorldPosition() const { return worldPosition; }
-quaternion TransformComponent::GetWorldRotation() const { return worldRotation; }
+vector3 Transform::GetWorldPosition() const { return worldPosition; }
+quaternion Transform::GetWorldRotation() const { return worldRotation; }

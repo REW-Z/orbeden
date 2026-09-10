@@ -50,7 +50,7 @@ void NativeBindings::ReleaseBuffer(NativeBindingBuffer buffer) { delete[] buffer
 
 #include "Runtime/World.h"
 #include "Runtime/Ens.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 
 namespace
 {

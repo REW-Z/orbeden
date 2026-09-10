@@ -5,7 +5,7 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Texture2D.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 
 #include <algorithm>
 #include <cstring>

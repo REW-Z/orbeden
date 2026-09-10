@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/Mesh.h"
 
 //碰撞体几何类型，仅用于原生物理和托管包装分派。
@@ -14,9 +15,9 @@ enum class ColliderGeometryType : uint32
 };
 
 //所有物理碰撞体的抽象基类；没有刚体组件时作为静态碰撞体。
-class ColliderComponent : public Component
+class Collider : public Component
 {
-    OBJECT_TYPE_DECLARE_ABSTRACT(ColliderComponent)
+    OBJECT_TYPE_DECLARE_ABSTRACT(Collider)
 
 public:
     bool enabled = true;
@@ -33,9 +34,9 @@ public:
 };
 
 //盒形碰撞体。
-class BoxColliderComponent final : public ColliderComponent
+class BoxCollider final : public Collider
 {
-    OBJECT_TYPE_DECLARE(BoxColliderComponent)
+    OBJECT_TYPE_DECLARE(BoxCollider)
 
 public:
     vector3 halfExtents = { 0.5f, 0.5f, 0.5f };
@@ -44,9 +45,9 @@ public:
 };
 
 //球形碰撞体。
-class SphereColliderComponent final : public ColliderComponent
+class SphereCollider final : public Collider
 {
-    OBJECT_TYPE_DECLARE(SphereColliderComponent)
+    OBJECT_TYPE_DECLARE(SphereCollider)
 
 public:
     float32 radius = 0.5f;
@@ -55,9 +56,9 @@ public:
 };
 
 //胶囊形碰撞体。
-class CapsuleColliderComponent final : public ColliderComponent
+class CapsuleCollider final : public Collider
 {
-    OBJECT_TYPE_DECLARE(CapsuleColliderComponent)
+    OBJECT_TYPE_DECLARE(CapsuleCollider)
 
 public:
     float32 radius = 0.5f;
@@ -67,9 +68,9 @@ public:
 };
 
 //凸包网格碰撞体。
-class ConvexMeshColliderComponent final : public ColliderComponent
+class ConvexMeshCollider final : public Collider
 {
-    OBJECT_TYPE_DECLARE(ConvexMeshColliderComponent)
+    OBJECT_TYPE_DECLARE(ConvexMeshCollider)
 
 public:
     Ref<Mesh> mesh;
@@ -79,9 +80,9 @@ public:
 };
 
 //三角网格碰撞体。
-class TriangleMeshColliderComponent final : public ColliderComponent
+class TriangleMeshCollider final : public Collider
 {
-    OBJECT_TYPE_DECLARE(TriangleMeshColliderComponent)
+    OBJECT_TYPE_DECLARE(TriangleMeshCollider)
 
 public:
     Ref<Mesh> mesh;

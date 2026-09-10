@@ -1,4 +1,4 @@
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 #include "Runtime/Reflection.h"
 #include "Scripting/ScriptSystem.h"

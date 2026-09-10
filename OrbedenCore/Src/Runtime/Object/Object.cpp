@@ -3,17 +3,17 @@
 
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
-#include "Physics/ColliderComponent.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Collider.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Reflection.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 #include "Runtime/World.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 #include <algorithm>
 #include <array>
@@ -1046,9 +1046,9 @@ bool Object::DestroyObjectFromBinding(Object* object)
             return false;
         }
 
-        if (component->GetType() == TransformComponent::StaticType())
+        if (component->GetType() == Transform::StaticType())
         {
-            Log::Error("TransformComponent cannot be destroyed directly.");
+            Log::Error("Transform cannot be destroyed directly.");
             return false;
         }
 
@@ -1161,14 +1161,14 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
                             ResourceManager::MarkObjectGraph(Object::FindObject(StringId(field.value)), marked);
                     }
                 }
-                ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
+                Collider* collider = component ? component->Cast<Collider>() : nullptr;
                 if (!collider) continue;
 
-                if (ConvexMeshColliderComponent* convex = collider->Cast<ConvexMeshColliderComponent>())
+                if (ConvexMeshCollider* convex = collider->Cast<ConvexMeshCollider>())
                 {
                     ResourceManager::MarkObjectGraph(convex->mesh.Get(), marked);
                 }
-                else if (TriangleMeshColliderComponent* triangle = collider->Cast<TriangleMeshColliderComponent>())
+                else if (TriangleMeshCollider* triangle = collider->Cast<TriangleMeshCollider>())
                 {
                     ResourceManager::MarkObjectGraph(triangle->mesh.Get(), marked);
                 }

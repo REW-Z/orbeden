@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
-#include "Platform/InputManager.h"
+#include "InputManager/InputManager.h"
 #include "FileSystem/Utf8Path.h"
 
 #include <algorithm>
@@ -286,7 +286,8 @@ namespace
 
     std::filesystem::path GetVisualStudioRoot()
     {
-        return std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community");
+        //lexically_normal 不会转换分隔符，统一转成系统首选分隔符后再拼接命令。
+        return std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community").make_preferred();
     }
 
     std::string GetBundledCMakePath()
@@ -298,7 +299,8 @@ namespace
     std::string GetBundledMSBuildPath()
     {
         std::filesystem::path path = GetVisualStudioRoot() / "MSBuild/Current/Bin/MSBuild.exe";
-        return std::filesystem::exists(path) ? ToCleanPath(path) : "msbuild";
+        //ToCleanPath 输出正斜杠的通用格式，cmd 无法执行；可执行文件路径必须使用原生分隔符。
+        return std::filesystem::exists(path) ? path.string() : "msbuild";
     }
 
     //判断原生目录是否包含游戏 C++ 工程文件。
@@ -584,7 +586,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     }
 
     std::string sdkRoot = ToCleanPath(Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk");
-    std::string buildCommand = GetBundledMSBuildPath()
+    std::string buildCommand = Quote(GetBundledMSBuildPath())
         + " " + Quote(ToCleanPath(vcxProject))
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
         + " -p:OrbedenSdkRoot=" + Quote(sdkRoot);
@@ -796,11 +798,13 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     std::string aotLibraryName = GetNativeAotLibraryName(target, assemblyName);
-    std::string aotLibraryPath = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot())
+    //命令行参数使用原生分隔符路径：ToCleanPath 输出正斜杠，cmd 内建命令（copy）无法解析。
+    std::filesystem::path aotLibraryFile = Utf8Path::FromUtf8(project.GetProjectRoot())
         / "Aot"
         / target.aotDirectory
         / BuildConfiguration
-        / Utf8Path::FromUtf8(aotLibraryName));
+        / Utf8Path::FromUtf8(aotLibraryName);
+    std::string aotLibraryPath = aotLibraryFile.string();
     if (!FileExists(aotLibraryPath))
     {
         projectStatus = "Build Player failed: NativeAOT library was not found: " + aotLibraryPath;
@@ -821,7 +825,7 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string buildCommand = GetBundledMSBuildPath()
+    std::string buildCommand = Quote(GetBundledMSBuildPath())
         + " " + Quote(playerProject)
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
         + " -p:OrbedenProjectDir=" + Quote(project.GetProjectRoot())
@@ -833,7 +837,7 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    projectStatus = "Built Player (" + std::string(target.displayName) + "): OrbedenGame/Build/windows-x64/bin/OrbedenGame";
+    projectStatus = "Built Player (" + std::string(target.displayName) + "): " + project.GetProjectRoot() + "/Build/windows-x64/bin/OrbedenGame.exe";
 }
 
 bool EditorSystem::IsPlaying() const
@@ -1117,9 +1121,14 @@ List<std::string> EditorSystem::GetManagedDependencyDirectories() const
 
 bool EditorSystem::RunCommand(const std::string& command, const char* actionName)
 {
+    Log::Info(("RunCommand: " + command).c_str());
 #if defined(_WIN32)
     std::wstring nativeCommand = Utf8Path::FromUtf8(command).wstring();
-    int result = _wsystem(nativeCommand.c_str());
+    //必须保留这层外引号：_wsystem 走 cmd /C，当命令以引号开头且以引号结尾时，
+    //cmd 会剥掉首尾两个引号再解析；命令内的带空格路径（如 "C:\Program Files\...\MSBuild.exe"）
+    //因此失去引号保护而被按空格截断。外层再包一对引号，让 cmd 剥掉外层、保留内层。
+    //切勿删除：删除后 Build Game C++ / Build Player 会报 'C:\Program' 不是内部或外部命令。
+    int result = _wsystem((L"\"" + nativeCommand + L"\"").c_str());
 #else
     int result = std::system(command.c_str());
 #endif

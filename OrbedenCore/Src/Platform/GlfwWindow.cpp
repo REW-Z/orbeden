@@ -13,7 +13,7 @@ typedef HWND__* HWND;
 #endif
 
 #include "Log/Log.h"
-#include "Platform/InputManager.h"
+#include "InputManager/InputManager.h"
 
 namespace
 {

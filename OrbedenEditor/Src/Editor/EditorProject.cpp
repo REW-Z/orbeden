@@ -5,7 +5,7 @@
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 #include "Runtime/WorldSerializer.h"
 
 #include <cctype>

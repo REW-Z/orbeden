@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
-#include "Platform/InputManager.h"
+#include "InputManager/InputManager.h"
 
 #include <chrono>
 

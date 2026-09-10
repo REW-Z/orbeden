@@ -1,10 +1,10 @@
 #include "Physics/PhysicsReflection.h"
 
-#include "Physics/CharacterControllerComponent.h"
-#include "Physics/ColliderComponent.h"
-#include "Physics/RigidBodyComponent.h"
-#include "Physics/HeightFieldComponent.h"
-#include "Physics/WheelColliderComponent.h"
+#include "Runtime/Object/CharacterController.h"
+#include "Runtime/Object/Collider.h"
+#include "Runtime/Object/RigidBody.h"
+#include "Runtime/Object/HeightField.h"
+#include "Runtime/Object/WheelCollider.h"
 #include "Runtime/Reflection.h"
 
 namespace
@@ -25,14 +25,14 @@ namespace
     template<auto Member>
     bool SetHeightField(Object* object, const std::string& value)
     {
-        HeightFieldComponent* terrain = static_cast<HeightFieldComponent*>(object);
+        HeightField* terrain = static_cast<HeightField*>(object);
         if (!Reflection::SetFromXmlValue(terrain->*Member, value)) return false;
         terrain->Regenerate();
         return true;
     }
 
 #define HEIGHT_FIELD(MEMBER, TYPE_NAME, KIND) \
-    Reflection::FieldInfo(#MEMBER, TYPE_NAME, Reflection::FieldKind::KIND, true, GetField<HeightFieldComponent, &HeightFieldComponent::MEMBER>, SetHeightField<&HeightFieldComponent::MEMBER>)
+    Reflection::FieldInfo(#MEMBER, TYPE_NAME, Reflection::FieldKind::KIND, true, GetField<HeightField, &HeightField::MEMBER>, SetHeightField<&HeightField::MEMBER>)
 
 #define PHYSICS_FIELD(TYPE, MEMBER, TYPE_NAME, KIND) \
     Reflection::FieldInfo(#MEMBER, TYPE_NAME, Reflection::FieldKind::KIND, true, GetField<TYPE, &TYPE::MEMBER>, SetField<TYPE, &TYPE::MEMBER>)
@@ -60,9 +60,9 @@ namespace PhysicsReflection
         if (registered) return;
         registered = true;
 
-        Reflection::RegisterTypeFields(HeightFieldComponent::StaticType(),
+        Reflection::RegisterTypeFields(HeightField::StaticType(),
         {
-            PHYSICS_FIELD(HeightFieldComponent, enabled, "bool", Bool),
+            PHYSICS_FIELD(HeightField, enabled, "bool", Bool),
             HEIGHT_FIELD(seed, "int32", Int32),
             HEIGHT_FIELD(sampleTileX, "int32", Int32),
             HEIGHT_FIELD(sampleTileZ, "int32", Int32),
@@ -86,85 +86,85 @@ namespace PhysicsReflection
             HEIGHT_FIELD(noiseHighColor, "color", Color),
             HEIGHT_FIELD(tileSize, "float32", Float32),
             Reflection::FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true,
-                GetField<HeightFieldComponent, &HeightFieldComponent::material>,
-                SetHeightField<&HeightFieldComponent::material>, "Material"),
+                GetField<HeightField, &HeightField::material>,
+                SetHeightField<&HeightField::material>, "Material"),
         });
 
-        Reflection::RegisterTypeFields(WheelColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(WheelCollider::StaticType(),
         {
-            PHYSICS_FIELD(WheelColliderComponent, enabled, "bool", Bool),
-            PHYSICS_FIELD(WheelColliderComponent, wheelOffset, "vector3", Vector3),
-            PHYSICS_FIELD(WheelColliderComponent, wheelRadius, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, suspensionRestLength, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, suspensionTravel, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, suspensionStiffness, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, suspensionDamping, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, rollingFriction, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, lateralFriction, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, raycastDistance, "float32", Float32),
-            PHYSICS_FIELD(WheelColliderComponent, groundQueryLayer, "uint32", UInt32),
-            PHYSICS_FIELD(WheelColliderComponent, steeringWheel, "bool", Bool),
-            PHYSICS_FIELD(WheelColliderComponent, steerAngle, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, enabled, "bool", Bool),
+            PHYSICS_FIELD(WheelCollider, wheelOffset, "vector3", Vector3),
+            PHYSICS_FIELD(WheelCollider, wheelRadius, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, suspensionRestLength, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, suspensionTravel, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, suspensionStiffness, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, suspensionDamping, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, rollingFriction, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, lateralFriction, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, raycastDistance, "float32", Float32),
+            PHYSICS_FIELD(WheelCollider, groundQueryLayer, "uint32", UInt32),
+            PHYSICS_FIELD(WheelCollider, steeringWheel, "bool", Bool),
+            PHYSICS_FIELD(WheelCollider, steerAngle, "float32", Float32),
         });
 
-        Reflection::RegisterTypeFields(RigidBodyComponent::StaticType(),
+        Reflection::RegisterTypeFields(RigidBody::StaticType(),
         {
-            PHYSICS_FIELD(RigidBodyComponent, enabled, "bool", Bool),
-            PHYSICS_FIELD(RigidBodyComponent, bodyType, "PhysicsBodyType", UInt32),
-            PHYSICS_FIELD(RigidBodyComponent, mass, "float32", Float32),
-            PHYSICS_FIELD(RigidBodyComponent, useGravity, "bool", Bool),
-            PHYSICS_FIELD(RigidBodyComponent, linearDamping, "float32", Float32),
-            PHYSICS_FIELD(RigidBodyComponent, angularDamping, "float32", Float32),
-            PHYSICS_FIELD(RigidBodyComponent, linearVelocity, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBodyComponent, angularVelocity, "vector3", Vector3),
-            PHYSICS_FIELD(RigidBodyComponent, continuousCollisionDetection, "bool", Bool),
-            PHYSICS_FIELD(RigidBodyComponent, lockFlags, "uint32", UInt32),
+            PHYSICS_FIELD(RigidBody, enabled, "bool", Bool),
+            PHYSICS_FIELD(RigidBody, bodyType, "PhysicsBodyType", UInt32),
+            PHYSICS_FIELD(RigidBody, mass, "float32", Float32),
+            PHYSICS_FIELD(RigidBody, useGravity, "bool", Bool),
+            PHYSICS_FIELD(RigidBody, linearDamping, "float32", Float32),
+            PHYSICS_FIELD(RigidBody, angularDamping, "float32", Float32),
+            PHYSICS_FIELD(RigidBody, linearVelocity, "vector3", Vector3),
+            PHYSICS_FIELD(RigidBody, angularVelocity, "vector3", Vector3),
+            PHYSICS_FIELD(RigidBody, continuousCollisionDetection, "bool", Bool),
+            PHYSICS_FIELD(RigidBody, lockFlags, "uint32", UInt32),
         });
 
-        Reflection::RegisterTypeFields(BoxColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(BoxCollider::StaticType(),
         {
-            COLLIDER_COMMON_FIELDS(BoxColliderComponent),
-            PHYSICS_FIELD(BoxColliderComponent, halfExtents, "vector3", Vector3),
+            COLLIDER_COMMON_FIELDS(BoxCollider),
+            PHYSICS_FIELD(BoxCollider, halfExtents, "vector3", Vector3),
         });
 
-        Reflection::RegisterTypeFields(SphereColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(SphereCollider::StaticType(),
         {
-            COLLIDER_COMMON_FIELDS(SphereColliderComponent),
-            PHYSICS_FIELD(SphereColliderComponent, radius, "float32", Float32),
+            COLLIDER_COMMON_FIELDS(SphereCollider),
+            PHYSICS_FIELD(SphereCollider, radius, "float32", Float32),
         });
 
-        Reflection::RegisterTypeFields(CapsuleColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(CapsuleCollider::StaticType(),
         {
-            COLLIDER_COMMON_FIELDS(CapsuleColliderComponent),
-            PHYSICS_FIELD(CapsuleColliderComponent, radius, "float32", Float32),
-            PHYSICS_FIELD(CapsuleColliderComponent, halfHeight, "float32", Float32),
+            COLLIDER_COMMON_FIELDS(CapsuleCollider),
+            PHYSICS_FIELD(CapsuleCollider, radius, "float32", Float32),
+            PHYSICS_FIELD(CapsuleCollider, halfHeight, "float32", Float32),
         });
 
-        Reflection::RegisterTypeFields(ConvexMeshColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(ConvexMeshCollider::StaticType(),
         {
-            COLLIDER_COMMON_FIELDS(ConvexMeshColliderComponent),
-            PHYSICS_REF_FIELD(ConvexMeshColliderComponent, mesh, "Ref<Mesh>", "Mesh"),
+            COLLIDER_COMMON_FIELDS(ConvexMeshCollider),
+            PHYSICS_REF_FIELD(ConvexMeshCollider, mesh, "Ref<Mesh>", "Mesh"),
         });
 
-        Reflection::RegisterTypeFields(TriangleMeshColliderComponent::StaticType(),
+        Reflection::RegisterTypeFields(TriangleMeshCollider::StaticType(),
         {
-            COLLIDER_COMMON_FIELDS(TriangleMeshColliderComponent),
-            PHYSICS_REF_FIELD(TriangleMeshColliderComponent, mesh, "Ref<Mesh>", "Mesh"),
+            COLLIDER_COMMON_FIELDS(TriangleMeshCollider),
+            PHYSICS_REF_FIELD(TriangleMeshCollider, mesh, "Ref<Mesh>", "Mesh"),
         });
 
-        Reflection::RegisterTypeFields(CharacterControllerComponent::StaticType(),
+        Reflection::RegisterTypeFields(CharacterController::StaticType(),
         {
-            PHYSICS_FIELD(CharacterControllerComponent, enabled, "bool", Bool),
-            PHYSICS_FIELD(CharacterControllerComponent, shape, "CharacterControllerShape", UInt32),
-            PHYSICS_FIELD(CharacterControllerComponent, radius, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, height, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, halfExtents, "vector3", Vector3),
-            PHYSICS_FIELD(CharacterControllerComponent, stepOffset, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, contactOffset, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, slopeLimit, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, minMoveDistance, "float32", Float32),
-            PHYSICS_FIELD(CharacterControllerComponent, collisionLayer, "uint32", UInt32),
-            PHYSICS_FIELD(CharacterControllerComponent, collisionMask, "uint32", UInt32),
+            PHYSICS_FIELD(CharacterController, enabled, "bool", Bool),
+            PHYSICS_FIELD(CharacterController, shape, "CharacterControllerShape", UInt32),
+            PHYSICS_FIELD(CharacterController, radius, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, height, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, halfExtents, "vector3", Vector3),
+            PHYSICS_FIELD(CharacterController, stepOffset, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, contactOffset, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, slopeLimit, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, minMoveDistance, "float32", Float32),
+            PHYSICS_FIELD(CharacterController, collisionLayer, "uint32", UInt32),
+            PHYSICS_FIELD(CharacterController, collisionMask, "uint32", UInt32),
         });
     }
 }

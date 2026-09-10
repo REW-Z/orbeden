@@ -41,8 +41,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <OutDir>$(MSBuildProjectDirectory)\Build\windows-x64\bin\</OutDir>
-    <IntDir>$(MSBuildProjectDirectory)\Build\windows-x64\obj\</IntDir>
+    <!--Player 产物归属于被打包的游戏项目，按项目目录隔离输出与中间文件。-->
+    <OutDir>$(OrbedenProjectDir)\Build\windows-x64\bin\</OutDir>
+    <IntDir>$(OrbedenProjectDir)\Build\windows-x64\obj\</IntDir>
     <TargetName>OrbedenGame</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -54,16 +55,15 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3_mt.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Native\WindowsX64\$(Configuration)\OrbedenCoreStatic.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3dll.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PostBuildEvent Condition="'$(OrbedenGameAotDll)' != ''">
-      <Command>copy /Y &quot;$(OrbedenGameAotDll)&quot; &quot;$(OutDir.TrimEnd('\'))&quot;</Command>
+    <!--同一 PostBuildEvent 里多个 Command 元数据会互相覆盖，改用 Copy 任务拷贝运行时依赖。-->
+    <PostBuildEvent>
+      <Command>echo Player runtime dependencies are copied by CopyAotRuntime.</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Src\game_main.cpp" />
-    <ClCompile Include="..\OrbedenCore\Src\**\*.cpp" Exclude="..\OrbedenCore\Src\examples.cpp;..\OrbedenCore\Src\ThirdParty\imgui\backends\imgui_impl_opengl3.cpp;..\OrbedenCore\Src\ThirdParty\imgui\backends\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="..\OrbedenCore\Src\**\*.c" />
     <ClCompile Include="$(OrbedenProjectDir)\Native\*.cpp" Exclude="$(OrbedenProjectDir)\Native\GameModule.cpp;$(OrbedenProjectDir)\Native\Build\**\*.cpp" />
     <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
     <ClCompile Include="$(OrbedenProjectDir)\Native\Generated\*.cpp">
@@ -71,8 +71,14 @@
     </ClCompile>
     <ClInclude Include="Src\*.h" />
   </ItemGroup>
-  <Target Name="GenerateCoreBindings" BeforeTargets="ClCompile">
-    <Exec Command="dotnet &quot;$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Tools\OrbedenMetaGen\OrbedenMetaGen.dll&quot; &quot;$(OrbedenEngineRoot)\OrbedenCore\Src&quot; &quot;$(OrbedenEngineRoot)\OrbedenCore\Src\Runtime\Generated&quot; --bindings" />
-  </Target>
+  <ItemGroup>
+    <ProjectReference Include="..\OrbedenCore\OrbedenCoreStatic.vcxproj">
+      <Project>{9C1E7B52-4A8D-4C3F-9B6E-2D5A8C1F7E64}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyAotRuntime" AfterTargets="Build">
+    <Copy SourceFiles="$(OrbedenGameAotDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'$(OrbedenGameAotDll)' != ''" />
+    <Copy SourceFiles="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

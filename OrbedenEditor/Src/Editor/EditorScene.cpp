@@ -10,7 +10,7 @@
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Object.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 
@@ -241,7 +241,7 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
     (void)deltaTime;
     CreateEditorCamera(world);
 
-    TransformComponent* transform = world.GetTransformComponent(cameraEns);
+    Transform* transform = world.GetTransform(cameraEns);
     GLFWwindow* window = GetGlfwWindow(app);
     if (!transform || !window) return;
 
@@ -433,14 +433,14 @@ std::string EditorScene::GetSelectedStableId() const
 std::string EditorScene::GetStableId(EnsId ens) const
 {
     if (ens.IsNull()) return std::string();
-    const TransformComponent* transform = app.GetWorld().GetTransformComponent(ens);
+    const Transform* transform = app.GetWorld().GetTransform(ens);
     return transform ? transform->GetInstanceId().GetPath() : std::string();
 }
 
 //判断 Ens 是否属于编辑器临时场景对象。
 bool EditorScene::IsTemporaryEns(EnsId ens) const
 {
-    const TransformComponent* transform = app.GetWorld().GetTransformComponent(ens);
+    const Transform* transform = app.GetWorld().GetTransform(ens);
     return transform && transform->GetInstanceId().GetPath() == EditorCameraId;
 }
 
@@ -461,7 +461,7 @@ void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
     CreateEditorCamera(world);
 
     if (!cameraState.hasValue) return;
-    if (TransformComponent* transform = world.GetTransformComponent(cameraEns))
+    if (Transform* transform = world.GetTransform(cameraEns))
     {
         transform->SetLocalPosition(cameraState.position);
         transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
@@ -484,7 +484,7 @@ void EditorScene::RestoreCamera(World& world)
     CreateEditorCamera(world);
     if (!cameraState.hasValue) return;
 
-    if (TransformComponent* transform = world.GetTransformComponent(cameraEns))
+    if (Transform* transform = world.GetTransform(cameraEns))
     {
         transform->SetLocalPosition(cameraState.position);
         transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
@@ -544,7 +544,7 @@ void EditorScene::CreateEditorCamera(World& world)
         editorCamera = world.CreateEnsWithStableId(EditorCameraId, "EditorCamera");
         if (editorCamera)
         {
-            if (TransformComponent* transform = editorCamera->Transform())
+            if (Transform* transform = editorCamera->Transform())
             {
                 transform->SetLocalPosition(cameraState.hasValue
                     ? cameraState.position
@@ -573,7 +573,7 @@ void EditorScene::CreateEditorCamera(World& world)
         cameraYaw = cameraState.yaw;
         cameraPitch = cameraState.pitch;
     }
-    if (TransformComponent* transform = editorCamera->Transform())
+    if (Transform* transform = editorCamera->Transform())
     {
         transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     }
@@ -596,7 +596,7 @@ void EditorScene::CaptureCameraState(World& world)
         return;
     }
 
-    TransformComponent* transform = editorCamera->Transform();
+    Transform* transform = editorCamera->Transform();
     if (!transform) return;
     cameraState.hasValue = true;
     cameraState.position = transform->GetLocalPosition();
@@ -718,7 +718,7 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
         EnsId rendererEns = renderer->GetEnsId();
         Ens* currentEns = app.GetWorld().GetEns(rendererEns);
         StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        TransformComponent* transform = app.GetWorld().GetTransformComponent(rendererEns);
+        Transform* transform = app.GetWorld().GetTransform(rendererEns);
         if (currentRenderer != renderer || !transform) continue;
 
         bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, mesh->GetLocalBounds());
@@ -854,14 +854,14 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
     }
     for (EnsId ens : selectedEns)
     {
-        TransformComponent* selectedTransform = world.GetTransformComponent(ens);
+        Transform* selectedTransform = world.GetTransform(ens);
         if (!selectedTransform) continue;
 
         EnsId child = selectedTransform->firstChild;
         while (!child.IsNull())
         {
             pendingEns.push_back(child);
-            TransformComponent* childTransform = world.GetTransformComponent(child);
+            Transform* childTransform = world.GetTransform(child);
             child = childTransform ? childTransform->next : EnsId();
         }
     }
@@ -874,14 +874,14 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
         uint64 key = GetEnsKey(ens);
         if (selectionTypes.find(key) != selectionTypes.end()) continue;
         selectionTypes.emplace(key, DescendantSelection);
-        TransformComponent* transform = world.GetTransformComponent(ens);
+        Transform* transform = world.GetTransform(ens);
         if (!transform) continue;
 
         EnsId child = transform->firstChild;
         while (!child.IsNull())
         {
             pendingEns.push_back(child);
-            TransformComponent* childTransform = world.GetTransformComponent(child);
+            Transform* childTransform = world.GetTransform(child);
             child = childTransform ? childTransform->next : EnsId();
         }
     }
@@ -909,7 +909,7 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
 
         Ens* currentEns = world.GetEns(rendererEns);
         StaticMeshRenderer* currentRenderer = currentEns ? currentEns->GetComponent<StaticMeshRenderer>() : nullptr;
-        TransformComponent* transform = world.GetTransformComponent(rendererEns);
+        Transform* transform = world.GetTransform(rendererEns);
         Mesh* mesh = renderer->mesh.Get();
         if (currentRenderer != renderer || !transform || !mesh) continue;
         if ((renderer->drawLayer & camera->drawLayerMask) == 0) continue;
@@ -1305,7 +1305,7 @@ bool EditorScene::ClipLine(ClipPoint& a, ClipPoint& b)
 void EditorScene::DrawManagedGizmos()
 {
     World& world = app.GetWorld();
-    TransformComponent* transform = world.GetTransformComponent(cameraEns);
+    Transform* transform = world.GetTransform(cameraEns);
     Camera* camera = nullptr;
     if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
     if (!transform || !camera || !camera->IsRenderSceneEligible()) return;

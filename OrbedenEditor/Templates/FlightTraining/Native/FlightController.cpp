@@ -2,12 +2,12 @@
 #include "FlightTerrainStreamer.h"
 #include "Physics/PhysicsSystem.h"
 #include "Physics/PhysicsTypes.h"
-#include "Physics/RigidBodyComponent.h"
-#include "Physics/WheelColliderComponent.h"
-#include "Platform/InputManager.h"
+#include "Runtime/Object/RigidBody.h"
+#include "Runtime/Object/WheelCollider.h"
+#include "InputManager/InputManager.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include <algorithm>
 #include <cmath>
 
@@ -62,7 +62,7 @@ namespace
 /// <summary>记录机场初始姿态。</summary>
 void FlightController::OnStart()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
     spawnPosition = transform->GetLocalPosition();
     spawnRotation = transform->GetLocalRotation();
@@ -80,8 +80,8 @@ void FlightController::OnUpdate(float32 deltaTime)
 /// <summary>计算并施加机翼、垂尾、螺旋桨和舵面作用。</summary>
 void FlightController::OnFixedUpdate(float32 deltaTime)
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
-    RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     if (!transform || !body || !body->enabled) return;
     float32 step = std::max(deltaTime, 0.0f);
     float32 throttleInput = (Input::Key(KeyEnum::LSHIFT) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::LCTRL) ? 1.0f : 0.0f);
@@ -109,9 +109,9 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
         - Dot(body->angularVelocity, up) * yawDamping));
 
     PhysicsSystem* physics = PhysicsSystem::Current();
-    List<WheelColliderComponent*> wheels;
+    List<WheelCollider*> wheels;
     GetEns()->GetComponentInstances(wheels);
-    for (WheelColliderComponent* wheel : wheels)
+    for (WheelCollider* wheel : wheels)
         if (wheel && wheel->steeringWheel) wheel->steerAngle = yawInput * steeringAngle;
 
     if (physics)
@@ -136,7 +136,7 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
 }
 
 /// <summary>从同一时刻的速度和姿态计算气动力，供物理施力和帧末诊断共用。</summary>
-void FlightController::EvaluateForces(const RigidBodyComponent& body, const quaternion& rotation)
+void FlightController::EvaluateForces(const RigidBody& body, const quaternion& rotation)
 {
     vector3 velocity = body.linearVelocity;
     float32 speed = Length(velocity);
@@ -194,7 +194,7 @@ void FlightController::OnLateUpdate(float32 deltaTime)
     (void)deltaTime;
     RenderSystem* renderer = RenderSystem::Current();
     if (!GetEns() || !GetWorld()) return;
-    RigidBodyComponent* body = GetEns()->GetComponent<RigidBodyComponent>();
+    RigidBody* body = GetEns()->GetComponent<RigidBody>();
     if (!body || !body->enabled) return;
     //使用模拟完成后的姿态与速度，避免旧力方向与新飞机姿态错位。
     EvaluateForces(*body, GetEns()->Transform()->GetLocalRotation());
@@ -222,7 +222,7 @@ void FlightController::OnLateUpdate(float32 deltaTime)
 /// <summary>读取空速。</summary>
 float32 FlightController::GetAirspeed()
 {
-    RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
+    RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     return body ? Length(body->linearVelocity) : 0.0f;
 }
 
@@ -243,13 +243,13 @@ float32 FlightController::GetWeightNewtons() { return Length(gravityForce); }
 /// <summary>读取垂直爬升速度。</summary>
 float32 FlightController::GetClimbRate()
 {
-    RigidBodyComponent* body = GetEns() ? GetEns()->GetComponent<RigidBodyComponent>() : nullptr;
+    RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     return body ? body->linearVelocity.y : 0.0f;
 }
 
 float32 FlightController::GetPitchDegrees()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return 0.0f;
 
     vector3 forward = Rotate(transform->GetLocalRotation(), { 0.0f, 0.0f, -1.0f });
@@ -258,7 +258,7 @@ float32 FlightController::GetPitchDegrees()
 
 float32 FlightController::GetRollDegrees()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return 0.0f;
 
     quaternion rotation = transform->GetLocalRotation();
@@ -269,7 +269,7 @@ float32 FlightController::GetRollDegrees()
 
 float32 FlightController::GetHeadingDegrees()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return 0.0f;
 
     vector3 forward = Rotate(transform->GetLocalRotation(), { 0.0f, 0.0f, -1.0f });
@@ -278,7 +278,7 @@ float32 FlightController::GetHeadingDegrees()
 
 float32 FlightController::GetAltitude()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     return transform ? transform->GetLocalPosition().y : 0.0f;
 }
 
@@ -286,7 +286,7 @@ float32 FlightController::GetAltitude()
 /// <summary>复位到机场并清空力和速度，不保留航路任务。</summary>
 void FlightController::ResetFlight()
 {
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
     if (FlightTerrainStreamer* terrain = GetEns()->GetComponent<FlightTerrainStreamer>()) terrain->ResetOrigin();
     throttle = 0;
@@ -295,7 +295,7 @@ void FlightController::ResetFlight()
     alphaDegrees = 0;
     transform->SetLocalPosition(spawnPosition);
     transform->SetLocalRotation(spawnRotation);
-    if (RigidBodyComponent* body = GetEns()->GetComponent<RigidBodyComponent>())
+    if (RigidBody* body = GetEns()->GetComponent<RigidBody>())
     {
         body->linearVelocity = {};
         body->angularVelocity = {};

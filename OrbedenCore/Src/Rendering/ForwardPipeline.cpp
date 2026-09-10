@@ -4,7 +4,7 @@
 #include "FileSystem/PathDefines.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 

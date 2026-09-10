@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 
 #include <string>
 

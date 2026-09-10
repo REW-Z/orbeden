@@ -69,7 +69,7 @@ flowchart LR
     Editor["OrbedenEditor Build Player\nWindows x64 构建前端"]
 
     subgraph Target["目标平台 Release"]
-        CoreCpp["Core C++"] --> CoreLib["Target Static Lib\norbeden_core"]
+        CoreCpp["Core C++"] --> CoreLib["OrbedenCoreStatic.lib\n（SDK WindowsX64）"]
         GameCpp["Game C++"] --> Link["Target Link"]
         CoreCs["Core C#"] --> Aot["Target NativeAOT Static Lib\n{AssemblyName}.lib / lib{AssemblyName}.a"]
         GameCs["Game Script C#"] --> Aot
@@ -90,14 +90,14 @@ flowchart LR
 | 目标 | 构建方式 | 入口 | 输出 |
 | --- | --- | --- | --- |
 | Core C++/C# SDK for Editor | MSVC Static Library + CLR Assembly | Visual Studio `OrbedenCore.vcxproj` | Native SDK `OrbedenCore.lib`，并自动生成和同步 `OrbedenCore.CSharp.dll` |
-| Core C++ for Player | CMake clang-cl/Clang/GCC Static Library | Release Editor `Build Player` | `OrbedenGame/Build/{Target}/lib/orbeden_core.*` |
+| Core C++ for Player | MSVC Static Library（`OrbedenCoreStatic.vcxproj`） | Release Editor `Build Player`（作为 Player 工程的 ProjectReference 自动构建） | `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCoreStatic.lib` |
 | PhysX CPU SDK | CMake/Ninja Static Libraries | `Build/BuildPhysX.ps1` / `Build/BuildPhysXLinux.sh` | `OrbedenCore/Src/ThirdParty/PhysX/lib/{Platform}/{Compiler?}/{Configuration}` |
 | Core C# SDK | Debug CLR / Release AOT 输入 | 构建 `OrbedenCore.vcxproj` 时自动执行 | Debug 为 `OrbedenCore.CSharp.dll`；Release 发布时作为 Game NativeAOT 的引用输入，不单独进入 Player |
 | Editor C++ | MSVC Executable | VS 解决方案 / Editor 工程 | `OrbedenEditor/x64/{Configuration}/OrbedenEditor.exe`，链接 `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib` |
 | Editor C# | Windows Editor CLR 工具程序集 | Editor 工程构建时自动构建 | `OrbedenEditor/x64/{Configuration}/Managed/Orbeden.Editor.dll`；不进入 Player |
 | Game C# Debug | CLR Assembly Build | Debug Editor `Build Game C#` | `{ProjectRoot}/Managed/{AssemblyName}.dll` |
 | Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
-| Player | CMake clang-cl/Clang/GCC Executable | Release Editor `Build Player` | `OrbedenGame/Build/{Target}/bin/OrbedenGame` |
+| Player | MSVC Executable（`OrbedenGame.vcxproj`） | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/OrbedenGame.exe` |
 
 ## 完整打包流程
 
@@ -111,7 +111,7 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 
 3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Script/Lib/`。点击 `Build Game C#` 生成 `{ProjectRoot}/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。
 
-4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 静态库，再由 CMake 重编 Player 版 Core C++ 并链接 `OrbedenGame`，输出到 `OrbedenGame/Build/{Target}/bin/`。
+4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程自动构建 Player 版 Core 静态库 `OrbedenCoreStatic.lib`，直接编译游戏 C++ 源码，链接静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。
 
 5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Resource/`、`World/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
@@ -271,15 +271,15 @@ file OrbedenCore/Src/ThirdParty/PhysX/lib/LinuxX64/GCC/Release/libPhysX_static_6
 
 四套全部生成时共有 32 个归档文件。`file` 应报告当前 x86-64 Linux 工具链生成的 archive，目录中不应出现 `.lib`、`.dll`、`.so` 或 `PhysXGpu`。Windows 只有在配置完整 Linux sysroot 和交叉工具链时才能交叉编译，Windows `.lib` 不能当作 Linux `.a` 使用。
 
-FreeBSD 和 Switch 当前明确不支持 PhysX：仓库没有经过验证的上游平台端口，也没有 Switch 厂商 SDK。对应 Player preset 会在 CMake 配置阶段失败，不会回退到无物理或其他实现。
+FreeBSD 和 Switch 当前明确不支持 PhysX：仓库没有经过验证的上游平台端口，也没有 Switch 厂商 SDK。对应目标在打包下拉框中置灰，不会进入发布流程，也不会回退到无物理或其他实现。
 
 ### 原生物理接口
 
 `Application::GetSystem<PhysicsSystem>()` 返回内建 `PhysicsSystem`。C++ 端现有高层能力包括：
 
-- `RigidBodyComponent`：Static、Dynamic、Kinematic、质量、阻尼、重力、CCD 和轴锁定。
-- `ColliderComponent`：Box、Sphere、Capsule、ConvexMesh、TriangleMesh、Trigger、材质和 layer/mask。
-- `CharacterControllerComponent`：Capsule/Box CCT、step/contact/slope 和 layer/mask。
+- `RigidBody`：Static、Dynamic、Kinematic、质量、阻尼、重力、CCD 和轴锁定。
+- `Collider`：Box、Sphere、Capsule、ConvexMesh、TriangleMesh、Trigger、材质和 layer/mask。
+- `CharacterController`：Capsule/Box CCT、step/contact/slope 和 layer/mask。
 - `Raycast`、`SweepSphere`、`OverlapSphere`、接触/Trigger 事件与 CCT 移动/传送。
 
 Dynamic 刚体和 CCT 必须是根实体。TriangleMesh 不允许用于 Dynamic 刚体，应改用 ConvexMesh。静态和 Kinematic Actor 会读取层级后的世界变换；Dynamic Actor 将模拟结果写回根实体局部变换。
@@ -308,21 +308,17 @@ RigidBody? sameBody = bodyEns.GetComponent<RigidBody>();
 
 ## Editor 的 Player 目标平台
 
-`ProjectPanel` 的 `Build Player` 按钮前有 `Target Platform` 下拉框。该选项只影响 Release Player，不影响 Windows x64 Debug Editor/PIE。每个目标都有独立的 NativeAOT RID、CMake preset、C++ 工具链和平台静态库。
+`Build Game` 面板的 `Build Player` 按钮前有 `Target Platform` 下拉框。该选项只影响 Player，不影响 Windows x64 Debug Editor/PIE。
 
-| Target Platform | Game C# AOT 目标 | Player CMake preset | 状态 |
-| --- | --- | --- | --- |
-| Windows x64 | `windows-x64` / `{AssemblyName}.lib` | `player-windows-x64-clang-cl` | 默认验证目标 |
-| Linux x64 | `linux-x64-clang` / `lib{AssemblyName}.a` | `player-linux-x64-clang` | 需要本机或交叉 clang/GLFW |
-| Linux x64 GCC | `linux-x64-gcc` / `lib{AssemblyName}.a` | `player-linux-x64-gcc` | 需要本机或交叉 gcc/GLFW |
-| FreeBSD x64 | `freebsd-x64` / `lib{AssemblyName}.a` | `player-freebsd-x64-clang` | 预留骨架，依赖本机 NativeAOT 和交叉工具链支持 |
-| Switch | `switch` | `player-switch` | 预留骨架，需要接入厂商 SDK |
+| Target Platform | Game C# AOT 目标 | 状态 |
+| --- | --- | --- |
+| Windows x64 | `windows-x64` / `{AssemblyName}.lib`（NativeLib=Shared，DLL 随 Player 分发） | 默认验证目标 |
+| Linux x64 / Linux x64 GCC / FreeBSD x64 / Switch | — | 下拉框置灰；需要目标机或厂商工具链，不在 Windows Editor 中发起 |
 
 `Build Player` 的流程固定为：
 
-1. C++ Editor 将项目、配置和目标传给 `Orbeden.Editor`，由 C# `PlayerBuildPipeline` 直接执行 `dotnet restore/publish` 并校验 Game NativeAOT 静态库。
-2. 使用对应 CMake preset 构建 Player 版本的 `OrbedenCore`。
-3. 链接 `OrbedenGame`、Player 版 `OrbedenCore` 和 Game C# AOT 静态库。
+1. C++ Editor 将项目、配置和目标传给 `Orbeden.Editor`，由 C# `PlayerBuildPipeline` 直接执行 `dotnet restore/publish` 并校验 Game NativeAOT 库。
+2. 以 MSBuild 构建 `OrbedenGame/OrbedenGame.vcxproj`：作为 ProjectReference 先构建 `OrbedenCoreStatic.vcxproj`（Core 静态库，输出到 SDK），再编译游戏 C++ 源码并链接静态库、第三方库与 AOT 导入库，最后拷贝 AOT DLL 与 `glfw3.dll` 到输出目录。
 
 NativeAOT 命令参数、RID 和输出目录集中在 `OrbedenEditor/Managed/Orbeden.Editor/PlayerBuildPipeline.cs`，可直接随 Editor C# 代码定制。失败时不会回退到 PowerShell、DLL 或 CLR 工作流。
 
@@ -372,7 +368,7 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 
 如果验证 Editor：先在 Visual Studio 中构建对应配置的 `OrbedenCore.vcxproj`，同时生成新的 Editor 版 `OrbedenCore.lib` 与 `OrbedenCore.CSharp.dll`；再构建或启动 `OrbedenEditor`，然后重启 Editor。
 
-如果验证 Player：在 Editor 里选择目标平台并点击 `Build Player`，CMake 会重新构建 Player 版 `OrbedenCore` 并重新链接 Player。
+如果验证 Player：在 Editor 里选择目标平台并点击 `Build Player`，MSBuild 会通过 `OrbedenCoreStatic.vcxproj` 重新构建 Player 版 Core 静态库并重新链接 Player。
 
 如果修改了暴露给 C# 的 Native API：同步修改 `OrbedenCore.CSharp` 的 delegate / wrapper，然后构建 `OrbedenCore.vcxproj`、Editor C#、Game C#，最后再测试 Editor 或打包 Player。
 

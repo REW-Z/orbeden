@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/EngineTypes.h"
 

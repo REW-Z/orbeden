@@ -2,7 +2,7 @@
 
 #include "Log/Log.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 #include <cmath>
 #include <span>
@@ -28,7 +28,7 @@ void SampleNativeBehaviour::OnUpdate(float32 deltaTime)
     }
     elapsedTime += deltaTime * speed;
     Ens* ens = GetEns();
-    TransformComponent* transform = ens ? ens->Transform() : nullptr;
+    Transform* transform = ens ? ens->Transform() : nullptr;
     if (!transform) return;
 
     vector3 position = transform->GetLocalPosition();

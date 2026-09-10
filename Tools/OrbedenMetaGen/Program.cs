@@ -254,7 +254,7 @@ static bool IsPersistentField(string className, string fieldName)
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
     if (className == "StaticMeshRenderer" && fieldName == "renderState") return false;
-    if (className == "TransformComponent")
+    if (className == "Transform")
     {
         return fieldName is "localPosition" or "localRotation" or "localScale";
     }
@@ -354,7 +354,7 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
     output.AppendLine("// </auto-generated>");
     output.AppendLine();
     output.AppendLine("#include \"Runtime/Reflection.h\"");
-    output.AppendLine("#include \"Scripting/Script.h\"");
+    output.AppendLine("#include \"Runtime/Object/Script.h\"");
     foreach (var file in classes.Select(value => Path.GetRelativePath(sourceRoot, value.File).Replace('\\', '/')).Distinct(StringComparer.Ordinal))
     {
         output.AppendLine($"#include \"{file}\"");
@@ -385,7 +385,7 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
         //生成字段 getter/setter 和方法 invoker
         foreach (var field in classInfo.Fields.Where(field => field.Persistent))
         {
-            var setterBacked = classInfo.Name == "TransformComponent"
+            var setterBacked = classInfo.Name == "Transform"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
             var marksDirty = classInfo.Name == "Material" && field.Name == "shader";
             var regenerateOnSet = field.Changed.Length != 0;

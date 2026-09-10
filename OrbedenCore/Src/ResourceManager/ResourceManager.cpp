@@ -1,9 +1,9 @@
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 
 #include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"

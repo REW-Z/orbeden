@@ -8,7 +8,7 @@
 
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 namespace
 {

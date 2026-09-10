@@ -85,12 +85,12 @@
 | 类型 | 关键行为 | 状态 |
 | --- | --- | --- |
 | Object / Component / Script | 身份缓存、所有权、构造和生命周期域 | 创建/身份/脚本域/CLR 卸载/真实 DLL 重载通过；托管继承/异常/重入/回调内销毁通过 |
-| TransformComponent | 本地变换 setter、层级与缓存通知 | 属性 getter/setter、世界变换、监听通知与父子层级通过 |
+| Transform | 本地变换 setter、层级与缓存通知 | 属性 getter/setter、世界变换、监听通知与父子层级通过 |
 | StaticMeshRenderer / Camera / DirectionalLight | 资源引用、渲染状态 | 已生成；渲染状态由飞行模板渲染冒烟覆盖 |
-| RigidBodyComponent | 力累积、物理属性 | 属性往返通过；力累积由飞行模板气动模型覆盖 |
-| ColliderComponent 及五个派生类 | 几何类型、材质与 Mesh 引用 | Box/Sphere/基类查询/销毁通过；属性、五种几何类型与 Mesh 引用往返通过 |
-| CharacterControllerComponent | 物理移动、形状参数 | 形状与参数往返通过 |
-| HeightFieldComponent / WheelColliderComponent | 生成地形与悬挂 | 地形参数重建/采样与悬挂参数往返通过；实际物理行为由飞行模板起落架覆盖 |
+| RigidBody | 力累积、物理属性 | 属性往返通过；力累积由飞行模板气动模型覆盖 |
+| Collider 及五个派生类 | 几何类型、材质与 Mesh 引用 | Box/Sphere/基类查询/销毁通过；属性、五种几何类型与 Mesh 引用往返通过 |
+| CharacterController | 物理移动、形状参数 | 形状与参数往返通过 |
+| HeightField / WheelCollider | 生成地形与悬挂 | 地形参数重建/采样与悬挂参数往返通过；实际物理行为由飞行模板起落架覆盖 |
 | Mesh | 顶点与索引缓冲、子网格、脏标记 | 顶点 Span、快照/写回、运行时 Key、索引上传、子网格校验/配置、RefreshNormals、脏标记周期通过 |
 | Material | 参数槽、Shader/Texture 引用、脏标记 | 纹理/颜色槽与 Shader 引用通过；GPU 消费端脏标记由 Player/渲染冒烟覆盖 |
 | Shader | 源码、Pass、槽反射、脏标记 | CreateFromSource/ReplaceSource/Pass 快照/置脏通过；GPU 消费端同上 |

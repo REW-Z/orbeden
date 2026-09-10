@@ -38,7 +38,7 @@ flowchart TD
 
 `RenderScene` 在绑定 World 时完整收集一次已有组件，后续由 Camera、DirectionalLight 和 StaticMeshRenderer 的 Attach、Detach 与 enabled 变化维护注册：
 
-- `TransformComponent` setter 和父级变化通过 `ITransformListener` 通知各 `TransformCache`，不再每帧扫描所有 Ens。
+- `Transform` setter 和父级变化通过 `ITransformListener` 通知各 `TransformCache`，不再每帧扫描所有 Ens。
 - `TransformCache` 只递归更新收到通知的子树，并把本次受影响的 Ens 提供给 `RenderScene`。
 - Camera 生成 View、Projection、ViewProjection 和视锥快照，并按 `depth` 升序排列。
 - DirectionalLight 复制光照与阴影参数。

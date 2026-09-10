@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Rendering/RenderTypes.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/EngineTypes.h"
 
 //方向光组件，描述全局平行光和基础阴影参数。

@@ -1,12 +1,12 @@
 #include "Runtime/Native/RuntimeComponentBinds.h"
 
 #include "FileSystem/PathDefines.h"
-#include "Physics/CharacterControllerComponent.h"
-#include "Physics/ColliderComponent.h"
-#include "Physics/RigidBodyComponent.h"
+#include "Runtime/Object/CharacterController.h"
+#include "Runtime/Object/Collider.h"
+#include "Runtime/Object/RigidBody.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Native/NativeCall.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
 

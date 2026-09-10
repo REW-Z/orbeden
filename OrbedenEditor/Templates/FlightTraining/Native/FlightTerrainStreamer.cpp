@@ -1,9 +1,9 @@
 #include "FlightTerrainStreamer.h"
-#include "Physics/HeightFieldComponent.h"
+#include "Runtime/Object/HeightField.h"
 #include "Runtime/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -17,13 +17,13 @@ void FlightTerrainStreamer::OnStart()
     if (!world) return;
     activeChunkSize = std::clamp(chunkSize, 128.0f, 2048.0f);
     activeSamples = std::clamp(samplesPerSide, 17, 129);
-    world->ForEachComponent<HeightFieldComponent>([&](HeightFieldComponent* terrain)
+    world->ForEachComponent<HeightField>([&](HeightField* terrain)
     {
         if (terrain->GetEns()->GetName() == "Terrain") airportTerrain = terrain->GetEnsId();
     });
     Ens* airport = world->GetEns(airportTerrain);
     if (!airport) return;
-    HeightFieldComponent* terrain = airport->GetComponent<HeightFieldComponent>();
+    HeightField* terrain = airport->GetComponent<HeightField>();
     terrain->sizeX = activeChunkSize;
     terrain->sizeZ = activeChunkSize;
     terrain->rowCount = activeSamples;
@@ -37,7 +37,7 @@ void FlightTerrainStreamer::OnStart()
 void FlightTerrainStreamer::OnFixedUpdate(float32 deltaTime)
 {
     (void)deltaTime;
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
     vector3 position = transform->GetLocalPosition();
     float32 threshold = std::max(rebaseDistance, activeChunkSize * 2);
@@ -55,7 +55,7 @@ void FlightTerrainStreamer::StreamChunks(int32 budget)
     World* world = GetWorld();
     Ens* airport = world ? world->GetEns(airportTerrain) : nullptr;
     if (!airport || !GetEns()) return;
-    HeightFieldComponent* source = airport->GetComponent<HeightFieldComponent>();
+    HeightField* source = airport->GetComponent<HeightField>();
     source->SyncPendingGeneration();
     Material* surface = source->GetSurfaceMaterial();
     if (!surface) return;
@@ -91,7 +91,7 @@ void FlightTerrainStreamer::StreamChunks(int32 budget)
                     0, static_cast<float32>(static_cast<double>(z) * activeChunkSize - originZ) });
                 StaticMeshRenderer* renderer = ens->AddComponent<StaticMeshRenderer>();
                 renderer->castShadows = false;
-                HeightFieldComponent* terrain = ens->AddComponent<HeightFieldComponent>();
+                HeightField* terrain = ens->AddComponent<HeightField>();
                 terrain->seed = source->seed;
                 terrain->sampleTileX = x;
                 terrain->sampleTileZ = z;
@@ -129,7 +129,7 @@ void FlightTerrainStreamer::RebaseWorld(const vector3& shift)
     originZ += shift.z;
     world->ForEachEns([&](Ens& ens)
     {
-        TransformComponent* transform = ens.Transform();
+        Transform* transform = ens.Transform();
         if (!transform || !transform->parent.IsNull()) return;
         vector3 position = transform->GetLocalPosition();
         transform->SetLocalPosition({ position.x - shift.x, position.y, position.z - shift.z });

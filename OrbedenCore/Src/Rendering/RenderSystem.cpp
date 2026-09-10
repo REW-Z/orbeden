@@ -2,7 +2,7 @@
 
 #include "Log/Log.h"
 #include "Rendering/RenderMath.h"
-#include "Runtime/ResourceManager.h"
+#include "ResourceManager/ResourceManager.h"
 
 #include <algorithm>
 #include <cmath>

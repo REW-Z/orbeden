@@ -40,7 +40,7 @@ public sealed class SampleBehaviour : Script
     private void OnUpdate(float deltaTime)
     {
         totalTime += deltaTime;
-        TransformComponent transform = Ens.Transform;
+        Transform transform = Ens.Transform;
         vector3 position = startPosition;
         position.y += MathF.Sin(totalTime) * 0.25f;
         transform.SetLocalPosition(position);

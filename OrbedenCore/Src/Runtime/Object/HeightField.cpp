@@ -1,16 +1,16 @@
-#include "Physics/HeightFieldComponent.h"
+#include "Runtime/Object/HeightField.h"
 
 #include "Runtime/Ens.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Texture2D.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 #include <algorithm>
 #include <cmath>
 
-OBJECT_TYPE_IMPLEMENT(HeightFieldComponent, Component)
+OBJECT_TYPE_IMPLEMENT(HeightField, Component)
 
 namespace
 {
@@ -39,13 +39,13 @@ namespace
 }
 
 //挂载时生成初始地形。
-void HeightFieldComponent::OnAttach()
+void HeightField::OnAttach()
 {
     Regenerate();
 }
 
 /// <summary>卸载地形块时释放专属资源，避免无限飞行累积 CPU/GPU 内存。</summary>
-void HeightFieldComponent::OnDetach()
+void HeightField::OnDetach()
 {
     StaticMeshRenderer* renderer = GetEns() ? GetEns()->GetComponent<StaticMeshRenderer>() : nullptr;
     if (renderer && renderer->mesh.Get() == generatedMesh) renderer->mesh.Set(nullptr);
@@ -59,13 +59,13 @@ void HeightFieldComponent::OnDetach()
 }
 
 /// <summary>获取可共享的地形材质。</summary>
-Material* HeightFieldComponent::GetSurfaceMaterial() const
+Material* HeightField::GetSurfaceMaterial() const
 {
     return runtimeMaterial ? runtimeMaterial : material.Get();
 }
 
 //按当前参数重建高度场、渲染网格与噪声贴图。
-void HeightFieldComponent::Regenerate()
+void HeightField::Regenerate()
 {
     RebuildHeights();
     RebuildNoiseTexture();
@@ -73,13 +73,13 @@ void HeightFieldComponent::Regenerate()
 }
 
 //双线性采样世界 XZ 处的高度。
-float32 HeightFieldComponent::GetHeightAtWorldXZ(float32 x, float32 z) const
+float32 HeightField::GetHeightAtWorldXZ(float32 x, float32 z) const
 {
     if (heights.empty()) return 0.0f;
 
     int32 rows = std::max(rowCount, 2);
     int32 columns = std::max(columnCount, 2);
-    TransformComponent* transform = GetEns() ? GetEns()->Transform() : nullptr;
+    Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     vector3 origin = transform ? (transform->transformCacheInitialized ? transform->worldPosition : transform->GetLocalPosition()) : vector3();
     x -= origin.x;
     z -= origin.z;
@@ -99,31 +99,31 @@ float32 HeightFieldComponent::GetHeightAtWorldXZ(float32 x, float32 z) const
 }
 
 //获取当前高度采样。
-const std::vector<float32>& HeightFieldComponent::GetHeights() const
+const std::vector<float32>& HeightField::GetHeights() const
 {
     return heights;
 }
 
 //获取高度场行间距（X 方向）。
-float32 HeightFieldComponent::GetRowScale() const
+float32 HeightField::GetRowScale() const
 {
     return sizeX / std::max(rowCount - 1, 1);
 }
 
 //获取高度场列间距（Z 方向）。
-float32 HeightFieldComponent::GetColumnScale() const
+float32 HeightField::GetColumnScale() const
 {
     return sizeZ / std::max(columnCount - 1, 1);
 }
 
 //获取当前生成代数。
-uint32 HeightFieldComponent::GetGeneration() const
+uint32 HeightField::GetGeneration() const
 {
     return generation;
 }
 
 //物理固定步兜底：material 解析后完整重建（噪声贴图和运行时材质依赖它）。
-void HeightFieldComponent::SyncPendingGeneration()
+void HeightField::SyncPendingGeneration()
 {
     if (meshPending && material.Get())
     {
@@ -133,7 +133,7 @@ void HeightFieldComponent::SyncPendingGeneration()
 }
 
 //确定性二维 value noise，输出 [0,1]。
-float32 HeightFieldComponent::SampleNoise(double x, double z, int32 noiseSeed) const
+float32 HeightField::SampleNoise(double x, double z, int32 noiseSeed) const
 {
     int64 xi = static_cast<int64>(std::floor(x));
     int64 zi = static_cast<int64>(std::floor(z));
@@ -160,7 +160,7 @@ float32 HeightFieldComponent::SampleNoise(double x, double z, int32 noiseSeed) c
 }
 
 /// <summary>按统一全局坐标采样，并在机场周围平滑过渡到平整地面。</summary>
-float32 HeightFieldComponent::SampleHeight(double x, double z) const
+float32 HeightField::SampleHeight(double x, double z) const
 {
     float32 total = 0.0f;
     float32 weight = 0.0f;
@@ -187,7 +187,7 @@ float32 HeightFieldComponent::SampleHeight(double x, double z) const
 }
 
 /// <summary>重建地形块采样，边界使用相同全局坐标。</summary>
-void HeightFieldComponent::RebuildHeights()
+void HeightField::RebuildHeights()
 {
     int32 rows = std::max(rowCount, 2);
     int32 columns = std::max(columnCount, 2);
@@ -207,7 +207,7 @@ void HeightFieldComponent::RebuildHeights()
 }
 
 //重建渲染网格并写入同 Ens 的 StaticMeshRenderer。
-void HeightFieldComponent::RebuildRenderMesh()
+void HeightField::RebuildRenderMesh()
 {
     Ens* ens = GetEns();
     StaticMeshRenderer* renderer = ens ? ens->GetComponent<StaticMeshRenderer>() : nullptr;
@@ -294,7 +294,7 @@ void HeightFieldComponent::RebuildRenderMesh()
 }
 
 //重建噪声贴图并绑定到运行时材质。
-void HeightFieldComponent::RebuildNoiseTexture()
+void HeightField::RebuildNoiseTexture()
 {
     Material* source = material.Get();
     if (!source)

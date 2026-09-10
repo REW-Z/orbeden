@@ -2,7 +2,7 @@
 
 #include "Rendering/RenderMath.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 #include <algorithm>
 
@@ -55,13 +55,13 @@ void TransformCache::Update(World& currentWorld)
 
     for (EnsId ens : roots)
     {
-        TransformComponent* transform = currentWorld.GetTransformComponent(ens);
+        Transform* transform = currentWorld.GetTransform(ens);
         if (!transform) continue;
 
         CollectChangedRecursive(ens);
         if (!transform->transformDirty && transform->transformCacheInitialized) continue;
 
-        TransformComponent* parentTransform = currentWorld.GetTransformComponent(transform->parent);
+        Transform* parentTransform = currentWorld.GetTransform(transform->parent);
         matrix4x4 parentMatrix = parentTransform ? parentTransform->worldMatrix : matrix4x4();
         quaternion parentRotation = parentTransform ? parentTransform->worldRotation : quaternion();
         UpdateNodeRecursive(ens, parentMatrix, parentRotation, false);
@@ -71,7 +71,7 @@ void TransformCache::Update(World& currentWorld)
 //获取实体的缓存世界矩阵
 matrix4x4 TransformCache::GetWorldMatrix(EnsId ens) const
 {
-    TransformComponent* transform = world ? world->GetTransformComponent(ens) : nullptr;
+    Transform* transform = world ? world->GetTransform(ens) : nullptr;
     return transform ? transform->worldMatrix : matrix4x4();
 }
 
@@ -94,7 +94,7 @@ void TransformCache::BindWorld(World& currentWorld)
     //收集世界层级根节点
     currentWorld.ForEachEns([this](Ens& ens)
     {
-        TransformComponent* transform = ens.Transform();
+        Transform* transform = ens.Transform();
         if (!transform || !transform->parent.IsNull()) return;
 
         transform->transformDirty = true;
@@ -107,13 +107,13 @@ bool TransformCache::HasPendingAncestor(EnsId ens) const
 {
     if (!world) return false;
 
-    TransformComponent* transform = world->GetTransformComponent(ens);
+    Transform* transform = world->GetTransform(ens);
     EnsId parent = transform ? transform->parent : EnsId();
     while (!parent.IsNull())
     {
         if (std::find(pendingNodes.begin(), pendingNodes.end(), parent) != pendingNodes.end()) return true;
 
-        TransformComponent* parentTransform = world->GetTransformComponent(parent);
+        Transform* parentTransform = world->GetTransform(parent);
         parent = parentTransform ? parentTransform->parent : EnsId();
     }
 
@@ -125,14 +125,14 @@ void TransformCache::CollectChangedRecursive(EnsId ens)
 {
     if (!world) return;
 
-    TransformComponent* transform = world->GetTransformComponent(ens);
+    Transform* transform = world->GetTransform(ens);
     if (!transform) return;
 
     changedNodes.push_back(ens);
     EnsId child = transform->firstChild;
     while (!child.IsNull())
     {
-        TransformComponent* childTransform = world->GetTransformComponent(child);
+        Transform* childTransform = world->GetTransform(child);
         EnsId nextChild = childTransform ? childTransform->next : EnsId();
         CollectChangedRecursive(child);
         child = nextChild;
@@ -144,7 +144,7 @@ void TransformCache::UpdateNodeRecursive(EnsId ens, const matrix4x4& parentMatri
 {
     if (!world) return;
 
-    TransformComponent* transform = world->GetTransformComponent(ens);
+    Transform* transform = world->GetTransform(ens);
     if (!transform) return;
 
     bool dirty = parentDirty || transform->transformDirty || !transform->transformCacheInitialized;
@@ -164,7 +164,7 @@ void TransformCache::UpdateNodeRecursive(EnsId ens, const matrix4x4& parentMatri
     EnsId child = transform->firstChild;
     while (!child.IsNull())
     {
-        TransformComponent* childTransform = world->GetTransformComponent(child);
+        Transform* childTransform = world->GetTransform(child);
         EnsId nextChild = childTransform ? childTransform->next : EnsId();
         UpdateNodeRecursive(child, transform->worldMatrix, transform->worldRotation, dirty);
         child = nextChild;

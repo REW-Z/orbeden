@@ -3,2550 +3,28 @@
 // </auto-generated>
 
 #include "Runtime/Reflection.h"
-#include "Scripting/Script.h"
-#include "Physics/CharacterControllerComponent.h"
-#include "Physics/ColliderComponent.h"
-#include "Physics/HeightFieldComponent.h"
-#include "Physics/RigidBodyComponent.h"
-#include "Physics/WheelColliderComponent.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Script.h"
 #include "Runtime/Object/Camera.h"
+#include "Runtime/Object/CharacterController.h"
+#include "Runtime/Object/Collider.h"
+#include "Runtime/Object/Component.h"
 #include "Runtime/Object/DirectionalLight.h"
+#include "Runtime/Object/HeightField.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Object.h"
+#include "Runtime/Object/RigidBody.h"
+#include "Runtime/Object/Script.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Texture2D.h"
-#include "Runtime/Object/TransformComponent.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Transform.h"
+#include "Runtime/Object/WheelCollider.h"
 
 class ReflectionGeneratedAccess
 {
 public:
-    //读取 CharacterControllerComponent.enabled 字段
-    static std::string Get_CharacterControllerComponent_enabled(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 CharacterControllerComponent.enabled 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_enabled(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.enabled 字段
-    static bool Set_CharacterControllerComponent_enabled(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 CharacterControllerComponent.enabled 字段
-    static bool SetValue_CharacterControllerComponent_enabled(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 CharacterControllerComponent.radius 字段
-    static std::string Get_CharacterControllerComponent_radius(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->radius);
-    }
-
-    //直接读取 CharacterControllerComponent.radius 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_radius(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.radius 字段
-    static bool Set_CharacterControllerComponent_radius(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->radius, value);
-    }
-
-    //直接写入 CharacterControllerComponent.radius 字段
-    static bool SetValue_CharacterControllerComponent_radius(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->radius, value);
-    }
-
-    //读取 CharacterControllerComponent.height 字段
-    static std::string Get_CharacterControllerComponent_height(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->height);
-    }
-
-    //直接读取 CharacterControllerComponent.height 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_height(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->height) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.height 字段
-    static bool Set_CharacterControllerComponent_height(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->height, value);
-    }
-
-    //直接写入 CharacterControllerComponent.height 字段
-    static bool SetValue_CharacterControllerComponent_height(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->height, value);
-    }
-
-    //读取 CharacterControllerComponent.halfExtents 字段
-    static std::string Get_CharacterControllerComponent_halfExtents(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->halfExtents);
-    }
-
-    //直接读取 CharacterControllerComponent.halfExtents 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_halfExtents(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.halfExtents 字段
-    static bool Set_CharacterControllerComponent_halfExtents(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->halfExtents, value);
-    }
-
-    //直接写入 CharacterControllerComponent.halfExtents 字段
-    static bool SetValue_CharacterControllerComponent_halfExtents(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->halfExtents, value);
-    }
-
-    //读取 CharacterControllerComponent.stepOffset 字段
-    static std::string Get_CharacterControllerComponent_stepOffset(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->stepOffset);
-    }
-
-    //直接读取 CharacterControllerComponent.stepOffset 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_stepOffset(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->stepOffset) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.stepOffset 字段
-    static bool Set_CharacterControllerComponent_stepOffset(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->stepOffset, value);
-    }
-
-    //直接写入 CharacterControllerComponent.stepOffset 字段
-    static bool SetValue_CharacterControllerComponent_stepOffset(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->stepOffset, value);
-    }
-
-    //读取 CharacterControllerComponent.contactOffset 字段
-    static std::string Get_CharacterControllerComponent_contactOffset(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->contactOffset);
-    }
-
-    //直接读取 CharacterControllerComponent.contactOffset 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_contactOffset(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->contactOffset) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.contactOffset 字段
-    static bool Set_CharacterControllerComponent_contactOffset(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->contactOffset, value);
-    }
-
-    //直接写入 CharacterControllerComponent.contactOffset 字段
-    static bool SetValue_CharacterControllerComponent_contactOffset(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->contactOffset, value);
-    }
-
-    //读取 CharacterControllerComponent.slopeLimit 字段
-    static std::string Get_CharacterControllerComponent_slopeLimit(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->slopeLimit);
-    }
-
-    //直接读取 CharacterControllerComponent.slopeLimit 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_slopeLimit(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->slopeLimit) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.slopeLimit 字段
-    static bool Set_CharacterControllerComponent_slopeLimit(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->slopeLimit, value);
-    }
-
-    //直接写入 CharacterControllerComponent.slopeLimit 字段
-    static bool SetValue_CharacterControllerComponent_slopeLimit(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->slopeLimit, value);
-    }
-
-    //读取 CharacterControllerComponent.minMoveDistance 字段
-    static std::string Get_CharacterControllerComponent_minMoveDistance(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->minMoveDistance);
-    }
-
-    //直接读取 CharacterControllerComponent.minMoveDistance 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_minMoveDistance(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->minMoveDistance) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.minMoveDistance 字段
-    static bool Set_CharacterControllerComponent_minMoveDistance(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->minMoveDistance, value);
-    }
-
-    //直接写入 CharacterControllerComponent.minMoveDistance 字段
-    static bool SetValue_CharacterControllerComponent_minMoveDistance(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->minMoveDistance, value);
-    }
-
-    //读取 CharacterControllerComponent.collisionLayer 字段
-    static std::string Get_CharacterControllerComponent_collisionLayer(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 CharacterControllerComponent.collisionLayer 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_collisionLayer(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.collisionLayer 字段
-    static bool Set_CharacterControllerComponent_collisionLayer(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
-    }
-
-    //直接写入 CharacterControllerComponent.collisionLayer 字段
-    static bool SetValue_CharacterControllerComponent_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionLayer, value);
-    }
-
-    //读取 CharacterControllerComponent.collisionMask 字段
-    static std::string Get_CharacterControllerComponent_collisionMask(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::ToXmlValue(instance->collisionMask);
-    }
-
-    //直接读取 CharacterControllerComponent.collisionMask 字段
-    static Reflection::Value GetValue_CharacterControllerComponent_collisionMask(Object* object)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
-    }
-
-    //写入 CharacterControllerComponent.collisionMask 字段
-    static bool Set_CharacterControllerComponent_collisionMask(Object* object, const std::string& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionMask, value);
-    }
-
-    //直接写入 CharacterControllerComponent.collisionMask 字段
-    static bool SetValue_CharacterControllerComponent_collisionMask(Object* object, const Reflection::Value& value)
-    {
-        CharacterControllerComponent* instance = static_cast<CharacterControllerComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionMask, value);
-    }
-
-    //读取 ColliderComponent.enabled 字段
-    static std::string Get_ColliderComponent_enabled(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 ColliderComponent.enabled 字段
-    static Reflection::Value GetValue_ColliderComponent_enabled(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.enabled 字段
-    static bool Set_ColliderComponent_enabled(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 ColliderComponent.enabled 字段
-    static bool SetValue_ColliderComponent_enabled(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 ColliderComponent.isTrigger 字段
-    static std::string Get_ColliderComponent_isTrigger(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->isTrigger);
-    }
-
-    //直接读取 ColliderComponent.isTrigger 字段
-    static Reflection::Value GetValue_ColliderComponent_isTrigger(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->isTrigger) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.isTrigger 字段
-    static bool Set_ColliderComponent_isTrigger(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->isTrigger, value);
-    }
-
-    //直接写入 ColliderComponent.isTrigger 字段
-    static bool SetValue_ColliderComponent_isTrigger(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->isTrigger, value);
-    }
-
-    //读取 ColliderComponent.center 字段
-    static std::string Get_ColliderComponent_center(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->center);
-    }
-
-    //直接读取 ColliderComponent.center 字段
-    static Reflection::Value GetValue_ColliderComponent_center(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->center) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.center 字段
-    static bool Set_ColliderComponent_center(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->center, value);
-    }
-
-    //直接写入 ColliderComponent.center 字段
-    static bool SetValue_ColliderComponent_center(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->center, value);
-    }
-
-    //读取 ColliderComponent.staticFriction 字段
-    static std::string Get_ColliderComponent_staticFriction(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->staticFriction);
-    }
-
-    //直接读取 ColliderComponent.staticFriction 字段
-    static Reflection::Value GetValue_ColliderComponent_staticFriction(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->staticFriction) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.staticFriction 字段
-    static bool Set_ColliderComponent_staticFriction(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->staticFriction, value);
-    }
-
-    //直接写入 ColliderComponent.staticFriction 字段
-    static bool SetValue_ColliderComponent_staticFriction(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->staticFriction, value);
-    }
-
-    //读取 ColliderComponent.dynamicFriction 字段
-    static std::string Get_ColliderComponent_dynamicFriction(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->dynamicFriction);
-    }
-
-    //直接读取 ColliderComponent.dynamicFriction 字段
-    static Reflection::Value GetValue_ColliderComponent_dynamicFriction(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->dynamicFriction) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.dynamicFriction 字段
-    static bool Set_ColliderComponent_dynamicFriction(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->dynamicFriction, value);
-    }
-
-    //直接写入 ColliderComponent.dynamicFriction 字段
-    static bool SetValue_ColliderComponent_dynamicFriction(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->dynamicFriction, value);
-    }
-
-    //读取 ColliderComponent.restitution 字段
-    static std::string Get_ColliderComponent_restitution(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->restitution);
-    }
-
-    //直接读取 ColliderComponent.restitution 字段
-    static Reflection::Value GetValue_ColliderComponent_restitution(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->restitution) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.restitution 字段
-    static bool Set_ColliderComponent_restitution(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->restitution, value);
-    }
-
-    //直接写入 ColliderComponent.restitution 字段
-    static bool SetValue_ColliderComponent_restitution(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->restitution, value);
-    }
-
-    //读取 ColliderComponent.collisionLayer 字段
-    static std::string Get_ColliderComponent_collisionLayer(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 ColliderComponent.collisionLayer 字段
-    static Reflection::Value GetValue_ColliderComponent_collisionLayer(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.collisionLayer 字段
-    static bool Set_ColliderComponent_collisionLayer(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
-    }
-
-    //直接写入 ColliderComponent.collisionLayer 字段
-    static bool SetValue_ColliderComponent_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionLayer, value);
-    }
-
-    //读取 ColliderComponent.collisionMask 字段
-    static std::string Get_ColliderComponent_collisionMask(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->collisionMask);
-    }
-
-    //直接读取 ColliderComponent.collisionMask 字段
-    static Reflection::Value GetValue_ColliderComponent_collisionMask(Object* object)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
-    }
-
-    //写入 ColliderComponent.collisionMask 字段
-    static bool Set_ColliderComponent_collisionMask(Object* object, const std::string& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->collisionMask, value);
-    }
-
-    //直接写入 ColliderComponent.collisionMask 字段
-    static bool SetValue_ColliderComponent_collisionMask(Object* object, const Reflection::Value& value)
-    {
-        ColliderComponent* instance = static_cast<ColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->collisionMask, value);
-    }
-
-    //读取 BoxColliderComponent.halfExtents 字段
-    static std::string Get_BoxColliderComponent_halfExtents(Object* object)
-    {
-        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->halfExtents);
-    }
-
-    //直接读取 BoxColliderComponent.halfExtents 字段
-    static Reflection::Value GetValue_BoxColliderComponent_halfExtents(Object* object)
-    {
-        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
-    }
-
-    //写入 BoxColliderComponent.halfExtents 字段
-    static bool Set_BoxColliderComponent_halfExtents(Object* object, const std::string& value)
-    {
-        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->halfExtents, value);
-    }
-
-    //直接写入 BoxColliderComponent.halfExtents 字段
-    static bool SetValue_BoxColliderComponent_halfExtents(Object* object, const Reflection::Value& value)
-    {
-        BoxColliderComponent* instance = static_cast<BoxColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->halfExtents, value);
-    }
-
-    //读取 SphereColliderComponent.radius 字段
-    static std::string Get_SphereColliderComponent_radius(Object* object)
-    {
-        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->radius);
-    }
-
-    //直接读取 SphereColliderComponent.radius 字段
-    static Reflection::Value GetValue_SphereColliderComponent_radius(Object* object)
-    {
-        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
-    }
-
-    //写入 SphereColliderComponent.radius 字段
-    static bool Set_SphereColliderComponent_radius(Object* object, const std::string& value)
-    {
-        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->radius, value);
-    }
-
-    //直接写入 SphereColliderComponent.radius 字段
-    static bool SetValue_SphereColliderComponent_radius(Object* object, const Reflection::Value& value)
-    {
-        SphereColliderComponent* instance = static_cast<SphereColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->radius, value);
-    }
-
-    //读取 CapsuleColliderComponent.radius 字段
-    static std::string Get_CapsuleColliderComponent_radius(Object* object)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->radius);
-    }
-
-    //直接读取 CapsuleColliderComponent.radius 字段
-    static Reflection::Value GetValue_CapsuleColliderComponent_radius(Object* object)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
-    }
-
-    //写入 CapsuleColliderComponent.radius 字段
-    static bool Set_CapsuleColliderComponent_radius(Object* object, const std::string& value)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->radius, value);
-    }
-
-    //直接写入 CapsuleColliderComponent.radius 字段
-    static bool SetValue_CapsuleColliderComponent_radius(Object* object, const Reflection::Value& value)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->radius, value);
-    }
-
-    //读取 CapsuleColliderComponent.halfHeight 字段
-    static std::string Get_CapsuleColliderComponent_halfHeight(Object* object)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->halfHeight);
-    }
-
-    //直接读取 CapsuleColliderComponent.halfHeight 字段
-    static Reflection::Value GetValue_CapsuleColliderComponent_halfHeight(Object* object)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->halfHeight) : Reflection::Value();
-    }
-
-    //写入 CapsuleColliderComponent.halfHeight 字段
-    static bool Set_CapsuleColliderComponent_halfHeight(Object* object, const std::string& value)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->halfHeight, value);
-    }
-
-    //直接写入 CapsuleColliderComponent.halfHeight 字段
-    static bool SetValue_CapsuleColliderComponent_halfHeight(Object* object, const Reflection::Value& value)
-    {
-        CapsuleColliderComponent* instance = static_cast<CapsuleColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->halfHeight, value);
-    }
-
-    //读取 ConvexMeshColliderComponent.mesh 字段
-    static std::string Get_ConvexMeshColliderComponent_mesh(Object* object)
-    {
-        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->mesh);
-    }
-
-    //直接读取 ConvexMeshColliderComponent.mesh 字段
-    static Reflection::Value GetValue_ConvexMeshColliderComponent_mesh(Object* object)
-    {
-        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
-    }
-
-    //写入 ConvexMeshColliderComponent.mesh 字段
-    static bool Set_ConvexMeshColliderComponent_mesh(Object* object, const std::string& value)
-    {
-        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->mesh, value);
-    }
-
-    //直接写入 ConvexMeshColliderComponent.mesh 字段
-    static bool SetValue_ConvexMeshColliderComponent_mesh(Object* object, const Reflection::Value& value)
-    {
-        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->mesh, value);
-    }
-
-    //调用 ConvexMeshColliderComponent.OnDetach 方法
-    static Reflection::Value Invoke_ConvexMeshColliderComponent_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        ConvexMeshColliderComponent* instance = static_cast<ConvexMeshColliderComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnDetach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //读取 TriangleMeshColliderComponent.mesh 字段
-    static std::string Get_TriangleMeshColliderComponent_mesh(Object* object)
-    {
-        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->mesh);
-    }
-
-    //直接读取 TriangleMeshColliderComponent.mesh 字段
-    static Reflection::Value GetValue_TriangleMeshColliderComponent_mesh(Object* object)
-    {
-        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
-    }
-
-    //写入 TriangleMeshColliderComponent.mesh 字段
-    static bool Set_TriangleMeshColliderComponent_mesh(Object* object, const std::string& value)
-    {
-        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->mesh, value);
-    }
-
-    //直接写入 TriangleMeshColliderComponent.mesh 字段
-    static bool SetValue_TriangleMeshColliderComponent_mesh(Object* object, const Reflection::Value& value)
-    {
-        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->mesh, value);
-    }
-
-    //调用 TriangleMeshColliderComponent.OnDetach 方法
-    static Reflection::Value Invoke_TriangleMeshColliderComponent_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        TriangleMeshColliderComponent* instance = static_cast<TriangleMeshColliderComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->OnDetach();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //读取 HeightFieldComponent.enabled 字段
-    static std::string Get_HeightFieldComponent_enabled(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 HeightFieldComponent.enabled 字段
-    static Reflection::Value GetValue_HeightFieldComponent_enabled(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.enabled 字段
-    static bool Set_HeightFieldComponent_enabled(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 HeightFieldComponent.enabled 字段
-    static bool SetValue_HeightFieldComponent_enabled(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 HeightFieldComponent.seed 字段
-    static std::string Get_HeightFieldComponent_seed(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->seed);
-    }
-
-    //直接读取 HeightFieldComponent.seed 字段
-    static Reflection::Value GetValue_HeightFieldComponent_seed(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->seed) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.seed 字段
-    static bool Set_HeightFieldComponent_seed(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->seed, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.seed 字段
-    static bool SetValue_HeightFieldComponent_seed(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->seed, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.sampleTileX 字段
-    static std::string Get_HeightFieldComponent_sampleTileX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->sampleTileX);
-    }
-
-    //直接读取 HeightFieldComponent.sampleTileX 字段
-    static Reflection::Value GetValue_HeightFieldComponent_sampleTileX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->sampleTileX) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.sampleTileX 字段
-    static bool Set_HeightFieldComponent_sampleTileX(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->sampleTileX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.sampleTileX 字段
-    static bool SetValue_HeightFieldComponent_sampleTileX(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->sampleTileX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.sampleTileZ 字段
-    static std::string Get_HeightFieldComponent_sampleTileZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->sampleTileZ);
-    }
-
-    //直接读取 HeightFieldComponent.sampleTileZ 字段
-    static Reflection::Value GetValue_HeightFieldComponent_sampleTileZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->sampleTileZ) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.sampleTileZ 字段
-    static bool Set_HeightFieldComponent_sampleTileZ(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->sampleTileZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.sampleTileZ 字段
-    static bool SetValue_HeightFieldComponent_sampleTileZ(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->sampleTileZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.sizeX 字段
-    static std::string Get_HeightFieldComponent_sizeX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->sizeX);
-    }
-
-    //直接读取 HeightFieldComponent.sizeX 字段
-    static Reflection::Value GetValue_HeightFieldComponent_sizeX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->sizeX) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.sizeX 字段
-    static bool Set_HeightFieldComponent_sizeX(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->sizeX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.sizeX 字段
-    static bool SetValue_HeightFieldComponent_sizeX(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->sizeX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.sizeZ 字段
-    static std::string Get_HeightFieldComponent_sizeZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->sizeZ);
-    }
-
-    //直接读取 HeightFieldComponent.sizeZ 字段
-    static Reflection::Value GetValue_HeightFieldComponent_sizeZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->sizeZ) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.sizeZ 字段
-    static bool Set_HeightFieldComponent_sizeZ(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->sizeZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.sizeZ 字段
-    static bool SetValue_HeightFieldComponent_sizeZ(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->sizeZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.rowCount 字段
-    static std::string Get_HeightFieldComponent_rowCount(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->rowCount);
-    }
-
-    //直接读取 HeightFieldComponent.rowCount 字段
-    static Reflection::Value GetValue_HeightFieldComponent_rowCount(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->rowCount) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.rowCount 字段
-    static bool Set_HeightFieldComponent_rowCount(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->rowCount, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.rowCount 字段
-    static bool SetValue_HeightFieldComponent_rowCount(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->rowCount, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.columnCount 字段
-    static std::string Get_HeightFieldComponent_columnCount(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->columnCount);
-    }
-
-    //直接读取 HeightFieldComponent.columnCount 字段
-    static Reflection::Value GetValue_HeightFieldComponent_columnCount(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->columnCount) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.columnCount 字段
-    static bool Set_HeightFieldComponent_columnCount(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->columnCount, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.columnCount 字段
-    static bool SetValue_HeightFieldComponent_columnCount(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->columnCount, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.amplitude 字段
-    static std::string Get_HeightFieldComponent_amplitude(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->amplitude);
-    }
-
-    //直接读取 HeightFieldComponent.amplitude 字段
-    static Reflection::Value GetValue_HeightFieldComponent_amplitude(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->amplitude) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.amplitude 字段
-    static bool Set_HeightFieldComponent_amplitude(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->amplitude, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.amplitude 字段
-    static bool SetValue_HeightFieldComponent_amplitude(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->amplitude, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.frequency 字段
-    static std::string Get_HeightFieldComponent_frequency(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->frequency);
-    }
-
-    //直接读取 HeightFieldComponent.frequency 字段
-    static Reflection::Value GetValue_HeightFieldComponent_frequency(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->frequency) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.frequency 字段
-    static bool Set_HeightFieldComponent_frequency(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->frequency, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.frequency 字段
-    static bool SetValue_HeightFieldComponent_frequency(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->frequency, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.octaves 字段
-    static std::string Get_HeightFieldComponent_octaves(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->octaves);
-    }
-
-    //直接读取 HeightFieldComponent.octaves 字段
-    static Reflection::Value GetValue_HeightFieldComponent_octaves(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->octaves) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.octaves 字段
-    static bool Set_HeightFieldComponent_octaves(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->octaves, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.octaves 字段
-    static bool SetValue_HeightFieldComponent_octaves(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->octaves, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenMinX 字段
-    static std::string Get_HeightFieldComponent_flattenMinX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenMinX);
-    }
-
-    //直接读取 HeightFieldComponent.flattenMinX 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenMinX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenMinX) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenMinX 字段
-    static bool Set_HeightFieldComponent_flattenMinX(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenMinX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenMinX 字段
-    static bool SetValue_HeightFieldComponent_flattenMinX(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenMinX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenMaxX 字段
-    static std::string Get_HeightFieldComponent_flattenMaxX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenMaxX);
-    }
-
-    //直接读取 HeightFieldComponent.flattenMaxX 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenMaxX(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenMaxX) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenMaxX 字段
-    static bool Set_HeightFieldComponent_flattenMaxX(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenMaxX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenMaxX 字段
-    static bool SetValue_HeightFieldComponent_flattenMaxX(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenMaxX, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenMinZ 字段
-    static std::string Get_HeightFieldComponent_flattenMinZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenMinZ);
-    }
-
-    //直接读取 HeightFieldComponent.flattenMinZ 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenMinZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenMinZ) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenMinZ 字段
-    static bool Set_HeightFieldComponent_flattenMinZ(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenMinZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenMinZ 字段
-    static bool SetValue_HeightFieldComponent_flattenMinZ(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenMinZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenMaxZ 字段
-    static std::string Get_HeightFieldComponent_flattenMaxZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenMaxZ);
-    }
-
-    //直接读取 HeightFieldComponent.flattenMaxZ 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenMaxZ(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenMaxZ) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenMaxZ 字段
-    static bool Set_HeightFieldComponent_flattenMaxZ(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenMaxZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenMaxZ 字段
-    static bool SetValue_HeightFieldComponent_flattenMaxZ(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenMaxZ, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenHeight 字段
-    static std::string Get_HeightFieldComponent_flattenHeight(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenHeight);
-    }
-
-    //直接读取 HeightFieldComponent.flattenHeight 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenHeight(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenHeight) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenHeight 字段
-    static bool Set_HeightFieldComponent_flattenHeight(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenHeight, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenHeight 字段
-    static bool SetValue_HeightFieldComponent_flattenHeight(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenHeight, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.flattenBlendDistance 字段
-    static std::string Get_HeightFieldComponent_flattenBlendDistance(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->flattenBlendDistance);
-    }
-
-    //直接读取 HeightFieldComponent.flattenBlendDistance 字段
-    static Reflection::Value GetValue_HeightFieldComponent_flattenBlendDistance(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->flattenBlendDistance) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.flattenBlendDistance 字段
-    static bool Set_HeightFieldComponent_flattenBlendDistance(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->flattenBlendDistance, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.flattenBlendDistance 字段
-    static bool SetValue_HeightFieldComponent_flattenBlendDistance(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->flattenBlendDistance, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.collisionLayer 字段
-    static std::string Get_HeightFieldComponent_collisionLayer(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->collisionLayer);
-    }
-
-    //直接读取 HeightFieldComponent.collisionLayer 字段
-    static Reflection::Value GetValue_HeightFieldComponent_collisionLayer(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.collisionLayer 字段
-    static bool Set_HeightFieldComponent_collisionLayer(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->collisionLayer, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.collisionLayer 字段
-    static bool SetValue_HeightFieldComponent_collisionLayer(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->collisionLayer, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.material 字段
-    static std::string Get_HeightFieldComponent_material(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->material);
-    }
-
-    //直接读取 HeightFieldComponent.material 字段
-    static Reflection::Value GetValue_HeightFieldComponent_material(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->material) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.material 字段
-    static bool Set_HeightFieldComponent_material(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->material, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.material 字段
-    static bool SetValue_HeightFieldComponent_material(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->material, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.generateNoiseTexture 字段
-    static std::string Get_HeightFieldComponent_generateNoiseTexture(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->generateNoiseTexture);
-    }
-
-    //直接读取 HeightFieldComponent.generateNoiseTexture 字段
-    static Reflection::Value GetValue_HeightFieldComponent_generateNoiseTexture(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->generateNoiseTexture) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.generateNoiseTexture 字段
-    static bool Set_HeightFieldComponent_generateNoiseTexture(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->generateNoiseTexture, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.generateNoiseTexture 字段
-    static bool SetValue_HeightFieldComponent_generateNoiseTexture(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->generateNoiseTexture, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.noiseTextureSize 字段
-    static std::string Get_HeightFieldComponent_noiseTextureSize(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->noiseTextureSize);
-    }
-
-    //直接读取 HeightFieldComponent.noiseTextureSize 字段
-    static Reflection::Value GetValue_HeightFieldComponent_noiseTextureSize(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->noiseTextureSize) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.noiseTextureSize 字段
-    static bool Set_HeightFieldComponent_noiseTextureSize(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->noiseTextureSize, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.noiseTextureSize 字段
-    static bool SetValue_HeightFieldComponent_noiseTextureSize(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->noiseTextureSize, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.noiseLowColor 字段
-    static std::string Get_HeightFieldComponent_noiseLowColor(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->noiseLowColor);
-    }
-
-    //直接读取 HeightFieldComponent.noiseLowColor 字段
-    static Reflection::Value GetValue_HeightFieldComponent_noiseLowColor(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->noiseLowColor) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.noiseLowColor 字段
-    static bool Set_HeightFieldComponent_noiseLowColor(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->noiseLowColor, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.noiseLowColor 字段
-    static bool SetValue_HeightFieldComponent_noiseLowColor(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->noiseLowColor, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.noiseHighColor 字段
-    static std::string Get_HeightFieldComponent_noiseHighColor(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->noiseHighColor);
-    }
-
-    //直接读取 HeightFieldComponent.noiseHighColor 字段
-    static Reflection::Value GetValue_HeightFieldComponent_noiseHighColor(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->noiseHighColor) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.noiseHighColor 字段
-    static bool Set_HeightFieldComponent_noiseHighColor(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->noiseHighColor, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.noiseHighColor 字段
-    static bool SetValue_HeightFieldComponent_noiseHighColor(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->noiseHighColor, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.tileSize 字段
-    static std::string Get_HeightFieldComponent_tileSize(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->tileSize);
-    }
-
-    //直接读取 HeightFieldComponent.tileSize 字段
-    static Reflection::Value GetValue_HeightFieldComponent_tileSize(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->tileSize) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.tileSize 字段
-    static bool Set_HeightFieldComponent_tileSize(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!Reflection::SetFromXmlValue(instance->tileSize, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //直接写入 HeightFieldComponent.tileSize 字段
-    static bool SetValue_HeightFieldComponent_tileSize(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        if (!Reflection::SetFromValue(instance->tileSize, value)) return false;
-        instance->Regenerate();
-        return true;
-    }
-
-    //读取 HeightFieldComponent.generation 字段
-    static std::string Get_HeightFieldComponent_generation(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->generation);
-    }
-
-    //直接读取 HeightFieldComponent.generation 字段
-    static Reflection::Value GetValue_HeightFieldComponent_generation(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->generation) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.generation 字段
-    static bool Set_HeightFieldComponent_generation(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->generation, value);
-    }
-
-    //直接写入 HeightFieldComponent.generation 字段
-    static bool SetValue_HeightFieldComponent_generation(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->generation, value);
-    }
-
-    //读取 HeightFieldComponent.meshPending 字段
-    static std::string Get_HeightFieldComponent_meshPending(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->meshPending);
-    }
-
-    //直接读取 HeightFieldComponent.meshPending 字段
-    static Reflection::Value GetValue_HeightFieldComponent_meshPending(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->meshPending) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.meshPending 字段
-    static bool Set_HeightFieldComponent_meshPending(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->meshPending, value);
-    }
-
-    //直接写入 HeightFieldComponent.meshPending 字段
-    static bool SetValue_HeightFieldComponent_meshPending(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->meshPending, value);
-    }
-
-    //读取 HeightFieldComponent.ownsRuntimeMaterial 字段
-    static std::string Get_HeightFieldComponent_ownsRuntimeMaterial(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::ToXmlValue(instance->ownsRuntimeMaterial);
-    }
-
-    //直接读取 HeightFieldComponent.ownsRuntimeMaterial 字段
-    static Reflection::Value GetValue_HeightFieldComponent_ownsRuntimeMaterial(Object* object)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return instance ? Reflection::ToValue(instance->ownsRuntimeMaterial) : Reflection::Value();
-    }
-
-    //写入 HeightFieldComponent.ownsRuntimeMaterial 字段
-    static bool Set_HeightFieldComponent_ownsRuntimeMaterial(Object* object, const std::string& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->ownsRuntimeMaterial, value);
-    }
-
-    //直接写入 HeightFieldComponent.ownsRuntimeMaterial 字段
-    static bool SetValue_HeightFieldComponent_ownsRuntimeMaterial(Object* object, const Reflection::Value& value)
-    {
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->ownsRuntimeMaterial, value);
-    }
-
-    //调用 HeightFieldComponent.Regenerate 方法
-    static Reflection::Value Invoke_HeightFieldComponent_Regenerate_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->Regenerate();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 HeightFieldComponent.GetHeightAtWorldXZ 方法
-    static Reflection::Value Invoke_HeightFieldComponent_GetHeightAtWorldXZ_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 2) return Reflection::Value();
-
-        float32 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        float32 arg1{};
-        if (!args[1].TryGet(arg1)) return Reflection::Value();
-        auto result = instance->GetHeightAtWorldXZ(arg0, arg1);
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 HeightFieldComponent.GetRowScale 方法
-    static Reflection::Value Invoke_HeightFieldComponent_GetRowScale_2(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetRowScale();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 HeightFieldComponent.GetColumnScale 方法
-    static Reflection::Value Invoke_HeightFieldComponent_GetColumnScale_3(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetColumnScale();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 HeightFieldComponent.GetGeneration 方法
-    static Reflection::Value Invoke_HeightFieldComponent_GetGeneration_4(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetGeneration();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 HeightFieldComponent.SyncPendingGeneration 方法
-    static Reflection::Value Invoke_HeightFieldComponent_SyncPendingGeneration_5(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        HeightFieldComponent* instance = static_cast<HeightFieldComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        instance->SyncPendingGeneration();
-        success = true;
-        return Reflection::Value();
-    }
-
-    //读取 RigidBodyComponent.enabled 字段
-    static std::string Get_RigidBodyComponent_enabled(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 RigidBodyComponent.enabled 字段
-    static Reflection::Value GetValue_RigidBodyComponent_enabled(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.enabled 字段
-    static bool Set_RigidBodyComponent_enabled(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 RigidBodyComponent.enabled 字段
-    static bool SetValue_RigidBodyComponent_enabled(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 RigidBodyComponent.mass 字段
-    static std::string Get_RigidBodyComponent_mass(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->mass);
-    }
-
-    //直接读取 RigidBodyComponent.mass 字段
-    static Reflection::Value GetValue_RigidBodyComponent_mass(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->mass) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.mass 字段
-    static bool Set_RigidBodyComponent_mass(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->mass, value);
-    }
-
-    //直接写入 RigidBodyComponent.mass 字段
-    static bool SetValue_RigidBodyComponent_mass(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->mass, value);
-    }
-
-    //读取 RigidBodyComponent.useGravity 字段
-    static std::string Get_RigidBodyComponent_useGravity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->useGravity);
-    }
-
-    //直接读取 RigidBodyComponent.useGravity 字段
-    static Reflection::Value GetValue_RigidBodyComponent_useGravity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->useGravity) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.useGravity 字段
-    static bool Set_RigidBodyComponent_useGravity(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->useGravity, value);
-    }
-
-    //直接写入 RigidBodyComponent.useGravity 字段
-    static bool SetValue_RigidBodyComponent_useGravity(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->useGravity, value);
-    }
-
-    //读取 RigidBodyComponent.linearDamping 字段
-    static std::string Get_RigidBodyComponent_linearDamping(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->linearDamping);
-    }
-
-    //直接读取 RigidBodyComponent.linearDamping 字段
-    static Reflection::Value GetValue_RigidBodyComponent_linearDamping(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->linearDamping) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.linearDamping 字段
-    static bool Set_RigidBodyComponent_linearDamping(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->linearDamping, value);
-    }
-
-    //直接写入 RigidBodyComponent.linearDamping 字段
-    static bool SetValue_RigidBodyComponent_linearDamping(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->linearDamping, value);
-    }
-
-    //读取 RigidBodyComponent.angularDamping 字段
-    static std::string Get_RigidBodyComponent_angularDamping(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->angularDamping);
-    }
-
-    //直接读取 RigidBodyComponent.angularDamping 字段
-    static Reflection::Value GetValue_RigidBodyComponent_angularDamping(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->angularDamping) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.angularDamping 字段
-    static bool Set_RigidBodyComponent_angularDamping(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->angularDamping, value);
-    }
-
-    //直接写入 RigidBodyComponent.angularDamping 字段
-    static bool SetValue_RigidBodyComponent_angularDamping(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->angularDamping, value);
-    }
-
-    //读取 RigidBodyComponent.linearVelocity 字段
-    static std::string Get_RigidBodyComponent_linearVelocity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->linearVelocity);
-    }
-
-    //直接读取 RigidBodyComponent.linearVelocity 字段
-    static Reflection::Value GetValue_RigidBodyComponent_linearVelocity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->linearVelocity) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.linearVelocity 字段
-    static bool Set_RigidBodyComponent_linearVelocity(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->linearVelocity, value);
-    }
-
-    //直接写入 RigidBodyComponent.linearVelocity 字段
-    static bool SetValue_RigidBodyComponent_linearVelocity(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->linearVelocity, value);
-    }
-
-    //读取 RigidBodyComponent.angularVelocity 字段
-    static std::string Get_RigidBodyComponent_angularVelocity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->angularVelocity);
-    }
-
-    //直接读取 RigidBodyComponent.angularVelocity 字段
-    static Reflection::Value GetValue_RigidBodyComponent_angularVelocity(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->angularVelocity) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.angularVelocity 字段
-    static bool Set_RigidBodyComponent_angularVelocity(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->angularVelocity, value);
-    }
-
-    //直接写入 RigidBodyComponent.angularVelocity 字段
-    static bool SetValue_RigidBodyComponent_angularVelocity(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->angularVelocity, value);
-    }
-
-    //读取 RigidBodyComponent.continuousCollisionDetection 字段
-    static std::string Get_RigidBodyComponent_continuousCollisionDetection(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->continuousCollisionDetection);
-    }
-
-    //直接读取 RigidBodyComponent.continuousCollisionDetection 字段
-    static Reflection::Value GetValue_RigidBodyComponent_continuousCollisionDetection(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->continuousCollisionDetection) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.continuousCollisionDetection 字段
-    static bool Set_RigidBodyComponent_continuousCollisionDetection(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->continuousCollisionDetection, value);
-    }
-
-    //直接写入 RigidBodyComponent.continuousCollisionDetection 字段
-    static bool SetValue_RigidBodyComponent_continuousCollisionDetection(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->continuousCollisionDetection, value);
-    }
-
-    //读取 RigidBodyComponent.lockFlags 字段
-    static std::string Get_RigidBodyComponent_lockFlags(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->lockFlags);
-    }
-
-    //直接读取 RigidBodyComponent.lockFlags 字段
-    static Reflection::Value GetValue_RigidBodyComponent_lockFlags(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->lockFlags) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.lockFlags 字段
-    static bool Set_RigidBodyComponent_lockFlags(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->lockFlags, value);
-    }
-
-    //直接写入 RigidBodyComponent.lockFlags 字段
-    static bool SetValue_RigidBodyComponent_lockFlags(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->lockFlags, value);
-    }
-
-    //读取 RigidBodyComponent.pendingForce 字段
-    static std::string Get_RigidBodyComponent_pendingForce(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->pendingForce);
-    }
-
-    //直接读取 RigidBodyComponent.pendingForce 字段
-    static Reflection::Value GetValue_RigidBodyComponent_pendingForce(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->pendingForce) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.pendingForce 字段
-    static bool Set_RigidBodyComponent_pendingForce(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->pendingForce, value);
-    }
-
-    //直接写入 RigidBodyComponent.pendingForce 字段
-    static bool SetValue_RigidBodyComponent_pendingForce(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->pendingForce, value);
-    }
-
-    //读取 RigidBodyComponent.pendingTorque 字段
-    static std::string Get_RigidBodyComponent_pendingTorque(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::ToXmlValue(instance->pendingTorque);
-    }
-
-    //直接读取 RigidBodyComponent.pendingTorque 字段
-    static Reflection::Value GetValue_RigidBodyComponent_pendingTorque(Object* object)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return instance ? Reflection::ToValue(instance->pendingTorque) : Reflection::Value();
-    }
-
-    //写入 RigidBodyComponent.pendingTorque 字段
-    static bool Set_RigidBodyComponent_pendingTorque(Object* object, const std::string& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->pendingTorque, value);
-    }
-
-    //直接写入 RigidBodyComponent.pendingTorque 字段
-    static bool SetValue_RigidBodyComponent_pendingTorque(Object* object, const Reflection::Value& value)
-    {
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->pendingTorque, value);
-    }
-
-    //调用 RigidBodyComponent.AddForce 方法
-    static Reflection::Value Invoke_RigidBodyComponent_AddForce_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        vector3 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->AddForce(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 RigidBodyComponent.AddTorque 方法
-    static Reflection::Value Invoke_RigidBodyComponent_AddTorque_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance || args.size() != 1) return Reflection::Value();
-
-        vector3 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        instance->AddTorque(arg0);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //调用 RigidBodyComponent.AddForceAtPosition 方法
-    static Reflection::Value Invoke_RigidBodyComponent_AddForceAtPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        RigidBodyComponent* instance = static_cast<RigidBodyComponent*>(object);
-        if (!instance || args.size() != 2) return Reflection::Value();
-
-        vector3 arg0{};
-        if (!args[0].TryGet(arg0)) return Reflection::Value();
-        vector3 arg1{};
-        if (!args[1].TryGet(arg1)) return Reflection::Value();
-        instance->AddForceAtPosition(arg0, arg1);
-        success = true;
-        return Reflection::Value();
-    }
-
-    //读取 WheelColliderComponent.enabled 字段
-    static std::string Get_WheelColliderComponent_enabled(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->enabled);
-    }
-
-    //直接读取 WheelColliderComponent.enabled 字段
-    static Reflection::Value GetValue_WheelColliderComponent_enabled(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.enabled 字段
-    static bool Set_WheelColliderComponent_enabled(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->enabled, value);
-    }
-
-    //直接写入 WheelColliderComponent.enabled 字段
-    static bool SetValue_WheelColliderComponent_enabled(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->enabled, value);
-    }
-
-    //读取 WheelColliderComponent.wheelOffset 字段
-    static std::string Get_WheelColliderComponent_wheelOffset(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->wheelOffset);
-    }
-
-    //直接读取 WheelColliderComponent.wheelOffset 字段
-    static Reflection::Value GetValue_WheelColliderComponent_wheelOffset(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->wheelOffset) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.wheelOffset 字段
-    static bool Set_WheelColliderComponent_wheelOffset(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->wheelOffset, value);
-    }
-
-    //直接写入 WheelColliderComponent.wheelOffset 字段
-    static bool SetValue_WheelColliderComponent_wheelOffset(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->wheelOffset, value);
-    }
-
-    //读取 WheelColliderComponent.wheelRadius 字段
-    static std::string Get_WheelColliderComponent_wheelRadius(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->wheelRadius);
-    }
-
-    //直接读取 WheelColliderComponent.wheelRadius 字段
-    static Reflection::Value GetValue_WheelColliderComponent_wheelRadius(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->wheelRadius) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.wheelRadius 字段
-    static bool Set_WheelColliderComponent_wheelRadius(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->wheelRadius, value);
-    }
-
-    //直接写入 WheelColliderComponent.wheelRadius 字段
-    static bool SetValue_WheelColliderComponent_wheelRadius(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->wheelRadius, value);
-    }
-
-    //读取 WheelColliderComponent.suspensionRestLength 字段
-    static std::string Get_WheelColliderComponent_suspensionRestLength(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->suspensionRestLength);
-    }
-
-    //直接读取 WheelColliderComponent.suspensionRestLength 字段
-    static Reflection::Value GetValue_WheelColliderComponent_suspensionRestLength(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->suspensionRestLength) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.suspensionRestLength 字段
-    static bool Set_WheelColliderComponent_suspensionRestLength(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->suspensionRestLength, value);
-    }
-
-    //直接写入 WheelColliderComponent.suspensionRestLength 字段
-    static bool SetValue_WheelColliderComponent_suspensionRestLength(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->suspensionRestLength, value);
-    }
-
-    //读取 WheelColliderComponent.suspensionTravel 字段
-    static std::string Get_WheelColliderComponent_suspensionTravel(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->suspensionTravel);
-    }
-
-    //直接读取 WheelColliderComponent.suspensionTravel 字段
-    static Reflection::Value GetValue_WheelColliderComponent_suspensionTravel(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->suspensionTravel) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.suspensionTravel 字段
-    static bool Set_WheelColliderComponent_suspensionTravel(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->suspensionTravel, value);
-    }
-
-    //直接写入 WheelColliderComponent.suspensionTravel 字段
-    static bool SetValue_WheelColliderComponent_suspensionTravel(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->suspensionTravel, value);
-    }
-
-    //读取 WheelColliderComponent.suspensionStiffness 字段
-    static std::string Get_WheelColliderComponent_suspensionStiffness(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->suspensionStiffness);
-    }
-
-    //直接读取 WheelColliderComponent.suspensionStiffness 字段
-    static Reflection::Value GetValue_WheelColliderComponent_suspensionStiffness(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->suspensionStiffness) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.suspensionStiffness 字段
-    static bool Set_WheelColliderComponent_suspensionStiffness(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->suspensionStiffness, value);
-    }
-
-    //直接写入 WheelColliderComponent.suspensionStiffness 字段
-    static bool SetValue_WheelColliderComponent_suspensionStiffness(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->suspensionStiffness, value);
-    }
-
-    //读取 WheelColliderComponent.suspensionDamping 字段
-    static std::string Get_WheelColliderComponent_suspensionDamping(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->suspensionDamping);
-    }
-
-    //直接读取 WheelColliderComponent.suspensionDamping 字段
-    static Reflection::Value GetValue_WheelColliderComponent_suspensionDamping(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->suspensionDamping) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.suspensionDamping 字段
-    static bool Set_WheelColliderComponent_suspensionDamping(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->suspensionDamping, value);
-    }
-
-    //直接写入 WheelColliderComponent.suspensionDamping 字段
-    static bool SetValue_WheelColliderComponent_suspensionDamping(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->suspensionDamping, value);
-    }
-
-    //读取 WheelColliderComponent.rollingFriction 字段
-    static std::string Get_WheelColliderComponent_rollingFriction(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->rollingFriction);
-    }
-
-    //直接读取 WheelColliderComponent.rollingFriction 字段
-    static Reflection::Value GetValue_WheelColliderComponent_rollingFriction(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->rollingFriction) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.rollingFriction 字段
-    static bool Set_WheelColliderComponent_rollingFriction(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->rollingFriction, value);
-    }
-
-    //直接写入 WheelColliderComponent.rollingFriction 字段
-    static bool SetValue_WheelColliderComponent_rollingFriction(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->rollingFriction, value);
-    }
-
-    //读取 WheelColliderComponent.lateralFriction 字段
-    static std::string Get_WheelColliderComponent_lateralFriction(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->lateralFriction);
-    }
-
-    //直接读取 WheelColliderComponent.lateralFriction 字段
-    static Reflection::Value GetValue_WheelColliderComponent_lateralFriction(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->lateralFriction) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.lateralFriction 字段
-    static bool Set_WheelColliderComponent_lateralFriction(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->lateralFriction, value);
-    }
-
-    //直接写入 WheelColliderComponent.lateralFriction 字段
-    static bool SetValue_WheelColliderComponent_lateralFriction(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->lateralFriction, value);
-    }
-
-    //读取 WheelColliderComponent.raycastDistance 字段
-    static std::string Get_WheelColliderComponent_raycastDistance(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->raycastDistance);
-    }
-
-    //直接读取 WheelColliderComponent.raycastDistance 字段
-    static Reflection::Value GetValue_WheelColliderComponent_raycastDistance(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->raycastDistance) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.raycastDistance 字段
-    static bool Set_WheelColliderComponent_raycastDistance(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->raycastDistance, value);
-    }
-
-    //直接写入 WheelColliderComponent.raycastDistance 字段
-    static bool SetValue_WheelColliderComponent_raycastDistance(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->raycastDistance, value);
-    }
-
-    //读取 WheelColliderComponent.groundQueryLayer 字段
-    static std::string Get_WheelColliderComponent_groundQueryLayer(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->groundQueryLayer);
-    }
-
-    //直接读取 WheelColliderComponent.groundQueryLayer 字段
-    static Reflection::Value GetValue_WheelColliderComponent_groundQueryLayer(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->groundQueryLayer) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.groundQueryLayer 字段
-    static bool Set_WheelColliderComponent_groundQueryLayer(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->groundQueryLayer, value);
-    }
-
-    //直接写入 WheelColliderComponent.groundQueryLayer 字段
-    static bool SetValue_WheelColliderComponent_groundQueryLayer(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->groundQueryLayer, value);
-    }
-
-    //读取 WheelColliderComponent.steeringWheel 字段
-    static std::string Get_WheelColliderComponent_steeringWheel(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->steeringWheel);
-    }
-
-    //直接读取 WheelColliderComponent.steeringWheel 字段
-    static Reflection::Value GetValue_WheelColliderComponent_steeringWheel(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->steeringWheel) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.steeringWheel 字段
-    static bool Set_WheelColliderComponent_steeringWheel(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->steeringWheel, value);
-    }
-
-    //直接写入 WheelColliderComponent.steeringWheel 字段
-    static bool SetValue_WheelColliderComponent_steeringWheel(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->steeringWheel, value);
-    }
-
-    //读取 WheelColliderComponent.steerAngle 字段
-    static std::string Get_WheelColliderComponent_steerAngle(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->steerAngle);
-    }
-
-    //直接读取 WheelColliderComponent.steerAngle 字段
-    static Reflection::Value GetValue_WheelColliderComponent_steerAngle(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->steerAngle) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.steerAngle 字段
-    static bool Set_WheelColliderComponent_steerAngle(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->steerAngle, value);
-    }
-
-    //直接写入 WheelColliderComponent.steerAngle 字段
-    static bool SetValue_WheelColliderComponent_steerAngle(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->steerAngle, value);
-    }
-
-    //读取 WheelColliderComponent.grounded 字段
-    static std::string Get_WheelColliderComponent_grounded(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->grounded);
-    }
-
-    //直接读取 WheelColliderComponent.grounded 字段
-    static Reflection::Value GetValue_WheelColliderComponent_grounded(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->grounded) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.grounded 字段
-    static bool Set_WheelColliderComponent_grounded(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->grounded, value);
-    }
-
-    //直接写入 WheelColliderComponent.grounded 字段
-    static bool SetValue_WheelColliderComponent_grounded(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->grounded, value);
-    }
-
-    //读取 WheelColliderComponent.compression 字段
-    static std::string Get_WheelColliderComponent_compression(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->compression);
-    }
-
-    //直接读取 WheelColliderComponent.compression 字段
-    static Reflection::Value GetValue_WheelColliderComponent_compression(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->compression) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.compression 字段
-    static bool Set_WheelColliderComponent_compression(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->compression, value);
-    }
-
-    //直接写入 WheelColliderComponent.compression 字段
-    static bool SetValue_WheelColliderComponent_compression(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->compression, value);
-    }
-
-    //读取 WheelColliderComponent.previousCompression 字段
-    static std::string Get_WheelColliderComponent_previousCompression(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::ToXmlValue(instance->previousCompression);
-    }
-
-    //直接读取 WheelColliderComponent.previousCompression 字段
-    static Reflection::Value GetValue_WheelColliderComponent_previousCompression(Object* object)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return instance ? Reflection::ToValue(instance->previousCompression) : Reflection::Value();
-    }
-
-    //写入 WheelColliderComponent.previousCompression 字段
-    static bool Set_WheelColliderComponent_previousCompression(Object* object, const std::string& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        return Reflection::SetFromXmlValue(instance->previousCompression, value);
-    }
-
-    //直接写入 WheelColliderComponent.previousCompression 字段
-    static bool SetValue_WheelColliderComponent_previousCompression(Object* object, const Reflection::Value& value)
-    {
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->previousCompression, value);
-    }
-
-    //调用 WheelColliderComponent.IsGrounded 方法
-    static Reflection::Value Invoke_WheelColliderComponent_IsGrounded_0(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->IsGrounded();
-        success = true;
-        return Reflection::Value(result);
-    }
-
-    //调用 WheelColliderComponent.GetCompression 方法
-    static Reflection::Value Invoke_WheelColliderComponent_GetCompression_1(Object* object, std::span<const Reflection::Value> args, bool& success)
-    {
-        success = false;
-        WheelColliderComponent* instance = static_cast<WheelColliderComponent*>(object);
-        if (!instance || args.size() != 0) return Reflection::Value();
-
-        auto result = instance->GetCompression();
-        success = true;
-        return Reflection::Value(result);
-    }
-
     //读取 Camera.enabled 字段
     static std::string Get_Camera_enabled(Object* object)
     {
@@ -2977,6 +455,726 @@ public:
         return Reflection::Value();
     }
 
+    //读取 CharacterController.enabled 字段
+    static std::string Get_CharacterController_enabled(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 CharacterController.enabled 字段
+    static Reflection::Value GetValue_CharacterController_enabled(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 CharacterController.enabled 字段
+    static bool Set_CharacterController_enabled(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 CharacterController.enabled 字段
+    static bool SetValue_CharacterController_enabled(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 CharacterController.radius 字段
+    static std::string Get_CharacterController_radius(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 CharacterController.radius 字段
+    static Reflection::Value GetValue_CharacterController_radius(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 CharacterController.radius 字段
+    static bool Set_CharacterController_radius(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 CharacterController.radius 字段
+    static bool SetValue_CharacterController_radius(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CharacterController.height 字段
+    static std::string Get_CharacterController_height(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->height);
+    }
+
+    //直接读取 CharacterController.height 字段
+    static Reflection::Value GetValue_CharacterController_height(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->height) : Reflection::Value();
+    }
+
+    //写入 CharacterController.height 字段
+    static bool Set_CharacterController_height(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->height, value);
+    }
+
+    //直接写入 CharacterController.height 字段
+    static bool SetValue_CharacterController_height(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->height, value);
+    }
+
+    //读取 CharacterController.halfExtents 字段
+    static std::string Get_CharacterController_halfExtents(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->halfExtents);
+    }
+
+    //直接读取 CharacterController.halfExtents 字段
+    static Reflection::Value GetValue_CharacterController_halfExtents(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
+    }
+
+    //写入 CharacterController.halfExtents 字段
+    static bool Set_CharacterController_halfExtents(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->halfExtents, value);
+    }
+
+    //直接写入 CharacterController.halfExtents 字段
+    static bool SetValue_CharacterController_halfExtents(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfExtents, value);
+    }
+
+    //读取 CharacterController.stepOffset 字段
+    static std::string Get_CharacterController_stepOffset(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->stepOffset);
+    }
+
+    //直接读取 CharacterController.stepOffset 字段
+    static Reflection::Value GetValue_CharacterController_stepOffset(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->stepOffset) : Reflection::Value();
+    }
+
+    //写入 CharacterController.stepOffset 字段
+    static bool Set_CharacterController_stepOffset(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->stepOffset, value);
+    }
+
+    //直接写入 CharacterController.stepOffset 字段
+    static bool SetValue_CharacterController_stepOffset(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->stepOffset, value);
+    }
+
+    //读取 CharacterController.contactOffset 字段
+    static std::string Get_CharacterController_contactOffset(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->contactOffset);
+    }
+
+    //直接读取 CharacterController.contactOffset 字段
+    static Reflection::Value GetValue_CharacterController_contactOffset(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->contactOffset) : Reflection::Value();
+    }
+
+    //写入 CharacterController.contactOffset 字段
+    static bool Set_CharacterController_contactOffset(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->contactOffset, value);
+    }
+
+    //直接写入 CharacterController.contactOffset 字段
+    static bool SetValue_CharacterController_contactOffset(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->contactOffset, value);
+    }
+
+    //读取 CharacterController.slopeLimit 字段
+    static std::string Get_CharacterController_slopeLimit(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->slopeLimit);
+    }
+
+    //直接读取 CharacterController.slopeLimit 字段
+    static Reflection::Value GetValue_CharacterController_slopeLimit(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->slopeLimit) : Reflection::Value();
+    }
+
+    //写入 CharacterController.slopeLimit 字段
+    static bool Set_CharacterController_slopeLimit(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->slopeLimit, value);
+    }
+
+    //直接写入 CharacterController.slopeLimit 字段
+    static bool SetValue_CharacterController_slopeLimit(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->slopeLimit, value);
+    }
+
+    //读取 CharacterController.minMoveDistance 字段
+    static std::string Get_CharacterController_minMoveDistance(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->minMoveDistance);
+    }
+
+    //直接读取 CharacterController.minMoveDistance 字段
+    static Reflection::Value GetValue_CharacterController_minMoveDistance(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->minMoveDistance) : Reflection::Value();
+    }
+
+    //写入 CharacterController.minMoveDistance 字段
+    static bool Set_CharacterController_minMoveDistance(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->minMoveDistance, value);
+    }
+
+    //直接写入 CharacterController.minMoveDistance 字段
+    static bool SetValue_CharacterController_minMoveDistance(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->minMoveDistance, value);
+    }
+
+    //读取 CharacterController.collisionLayer 字段
+    static std::string Get_CharacterController_collisionLayer(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->collisionLayer);
+    }
+
+    //直接读取 CharacterController.collisionLayer 字段
+    static Reflection::Value GetValue_CharacterController_collisionLayer(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
+    }
+
+    //写入 CharacterController.collisionLayer 字段
+    static bool Set_CharacterController_collisionLayer(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
+    }
+
+    //直接写入 CharacterController.collisionLayer 字段
+    static bool SetValue_CharacterController_collisionLayer(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionLayer, value);
+    }
+
+    //读取 CharacterController.collisionMask 字段
+    static std::string Get_CharacterController_collisionMask(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::ToXmlValue(instance->collisionMask);
+    }
+
+    //直接读取 CharacterController.collisionMask 字段
+    static Reflection::Value GetValue_CharacterController_collisionMask(Object* object)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
+    }
+
+    //写入 CharacterController.collisionMask 字段
+    static bool Set_CharacterController_collisionMask(Object* object, const std::string& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionMask, value);
+    }
+
+    //直接写入 CharacterController.collisionMask 字段
+    static bool SetValue_CharacterController_collisionMask(Object* object, const Reflection::Value& value)
+    {
+        CharacterController* instance = static_cast<CharacterController*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //读取 Collider.enabled 字段
+    static std::string Get_Collider_enabled(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 Collider.enabled 字段
+    static Reflection::Value GetValue_Collider_enabled(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 Collider.enabled 字段
+    static bool Set_Collider_enabled(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 Collider.enabled 字段
+    static bool SetValue_Collider_enabled(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 Collider.isTrigger 字段
+    static std::string Get_Collider_isTrigger(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->isTrigger);
+    }
+
+    //直接读取 Collider.isTrigger 字段
+    static Reflection::Value GetValue_Collider_isTrigger(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->isTrigger) : Reflection::Value();
+    }
+
+    //写入 Collider.isTrigger 字段
+    static bool Set_Collider_isTrigger(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->isTrigger, value);
+    }
+
+    //直接写入 Collider.isTrigger 字段
+    static bool SetValue_Collider_isTrigger(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->isTrigger, value);
+    }
+
+    //读取 Collider.center 字段
+    static std::string Get_Collider_center(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->center);
+    }
+
+    //直接读取 Collider.center 字段
+    static Reflection::Value GetValue_Collider_center(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->center) : Reflection::Value();
+    }
+
+    //写入 Collider.center 字段
+    static bool Set_Collider_center(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->center, value);
+    }
+
+    //直接写入 Collider.center 字段
+    static bool SetValue_Collider_center(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->center, value);
+    }
+
+    //读取 Collider.staticFriction 字段
+    static std::string Get_Collider_staticFriction(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->staticFriction);
+    }
+
+    //直接读取 Collider.staticFriction 字段
+    static Reflection::Value GetValue_Collider_staticFriction(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->staticFriction) : Reflection::Value();
+    }
+
+    //写入 Collider.staticFriction 字段
+    static bool Set_Collider_staticFriction(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->staticFriction, value);
+    }
+
+    //直接写入 Collider.staticFriction 字段
+    static bool SetValue_Collider_staticFriction(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->staticFriction, value);
+    }
+
+    //读取 Collider.dynamicFriction 字段
+    static std::string Get_Collider_dynamicFriction(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->dynamicFriction);
+    }
+
+    //直接读取 Collider.dynamicFriction 字段
+    static Reflection::Value GetValue_Collider_dynamicFriction(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->dynamicFriction) : Reflection::Value();
+    }
+
+    //写入 Collider.dynamicFriction 字段
+    static bool Set_Collider_dynamicFriction(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->dynamicFriction, value);
+    }
+
+    //直接写入 Collider.dynamicFriction 字段
+    static bool SetValue_Collider_dynamicFriction(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->dynamicFriction, value);
+    }
+
+    //读取 Collider.restitution 字段
+    static std::string Get_Collider_restitution(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->restitution);
+    }
+
+    //直接读取 Collider.restitution 字段
+    static Reflection::Value GetValue_Collider_restitution(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->restitution) : Reflection::Value();
+    }
+
+    //写入 Collider.restitution 字段
+    static bool Set_Collider_restitution(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->restitution, value);
+    }
+
+    //直接写入 Collider.restitution 字段
+    static bool SetValue_Collider_restitution(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->restitution, value);
+    }
+
+    //读取 Collider.collisionLayer 字段
+    static std::string Get_Collider_collisionLayer(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->collisionLayer);
+    }
+
+    //直接读取 Collider.collisionLayer 字段
+    static Reflection::Value GetValue_Collider_collisionLayer(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
+    }
+
+    //写入 Collider.collisionLayer 字段
+    static bool Set_Collider_collisionLayer(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionLayer, value);
+    }
+
+    //直接写入 Collider.collisionLayer 字段
+    static bool SetValue_Collider_collisionLayer(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionLayer, value);
+    }
+
+    //读取 Collider.collisionMask 字段
+    static std::string Get_Collider_collisionMask(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::ToXmlValue(instance->collisionMask);
+    }
+
+    //直接读取 Collider.collisionMask 字段
+    static Reflection::Value GetValue_Collider_collisionMask(Object* object)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return instance ? Reflection::ToValue(instance->collisionMask) : Reflection::Value();
+    }
+
+    //写入 Collider.collisionMask 字段
+    static bool Set_Collider_collisionMask(Object* object, const std::string& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        return Reflection::SetFromXmlValue(instance->collisionMask, value);
+    }
+
+    //直接写入 Collider.collisionMask 字段
+    static bool SetValue_Collider_collisionMask(Object* object, const Reflection::Value& value)
+    {
+        Collider* instance = static_cast<Collider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //读取 BoxCollider.halfExtents 字段
+    static std::string Get_BoxCollider_halfExtents(Object* object)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        return Reflection::ToXmlValue(instance->halfExtents);
+    }
+
+    //直接读取 BoxCollider.halfExtents 字段
+    static Reflection::Value GetValue_BoxCollider_halfExtents(Object* object)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        return instance ? Reflection::ToValue(instance->halfExtents) : Reflection::Value();
+    }
+
+    //写入 BoxCollider.halfExtents 字段
+    static bool Set_BoxCollider_halfExtents(Object* object, const std::string& value)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->halfExtents, value);
+    }
+
+    //直接写入 BoxCollider.halfExtents 字段
+    static bool SetValue_BoxCollider_halfExtents(Object* object, const Reflection::Value& value)
+    {
+        BoxCollider* instance = static_cast<BoxCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfExtents, value);
+    }
+
+    //读取 SphereCollider.radius 字段
+    static std::string Get_SphereCollider_radius(Object* object)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 SphereCollider.radius 字段
+    static Reflection::Value GetValue_SphereCollider_radius(Object* object)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 SphereCollider.radius 字段
+    static bool Set_SphereCollider_radius(Object* object, const std::string& value)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 SphereCollider.radius 字段
+    static bool SetValue_SphereCollider_radius(Object* object, const Reflection::Value& value)
+    {
+        SphereCollider* instance = static_cast<SphereCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CapsuleCollider.radius 字段
+    static std::string Get_CapsuleCollider_radius(Object* object)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return Reflection::ToXmlValue(instance->radius);
+    }
+
+    //直接读取 CapsuleCollider.radius 字段
+    static Reflection::Value GetValue_CapsuleCollider_radius(Object* object)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return instance ? Reflection::ToValue(instance->radius) : Reflection::Value();
+    }
+
+    //写入 CapsuleCollider.radius 字段
+    static bool Set_CapsuleCollider_radius(Object* object, const std::string& value)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->radius, value);
+    }
+
+    //直接写入 CapsuleCollider.radius 字段
+    static bool SetValue_CapsuleCollider_radius(Object* object, const Reflection::Value& value)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //读取 CapsuleCollider.halfHeight 字段
+    static std::string Get_CapsuleCollider_halfHeight(Object* object)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return Reflection::ToXmlValue(instance->halfHeight);
+    }
+
+    //直接读取 CapsuleCollider.halfHeight 字段
+    static Reflection::Value GetValue_CapsuleCollider_halfHeight(Object* object)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return instance ? Reflection::ToValue(instance->halfHeight) : Reflection::Value();
+    }
+
+    //写入 CapsuleCollider.halfHeight 字段
+    static bool Set_CapsuleCollider_halfHeight(Object* object, const std::string& value)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->halfHeight, value);
+    }
+
+    //直接写入 CapsuleCollider.halfHeight 字段
+    static bool SetValue_CapsuleCollider_halfHeight(Object* object, const Reflection::Value& value)
+    {
+        CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->halfHeight, value);
+    }
+
+    //读取 ConvexMeshCollider.mesh 字段
+    static std::string Get_ConvexMeshCollider_mesh(Object* object)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 ConvexMeshCollider.mesh 字段
+    static Reflection::Value GetValue_ConvexMeshCollider_mesh(Object* object)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+    }
+
+    //写入 ConvexMeshCollider.mesh 字段
+    static bool Set_ConvexMeshCollider_mesh(Object* object, const std::string& value)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->mesh, value);
+    }
+
+    //直接写入 ConvexMeshCollider.mesh 字段
+    static bool SetValue_ConvexMeshCollider_mesh(Object* object, const Reflection::Value& value)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mesh, value);
+    }
+
+    //调用 ConvexMeshCollider.OnDetach 方法
+    static Reflection::Value Invoke_ConvexMeshCollider_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 TriangleMeshCollider.mesh 字段
+    static std::string Get_TriangleMeshCollider_mesh(Object* object)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 TriangleMeshCollider.mesh 字段
+    static Reflection::Value GetValue_TriangleMeshCollider_mesh(Object* object)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+    }
+
+    //写入 TriangleMeshCollider.mesh 字段
+    static bool Set_TriangleMeshCollider_mesh(Object* object, const std::string& value)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->mesh, value);
+    }
+
+    //直接写入 TriangleMeshCollider.mesh 字段
+    static bool SetValue_TriangleMeshCollider_mesh(Object* object, const Reflection::Value& value)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mesh, value);
+    }
+
+    //调用 TriangleMeshCollider.OnDetach 方法
+    static Reflection::Value Invoke_TriangleMeshCollider_OnDetach_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 DirectionalLight.enabled 字段
     static std::string Get_DirectionalLight_enabled(Object* object)
     {
@@ -3287,6 +1485,957 @@ public:
         bool arg0{};
         if (!args[0].TryGet(arg0)) return Reflection::Value();
         instance->OnWorldActiveChanged(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 HeightField.enabled 字段
+    static std::string Get_HeightField_enabled(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 HeightField.enabled 字段
+    static Reflection::Value GetValue_HeightField_enabled(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 HeightField.enabled 字段
+    static bool Set_HeightField_enabled(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 HeightField.enabled 字段
+    static bool SetValue_HeightField_enabled(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 HeightField.seed 字段
+    static std::string Get_HeightField_seed(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->seed);
+    }
+
+    //直接读取 HeightField.seed 字段
+    static Reflection::Value GetValue_HeightField_seed(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->seed) : Reflection::Value();
+    }
+
+    //写入 HeightField.seed 字段
+    static bool Set_HeightField_seed(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->seed, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.seed 字段
+    static bool SetValue_HeightField_seed(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->seed, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.sampleTileX 字段
+    static std::string Get_HeightField_sampleTileX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->sampleTileX);
+    }
+
+    //直接读取 HeightField.sampleTileX 字段
+    static Reflection::Value GetValue_HeightField_sampleTileX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->sampleTileX) : Reflection::Value();
+    }
+
+    //写入 HeightField.sampleTileX 字段
+    static bool Set_HeightField_sampleTileX(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->sampleTileX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.sampleTileX 字段
+    static bool SetValue_HeightField_sampleTileX(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->sampleTileX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.sampleTileZ 字段
+    static std::string Get_HeightField_sampleTileZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->sampleTileZ);
+    }
+
+    //直接读取 HeightField.sampleTileZ 字段
+    static Reflection::Value GetValue_HeightField_sampleTileZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->sampleTileZ) : Reflection::Value();
+    }
+
+    //写入 HeightField.sampleTileZ 字段
+    static bool Set_HeightField_sampleTileZ(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->sampleTileZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.sampleTileZ 字段
+    static bool SetValue_HeightField_sampleTileZ(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->sampleTileZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.sizeX 字段
+    static std::string Get_HeightField_sizeX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->sizeX);
+    }
+
+    //直接读取 HeightField.sizeX 字段
+    static Reflection::Value GetValue_HeightField_sizeX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->sizeX) : Reflection::Value();
+    }
+
+    //写入 HeightField.sizeX 字段
+    static bool Set_HeightField_sizeX(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->sizeX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.sizeX 字段
+    static bool SetValue_HeightField_sizeX(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->sizeX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.sizeZ 字段
+    static std::string Get_HeightField_sizeZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->sizeZ);
+    }
+
+    //直接读取 HeightField.sizeZ 字段
+    static Reflection::Value GetValue_HeightField_sizeZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->sizeZ) : Reflection::Value();
+    }
+
+    //写入 HeightField.sizeZ 字段
+    static bool Set_HeightField_sizeZ(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->sizeZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.sizeZ 字段
+    static bool SetValue_HeightField_sizeZ(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->sizeZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.rowCount 字段
+    static std::string Get_HeightField_rowCount(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->rowCount);
+    }
+
+    //直接读取 HeightField.rowCount 字段
+    static Reflection::Value GetValue_HeightField_rowCount(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->rowCount) : Reflection::Value();
+    }
+
+    //写入 HeightField.rowCount 字段
+    static bool Set_HeightField_rowCount(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->rowCount, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.rowCount 字段
+    static bool SetValue_HeightField_rowCount(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->rowCount, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.columnCount 字段
+    static std::string Get_HeightField_columnCount(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->columnCount);
+    }
+
+    //直接读取 HeightField.columnCount 字段
+    static Reflection::Value GetValue_HeightField_columnCount(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->columnCount) : Reflection::Value();
+    }
+
+    //写入 HeightField.columnCount 字段
+    static bool Set_HeightField_columnCount(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->columnCount, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.columnCount 字段
+    static bool SetValue_HeightField_columnCount(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->columnCount, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.amplitude 字段
+    static std::string Get_HeightField_amplitude(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->amplitude);
+    }
+
+    //直接读取 HeightField.amplitude 字段
+    static Reflection::Value GetValue_HeightField_amplitude(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->amplitude) : Reflection::Value();
+    }
+
+    //写入 HeightField.amplitude 字段
+    static bool Set_HeightField_amplitude(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->amplitude, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.amplitude 字段
+    static bool SetValue_HeightField_amplitude(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->amplitude, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.frequency 字段
+    static std::string Get_HeightField_frequency(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->frequency);
+    }
+
+    //直接读取 HeightField.frequency 字段
+    static Reflection::Value GetValue_HeightField_frequency(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->frequency) : Reflection::Value();
+    }
+
+    //写入 HeightField.frequency 字段
+    static bool Set_HeightField_frequency(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->frequency, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.frequency 字段
+    static bool SetValue_HeightField_frequency(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->frequency, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.octaves 字段
+    static std::string Get_HeightField_octaves(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->octaves);
+    }
+
+    //直接读取 HeightField.octaves 字段
+    static Reflection::Value GetValue_HeightField_octaves(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->octaves) : Reflection::Value();
+    }
+
+    //写入 HeightField.octaves 字段
+    static bool Set_HeightField_octaves(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->octaves, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.octaves 字段
+    static bool SetValue_HeightField_octaves(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->octaves, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenMinX 字段
+    static std::string Get_HeightField_flattenMinX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenMinX);
+    }
+
+    //直接读取 HeightField.flattenMinX 字段
+    static Reflection::Value GetValue_HeightField_flattenMinX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenMinX) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenMinX 字段
+    static bool Set_HeightField_flattenMinX(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenMinX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenMinX 字段
+    static bool SetValue_HeightField_flattenMinX(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenMinX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenMaxX 字段
+    static std::string Get_HeightField_flattenMaxX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenMaxX);
+    }
+
+    //直接读取 HeightField.flattenMaxX 字段
+    static Reflection::Value GetValue_HeightField_flattenMaxX(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenMaxX) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenMaxX 字段
+    static bool Set_HeightField_flattenMaxX(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenMaxX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenMaxX 字段
+    static bool SetValue_HeightField_flattenMaxX(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenMaxX, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenMinZ 字段
+    static std::string Get_HeightField_flattenMinZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenMinZ);
+    }
+
+    //直接读取 HeightField.flattenMinZ 字段
+    static Reflection::Value GetValue_HeightField_flattenMinZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenMinZ) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenMinZ 字段
+    static bool Set_HeightField_flattenMinZ(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenMinZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenMinZ 字段
+    static bool SetValue_HeightField_flattenMinZ(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenMinZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenMaxZ 字段
+    static std::string Get_HeightField_flattenMaxZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenMaxZ);
+    }
+
+    //直接读取 HeightField.flattenMaxZ 字段
+    static Reflection::Value GetValue_HeightField_flattenMaxZ(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenMaxZ) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenMaxZ 字段
+    static bool Set_HeightField_flattenMaxZ(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenMaxZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenMaxZ 字段
+    static bool SetValue_HeightField_flattenMaxZ(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenMaxZ, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenHeight 字段
+    static std::string Get_HeightField_flattenHeight(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenHeight);
+    }
+
+    //直接读取 HeightField.flattenHeight 字段
+    static Reflection::Value GetValue_HeightField_flattenHeight(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenHeight) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenHeight 字段
+    static bool Set_HeightField_flattenHeight(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenHeight, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenHeight 字段
+    static bool SetValue_HeightField_flattenHeight(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenHeight, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.flattenBlendDistance 字段
+    static std::string Get_HeightField_flattenBlendDistance(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->flattenBlendDistance);
+    }
+
+    //直接读取 HeightField.flattenBlendDistance 字段
+    static Reflection::Value GetValue_HeightField_flattenBlendDistance(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->flattenBlendDistance) : Reflection::Value();
+    }
+
+    //写入 HeightField.flattenBlendDistance 字段
+    static bool Set_HeightField_flattenBlendDistance(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->flattenBlendDistance, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.flattenBlendDistance 字段
+    static bool SetValue_HeightField_flattenBlendDistance(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->flattenBlendDistance, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.collisionLayer 字段
+    static std::string Get_HeightField_collisionLayer(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->collisionLayer);
+    }
+
+    //直接读取 HeightField.collisionLayer 字段
+    static Reflection::Value GetValue_HeightField_collisionLayer(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->collisionLayer) : Reflection::Value();
+    }
+
+    //写入 HeightField.collisionLayer 字段
+    static bool Set_HeightField_collisionLayer(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->collisionLayer, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.collisionLayer 字段
+    static bool SetValue_HeightField_collisionLayer(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->collisionLayer, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.material 字段
+    static std::string Get_HeightField_material(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->material);
+    }
+
+    //直接读取 HeightField.material 字段
+    static Reflection::Value GetValue_HeightField_material(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->material) : Reflection::Value();
+    }
+
+    //写入 HeightField.material 字段
+    static bool Set_HeightField_material(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->material, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.material 字段
+    static bool SetValue_HeightField_material(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->material, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.generateNoiseTexture 字段
+    static std::string Get_HeightField_generateNoiseTexture(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->generateNoiseTexture);
+    }
+
+    //直接读取 HeightField.generateNoiseTexture 字段
+    static Reflection::Value GetValue_HeightField_generateNoiseTexture(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->generateNoiseTexture) : Reflection::Value();
+    }
+
+    //写入 HeightField.generateNoiseTexture 字段
+    static bool Set_HeightField_generateNoiseTexture(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->generateNoiseTexture, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.generateNoiseTexture 字段
+    static bool SetValue_HeightField_generateNoiseTexture(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->generateNoiseTexture, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.noiseTextureSize 字段
+    static std::string Get_HeightField_noiseTextureSize(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->noiseTextureSize);
+    }
+
+    //直接读取 HeightField.noiseTextureSize 字段
+    static Reflection::Value GetValue_HeightField_noiseTextureSize(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->noiseTextureSize) : Reflection::Value();
+    }
+
+    //写入 HeightField.noiseTextureSize 字段
+    static bool Set_HeightField_noiseTextureSize(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->noiseTextureSize, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.noiseTextureSize 字段
+    static bool SetValue_HeightField_noiseTextureSize(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->noiseTextureSize, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.noiseLowColor 字段
+    static std::string Get_HeightField_noiseLowColor(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->noiseLowColor);
+    }
+
+    //直接读取 HeightField.noiseLowColor 字段
+    static Reflection::Value GetValue_HeightField_noiseLowColor(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->noiseLowColor) : Reflection::Value();
+    }
+
+    //写入 HeightField.noiseLowColor 字段
+    static bool Set_HeightField_noiseLowColor(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->noiseLowColor, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.noiseLowColor 字段
+    static bool SetValue_HeightField_noiseLowColor(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->noiseLowColor, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.noiseHighColor 字段
+    static std::string Get_HeightField_noiseHighColor(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->noiseHighColor);
+    }
+
+    //直接读取 HeightField.noiseHighColor 字段
+    static Reflection::Value GetValue_HeightField_noiseHighColor(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->noiseHighColor) : Reflection::Value();
+    }
+
+    //写入 HeightField.noiseHighColor 字段
+    static bool Set_HeightField_noiseHighColor(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->noiseHighColor, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.noiseHighColor 字段
+    static bool SetValue_HeightField_noiseHighColor(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->noiseHighColor, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.tileSize 字段
+    static std::string Get_HeightField_tileSize(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->tileSize);
+    }
+
+    //直接读取 HeightField.tileSize 字段
+    static Reflection::Value GetValue_HeightField_tileSize(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->tileSize) : Reflection::Value();
+    }
+
+    //写入 HeightField.tileSize 字段
+    static bool Set_HeightField_tileSize(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!Reflection::SetFromXmlValue(instance->tileSize, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //直接写入 HeightField.tileSize 字段
+    static bool SetValue_HeightField_tileSize(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->tileSize, value)) return false;
+        instance->Regenerate();
+        return true;
+    }
+
+    //读取 HeightField.generation 字段
+    static std::string Get_HeightField_generation(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->generation);
+    }
+
+    //直接读取 HeightField.generation 字段
+    static Reflection::Value GetValue_HeightField_generation(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->generation) : Reflection::Value();
+    }
+
+    //写入 HeightField.generation 字段
+    static bool Set_HeightField_generation(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::SetFromXmlValue(instance->generation, value);
+    }
+
+    //直接写入 HeightField.generation 字段
+    static bool SetValue_HeightField_generation(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->generation, value);
+    }
+
+    //读取 HeightField.meshPending 字段
+    static std::string Get_HeightField_meshPending(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->meshPending);
+    }
+
+    //直接读取 HeightField.meshPending 字段
+    static Reflection::Value GetValue_HeightField_meshPending(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->meshPending) : Reflection::Value();
+    }
+
+    //写入 HeightField.meshPending 字段
+    static bool Set_HeightField_meshPending(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::SetFromXmlValue(instance->meshPending, value);
+    }
+
+    //直接写入 HeightField.meshPending 字段
+    static bool SetValue_HeightField_meshPending(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->meshPending, value);
+    }
+
+    //读取 HeightField.ownsRuntimeMaterial 字段
+    static std::string Get_HeightField_ownsRuntimeMaterial(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::ToXmlValue(instance->ownsRuntimeMaterial);
+    }
+
+    //直接读取 HeightField.ownsRuntimeMaterial 字段
+    static Reflection::Value GetValue_HeightField_ownsRuntimeMaterial(Object* object)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return instance ? Reflection::ToValue(instance->ownsRuntimeMaterial) : Reflection::Value();
+    }
+
+    //写入 HeightField.ownsRuntimeMaterial 字段
+    static bool Set_HeightField_ownsRuntimeMaterial(Object* object, const std::string& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return Reflection::SetFromXmlValue(instance->ownsRuntimeMaterial, value);
+    }
+
+    //直接写入 HeightField.ownsRuntimeMaterial 字段
+    static bool SetValue_HeightField_ownsRuntimeMaterial(Object* object, const Reflection::Value& value)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->ownsRuntimeMaterial, value);
+    }
+
+    //调用 HeightField.Regenerate 方法
+    static Reflection::Value Invoke_HeightField_Regenerate_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->Regenerate();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 HeightField.GetHeightAtWorldXZ 方法
+    static Reflection::Value Invoke_HeightField_GetHeightAtWorldXZ_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        float32 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        float32 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        auto result = instance->GetHeightAtWorldXZ(arg0, arg1);
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 HeightField.GetRowScale 方法
+    static Reflection::Value Invoke_HeightField_GetRowScale_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRowScale();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 HeightField.GetColumnScale 方法
+    static Reflection::Value Invoke_HeightField_GetColumnScale_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetColumnScale();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 HeightField.GetGeneration 方法
+    static Reflection::Value Invoke_HeightField_GetGeneration_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetGeneration();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 HeightField.SyncPendingGeneration 方法
+    static Reflection::Value Invoke_HeightField_SyncPendingGeneration_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        HeightField* instance = static_cast<HeightField*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->SyncPendingGeneration();
         success = true;
         return Reflection::Value();
     }
@@ -3632,6 +2781,369 @@ public:
         auto result = instance->RefreshNormals();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //读取 RigidBody.enabled 字段
+    static std::string Get_RigidBody_enabled(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 RigidBody.enabled 字段
+    static Reflection::Value GetValue_RigidBody_enabled(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 RigidBody.enabled 字段
+    static bool Set_RigidBody_enabled(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 RigidBody.enabled 字段
+    static bool SetValue_RigidBody_enabled(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 RigidBody.mass 字段
+    static std::string Get_RigidBody_mass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->mass);
+    }
+
+    //直接读取 RigidBody.mass 字段
+    static Reflection::Value GetValue_RigidBody_mass(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->mass) : Reflection::Value();
+    }
+
+    //写入 RigidBody.mass 字段
+    static bool Set_RigidBody_mass(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->mass, value);
+    }
+
+    //直接写入 RigidBody.mass 字段
+    static bool SetValue_RigidBody_mass(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->mass, value);
+    }
+
+    //读取 RigidBody.useGravity 字段
+    static std::string Get_RigidBody_useGravity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->useGravity);
+    }
+
+    //直接读取 RigidBody.useGravity 字段
+    static Reflection::Value GetValue_RigidBody_useGravity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->useGravity) : Reflection::Value();
+    }
+
+    //写入 RigidBody.useGravity 字段
+    static bool Set_RigidBody_useGravity(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->useGravity, value);
+    }
+
+    //直接写入 RigidBody.useGravity 字段
+    static bool SetValue_RigidBody_useGravity(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->useGravity, value);
+    }
+
+    //读取 RigidBody.linearDamping 字段
+    static std::string Get_RigidBody_linearDamping(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->linearDamping);
+    }
+
+    //直接读取 RigidBody.linearDamping 字段
+    static Reflection::Value GetValue_RigidBody_linearDamping(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->linearDamping) : Reflection::Value();
+    }
+
+    //写入 RigidBody.linearDamping 字段
+    static bool Set_RigidBody_linearDamping(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->linearDamping, value);
+    }
+
+    //直接写入 RigidBody.linearDamping 字段
+    static bool SetValue_RigidBody_linearDamping(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->linearDamping, value);
+    }
+
+    //读取 RigidBody.angularDamping 字段
+    static std::string Get_RigidBody_angularDamping(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->angularDamping);
+    }
+
+    //直接读取 RigidBody.angularDamping 字段
+    static Reflection::Value GetValue_RigidBody_angularDamping(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->angularDamping) : Reflection::Value();
+    }
+
+    //写入 RigidBody.angularDamping 字段
+    static bool Set_RigidBody_angularDamping(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->angularDamping, value);
+    }
+
+    //直接写入 RigidBody.angularDamping 字段
+    static bool SetValue_RigidBody_angularDamping(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->angularDamping, value);
+    }
+
+    //读取 RigidBody.linearVelocity 字段
+    static std::string Get_RigidBody_linearVelocity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->linearVelocity);
+    }
+
+    //直接读取 RigidBody.linearVelocity 字段
+    static Reflection::Value GetValue_RigidBody_linearVelocity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->linearVelocity) : Reflection::Value();
+    }
+
+    //写入 RigidBody.linearVelocity 字段
+    static bool Set_RigidBody_linearVelocity(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->linearVelocity, value);
+    }
+
+    //直接写入 RigidBody.linearVelocity 字段
+    static bool SetValue_RigidBody_linearVelocity(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->linearVelocity, value);
+    }
+
+    //读取 RigidBody.angularVelocity 字段
+    static std::string Get_RigidBody_angularVelocity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->angularVelocity);
+    }
+
+    //直接读取 RigidBody.angularVelocity 字段
+    static Reflection::Value GetValue_RigidBody_angularVelocity(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->angularVelocity) : Reflection::Value();
+    }
+
+    //写入 RigidBody.angularVelocity 字段
+    static bool Set_RigidBody_angularVelocity(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->angularVelocity, value);
+    }
+
+    //直接写入 RigidBody.angularVelocity 字段
+    static bool SetValue_RigidBody_angularVelocity(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->angularVelocity, value);
+    }
+
+    //读取 RigidBody.continuousCollisionDetection 字段
+    static std::string Get_RigidBody_continuousCollisionDetection(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->continuousCollisionDetection);
+    }
+
+    //直接读取 RigidBody.continuousCollisionDetection 字段
+    static Reflection::Value GetValue_RigidBody_continuousCollisionDetection(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->continuousCollisionDetection) : Reflection::Value();
+    }
+
+    //写入 RigidBody.continuousCollisionDetection 字段
+    static bool Set_RigidBody_continuousCollisionDetection(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->continuousCollisionDetection, value);
+    }
+
+    //直接写入 RigidBody.continuousCollisionDetection 字段
+    static bool SetValue_RigidBody_continuousCollisionDetection(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->continuousCollisionDetection, value);
+    }
+
+    //读取 RigidBody.lockFlags 字段
+    static std::string Get_RigidBody_lockFlags(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->lockFlags);
+    }
+
+    //直接读取 RigidBody.lockFlags 字段
+    static Reflection::Value GetValue_RigidBody_lockFlags(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->lockFlags) : Reflection::Value();
+    }
+
+    //写入 RigidBody.lockFlags 字段
+    static bool Set_RigidBody_lockFlags(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->lockFlags, value);
+    }
+
+    //直接写入 RigidBody.lockFlags 字段
+    static bool SetValue_RigidBody_lockFlags(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->lockFlags, value);
+    }
+
+    //读取 RigidBody.pendingForce 字段
+    static std::string Get_RigidBody_pendingForce(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->pendingForce);
+    }
+
+    //直接读取 RigidBody.pendingForce 字段
+    static Reflection::Value GetValue_RigidBody_pendingForce(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->pendingForce) : Reflection::Value();
+    }
+
+    //写入 RigidBody.pendingForce 字段
+    static bool Set_RigidBody_pendingForce(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->pendingForce, value);
+    }
+
+    //直接写入 RigidBody.pendingForce 字段
+    static bool SetValue_RigidBody_pendingForce(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->pendingForce, value);
+    }
+
+    //读取 RigidBody.pendingTorque 字段
+    static std::string Get_RigidBody_pendingTorque(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::ToXmlValue(instance->pendingTorque);
+    }
+
+    //直接读取 RigidBody.pendingTorque 字段
+    static Reflection::Value GetValue_RigidBody_pendingTorque(Object* object)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return instance ? Reflection::ToValue(instance->pendingTorque) : Reflection::Value();
+    }
+
+    //写入 RigidBody.pendingTorque 字段
+    static bool Set_RigidBody_pendingTorque(Object* object, const std::string& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        return Reflection::SetFromXmlValue(instance->pendingTorque, value);
+    }
+
+    //直接写入 RigidBody.pendingTorque 字段
+    static bool SetValue_RigidBody_pendingTorque(Object* object, const Reflection::Value& value)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->pendingTorque, value);
+    }
+
+    //调用 RigidBody.AddForce 方法
+    static Reflection::Value Invoke_RigidBody_AddForce_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->AddForce(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 RigidBody.AddTorque 方法
+    static Reflection::Value Invoke_RigidBody_AddTorque_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->AddTorque(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 RigidBody.AddForceAtPosition 方法
+    static Reflection::Value Invoke_RigidBody_AddForceAtPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        vector3 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        instance->AddForceAtPosition(arg0, arg1);
+        success = true;
+        return Reflection::Value();
     }
 
     //读取 Shader.name 字段
@@ -4418,34 +3930,34 @@ public:
         return Reflection::SetFromValue(instance->format, value);
     }
 
-    //读取 TransformComponent.localPosition 字段
-    static std::string Get_TransformComponent_localPosition(Object* object)
+    //读取 Transform.localPosition 字段
+    static std::string Get_Transform_localPosition(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return Reflection::ToXmlValue(instance->GetLocalPosition());
     }
 
-    //直接读取 TransformComponent.localPosition 字段
-    static Reflection::Value GetValue_TransformComponent_localPosition(Object* object)
+    //直接读取 Transform.localPosition 字段
+    static Reflection::Value GetValue_Transform_localPosition(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return instance ? Reflection::ToValue(instance->GetLocalPosition()) : Reflection::Value();
     }
 
-    //写入 TransformComponent.localPosition 字段
-    static bool Set_TransformComponent_localPosition(Object* object, const std::string& value)
+    //写入 Transform.localPosition 字段
+    static bool Set_Transform_localPosition(Object* object, const std::string& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         vector3 parsedValue{};
         if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
         instance->SetLocalPosition(parsedValue);
         return true;
     }
 
-    //直接写入 TransformComponent.localPosition 字段
-    static bool SetValue_TransformComponent_localPosition(Object* object, const Reflection::Value& value)
+    //直接写入 Transform.localPosition 字段
+    static bool SetValue_Transform_localPosition(Object* object, const Reflection::Value& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance) return false;
         vector3 parsedValue{};
         if (!Reflection::SetFromValue(parsedValue, value)) return false;
@@ -4453,34 +3965,34 @@ public:
         return true;
     }
 
-    //读取 TransformComponent.localRotation 字段
-    static std::string Get_TransformComponent_localRotation(Object* object)
+    //读取 Transform.localRotation 字段
+    static std::string Get_Transform_localRotation(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return Reflection::ToXmlValue(instance->GetLocalRotation());
     }
 
-    //直接读取 TransformComponent.localRotation 字段
-    static Reflection::Value GetValue_TransformComponent_localRotation(Object* object)
+    //直接读取 Transform.localRotation 字段
+    static Reflection::Value GetValue_Transform_localRotation(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return instance ? Reflection::ToValue(instance->GetLocalRotation()) : Reflection::Value();
     }
 
-    //写入 TransformComponent.localRotation 字段
-    static bool Set_TransformComponent_localRotation(Object* object, const std::string& value)
+    //写入 Transform.localRotation 字段
+    static bool Set_Transform_localRotation(Object* object, const std::string& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         quaternion parsedValue{};
         if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
         instance->SetLocalRotation(parsedValue);
         return true;
     }
 
-    //直接写入 TransformComponent.localRotation 字段
-    static bool SetValue_TransformComponent_localRotation(Object* object, const Reflection::Value& value)
+    //直接写入 Transform.localRotation 字段
+    static bool SetValue_Transform_localRotation(Object* object, const Reflection::Value& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance) return false;
         quaternion parsedValue{};
         if (!Reflection::SetFromValue(parsedValue, value)) return false;
@@ -4488,34 +4000,34 @@ public:
         return true;
     }
 
-    //读取 TransformComponent.localScale 字段
-    static std::string Get_TransformComponent_localScale(Object* object)
+    //读取 Transform.localScale 字段
+    static std::string Get_Transform_localScale(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return Reflection::ToXmlValue(instance->GetLocalScale());
     }
 
-    //直接读取 TransformComponent.localScale 字段
-    static Reflection::Value GetValue_TransformComponent_localScale(Object* object)
+    //直接读取 Transform.localScale 字段
+    static Reflection::Value GetValue_Transform_localScale(Object* object)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         return instance ? Reflection::ToValue(instance->GetLocalScale()) : Reflection::Value();
     }
 
-    //写入 TransformComponent.localScale 字段
-    static bool Set_TransformComponent_localScale(Object* object, const std::string& value)
+    //写入 Transform.localScale 字段
+    static bool Set_Transform_localScale(Object* object, const std::string& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         vector3 parsedValue{};
         if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;
         instance->SetLocalScale(parsedValue);
         return true;
     }
 
-    //直接写入 TransformComponent.localScale 字段
-    static bool SetValue_TransformComponent_localScale(Object* object, const Reflection::Value& value)
+    //直接写入 Transform.localScale 字段
+    static bool SetValue_Transform_localScale(Object* object, const Reflection::Value& value)
     {
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance) return false;
         vector3 parsedValue{};
         if (!Reflection::SetFromValue(parsedValue, value)) return false;
@@ -4523,11 +4035,11 @@ public:
         return true;
     }
 
-    //调用 TransformComponent.GetParent 方法
-    static Reflection::Value Invoke_TransformComponent_GetParent_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetParent 方法
+    static Reflection::Value Invoke_Transform_GetParent_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetParent();
@@ -4535,11 +4047,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.SetParent 方法
-    static Reflection::Value Invoke_TransformComponent_SetParent_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.SetParent 方法
+    static Reflection::Value Invoke_Transform_SetParent_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 1) return Reflection::Value();
 
         EnsId arg0{};
@@ -4549,11 +4061,11 @@ public:
         return Reflection::Value();
     }
 
-    //调用 TransformComponent.GetWorldPosition 方法
-    static Reflection::Value Invoke_TransformComponent_GetWorldPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetWorldPosition 方法
+    static Reflection::Value Invoke_Transform_GetWorldPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetWorldPosition();
@@ -4561,11 +4073,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.GetWorldRotation 方法
-    static Reflection::Value Invoke_TransformComponent_GetWorldRotation_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetWorldRotation 方法
+    static Reflection::Value Invoke_Transform_GetWorldRotation_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetWorldRotation();
@@ -4573,11 +4085,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.GetLocalPosition 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalPosition_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetLocalPosition 方法
+    static Reflection::Value Invoke_Transform_GetLocalPosition_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetLocalPosition();
@@ -4585,11 +4097,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.SetLocalPosition 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.SetLocalPosition 方法
+    static Reflection::Value Invoke_Transform_SetLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 1) return Reflection::Value();
 
         vector3 arg0{};
@@ -4599,11 +4111,11 @@ public:
         return Reflection::Value();
     }
 
-    //调用 TransformComponent.GetLocalRotation 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalRotation_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetLocalRotation 方法
+    static Reflection::Value Invoke_Transform_GetLocalRotation_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetLocalRotation();
@@ -4611,11 +4123,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.SetLocalRotation 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalRotation_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.SetLocalRotation 方法
+    static Reflection::Value Invoke_Transform_SetLocalRotation_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 1) return Reflection::Value();
 
         quaternion arg0{};
@@ -4625,11 +4137,11 @@ public:
         return Reflection::Value();
     }
 
-    //调用 TransformComponent.GetLocalScale 方法
-    static Reflection::Value Invoke_TransformComponent_GetLocalScale_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.GetLocalScale 方法
+    static Reflection::Value Invoke_Transform_GetLocalScale_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 0) return Reflection::Value();
 
         auto result = instance->GetLocalScale();
@@ -4637,11 +4149,11 @@ public:
         return Reflection::Value(result);
     }
 
-    //调用 TransformComponent.SetLocalScale 方法
-    static Reflection::Value Invoke_TransformComponent_SetLocalScale_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    //调用 Transform.SetLocalScale 方法
+    static Reflection::Value Invoke_Transform_SetLocalScale_9(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
-        TransformComponent* instance = static_cast<TransformComponent*>(object);
+        Transform* instance = static_cast<Transform*>(object);
         if (!instance || args.size() != 1) return Reflection::Value();
 
         vector3 arg0{};
@@ -4649,6 +4161,494 @@ public:
         instance->SetLocalScale(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //读取 WheelCollider.enabled 字段
+    static std::string Get_WheelCollider_enabled(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->enabled);
+    }
+
+    //直接读取 WheelCollider.enabled 字段
+    static Reflection::Value GetValue_WheelCollider_enabled(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->enabled) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.enabled 字段
+    static bool Set_WheelCollider_enabled(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->enabled, value);
+    }
+
+    //直接写入 WheelCollider.enabled 字段
+    static bool SetValue_WheelCollider_enabled(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //读取 WheelCollider.wheelOffset 字段
+    static std::string Get_WheelCollider_wheelOffset(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->wheelOffset);
+    }
+
+    //直接读取 WheelCollider.wheelOffset 字段
+    static Reflection::Value GetValue_WheelCollider_wheelOffset(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->wheelOffset) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.wheelOffset 字段
+    static bool Set_WheelCollider_wheelOffset(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->wheelOffset, value);
+    }
+
+    //直接写入 WheelCollider.wheelOffset 字段
+    static bool SetValue_WheelCollider_wheelOffset(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->wheelOffset, value);
+    }
+
+    //读取 WheelCollider.wheelRadius 字段
+    static std::string Get_WheelCollider_wheelRadius(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->wheelRadius);
+    }
+
+    //直接读取 WheelCollider.wheelRadius 字段
+    static Reflection::Value GetValue_WheelCollider_wheelRadius(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->wheelRadius) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.wheelRadius 字段
+    static bool Set_WheelCollider_wheelRadius(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->wheelRadius, value);
+    }
+
+    //直接写入 WheelCollider.wheelRadius 字段
+    static bool SetValue_WheelCollider_wheelRadius(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->wheelRadius, value);
+    }
+
+    //读取 WheelCollider.suspensionRestLength 字段
+    static std::string Get_WheelCollider_suspensionRestLength(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->suspensionRestLength);
+    }
+
+    //直接读取 WheelCollider.suspensionRestLength 字段
+    static Reflection::Value GetValue_WheelCollider_suspensionRestLength(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->suspensionRestLength) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.suspensionRestLength 字段
+    static bool Set_WheelCollider_suspensionRestLength(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->suspensionRestLength, value);
+    }
+
+    //直接写入 WheelCollider.suspensionRestLength 字段
+    static bool SetValue_WheelCollider_suspensionRestLength(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->suspensionRestLength, value);
+    }
+
+    //读取 WheelCollider.suspensionTravel 字段
+    static std::string Get_WheelCollider_suspensionTravel(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->suspensionTravel);
+    }
+
+    //直接读取 WheelCollider.suspensionTravel 字段
+    static Reflection::Value GetValue_WheelCollider_suspensionTravel(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->suspensionTravel) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.suspensionTravel 字段
+    static bool Set_WheelCollider_suspensionTravel(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->suspensionTravel, value);
+    }
+
+    //直接写入 WheelCollider.suspensionTravel 字段
+    static bool SetValue_WheelCollider_suspensionTravel(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->suspensionTravel, value);
+    }
+
+    //读取 WheelCollider.suspensionStiffness 字段
+    static std::string Get_WheelCollider_suspensionStiffness(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->suspensionStiffness);
+    }
+
+    //直接读取 WheelCollider.suspensionStiffness 字段
+    static Reflection::Value GetValue_WheelCollider_suspensionStiffness(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->suspensionStiffness) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.suspensionStiffness 字段
+    static bool Set_WheelCollider_suspensionStiffness(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->suspensionStiffness, value);
+    }
+
+    //直接写入 WheelCollider.suspensionStiffness 字段
+    static bool SetValue_WheelCollider_suspensionStiffness(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->suspensionStiffness, value);
+    }
+
+    //读取 WheelCollider.suspensionDamping 字段
+    static std::string Get_WheelCollider_suspensionDamping(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->suspensionDamping);
+    }
+
+    //直接读取 WheelCollider.suspensionDamping 字段
+    static Reflection::Value GetValue_WheelCollider_suspensionDamping(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->suspensionDamping) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.suspensionDamping 字段
+    static bool Set_WheelCollider_suspensionDamping(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->suspensionDamping, value);
+    }
+
+    //直接写入 WheelCollider.suspensionDamping 字段
+    static bool SetValue_WheelCollider_suspensionDamping(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->suspensionDamping, value);
+    }
+
+    //读取 WheelCollider.rollingFriction 字段
+    static std::string Get_WheelCollider_rollingFriction(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->rollingFriction);
+    }
+
+    //直接读取 WheelCollider.rollingFriction 字段
+    static Reflection::Value GetValue_WheelCollider_rollingFriction(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->rollingFriction) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.rollingFriction 字段
+    static bool Set_WheelCollider_rollingFriction(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->rollingFriction, value);
+    }
+
+    //直接写入 WheelCollider.rollingFriction 字段
+    static bool SetValue_WheelCollider_rollingFriction(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->rollingFriction, value);
+    }
+
+    //读取 WheelCollider.lateralFriction 字段
+    static std::string Get_WheelCollider_lateralFriction(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->lateralFriction);
+    }
+
+    //直接读取 WheelCollider.lateralFriction 字段
+    static Reflection::Value GetValue_WheelCollider_lateralFriction(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->lateralFriction) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.lateralFriction 字段
+    static bool Set_WheelCollider_lateralFriction(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->lateralFriction, value);
+    }
+
+    //直接写入 WheelCollider.lateralFriction 字段
+    static bool SetValue_WheelCollider_lateralFriction(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->lateralFriction, value);
+    }
+
+    //读取 WheelCollider.raycastDistance 字段
+    static std::string Get_WheelCollider_raycastDistance(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->raycastDistance);
+    }
+
+    //直接读取 WheelCollider.raycastDistance 字段
+    static Reflection::Value GetValue_WheelCollider_raycastDistance(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->raycastDistance) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.raycastDistance 字段
+    static bool Set_WheelCollider_raycastDistance(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->raycastDistance, value);
+    }
+
+    //直接写入 WheelCollider.raycastDistance 字段
+    static bool SetValue_WheelCollider_raycastDistance(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->raycastDistance, value);
+    }
+
+    //读取 WheelCollider.groundQueryLayer 字段
+    static std::string Get_WheelCollider_groundQueryLayer(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->groundQueryLayer);
+    }
+
+    //直接读取 WheelCollider.groundQueryLayer 字段
+    static Reflection::Value GetValue_WheelCollider_groundQueryLayer(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->groundQueryLayer) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.groundQueryLayer 字段
+    static bool Set_WheelCollider_groundQueryLayer(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->groundQueryLayer, value);
+    }
+
+    //直接写入 WheelCollider.groundQueryLayer 字段
+    static bool SetValue_WheelCollider_groundQueryLayer(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->groundQueryLayer, value);
+    }
+
+    //读取 WheelCollider.steeringWheel 字段
+    static std::string Get_WheelCollider_steeringWheel(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->steeringWheel);
+    }
+
+    //直接读取 WheelCollider.steeringWheel 字段
+    static Reflection::Value GetValue_WheelCollider_steeringWheel(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->steeringWheel) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.steeringWheel 字段
+    static bool Set_WheelCollider_steeringWheel(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->steeringWheel, value);
+    }
+
+    //直接写入 WheelCollider.steeringWheel 字段
+    static bool SetValue_WheelCollider_steeringWheel(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->steeringWheel, value);
+    }
+
+    //读取 WheelCollider.steerAngle 字段
+    static std::string Get_WheelCollider_steerAngle(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->steerAngle);
+    }
+
+    //直接读取 WheelCollider.steerAngle 字段
+    static Reflection::Value GetValue_WheelCollider_steerAngle(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->steerAngle) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.steerAngle 字段
+    static bool Set_WheelCollider_steerAngle(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->steerAngle, value);
+    }
+
+    //直接写入 WheelCollider.steerAngle 字段
+    static bool SetValue_WheelCollider_steerAngle(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->steerAngle, value);
+    }
+
+    //读取 WheelCollider.grounded 字段
+    static std::string Get_WheelCollider_grounded(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->grounded);
+    }
+
+    //直接读取 WheelCollider.grounded 字段
+    static Reflection::Value GetValue_WheelCollider_grounded(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->grounded) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.grounded 字段
+    static bool Set_WheelCollider_grounded(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->grounded, value);
+    }
+
+    //直接写入 WheelCollider.grounded 字段
+    static bool SetValue_WheelCollider_grounded(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->grounded, value);
+    }
+
+    //读取 WheelCollider.compression 字段
+    static std::string Get_WheelCollider_compression(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->compression);
+    }
+
+    //直接读取 WheelCollider.compression 字段
+    static Reflection::Value GetValue_WheelCollider_compression(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->compression) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.compression 字段
+    static bool Set_WheelCollider_compression(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->compression, value);
+    }
+
+    //直接写入 WheelCollider.compression 字段
+    static bool SetValue_WheelCollider_compression(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->compression, value);
+    }
+
+    //读取 WheelCollider.previousCompression 字段
+    static std::string Get_WheelCollider_previousCompression(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::ToXmlValue(instance->previousCompression);
+    }
+
+    //直接读取 WheelCollider.previousCompression 字段
+    static Reflection::Value GetValue_WheelCollider_previousCompression(Object* object)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return instance ? Reflection::ToValue(instance->previousCompression) : Reflection::Value();
+    }
+
+    //写入 WheelCollider.previousCompression 字段
+    static bool Set_WheelCollider_previousCompression(Object* object, const std::string& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return Reflection::SetFromXmlValue(instance->previousCompression, value);
+    }
+
+    //直接写入 WheelCollider.previousCompression 字段
+    static bool SetValue_WheelCollider_previousCompression(Object* object, const Reflection::Value& value)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->previousCompression, value);
+    }
+
+    //调用 WheelCollider.IsGrounded 方法
+    static Reflection::Value Invoke_WheelCollider_IsGrounded_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsGrounded();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 WheelCollider.GetCompression 方法
+    static Reflection::Value Invoke_WheelCollider_GetCompression_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetCompression();
+        success = true;
+        return Reflection::Value(result);
     }
 
 };
@@ -4661,191 +4661,6 @@ namespace Reflection
         static bool registered = false;
         if (registered) return;
         registered = true;
-
-        RegisterTypeFields(CharacterControllerComponent::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_enabled, ReflectionGeneratedAccess::Set_CharacterControllerComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_enabled, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_enabled),
-                FieldInfo("shape", "CharacterControllerShape", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_radius, ReflectionGeneratedAccess::Set_CharacterControllerComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_radius, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_radius),
-                FieldInfo("height", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_height, ReflectionGeneratedAccess::Set_CharacterControllerComponent_height, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_height, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_height),
-                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_halfExtents, ReflectionGeneratedAccess::Set_CharacterControllerComponent_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_halfExtents, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_halfExtents),
-                FieldInfo("stepOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_stepOffset, ReflectionGeneratedAccess::Set_CharacterControllerComponent_stepOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_stepOffset, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_stepOffset),
-                FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_contactOffset, ReflectionGeneratedAccess::Set_CharacterControllerComponent_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_contactOffset),
-                FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_slopeLimit, ReflectionGeneratedAccess::Set_CharacterControllerComponent_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_slopeLimit),
-                FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterControllerComponent_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_minMoveDistance),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_collisionLayer, ReflectionGeneratedAccess::Set_CharacterControllerComponent_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_collisionLayer),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterControllerComponent_collisionMask, ReflectionGeneratedAccess::Set_CharacterControllerComponent_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterControllerComponent_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterControllerComponent_collisionMask),
-            });
-
-        RegisterTypeMethods(CharacterControllerComponent::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(ColliderComponent::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ColliderComponent_enabled, ReflectionGeneratedAccess::Set_ColliderComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_enabled, ReflectionGeneratedAccess::SetValue_ColliderComponent_enabled),
-                FieldInfo("isTrigger", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ColliderComponent_isTrigger, ReflectionGeneratedAccess::Set_ColliderComponent_isTrigger, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_isTrigger, ReflectionGeneratedAccess::SetValue_ColliderComponent_isTrigger),
-                FieldInfo("center", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_ColliderComponent_center, ReflectionGeneratedAccess::Set_ColliderComponent_center, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_center, ReflectionGeneratedAccess::SetValue_ColliderComponent_center),
-                FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_staticFriction, ReflectionGeneratedAccess::Set_ColliderComponent_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_staticFriction, ReflectionGeneratedAccess::SetValue_ColliderComponent_staticFriction),
-                FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_dynamicFriction, ReflectionGeneratedAccess::Set_ColliderComponent_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_dynamicFriction, ReflectionGeneratedAccess::SetValue_ColliderComponent_dynamicFriction),
-                FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_ColliderComponent_restitution, ReflectionGeneratedAccess::Set_ColliderComponent_restitution, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_restitution, ReflectionGeneratedAccess::SetValue_ColliderComponent_restitution),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ColliderComponent_collisionLayer, ReflectionGeneratedAccess::Set_ColliderComponent_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_collisionLayer, ReflectionGeneratedAccess::SetValue_ColliderComponent_collisionLayer),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ColliderComponent_collisionMask, ReflectionGeneratedAccess::Set_ColliderComponent_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_ColliderComponent_collisionMask, ReflectionGeneratedAccess::SetValue_ColliderComponent_collisionMask),
-            });
-
-        RegisterTypeMethods(ColliderComponent::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(BoxColliderComponent::StaticType(),
-            {
-                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_BoxColliderComponent_halfExtents, ReflectionGeneratedAccess::Set_BoxColliderComponent_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_BoxColliderComponent_halfExtents, ReflectionGeneratedAccess::SetValue_BoxColliderComponent_halfExtents),
-            });
-
-        RegisterTypeMethods(BoxColliderComponent::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(SphereColliderComponent::StaticType(),
-            {
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_SphereColliderComponent_radius, ReflectionGeneratedAccess::Set_SphereColliderComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_SphereColliderComponent_radius, ReflectionGeneratedAccess::SetValue_SphereColliderComponent_radius),
-            });
-
-        RegisterTypeMethods(SphereColliderComponent::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(CapsuleColliderComponent::StaticType(),
-            {
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleColliderComponent_radius, ReflectionGeneratedAccess::Set_CapsuleColliderComponent_radius, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleColliderComponent_radius, ReflectionGeneratedAccess::SetValue_CapsuleColliderComponent_radius),
-                FieldInfo("halfHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleColliderComponent_halfHeight, ReflectionGeneratedAccess::Set_CapsuleColliderComponent_halfHeight, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleColliderComponent_halfHeight, ReflectionGeneratedAccess::SetValue_CapsuleColliderComponent_halfHeight),
-            });
-
-        RegisterTypeMethods(CapsuleColliderComponent::StaticType(),
-            {
-            });
-
-        RegisterTypeFields(ConvexMeshColliderComponent::StaticType(),
-            {
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ConvexMeshColliderComponent_mesh, ReflectionGeneratedAccess::Set_ConvexMeshColliderComponent_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ConvexMeshColliderComponent_mesh, ReflectionGeneratedAccess::SetValue_ConvexMeshColliderComponent_mesh),
-            });
-
-        RegisterTypeMethods(ConvexMeshColliderComponent::StaticType(),
-            {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshColliderComponent_OnDetach_0),
-            });
-
-        RegisterTypeFields(TriangleMeshColliderComponent::StaticType(),
-            {
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshColliderComponent_mesh, ReflectionGeneratedAccess::Set_TriangleMeshColliderComponent_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshColliderComponent_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshColliderComponent_mesh),
-            });
-
-        RegisterTypeMethods(TriangleMeshColliderComponent::StaticType(),
-            {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshColliderComponent_OnDetach_0),
-            });
-
-        RegisterTypeFields(HeightFieldComponent::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_enabled, ReflectionGeneratedAccess::Set_HeightFieldComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_enabled, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_enabled),
-                FieldInfo("seed", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_seed, ReflectionGeneratedAccess::Set_HeightFieldComponent_seed, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_seed, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_seed),
-                FieldInfo("sampleTileX", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_sampleTileX, ReflectionGeneratedAccess::Set_HeightFieldComponent_sampleTileX, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_sampleTileX, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_sampleTileX),
-                FieldInfo("sampleTileZ", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_sampleTileZ, ReflectionGeneratedAccess::Set_HeightFieldComponent_sampleTileZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_sampleTileZ, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_sampleTileZ),
-                FieldInfo("sizeX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_sizeX, ReflectionGeneratedAccess::Set_HeightFieldComponent_sizeX, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_sizeX, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_sizeX),
-                FieldInfo("sizeZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_sizeZ, ReflectionGeneratedAccess::Set_HeightFieldComponent_sizeZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_sizeZ, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_sizeZ),
-                FieldInfo("rowCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_rowCount, ReflectionGeneratedAccess::Set_HeightFieldComponent_rowCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_rowCount, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_rowCount),
-                FieldInfo("columnCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_columnCount, ReflectionGeneratedAccess::Set_HeightFieldComponent_columnCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_columnCount, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_columnCount),
-                FieldInfo("amplitude", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_amplitude, ReflectionGeneratedAccess::Set_HeightFieldComponent_amplitude, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_amplitude, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_amplitude),
-                FieldInfo("frequency", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_frequency, ReflectionGeneratedAccess::Set_HeightFieldComponent_frequency, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_frequency, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_frequency),
-                FieldInfo("octaves", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_octaves, ReflectionGeneratedAccess::Set_HeightFieldComponent_octaves, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_octaves, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_octaves),
-                FieldInfo("flattenMinX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenMinX, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenMinX, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenMinX, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenMinX),
-                FieldInfo("flattenMaxX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenMaxX, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenMaxX, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenMaxX, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenMaxX),
-                FieldInfo("flattenMinZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenMinZ, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenMinZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenMinZ, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenMinZ),
-                FieldInfo("flattenMaxZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenMaxZ, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenMaxZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenMaxZ, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenMaxZ),
-                FieldInfo("flattenHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenHeight, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenHeight, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenHeight, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenHeight),
-                FieldInfo("flattenBlendDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_flattenBlendDistance, ReflectionGeneratedAccess::Set_HeightFieldComponent_flattenBlendDistance, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_flattenBlendDistance, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_flattenBlendDistance),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_collisionLayer, ReflectionGeneratedAccess::Set_HeightFieldComponent_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_collisionLayer, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_collisionLayer),
-                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_material, ReflectionGeneratedAccess::Set_HeightFieldComponent_material, "Material", ReflectionGeneratedAccess::GetValue_HeightFieldComponent_material, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_material),
-                FieldInfo("generateNoiseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_generateNoiseTexture, ReflectionGeneratedAccess::Set_HeightFieldComponent_generateNoiseTexture, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_generateNoiseTexture, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_generateNoiseTexture),
-                FieldInfo("noiseTextureSize", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_noiseTextureSize, ReflectionGeneratedAccess::Set_HeightFieldComponent_noiseTextureSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_noiseTextureSize, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_noiseTextureSize),
-                FieldInfo("noiseLowColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_noiseLowColor, ReflectionGeneratedAccess::Set_HeightFieldComponent_noiseLowColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_noiseLowColor, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_noiseLowColor),
-                FieldInfo("noiseHighColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_noiseHighColor, ReflectionGeneratedAccess::Set_HeightFieldComponent_noiseHighColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_noiseHighColor, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_noiseHighColor),
-                FieldInfo("tileSize", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_tileSize, ReflectionGeneratedAccess::Set_HeightFieldComponent_tileSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_tileSize, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_tileSize),
-                FieldInfo("heights", "std::vector<float32>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_generation, ReflectionGeneratedAccess::Set_HeightFieldComponent_generation, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_generation, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_generation),
-                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_meshPending, ReflectionGeneratedAccess::Set_HeightFieldComponent_meshPending, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_meshPending, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_meshPending),
-                FieldInfo("generatedMesh", "Mesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("noiseTexture", "Texture2D*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("runtimeMaterial", "Material*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightFieldComponent_ownsRuntimeMaterial, ReflectionGeneratedAccess::Set_HeightFieldComponent_ownsRuntimeMaterial, nullptr, ReflectionGeneratedAccess::GetValue_HeightFieldComponent_ownsRuntimeMaterial, ReflectionGeneratedAccess::SetValue_HeightFieldComponent_ownsRuntimeMaterial),
-            });
-
-        RegisterTypeMethods(HeightFieldComponent::StaticType(),
-            {
-                MethodInfo("Regenerate", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightFieldComponent_Regenerate_0),
-                MethodInfo("GetHeightAtWorldXZ", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("x", "float32", Reflection::ValueKind::Float32), ParameterInfo("z", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_HeightFieldComponent_GetHeightAtWorldXZ_1),
-                MethodInfo("GetRowScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightFieldComponent_GetRowScale_2),
-                MethodInfo("GetColumnScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightFieldComponent_GetColumnScale_3),
-                MethodInfo("GetGeneration", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightFieldComponent_GetGeneration_4),
-                MethodInfo("SyncPendingGeneration", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightFieldComponent_SyncPendingGeneration_5),
-            });
-
-        RegisterTypeFields(RigidBodyComponent::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_enabled, ReflectionGeneratedAccess::Set_RigidBodyComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_enabled, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_enabled),
-                FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_mass, ReflectionGeneratedAccess::Set_RigidBodyComponent_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_mass, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_mass),
-                FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_useGravity, ReflectionGeneratedAccess::Set_RigidBodyComponent_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_useGravity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_useGravity),
-                FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_linearDamping, ReflectionGeneratedAccess::Set_RigidBodyComponent_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_linearDamping),
-                FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_angularDamping, ReflectionGeneratedAccess::Set_RigidBodyComponent_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_angularDamping),
-                FieldInfo("linearVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_linearVelocity, ReflectionGeneratedAccess::Set_RigidBodyComponent_linearVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_linearVelocity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_linearVelocity),
-                FieldInfo("angularVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_angularVelocity, ReflectionGeneratedAccess::Set_RigidBodyComponent_angularVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_angularVelocity, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_angularVelocity),
-                FieldInfo("continuousCollisionDetection", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_continuousCollisionDetection, ReflectionGeneratedAccess::Set_RigidBodyComponent_continuousCollisionDetection, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_continuousCollisionDetection, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_continuousCollisionDetection),
-                FieldInfo("lockFlags", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_lockFlags, ReflectionGeneratedAccess::Set_RigidBodyComponent_lockFlags, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_lockFlags, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_lockFlags),
-                FieldInfo("pendingForce", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_pendingForce, ReflectionGeneratedAccess::Set_RigidBodyComponent_pendingForce, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_pendingForce, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_pendingForce),
-                FieldInfo("pendingTorque", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBodyComponent_pendingTorque, ReflectionGeneratedAccess::Set_RigidBodyComponent_pendingTorque, nullptr, ReflectionGeneratedAccess::GetValue_RigidBodyComponent_pendingTorque, ReflectionGeneratedAccess::SetValue_RigidBodyComponent_pendingTorque),
-            });
-
-        RegisterTypeMethods(RigidBodyComponent::StaticType(),
-            {
-                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBodyComponent_AddForce_0),
-                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBodyComponent_AddTorque_1),
-                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBodyComponent_AddForceAtPosition_2),
-            });
-
-        RegisterTypeFields(WheelColliderComponent::StaticType(),
-            {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_enabled, ReflectionGeneratedAccess::Set_WheelColliderComponent_enabled, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_enabled, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_enabled),
-                FieldInfo("wheelOffset", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_wheelOffset, ReflectionGeneratedAccess::Set_WheelColliderComponent_wheelOffset, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_wheelOffset, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_wheelOffset),
-                FieldInfo("wheelRadius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_wheelRadius, ReflectionGeneratedAccess::Set_WheelColliderComponent_wheelRadius, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_wheelRadius, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_wheelRadius),
-                FieldInfo("suspensionRestLength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_suspensionRestLength, ReflectionGeneratedAccess::Set_WheelColliderComponent_suspensionRestLength, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_suspensionRestLength, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_suspensionRestLength),
-                FieldInfo("suspensionTravel", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_suspensionTravel, ReflectionGeneratedAccess::Set_WheelColliderComponent_suspensionTravel, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_suspensionTravel, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_suspensionTravel),
-                FieldInfo("suspensionStiffness", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_suspensionStiffness, ReflectionGeneratedAccess::Set_WheelColliderComponent_suspensionStiffness, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_suspensionStiffness, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_suspensionStiffness),
-                FieldInfo("suspensionDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_suspensionDamping, ReflectionGeneratedAccess::Set_WheelColliderComponent_suspensionDamping, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_suspensionDamping, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_suspensionDamping),
-                FieldInfo("rollingFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_rollingFriction, ReflectionGeneratedAccess::Set_WheelColliderComponent_rollingFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_rollingFriction, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_rollingFriction),
-                FieldInfo("lateralFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_lateralFriction, ReflectionGeneratedAccess::Set_WheelColliderComponent_lateralFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_lateralFriction, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_lateralFriction),
-                FieldInfo("raycastDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_raycastDistance, ReflectionGeneratedAccess::Set_WheelColliderComponent_raycastDistance, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_raycastDistance, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_raycastDistance),
-                FieldInfo("groundQueryLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_groundQueryLayer, ReflectionGeneratedAccess::Set_WheelColliderComponent_groundQueryLayer, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_groundQueryLayer, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_groundQueryLayer),
-                FieldInfo("steeringWheel", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_steeringWheel, ReflectionGeneratedAccess::Set_WheelColliderComponent_steeringWheel, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_steeringWheel, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_steeringWheel),
-                FieldInfo("steerAngle", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_steerAngle, ReflectionGeneratedAccess::Set_WheelColliderComponent_steerAngle, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_steerAngle, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_steerAngle),
-                FieldInfo("grounded", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_grounded, ReflectionGeneratedAccess::Set_WheelColliderComponent_grounded, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_grounded, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_grounded),
-                FieldInfo("compression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_compression, ReflectionGeneratedAccess::Set_WheelColliderComponent_compression, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_compression, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_compression),
-                FieldInfo("previousCompression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelColliderComponent_previousCompression, ReflectionGeneratedAccess::Set_WheelColliderComponent_previousCompression, nullptr, ReflectionGeneratedAccess::GetValue_WheelColliderComponent_previousCompression, ReflectionGeneratedAccess::SetValue_WheelColliderComponent_previousCompression),
-            });
-
-        RegisterTypeMethods(WheelColliderComponent::StaticType(),
-            {
-                MethodInfo("IsGrounded", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelColliderComponent_IsGrounded_0),
-                MethodInfo("GetCompression", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelColliderComponent_GetCompression_1),
-            });
-
-        RegisterTypeFields(Component::StaticType(),
-            {
-            });
-
-        RegisterTypeMethods(Component::StaticType(),
-            {
-            });
 
         RegisterTypeFields(Camera::StaticType(),
             {
@@ -4874,6 +4689,97 @@ namespace Reflection
                 MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_OnWorldActiveChanged_5),
             });
 
+        RegisterTypeFields(CharacterController::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_CharacterController_enabled, ReflectionGeneratedAccess::Set_CharacterController_enabled, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_enabled, ReflectionGeneratedAccess::SetValue_CharacterController_enabled),
+                FieldInfo("shape", "CharacterControllerShape", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_radius, ReflectionGeneratedAccess::Set_CharacterController_radius, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_radius, ReflectionGeneratedAccess::SetValue_CharacterController_radius),
+                FieldInfo("height", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_height, ReflectionGeneratedAccess::Set_CharacterController_height, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_height, ReflectionGeneratedAccess::SetValue_CharacterController_height),
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_CharacterController_halfExtents, ReflectionGeneratedAccess::Set_CharacterController_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_halfExtents, ReflectionGeneratedAccess::SetValue_CharacterController_halfExtents),
+                FieldInfo("stepOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_stepOffset, ReflectionGeneratedAccess::Set_CharacterController_stepOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_stepOffset, ReflectionGeneratedAccess::SetValue_CharacterController_stepOffset),
+                FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_contactOffset, ReflectionGeneratedAccess::Set_CharacterController_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterController_contactOffset),
+                FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_slopeLimit, ReflectionGeneratedAccess::Set_CharacterController_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterController_slopeLimit),
+                FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterController_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterController_minMoveDistance),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionLayer, ReflectionGeneratedAccess::Set_CharacterController_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterController_collisionLayer),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionMask, ReflectionGeneratedAccess::Set_CharacterController_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterController_collisionMask),
+            });
+
+        RegisterTypeMethods(CharacterController::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(Collider::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_enabled, ReflectionGeneratedAccess::Set_Collider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Collider_enabled, ReflectionGeneratedAccess::SetValue_Collider_enabled),
+                FieldInfo("isTrigger", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_isTrigger, ReflectionGeneratedAccess::Set_Collider_isTrigger, nullptr, ReflectionGeneratedAccess::GetValue_Collider_isTrigger, ReflectionGeneratedAccess::SetValue_Collider_isTrigger),
+                FieldInfo("center", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Collider_center, ReflectionGeneratedAccess::Set_Collider_center, nullptr, ReflectionGeneratedAccess::GetValue_Collider_center, ReflectionGeneratedAccess::SetValue_Collider_center),
+                FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_staticFriction, ReflectionGeneratedAccess::Set_Collider_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_staticFriction, ReflectionGeneratedAccess::SetValue_Collider_staticFriction),
+                FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_dynamicFriction, ReflectionGeneratedAccess::Set_Collider_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_dynamicFriction, ReflectionGeneratedAccess::SetValue_Collider_dynamicFriction),
+                FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_restitution, ReflectionGeneratedAccess::Set_Collider_restitution, nullptr, ReflectionGeneratedAccess::GetValue_Collider_restitution, ReflectionGeneratedAccess::SetValue_Collider_restitution),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionLayer, ReflectionGeneratedAccess::Set_Collider_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionLayer, ReflectionGeneratedAccess::SetValue_Collider_collisionLayer),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionMask, ReflectionGeneratedAccess::Set_Collider_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionMask, ReflectionGeneratedAccess::SetValue_Collider_collisionMask),
+            });
+
+        RegisterTypeMethods(Collider::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(BoxCollider::StaticType(),
+            {
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_BoxCollider_halfExtents, ReflectionGeneratedAccess::Set_BoxCollider_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_BoxCollider_halfExtents, ReflectionGeneratedAccess::SetValue_BoxCollider_halfExtents),
+            });
+
+        RegisterTypeMethods(BoxCollider::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(SphereCollider::StaticType(),
+            {
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_SphereCollider_radius, ReflectionGeneratedAccess::Set_SphereCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_SphereCollider_radius, ReflectionGeneratedAccess::SetValue_SphereCollider_radius),
+            });
+
+        RegisterTypeMethods(SphereCollider::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(CapsuleCollider::StaticType(),
+            {
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_radius, ReflectionGeneratedAccess::Set_CapsuleCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_radius, ReflectionGeneratedAccess::SetValue_CapsuleCollider_radius),
+                FieldInfo("halfHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::Set_CapsuleCollider_halfHeight, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::SetValue_CapsuleCollider_halfHeight),
+            });
+
+        RegisterTypeMethods(CapsuleCollider::StaticType(),
+            {
+            });
+
+        RegisterTypeFields(ConvexMeshCollider::StaticType(),
+            {
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::Set_ConvexMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_ConvexMeshCollider_mesh),
+            });
+
+        RegisterTypeMethods(ConvexMeshCollider::StaticType(),
+            {
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_OnDetach_0),
+            });
+
+        RegisterTypeFields(TriangleMeshCollider::StaticType(),
+            {
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::Set_TriangleMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshCollider_mesh),
+            });
+
+        RegisterTypeMethods(TriangleMeshCollider::StaticType(),
+            {
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_0),
+            });
+
+        RegisterTypeFields(Component::StaticType(),
+            {
+            });
+
+        RegisterTypeMethods(Component::StaticType(),
+            {
+            });
+
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_enabled, ReflectionGeneratedAccess::SetValue_DirectionalLight_enabled),
@@ -4894,6 +4800,51 @@ namespace Reflection
                 MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_3),
                 MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_4),
                 MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_OnWorldActiveChanged_5),
+            });
+
+        RegisterTypeFields(HeightField::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_enabled, ReflectionGeneratedAccess::Set_HeightField_enabled, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_enabled, ReflectionGeneratedAccess::SetValue_HeightField_enabled),
+                FieldInfo("seed", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_seed, ReflectionGeneratedAccess::Set_HeightField_seed, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_seed, ReflectionGeneratedAccess::SetValue_HeightField_seed),
+                FieldInfo("sampleTileX", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileX, ReflectionGeneratedAccess::Set_HeightField_sampleTileX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileX, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileX),
+                FieldInfo("sampleTileZ", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileZ, ReflectionGeneratedAccess::Set_HeightField_sampleTileZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileZ, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileZ),
+                FieldInfo("sizeX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeX, ReflectionGeneratedAccess::Set_HeightField_sizeX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeX, ReflectionGeneratedAccess::SetValue_HeightField_sizeX),
+                FieldInfo("sizeZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeZ, ReflectionGeneratedAccess::Set_HeightField_sizeZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeZ, ReflectionGeneratedAccess::SetValue_HeightField_sizeZ),
+                FieldInfo("rowCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_rowCount, ReflectionGeneratedAccess::Set_HeightField_rowCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_rowCount, ReflectionGeneratedAccess::SetValue_HeightField_rowCount),
+                FieldInfo("columnCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_columnCount, ReflectionGeneratedAccess::Set_HeightField_columnCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_columnCount, ReflectionGeneratedAccess::SetValue_HeightField_columnCount),
+                FieldInfo("amplitude", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_amplitude, ReflectionGeneratedAccess::Set_HeightField_amplitude, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_amplitude, ReflectionGeneratedAccess::SetValue_HeightField_amplitude),
+                FieldInfo("frequency", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_frequency, ReflectionGeneratedAccess::Set_HeightField_frequency, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_frequency, ReflectionGeneratedAccess::SetValue_HeightField_frequency),
+                FieldInfo("octaves", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_octaves, ReflectionGeneratedAccess::Set_HeightField_octaves, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_octaves, ReflectionGeneratedAccess::SetValue_HeightField_octaves),
+                FieldInfo("flattenMinX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinX, ReflectionGeneratedAccess::Set_HeightField_flattenMinX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinX),
+                FieldInfo("flattenMaxX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxX, ReflectionGeneratedAccess::Set_HeightField_flattenMaxX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxX),
+                FieldInfo("flattenMinZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinZ, ReflectionGeneratedAccess::Set_HeightField_flattenMinZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinZ),
+                FieldInfo("flattenMaxZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxZ, ReflectionGeneratedAccess::Set_HeightField_flattenMaxZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxZ),
+                FieldInfo("flattenHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenHeight, ReflectionGeneratedAccess::Set_HeightField_flattenHeight, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenHeight, ReflectionGeneratedAccess::SetValue_HeightField_flattenHeight),
+                FieldInfo("flattenBlendDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::Set_HeightField_flattenBlendDistance, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::SetValue_HeightField_flattenBlendDistance),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_collisionLayer, ReflectionGeneratedAccess::Set_HeightField_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_collisionLayer, ReflectionGeneratedAccess::SetValue_HeightField_collisionLayer),
+                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_HeightField_material, ReflectionGeneratedAccess::Set_HeightField_material, "Material", ReflectionGeneratedAccess::GetValue_HeightField_material, ReflectionGeneratedAccess::SetValue_HeightField_material),
+                FieldInfo("generateNoiseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::Set_HeightField_generateNoiseTexture, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::SetValue_HeightField_generateNoiseTexture),
+                FieldInfo("noiseTextureSize", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_noiseTextureSize, ReflectionGeneratedAccess::Set_HeightField_noiseTextureSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseTextureSize, ReflectionGeneratedAccess::SetValue_HeightField_noiseTextureSize),
+                FieldInfo("noiseLowColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseLowColor, ReflectionGeneratedAccess::Set_HeightField_noiseLowColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseLowColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseLowColor),
+                FieldInfo("noiseHighColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseHighColor, ReflectionGeneratedAccess::Set_HeightField_noiseHighColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseHighColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseHighColor),
+                FieldInfo("tileSize", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_tileSize, ReflectionGeneratedAccess::Set_HeightField_tileSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_tileSize, ReflectionGeneratedAccess::SetValue_HeightField_tileSize),
+                FieldInfo("heights", "std::vector<float32>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_generation, ReflectionGeneratedAccess::Set_HeightField_generation, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generation, ReflectionGeneratedAccess::SetValue_HeightField_generation),
+                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_meshPending, ReflectionGeneratedAccess::Set_HeightField_meshPending, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_meshPending, ReflectionGeneratedAccess::SetValue_HeightField_meshPending),
+                FieldInfo("generatedMesh", "Mesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("noiseTexture", "Texture2D*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("runtimeMaterial", "Material*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_ownsRuntimeMaterial, ReflectionGeneratedAccess::Set_HeightField_ownsRuntimeMaterial, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_ownsRuntimeMaterial, ReflectionGeneratedAccess::SetValue_HeightField_ownsRuntimeMaterial),
+            });
+
+        RegisterTypeMethods(HeightField::StaticType(),
+            {
+                MethodInfo("Regenerate", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_Regenerate_0),
+                MethodInfo("GetHeightAtWorldXZ", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("x", "float32", Reflection::ValueKind::Float32), ParameterInfo("z", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_HeightField_GetHeightAtWorldXZ_1),
+                MethodInfo("GetRowScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetRowScale_2),
+                MethodInfo("GetColumnScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetColumnScale_3),
+                MethodInfo("GetGeneration", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetGeneration_4),
+                MethodInfo("SyncPendingGeneration", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_SyncPendingGeneration_5),
             });
 
         RegisterTypeFields(Material::StaticType(),
@@ -4955,6 +4906,30 @@ namespace Reflection
             {
             });
 
+        RegisterTypeFields(RigidBody::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_enabled, ReflectionGeneratedAccess::Set_RigidBody_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_enabled, ReflectionGeneratedAccess::SetValue_RigidBody_enabled),
+                FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_mass, ReflectionGeneratedAccess::Set_RigidBody_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_mass, ReflectionGeneratedAccess::SetValue_RigidBody_mass),
+                FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_useGravity, ReflectionGeneratedAccess::Set_RigidBody_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_useGravity, ReflectionGeneratedAccess::SetValue_RigidBody_useGravity),
+                FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_linearDamping, ReflectionGeneratedAccess::Set_RigidBody_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBody_linearDamping),
+                FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_angularDamping, ReflectionGeneratedAccess::Set_RigidBody_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBody_angularDamping),
+                FieldInfo("linearVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_linearVelocity, ReflectionGeneratedAccess::Set_RigidBody_linearVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_linearVelocity),
+                FieldInfo("angularVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_angularVelocity, ReflectionGeneratedAccess::Set_RigidBody_angularVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_angularVelocity),
+                FieldInfo("continuousCollisionDetection", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::Set_RigidBody_continuousCollisionDetection, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::SetValue_RigidBody_continuousCollisionDetection),
+                FieldInfo("lockFlags", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_RigidBody_lockFlags, ReflectionGeneratedAccess::Set_RigidBody_lockFlags, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_lockFlags, ReflectionGeneratedAccess::SetValue_RigidBody_lockFlags),
+                FieldInfo("pendingForce", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingForce, ReflectionGeneratedAccess::Set_RigidBody_pendingForce, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingForce, ReflectionGeneratedAccess::SetValue_RigidBody_pendingForce),
+                FieldInfo("pendingTorque", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingTorque, ReflectionGeneratedAccess::Set_RigidBody_pendingTorque, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingTorque, ReflectionGeneratedAccess::SetValue_RigidBody_pendingTorque),
+            });
+
+        RegisterTypeMethods(RigidBody::StaticType(),
+            {
+                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForce_0),
+                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddTorque_1),
+                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForceAtPosition_2),
+            });
+
+        Script::RegisterReflection();
         RegisterTypeFields(Shader::StaticType(),
             {
                 FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
@@ -5032,11 +5007,11 @@ namespace Reflection
             {
             });
 
-        RegisterTypeFields(TransformComponent::StaticType(),
+        RegisterTypeFields(Transform::StaticType(),
             {
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localPosition, ReflectionGeneratedAccess::Set_TransformComponent_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localPosition, ReflectionGeneratedAccess::SetValue_TransformComponent_localPosition),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_TransformComponent_localRotation, ReflectionGeneratedAccess::Set_TransformComponent_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localRotation, ReflectionGeneratedAccess::SetValue_TransformComponent_localRotation),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_TransformComponent_localScale, ReflectionGeneratedAccess::Set_TransformComponent_localScale, nullptr, ReflectionGeneratedAccess::GetValue_TransformComponent_localScale, ReflectionGeneratedAccess::SetValue_TransformComponent_localScale),
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localPosition, ReflectionGeneratedAccess::Set_Transform_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localPosition, ReflectionGeneratedAccess::SetValue_Transform_localPosition),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_Transform_localRotation, ReflectionGeneratedAccess::Set_Transform_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localRotation, ReflectionGeneratedAccess::SetValue_Transform_localRotation),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localScale, ReflectionGeneratedAccess::Set_Transform_localScale, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localScale, ReflectionGeneratedAccess::SetValue_Transform_localScale),
                 FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr),
@@ -5050,20 +5025,45 @@ namespace Reflection
                 FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
-        RegisterTypeMethods(TransformComponent::StaticType(),
+        RegisterTypeMethods(Transform::StaticType(),
             {
-                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetParent_0),
-                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetParent_1),
-                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetWorldPosition_2),
-                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetWorldRotation_3),
-                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalPosition_4),
-                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalPosition_5),
-                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalRotation_6),
-                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalRotation_7),
-                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TransformComponent_GetLocalScale_8),
-                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_TransformComponent_SetLocalScale_9),
+                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetParent_0),
+                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Transform_SetParent_1),
+                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_2),
+                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_3),
+                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_4),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_5),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_6),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_7),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_8),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_9),
             });
 
-        Script::RegisterReflection();
+        RegisterTypeFields(WheelCollider::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_enabled, ReflectionGeneratedAccess::Set_WheelCollider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_enabled, ReflectionGeneratedAccess::SetValue_WheelCollider_enabled),
+                FieldInfo("wheelOffset", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelOffset, ReflectionGeneratedAccess::Set_WheelCollider_wheelOffset, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelOffset, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelOffset),
+                FieldInfo("wheelRadius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelRadius, ReflectionGeneratedAccess::Set_WheelCollider_wheelRadius, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelRadius, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelRadius),
+                FieldInfo("suspensionRestLength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::Set_WheelCollider_suspensionRestLength, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionRestLength),
+                FieldInfo("suspensionTravel", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::Set_WheelCollider_suspensionTravel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionTravel),
+                FieldInfo("suspensionStiffness", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::Set_WheelCollider_suspensionStiffness, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionStiffness),
+                FieldInfo("suspensionDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::Set_WheelCollider_suspensionDamping, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionDamping),
+                FieldInfo("rollingFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_rollingFriction, ReflectionGeneratedAccess::Set_WheelCollider_rollingFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_rollingFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_rollingFriction),
+                FieldInfo("lateralFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_lateralFriction, ReflectionGeneratedAccess::Set_WheelCollider_lateralFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_lateralFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_lateralFriction),
+                FieldInfo("raycastDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_raycastDistance, ReflectionGeneratedAccess::Set_WheelCollider_raycastDistance, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_raycastDistance, ReflectionGeneratedAccess::SetValue_WheelCollider_raycastDistance),
+                FieldInfo("groundQueryLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::Set_WheelCollider_groundQueryLayer, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::SetValue_WheelCollider_groundQueryLayer),
+                FieldInfo("steeringWheel", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_steeringWheel, ReflectionGeneratedAccess::Set_WheelCollider_steeringWheel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steeringWheel, ReflectionGeneratedAccess::SetValue_WheelCollider_steeringWheel),
+                FieldInfo("steerAngle", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_steerAngle, ReflectionGeneratedAccess::Set_WheelCollider_steerAngle, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steerAngle, ReflectionGeneratedAccess::SetValue_WheelCollider_steerAngle),
+                FieldInfo("grounded", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_grounded, ReflectionGeneratedAccess::Set_WheelCollider_grounded, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_grounded, ReflectionGeneratedAccess::SetValue_WheelCollider_grounded),
+                FieldInfo("compression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_compression, ReflectionGeneratedAccess::Set_WheelCollider_compression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_compression, ReflectionGeneratedAccess::SetValue_WheelCollider_compression),
+                FieldInfo("previousCompression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_previousCompression, ReflectionGeneratedAccess::Set_WheelCollider_previousCompression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_previousCompression, ReflectionGeneratedAccess::SetValue_WheelCollider_previousCompression),
+            });
+
+        RegisterTypeMethods(WheelCollider::StaticType(),
+            {
+                MethodInfo("IsGrounded", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_IsGrounded_0),
+                MethodInfo("GetCompression", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_GetCompression_1),
+            });
+
     }
 }

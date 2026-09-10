@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Physics/PhysicsTypes.h"
+#include "Runtime/Object/Component.h"
 
 //PhysX CCT 角色控制器组件，位置使用实体变换的脚底坐标
-class CharacterControllerComponent : public Component
+class CharacterController : public Component
 {
-    OBJECT_TYPE_DECLARE(CharacterControllerComponent)
+    OBJECT_TYPE_DECLARE(CharacterController)
     ORBEDEN_COMPONENT_UNIQUE
 
 public:

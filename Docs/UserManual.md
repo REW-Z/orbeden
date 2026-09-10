@@ -131,7 +131,7 @@ C# 文件修改后：
 // MoveBehaviour.h
 #pragma once
 
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 
 class MoveBehaviour final : public Script
 {
@@ -151,7 +151,7 @@ protected:
 // MoveBehaviour.cpp
 #include "MoveBehaviour.h"
 #include "Runtime/Ens.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 OBJECT_TYPE_IMPLEMENT(MoveBehaviour, Script)
 
@@ -161,7 +161,7 @@ void MoveBehaviour::OnStart()
 
 void MoveBehaviour::OnUpdate(float32 deltaTime)
 {
-    TransformComponent* transform = GetEns()->Transform();
+    Transform* transform = GetEns()->Transform();
     vector3 position = transform->GetLocalPosition();
     position.x += speed * deltaTime;
     transform->SetLocalPosition(position);
@@ -251,10 +251,10 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 3. 重新编译 Player 版 OrbedenCore。
 4. 链接最终 Player。
 
-默认 Windows 输出位置：
+默认 Windows 输出位置（在被打包的项目目录内）：
 
 ```text
-OrbedenGame/Build/windows-x64-clang-cl/bin/OrbedenGame.exe
+{项目目录}/Build/windows-x64/bin/OrbedenGame.exe
 ```
 
 其他目标平台需要对应的编译器、系统库和 NativeAOT 工具链。FreeBSD 与 Switch 目前只是预留目标，不能作为完整发布流程使用。

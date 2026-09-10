@@ -4,7 +4,7 @@
 #include "Runtime/ITransformListener.h"
 #include "Runtime/World.h"
 
-//变换矩阵缓存，按变更通知刷新 TransformComponent 的世界变换
+//变换矩阵缓存，按变更通知刷新 Transform 的世界变换
 class TransformCache : public ITransformListener
 {
 private:

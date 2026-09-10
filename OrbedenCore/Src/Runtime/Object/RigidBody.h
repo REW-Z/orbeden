@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Physics/PhysicsTypes.h"
+#include "Runtime/Object/Component.h"
 
 //由 PhysicsSystem 驱动的刚体组件
-class RigidBodyComponent : public Component
+class RigidBody : public Component
 {
-    OBJECT_TYPE_DECLARE(RigidBodyComponent)
+    OBJECT_TYPE_DECLARE(RigidBody)
     ORBEDEN_COMPONENT_UNIQUE
 
 public:

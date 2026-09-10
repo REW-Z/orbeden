@@ -286,7 +286,7 @@ internal sealed class InspectorPanel : EditorPanel
         NativeComponentInfo primary = components[0];
         string title = GetComponentTitle(primary);
         bool removable = primary.IsManaged
-            || !string.Equals(primary.TypeName, "TransformComponent", StringComparison.Ordinal);
+            || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         bool expanded = EditorGUI.BeginCollapsibleComponentBlock(
             title,
             $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}",
@@ -328,11 +328,11 @@ internal sealed class InspectorPanel : EditorPanel
         document.Update();
         string[] order = nativeType switch
         {
-            "TransformComponent" => ["localPosition", "localRotation", "localScale"],
+            "Transform" => ["localPosition", "localRotation", "localScale"],
             "StaticMeshRenderer" => ["enabled", "mesh", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
-            "RigidBodyComponent" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
-            "CharacterControllerComponent" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
-            _ when nativeType.EndsWith("ColliderComponent", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
+            "RigidBody" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
+            "CharacterController" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
+            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
             _ => [],
         };
         foreach (PropertyValue property in document.Properties.OrderBy(value =>
@@ -514,8 +514,8 @@ internal sealed class InspectorPanel : EditorPanel
             {
                 List<NativeComponentInfo> existing = EditorNativeComponents.GetComponents(ens);
                 bool unique = choice.ManagedType?.GetCustomAttribute<UniqueComponentAttribute>(true) != null
-                    || !choice.IsManaged && choice.TypeName is "TransformComponent" or "StaticMeshRenderer"
-                        or "RigidBodyComponent" or "CharacterControllerComponent" or "Camera";
+                    || !choice.IsManaged && choice.TypeName is "Transform" or "StaticMeshRenderer"
+                        or "RigidBody" or "CharacterController" or "Camera";
                 if (unique && existing.Any(value => value.IsManaged == choice.IsManaged && value.TypeName == choice.TypeName))
                     throw new InvalidOperationException($"Unique component already exists: {choice.TypeName}");
             }
@@ -579,7 +579,7 @@ internal sealed class InspectorPanel : EditorPanel
                     bool managed = NativeBindingRuntime.IsManagedScript(required);
                     string name = managed ? GetScriptTypeName(required) : required.Name;
                     if (managed && required.GetConstructor([typeof(Ens)]) == null
-                        || !managed && name != "TransformComponent" && !EditorNativeComponents.GetAddableTypes().Contains(name))
+                        || !managed && name != "Transform" && !EditorNativeComponents.GetAddableTypes().Contains(name))
                         throw new InvalidOperationException($"Component has no factory: {name}");
                     BuildAddOrder(new(name, name, managed, required), visiting, visited, order);
                 }

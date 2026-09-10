@@ -1,15 +1,15 @@
 #include "Physics/PhysicsSystem.h"
 
 #include "Log/Log.h"
-#include "Physics/CharacterControllerComponent.h"
-#include "Physics/ColliderComponent.h"
-#include "Physics/HeightFieldComponent.h"
-#include "Physics/RigidBodyComponent.h"
-#include "Physics/WheelColliderComponent.h"
+#include "Runtime/Object/CharacterController.h"
+#include "Runtime/Object/Collider.h"
+#include "Runtime/Object/HeightField.h"
+#include "Runtime/Object/RigidBody.h"
+#include "Runtime/Object/WheelCollider.h"
 #include "Rendering/TransformCache.h"
 #include "Runtime/Ens.h"
 #include "Runtime/Object/Mesh.h"
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 
 #include "PxPhysicsAPI.h"
 #include "characterkinematic/PxBoxController.h"
@@ -128,7 +128,7 @@ namespace
         return std::min(direct, negated) <= epsilon * 4.0f;
     }
 
-    vector3 GetWorldScale(const TransformComponent& transform)
+    vector3 GetWorldScale(const Transform& transform)
     {
         //根节点直接使用局部缩放，避免旋转矩阵的舍入误差进入碰撞形状尺寸。
         if (transform.parent.IsNull())
@@ -545,14 +545,14 @@ public:
         events.push_back(event);
     }
 
-    Mesh* GetColliderMesh(const ColliderComponent& collider) const
+    Mesh* GetColliderMesh(const Collider& collider) const
     {
-        if (const ConvexMeshColliderComponent* convex = collider.Cast<ConvexMeshColliderComponent>()) return convex->mesh.Get();
-        if (const TriangleMeshColliderComponent* triangle = collider.Cast<TriangleMeshColliderComponent>()) return triangle->mesh.Get();
+        if (const ConvexMeshCollider* convex = collider.Cast<ConvexMeshCollider>()) return convex->mesh.Get();
+        if (const TriangleMeshCollider* triangle = collider.Cast<TriangleMeshCollider>()) return triangle->mesh.Get();
         return nullptr;
     }
 
-    uint64 CalculateColliderHash(const ColliderComponent& collider) const
+    uint64 CalculateColliderHash(const Collider& collider) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(collider.GetGeometryType()));
@@ -564,15 +564,15 @@ public:
         hash = MixHash(hash, collider.collisionLayer);
         hash = MixHash(hash, collider.collisionMask);
 
-        if (const BoxColliderComponent* box = collider.Cast<BoxColliderComponent>())
+        if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
             hash = MixVector(hash, box->halfExtents);
         }
-        else if (const SphereColliderComponent* sphere = collider.Cast<SphereColliderComponent>())
+        else if (const SphereCollider* sphere = collider.Cast<SphereCollider>())
         {
             hash = MixFloat(hash, sphere->radius);
         }
-        else if (const CapsuleColliderComponent* capsule = collider.Cast<CapsuleColliderComponent>())
+        else if (const CapsuleCollider* capsule = collider.Cast<CapsuleCollider>())
         {
             hash = MixFloat(hash, capsule->radius);
             hash = MixFloat(hash, capsule->halfHeight);
@@ -584,10 +584,10 @@ public:
         return hash;
     }
 
-    uint64 CalculateBodyHash(const List<ColliderComponent*>& colliders, const RigidBodyComponent* body) const
+    uint64 CalculateBodyHash(const List<Collider*>& colliders, const RigidBody* body) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
-        for (const ColliderComponent* collider : colliders)
+        for (const Collider* collider : colliders)
         {
             if (collider) hash = MixHash(hash, CalculateColliderHash(*collider));
         }
@@ -689,7 +689,7 @@ public:
         }
     }
 
-    PxShape* CreateShape(const ColliderComponent& collider, PhysicsBodyType bodyType, const vector3& scale)
+    PxShape* CreateShape(const Collider& collider, PhysicsBodyType bodyType, const vector3& scale)
     {
         PxMaterial* material = physics->createMaterial(
             std::max(0.0f, collider.staticFriction),
@@ -702,7 +702,7 @@ public:
         PxShape* shape = nullptr;
 
         ColliderGeometryType geometryType = collider.GetGeometryType();
-        if (const BoxColliderComponent* box = collider.Cast<BoxColliderComponent>())
+        if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
             PxBoxGeometry geometry(
                 Positive(box->halfExtents.x * scale.x),
@@ -710,12 +710,12 @@ public:
                 Positive(box->halfExtents.z * scale.z));
             shape = physics->createShape(geometry, *material, true, flags);
         }
-        else if (const SphereColliderComponent* sphere = collider.Cast<SphereColliderComponent>())
+        else if (const SphereCollider* sphere = collider.Cast<SphereCollider>())
         {
             float32 uniformScale = std::max({ Positive(scale.x), Positive(scale.y), Positive(scale.z) });
             shape = physics->createShape(PxSphereGeometry(Positive(sphere->radius * uniformScale)), *material, true, flags);
         }
-        else if (const CapsuleColliderComponent* capsule = collider.Cast<CapsuleColliderComponent>())
+        else if (const CapsuleCollider* capsule = collider.Cast<CapsuleCollider>())
         {
             float32 radialScale = std::max(Positive(scale.x), Positive(scale.z));
             PxCapsuleGeometry geometry(Positive(capsule->radius * radialScale), Positive(capsule->halfHeight * scale.y));
@@ -769,9 +769,9 @@ public:
     }
 
     std::unique_ptr<BodyRecord> CreateBody(
-        const List<ColliderComponent*>& colliders,
-        RigidBodyComponent* body,
-        TransformComponent& transform,
+        const List<Collider*>& colliders,
+        RigidBody* body,
+        Transform& transform,
         uint64 configurationHash,
         const List<Mesh*>& sourceMeshes)
     {
@@ -804,7 +804,7 @@ public:
         bool hasShape = false;
         vector3 scale = GetWorldScale(transform);
         record->shapeScale = scale;
-        for (ColliderComponent* collider : colliders)
+        for (Collider* collider : colliders)
         {
             if (!collider) continue;
 
@@ -878,7 +878,7 @@ public:
     }
 
     //计算 HeightField 物理参数哈希。
-    uint64 CalculateHeightFieldHash(const HeightFieldComponent& component) const
+    uint64 CalculateHeightFieldHash(const HeightField& component) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(component.seed));
@@ -901,7 +901,7 @@ public:
     }
 
     //创建 HeightField 静态碰撞体。
-    std::unique_ptr<HeightFieldRecord> CreateHeightField(HeightFieldComponent& component, TransformComponent& transform, uint64 configurationHash)
+    std::unique_ptr<HeightFieldRecord> CreateHeightField(HeightField& component, Transform& transform, uint64 configurationHash)
     {
         int32 rows = std::max(component.rowCount, 2);
         int32 columns = std::max(component.columnCount, 2);
@@ -987,7 +987,7 @@ public:
     }
 
     //同步 HeightField 静态体。
-    void SyncHeightField(HeightFieldComponent& component, TransformComponent& transform, uint64 key)
+    void SyncHeightField(HeightField& component, Transform& transform, uint64 key)
     {
         component.SyncPendingGeneration();
 
@@ -1011,7 +1011,7 @@ public:
         if (found->second->actor) found->second->actor->setGlobalPose(pose);
     }
 
-    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBodyComponent* body, TransformComponent& transform)
+    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform)
     {
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
         if (record.bodyType == PhysicsBodyType::Static)
@@ -1062,12 +1062,12 @@ public:
         std::unordered_set<Mesh*> dirtyMeshes;
         currentWorld.ForEachEns([&](Ens& ens)
         {
-            TransformComponent* transform = ens.Transform();
-            RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
+            Transform* transform = ens.Transform();
+            RigidBody* body = ens.GetComponent<RigidBody>();
             if (!transform || (body && !body->enabled)) return;
 
             //HeightField 地形使用独立静态体，与普通 collider body 分开管理。
-            HeightFieldComponent* heightField = ens.GetComponent<HeightFieldComponent>();
+            HeightField* heightField = ens.GetComponent<HeightField>();
             if (heightField && heightField->enabled
                 && (!body || body->bodyType == PhysicsBodyType::Static))
             {
@@ -1076,12 +1076,12 @@ public:
                 SyncHeightField(*heightField, *transform, key);
             }
 
-            List<ColliderComponent*> colliders;
+            List<Collider*> colliders;
             List<Mesh*> sourceMeshes;
             bool meshDirty = false;
             for (Component* component : ens.GetComponents())
             {
-                ColliderComponent* collider = component ? component->Cast<ColliderComponent>() : nullptr;
+                Collider* collider = component ? component->Cast<Collider>() : nullptr;
                 if (!collider || !collider->enabled) continue;
 
                 colliders.push_back(collider);
@@ -1156,7 +1156,7 @@ public:
         }
     }
 
-    uint64 CalculateControllerHash(const CharacterControllerComponent& component) const
+    uint64 CalculateControllerHash(const CharacterController& component) const
     {
         uint64 hash = 0xCBF29CE484222325ull;
         hash = MixHash(hash, static_cast<uint32>(component.shape));
@@ -1170,7 +1170,7 @@ public:
         return MixHash(hash, component.collisionMask);
     }
 
-    std::unique_ptr<ControllerRecord> CreateController(CharacterControllerComponent& component, TransformComponent& transform, uint64 configurationHash)
+    std::unique_ptr<ControllerRecord> CreateController(CharacterController& component, Transform& transform, uint64 configurationHash)
     {
         if (!transform.parent.IsNull())
         {
@@ -1248,11 +1248,11 @@ public:
     void SyncControllers(World& currentWorld)
     {
         std::unordered_set<uint64> seen;
-        currentWorld.ForEachComponent<CharacterControllerComponent>([&](CharacterControllerComponent* component)
+        currentWorld.ForEachComponent<CharacterController>([&](CharacterController* component)
         {
             if (!component || !component->enabled) return;
             Ens* ens = component->GetEns();
-            TransformComponent* transform = ens ? ens->Transform() : nullptr;
+            Transform* transform = ens ? ens->Transform() : nullptr;
             if (!transform) return;
 
             uint64 key = EnsKey(component->GetEnsId());
@@ -1299,9 +1299,9 @@ public:
         {
             BodyRecord& record = *entry.second;
             if (record.bodyType != PhysicsBodyType::Dynamic) continue;
-            TransformComponent* transform = currentWorld.GetTransformComponent(record.binding.ens);
+            Transform* transform = currentWorld.GetTransform(record.binding.ens);
             Ens* ens = currentWorld.GetEns(record.binding.ens);
-            RigidBodyComponent* body = ens ? ens->GetComponent<RigidBodyComponent>() : nullptr;
+            RigidBody* body = ens ? ens->GetComponent<RigidBody>() : nullptr;
             if (!transform || !body) continue;
 
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
@@ -1355,11 +1355,11 @@ public:
     //模拟全部机轮：弹簧阻尼悬挂 + 地面摩擦 + 转向侧向力。
     void SyncWheels(World& currentWorld)
     {
-        currentWorld.ForEachComponent<WheelColliderComponent>([&](WheelColliderComponent* wheel)
+        currentWorld.ForEachComponent<WheelCollider>([&](WheelCollider* wheel)
         {
             Ens& ens = *wheel->GetEns();
-            RigidBodyComponent* body = ens.GetComponent<RigidBodyComponent>();
-            TransformComponent* transform = ens.Transform();
+            RigidBody* body = ens.GetComponent<RigidBody>();
+            Transform* transform = ens.Transform();
             wheel->grounded = false;
             wheel->compression = 0.0f;
             wheel->previousCompression = 0.0f;
@@ -1543,7 +1543,7 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
     if (found == impl->controllers.end()) return CharacterCollisionNone;
 
     Ens* entity = impl->world->GetEns(ens);
-    CharacterControllerComponent* component = entity ? entity->GetComponent<CharacterControllerComponent>() : nullptr;
+    CharacterController* component = entity ? entity->GetComponent<CharacterController>() : nullptr;
     if (!component) return CharacterCollisionNone;
 
     LayerQueryFilter callback(component->collisionMask, false, component->collisionLayer);
@@ -1555,7 +1555,7 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
 
     PxExtendedVec3 foot = found->second->controller->getFootPosition();
     vector3 position = { static_cast<float32>(foot.x), static_cast<float32>(foot.y), static_cast<float32>(foot.z) };
-    TransformComponent* transform = impl->world->GetTransformComponent(ens);
+    Transform* transform = impl->world->GetTransform(ens);
     if (transform)
     {
         transform->SetLocalPosition(position);
@@ -1582,7 +1582,7 @@ bool PhysicsSystem::TeleportCharacter(EnsId ens, const vector3& footPosition)
     found->second->lastPoseValid = true;
     if (impl->world)
     {
-        TransformComponent* transform = impl->world->GetTransformComponent(ens);
+        Transform* transform = impl->world->GetTransform(ens);
         if (transform)
         {
             transform->SetLocalPosition(footPosition);

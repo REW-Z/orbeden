@@ -1,17 +1,17 @@
 #pragma once
 
 #include "Runtime/EngineTypes.h"
-#include "Runtime/EnsId.h"
+#include "Runtime/Object/Component.h"
 
 class PhysicsSystem;
 
 //射线悬挂机轮组件：由 PhysicsSystem 在每次物理模拟前驱动。
 //通过向下射线检测地面，施加弹簧阻尼悬挂力、地面摩擦与转向侧向力，
-//力作用到同 Ens 的 RigidBodyComponent 上（当前物理步生效）。
+//力作用到同 Ens 的 RigidBody 上（当前物理步生效）。
 //需要挂载在根节点 Dynamic 刚体所在的 Ens 上。
-class WheelColliderComponent final : public Component
+class WheelCollider final : public Component
 {
-    OBJECT_TYPE_DECLARE(WheelColliderComponent)
+    OBJECT_TYPE_DECLARE(WheelCollider)
 
 public:
     bool enabled = true;

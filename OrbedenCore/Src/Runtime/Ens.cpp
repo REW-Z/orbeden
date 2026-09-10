@@ -1,8 +1,8 @@
 #include "Runtime/Ens.h"
 
-#include "Runtime/Object/TransformComponent.h"
+#include "Runtime/Object/Transform.h"
 #include "Runtime/World.h"
-#include "Scripting/Script.h"
+#include "Runtime/Object/Script.h"
 #include "Scripting/ScriptInterop.h"
 #include "Scripting/ScriptSystem.h"
 
@@ -69,9 +69,9 @@ EnsId Ens::GetId() const
 }
 
 //获取变换组件
-TransformComponent* Ens::Transform() const
+Transform* Ens::Transform() const
 {
-    return world ? world->GetTransformComponent(ens) : nullptr;
+    return world ? world->GetTransform(ens) : nullptr;
 }
 
 //获取名称
