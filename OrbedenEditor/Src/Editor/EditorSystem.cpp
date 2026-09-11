@@ -2,6 +2,8 @@
 
 #include "Log/Log.h"
 #include "Editor/NewProjectGenerator.h"
+#include "Editor/ProjectLayout.h"
+#include "Editor/ProjectUpgrader.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "InputManager/InputManager.h"
 #include "FileSystem/Utf8Path.h"
@@ -124,6 +126,10 @@ namespace
     constexpr const char* BuildConfiguration = "Debug";
 #endif
 
+    //Player AOT 产物相对项目根的目录。发布方在 Orbeden.Editor 的 PlayerBuildPipeline 里，
+    //两处必须一致，否则构建完成后会在这里找不到产物。
+    constexpr const char* PlayerAotDirectory = "Build/Aot";
+
     std::string ToCleanPath(const std::filesystem::path& path)
     {
         return Utf8Path::ToUtf8(path.lexically_normal());
@@ -217,10 +223,11 @@ namespace
         return !path.empty() && std::filesystem::exists(Utf8Path::FromUtf8(path));
     }
 
-    //判断脚本源是否比程序集更新。
-    bool IsProjectScriptBuildOutdated(const std::string& scriptRoot, const std::string& assemblyPath)
+    //判断脚本源是否比程序集更新。脚本可以放在项目下任何目录，因此以项目根为扫描范围；
+    //生成目录里的时间戳变化不代表脚本源变化，整棵子树直接跳过。
+    bool IsProjectScriptBuildOutdated(const std::string& projectRoot, const std::string& assemblyPath)
     {
-        if (scriptRoot.empty() || assemblyPath.empty()) return false;
+        if (projectRoot.empty() || assemblyPath.empty()) return false;
         std::filesystem::path assembly = Utf8Path::FromUtf8(assemblyPath);
         if (!std::filesystem::exists(assembly)) return true;
 
@@ -228,18 +235,46 @@ namespace
         std::filesystem::file_time_type assemblyTime = std::filesystem::last_write_time(assembly, error);
         if (error) return true;
 
-        std::filesystem::path root = Utf8Path::FromUtf8(scriptRoot);
-        for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(root, error))
+        //内容根之外都是构建生成物或工程文件，时间戳变化不代表脚本源变化。
+        const char* const excludedPrefixes[] =
         {
-            if (error) return true;
-            if (!entry.is_regular_file()) continue;
+            "Build/", "Lib/", "Legacy/", ".vs/", ".git/",
+        };
 
-            std::filesystem::path extension = entry.path().extension();
-            if (extension != ".cs" && extension != ".csproj" && extension != ".props" && extension != ".targets") continue;
+        std::filesystem::path root = Utf8Path::FromUtf8(projectRoot);
+        std::filesystem::recursive_directory_iterator iterator(root, error);
+        std::filesystem::recursive_directory_iterator end;
+        while (!error && iterator != end)
+        {
+            const std::filesystem::directory_entry& entry = *iterator;
+            std::string relative = ToCleanPath(entry.path().lexically_relative(root)) + "/";
 
-            std::filesystem::file_time_type sourceTime = std::filesystem::last_write_time(entry.path(), error);
-            if (error) return true;
-            if (sourceTime > assemblyTime) return true;
+            bool excluded = false;
+            for (const char* prefix : excludedPrefixes)
+            {
+                if (relative.compare(0, std::char_traits<char>::length(prefix), prefix) == 0)
+                {
+                    excluded = true;
+                    break;
+                }
+            }
+
+            if (excluded)
+            {
+                if (entry.is_directory()) iterator.disable_recursion_pending();
+            }
+            else if (entry.is_regular_file())
+            {
+                std::filesystem::path extension = entry.path().extension();
+                if (extension == ".cs" || extension == ".csproj" || extension == ".props" || extension == ".targets")
+                {
+                    std::filesystem::file_time_type sourceTime = std::filesystem::last_write_time(entry.path(), error);
+                    if (error) return true;
+                    if (sourceTime > assemblyTime) return true;
+                }
+            }
+
+            iterator.increment(error);
         }
 
         return false;
@@ -257,43 +292,13 @@ namespace
         outError.clear();
         if (!ScriptProjectUsesLocalRuntimeDll(csproj)) return true;
 
-        if (runtimeDllPath.empty() || !std::filesystem::exists(Utf8Path::FromUtf8(runtimeDllPath)))
-        {
-            outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
-            return false;
-        }
-
-        std::filesystem::path target = Utf8Path::FromUtf8(csproj).parent_path() / "Lib/OrbedenCore.CSharp.dll";
-        std::filesystem::create_directories(target.parent_path());
-
-        std::error_code equivalentError;
-        if (!std::filesystem::exists(target) || !std::filesystem::equivalent(Utf8Path::FromUtf8(runtimeDllPath), target, equivalentError))
-        {
-            std::error_code copyError;
-            std::filesystem::copy_file(Utf8Path::FromUtf8(runtimeDllPath),
-                target,
-                std::filesystem::copy_options::overwrite_existing,
-                copyError);
-            if (copyError)
-            {
-                outError = "Copy OrbedenCore.CSharp.dll failed: " + copyError.message();
-                return false;
-            }
-        }
-
-        return NewProjectGenerator::SyncBindingBuildFiles(csproj, runtimeDllPath, outError);
+        return NewProjectGenerator::SyncRuntimeCSharpDll(csproj, runtimeDllPath, outError);
     }
 
     std::filesystem::path GetVisualStudioRoot()
     {
         //lexically_normal 不会转换分隔符，统一转成系统首选分隔符后再拼接命令。
         return std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community").make_preferred();
-    }
-
-    std::string GetBundledCMakePath()
-    {
-        std::filesystem::path path = GetVisualStudioRoot() / "Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/cmake.exe";
-        return std::filesystem::exists(path) ? ToCleanPath(path) : std::string();
     }
 
     std::string GetBundledMSBuildPath()
@@ -303,7 +308,7 @@ namespace
         return std::filesystem::exists(path) ? path.string() : "msbuild";
     }
 
-    //判断原生目录是否包含游戏 C++ 工程文件。
+    //判断项目根是否包含游戏 C++ 工程文件。
     bool HasNativeVcxProject(const std::string& nativeRoot)
     {
         if (nativeRoot.empty()) return false;
@@ -406,6 +411,7 @@ void EditorSystem::RenderEditorGUI()
     DrawPlayToolbar();
     DrawProjectDialog();
     DrawNewProjectDialog();
+    DrawUpgradeProjectDialog();
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     panelManager.DrawPanels();
 
@@ -445,6 +451,163 @@ void EditorSystem::RequestNewProjectDialog()
 void EditorSystem::RequestSaveCurrentWorld()
 {
     SaveCurrentWorld();
+}
+
+//打开项目内的另一个场景
+bool EditorSystem::OpenWorld(const std::string& relativeKey)
+{
+    if (!project.HasProject())
+    {
+        projectStatus = "No project is open.";
+        return false;
+    }
+    if (playMode.IsPlaying()) RequestStop();
+
+    //切换前先把当前场景存盘，否则未保存的编辑会随切换丢失。
+    if (project.IsWorldLoaded() && !SaveCurrentWorld()) return false;
+
+    if (!project.OpenWorld(relativeKey))
+    {
+        projectStatus = project.GetLastError();
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    editorScene.ClearSceneState();
+    projectStatus = "Opened scene: " + relativeKey;
+    RequestRepaint();
+    return true;
+}
+
+//项目加载成功后的统一收尾。Load 与 New Project 两条路径共用，
+//延迟执行的升级路径也必须走这里，否则会漏掉布局恢复与 Inspector 程序集刷新。
+void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std::string& pendingNativeLabel)
+{
+    editorScene.ClearSceneState();
+    dialogError.clear();
+    SetDialogDirectory(project.GetProjectRoot());
+    projectStatus = successLabel + ": " + project.GetProjectRoot();
+
+    std::string runtimeSyncError;
+    if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
+    {
+        projectStatus += " Core C# sync failed: " + runtimeSyncError;
+        Log::Warning(runtimeSyncError.c_str());
+    }
+
+    if (!BuildNativeGameModule(false))
+    {
+        projectStatus = "Project " + pendingNativeLabel + ". Native scripts still need to be compiled. " + projectStatus;
+    }
+
+    ApplyEditorLayout();
+    RefreshInspectorGameAssembly();
+}
+
+//加载一个已通过版本闸门的项目
+void EditorSystem::LoadProjectFromFolder(const std::string& folder)
+{
+    RequestStop();
+    SaveEditorLayout();
+    if (project.LoadProjectFolder(folder))
+    {
+        FinishProjectLoad("Loaded", "opened");
+    }
+    else
+    {
+        dialogError = project.GetLastError();
+        projectStatus = dialogError;
+    }
+}
+
+//对 pendingUpgrade 指向的项目执行升级
+bool EditorSystem::RunProjectUpgrade(std::string& outError)
+{
+    outError.clear();
+    if (pendingUpgrade.projectFilePath.empty())
+    {
+        outError = "No project is pending upgrade.";
+        return false;
+    }
+
+    std::string templateRoot = GetProjectTemplateDirectory();
+    if (templateRoot.empty())
+    {
+        outError = "Project template directory was not found. Rebuild OrbedenEditor.";
+        return false;
+    }
+
+    ProjectUpgrader::UpgradeRequest request;
+    request.projectRoot = pendingUpgrade.projectRoot;
+    request.projectName = pendingUpgrade.projectName;
+    request.projectFilePath = pendingUpgrade.projectFilePath;
+    request.startupWorld = pendingUpgrade.startupWorld;
+    request.runtimeDllPath = FindRuntimeCSharpDll();
+    request.templateRoot = templateRoot;
+
+    return ProjectUpgrader::UpgradeProject(request, outError);
+}
+
+//项目升级弹窗：载入时发现版本不一致才出现，只有"升级"和"退出"两个选择。
+void EditorSystem::DrawUpgradeProjectDialog()
+{
+    if (upgradeProjectDialog)
+    {
+        ImGui::OpenPopup("Upgrade Project");
+        upgradeProjectDialog = false;
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(620.0f, 0.0f), ImGuiCond_Appearing);
+    if (!ImGui::BeginPopupModal("Upgrade Project", nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        return;
+    }
+
+    ImGui::TextUnformatted("This project was created by an older version of Orbeden.");
+    ImGui::Spacing();
+    ImGui::Text("Project: %s", pendingUpgrade.projectFilePath.c_str());
+    ImGui::Text("Project version: %u    Current version: %u", pendingUpgrade.storedVersion, OrbedenProjectVersion);
+    ImGui::Spacing();
+    ImGui::TextWrapped("Upgrading refreshes the engine SDK, the build scaffold and the Examples folder. "
+        "Your own assets and scripts are left untouched.");
+    ImGui::Spacing();
+
+    if (!upgradeError.empty())
+    {
+        ImGui::TextWrapped("%s", upgradeError.c_str());
+        ImGui::Spacing();
+    }
+
+    if (ImGui::Button("Upgrade", ImVec2(140.0f, 0.0f)))
+    {
+        std::string error;
+        if (RunProjectUpgrade(error))
+        {
+            std::string folder = ToCleanPath(Utf8Path::FromUtf8(pendingUpgrade.projectFilePath).parent_path());
+            pendingUpgrade = ProjectVersionProbe();
+            upgradeError.clear();
+            LoadProjectFromFolder(folder);
+            ImGui::CloseCurrentPopup();
+        }
+        else
+        {
+            //版本号未写入，可以留在弹窗里重试，也可以直接退出。
+            upgradeError = error;
+            projectStatus = error;
+            Log::Error(error.c_str());
+        }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Exit", ImVec2(140.0f, 0.0f)))
+    {
+        //什么都不做：不加载项目，也不改动编辑器当前状态。
+        pendingUpgrade = ProjectVersionProbe();
+        upgradeError.clear();
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 void EditorSystem::RequestBuildScripts()
@@ -505,11 +668,12 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         return false;
     }
 
-    std::string nativeRoot = project.GetNativeRootPath();
-    if (nativeRoot.empty())
+    //原生工程与导出层直接放在项目根；没有工程文件即视为纯托管项目。
+    std::string nativeRoot = project.GetProjectRoot();
+    if (!HasNativeVcxProject(nativeRoot))
     {
         if (!nativeGameModule.IsLoaded()) return true;
-        project.MarkStartupWorldPendingReload();
+        project.MarkWorldPendingReload();
         app.GetWorld().Clear();
         std::string unloadError;
         if (!nativeGameModule.Unload(unloadError))
@@ -517,19 +681,13 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
             projectStatus = unloadError;
             return false;
         }
-        return project.ReloadStartupWorld();
-    }
-    if (!HasNativeVcxProject(nativeRoot))
-    {
-        projectStatus = "Native project is missing a .vcxproj: " + nativeRoot;
-        Log::Error(projectStatus.c_str());
-        return false;
+        return project.ReloadWorld();
     }
 
     //项目切换时先移除旧模块，避免新 World 误用同名旧类型。
     if (!saveWorldBeforeReload && nativeGameModule.IsLoaded())
     {
-        project.MarkStartupWorldPendingReload();
+        project.MarkWorldPendingReload();
         app.GetWorld().Clear();
         std::string unloadError;
         if (!nativeGameModule.Unload(unloadError))
@@ -540,7 +698,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     }
 
     //手动热重载时记录当前 World 实际依赖的游戏模块组件类型。
-    bool preserveLoadedWorld = saveWorldBeforeReload && project.IsStartupWorldLoaded();
+    bool preserveLoadedWorld = saveWorldBeforeReload && project.IsWorldLoaded();
     List<std::string> requiredTypes;
     std::unordered_set<std::string> requiredTypeSet;
     if (preserveLoadedWorld) app.GetWorld().ForEachEns([&](Ens& ens)
@@ -566,7 +724,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         return false;
     }
 
-    std::filesystem::path buildDirectory = Utf8Path::FromUtf8(nativeRoot) / "Build/Editor";
+    std::filesystem::path buildDirectory = Utf8Path::FromUtf8(nativeRoot) / ProjectLayout::NativeBuildFolder;
     //定位唯一的游戏 C++ 工程文件，模块名随工程文件名。
     std::filesystem::path vcxProject;
     std::error_code scanError;
@@ -595,16 +753,15 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
     if (!RunCommand(buildCommand, "Build Game C++")) return false;
 
     std::string modulePath = ToCleanPath(buildDirectory
-        / "bin"
-        / (project.GetProjectName() + "Native.dll"));
+        / (project.GetProjectName() + ProjectLayout::ModuleNameSuffix + ".dll"));
     std::string shadowDirectory = ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".native-pie");
 
     //清空全部模块实例后替换 DLL，再从 .world 恢复字段和挂载顺序
-    project.MarkStartupWorldPendingReload();
+    project.MarkWorldPendingReload();
     app.GetWorld().Clear();
     std::string reloadError;
     bool loaded = nativeGameModule.Reload(modulePath, shadowDirectory, requiredTypes, reloadError);
-    if (!project.ReloadStartupWorld())
+    if (!project.ReloadWorld())
     {
         projectStatus = project.GetLastError();
         return false;
@@ -633,11 +790,11 @@ void EditorSystem::RequestPlay()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
-    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetScriptRootPath(), assemblyPath))
+    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
     {
         RequestBuildScripts();
         assemblyPath = GetProjectGameAssemblyPath();
-        if (IsProjectScriptBuildOutdated(project.GetScriptRootPath(), assemblyPath))
+        if (IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
         {
             projectStatus = "C# build failed or output is out of date.";
             Log::Error(projectStatus.c_str());
@@ -700,7 +857,7 @@ void EditorSystem::RequestStop()
     managedBridge.UnloadGameAssembly();
     if (project.HasProject())
     {
-        if (project.ReloadStartupWorld())
+        if (project.ReloadWorld())
         {
             editorScene.ExitPlayMode(app.GetWorld());
         }
@@ -800,7 +957,7 @@ void EditorSystem::RequestBuildPlayer()
     std::string aotLibraryName = GetNativeAotLibraryName(target, assemblyName);
     //命令行参数使用原生分隔符路径：ToCleanPath 输出正斜杠，cmd 内建命令（copy）无法解析。
     std::filesystem::path aotLibraryFile = Utf8Path::FromUtf8(project.GetProjectRoot())
-        / "Aot"
+        / PlayerAotDirectory
         / target.aotDirectory
         / BuildConfiguration
         / Utf8Path::FromUtf8(aotLibraryName);
@@ -871,9 +1028,9 @@ const std::string& EditorSystem::GetProjectRoot() const
     return project.GetProjectRoot();
 }
 
-std::string EditorSystem::GetProjectScriptRootPath() const
+std::string EditorSystem::GetProjectContentRootPath() const
 {
-    return project.GetScriptRootPath();
+    return project.GetContentRootPath();
 }
 
 std::string EditorSystem::GetProjectManagedRootPath() const
@@ -881,14 +1038,14 @@ std::string EditorSystem::GetProjectManagedRootPath() const
     return project.GetManagedRootPath();
 }
 
-std::string EditorSystem::GetProjectNativeRootPath() const
+std::string EditorSystem::GetProjectNativeBuildPath() const
 {
-    return project.GetNativeRootPath();
+    return project.GetNativeBuildPath();
 }
 
-std::string EditorSystem::GetStartupWorldPath() const
+std::string EditorSystem::GetWorldPath() const
 {
-    return project.GetStartupWorldPath();
+    return project.GetWorldPath();
 }
 
 const std::string& EditorSystem::GetProjectStatusText() const
@@ -975,7 +1132,12 @@ void EditorSystem::SetManagedPanelVisible(int32 handle, bool visible)
 
 std::string EditorSystem::GetProjectScriptProjectPath() const
 {
-    return FindFirstCsproj(project.GetScriptRootPath());
+    //脚本工程直接放在项目根，优先用约定名，找不到再取第一个 .csproj。
+    std::filesystem::path projectRoot = Utf8Path::FromUtf8(project.GetProjectRoot());
+    std::filesystem::path expected = projectRoot / Utf8Path::FromUtf8(project.GetProjectName() + ".csproj");
+    if (!projectRoot.empty() && std::filesystem::exists(expected)) return ToCleanPath(expected);
+
+    return FindFirstCsproj(projectRoot);
 }
 
 std::string EditorSystem::GetProjectGameAssemblyName() const
@@ -1174,10 +1336,10 @@ bool EditorSystem::SaveCurrentWorld()
     bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
 
     bool managedSaved = managedBridge.SaveProjectState();
-    bool worldSaved = managedSaved && project.SaveStartupWorld();
+    bool worldSaved = managedSaved && project.SaveWorld();
     if (worldSaved) managedBridge.NotifyWorldSaved();
     bool saved = managedSaved && worldSaved;
-    projectStatus = saved ? ("Saved: " + project.GetStartupWorldPath())
+    projectStatus = saved ? ("Saved: " + project.GetWorldPath())
         : (managedSaved ? project.GetLastError() : "Managed project data save failed.");
 
     if (hadEditorCamera) editorScene.RestoreCamera(world);
@@ -1468,32 +1630,32 @@ void EditorSystem::DrawProjectDialog()
 
     if (ImGui::Button("Load"))
     {
-        RequestStop();
-        SaveEditorLayout();
-        if (project.LoadProjectFolder(dialogDirectory))
+        //版本闸门必须在任何副作用之前：RequestStop 和 SaveEditorLayout 都会动当前项目的状态。
+        ProjectVersionProbe probe;
+        std::string probeError;
+        if (!EditorProject::ProbeProjectFolder(dialogDirectory, probe, probeError))
         {
-            editorScene.ClearSceneState();
-            dialogError.clear();
-            SetDialogDirectory(project.GetProjectRoot());
-            projectStatus = "Loaded: " + project.GetProjectRoot();
-            std::string runtimeSyncError;
-            if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
-            {
-                projectStatus += " Core C# sync failed: " + runtimeSyncError;
-                Log::Warning(runtimeSyncError.c_str());
-            }
-            if (!BuildNativeGameModule(false))
-            {
-                projectStatus = "Project opened. Native scripts still need to be compiled. " + projectStatus;
-            }
-            ApplyEditorLayout();
-            RefreshInspectorGameAssembly();
+            dialogError = probeError;
+            projectStatus = probeError;
+        }
+        else if (probe.status == ProjectVersionStatus::Newer)
+        {
+            dialogError = "This project was created by a newer version of Orbeden (project version "
+                + std::to_string(probe.storedVersion) + ", this Editor supports "
+                + std::to_string(OrbedenProjectVersion) + "). Update Orbeden before opening it.";
+            projectStatus = dialogError;
+        }
+        else if (probe.status == ProjectVersionStatus::Outdated)
+        {
+            pendingUpgrade = probe;
+            upgradeError.clear();
+            upgradeProjectDialog = true;
             ImGui::CloseCurrentPopup();
         }
         else
         {
-            dialogError = project.GetLastError();
-            projectStatus = dialogError;
+            LoadProjectFromFolder(dialogDirectory);
+            ImGui::CloseCurrentPopup();
         }
     }
 
@@ -1585,22 +1747,7 @@ void EditorSystem::DrawNewProjectDialog()
 
             if (error.empty() && project.LoadProjectFolder(projectRoot))
             {
-                editorScene.ClearSceneState();
-                dialogError.clear();
-                SetDialogDirectory(project.GetProjectRoot());
-                projectStatus = "Created project: " + project.GetProjectRoot();
-                std::string runtimeSyncError;
-                if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
-                {
-                    projectStatus += " Core C# sync failed: " + runtimeSyncError;
-                    Log::Warning(runtimeSyncError.c_str());
-                }
-                if (!BuildNativeGameModule(false))
-                {
-                    projectStatus = "Project created. Native scripts still need to be compiled. " + projectStatus;
-                }
-                ApplyEditorLayout();
-                RefreshInspectorGameAssembly();
+                FinishProjectLoad("Created project", "created");
                 ImGui::CloseCurrentPopup();
             }
             else
@@ -1627,19 +1774,37 @@ void EditorSystem::SetDialogDirectory(const std::string& path)
     CopyToBuffer(pathBuffer, sizeof(pathBuffer), dialogDirectory);
 }
 
-//定位新项目模板目录：优先 exe 旁的分发副本，回退源码树开发环境。
+//定位模板根目录：优先 exe 旁的分发副本，回退源码树开发环境。
+//模板根下分为脚手架（Project/）与示例（Examples/）两部分。
 std::string EditorSystem::GetProjectTemplateDirectory() const
 {
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
     const std::array<std::filesystem::path, 2> candidates =
     {
-        executableDirectory / "Templates" / "FlightTraining",
-        executableDirectory.parent_path().parent_path() / "Templates" / "FlightTraining",
+        executableDirectory / "Templates",
+        executableDirectory.parent_path().parent_path() / "Templates",
     };
     for (const std::filesystem::path& candidate : candidates)
     {
-        if (std::filesystem::is_directory(candidate)) return ToCleanPath(candidate);
+        if (std::filesystem::is_directory(candidate / "Project")) return ToCleanPath(candidate);
     }
 
     return std::string();
+}
+
+std::string EditorSystem::GetRepositoryRoot() const
+{
+    return FindRepositoryRoot();
+}
+
+//写回目标只能是源码树里的模板：exe 旁那份是构建产物，下次构建就被刷掉。
+std::string EditorSystem::GetSourceTemplateRoot() const
+{
+    std::string repositoryRoot = FindRepositoryRoot();
+    if (repositoryRoot.empty()) return std::string();
+
+    std::filesystem::path templates = Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor" / "Templates";
+    if (!std::filesystem::is_directory(templates / "Project")) return std::string();
+
+    return ToCleanPath(templates);
 }

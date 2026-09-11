@@ -9,14 +9,28 @@ namespace OrbedenEditor;
 internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
 {
     private readonly Dictionary<Type, List<ObjectFieldOption>> assets = [];
-    private string indexedProjectRoot = string.Empty;
-    private string indexedResourceRoot = string.Empty;
+    private string indexedContentRoot = string.Empty;
 
     public static EditorAssetCatalog Instance { get; } = new();
 
-    public string ProjectRoot => Path.GetFullPath(PathDefines.ContentRoot);
-    public string ResourceRootKey => NormalizeKey(EditorAssetsNative.GetResourceRoot());
-    public string ResourceRootPath => Path.GetFullPath(Path.Combine(ProjectRoot, ResourceRootKey));
+    /// <summary>内容根：资源、场景与脚本的根，内部结构完全自由。</summary>
+    public string ContentRoot => Path.GetFullPath(PathDefines.ContentRoot);
+
+    /// <summary>判断某个路径是否落在内容根之外。</summary>
+    public bool IsGeneratedPath(string fullPath)
+    {
+        return !IsInsideContentRoot(fullPath);
+    }
+
+    /// <summary>判断某个路径是否落在内容根内。</summary>
+    public bool IsInsideContentRoot(string fullPath)
+    {
+        string contentRoot = ContentRoot;
+        if (string.IsNullOrWhiteSpace(contentRoot)) return false;
+
+        string relative = Path.GetRelativePath(contentRoot, Path.GetFullPath(fullPath));
+        return !relative.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(relative);
+    }
 
     /// <summary>读取指定对象类型的可选择资源。</summary>
     public IReadOnlyList<ObjectFieldOption> GetAssets(Type objectType)
@@ -38,14 +52,13 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     public void Refresh()
     {
         assets.Clear();
-        indexedProjectRoot = PathDefines.ContentRoot;
-        indexedResourceRoot = EditorAssetsNative.GetResourceRoot();
-        if (string.IsNullOrWhiteSpace(indexedProjectRoot)) return;
+        indexedContentRoot = PathDefines.ContentRoot;
+        if (string.IsNullOrWhiteSpace(indexedContentRoot)) return;
 
-        string resourcePath = ResourceRootPath;
-        if (!Directory.Exists(resourcePath)) return;
+        string root = ContentRoot;
+        if (!Directory.Exists(root)) return;
 
-        foreach (string file in Directory.EnumerateFiles(resourcePath, "*", SearchOption.AllDirectories))
+        foreach (string file in EnumerateSourceFiles(root))
         {
             AddSourceOptions(file);
         }
@@ -56,11 +69,35 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         }
     }
 
-    /// <summary>把资源磁盘路径转换为项目资源 Key。</summary>
+    //把资源磁盘路径转换为内容根相对 Key。内容根之外的路径返回空：
+    //Key 最终由原生侧按内容根解析，带 ".." 的 Key 能读到内容根外的文件，必须在这里挡住。
     public string ToResourceKey(string fullPath)
     {
-        string relative = Path.GetRelativePath(ProjectRoot, Path.GetFullPath(fullPath));
+        string relative = Path.GetRelativePath(ContentRoot, Path.GetFullPath(fullPath));
+        if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)) return string.Empty;
         return NormalizeKey(relative);
+    }
+
+    //递归枚举内容根下的资源源文件。内容根之外按定义不是用户内容，不需要排除表；
+    //只跳过以点开头的目录（版本库、编辑器缓存等）。
+    private static IEnumerable<string> EnumerateSourceFiles(string contentRoot)
+    {
+        Stack<string> pending = new();
+        pending.Push(contentRoot);
+        while (pending.Count > 0)
+        {
+            string directory = pending.Pop();
+            foreach (string child in Directory.EnumerateDirectories(directory))
+            {
+                if (Path.GetFileName(child).StartsWith('.')) continue;
+                pending.Push(child);
+            }
+
+            foreach (string file in Directory.EnumerateFiles(directory))
+            {
+                yield return file;
+            }
+        }
     }
 
     /// <summary>返回资源文件在 ProjectPanel 中显示的类型。</summary>
@@ -74,6 +111,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             ".gltf" or ".glb" => "glTF Source",
             ".mtl" => "Material Source",
             ".orbshader" => "Shader",
+            ".world" => "World",
             ".vert" or ".frag" or ".glsl" => "Shader Source",
             ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => "Texture2D",
             _ => "File",
@@ -98,8 +136,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     //检测项目变化并刷新索引。
     private void EnsureCurrentProject()
     {
-        if (!string.Equals(indexedProjectRoot, PathDefines.ContentRoot, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(indexedResourceRoot, EditorAssetsNative.GetResourceRoot(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(indexedContentRoot, PathDefines.ContentRoot, StringComparison.OrdinalIgnoreCase))
         {
             Refresh();
         }

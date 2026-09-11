@@ -15,6 +15,8 @@
     <RootNamespace>OrbedenGame</RootNamespace>
     <!--Player 工程位于 OrbedenGame/ 下，仓库根为上一级目录。-->
     <OrbedenEngineRoot Condition="'$(OrbedenEngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</OrbedenEngineRoot>
+    <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
+    <OrbedenContentRoot>$(OrbedenProjectDir)\Content</OrbedenContentRoot>
     <!--Player 只链接 SDK 预编译的 Core 静态库；缺失即报错，不回退到编译 Core 源码。-->
     <OrbedenCoreStaticLib Condition="'$(OrbedenCoreStaticLib)' == ''">$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Native\WindowsX64\$(Configuration)\OrbedenCoreStatic.lib</OrbedenCoreStaticLib>
   </PropertyGroup>
@@ -53,7 +55,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 /EHsc %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ORBEDEN_PLAYER;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;ORBEDEN_HAS_NATIVE_GAME;ORBEDEN_PROJECT_DIR="$(OrbedenProjectDir.Replace('\', '/'))";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(OrbedenEngineRoot)\OrbedenCore\Src;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\backends;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf;$(OrbedenEngineRoot)\OrbedenGame\Src;$(OrbedenProjectDir)\Native;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OrbedenEngineRoot)\OrbedenCore\Src;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\backends;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf;$(OrbedenEngineRoot)\OrbedenGame\Src;$(OrbedenProjectDir);$(OrbedenContentRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -66,15 +68,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Src\game_main.cpp" />
-    <ClCompile Include="$(OrbedenProjectDir)\Native\*.cpp" Exclude="$(OrbedenProjectDir)\Native\GameModule.cpp;$(OrbedenProjectDir)\Native\Build\**\*.cpp" />
+    <!--内容根下的游戏 C++ 源码全部进 Player；GameModule.cpp 由 Editor 的模块工程负责，不在这里编译。-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" />
     <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
-    <ClCompile Include="$(OrbedenProjectDir)\Native\Generated\*.cpp">
+    <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\*.cpp">
       <ObjectFileName>$(IntDir)GameGenerated\%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClInclude Include="Src\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(OrbedenProjectDir)\Native\*.h" />
+    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <!--Player 不感知 Core 源码：SDK 缺少静态库时直接失败，不触发 Core 源码编译。-->

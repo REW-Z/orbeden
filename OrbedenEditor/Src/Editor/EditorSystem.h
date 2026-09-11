@@ -26,10 +26,14 @@ private:
     std::string dialogDirectory;
     std::string dialogError;
     std::string projectStatus;
+    std::string upgradeError;
     char pathBuffer[1024] = {};
     char newProjectNameBuffer[128] = {};
     bool openProjectDialog = false;
     bool newProjectDialog = false;
+    //版本闸门拦下的待升级项目。用户选择"退出"时直接丢弃，编辑器状态不受影响。
+    bool upgradeProjectDialog = false;
+    ProjectVersionProbe pendingUpgrade;
     bool previousInputEnabled = true;
     EditorLayoutState playPanelLayout;
     PanelManager panelManager;
@@ -70,6 +74,9 @@ public:
     //请求保存当前场景
     void RequestSaveCurrentWorld();
 
+    //打开项目内的另一个场景。路径以项目根为基准。
+    bool OpenWorld(const std::string& relativeKey);
+
     //请求构建当前项目 C# 脚本
     void RequestBuildScripts();
 
@@ -97,20 +104,26 @@ public:
     //获取当前项目根目录
     const std::string& GetProjectRoot() const;
 
-    //获取项目脚本根目录
-    std::string GetProjectScriptRootPath() const;
+    //获取项目内容根目录：资源、场景与脚本的根，内部结构完全自由。
+    std::string GetProjectContentRootPath() const;
 
     //获取项目托管输出目录
     std::string GetProjectManagedRootPath() const;
 
-    //获取项目 C++ 代码根目录。
-    std::string GetProjectNativeRootPath() const;
+    //获取原生模块产物目录
+    std::string GetProjectNativeBuildPath() const;
 
     //定位新项目模板目录（优先 exe 旁的分发副本，回退源码树）。
     std::string GetProjectTemplateDirectory() const;
 
+    //定位仓库根目录，找不到返回空串。
+    std::string GetRepositoryRoot() const;
+
+    //定位源码树里的模板根：示例写回只能落在这里，不能落进 exe 旁那份随构建刷新的分发副本。
+    std::string GetSourceTemplateRoot() const;
+
     //获取启动场景完整路径
-    std::string GetStartupWorldPath() const;
+    std::string GetWorldPath() const;
 
     //获取项目操作状态文本
     const std::string& GetProjectStatusText() const;
@@ -193,6 +206,18 @@ private:
 
     //应用当前项目编辑器布局
     void ApplyEditorLayout();
+
+    //项目加载成功后的统一收尾，Load 与 New Project 两条路径共用
+    void FinishProjectLoad(const std::string& successLabel, const std::string& pendingNativeLabel);
+
+    //加载一个已通过版本闸门的项目
+    void LoadProjectFromFolder(const std::string& folder);
+
+    //对 pendingUpgrade 指向的项目执行升级
+    bool RunProjectUpgrade(std::string& outError);
+
+    //绘制项目升级弹窗
+    void DrawUpgradeProjectDialog();
 
     //打开项目选择弹窗
     void OpenProjectDialog();

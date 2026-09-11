@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    游戏原生模块的共享构建设置、源文件收集与绑定生成目标。
+    由 Orbeden SDK 发布到 Sdk/Native/，是这些设置的唯一来源：引擎侧改动随 SDK 一起刷新，
+    游戏工程里不再保留副本。
+
+    导入位置必须在 Microsoft.Cpp.props 之后，才能压过工具集属性表里的默认值。
+  -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 /EHsc %(AdditionalOptions)</AdditionalOptions>
+      <!--内容根在 include 路径里：MetaGen 生成的头文件引用是相对源根的，而生成物落在 Build/Native/Generated。-->
+      <AdditionalIncludeDirectories>$(OrbedenProjectRoot);$(OrbedenContentRoot);$(OrbedenSdkRoot)\Native\Include;$(OrbedenSdkRoot)\Native\Include\ThirdParty\PhysX\include;$(OrbedenSdkRoot)\Native\Include\ThirdParty\glfw\include;$(OrbedenSdkRoot)\Native\Include\ThirdParty\glad\include;$(OrbedenSdkRoot)\Native\Include\ThirdParty\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(OrbedenSdkRoot)\Native\WindowsX64\$(Configuration)\OrbedenCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <!--内容根下的 C++ 源文件全部进入模块：代码放在内容根内任何目录都生效，不需要排除表。-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" />
+    <!--导出层由 SDK 提供、直接引用，不在项目内保留副本；生成文件要到构建期才产生，必须用字面路径列出。-->
+    <ClCompile Include="$(OrbedenSdkRoot)\Shared\GameModule.cpp" />
+    <ClCompile Include="$(OrbedenGeneratedDir)\Reflection.Generated.cpp" />
+    <ClCompile Include="$(OrbedenGeneratedDir)\Bindings.Generated.cpp" />
+    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" />
+  </ItemGroup>
+  <Target Name="GenerateGameBindings" BeforeTargets="ClCompile">
+    <Error Condition="'$(OrbedenSdkRoot)' == ''" Text="Orbeden SDK was not found. Build OrbedenCore first." />
+    <Error Condition="!Exists('$(OrbedenSdkRoot)\Tools\OrbedenMetaGen\OrbedenMetaGen.dll')" Text="Orbeden SDK is incomplete: $(OrbedenSdkRoot)\Tools\OrbedenMetaGen\OrbedenMetaGen.dll is missing. Build OrbedenCore to refresh the SDK." />
+    <Error Condition="'$(OrbedenGameName)' == ''" Text="The game name could not be derived from '$(MSBuildProjectName)'. The native project must be named &lt;GameName&gt;Native.vcxproj." />
+    <Exec Command="dotnet &quot;$(OrbedenSdkRoot)\Tools\OrbedenMetaGen\OrbedenMetaGen.dll&quot; &quot;$(OrbedenContentRoot)&quot; &quot;$(OrbedenGeneratedDir)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)\Native\Bindings.Manifest.json&quot;" />
+  </Target>
+</Project>

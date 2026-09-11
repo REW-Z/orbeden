@@ -20,6 +20,10 @@ public static class EditorRuntime
         public EditorComponentNativeApi Components;
     }
 
+    //初始化失败原因的非托管副本，供原生侧读取。
+    private static IntPtr initializationErrorPointer = IntPtr.Zero;
+    private static int initializationErrorLength;
+
     /// <summary>初始化 Editor 托管桥接。</summary>
     [UnmanagedCallersOnly]
     public static unsafe byte Initialize(IntPtr editorApi)
@@ -55,9 +59,29 @@ public static class EditorRuntime
         }
         catch (Exception ex)
         {
+            SetInitializationError(ex.ToString());
             Console.Error.WriteLine($"Editor managed initialization failed: {ex}");
             return 0;
         }
+    }
+
+    /// <summary>返回上一次初始化失败的原因，由原生侧在 Initialize 返回 0 后取回写进日志。</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe IntPtr GetInitializationError(int* length)
+    {
+        if (length != null) *length = initializationErrorLength;
+        return initializationErrorPointer;
+    }
+
+    //托管侧没有日志通道，失败原因只能存在非托管内存里等原生侧来取。
+    private static void SetInitializationError(string message)
+    {
+        if (initializationErrorPointer != IntPtr.Zero) Marshal.FreeHGlobal(initializationErrorPointer);
+
+        byte[] bytes = Encoding.UTF8.GetBytes(message);
+        initializationErrorPointer = Marshal.AllocHGlobal(bytes.Length);
+        Marshal.Copy(bytes, 0, initializationErrorPointer, bytes.Length);
+        initializationErrorLength = bytes.Length;
     }
 
     /// <summary>加载当前项目的用户游戏程序集。</summary>

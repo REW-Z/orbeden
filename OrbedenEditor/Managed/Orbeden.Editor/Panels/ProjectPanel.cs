@@ -99,8 +99,7 @@ internal sealed class ProjectPanel : EditorPanel
     private const int PathMustExist = 0x00000800;
     private const int ExplorerDialog = 0x00080000;
 
-    private string projectRoot = string.Empty;
-    private string resourceRoot = string.Empty;
+    private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
     private string? selectedPath;
     private string search = string.Empty;
@@ -149,7 +148,7 @@ internal sealed class ProjectPanel : EditorPanel
         if (Interlocked.Exchange(ref refreshRequested, 0) != 0)
         {
             EditorAssetCatalog.Instance.Refresh();
-            if (!Directory.Exists(currentDirectory)) currentDirectory = EditorAssetCatalog.Instance.ResourceRootPath;
+            if (!Directory.Exists(currentDirectory)) currentDirectory = EditorAssetCatalog.Instance.ContentRoot;
         }
 
         DrawToolbar();
@@ -162,18 +161,15 @@ internal sealed class ProjectPanel : EditorPanel
     //检测项目切换并重置目录状态。
     private bool EnsureProject()
     {
-        string currentProjectRoot = PathDefines.ContentRoot;
-        if (string.IsNullOrWhiteSpace(currentProjectRoot)) return false;
+        string currentContentRoot = PathDefines.ContentRoot;
+        if (string.IsNullOrWhiteSpace(currentContentRoot)) return false;
 
-        string currentResourceRoot = EditorAssetsNative.GetResourceRoot();
-        if (string.Equals(projectRoot, currentProjectRoot, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(resourceRoot, currentResourceRoot, StringComparison.OrdinalIgnoreCase)
+        if (string.Equals(contentRoot, currentContentRoot, StringComparison.OrdinalIgnoreCase)
             && Directory.Exists(currentDirectory)) return true;
 
-        projectRoot = currentProjectRoot;
-        resourceRoot = currentResourceRoot;
+        contentRoot = currentContentRoot;
         EditorAssetCatalog.Instance.Refresh();
-        currentDirectory = EditorAssetCatalog.Instance.ResourceRootPath;
+        currentDirectory = EditorAssetCatalog.Instance.ContentRoot;
         Directory.CreateDirectory(currentDirectory);
         SetupWatcher();
         selectedPath = null;
@@ -189,7 +185,8 @@ internal sealed class ProjectPanel : EditorPanel
         watcher = null;
         if (string.IsNullOrWhiteSpace(PathDefines.ContentRoot)) return;
 
-        string path = EditorAssetCatalog.Instance.ResourceRootPath;
+        //监听整个内容根：脚本、资源、场景可以放在内容根内任何目录。
+        string path = EditorAssetCatalog.Instance.ContentRoot;
         if (!Directory.Exists(path)) return;
         watcher = new FileSystemWatcher(path)
         {
@@ -206,6 +203,8 @@ internal sealed class ProjectPanel : EditorPanel
     //标记资源索引需要刷新。
     private void RequestRefresh(object sender, FileSystemEventArgs args)
     {
+        //生成目录在构建期间高频变化，不参与刷新。
+        if (EditorAssetCatalog.Instance.IsGeneratedPath(args.FullPath)) return;
         Interlocked.Exchange(ref refreshRequested, 1);
         EditorApplication.RequestRepaint();
     }
@@ -213,11 +212,11 @@ internal sealed class ProjectPanel : EditorPanel
     //绘制导航和常用操作栏。
     private void DrawToolbar()
     {
-        bool atRoot = string.Equals(currentDirectory, EditorAssetCatalog.Instance.ResourceRootPath, StringComparison.OrdinalIgnoreCase);
+        bool atRoot = string.Equals(currentDirectory, EditorAssetCatalog.Instance.ContentRoot, StringComparison.OrdinalIgnoreCase);
         EditorGUI.BeginDisabled(atRoot);
         if (EditorGUI.Button("Up") && !atRoot)
         {
-            currentDirectory = Path.GetDirectoryName(currentDirectory) ?? EditorAssetCatalog.Instance.ResourceRootPath;
+            currentDirectory = Path.GetDirectoryName(currentDirectory) ?? EditorAssetCatalog.Instance.ContentRoot;
             selectedPath = null;
         }
         EditorGUI.EndDisabled();
@@ -406,7 +405,7 @@ internal sealed class ProjectPanel : EditorPanel
             if (succeeded) selectedPath = renamed;
             break;
         case PendingOperation.Move when path != null:
-            string destinationDirectory = Path.GetFullPath(Path.Combine(projectRoot, operationValue.Replace('/', Path.DirectorySeparatorChar)));
+            string destinationDirectory = Path.GetFullPath(Path.Combine(contentRoot, operationValue.Replace('/', Path.DirectorySeparatorChar)));
             string moved = Path.Combine(destinationDirectory, Path.GetFileName(path));
             succeeded = ProjectAssetOperations.Move(path, moved, out status);
             if (succeeded) selectedPath = moved;
@@ -437,6 +436,14 @@ internal sealed class ProjectPanel : EditorPanel
         {
             currentDirectory = entry;
             selectedPath = null;
+            return;
+        }
+
+        //场景由编辑器自己打开：交给系统默认程序只会用文本编辑器打开 XML。
+        if (string.Equals(Path.GetExtension(entry), ".world", StringComparison.OrdinalIgnoreCase))
+        {
+            string key = EditorAssetCatalog.Instance.ToResourceKey(entry);
+            status = EditorAssetsNative.OpenWorld(key) ? "Opened scene: " + key : "Failed to open scene: " + key;
             return;
         }
 

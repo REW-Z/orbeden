@@ -64,7 +64,7 @@ internal static class PlayerBuildPipeline
             }
 
             string assemblyName = GetAssemblyName(fullScriptProject);
-            string outputDirectory = Path.Combine(fullProjectRoot, "Aot", target.OutputDirectory, configuration);
+            string outputDirectory = Path.Combine(fullProjectRoot, "Build", "Aot", target.OutputDirectory, configuration);
             Directory.CreateDirectory(outputDirectory);
             string sdkProperty = Path.TrimEndingDirectorySeparator(sdkPath) + Path.DirectorySeparatorChar;
             string nativeLibraryKind = target.UsesWindowsLibraryName ? "Shared" : "Static";

@@ -30,11 +30,10 @@ void BuildGamePanel::DrawPanel()
     {
         ImGui::Text("Name: %s", editor.GetProjectName().c_str());
         ImGui::TextWrapped("Root: %s", editor.GetProjectRoot().c_str());
-        ImGui::TextWrapped("World: %s", editor.GetStartupWorldPath().c_str());
-        ImGui::TextWrapped("Script: %s", editor.GetProjectScriptRootPath().c_str());
+        ImGui::TextWrapped("Content: %s", editor.GetProjectContentRootPath().c_str());
+        ImGui::TextWrapped("World: %s", editor.GetWorldPath().c_str());
         ImGui::TextWrapped("Managed: %s", editor.GetProjectManagedRootPath().c_str());
-        std::string nativeRoot = editor.GetProjectNativeRootPath();
-        ImGui::TextWrapped("Native: %s", nativeRoot.empty() ? "<disabled>" : nativeRoot.c_str());
+        ImGui::TextWrapped("Native: %s", editor.GetProjectNativeBuildPath().c_str());
     }
     else
     {

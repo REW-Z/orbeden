@@ -50,7 +50,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v145</PlatformToolset>
     <!-- 自动导出通过扫描 .obj 生成 .def；CMake __create_def 无法读取 /GL LTCG 对象。 -->
-    <!-- Player 的静态 Core 由 CMake 单独构建，不受此 Editor DLL 设置影响。 -->
+    <!-- Player 的静态 Core 由本工程归档同一批 obj（ArchiveCoreStaticLibrary），因此同样关闭 LTCG。 -->
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -79,6 +79,9 @@
     <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\Sdk\Native\$(OrbedenCoreNativePlatform)\$(Configuration)\</OrbedenCoreOutputDir>
     <OrbedenEditorSdkDir>$(ProjectDir)..\OrbedenEditor\Sdk\</OrbedenEditorSdkDir>
     <OrbedenNativeSdkIncludeDir>$(OrbedenEditorSdkDir)Native\Include\</OrbedenNativeSdkIncludeDir>
+    <OrbedenNativeSdkDir>$(OrbedenEditorSdkDir)Native\</OrbedenNativeSdkDir>
+    <OrbedenSharedSdkDir>$(OrbedenEditorSdkDir)Shared\</OrbedenSharedSdkDir>
+    <OrbedenSharedBuildDir>$(ProjectDir)..\OrbedenEditor\Templates\Shared\</OrbedenSharedBuildDir>
     <OrbedenMetaGenSdkDir>$(OrbedenEditorSdkDir)Tools\OrbedenMetaGen\</OrbedenMetaGenSdkDir>
     <OutDir>$(OrbedenCoreOutputDir)</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
@@ -146,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="Src\Application.h" />
     <ClInclude Include="Src\Defines\types.h" />
+    <ClInclude Include="Src\Defines\Version.h" />
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
     <ClInclude Include="Src\FileSystem\Utf8Path.h" />
     <ClInclude Include="Src\Log\Log.h" />
@@ -311,8 +315,16 @@
       <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.hpp" />
       <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.inl" />
     </ItemGroup>
-    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir)" />
-    <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenEditorSdkDir)Native\" SkipUnchangedFiles="true" />
+    <!--头文件发布只拷不删，改名或移动后的旧头会残留在 SDK 里被游戏工程误用；发布前先清空。-->
+    <RemoveDir Directories="$(OrbedenNativeSdkIncludeDir)" />
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir)" />
+    <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <!--游戏工程的原生构建契约：唯一来源是 Templates/Shared/，工程内不再保留副本。-->
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.props" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.targets" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <!--固定的桥接源码：游戏模块导出层与 NativeAOT 导出层，由各游戏工程直接引用，不再是项目文件。-->
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)GameModule.cpp" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)GameAotExports.cs" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
           DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"

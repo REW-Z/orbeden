@@ -104,9 +104,10 @@ namespace
             return false;
         }
 
-        std::string resourceRoot = GetAttribute(content, "resourceRoot");
-        PathDefines::SetContentRoot(ToCleanPath(projectRoot), resourceRoot.empty() ? "Resource" : resourceRoot);
-        std::string worldPath = ToCleanPath(projectRoot / Utf8Path::FromUtf8(startupWorld));
+        //内容根固定为 <项目根>/Content，资源 Key 与 startupWorld 都相对它解析。
+        std::filesystem::path contentRoot = projectRoot / "Content";
+        PathDefines::SetContentRoot(ToCleanPath(contentRoot));
+        std::string worldPath = ToCleanPath(contentRoot / Utf8Path::FromUtf8(startupWorld));
         if (app.LoadWorld(worldPath)) return true;
 
         Log::Error(("Player startup world load failed: " + worldPath).c_str());

@@ -129,21 +129,13 @@ namespace
     }
 
     //解析资源磁盘路径
+    //Key 一律相对内容根：同一个 Key 在任何工作目录下都必须解析到同一个文件。
     std::string GetAssetFilePath(const std::string& path)
     {
         std::string cleanPath = ToCleanPath(path);
-        if (FileSystem::Exist(cleanPath)) return cleanPath;
+        if (PathDefines::HasContentRoot()) return PathDefines::GetContentFilePath(cleanPath);
 
-        if (PathDefines::HasContentRoot())
-        {
-            std::string resourceRoot = PathDefines::GetResourceRoot();
-            if (cleanPath == resourceRoot || StartsWith(cleanPath, resourceRoot + "/"))
-            {
-                std::string resourceCandidate = PathDefines::GetResourceFilePath(cleanPath);
-                if (FileSystem::Exist(resourceCandidate)) return resourceCandidate;
-            }
-        }
-
+        //未打开项目时才退回进程工作目录相对路径。
         return cleanPath;
     }
 
@@ -278,7 +270,9 @@ namespace
     std::string GetOrbShaderIncludeKey(const std::string& sourceKey, const std::string& path)
     {
         std::string includeKey = ResourceManager::ToResourceKey(path);
-        if (StartsWith(includeKey, "Resource/")) return includeKey;
+
+        //内容根相对优先，但只认磁盘上确实命中的，避免把 "Builtin/x.orbinc" 这类真正的相对引用误判成根相对。
+        if (FileSystem::Exist(GetAssetFilePath(includeKey))) return includeKey;
 
         std::filesystem::path parent = Utf8Path::FromUtf8(sourceKey).parent_path();
         return Utf8Path::ToUtf8((parent / Utf8Path::FromUtf8(includeKey)).lexically_normal());

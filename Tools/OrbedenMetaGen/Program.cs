@@ -33,7 +33,7 @@ using var generationLock = new GenerationLock(outputDir);
 //扫描所有 Runtime 头文件
 var classes = new List<ClassInfo>();
 var declarations = new List<CppType>();
-foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDirectories).Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar).Any(part => part is "ThirdParty" or "Build" or "Generated" or "obj" or "bin")).OrderBy(path => path, StringComparer.Ordinal))
+foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDirectories).Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar).Any(part => part is "ThirdParty" or "Build" or "Generated" or "obj" or "bin" or "Managed" or "Aot" or "Legacy" or ".vs")).OrderBy(path => path, StringComparer.Ordinal))
 {
     var text = File.ReadAllText(file);
     var parsed = CppDeclarations.Parse(text, file);
@@ -165,7 +165,7 @@ if (bindings != null)
             foreach (string error in errors) Console.Error.WriteLine(error);
             return 1;
         }
-        new BindingGenerator(bindings, bindingTypes).Generate(sourceRoot, outputDir);
+        new BindingGenerator(bindings, bindingTypes, gameModule).Generate(sourceRoot, outputDir);
     }
     catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 }

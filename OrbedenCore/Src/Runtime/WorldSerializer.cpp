@@ -735,7 +735,9 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
         std::filesystem::create_directories(filePath.parent_path());
     }
 
-    std::ofstream output(filePath, std::ios::out | std::ios::trunc);
+    //二进制模式：文本模式会把每个 \n 写成 \r\n，存一次盘就把整个场景文件的行尾翻掉，
+    //没有改动的场景也会在版本控制里显示成全文件重写。
+    std::ofstream output(filePath, std::ios::out | std::ios::trunc | std::ios::binary);
     if (!output)
     {
         Log::Error(("Save world XML failed: " + path).c_str());

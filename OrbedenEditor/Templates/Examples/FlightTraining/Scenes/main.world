@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="utf-8"?>
+<World version="1">
+    <Ens stableId="world://FlightTraining/main/root" name="FreeFlight">
+        <Component type="Transform">
+            <Field name="localPosition" type="vector3" value="0 0 0" />
+            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Ens stableId="world://FlightTraining/main/terrain" name="Terrain">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0 0" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+            <Component type="HeightField">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="seed" type="int32" value="1337" />
+                <Field name="sizeX" type="float32" value="512" />
+                <Field name="sizeZ" type="float32" value="512" />
+                <Field name="rowCount" type="int32" value="65" />
+                <Field name="columnCount" type="int32" value="65" />
+                <Field name="amplitude" type="float32" value="36" />
+                <Field name="frequency" type="float32" value="0.003" />
+                <Field name="octaves" type="int32" value="4" />
+                <Field name="flattenMinX" type="float32" value="-32" />
+                <Field name="flattenMaxX" type="float32" value="32" />
+                <Field name="flattenMinZ" type="float32" value="-200" />
+                <Field name="flattenMaxZ" type="float32" value="200" />
+                <Field name="flattenHeight" type="float32" value="0" />
+                <Field name="flattenBlendDistance" type="float32" value="80" />
+                <Field name="collisionLayer" type="uint32" value="1" />
+                <Field name="material" type="Ref&lt;Material&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Material/GroundMaterial" />
+                <Field name="generateNoiseTexture" type="bool" value="true" />
+                <Field name="noiseTextureSize" type="int32" value="256" />
+                <Field name="noiseLowColor" type="color" value="0.24 0.32 0.22 1" />
+                <Field name="noiseHighColor" type="color" value="0.62 0.58 0.42 1" />
+                <Field name="tileSize" type="float32" value="96" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/runway" name="Runway">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.05 -10" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="6 0.05 140" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/runway.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+            <Component type="BoxCollider">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="isTrigger" type="bool" value="false" />
+                <Field name="center" type="vector3" value="0 0 0" />
+                <Field name="staticFriction" type="float32" value="0.6" />
+                <Field name="dynamicFriction" type="float32" value="0.6" />
+                <Field name="restitution" type="float32" value="0" />
+                <Field name="collisionLayer" type="uint32" value="1" />
+                <Field name="collisionMask" type="uint32" value="4294967295" />
+                <Field name="halfExtents" type="vector3" value="1 1 1" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/runway_stripe_1" name="RunwayStripe01">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.12 15" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/runway_stripe_2" name="RunwayStripe02">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.12 4" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/runway_stripe_3" name="RunwayStripe03">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.12 -7" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/hangar_1" name="Hangar01">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="-15 2 -4" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="5 2 7" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+            <Component type="BoxCollider">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="isTrigger" type="bool" value="false" />
+                <Field name="center" type="vector3" value="0 0 0" />
+                <Field name="staticFriction" type="float32" value="0.6" />
+                <Field name="dynamicFriction" type="float32" value="0.6" />
+                <Field name="restitution" type="float32" value="0" />
+                <Field name="collisionLayer" type="uint32" value="1" />
+                <Field name="collisionMask" type="uint32" value="4294967295" />
+                <Field name="halfExtents" type="vector3" value="1 1 1" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/hangar_2" name="Hangar02">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="15 1.5 -15" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="4 1.5 5" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+            <Component type="BoxCollider">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="isTrigger" type="bool" value="false" />
+                <Field name="center" type="vector3" value="0 0 0" />
+                <Field name="staticFriction" type="float32" value="0.6" />
+                <Field name="dynamicFriction" type="float32" value="0.6" />
+                <Field name="restitution" type="float32" value="0" />
+                <Field name="collisionLayer" type="uint32" value="1" />
+                <Field name="collisionMask" type="uint32" value="4294967295" />
+                <Field name="halfExtents" type="vector3" value="1 1 1" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/directional_light" name="Sun">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 50 0" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="DirectionalLight">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="direction" type="vector3" value="-0.35 -1 -0.25" />
+                <Field name="color" type="color" value="1 0.96 0.86 1" />
+                <Field name="intensity" type="float32" value="1.4" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="shadowBias" type="float32" value="0.004" />
+                <Field name="shadowStrength" type="float32" value="0.45" />
+                <Field name="shadowDistance" type="float32" value="180" />
+            </Component>
+        </Ens>
+    </Ens>
+    <Ens stableId="world://FlightTraining/main/aircraft" name="PlayerAircraft">
+        <Component type="Transform">
+            <Field name="localPosition" type="vector3" value="0 1.22 60" />
+            <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+            <Field name="localScale" type="vector3" value="1 1 1" />
+        </Component>
+        <Component type="FlightTerrainStreamer">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="chunkSize" type="float32" value="512" />
+            <Field name="samplesPerSide" type="int32" value="65" />
+            <Field name="loadRadius" type="int32" value="3" />
+            <Field name="chunksPerStep" type="int32" value="2" />
+            <Field name="rebaseDistance" type="float32" value="4096" />
+        </Component>
+        <Component type="FlightController">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="showForces" type="bool" value="true" />
+            <Field name="maxThrust" type="float32" value="15000" />
+            <Field name="thrustFadeSpeed" type="float32" value="90" />
+            <Field name="wingArea" type="float32" value="24" />
+            <Field name="liftSlope" type="float32" value="0.105" />
+            <Field name="liftMultiplier" type="float32" value="1.3" />
+            <Field name="zeroLiftAngle" type="float32" value="-5" />
+            <Field name="stallAngle" type="float32" value="15" />
+            <Field name="postStallCl" type="float32" value="0.45" />
+            <Field name="dragCoefficient" type="float32" value="0.028" />
+            <Field name="inducedDragCoefficient" type="float32" value="0.045" />
+            <Field name="elevatorAuthority" type="float32" value="6" />
+            <Field name="aileronAuthority" type="float32" value="7" />
+            <Field name="rudderAuthority" type="float32" value="5" />
+            <Field name="pitchStability" type="float32" value="0.6" />
+            <Field name="pitchTrimAngle" type="float32" value="2" />
+            <Field name="pitchDamping" type="float32" value="4000" />
+            <Field name="rollDamping" type="float32" value="1200" />
+            <Field name="yawDamping" type="float32" value="1400" />
+            <Field name="verticalFinArea" type="float32" value="2.2" />
+            <Field name="sideForceSlope" type="float32" value="2" />
+            <Field name="verticalFinArm" type="float32" value="2.2" />
+            <Field name="steeringAngle" type="float32" value="30" />
+            <Field name="crashImpulseThreshold" type="float32" value="15000" />
+            <Field name="throttleRate" type="float32" value="1" />
+            <Field name="forceDrawScale" type="float32" value="0.0005" />
+        </Component>
+        <Component type="RigidBody">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="bodyType" type="PhysicsBodyType" value="1" />
+            <Field name="mass" type="float32" value="1200" />
+            <Field name="useGravity" type="bool" value="true" />
+            <Field name="linearDamping" type="float32" value="0" />
+            <Field name="angularDamping" type="float32" value="0.3" />
+            <Field name="linearVelocity" type="vector3" value="0 0 0" />
+            <Field name="angularVelocity" type="vector3" value="0 0 0" />
+            <Field name="continuousCollisionDetection" type="bool" value="true" />
+            <Field name="lockFlags" type="uint32" value="0" />
+        </Component>
+        <Component type="BoxCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="isTrigger" type="bool" value="false" />
+            <Field name="center" type="vector3" value="0 0.1 -0.1" />
+            <Field name="staticFriction" type="float32" value="0.6" />
+            <Field name="dynamicFriction" type="float32" value="0.6" />
+            <Field name="restitution" type="float32" value="0" />
+            <Field name="collisionLayer" type="uint32" value="2" />
+            <Field name="collisionMask" type="uint32" value="4294967295" />
+            <Field name="halfExtents" type="vector3" value="0.3 0.26 1.15" />
+        </Component>
+        <Component type="BoxCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="isTrigger" type="bool" value="false" />
+            <Field name="center" type="vector3" value="0 0.05 0" />
+            <Field name="staticFriction" type="float32" value="0.6" />
+            <Field name="dynamicFriction" type="float32" value="0.6" />
+            <Field name="restitution" type="float32" value="0" />
+            <Field name="collisionLayer" type="uint32" value="2" />
+            <Field name="collisionMask" type="uint32" value="4294967295" />
+            <Field name="halfExtents" type="vector3" value="1.7 0.08 0.4" />
+        </Component>
+        <Component type="SphereCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="isTrigger" type="bool" value="false" />
+            <Field name="center" type="vector3" value="0 -0.30 -2.15" />
+            <Field name="staticFriction" type="float32" value="0.6" />
+            <Field name="dynamicFriction" type="float32" value="0.6" />
+            <Field name="restitution" type="float32" value="0" />
+            <Field name="collisionLayer" type="uint32" value="2" />
+            <Field name="collisionMask" type="uint32" value="4294967295" />
+            <Field name="radius" type="float32" value="0.24" />
+        </Component>
+        <Component type="SphereCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="isTrigger" type="bool" value="false" />
+            <Field name="center" type="vector3" value="-0.75 -0.30 0.55" />
+            <Field name="staticFriction" type="float32" value="0.6" />
+            <Field name="dynamicFriction" type="float32" value="0.6" />
+            <Field name="restitution" type="float32" value="0" />
+            <Field name="collisionLayer" type="uint32" value="2" />
+            <Field name="collisionMask" type="uint32" value="4294967295" />
+            <Field name="radius" type="float32" value="0.3" />
+        </Component>
+        <Component type="SphereCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="isTrigger" type="bool" value="false" />
+            <Field name="center" type="vector3" value="0.75 -0.30 0.55" />
+            <Field name="staticFriction" type="float32" value="0.6" />
+            <Field name="dynamicFriction" type="float32" value="0.6" />
+            <Field name="restitution" type="float32" value="0" />
+            <Field name="collisionLayer" type="uint32" value="2" />
+            <Field name="collisionMask" type="uint32" value="4294967295" />
+            <Field name="radius" type="float32" value="0.3" />
+        </Component>
+        <Component type="Script">
+            <Field name="domain" type="ScriptDomain" value="Managed" />
+            <Field name="managedTypeName" type="string" value="FlightTraining.FlightHud" />
+            <Field name="enabled" type="bool" value="true" />
+        </Component>
+        <Component type="WheelCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="wheelOffset" type="vector3" value="0 -0.42 -2.15" />
+            <Field name="wheelRadius" type="float32" value="0.24" />
+            <Field name="suspensionRestLength" type="float32" value="0.55" />
+            <Field name="suspensionTravel" type="float32" value="0.35" />
+            <Field name="suspensionStiffness" type="float32" value="24000" />
+            <Field name="suspensionDamping" type="float32" value="3800" />
+            <Field name="rollingFriction" type="float32" value="0.02" />
+            <Field name="lateralFriction" type="float32" value="0.8" />
+            <Field name="raycastDistance" type="float32" value="1.2" />
+            <Field name="groundQueryLayer" type="uint32" value="1" />
+            <Field name="steeringWheel" type="bool" value="true" />
+            <Field name="steerAngle" type="float32" value="0" />
+        </Component>
+        <Component type="WheelCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="wheelOffset" type="vector3" value="-0.75 -0.42 0.55" />
+            <Field name="wheelRadius" type="float32" value="0.3" />
+            <Field name="suspensionRestLength" type="float32" value="0.55" />
+            <Field name="suspensionTravel" type="float32" value="0.35" />
+            <Field name="suspensionStiffness" type="float32" value="30000" />
+            <Field name="suspensionDamping" type="float32" value="5500" />
+            <Field name="rollingFriction" type="float32" value="0.02" />
+            <Field name="lateralFriction" type="float32" value="0.8" />
+            <Field name="raycastDistance" type="float32" value="1.2" />
+            <Field name="groundQueryLayer" type="uint32" value="1" />
+            <Field name="steeringWheel" type="bool" value="false" />
+            <Field name="steerAngle" type="float32" value="0" />
+        </Component>
+        <Component type="WheelCollider">
+            <Field name="enabled" type="bool" value="true" />
+            <Field name="wheelOffset" type="vector3" value="0.75 -0.42 0.55" />
+            <Field name="wheelRadius" type="float32" value="0.3" />
+            <Field name="suspensionRestLength" type="float32" value="0.55" />
+            <Field name="suspensionTravel" type="float32" value="0.35" />
+            <Field name="suspensionStiffness" type="float32" value="30000" />
+            <Field name="suspensionDamping" type="float32" value="5500" />
+            <Field name="rollingFriction" type="float32" value="0.02" />
+            <Field name="lateralFriction" type="float32" value="0.8" />
+            <Field name="raycastDistance" type="float32" value="1.2" />
+            <Field name="groundQueryLayer" type="uint32" value="1" />
+            <Field name="steeringWheel" type="bool" value="false" />
+            <Field name="steerAngle" type="float32" value="0" />
+        </Component>
+        <Ens stableId="world://FlightTraining/main/aircraft_body" name="AircraftBody">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0 0" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.55 0.42 2.1" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/aircraft_nose" name="AircraftNose">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 -0.05 -2.35" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.42 0.32 0.42" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/aircraft_wing" name="AircraftWing">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0 0" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="3.4 0.09 0.72" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/aircraft_tail_wing" name="AircraftTailWing">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.15 1.72" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="1.35 0.07 0.42" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/aircraft_tail_fin" name="AircraftTailFin">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.72 1.72" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.10 0.75 0.42" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/aircraft_cockpit" name="AircraftCockpit">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 0.48 -0.62" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.36 0.25 0.58" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/wheel_nose" name="WheelNose">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 -0.87 -2.15" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.24 0.24" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/wheel_left" name="WheelLeft">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="-0.75 -0.81 0.55" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/wheel_right" name="WheelRight">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0.75 -0.81 0.55" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
+            </Component>
+            <Component type="StaticMeshRenderer">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="drawQueue" type="DrawQueue" value="0" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="false" />
+            </Component>
+        </Ens>
+        <Ens stableId="world://FlightTraining/main/flight_camera" name="ChaseCamera">
+            <Component type="Transform">
+                <Field name="localPosition" type="vector3" value="0 3.2 9" />
+                <Field name="localRotation" type="quaternion" value="-0.1305 0 0 0.9914" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="FlightOrbitCamera">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="distance" type="float32" value="10" />
+                <Field name="sensitivity" type="float32" value="0.25" />
+                <Field name="defaultElevation" type="float32" value="18" />
+            </Component>
+            <Component type="Camera">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="fieldOfView" type="float32" value="68" />
+                <Field name="nearPlane" type="float32" value="0.1" />
+                <Field name="farPlane" type="float32" value="1400" />
+                <Field name="depth" type="float32" value="0" />
+                <Field name="drawLayerMask" type="uint32" value="4294967295" />
+                <Field name="clearMode" type="ClearMode" value="2" />
+                <Field name="clearColor" type="color" value="0.45 0.68 0.92 1" />
+            </Component>
+        </Ens>
+    </Ens>
+</World>

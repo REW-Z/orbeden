@@ -1,16 +1,42 @@
 <Project>
+  <!--
+    游戏 C# 工程的绑定生成目标。由 Orbeden SDK 发布到 Sdk/Tools/OrbedenMetaGen/，
+    再经游戏工程的 Lib/Orbeden.Bindings.targets 转发进来。
+    这里是唯一来源：引擎侧改动随 SDK 一起刷新，项目内不再保留副本。
+
+    $(OrbedenSdkRoot) 由转发文件或调用方（Editor 的 dotnet build）提供。
+    工程文件直接放在项目根，因此 MSBuildProjectDirectory 就是项目根。
+  -->
   <PropertyGroup>
-    <OrbedenSdkRoot Condition="'$(OrbedenSdkRoot)' == '' and Exists('$(MSBuildThisFileDirectory)OrbedenSdk.path')">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)OrbedenSdk.path').Trim())</OrbedenSdkRoot>
-    <OrbedenNativeSource>$(MSBuildProjectDirectory)/../Native</OrbedenNativeSource>
-    <OrbedenBindingOutput>$(OrbedenNativeSource)/Generated</OrbedenBindingOutput>
+    <OrbedenProjectRoot Condition="'$(OrbedenProjectRoot)' == ''">$(MSBuildProjectDirectory)</OrbedenProjectRoot>
+    <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
+    <OrbedenContentRoot>$(OrbedenProjectRoot)/Content</OrbedenContentRoot>
+    <!--MetaGen 扫描内容根，生成物落在内容根之外的原生构建目录。-->
+    <OrbedenNativeSource>$(OrbedenContentRoot)</OrbedenNativeSource>
+    <OrbedenBindingOutput>$(OrbedenProjectRoot)/Build/Native/Generated</OrbedenBindingOutput>
     <OrbedenBindingNamespace>$(RootNamespace).Native</OrbedenBindingNamespace>
   </PropertyGroup>
-  <!--游戏 C++ 工程已迁移为 vcxproj；以 Native 目录下的 vcxproj 判断是否存在原生模块。-->
+  <!--
+    是否包含原生模块，与上面的源根无关：源根是内容根，工程文件则在项目根，不能跟着源根一起改。
+  -->
   <ItemGroup>
-    <NativeVcxProject Include="$(OrbedenNativeSource)/*.vcxproj" />
+    <NativeVcxProject Include="$(OrbedenProjectRoot)/*.vcxproj" />
+  </ItemGroup>
+  <!--
+    脚本编译项：内容根下所有 .cs 自动进入游戏程序集，脚本放在内容根内任何目录都能生效。
+    基础属性里的 EnableDefaultCompileItems=false 已关掉 SDK 的默认通配，这里就是全部来源。
+    内容根之外按定义不含用户脚本，因此不需要排除表。
+  -->
+  <ItemGroup>
+    <Compile Include="$(OrbedenContentRoot)/**/*.cs" />
+    <!--
+      NativeAOT 要求导出层编译进游戏程序集本身：被引用程序集中的 UnmanagedCallersOnly 不会被导出。
+      由 SDK 提供、直接引用，因此项目内不再保留这个文件。
+    -->
+    <Compile Include="$(OrbedenSdkRoot)/Shared/GameAotExports.cs" />
   </ItemGroup>
   <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="'@(NativeVcxProject)' != ''">
-    <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Rebuild Core and refresh the game project in Editor." />
+    <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Build OrbedenCore to refresh the SDK." />
     <Exec Command="dotnet &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll&quot; &quot;$(OrbedenNativeSource)&quot; &quot;$(OrbedenBindingOutput)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)/Native/Bindings.Manifest.json&quot;" />
     <ItemGroup>
       <Compile Include="$(OrbedenBindingOutput)/Bindings.Generated.cs" />

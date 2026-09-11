@@ -9,9 +9,9 @@ namespace OrbedenEditor;
 internal unsafe struct EditorAssetNativeApi
 {
     public IntPtr Context;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> GetResourceRoot;
     public delegate* unmanaged[Cdecl]<IntPtr, byte> CanModifyAssets;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte, int> RemapLiveReferences;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> OpenWorld;
 }
 #pragma warning restore CS0649
 
@@ -24,22 +24,6 @@ internal static unsafe class EditorAssetsNative
     internal static void Initialize(EditorAssetNativeApi value)
     {
         api = value;
-    }
-
-    /// <summary>读取项目配置中的资源根目录。</summary>
-    internal static string GetResourceRoot()
-    {
-        if (api.GetResourceRoot == null) return "Resource";
-
-        int requiredBytes = api.GetResourceRoot(api.Context, null, 0);
-        if (requiredBytes <= 0) return "Resource";
-
-        Span<byte> bytes = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
-        fixed (byte* output = bytes)
-        {
-            int actualBytes = api.GetResourceRoot(api.Context, output, requiredBytes);
-            return Encoding.UTF8.GetString(bytes[..Math.Clamp(actualBytes, 0, requiredBytes)]);
-        }
     }
 
     /// <summary>判断当前是否允许修改资源文件。</summary>
@@ -64,6 +48,18 @@ internal static unsafe class EditorAssetsNative
                 newPointer,
                 newBytes.Length,
                 prefix ? (byte)1 : (byte)0);
+        }
+    }
+
+    /// <summary>打开项目内的另一个场景，路径以项目根为基准。</summary>
+    internal static bool OpenWorld(string relativeKey)
+    {
+        if (api.OpenWorld == null || string.IsNullOrEmpty(relativeKey)) return false;
+
+        byte[] keyBytes = Encoding.UTF8.GetBytes(relativeKey);
+        fixed (byte* keyPointer = keyBytes)
+        {
+            return api.OpenWorld(api.Context, keyPointer, keyBytes.Length) != 0;
         }
     }
 }

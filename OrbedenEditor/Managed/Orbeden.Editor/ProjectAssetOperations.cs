@@ -201,7 +201,15 @@ internal static class ProjectAssetOperations
         }
     }
 
-    //验证资源操作源路径。
+    //内容根内必须保留的文件：引擎按文件名查找这两个内置 Shader，删掉只会让阴影和天空盒静默失效。
+    private static bool IsProtectedContentFile(string fullPath)
+    {
+        string name = Path.GetFileName(fullPath);
+        return name.Equals("shadow_depth.orbshader", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("skybox.orbshader", StringComparison.OrdinalIgnoreCase);
+    }
+
+    //验证资源操作源路径。范围就是内容根：内容根之外是工程文件与构建产物，边界天然挡住。
     private static bool TryValidateSource(string source, out string fullPath, out string message)
     {
         fullPath = Path.GetFullPath(source);
@@ -211,10 +219,15 @@ internal static class ProjectAssetOperations
             message = "Assets cannot be modified while playing or without an open project.";
             return false;
         }
-        if (!IsSameOrChild(fullPath, EditorAssetCatalog.Instance.ResourceRootPath)
-            || string.Equals(fullPath, EditorAssetCatalog.Instance.ResourceRootPath, StringComparison.OrdinalIgnoreCase))
+        if (!EditorAssetCatalog.Instance.IsInsideContentRoot(fullPath)
+            || string.Equals(fullPath, EditorAssetCatalog.Instance.ContentRoot, StringComparison.OrdinalIgnoreCase))
         {
-            message = "Asset operation must stay inside the configured resource root.";
+            message = "Asset operation must stay inside Content.";
+            return false;
+        }
+        if (IsProtectedContentFile(fullPath))
+        {
+            message = "The engine looks these shaders up by name; deleting them breaks shadows or skybox.";
             return false;
         }
         if (!File.Exists(fullPath) && !Directory.Exists(fullPath))
@@ -235,9 +248,14 @@ internal static class ProjectAssetOperations
             message = "Assets cannot be modified while playing or without an open project.";
             return false;
         }
-        if (!IsSameOrChild(fullPath, EditorAssetCatalog.Instance.ResourceRootPath))
+        if (!EditorAssetCatalog.Instance.IsInsideContentRoot(fullPath))
         {
-            message = "Destination must stay inside the configured resource root.";
+            message = "Destination must stay inside Content.";
+            return false;
+        }
+        if (IsProtectedContentFile(fullPath))
+        {
+            message = "Engine build scaffold files cannot be overwritten.";
             return false;
         }
         return true;
@@ -283,8 +301,7 @@ internal sealed class ReferenceRewritePlan
     private readonly List<Rewrite> applied = [];
     private readonly List<BinaryRewrite> binaryRewrites = [];
     private readonly List<BinaryRewrite> binaryApplied = [];
-    private readonly string projectRoot;
-    private readonly string resourceRootKey;
+    private readonly string contentRoot;
     private readonly string sourcePath;
     private readonly string? destinationPath;
     private readonly bool deleting;
@@ -296,27 +313,13 @@ internal sealed class ReferenceRewritePlan
     public int ChangedReferenceCount { get; private set; }
 
     private ReferenceRewritePlan(string source, string? destination, bool delete)
-        : this(EditorAssetCatalog.Instance.ProjectRoot,
-            EditorAssetCatalog.Instance.ResourceRootKey,
-            source,
-            destination,
-            delete)
     {
-    }
-
-    private ReferenceRewritePlan(string ownerProjectRoot,
-        string ownerResourceRootKey,
-        string source,
-        string? destination,
-        bool delete)
-    {
-        projectRoot = Path.GetFullPath(ownerProjectRoot);
-        resourceRootKey = NormalizeKey(ownerResourceRootKey);
+        contentRoot = EditorAssetCatalog.Instance.ContentRoot;
         sourcePath = Path.GetFullPath(source);
         destinationPath = destination == null ? null : Path.GetFullPath(destination);
         deleting = delete;
-        OldResourceKey = NormalizeKey(Path.GetRelativePath(projectRoot, sourcePath));
-        NewResourceKey = destinationPath == null ? string.Empty : NormalizeKey(Path.GetRelativePath(projectRoot, destinationPath));
+        OldResourceKey = NormalizeKey(Path.GetRelativePath(contentRoot, sourcePath));
+        NewResourceKey = destinationPath == null ? string.Empty : NormalizeKey(Path.GetRelativePath(contentRoot, destinationPath));
         Prefix = Directory.Exists(sourcePath);
     }
 
@@ -324,18 +327,6 @@ internal sealed class ReferenceRewritePlan
     public static ReferenceRewritePlan Create(string source, string? destination, bool deleting)
     {
         ReferenceRewritePlan plan = new(source, destination, deleting);
-        plan.Scan();
-        return plan;
-    }
-
-    //创建资源引用计划
-    internal static ReferenceRewritePlan CreateForProject(string projectRoot,
-        string resourceRootKey,
-        string source,
-        string? destination,
-        bool deleting)
-    {
-        ReferenceRewritePlan plan = new(projectRoot, resourceRootKey, source, destination, deleting);
         plan.Scan();
         return plan;
     }
@@ -404,8 +395,8 @@ internal sealed class ReferenceRewritePlan
     //扫描项目中会受路径变化影响的引用文件。
     private void Scan()
     {
-        if (!Directory.Exists(projectRoot)) return;
-        foreach (string file in Directory.EnumerateFiles(projectRoot, "*", System.IO.SearchOption.AllDirectories))
+        if (!Directory.Exists(contentRoot)) return;
+        foreach (string file in Directory.EnumerateFiles(contentRoot, "*", System.IO.SearchOption.AllDirectories))
         {
             if (!ShouldInspect(file) || (deleting && ProjectAssetOperations.IsSameOrChild(file, sourcePath))) continue;
 
@@ -414,8 +405,8 @@ internal sealed class ReferenceRewritePlan
             string targetFile = !ownerMoves
                 ? file
                 : ownerRelativePath == "." ? destinationPath! : Path.Combine(destinationPath!, ownerRelativePath);
-            string oldOwnerKey = NormalizeKey(Path.GetRelativePath(projectRoot, file));
-            string newOwnerKey = NormalizeKey(Path.GetRelativePath(projectRoot, targetFile));
+            string oldOwnerKey = NormalizeKey(Path.GetRelativePath(contentRoot, file));
+            string newOwnerKey = NormalizeKey(Path.GetRelativePath(contentRoot, targetFile));
             if (file.EndsWith(".glb", StringComparison.OrdinalIgnoreCase))
             {
                 ScanGlb(file, targetFile, oldOwnerKey, newOwnerKey);
@@ -634,18 +625,22 @@ internal sealed class ReferenceRewritePlan
             || reference.Contains("://", StringComparison.Ordinal)
             || reference.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return false;
 
+        //引用可以是内容根相对，也可以是相对拥有者目录。内容根相对优先，但只认磁盘上确实命中的，
+        //否则会把 "Builtin/x.orbinc" 这类真正的相对引用误当成根相对。
+        string rootRelativeTarget = Path.GetFullPath(Path.Combine(contentRoot, reference.Replace('/', Path.DirectorySeparatorChar)));
+        bool matchesContentRoot = ProjectAssetOperations.IsSameOrChild(rootRelativeTarget, contentRoot) && File.Exists(rootRelativeTarget);
+
         string oldTargetKey;
-        if (!relative || reference.Equals(resourceRootKey, StringComparison.OrdinalIgnoreCase)
-            || reference.StartsWith(resourceRootKey + "/", StringComparison.OrdinalIgnoreCase))
+        if (!relative || matchesContentRoot)
         {
             oldTargetKey = NormalizeKey(reference);
         }
         else
         {
             string ownerDirectory = Path.GetDirectoryName(oldOwnerKey.Replace('/', Path.DirectorySeparatorChar)) ?? string.Empty;
-            string targetPath = Path.GetFullPath(Path.Combine(projectRoot, ownerDirectory, reference));
-            if (!ProjectAssetOperations.IsSameOrChild(targetPath, projectRoot)) return false;
-            oldTargetKey = NormalizeKey(Path.GetRelativePath(projectRoot, targetPath));
+            string targetPath = Path.GetFullPath(Path.Combine(contentRoot, ownerDirectory, reference));
+            if (!ProjectAssetOperations.IsSameOrChild(targetPath, contentRoot)) return false;
+            oldTargetKey = NormalizeKey(Path.GetRelativePath(contentRoot, targetPath));
         }
 
         bool targetChanges = TryMapSourceKey(oldTargetKey, out string newTargetKey);
@@ -666,8 +661,8 @@ internal sealed class ReferenceRewritePlan
             return mapped != reference;
         }
 
-        string newOwnerPath = Path.Combine(projectRoot, newOwnerKey.Replace('/', Path.DirectorySeparatorChar));
-        string newTargetPath = Path.Combine(projectRoot, newTargetKey.Replace('/', Path.DirectorySeparatorChar));
+        string newOwnerPath = Path.Combine(contentRoot, newOwnerKey.Replace('/', Path.DirectorySeparatorChar));
+        string newTargetPath = Path.Combine(contentRoot, newTargetKey.Replace('/', Path.DirectorySeparatorChar));
         mapped = NormalizeKey(Path.GetRelativePath(Path.GetDirectoryName(newOwnerPath)!, newTargetPath));
         ChangedReferenceCount++;
         return mapped != reference;
@@ -691,7 +686,8 @@ internal sealed class ReferenceRewritePlan
     //判断文件是否包含首版支持的资源引用语法。
     private bool ShouldInspect(string path)
     {
-        if (ProjectAssetOperations.IsSameOrChild(path, Path.Combine(projectRoot, "Managed"))) return false;
+        //生成目录里的文件不是用户内容，重写它们的引用没有意义。
+        if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return false;
         string lower = path.ToLowerInvariant();
         return lower.EndsWith(".world")
             || lower.EndsWith(".orbshader")

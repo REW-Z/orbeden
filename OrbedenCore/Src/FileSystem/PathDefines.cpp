@@ -10,18 +10,12 @@ namespace
     {
     public:
         std::string contentRoot;
-        std::string resourceRoot = "Resource";
     };
 
     PathDefinesRuntime& GetRuntime()
     {
         static PathDefinesRuntime runtime;
         return runtime;
-    }
-
-    bool StartsWith(const std::string& text, const std::string& prefix)
-    {
-        return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
     }
 
     std::string ToCleanPath(const std::filesystem::path& path)
@@ -43,18 +37,14 @@ namespace
 
 }
 
-void PathDefines::SetContentRoot(const std::string& root, const std::string& resourceRoot)
+void PathDefines::SetContentRoot(const std::string& root)
 {
-    PathDefinesRuntime& runtime = GetRuntime();
-    runtime.contentRoot = ToCleanPath(AbsolutePath(root));
-    runtime.resourceRoot = ToCleanPath(Utf8Path::FromUtf8(resourceRoot.empty() ? "Resource" : resourceRoot));
+    GetRuntime().contentRoot = ToCleanPath(AbsolutePath(root));
 }
 
 void PathDefines::Clear()
 {
-    PathDefinesRuntime& runtime = GetRuntime();
-    runtime.contentRoot.clear();
-    runtime.resourceRoot = "Resource";
+    GetRuntime().contentRoot.clear();
 }
 
 bool PathDefines::HasContentRoot()
@@ -67,11 +57,6 @@ const std::string& PathDefines::GetContentRoot()
     return GetRuntime().contentRoot;
 }
 
-const std::string& PathDefines::GetResourceRoot()
-{
-    return GetRuntime().resourceRoot;
-}
-
 std::string PathDefines::GetContentFilePath(const std::string& path)
 {
     std::filesystem::path filePath = Utf8Path::FromUtf8(path);
@@ -81,27 +66,4 @@ std::string PathDefines::GetContentFilePath(const std::string& path)
     if (runtime.contentRoot.empty()) return ToCleanPath(filePath);
 
     return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot) / filePath);
-}
-
-std::string PathDefines::GetResourceFilePath(const std::string& path)
-{
-    std::string cleanPath = ToCleanPath(Utf8Path::FromUtf8(path));
-    const PathDefinesRuntime& runtime = GetRuntime();
-    if (runtime.contentRoot.empty()) return cleanPath;
-
-    if (cleanPath == runtime.resourceRoot)
-    {
-        return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot) / Utf8Path::FromUtf8(runtime.resourceRoot));
-    }
-
-    std::string resourcePrefix = runtime.resourceRoot + "/";
-    if (StartsWith(cleanPath, resourcePrefix))
-    {
-        std::string relativeResource = cleanPath.substr(resourcePrefix.size());
-        return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot)
-            / Utf8Path::FromUtf8(runtime.resourceRoot)
-            / Utf8Path::FromUtf8(relativeResource));
-    }
-
-    return GetContentFilePath(cleanPath);
 }

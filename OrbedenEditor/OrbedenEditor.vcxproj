@@ -201,6 +201,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
     <ClCompile Include="Src\Editor\NativeGameModule.cpp" />
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
+    <ClCompile Include="Src\Editor\ProjectUpgrader.cpp" />
     <ClCompile Include="Src\Editor\PanelManager.cpp" />
     <ClCompile Include="Src\Editor\Panels\**\*.cpp" />
   </ItemGroup>
@@ -216,6 +217,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClInclude Include="Src\Editor\ManagedEditorBridge.h" />
     <ClInclude Include="Src\Editor\NativeGameModule.h" />
     <ClInclude Include="Src\Editor\NewProjectGenerator.h" />
+    <ClInclude Include="Src\Editor\ProjectUpgrader.h" />
     <ClInclude Include="Src\Editor\PanelManager.h" />
     <ClInclude Include="Src\Editor\Panels\**\*.h" />
   </ItemGroup>

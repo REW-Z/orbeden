@@ -45,6 +45,9 @@
     <ClCompile Include="Src\Editor\NewProjectGenerator.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\ProjectUpgrader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\PanelManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -81,6 +84,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\NewProjectGenerator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ProjectUpgrader.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\PanelManager.h">

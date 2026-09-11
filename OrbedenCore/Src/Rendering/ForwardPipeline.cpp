@@ -2,6 +2,7 @@
 
 #include "Log/Log.h"
 #include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "ResourceManager/ResourceManager.h"
@@ -9,21 +10,75 @@
 #include "Runtime/Object/StaticMeshRenderer.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <unordered_set>
 
 namespace
 {
-    constexpr const char* ShadowDepthShaderKey = "Resource/Shader/shadow_depth.orbshader";
-    constexpr const char* SkyboxShaderKey = "Resource/Shader/skybox.orbshader";
+    //内置 Shader 按文件名在内容根内查找：内容根的目录结构完全自由，不能假定固定路径。
+    constexpr const char* ShadowDepthShaderFileName = "shadow_depth.orbshader";
+    constexpr const char* SkyboxShaderFileName = "skybox.orbshader";
+
+    //解析结果缓存。内容根变化时随 InvalidateResourceCaches 一起作废。
+    struct BuiltinShaderKeys
+    {
+    public:
+        std::string shadowDepth;
+        std::string skybox;
+    };
+
+    BuiltinShaderKeys& GetBuiltinShaderKeys()
+    {
+        static BuiltinShaderKeys keys;
+        return keys;
+    }
+
+    //在内容根内递归查找指定文件名，返回内容根相对 Key；找不到返回空串。
+    std::string FindContentKeyByFileName(const std::string& fileName)
+    {
+        if (!PathDefines::HasContentRoot()) return std::string();
+
+        std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot());
+        List<std::string> matches;
+        std::error_code error;
+        for (std::filesystem::recursive_directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error))
+        {
+            const std::filesystem::directory_entry& entry = *iterator;
+            if (!entry.is_regular_file()) continue;
+            if (Utf8Path::ToUtf8(entry.path().filename()) != fileName) continue;
+
+            matches.push_back(Utf8Path::ToUtf8(entry.path().lexically_relative(root)));
+        }
+
+        if (matches.empty()) return std::string();
+
+        //同名多个时取字典序第一个，保证结果稳定。
+        std::sort(matches.begin(), matches.end());
+        if (matches.size() > 1)
+        {
+            Log::Warning(("Multiple files named '" + fileName + "' were found in the content root; using " + matches.front()).c_str());
+        }
+
+        return ResourceManager::ToResourceKey(matches.front());
+    }
+
+    //获取内置 Shader 的 Key，首次解析后缓存
+    const std::string& ResolveBuiltinShaderKey(const char* fileName, std::string& cachedKey)
+    {
+        if (cachedKey.empty()) cachedKey = FindContentKeyByFileName(fileName);
+        return cachedKey;
+    }
 
     //获取内置 Shader
-    Shader* GetOrLoadBuiltinShader(Ref<Shader>& shader, const char* key)
+    Shader* GetOrLoadBuiltinShader(Ref<Shader>& shader, const std::string& key)
     {
         //读取已缓存的 Shader
         Shader* result = shader.Get();
         if (result || !shader.GetInstanceId().IsValid()) return result;
 
         //重新加载内置 Shader
+        if (key.empty()) return nullptr;
+
         result = ResourceManager::Load<Shader>(key);
         shader.Set(result);
         return result;
@@ -178,6 +233,8 @@ void ForwardPipeline::InvalidateResourceCaches()
     lightViewProjection = matrix4x4();
     shadowReady = false;
     builtinShadersInvalidated = true;
+    //内容根可能已经换了，内置 Shader 的解析结果作废。
+    GetBuiltinShaderKeys() = BuiltinShaderKeys();
 }
 
 void ForwardPipeline::Shutdown()
@@ -389,19 +446,20 @@ void ForwardPipeline::LoadBuiltinShaders()
     if (!PathDefines::HasContentRoot()) return;
 
     //阴影深度
-    shadowDepthShader.Set(ResourceManager::Load<Shader>(ShadowDepthShaderKey));
+    BuiltinShaderKeys& keys = GetBuiltinShaderKeys();
+    shadowDepthShader.Set(ResourceManager::Load<Shader>(ResolveBuiltinShaderKey(ShadowDepthShaderFileName, keys.shadowDepth)));
     //天空盒
-    skyboxShader.Set(ResourceManager::Load<Shader>(SkyboxShaderKey));
+    skyboxShader.Set(ResourceManager::Load<Shader>(ResolveBuiltinShaderKey(SkyboxShaderFileName, keys.skybox)));
     builtinShadersInvalidated = false;
 
     //记录内置 Shader 加载错误
     if (!shadowDepthShader.Get())
     {
-        Log::Error("ForwardPipeline resource resolve warning: shadow depth shader resource is missing.");
+        Log::Error("ForwardPipeline: shadow_depth.orbshader was not found in the content root.");
     }
     if (!skyboxShader.Get())
     {
-        Log::Error("ForwardPipeline resource resolve warning: skybox shader resource is missing.");
+        Log::Error("ForwardPipeline: skybox.orbshader was not found in the content root.");
     }
 }
 
@@ -516,7 +574,8 @@ bool ForwardPipeline::PrepareSkyboxMesh()
 bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager)
 {
     //准备阴影 Shader 和渲染目标
-    Shader* sourceShader = GetOrLoadBuiltinShader(shadowDepthShader, ShadowDepthShaderKey);
+    Shader* sourceShader = GetOrLoadBuiltinShader(shadowDepthShader,
+        ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
     if (!PrepareShadowResources() || !sourceShader) return false;
 
     //上传阴影 Shader
@@ -576,7 +635,8 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera& camera, GpuResourceManager& gpuResourceManager)
 {
     //获取天空盒 Shader
-    Shader* sourceShader = GetOrLoadBuiltinShader(skyboxShader, SkyboxShaderKey);
+    Shader* sourceShader = GetOrLoadBuiltinShader(skyboxShader,
+        ResolveBuiltinShaderKey(SkyboxShaderFileName, GetBuiltinShaderKeys().skybox));
     if (!scene.renderSettings.skyboxEnabled || !sourceShader) return;
 
     //获取天空盒资源

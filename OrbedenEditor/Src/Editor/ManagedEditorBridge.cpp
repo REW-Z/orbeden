@@ -30,6 +30,7 @@
 namespace
 {
     using ManagedInitializeEditorFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(void*);
+    using ManagedGetInitializationErrorFn = void*(CORECLR_DELEGATE_CALLTYPE*)(int32*);
     using ManagedDrawPanelFn = void(CORECLR_DELEGATE_CALLTYPE*)(
         int32, uint32, uint32, const EnsId*, int32, const uint8*, int32, const uint8*, int32);
     using ManagedSetPanelVisibleFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint8);
@@ -47,6 +48,7 @@ namespace
 
     constexpr const char* EditorTypeName = "OrbedenEditor.EditorRuntime, Orbeden.Editor";
     constexpr const char* EditorInitializeMethod = "Initialize";
+    constexpr const char* EditorGetInitializationErrorMethod = "GetInitializationError";
     constexpr const char* EditorDrawPanelMethod = "DrawPanel";
     constexpr const char* EditorSetPanelVisibleMethod = "SetPanelVisible";
     constexpr const char* EditorLoadGameAssemblyMethod = "LoadGameAssembly";
@@ -81,9 +83,9 @@ namespace
     {
     public:
         void* context = nullptr;
-        void* getResourceRoot = nullptr;
         void* canModifyAssets = nullptr;
         void* remapLiveReferences = nullptr;
+        void* openWorld = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -203,17 +205,18 @@ namespace
         return mapped != value;
     }
 
-    //读取当前资源根目录。
-    int32 ORBEDEN_NATIVE_CALL GetManagedResourceRoot(void*, uint8* buffer, int32 bufferSize)
-    {
-        return CopyUtf8(PathDefines::GetResourceRoot(), buffer, bufferSize);
-    }
-
     //判断是否允许托管层修改资源。
     uint8 ORBEDEN_NATIVE_CALL CanModifyManagedAssets(void* context)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         return editor && editor->HasProject() && !editor->IsPlaying() ? 1 : 0;
+    }
+
+    //打开项目内的另一个场景。
+    uint8 ORBEDEN_NATIVE_CALL OpenManagedWorld(void* context, const uint8* keyText, int32 keyLength)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && editor->OpenWorld(ReadUtf8(keyText, keyLength)) ? 1 : 0;
     }
 
     //请求原生 Editor 重绘。
@@ -618,6 +621,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     //绑定托管入口并注册面板
     clrHost = &host;
     ManagedInitializeEditorFn initializeEditor = nullptr;
+    ManagedGetInitializationErrorFn getInitializationError = nullptr;
     if (!clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorInitializeMethod,
         reinterpret_cast<void**>(&initializeEditor))
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawPanelMethod, &DrawPanelFunction)
@@ -629,7 +633,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
-        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorWorldSavedMethod, &WorldSavedFunction))
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorWorldSavedMethod, &WorldSavedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
         Shutdown();
@@ -649,9 +654,9 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
     editorApi.assets.context = &editor;
-    editorApi.assets.getResourceRoot = reinterpret_cast<void*>(&GetManagedResourceRoot);
     editorApi.assets.canModifyAssets = reinterpret_cast<void*>(&CanModifyManagedAssets);
     editorApi.assets.remapLiveReferences = reinterpret_cast<void*>(&RemapManagedLiveReferences);
+    editorApi.assets.openWorld = reinterpret_cast<void*>(&OpenManagedWorld);
     editorApi.components.context = &editor;
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
@@ -673,7 +678,13 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.getHostBinding = reinterpret_cast<void*>(&GetEditorHostBinding);
     if (initializeEditor(&editorApi) == 0)
     {
-        Log::Warning("ManagedEditorBridge initialize failed: managed runtime rejected initialization.");
+        //托管侧没有日志通道，失败原因只能靠这个出口带回原生侧。
+        int32 errorLength = 0;
+        const void* errorText = getInitializationError ? getInitializationError(&errorLength) : nullptr;
+        std::string reason = errorText && errorLength > 0
+            ? std::string(static_cast<const char*>(errorText), static_cast<usize>(errorLength))
+            : "no diagnostic was reported";
+        Log::Error(("ManagedEditorBridge initialize failed: " + reason).c_str());
         Shutdown();
         return false;
     }

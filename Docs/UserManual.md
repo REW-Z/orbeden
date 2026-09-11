@@ -31,20 +31,46 @@ Windows Editor 开发需要：
 
 选择 `Project > Load...`，然后选择包含 `.oeproj` 文件的项目根目录。
 
+如果项目由更早版本的 Orbeden 创建，编辑器会弹出升级对话框：
+
+- **升级**：整块重建 `Content/` 之外的一切（引擎 SDK、工程文件与构建脚手架）并重建 `Content/Examples/` 示例。**`Content/` 里你自己的东西不会被改动。** 升级失败时对话框会保留并显示原因，版本号不会写入，可以重试或直接退出。
+- **退出**：什么都不做，关闭对话框，编辑器保持原样（已经打开的项目不受影响）。
+
+如果提示项目由更新版本的 Orbeden 创建，说明编辑器落后于项目版本，需要先更新 Orbeden；此时不支持升级。
+
 ### 项目目录
 
 ```text
 MyGame/
-├─ MyGame.oeproj    项目配置和启动 World
-├─ World/           场景、组件及其字段数据
-├─ Resource/        模型、材质、贴图和 Shader
-├─ Script/          C# 游戏代码
-├─ Native/          C++ 游戏代码和 vcxproj 工程
-├─ Managed/         C# 开发构建输出
-└─ Aot/             Player 的 C# NativeAOT 构建输出
+├─ MyGame.oeproj          项目配置：启动场景和项目版本
+├─ MyGame.csproj          工程文件直接放在项目根
+├─ MyGameNative.vcxproj
+├─ Directory.Build.props
+├─ Lib/                   SDK 快照，由编辑器自动刷新
+├─ Content/               内容根：你想放什么、怎么放都行
+│   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/
+│   └─ Examples/FlightTraining/
+└─ Build/                 全部构建产物
 ```
 
-通常只需要编辑 `Script`、`Native` 和 `Resource`。`Managed`、`Aot` 以及 `Native/Build` 都是生成目录。
+**只有 `Content/` 里的东西是你的**，其中的目录结构完全自由——可以随意增删改名，把资源、场景、脚本放到任何位置。`Content/` 之外是引擎的地盘：工程文件、SDK 快照和 `Build/` 里的产物都由引擎维护，升级项目时会整块重建，请勿手工修改，也不要把自己的东西放在那里。
+
+新建项目时会生成 `Meshes/`、`Materials/`、`Textures/`、`Shaders/`、`Scenes/`、`Scripts/` 这几个初始子目录，它们只是给你一个起步结构，不是约束。
+
+### 脚本、资源、场景放在哪里都能生效
+
+`Content/` 内任何目录中的文件都会被自动收集，新增文件不需要改工程文件：
+
+- `.cs` 会进入游戏程序集，`.cpp`/`.h` 会进入原生模块和 Player。
+- `.world` 场景以内容根为基准记录在项目配置里；在 Project 面板中双击某个 `.world` 即可切换到该场景。
+- 资源 Key 就是文件相对 `Content/` 的路径，例如 `Meshes/ground.obj//Mesh/Main` 对应 `Content/Meshes/ground.obj`。
+- 内置 Shader（`shadow_depth.orbshader`、`skybox.orbshader`）由引擎按文件名查找，放在 `Content/` 下任何位置都可以。
+
+### Examples 目录
+
+新建项目时会生成 `Content/Examples/FlightTraining/`，其中是完整的飞行模拟示例，也是新项目的启动场景。示例的场景、资源和脚本都会参与构建，可以直接在 Inspector 中查看和复用。
+
+升级项目时 `Content/Examples/` 会被整目录重建，**你在其中做的修改会丢失**。要长期保留的内容请放到 `Content/Examples/` 之外。
 
 ## 3. 编辑场景和组件
 
@@ -55,7 +81,7 @@ MyGame/
    - `[C++]` 表示原生 C++ 组件。
 4. 使用 `Ctrl+S` 或 `Project > Save` 保存 World，其中包含场景组件及其字段数据。
 
-模型、材质、贴图和 Shader 放在 `Resource` 目录中，再通过 Project 面板和 Inspector 使用。
+模型、材质、贴图和 Shader 放在 `Content/` 下（默认分别放 `Meshes/`、`Materials/`、`Textures/`、`Shaders/`），再通过 Project 面板和 Inspector 使用。
 
 
 `Ctrl+Z` 用于撤销，`Ctrl+Y` 或 `Ctrl+Shift+Z` 用于重做。
@@ -64,7 +90,7 @@ Play 模式中的属性修改只影响本次运行。停止 Play 后会重新加
 
 ## 4. 编写 C# 脚本
 
-在 `Script` 目录中创建 `.cs` 文件，并继承 `Script`：
+在 `Content/` 下创建 `.cs` 文件（默认放 `Scripts/`），并继承 `Script`：
 
 ```csharp
 using Orbeden;
@@ -125,7 +151,7 @@ C# 文件修改后：
 
 ## 5. 编写 C++ 脚本
 
-在 `Native` 目录中创建头文件和源文件：
+在 `Content/` 下任何目录中创建头文件和源文件（例如 `Scripts/`）：
 
 ```cpp
 // MoveBehaviour.h
@@ -273,7 +299,7 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 
 ### 项目提示内置 Shader 缺失
 
-如果项目打开后出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，请确认项目的 `Resource/Shader` 目录未被删除。
+如果项目打开后出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，说明引擎在内容根内按文件名没找到它们。把这两个文件放回 `Content/` 下的任意位置即可（新建项目默认在 `Content/Shaders/`）。
 
 ### Inspector 中看不到新 C# 脚本
 
@@ -293,6 +319,6 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 
 ### 飞行地形材质和机轮参数
 
-地形材质引用使用 `Resource/Mesh/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，应使用 OBJ 下的材质资源路径。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
+地形材质引用使用 `Meshes/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，应使用 OBJ 下的材质资源路径。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
 
 更深入的实现说明见 [脚本系统](ScriptSystem.md)，平台工具链和目录说明见 [构建与打包](BuildAndPackaging.md)。

@@ -1,6 +1,6 @@
 # 项目规范
 
-Orbeden 是一个 C++ 游戏引擎项目。核心原生代码在 `OrbedenCore/`，托管层在 `OrbedenCore/Managed/OrbedenCore.CSharp/`，编辑器在 `OrbedenEditor/`，玩家在 `OrbedenGame/`。本规范约束引擎代码的文件组织、命名、include、代码风格与代码生成，新代码按本规范编写，同时作为既有代码整理的依据。
+Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托管层在 `OrbedenCore/Managed/OrbedenCore.CSharp/`，编辑器在 `OrbedenEditor/`，玩家在 `OrbedenGame/`。本规范约束引擎代码的文件组织、命名、include、代码风格与代码生成，新代码按本规范编写，同时作为既有代码整理的依据。
 
 ---
 
@@ -159,69 +159,13 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 
 ---
 
-# 子系统规范
-
-- 子系统继承 `IEngineSystem` 并实现所需生命周期：`OnInitialize(Application&)`、`FixedUpdate`、`Update`、`LateUpdate`、`OnWindowResize`、`OnShutdown`。
-- 子系统之间不互相持有单例；依赖在 `OnInitialize(Application&)` 中经 `Application` 获取。
-- 注册与注销成对出现：`OnAttach` 注册、`OnDetach` 注销，`OnShutdown` 释放全部持有资源。
-- 子系统对外提供的静态入口（如 `ResourceManager::Load<T>()`）集中在子系统头文件，不散落到调用方。
-
----
-
-# include 规范
-
-- 一律使用 **Src 根相对路径**、正斜杠、双引号：
-
-```cpp
-#include "Runtime/Object/Component.h"
-#include "Physics/PhysicsTypes.h"
-#include "Rendering/RenderTypes.h"
-```
-
-- 禁止相对路径跳转（`../`），禁止裸文件名（`#include "Transform.h"`）。
-- 头文件必须显式包含自己用到的定义，不依赖其他头文件的传递包含。例如类成员是 `Ref<Mesh>` 就包含 `Runtime/Object/Mesh.h`，不要指望别的头替你带进来。
-- 标准库使用尖括号（`<string>`、`<vector>`、`<type_traits>`）；第三方按其 include 根沿用现状（imgui 用 `#include <imgui.h>`，cgltf 用 `#include "cgltf.h"`）。
-- 顺序：自身头文件（源文件首行）→ 项目头文件 → 标准库 → 第三方。
-- 文件移动或改名后，必须更新全仓库引用它的 include、工程文件清单（`.vcxproj` / `.vcxproj.filters`）以及 `CMakeLists.txt` 的源文件列表。
-
----
-
-# 代码风格
-
-- 缩进 4 空格，不使用 Tab。
-- 大括号另起一行（Allman 风格），函数、类、控制流一致：
-
-```cpp
-bool Component::IsRenderSceneEligible() const
-{
-    if (enabled == false)
-    {
-        return false;
-    }
-
-    return true;
-}
-```
-
-- 类内成员顺序：类型宏 → `private` 数据与私有方法 → `public` 对外字段 → `public` 方法。
-- 空指针一律 `nullptr`；类型转换使用显式 `static_cast`。
-- 注释使用中文 `//`，说明"做什么、为什么"，不复述代码：
-
-```cpp
-//设置启用状态并同步渲染场景注册
-void SetEnabled(bool value);
-```
-
-- 每个类和每个公开方法都要有简短注释；实现中的关键分支、特殊约束同样需要注释。
-- 未使用的参数在函数体内显式 `(void)param;` 标记，避免编译告警。
-
----
 
 # 托管 C# 侧规范
 
 - 手写代码与生成代码分离：`OrbedenCore/Managed/OrbedenCore.CSharp/Generated/` 下的文件由 MetaGen 生成，**禁止手工修改**。
 - 每个 C++ Object 类型在托管侧对应一个 `partial class`，生成部分提供绑定成员，手写部分补充运行时逻辑。
 - 命名空间：核心类型在 `Orbeden`，游戏模块在 `<项目名>.Native`；托管类名、成员名跟随 C++，改名时同步修改仓库调用方，不保留旧名兼容层。
+- 生成物顶部带 `global using Native = <项目名>.Native;`，供内容根内的脚本引用本程序集的绑定类型。**内容根内的脚本一律写 `Native.X`**，不要写 `<项目名>.Native.X`：内容会被复制到别的项目，写死项目名就失效了。
 - 常用入口：
   - 组件：`ens.AddComponent<T>()`、`ens.GetComponent<T>()`、`ens.TryGetComponent<T>(out var c)`
   - 资源：`Resources.Load<T>(key)`、`Resources.UnloadUnusedObjects()`
@@ -232,17 +176,16 @@ void SetEnabled(bool value);
 
 # 构建与代码生成
 
-- 新增、移动、改名文件后同步更新 `OrbedenCore/OrbedenCore.vcxproj` 与 `OrbedenCore.vcxproj.filters`（显式文件列表）；同时维护 `CMakeLists.txt` 的 `ORBEDEN_CORE_SOURCES`。
+- 新增、移动、改名文件后同步更新 `OrbedenCore/OrbedenCore.vcxproj` 与 `OrbedenCore.vcxproj.filters`（显式文件列表）。
 - 新增 Object 派生类无需手写绑定：构建 `OrbedenCore` 时会先运行 `OrbedenMetaGen` 重新生成 `Src/Runtime/Generated/`（反射、C++/C# Binding、类型清单），再发布 SDK 头文件到 `OrbedenEditor/Sdk/`。
 - 生成物提交到仓库，但只通过构建刷新；`Bindings.Manifest.json` 中的 schema hash 随签名变化属正常。
-- 改名或移动文件后，旧文件不会从 `OrbedenEditor/Sdk/Native/Include/` 自动消失（发布过程只复制不删除），需要手工清理，避免模板工程误用旧头文件。
-- 模板工程（`OrbedenEditor/Templates/`）的源码通过 SDK include 根引用引擎头文件，引擎侧目录或类名变动后必须同步更新模板。
+- `PublishNativeGameSdk` 发布前会先清空 `OrbedenEditor/Sdk/Native/Include/` 再复制，改名或移动后不会有旧头文件残留。
+- 游戏工程的构建脚手架一律引用 SDK，不在项目内保留副本；游戏工程布局、位置无关规则与升级流程见 [构建与打包](BuildAndPackaging.md)。
 
 ---
 
-# 变更纪律
+# 项目版本号
 
-- 大范围重命名/移动必须一次性覆盖：引擎源码、编辑器与玩家代码、模板与示例、测试、`Docs/`、工程文件与 CI 脚本。
-- 提交前确认全仓库不存在旧类名与旧路径残留（排除 `ThirdParty/`、SDK 发布产物与构建目录）。
-- 完成结构变更后至少构建通过 `OrbedenCore`、`OrbedenEditor`（Player 由编辑器构建流程驱动，需带 `-p:OrbedenProjectDir` 等参数）。
-- 引擎处于开发期，不引入兼容层：旧场景、旧名称由使用方同步更新。
+- `OrbedenCore/Src/Defines/Version.h` 的 `OrbedenProjectVersion` 是权威版本号；`.oeproj` 的 `version` 属性记录项目建立或上次升级时的值。
+- **只做了会影响已有游戏项目的引擎改动，就必须手工递增该常量**，并在 [构建与打包](BuildAndPackaging.md) 的版本一节记录该级迁移做了什么。
+- 忘记递增的后果是老项目不会升级，而构建会在别处以难以排查的方式失败（工具集不匹配、MetaGen 参数过期、绑定签名不符）。宁可多递增，也不要漏。

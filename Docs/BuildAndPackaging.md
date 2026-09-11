@@ -95,8 +95,8 @@ flowchart LR
 | Core C# SDK | Debug CLR / Release AOT 输入 | 构建 `OrbedenCore.vcxproj` 时自动执行 | Debug 为 `OrbedenCore.CSharp.dll`；Release 发布时作为 Game NativeAOT 的引用输入，不单独进入 Player |
 | Editor C++ | MSVC Executable | VS 解决方案 / Editor 工程 | `OrbedenEditor/x64/{Configuration}/OrbedenEditor.exe`，链接 `OrbedenEditor/Sdk/Native/WindowsX64/{Configuration}/OrbedenCore.lib` |
 | Editor C# | Windows Editor CLR 工具程序集 | Editor 工程构建时自动构建 | `OrbedenEditor/x64/{Configuration}/Managed/Orbeden.Editor.dll`；不进入 Player |
-| Game C# Debug | CLR Assembly Build | Debug Editor `Build Game C#` | `{ProjectRoot}/Managed/{AssemblyName}.dll` |
-| Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
+| Game C# Debug | CLR Assembly Build | Debug Editor `Build Game C#` | `{ProjectRoot}/Build/Managed/{AssemblyName}.dll` |
+| Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Build/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
 | Player | MSVC Executable（`OrbedenGame.vcxproj`） | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/OrbedenGame.exe` |
 
 ## 完整打包流程
@@ -109,11 +109,11 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 
 2. **构建 Editor**：构建同配置的 `OrbedenEditor.vcxproj`，生成 `OrbedenEditor.exe` 与 `Managed/Orbeden.Editor.dll`，同时复制 GLFW、nethost 和 runtimeconfig。Editor 仅支持 Windows x64。
 
-3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Script/Lib/`。点击 `Build Game C#` 生成 `{ProjectRoot}/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。
+3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Lib/`。点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。
 
 4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
 
-5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Resource/`、`World/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
+5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Content/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
 > 当前 `Build Player` 会通过 `ORBEDEN_PROJECT_DIR` 绑定 Editor 中打开的项目，Player 从该项目的 `.oeproj` 读取启动 World；项目文件和资源仍未自动复制到发布目录。
 
@@ -336,7 +336,7 @@ Debug Editor 仅支持 Windows x64，测试流程不使用 NativeAOT 静态库�
 
 ```mermaid
 flowchart LR
-    GameCs["{ProjectRoot}/Script"] --> GameDll["{ProjectRoot}/Managed/{ProjectName}.dll"]
+    GameCs["{ProjectRoot}/Content"] --> GameDll["{ProjectRoot}/Build/Managed/{ProjectName}.dll"]
     CoreSdk["OrbedenCore.CSharp.dll"] -.-> GameDll
     CoreSdk -.-> EditorDll["Orbeden.Editor.dll"]
     EditorExe["OrbedenEditor.exe"] -.-> EditorDll
@@ -369,6 +369,97 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 - `hostfxr`
 - `nethost`
 - `runtimeconfig.json`
+
+## 游戏工程布局与引擎升级
+
+游戏工程只分两部分：**内容根 `Content/`** 是给用户用的，内部结构完全自由；内容根之外的一切都由引擎与构建系统强依赖，位置固定且可整块重建。
+
+构建脚手架一律**引用 SDK**，项目内不保留引擎设置的副本：工具集、include、链接库、MetaGen 参数与源文件收集都由 SDK 的共享属性表提供。引擎改动只需刷新 SDK。
+
+### 模板分区
+
+`OrbedenEditor/Templates/` 下分三部分：
+
+| 目录 | 内容 | 去向 |
+| --- | --- | --- |
+| `Project/` | 工程脚手架：`.oeproj`、`*.csproj`、`*.vcxproj`、`Directory.Build.props`、`Content/Shaders/` 下的内置 Shader | 铺到项目根 |
+| `Examples/` | 示例内容：场景、资源、脚本与原生组件 | 铺到 `<项目根>/Content/Examples/`，每次重铺都整目录重建 |
+| `Shared/` | 共享属性表与固定桥接源码：`Orbeden.Native.props` / `.targets`、`GameModule.cpp`、`GameAotExports.cs` | 由 `PublishNativeGameSdk` 发布到 `Sdk/Native/` 与 `Sdk/Shared/`，不铺进项目 |
+
+`Project/` 中不得包含任何游戏内容：示例内容一旦与项目自身内容同名，会同时撞上 C# 的全限定类型名、MetaGen 的类型字典和 Player 的链接符号。
+
+### 项目目录
+
+```text
+MyGame/
+├─ MyGame.oeproj            项目配置：version / name / startupWorld
+├─ MyGame.csproj            工程文件直接放在项目根
+├─ MyGameNative.vcxproj
+├─ Directory.Build.props
+├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path
+├─ Content/                 内容根：内部结构完全自由
+│   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/
+│   └─ Examples/FlightTraining/   示例（引擎管理，重铺时整目录重建）
+└─ Build/                   全部构建产物
+    ├─ Managed/             C# 开发程序集、obj、PIE 影子副本
+    ├─ Aot/                 NativeAOT 库
+    ├─ Native/              模块 DLL、obj 与 MetaGen 的 Generated/
+    └─ windows-x64/         Player 打包产物
+```
+
+`Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`——位置既然固定，就不该做成可配置属性。
+
+### 内容根与资源 Key
+
+**所有 `Object` 派生资源的 stringid 都是内容根相对路径**：`Meshes/cube.obj` 对应 `<项目根>/Content/Meshes/cube.obj`。`startupWorld` 同样相对内容根。Key 里没有 `Resource/` 这类前缀特判，解析就是一次路径拼接。
+
+### 位置无关
+
+脚本、资源、场景放在内容根内任何目录都能生效，新增文件不需要改工程：
+
+- **C#**：`Directory.Build.props` 关掉 SDK 默认编译项通配，由 SDK 的 `Orbeden.Bindings.targets` 收集 `Content/**/*.cs`。
+- **C++**：`Orbeden.Native.targets` 收集 `Content/**/*.cpp`；Player 的 `OrbedenGame.vcxproj` 同样。
+- **场景**：`startupWorld` 与 `EditorProject::OpenWorld` 都以内容根为基准，在 Project 面板双击 `.world` 即可切换。
+- **内置 Shader**：`shadow_depth.orbshader` 与 `skybox.orbshader` 由引擎**按文件名在内容根内查找**（结果缓存），不要求固定位置。
+
+内容根之外按定义不含用户内容，因此 glob 不需要排除表。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
+
+### 项目版本与升级
+
+`OrbedenCore/Src/Defines/Version.h` 的 `OrbedenProjectVersion` 是权威版本号，`.oeproj` 的 `version` 属性记录项目建立或上次升级时的值。
+
+载入项目时按三态判定：
+
+| 情况 | 行为 |
+| --- | --- |
+| 相等 | 直接加载 |
+| 项目版本落后 | 弹出升级对话框，选择**升级**或**退出** |
+| 项目版本超前 | 硬拒绝，提示先更新 Orbeden。此时升级会把脚手架降级写坏 |
+
+「退出」不关闭编辑器，也不改动任何状态，只是中止本次加载。
+
+### 升级：内容之外全部重建
+
+内容根之外既然都是引擎的地盘，升级就不做增量修补，而是整块重建：
+
+1. **内容归位**：按旧布局把内容收进内容根（`Resource/` 这一层去掉，`World/` 改名 `Scenes/`，其余顶层目录整体搬入）。
+2. **清空内容根之外**：`Content/`、`.oeproj` 以及以点开头的条目保留，其余全部删除。
+3. **重铺脚手架**：`Templates/Project/` 铺到项目根，`Templates/Examples/` 整目录重建到 `Content/Examples/`。
+4. **同步 SDK 产物**：Core C# 运行库与绑定目标。
+5. **写根属性**：版本号、`name`，并清掉 `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景在重铺前已带出，映射后仍然存在才恢复，否则用模板默认。
+
+**版本号最后写入**，任一步失败即中止且不写版本号，下次打开会重新提示，不会留下"版本号已更新、脚手架还是旧的"这种无法自愈的状态。
+
+这套流程是通用的：**新增版本不需要再写版本特有逻辑**，只有内容布局或 `.oeproj` schema 变化时才需要递增版本号并在这里记录。
+
+> 代价：你在 `Content/` 之外放的东西会被删除。内容根之外是引擎的地盘，笔记、临时脚本请放进 `Content/`。
+
+### 版本记录
+
+| 版本 | 迁移内容 |
+| --- | --- |
+| 2 | 代码工程与生成目录统一收进 `Script/`：原生工程移到 `Script/Native/`，C# 输出移到 `Script/Managed/`，AOT 输出移到 `Script/Aot/`；示例统一收进 `Examples/`；原生构建改为导入 SDK 的 `Orbeden.Native.props` / `.targets`；脚本与 C++ 源文件改为按项目根收集。 |
+| 3 | 引入内容根 `Content/`：内容根的目录结构完全自由，资源 Key 与 `startupWorld` 改为内容根相对；工程文件上移到项目根，构建产物统一收进 `Build/`；`.oeproj` 收缩为 `version` / `name` / `startupWorld`，废弃根属性被清除；内置 Shader 改为按文件名在内容根内查找。 |
 
 ## 修改代码后的流程
 

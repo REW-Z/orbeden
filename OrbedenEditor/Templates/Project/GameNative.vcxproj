@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    游戏原生模块工程。
+    工具集、include、链接库、输出目录、源文件收集与绑定生成全部来自 Orbeden SDK 的共享属性表，
+    本文件只声明项目身份，因此引擎升级时通常不需要改动。
+
+    SDK 的导入位置有硬性要求：Orbeden.Native.props 必须在 Microsoft.Cpp.props 之前
+    （后者按 $(PlatformToolset) 去导入工具集属性表），Orbeden.Native.targets 必须在之后。
+  -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5E4C9A81-2B3D-4F61-9E7A-D8C2B14F6A35}</ProjectGuid>
+    <!--Orbeden SDK 根目录：优先使用 Editor 传入的值，否则读取 C# 侧生成的 SDK 路径文件。
+        VS 里直接打开工程或 dotnet build 都不会带上编辑器传的参数，必须留这条回退。-->
+    <OrbedenSdkRoot Condition="'$(OrbedenSdkRoot)' == '' and Exists('$(MSBuildProjectDirectory)\Lib\OrbedenSdk.path')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\Lib\OrbedenSdk.path').Trim())</OrbedenSdkRoot>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(OrbedenSdkRoot)\Native\Orbeden.Native.props" Condition="Exists('$(OrbedenSdkRoot)\Native\Orbeden.Native.props')" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(OrbedenSdkRoot)\Native\Orbeden.Native.targets" Condition="Exists('$(OrbedenSdkRoot)\Native\Orbeden.Native.targets')" />
+  <!--共享属性表缺失时提前报错，否则后续会以一堆莫名其妙的编译错误收场。-->
+  <Target Name="ValidateOrbedenSdk" BeforeTargets="ClCompile">
+    <Error Condition="'$(OrbedenSdkRoot)' == ''" Text="Orbeden SDK was not found. Set OrbedenSdkRoot, or rebuild OrbedenCore so that Lib/OrbedenSdk.path is refreshed." />
+    <Error Condition="!Exists('$(OrbedenSdkRoot)\Native\Orbeden.Native.props')" Text="Orbeden SDK is incomplete: $(OrbedenSdkRoot)\Native\Orbeden.Native.props is missing. Build OrbedenCore to refresh the SDK, then reopen the project in the Editor and accept the upgrade." />
+  </Target>
+</Project>
