@@ -48,7 +48,7 @@ void HeightField::OnAttach()
 void HeightField::OnDetach()
 {
     StaticMeshRenderer* renderer = GetEns() ? GetEns()->GetComponent<StaticMeshRenderer>() : nullptr;
-    if (renderer && renderer->mesh.Get() == generatedMesh) renderer->mesh.Set(nullptr);
+    if (generatedMesh && renderer && renderer->GetRenderMesh() == generatedMesh) renderer->SetRuntimeMesh(nullptr);
     Object::DeleteInstance(generatedMesh);
     if (ownsRuntimeMaterial) Object::DeleteInstance(runtimeMaterial);
     Object::DeleteInstance(noiseTexture);
@@ -206,7 +206,7 @@ void HeightField::RebuildHeights()
     ++generation;
 }
 
-//重建渲染网格并写入同 Ens 的 StaticMeshRenderer。
+//重建渲染网格并覆盖实际渲染，保留 StaticMeshRenderer 的源资源引用。
 void HeightField::RebuildRenderMesh()
 {
     Ens* ens = GetEns();
@@ -287,7 +287,7 @@ void HeightField::RebuildRenderMesh()
     mesh->ConfigureSubMesh(0, "Main", 0, static_cast<uint32>(indices.size()), submeshMaterial);
     mesh->SetVertexNormals(normals.data(), vertexCount);
 
-    renderer->mesh = Ref<Mesh>(mesh);
+    renderer->SetRuntimeMesh(mesh);
     mesh->MarkDirty();
     meshPending = false;
     generatedMesh = mesh;

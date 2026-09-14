@@ -89,7 +89,7 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     {
         if (!renderer || !renderer->IsRenderSceneEligible()) continue;
 
-        Mesh* mesh = renderer->mesh.Get();
+        Mesh* mesh = renderer->GetRenderMesh();
         if (mesh != renderer->renderState.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render)))
         {
             UpdateRenderer(renderer, false);
@@ -408,7 +408,7 @@ void RenderScene::UpdateRenderer(StaticMeshRenderer* renderer, bool updateTransf
     if (!world || !renderer || !renderer->IsRenderSceneEligible() || renderer->GetWorld() != world) return;
 
     StaticMeshRendererRenderState& state = renderer->renderState;
-    Mesh* mesh = renderer->mesh.Get();
+    Mesh* mesh = renderer->GetRenderMesh();
     bool meshChanged = mesh != state.mesh || (mesh && mesh->IsDirty(MeshDirtyFlags::Render));
     if (meshChanged)
     {

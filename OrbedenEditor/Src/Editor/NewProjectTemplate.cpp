@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
+#include <utility>
 
 namespace
 {
@@ -21,19 +22,19 @@ namespace
         return Utf8Path::ToUtf8(path.lexically_normal());
     }
 
-    //文本类文件才做文本扫描：在美术资源里搜字符串只会碰到随机字节。
+    /// <summary>仅已知文本格式忽略行尾差异，其余资源按原始字节比较。</summary>
     bool IsScannableTextFile(const std::filesystem::path& path)
     {
-        static const std::unordered_set<std::string> BinaryExtensions =
+        static const std::unordered_set<std::string> TextExtensions =
         {
-            ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".dds", ".ktx", ".hdr", ".ico",
-            ".obj", ".fbx", ".mesh", ".bin", ".wav", ".ogg", ".mp3", ".ttf", ".otf",
-            ".dll", ".lib", ".exe", ".pdb", ".zip", ".7z",
+            ".cs", ".cpp", ".h", ".hpp", ".c", ".inl", ".txt", ".md", ".json", ".xml",
+            ".world", ".oeproj", ".csproj", ".vcxproj", ".props", ".targets", ".filters",
+            ".obj", ".mtl", ".orbshader", ".orbinc", ".glsl", ".vert", ".frag",
         };
 
         std::string extension = Utf8Path::ToUtf8(path.extension());
         for (char& character : extension) character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
-        return BinaryExtensions.count(extension) == 0;
+        return TextExtensions.count(extension) != 0;
     }
 
     bool ReadWholeFile(const std::filesystem::path& path, std::string& outText)
@@ -101,7 +102,7 @@ namespace
     //只比字节的话，一次 checkout 就能把整个模板报成"全都改过"。
     bool FilesEqual(const std::filesystem::path& left, const std::filesystem::path& right)
     {
-        //行尾差异必然改变文件大小，所以大小一致时比字节就能定论，二进制文件也走这条。
+        //字节完全相同时直接返回；仅已知文本格式进一步忽略行尾。
         if (FilesEqualBytes(left, right)) return true;
 
         if (!IsScannableTextFile(left)) return false;
@@ -148,7 +149,8 @@ namespace
 bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
     const std::string& targetDirectory,
     const std::string& projectName,
-    std::string& outError)
+    std::string& outError,
+    bool preserveProjectContent)
 {
     outError.clear();
 
@@ -172,7 +174,10 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
         {
             std::filesystem::path relative = entry.path().lexically_relative(sourceRoot);
             std::filesystem::path target = targetRoot / MapTemplateFileName(relative, projectName);
-            succeeded = CopyBinaryFile(entry.path(), target) && succeeded;
+            //升级只更新脚手架，保留项目配置和全部用户内容。
+            bool preserve = preserveProjectContent
+                && (relative == "Project.oeproj" || *relative.begin() == ProjectLayout::ContentFolder);
+            if (!preserve) succeeded = CopyBinaryFile(entry.path(), target) && succeeded;
         }
 
         iterator.increment(error);
@@ -198,7 +203,7 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
 bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
     const std::string& targetDirectory,
     MirrorReport& outReport,
-    std::string& outError)
+    std::string& outError) try
 {
     outError.clear();
     outReport = MirrorReport();
@@ -211,16 +216,43 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
         return false;
     }
 
+    std::filesystem::path targetRoot = std::filesystem::weakly_canonical(Utf8Path::FromUtf8(targetDirectory));
+    sourceRoot = std::filesystem::canonical(sourceRoot);
+    for (const auto& roots : { std::make_pair(sourceRoot, targetRoot), std::make_pair(targetRoot, sourceRoot) })
+    {
+        for (std::filesystem::path parent = roots.first; !parent.empty(); parent = parent.parent_path())
+        {
+            if (std::filesystem::exists(parent) && std::filesystem::exists(roots.second)
+                && std::filesystem::equivalent(parent, roots.second))
+            {
+                outError = "Mirror source and target directories must not overlap.";
+                return false;
+            }
+            if (parent == parent.parent_path()) break;
+        }
+    }
+
+    for (const std::filesystem::path& root : { sourceRoot, targetRoot })
+    {
+        if (!std::filesystem::exists(root)) continue;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(root))
+        {
+            if (entry.is_symlink())
+            {
+                outError = "Mirror does not support symbolic links: " + ToCleanPath(entry.path());
+                return false;
+            }
+        }
+    }
+
     std::error_code error;
     List<std::filesystem::path> sourceFiles;
-    std::unordered_set<std::string> sourceKeys;
     for (std::filesystem::recursive_directory_iterator iterator(sourceRoot, error), end; !error && iterator != end; iterator.increment(error))
     {
         if (!iterator->is_regular_file()) continue;
 
         std::filesystem::path relative = iterator->path().lexically_relative(sourceRoot);
         sourceFiles.push_back(relative);
-        sourceKeys.insert(ToCleanPath(relative));
     }
 
     if (error)
@@ -238,7 +270,6 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
         return false;
     }
 
-    std::filesystem::path targetRoot = Utf8Path::FromUtf8(targetDirectory);
     for (const std::filesystem::path& relative : sourceFiles)
     {
         std::filesystem::path source = sourceRoot / relative;
@@ -246,6 +277,11 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
 
         std::error_code existsError;
         bool existed = std::filesystem::exists(target, existsError);
+        if (existsError)
+        {
+            outError = "Mirror target access failed: " + existsError.message();
+            return false;
+        }
         //内容相同的文件不重写：报告才有意义，也避免无谓地刷新时间戳。
         if (!existed || !FilesEqual(source, target))
         {
@@ -267,10 +303,16 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
         for (std::filesystem::recursive_directory_iterator iterator(targetRoot, error), end; !error && iterator != end; iterator.increment(error))
         {
             if (!iterator->is_regular_file()) continue;
-            if (sourceKeys.count(ToCleanPath(iterator->path().lexically_relative(targetRoot))) == 0)
-            {
-                stale.push_back(iterator->path());
-            }
+            std::filesystem::path source = sourceRoot / iterator->path().lexically_relative(targetRoot);
+            bool exists = std::filesystem::exists(source, error);
+            if (error) break;
+            if (!exists) stale.push_back(iterator->path());
+        }
+
+        if (error)
+        {
+            outError = "Mirror target scan failed: " + error.message();
+            return false;
         }
 
         for (const std::filesystem::path& path : stale)
@@ -289,51 +331,18 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
     return true;
 }
 
-//在目录里找出现指定文本的文件
-bool NewProjectTemplate::CollectFilesContaining(const std::string& sourceDirectory,
-    const std::string& token,
-    List<std::string>& outFiles,
-    std::string& outError)
+catch (const std::filesystem::filesystem_error& error)
 {
-    outFiles.clear();
-    outError.clear();
-    if (token.empty()) return true;
-
-    std::filesystem::path sourceRoot = Utf8Path::FromUtf8(sourceDirectory);
-    if (!std::filesystem::is_directory(sourceRoot))
-    {
-        outError = "Directory was not found: " + ToCleanPath(sourceRoot);
-        return false;
-    }
-
-    std::error_code error;
-    for (std::filesystem::recursive_directory_iterator iterator(sourceRoot, error), end; !error && iterator != end; iterator.increment(error))
-    {
-        if (!iterator->is_regular_file()) continue;
-        if (!IsScannableTextFile(iterator->path())) continue;
-
-        std::string text;
-        if (!ReadWholeFile(iterator->path(), text)) continue;
-        if (text.find(token) != std::string::npos)
-        {
-            outFiles.push_back(ToCleanPath(iterator->path().lexically_relative(sourceRoot)));
-        }
-    }
-
-    if (error)
-    {
-        outError = "Directory scan failed: " + error.message();
-        return false;
-    }
-
-    return true;
+    outError = "Mirror failed: " + std::string(error.what());
+    return false;
 }
 
 //把脚手架与示例铺到项目目录
 bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     const std::string& projectName,
     const std::string& templateRoot,
-    std::string& outError)
+    std::string& outError,
+    bool preserveProjectContent)
 {
     outError.clear();
 
@@ -346,23 +355,13 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     }
 
     std::filesystem::path projectRootPath = Utf8Path::FromUtf8(projectRoot);
-    if (!CopyTemplateTree(ToCleanPath(root / ProjectFolder), projectRoot, projectName, outError)) return false;
+    if (!CopyTemplateTree(ToCleanPath(root / ProjectFolder), projectRoot, projectName, outError, preserveProjectContent)) return false;
 
-    //示例属于内容，落在内容根内的 Examples/ 下。
-    //整目录重建：只覆盖不删除会让模板里已移除的旧文件留在项目里继续参与编译。
+    //仅新建项目初始化示例；升级不覆盖用户已修改或删除的内容。
     std::filesystem::path examplesRoot = root / ExamplesFolder;
-    if (std::filesystem::is_directory(examplesRoot))
+    if (!preserveProjectContent && std::filesystem::is_directory(examplesRoot))
     {
         std::filesystem::path targetRoot = projectRootPath / ProjectLayout::ContentFolder / ExamplesFolder;
-        std::error_code removeError;
-        std::filesystem::remove_all(targetRoot, removeError);
-        if (removeError)
-        {
-            outError = "Failed to clear the examples directory: " + removeError.message();
-            Log::Error(outError.c_str());
-            return false;
-        }
-
         if (!CopyTemplateTree(ToCleanPath(examplesRoot), ToCleanPath(targetRoot), projectName, outError)) return false;
     }
 

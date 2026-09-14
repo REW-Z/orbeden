@@ -253,7 +253,7 @@ static bool IsPersistentField(string className, string fieldName)
     if (className is "Object") return false;
     if (className == "Component" && fieldName == "owner") return false;
     if (className == "Camera" && fieldName == "renderTargetId") return false;
-    if (className == "StaticMeshRenderer" && fieldName == "renderState") return false;
+    if (className == "StaticMeshRenderer" && fieldName is "renderState" or "runtimeMesh") return false;
     if (className == "Transform")
     {
         return fieldName is "localPosition" or "localRotation" or "localScale";
@@ -287,7 +287,8 @@ static bool IsPersistentField(string className, string fieldName)
     //HeightField 的运行时数据由 Regenerate 管理，不参与序列化。
     if (className == "HeightField")
     {
-        return fieldName is not ("heights" or "generatedMesh" or "noiseTexture" or "runtimeMaterial");
+        return fieldName is not ("heights" or "generation" or "meshPending" or "generatedMesh"
+            or "noiseTexture" or "runtimeMaterial" or "ownsRuntimeMaterial");
     }
 
     //物理枚举字段由 PhysicsReflection.cpp 的手工表注册，MetaGen 不重复处理。

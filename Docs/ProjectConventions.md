@@ -35,26 +35,6 @@ Runtime/Object/
 
 `Component` 基类位于 `Runtime/Object/Component.h`，句柄 `EnsId` 位于 `Runtime/EnsId.h`，两者不混在同一文件。
 
-### 子系统拥有根目录层级的文件夹
-
-继承 `IEngineSystem` 的子系统（以及以 `Manager`、`System` 结尾的引擎系统类）拥有 `Src/` 下的根目录层级文件夹，目录内是该子系统的全部实现：
-
-| 子系统 | 目录 | 说明 |
-|---|---|---|
-| `FileSystem` | `Src/FileSystem/` | |
-| `InputManager` | `Src/InputManager/` | |
-| `PhysicsSystem` | `Src/Physics/` | 含 `PhysicsTypes.h`、`PhysicsReflection.*` |
-| `Profiler` | `Src/Profiler/` | |
-| `RenderSystem` | `Src/Rendering/` | 含 `GpuResourceManager`、`ForwardPipeline`、`Backend/` |
-| `ResourceManager` | `Src/ResourceManager/` | |
-| `ScriptSystem` | `Src/Scripting/` | 含 `ScriptInterop`、`NativeGameModule.h` |
-
-约定：
-
-- 目录名不必与子系统类名逐字相同，但必须与该模块的职责一致（如 `Rendering/` 就是 `RenderSystem` 的模块目录）。
-- 模块内部的管理类（`GpuResourceManager`、`MemoryManager`）不算独立子系统，留在所属模块目录（`Rendering/`、`Memory/`），不单独建目录。
-- 子系统不得散落在 `Runtime/` 等其他目录，不得把子系统实现文件平铺在 `Src/` 根下。
-
 ## 文件命名
 
 - 一个文件承载一个主类；文件名与类名完全一致：`Transform.h` / `Transform.cpp`。

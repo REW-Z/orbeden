@@ -383,7 +383,7 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 | 目录 | 内容 | 去向 |
 | --- | --- | --- |
 | `Project/` | 工程脚手架：`.oeproj`、`*.csproj`、`*.vcxproj`、`Directory.Build.props`、`Content/Shaders/` 下的内置 Shader | 铺到项目根 |
-| `Examples/` | 示例内容：场景、资源、脚本与原生组件 | 铺到 `<项目根>/Content/Examples/`，每次重铺都整目录重建 |
+| `Examples/` | 示例内容：场景、资源、脚本与原生组件 | 新建时铺到 `<项目根>/Content/Examples/`；升级保留，Dev 面板可显式重置 |
 | `Shared/` | 共享属性表与固定桥接源码：`Orbeden.Native.props` / `.targets`、`GameModule.cpp`、`GameAotExports.cs` | 由 `PublishNativeGameSdk` 发布到 `Sdk/Native/` 与 `Sdk/Shared/`，不铺进项目 |
 
 `Project/` 中不得包含任何游戏内容：示例内容一旦与项目自身内容同名，会同时撞上 C# 的全限定类型名、MetaGen 的类型字典和 Player 的链接符号。
@@ -399,7 +399,7 @@ MyGame/
 ├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path
 ├─ Content/                 内容根：内部结构完全自由
 │   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/
-│   └─ Examples/FlightTraining/   示例（引擎管理，重铺时整目录重建）
+│   └─ Examples/FlightTraining/   可编辑的示例游戏（升级保留）
 └─ Build/                   全部构建产物
     ├─ Managed/             C# 开发程序集、obj、PIE 影子副本
     ├─ Aot/                 NativeAOT 库
@@ -444,9 +444,9 @@ MyGame/
 
 1. **内容归位**：按旧布局把内容收进内容根（`Resource/` 这一层去掉，`World/` 改名 `Scenes/`，其余顶层目录整体搬入）。
 2. **清空内容根之外**：`Content/`、`.oeproj` 以及以点开头的条目保留，其余全部删除。
-3. **重铺脚手架**：`Templates/Project/` 铺到项目根，`Templates/Examples/` 整目录重建到 `Content/Examples/`。
+3. **重铺脚手架**：更新 `Templates/Project/` 中的工程文件，跳过 `.oeproj` 和 `Content/`；不复制 `Templates/Examples/`，保留用户对示例的修改与删除。
 4. **同步 SDK 产物**：Core C# 运行库与绑定目标。
-5. **写根属性**：版本号、`name`，并清掉 `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景在重铺前已带出，映射后仍然存在才恢复，否则用模板默认。
+5. **写根属性**：最后更新版本号，清掉 `name` / `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景映射后仍存在才更新路径；其它配置保留，不用模板覆盖原 `.oeproj`。
 
 **版本号最后写入**，任一步失败即中止且不写版本号，下次打开会重新提示，不会留下"版本号已更新、脚手架还是旧的"这种无法自愈的状态。
 
@@ -458,8 +458,15 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 4 | 地形生成网格改用非持久化渲染覆盖，保留 `StaticMeshRenderer.mesh` 源资源路径；地形生成计数、待生成标记与运行时材质所有权不再存盘。组件布局变化，需更新 SDK 并重建游戏原生模块。历史场景中已丢失的源网格路径需从资源或版本记录恢复。 |
 | 2 | 代码工程与生成目录统一收进 `Script/`：原生工程移到 `Script/Native/`，C# 输出移到 `Script/Managed/`，AOT 输出移到 `Script/Aot/`；示例统一收进 `Examples/`；原生构建改为导入 SDK 的 `Orbeden.Native.props` / `.targets`；脚本与 C++ 源文件改为按项目根收集。 |
 | 3 | 引入内容根 `Content/`：内容根的目录结构完全自由，资源 Key 与 `startupWorld` 改为内容根相对；工程文件上移到项目根，构建产物统一收进 `Build/`；`.oeproj` 收缩为 `version` / `name` / `startupWorld`，废弃根属性被清除；内置 Shader 改为按文件名在内容根内查找。 |
+
+版本 4 的 `StaticMeshRenderer.mesh` 保存源资源引用，`SetRuntimeMesh` 设置的覆盖仅用于实际渲染，不进入场景或组件快照。覆盖对象由调用方管理；清除或销毁覆盖后恢复源网格。`HeightField` 的运行时资源、生成计数、待生成标记和材质所有权由当前会话重新建立；旧场景中的这些缓存字段会被忽略。
+
+历史文件若已经把 `mesh` 写成 `world://runtime/Mesh/...`，原源路径无法从随机 ID 推导。请从版本记录恢复源引用，或在 Inspector 重新指定 Mesh；修复后的正常场景不再生成此类地形引用。此次不改变其它 `Ref<>` 字段的序列化规则。
+
+验证命令：先构建 Core Debug，再运行 `Build/TestHeightFieldPersistence.ps1`。测试使用真实 OBJ/材质资源，覆盖保存—重载—再保存、旧缓存字段、地形移除与组件快照恢复。
 
 ## 修改代码后的流程
 

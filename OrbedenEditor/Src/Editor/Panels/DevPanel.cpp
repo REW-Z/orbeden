@@ -126,36 +126,10 @@ void DevPanel::WriteBackExamples()
     const std::string source = GetProjectExamplesPath();
     const std::string target = GetTemplateExamplesPath();
 
-    //模板要能被任意项目名复用，所以示例里不能出现开发项目的名字。
-    //项目名恰好就是某个示例目录名时，示例里出现这个名字是正常的。
-    const std::string& projectName = editor.GetProjectName();
-    if (!projectName.empty() && !IsDirectory(JoinPath(source, projectName)))
+    if (!editor.SaveCurrentWorld())
     {
-        List<std::string> offenders;
-        std::string scanError;
-        if (!NewProjectTemplate::CollectFilesContaining(source, projectName, offenders, scanError))
-        {
-            report = "Write-back failed: " + scanError;
-            return;
-        }
-
-        if (!offenders.empty())
-        {
-            constexpr std::size_t MaxListed = 8;
-            std::string listing;
-            for (std::size_t index = 0; index < offenders.size() && index < MaxListed; ++index)
-            {
-                listing += "\n  " + offenders[index];
-            }
-
-            if (offenders.size() > MaxListed) listing += "\n  ...";
-
-            report = "Write-back refused: " + std::to_string(offenders.size())
-                + " example file(s) still mention the project name '" + projectName
-                + "'. Make the example self-contained (namespace, world:// ids, managed type names) before writing it back."
-                + listing;
-            return;
-        }
+        report = "Write-back failed: " + editor.GetProjectStatusText();
+        return;
     }
 
     NewProjectTemplate::MirrorReport mirrorReport;
@@ -177,17 +151,27 @@ void DevPanel::ResetExamplesFromTemplate()
 {
     report.clear();
 
+    if (!editor.SaveCurrentWorld())
+    {
+        report = "Reset failed: " + editor.GetProjectStatusText();
+        return;
+    }
+
     NewProjectTemplate::MirrorReport mirrorReport;
     std::string error;
-    if (!NewProjectTemplate::MirrorTree(GetTemplateExamplesPath(), GetProjectExamplesPath(), mirrorReport, error))
+    bool mirrored = NewProjectTemplate::MirrorTree(GetTemplateExamplesPath(), GetProjectExamplesPath(), mirrorReport, error);
+    bool reloaded = editor.ReloadProjectContent();
+    if (!mirrored)
     {
         report = "Reset failed: " + error;
+        if (!reloaded) report += "\nContent reload failed: " + editor.GetProjectStatusText();
         return;
     }
 
     report = "Restored examples from template: " + std::to_string(mirrorReport.added) + " added, "
         + std::to_string(mirrorReport.updated) + " updated, "
         + std::to_string(mirrorReport.removed) + " removed.";
+    if (!reloaded) report += "\nContent reload failed: " + editor.GetProjectStatusText();
 }
 
 ORBEDEN_REGISTER_EDITOR_PANEL(DevPanel)

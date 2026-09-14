@@ -216,8 +216,8 @@ bool ProjectUpgrader::UpgradeProject(const UpgradeRequest& request, std::string&
     //2. 清空内容根之外：脚手架与产物全部由下一步重铺。
     ClearOutsideContentRoot(projectRoot, Utf8Path::FromUtf8(request.projectFilePath));
 
-    //3. 重铺脚手架（工程文件铺到项目根，示例铺到内容根的 Examples/）。
-    if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), request.projectName, request.templateRoot, outError)) return false;
+    //3. 只重铺脚手架，保留原项目配置和 Content/ 内全部内容。
+    if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), request.projectName, request.templateRoot, outError, true)) return false;
     CreateContentFolders(contentRoot);
 
     //4. 恢复启动场景：映射后仍然存在才恢复，否则保留模板默认（示例场景）。

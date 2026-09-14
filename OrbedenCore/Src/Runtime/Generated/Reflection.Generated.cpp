@@ -2277,93 +2277,6 @@ public:
         return true;
     }
 
-    //读取 HeightField.generation 字段
-    static std::string Get_HeightField_generation(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::ToXmlValue(instance->generation);
-    }
-
-    //直接读取 HeightField.generation 字段
-    static Reflection::Value GetValue_HeightField_generation(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return instance ? Reflection::ToValue(instance->generation) : Reflection::Value();
-    }
-
-    //写入 HeightField.generation 字段
-    static bool Set_HeightField_generation(Object* object, const std::string& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::SetFromXmlValue(instance->generation, value);
-    }
-
-    //直接写入 HeightField.generation 字段
-    static bool SetValue_HeightField_generation(Object* object, const Reflection::Value& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->generation, value);
-    }
-
-    //读取 HeightField.meshPending 字段
-    static std::string Get_HeightField_meshPending(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::ToXmlValue(instance->meshPending);
-    }
-
-    //直接读取 HeightField.meshPending 字段
-    static Reflection::Value GetValue_HeightField_meshPending(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return instance ? Reflection::ToValue(instance->meshPending) : Reflection::Value();
-    }
-
-    //写入 HeightField.meshPending 字段
-    static bool Set_HeightField_meshPending(Object* object, const std::string& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::SetFromXmlValue(instance->meshPending, value);
-    }
-
-    //直接写入 HeightField.meshPending 字段
-    static bool SetValue_HeightField_meshPending(Object* object, const Reflection::Value& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->meshPending, value);
-    }
-
-    //读取 HeightField.ownsRuntimeMaterial 字段
-    static std::string Get_HeightField_ownsRuntimeMaterial(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::ToXmlValue(instance->ownsRuntimeMaterial);
-    }
-
-    //直接读取 HeightField.ownsRuntimeMaterial 字段
-    static Reflection::Value GetValue_HeightField_ownsRuntimeMaterial(Object* object)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return instance ? Reflection::ToValue(instance->ownsRuntimeMaterial) : Reflection::Value();
-    }
-
-    //写入 HeightField.ownsRuntimeMaterial 字段
-    static bool Set_HeightField_ownsRuntimeMaterial(Object* object, const std::string& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        return Reflection::SetFromXmlValue(instance->ownsRuntimeMaterial, value);
-    }
-
-    //直接写入 HeightField.ownsRuntimeMaterial 字段
-    static bool SetValue_HeightField_ownsRuntimeMaterial(Object* object, const Reflection::Value& value)
-    {
-        HeightField* instance = static_cast<HeightField*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->ownsRuntimeMaterial, value);
-    }
-
     //调用 HeightField.Regenerate 方法
     static Reflection::Value Invoke_HeightField_Regenerate_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4829,12 +4742,12 @@ namespace Reflection
                 FieldInfo("noiseHighColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseHighColor, ReflectionGeneratedAccess::Set_HeightField_noiseHighColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseHighColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseHighColor),
                 FieldInfo("tileSize", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_tileSize, ReflectionGeneratedAccess::Set_HeightField_tileSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_tileSize, ReflectionGeneratedAccess::SetValue_HeightField_tileSize),
                 FieldInfo("heights", "std::vector<float32>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_generation, ReflectionGeneratedAccess::Set_HeightField_generation, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generation, ReflectionGeneratedAccess::SetValue_HeightField_generation),
-                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_meshPending, ReflectionGeneratedAccess::Set_HeightField_meshPending, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_meshPending, ReflectionGeneratedAccess::SetValue_HeightField_meshPending),
+                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("generatedMesh", "Mesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("noiseTexture", "Texture2D*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("runtimeMaterial", "Material*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
-                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_ownsRuntimeMaterial, ReflectionGeneratedAccess::Set_HeightField_ownsRuntimeMaterial, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_ownsRuntimeMaterial, ReflectionGeneratedAccess::SetValue_HeightField_ownsRuntimeMaterial),
+                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
             });
 
         RegisterTypeMethods(HeightField::StaticType(),
@@ -4973,6 +4886,7 @@ namespace Reflection
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enabled),
+                FieldInfo("runtimeMesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr),
                 FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh),
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer),

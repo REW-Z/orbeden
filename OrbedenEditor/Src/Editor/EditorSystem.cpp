@@ -659,6 +659,29 @@ void EditorSystem::RequestBuildNative()
     BuildNativeGameModule(true);
 }
 
+/// <summary>重置后重新读取场景和脚本；加载失败时保持不可保存状态。</summary>
+bool EditorSystem::ReloadProjectContent()
+{
+    if (!project.HasProject() || playMode.IsPlaying()) return false;
+
+    project.MarkWorldPendingReload();
+    managedBridge.UnloadGameAssembly();
+    editorScene.ClearSceneState();
+    app.GetWorld().Clear();
+    if (!BuildNativeGameModule(false)) return false;
+    if (!project.IsWorldLoaded() && !project.ReloadWorld())
+    {
+        projectStatus = project.GetLastError();
+        return false;
+    }
+
+    std::string csproj = GetProjectScriptProjectPath();
+    if (!csproj.empty() && !RunCommand("dotnet build " + Quote(csproj) + " -c Debug", "Build Game C#")) return false;
+    RefreshInspectorGameAssembly();
+    RequestRepaint();
+    return true;
+}
+
 bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
 {
     if (playMode.IsPlaying()) RequestStop();

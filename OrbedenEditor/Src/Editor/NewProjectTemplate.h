@@ -11,7 +11,7 @@
 //
 //模板根下分为三部分：
 //  Project/   项目脚手架，铺到项目根。
-//  Examples/  示例内容，整体铺到 <项目根>/Content/Examples/，每次重铺都整目录重建。
+//  Examples/  示例内容，整体铺到 <项目根>/Content/Examples/，新建时初始化，升级保留。
 //  Shared/    固定的桥接源码与共享属性表，发布到 SDK，不铺进项目。
 //
 //Project/ 中不得包含任何游戏内容：示例内容一旦与项目自身内容同名，
@@ -28,11 +28,12 @@ namespace NewProjectTemplate
     };
 
     //把一棵模板树复制到目标目录；文件名按规则改名，内容逐字节复制。
-    //只覆盖不删除：目标中已存在但模板里没有的文件保持原样。
+    //只覆盖不删除；preserveProjectContent 为真时跳过 Project.oeproj 和 Content/。
     bool CopyTemplateTree(const std::string& sourceDirectory,
         const std::string& targetDirectory,
         const std::string& projectName,
-        std::string& outError);
+        std::string& outError,
+        bool preserveProjectContent = false);
 
     //把 sourceDirectory 镜像到 targetDirectory：复制有变化的文件，并删除目标里多余的。
     //内容相同的文件不重写，这样"什么都没改"的报告就是 0/0/0。
@@ -42,15 +43,10 @@ namespace NewProjectTemplate
         MirrorReport& outReport,
         std::string& outError);
 
-    //在目录里找出现指定文本的文件（只查文本类文件），用于写回前拦截还没规范化的示例。
-    bool CollectFilesContaining(const std::string& sourceDirectory,
-        const std::string& token,
-        List<std::string>& outFiles,
-        std::string& outError);
-
-    //把脚手架与示例铺到项目目录。
+    /// <summary>新建时初始化模板；preserveProjectContent 用于升级，仅更新脚手架。</summary>
     bool GenerateProjectFiles(const std::string& projectRoot,
         const std::string& projectName,
         const std::string& templateRoot,
-        std::string& outError);
+        std::string& outError,
+        bool preserveProjectContent = false);
 }

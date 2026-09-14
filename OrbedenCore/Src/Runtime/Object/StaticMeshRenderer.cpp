@@ -5,6 +5,19 @@
 
 OBJECT_TYPE_IMPLEMENT(StaticMeshRenderer, Component)
 
+/// <summary>设置临时渲染网格，保留用于场景存盘的源资源引用。</summary>
+void StaticMeshRenderer::SetRuntimeMesh(Mesh* value)
+{
+    runtimeMesh.Set(value);
+}
+
+/// <summary>优先解析临时渲染网格，覆盖失效时恢复源网格。</summary>
+Mesh* StaticMeshRenderer::GetRenderMesh() const
+{
+    Mesh* overrideMesh = runtimeMesh.Get();
+    return overrideMesh ? overrideMesh : mesh.Get();
+}
+
 //获取启用状态
 bool StaticMeshRenderer::GetEnabled() const
 {
@@ -55,6 +68,7 @@ void StaticMeshRenderer::OnDetach()
     RenderScene* scene = GetRenderScene();
     if (scene) scene->UnregisterRenderer(this);
     mesh.SetInstanceId(StringId());
+    runtimeMesh.SetInstanceId(StringId());
 }
 
 //所属 Ens 的 worldActive 变化时同步渲染场景注册

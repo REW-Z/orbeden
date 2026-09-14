@@ -30,17 +30,27 @@ private:
     friend class ForwardPipeline;
 
     bool enabled = true;
+    Ref<Mesh> runtimeMesh;
     StaticMeshRendererRenderState renderState;
 
     //按当前状态同步渲染场景注册
     void SyncRenderSceneRegistration();
 
 public:
+    //持久化源网格；程序生成的网格通过 SetRuntimeMesh 覆盖渲染。
     Ref<Mesh> mesh;
     uint32 drawLayer = 1u;
     DrawQueue drawQueue = DrawQueue::Opaque;
     bool castShadows = true;
     bool receiveShadows = true;
+
+    /// <summary>设置非持久化渲染网格，传空恢复源网格；对象由调用方管理。</summary>
+    ORBEDEN_BIND_IGNORE
+    void SetRuntimeMesh(Mesh* value);
+
+    /// <summary>获取实际渲染网格，运行时覆盖失效时恢复源网格。</summary>
+    ORBEDEN_BIND_IGNORE
+    Mesh* GetRenderMesh() const;
 
     //获取启用状态
     bool GetEnabled() const;

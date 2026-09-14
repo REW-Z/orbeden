@@ -74,6 +74,12 @@ public:
     //请求保存当前场景
     void RequestSaveCurrentWorld();
 
+    /// <summary>保存当前编辑状态，失败时阻止模板写回。</summary>
+    bool SaveCurrentWorld();
+
+    /// <summary>从磁盘重新构建并加载项目内容，丢弃重置前的场景和缓存。</summary>
+    bool ReloadProjectContent();
+
     //打开项目内的另一个场景。路径以项目根为基准。
     bool OpenWorld(const std::string& relativeKey);
 
@@ -197,9 +203,6 @@ private:
 
     //设置托管面板可见状态
     void SetManagedPanelVisible(int32 handle, bool visible);
-
-    //保存当前项目启动场景
-    bool SaveCurrentWorld();
 
     //保存当前编辑器布局
     void SaveEditorLayout();
