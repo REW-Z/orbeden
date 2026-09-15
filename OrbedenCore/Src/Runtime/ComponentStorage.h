@@ -7,6 +7,7 @@
 //单个Component类型在一个World中的多实例稀疏集索引
 class ComponentStorage
 {
+    friend class World;
 private:
     //EnsId槽位到该类型所有组件实例的映射
     struct SparseSlot

@@ -1,4 +1,5 @@
 #include <cctype>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -336,10 +337,20 @@ namespace
         {
             if (!field || !field->persistent || !field->getter) continue;
 
+            std::string fieldValue = field->getter(component);
+            if (field->kind == Reflection::FieldKind::EnsId)
+            {
+                EnsId id;
+                if (Reflection::SetFromXmlValue(id, fieldValue))
+                {
+                    Ens* target = component->GetWorld()->GetEns(id);
+                    fieldValue = target ? target->Transform()->GetInstanceId().GetPath() : "";
+                }
+            }
             WriteIndent(output, depth + 1);
             output << "<Field name=\"" << EscapeXml(field->name ? field->name : "") << "\" type=\""
                 << EscapeXml(field->typeName ? field->typeName : "") << "\" value=\""
-                << EscapeXml(field->getter(component)) << "\" />\n";
+                << EscapeXml(fieldValue) << "\" />\n";
         }
 
         if (script && script->IsManagedHost())
@@ -416,6 +427,7 @@ namespace
         const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), name);
         if (field && field->persistent && field->setter)
         {
+            if (field->kind == Reflection::FieldKind::EnsId && (value.empty() || IsWorldObjectRef(value))) return true;
             return field->setter(component, value);
         }
         if (!script || !script->IsManagedHost()) return true;
@@ -597,9 +609,9 @@ namespace
     }
 
     //扫描单个对象的资源Ref字段
-    void LoadResourceRefsFromObject(World& world, Object* object)
+    bool LoadResourceRefsFromObject(World& world, Object* object)
     {
-        if (!object) return;
+        if (!object) return true;
 
         Script* host = object->Cast<Script>();
         if (host && host->IsManagedHost())
@@ -610,12 +622,13 @@ namespace
                     || IsWorldObjectRef(field.value) || !field.typeName.starts_with("Ref<")) continue;
                 std::string name = field.typeName.substr(4, field.typeName.size() - 5);
                 if (name.starts_with("Orbeden.")) name.erase(0, 8);
-                if (Type* type = Object::FindType(name)) ResourceManager::Load(type, field.value);
+                Type* type = Object::FindType(name);
+                if (!type || !ResourceManager::Load(type, field.value)) return false;
             }
         }
 
         const Reflection::TypeInfo* typeInfo = Reflection::FindTypeInfo(object->GetType());
-        if (!typeInfo) return;
+        if (!typeInfo) return true;
 
         for (const Reflection::FieldInfo& field : typeInfo->fields)
         {
@@ -631,20 +644,23 @@ namespace
                 continue;
             }
 
-            ResourceManager::Load(refType, key);
+            if (!ResourceManager::Load(refType, key)) return false;
         }
+        return true;
     }
 
     //扫描World中所有组件的资源Ref字段
-    void LoadWorldResourceRefs(World& world)
+    bool LoadWorldResourceRefs(World& world)
     {
-        world.ForEachEns([&world](Ens& ens)
+        bool success = true;
+        world.ForEachEns([&world, &success](Ens& ens)
             {
                 for (Component* component : ens.GetComponents())
                 {
-                    LoadResourceRefsFromObject(world, component);
+                    if (!LoadResourceRefsFromObject(world, component)) success = false;
                 }
             });
+        return success;
     }
 }
 
@@ -682,45 +698,16 @@ const std::string& WorldSerializer::GetLastUnregisteredComponentType()
 
 bool WorldSerializer::LoadXml(World& world, const std::string& path)
 {
-    lastUnregisteredComponentType.clear();
-
-    Reflection::RegisterGeneratedReflection();
-
-    //读取 World XML 文件
-    if (!FileSystem::Exist(path))
+    std::string error;
+    auto document = ReadDocument(path, error);
+    auto prepared = document ? PrepareWorld(world, *document, error) : nullptr;
+    if (!prepared)
     {
-        Log::Warning(("World file does not exist: " + path).c_str());
+        Log::Error(error.c_str());
         return false;
     }
-
-    std::string content = FileSystem::LoadText(path);
-    XmlReader reader(std::move(content));
-
-    world.Clear();
-
-    //查找 World 根节点并读取
-    XmlToken token;
-    while (reader.Next(token))
-    {
-        if (token.kind == XmlTokenKind::StartElement && token.name == "World")
-        {
-            bool success = ReadWorld(reader, world, token);
-            if (!success)
-            {
-                world.Clear();
-            }
-            else
-            {
-                LoadWorldResourceRefs(world);
-            }
-
-            return success;
-        }
-    }
-
-    LogSerializerError("World XML does not contain a World root element.");
-    world.Clear();
-    return false;
+    world.CommitReplacement(*prepared);
+    return true;
 }
 
 //将 World 序列化到 XML 文件
@@ -756,4 +743,261 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
 
     output << "</World>\n";
     return true;
+}
+
+struct WorldDocument
+{
+    List<XmlToken> tokens;
+};
+
+//解析内存中的层级文档
+std::shared_ptr<WorldDocument> WorldSerializer::ParseDocument(const std::string& text, std::string& error)
+{
+    error.clear();
+    auto document = std::make_shared<WorldDocument>();
+    XmlReader reader(text);
+    List<std::string> stack;
+    XmlToken token;
+    bool rootSeen = false;
+    bool closed = false;
+    while (reader.Next(token))
+    {
+        if (closed) { error = "Unexpected content after document root."; return nullptr; }
+        if (token.kind == XmlTokenKind::StartElement)
+        {
+            if (!rootSeen)
+            {
+                if (token.name != "World" && token.name != "Prefab")
+                { error = "Expected World or Prefab root."; return nullptr; }
+                rootSeen = true;
+            }
+            if (!token.emptyElement) stack.push_back(token.name);
+            else if (stack.empty()) closed = true;
+        }
+        else
+        {
+            if (stack.empty() || stack.back() != token.name)
+            { error = "Mismatched XML element: " + token.name; return nullptr; }
+            stack.pop_back();
+            if (stack.empty()) closed = true;
+        }
+        document->tokens.push_back(token);
+    }
+    if (!rootSeen || !closed || !stack.empty())
+    { error = "Incomplete XML document."; return nullptr; }
+    return document;
+}
+
+//读取文档，不访问反射、资源和对象运行时
+std::shared_ptr<WorldDocument> WorldSerializer::ReadDocument(const std::string& path, std::string& error)
+{
+    std::ifstream input(Utf8Path::FromUtf8(path), std::ios::binary);
+    if (!input) { error = "Cannot read file: " + path; return nullptr; }
+    std::ostringstream text;
+    text << input.rdbuf();
+    if (input.bad()) { error = "File read failed: " + path; return nullptr; }
+    return ParseDocument(text.str(), error);
+}
+
+namespace
+{
+    //输出文档并替换对象身份及引用
+    std::string WriteDocument(const WorldDocument& document,
+        const std::unordered_map<std::string, std::string>& paths, bool clearExternal)
+    {
+        std::ostringstream output;
+        output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+        for (const XmlToken& token : document.tokens)
+        {
+            output << '<';
+            if (token.kind == XmlTokenKind::EndElement)
+            {
+                output << '/' << token.name << ">\n";
+                continue;
+            }
+            output << token.name;
+            for (const auto& attribute : token.attributes)
+            {
+                std::string value = attribute.second;
+                bool reference = token.name == "Field" && attribute.first == "value"
+                    && (GetAttribute(token, "type").starts_with("Ref<")
+                        || GetAttribute(token, "type") == "EnsId");
+                if (attribute.first == "stableId" || reference)
+                {
+                    auto found = paths.find(value);
+                    if (found != paths.end()) value = found->second;
+                    else if (reference && clearExternal && IsWorldObjectRef(value)) value.clear();
+                }
+                output << ' ' << attribute.first << "=\"" << EscapeXml(value) << '"';
+            }
+            output << (token.emptyElement ? " />\n" : ">\n");
+        }
+        return output.str();
+    }
+
+    //恢复稳定身份表示的 Ens 引用
+    bool ApplyEnsReferences(World& world, const WorldDocument& document,
+        const std::unordered_map<std::string, std::string>& paths)
+    {
+        Component* component = nullptr;
+        for (const XmlToken& token : document.tokens)
+        {
+            if (token.name == "Component")
+            {
+                component = nullptr;
+                if (token.kind == XmlTokenKind::StartElement)
+                {
+                    std::string path = GetAttribute(token, "stableId");
+                    auto found = paths.find(path);
+                    if (found != paths.end()) path = found->second;
+                    Object* object = Object::FindObject(StringId(path));
+                    component = object ? object->Cast<Component>() : nullptr;
+                }
+            }
+            if (!component || token.name != "Field" || GetAttribute(token, "type") != "EnsId") continue;
+            std::string path = GetAttribute(token, "value");
+            if (!path.empty() && !IsWorldObjectRef(path)) continue;
+            auto found = paths.find(path);
+            if (found != paths.end()) path = found->second;
+            Ens* target = world.FindEns(StringId(path));
+            const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), GetAttribute(token, "name"));
+            if (field && field->setter && !field->setter(component,
+                Reflection::ToXmlValue(target ? target->GetId() : EnsId()))) return false;
+        }
+        return true;
+    }
+}
+
+//在主线程准备独立且未激活的世界
+std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
+    const WorldDocument& document, std::string& error)
+{
+    error.clear();
+    lastUnregisteredComponentType.clear();
+    if (document.tokens.empty() || document.tokens.front().name != "World")
+    { error = "Expected World document."; return nullptr; }
+    Reflection::RegisterGeneratedReflection();
+    std::unordered_map<std::string, std::string> paths;
+    for (const XmlToken& token : document.tokens)
+    {
+        if (token.kind != XmlTokenKind::StartElement) continue;
+        if (token.name != "Ens" && token.name != "Component") continue;
+        const std::string& original = GetAttribute(token, "stableId");
+        if (original.empty()) continue;
+        //Transform 与所属 Ens 共用稳定身份
+        if (paths.contains(original))
+        {
+            if (token.name == "Component" && GetAttribute(token, "type") == "Transform") continue;
+            error = "Duplicate object identity: " + original;
+            return nullptr;
+        }
+        paths.emplace(original, "world://preparing/" + Object::GenerateUuidText());
+    }
+    auto prepared = std::make_unique<World>();
+    prepared->PrepareReplacement(current);
+    //只替换对象身份，Ref 字段保留目标文件中的稳定路径
+    WorldDocument renamed = document;
+    for (XmlToken& token : renamed.tokens)
+    {
+        auto identity = token.attributes.find("stableId");
+        if (identity != token.attributes.end() && paths.contains(identity->second))
+            identity->second = paths.at(identity->second);
+    }
+    XmlReader reader(WriteDocument(renamed, {}, false));
+    XmlToken root;
+    if (!reader.Next(root) || !ReadWorld(reader, *prepared, root)
+        || !ApplyEnsReferences(*prepared, document, paths) || !LoadWorldResourceRefs(*prepared))
+    {
+        error = lastUnregisteredComponentType.empty() ? "World content or resource validation failed."
+            : "Unregistered component: " + lastUnregisteredComponentType;
+        return nullptr;
+    }
+    for (const auto& entry : paths)
+    {
+        Object* object = Object::FindObject(StringId(entry.second));
+        if (object && object->GetWorld() == prepared.get())
+            prepared->preparedObjectPaths.emplace_back(object, StringId(entry.first));
+    }
+    return prepared;
+}
+
+//捕获完整 Ens 子树
+std::string WorldSerializer::CaptureEns(Ens& ens)
+{
+    std::ostringstream output;
+    output << "<Prefab version=\"1\">\n";
+    WriteEns(output, ens, 1);
+    output << "</Prefab>\n";
+    return output.str();
+}
+
+//保存预制体并清空外部场景引用
+bool WorldSerializer::SavePrefab(Ens& ens, const std::string& path, std::string& error)
+{
+    auto document = ParseDocument(CaptureEns(ens), error);
+    if (!document) return false;
+    std::unordered_map<std::string, std::string> paths;
+    for (const XmlToken& token : document->tokens)
+    {
+        const std::string& id = GetAttribute(token, "stableId");
+        if (!id.empty()) paths.emplace(id, id);
+    }
+    std::ofstream output(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::trunc);
+    if (!output) { error = "Cannot create prefab: " + path; return false; }
+    output << WriteDocument(*document, paths, true);
+    output.flush();
+    if (!output) { error = "Cannot write prefab: " + path; return false; }
+    return true;
+}
+
+//实例化预制体并映射子树身份
+Ens* WorldSerializer::InstantiatePrefab(World& world, const std::string& path, EnsId parent, std::string& error)
+{
+    auto document = ReadDocument(path, error);
+    if (!document || document->tokens.front().name != "Prefab")
+    { if (error.empty()) error = "Expected Prefab document."; return nullptr; }
+    if (!parent.IsNull() && !world.IsAlive(parent))
+    { error = "Prefab parent no longer exists."; return nullptr; }
+    std::unordered_map<std::string, std::string> paths;
+    for (const XmlToken& token : document->tokens)
+    {
+        const std::string& id = GetAttribute(token, "stableId");
+        if (!id.empty() && !paths.contains(id)) paths.emplace(id, "world://ens/" + Object::GenerateUuidText());
+    }
+    std::string xml = WriteDocument(*document, paths, true);
+    auto remapped = ParseDocument(xml, error);
+    if (!remapped) return nullptr;
+    //逐个创建对象前记录已有身份，失败时只清理本次新增内容
+    List<EnsId> previous;
+    world.ForEachEns([&](Ens& ens) { previous.push_back(ens.GetId()); });
+    XmlReader reader(xml);
+    XmlToken token;
+    Ens* root = nullptr;
+    bool success = reader.Next(token);
+    if (success) success = reader.Next(token) && token.name == "Ens" && token.kind == XmlTokenKind::StartElement;
+    if (success)
+    {
+        success = ReadEns(reader, world, world.GetEns(parent), token);
+        root = world.FindEns(StringId(GetAttribute(token, "stableId")));
+    }
+    if (success) success = reader.Next(token) && token.name == "Prefab" && token.kind == XmlTokenKind::EndElement;
+    if (success) success = ApplyEnsReferences(world, *remapped, {});
+    if (success && root)
+    {
+        List<EnsId> added;
+        world.ForEachEns([&](Ens& ens) {
+            if (std::find(previous.begin(), previous.end(), ens.GetId()) == previous.end()) added.push_back(ens.GetId());
+        });
+        for (EnsId id : added)
+            for (Component* component : world.GetEns(id)->GetComponents())
+                if (!LoadResourceRefsFromObject(world, component)) success = false;
+    }
+    if (success && root) return root;
+    List<EnsId> added;
+    world.ForEachEns([&](Ens& ens) {
+        if (std::find(previous.begin(), previous.end(), ens.GetId()) == previous.end()) added.push_back(ens.GetId());
+    });
+    for (auto it = added.rbegin(); it != added.rend(); ++it) world.DestroyEns(*it);
+    error = "Prefab instantiation failed: " + path;
+    return nullptr;
 }

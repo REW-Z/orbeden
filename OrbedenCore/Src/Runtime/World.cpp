@@ -141,7 +141,7 @@ void World::RefreshEnsWorldActive(EnsId ens)
     if (!storedEns || !transform) return;
 
     Ens* parent = GetEns(transform->parent);
-    bool active = storedEns->localActive && (!parent || parent->worldActive);
+    bool active = !preparing && storedEns->localActive && (!parent || parent->worldActive);
     if (storedEns->worldActive != active)
     {
         storedEns->worldActive = active;
@@ -273,6 +273,63 @@ void World::Clear()
     renderSettings = RenderSettings();
 }
 
+//复制句柄版本并隔离准备中的实体
+void World::PrepareReplacement(const World& source)
+{
+    assert(liveEns.empty());
+    preparing = true;
+    ensSlots.resize(source.ensSlots.size());
+    for (uint32 index = 0; index < ensSlots.size(); ++index)
+    {
+        ensSlots[index].version = source.ensSlots[index].version;
+        freeEnsIds.push_back(index);
+    }
+}
+
+//接收准备完成的世界内容并激活组件
+void World::CommitReplacement(World& prepared)
+{
+    assert(prepared.preparing);
+    Clear();
+    ensSlots.swap(prepared.ensSlots);
+    liveEns.swap(prepared.liveEns);
+    freeEnsIds.swap(prepared.freeEnsIds);
+    componentStorages.swap(prepared.componentStorages);
+    ownedObjects.swap(prepared.ownedObjects);
+    renderSettings = prepared.renderSettings;
+
+    //更新容器归属与稳定身份
+    for (ComponentStorage* storage : componentStorages)
+        if (storage) storage->ownerWorld = this;
+    for (Ens* ens : liveEns)
+    {
+        ens->world = this;
+        for (Component* component : ens->componentInstances) component->SetWorld(this);
+    }
+    for (Object* object : ownedObjects) object->SetWorld(this);
+    for (const auto& entry : prepared.preparedObjectPaths)
+        entry.first->ChangeInstancePath(entry.second);
+    prepared.preparedObjectPaths.clear();
+
+    //激活完整层级后挂载组件
+    for (Ens* ens : liveEns)
+    {
+        bool active = ens->localActive;
+        for (Ens* parent = GetParent(ens->ens); parent; parent = GetParent(parent->ens))
+            active = active && parent->localActive;
+        ens->worldActive = active;
+    }
+    List<int32> components;
+    for (Ens* ens : liveEns)
+        for (Component* component : ens->componentInstances) components.push_back(component->GetObjectId());
+    for (int32 id : components)
+    {
+        Object* object = Object::FindObjectById(id);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (component && component->GetWorld() == this) component->OnAttach();
+    }
+}
+
 //创建Ens
 Ens* World::CreateEns(const std::string& name)
 {
@@ -315,6 +372,7 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     }
 
     storedEns = NEW(Ens)Ens(this, value);
+    storedEns->worldActive = !preparing;
     slot->value = storedEns;
     slot->denseIndex = static_cast<uint32>(liveEns.size());
     liveEns.push_back(storedEns);
@@ -357,7 +415,7 @@ bool World::DestroyEns(EnsId ens)
     }
     if (ScriptSystem* scripts = ScriptSystem::Current())
     {
-        if (scripts->DeferEnsDestruction(ens)) return true;
+        if (!preparing && scripts->DeferEnsDestruction(ens)) return true;
     }
 
     Ens* storedEns = GetEns(ens);
@@ -642,7 +700,7 @@ Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string&
     if (!component) return nullptr;
 
     storedEns->AddComponentInstance(component);
-    component->OnAttach();
+    if (!preparing) component->OnAttach();
     return component;
 }
 
@@ -681,7 +739,7 @@ bool World::RemoveComponent(Component* component)
     if (std::find(removingComponents.begin(), removingComponents.end(), objectId) != removingComponents.end()) return true;
     if (ScriptSystem* scripts = ScriptSystem::Current())
     {
-        if (scripts->DeferComponentRemoval(component)) return true;
+        if (!preparing && scripts->DeferComponentRemoval(component)) return true;
     }
 
     if (!component) return false;
@@ -695,7 +753,7 @@ bool World::RemoveComponent(Component* component)
 
     //执行组件卸载回调
     removingComponents.push_back(objectId);
-    component->OnDetach();
+    if (!preparing) component->OnDetach();
 
     //移除组件索引和对象
     Component* removedComponent = storage->Remove(component);

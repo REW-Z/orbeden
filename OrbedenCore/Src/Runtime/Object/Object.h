@@ -14,6 +14,7 @@ class Component;
 class Type;
 class IChunk;
 class World;
+class WorldSerializer;
 class AssetPipelineObjectFactory;
 class ComponentStorage;
 namespace Reflection
@@ -280,6 +281,7 @@ private:
     IChunk* allocationChunk = nullptr;
 
     friend class ::World;
+    friend class ::WorldSerializer;
     friend class ::ResourceManager;
     friend class ::AssetPipelineObjectFactory;
     friend class ::ComponentStorage;
@@ -328,6 +330,10 @@ public:
 
     //设置实例ID
     void SetInstanceId(const StringId& id);
+
+    //更新对象注册表中的实例路径
+    ORBEDEN_BIND_IGNORE
+    void ChangeInstancePath(const StringId& id);
 
     //获取所属世界
     ORBEDEN_BIND_IGNORE

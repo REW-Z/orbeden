@@ -11,6 +11,7 @@
 //运行时世界
 class World
 {
+    friend class WorldSerializer;
     friend class Ens;
     friend class Orbeden::Object;
 
@@ -23,6 +24,8 @@ private:
         uint32 denseIndex = EnsId::InvalidId;
     };
 
+    bool preparing = false;
+    List<std::pair<Object*, StringId>> preparedObjectPaths;
     List<EnsSlot> ensSlots;//按EnsId索引的稀疏槽位表
     List<Ens*> liveEns;//所有存活Ens指针
     List<uint32> freeEnsIds;//等待复用的EnsId槽位
@@ -72,6 +75,17 @@ public:
     RenderSettings renderSettings;
 
     World();
+    World(const World&) = delete;
+    World& operator=(const World&) = delete;
+
+    //判断世界是否正在准备尚未激活的内容
+    bool IsPreparing() const { return preparing; }
+
+    //复制句柄版本并准备独立加载容器
+    void PrepareReplacement(const World& source);
+
+    //接收准备完成的世界内容
+    void CommitReplacement(World& prepared);
 
     //销毁世界及其运行时对象
     ~World();

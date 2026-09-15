@@ -141,6 +141,9 @@ public:
     //获取当前 Application 拥有的 ScriptSystem。
     static ScriptSystem* Current();
 
+    //判断脚本域是否正在执行回调
+    bool IsDispatching() const { return domainDispatching || shuttingDown; }
+
     //回调期间把组件删除延迟到下一个脚本域阶段。
     bool DeferComponentRemoval(Component* component);
 

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <future>
+#include <unordered_map>
+#include "Runtime/WorldSerializer.h"
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -43,6 +46,25 @@ enum class ScriptRuntimeMode
     CLR,
 };
 
+//世界加载操作的可观察状态
+enum class WorldLoadState : int32
+{
+    Preparing, WaitingToCommit, Committing, Succeeded, Failed, Cancelled
+};
+
+//应用拥有的世界加载结果
+struct WorldLoadOperation
+{
+    uint64 id = 0;
+    WorldLoadState state = WorldLoadState::Preparing;
+    std::string error;
+
+    //判断操作是否已经结束
+    bool IsDone() const { return state >= WorldLoadState::Succeeded; }
+    //判断世界是否已成功切换
+    bool Succeeded() const { return state == WorldLoadState::Succeeded; }
+};
+
 class Application : public IWindowResizeListener
 {
 private:
@@ -61,6 +83,12 @@ private:
     };
 
     World world;
+    std::shared_ptr<WorldLoadOperation> pendingWorldLoad;
+    std::unordered_map<uint64, std::shared_ptr<WorldLoadOperation>> worldLoads;
+    std::future<std::pair<std::shared_ptr<WorldDocument>, std::string>> worldRead;
+    std::shared_ptr<WorldDocument> worldDocument;
+    bool dispatching = false;
+    uint64 worldRevision = 0;
     IWindow* window = nullptr;
     List<EngineSystemEntry> systems;
     List<std::type_index> initializingSystems;
@@ -94,6 +122,24 @@ public:
 
     //从 XML 文件读取 World，失败时保留空 World 继续运行
     bool LoadWorld(const std::string& path);
+
+    //获取当前运行时应用
+    static Application* Current();
+
+    //以内容根相对路径请求同步或异步世界加载
+    std::shared_ptr<WorldLoadOperation> LoadWorldOperation(const std::string& key, bool asynchronous);
+
+    //获取指定加载操作
+    std::shared_ptr<WorldLoadOperation> GetWorldLoadOperation(uint64 id) const;
+
+    //在主线程安全点提交已准备的世界
+    void ProcessWorldLoad();
+
+    //取消未提交请求并等待后台读取结束
+    void CancelWorldLoad();
+
+    //获取世界内容切换序号
+    uint64 GetWorldRevision() const { return worldRevision; }
 
     //将当前 World 写入 XML 文件
     bool SaveWorld(const std::string& path) const;

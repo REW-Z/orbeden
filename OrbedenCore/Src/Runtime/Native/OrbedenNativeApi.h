@@ -58,6 +58,6 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 16);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 101);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 104);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
 static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 51);

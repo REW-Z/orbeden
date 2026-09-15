@@ -172,7 +172,7 @@ internal static partial class ManagedTypeMetadataCache
                     Name = field.Name,
                     FieldType = field.FieldType,
                     Kind = kind,
-                    InspectorVisible = field.GetCustomAttribute<HideInInspectorAttribute>() == null,
+                    InspectorVisible = field.GetCustomAttribute<HideInEditorAttribute>() == null,
                     Getter = script => field.GetValue(script),
                     Setter = (script, value) => field.SetValue(script, value),
                 };

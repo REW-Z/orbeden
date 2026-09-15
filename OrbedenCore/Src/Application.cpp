@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <chrono>
 #include <thread>
+#include <filesystem>
+#include "FileSystem/Utf8Path.h"
+#include "FileSystem/PathDefines.h"
 
 #include "Application.h"
 #include "FileSystem/FileSystem.h"
@@ -18,6 +21,8 @@
 
 namespace
 {
+    Application* currentApplication = nullptr;
+    uint64 nextWorldLoadId = 1;
     //计算允许帧率最多快 1 FPS 时的帧时间容差
     std::chrono::steady_clock::duration CalculateFrameTimeTolerance(uint32 targetFrameRate)
     {
@@ -94,6 +99,7 @@ bool Application::Initialize()
     Reflection::RegisterGeneratedReflection();
     PhysicsReflection::Register();
     World::SetCurrentWorld(&world);
+    currentApplication = this;
 
     //创建内置系统
     if (!GetSystem<Profiler>()
@@ -172,18 +178,119 @@ void Application::ShutdownSystems()
 bool Application::LoadWorld(const std::string& path)
 {
     if (!Initialize()) return false;
-    if (PhysicsSystem* physicsSystem = GetSystem<PhysicsSystem>()) physicsSystem->ResetWorld();
+    std::string error;
+    auto document = WorldSerializer::ReadDocument(path, error);
+    auto prepared = document ? WorldSerializer::PrepareWorld(world, *document, error) : nullptr;
+    if (!prepared) { Log::Error(error.c_str()); return false; }
+    ScriptSystem* scripts = GetSystem<ScriptSystem>();
+    bool restart = scripts && scripts->IsInitialized();
+    if (restart) scripts->Shutdown();
+    if (PhysicsSystem* physics = GetSystem<PhysicsSystem>()) physics->ResetWorld();
+    world.CommitReplacement(*prepared);
+    ++worldRevision;
+    if (restart) scripts->Initialize();
+    return true;
+}
 
-    //替换当前 World
-    if (WorldSerializer::LoadXml(world, path))
+//获取当前运行时应用
+Application* Application::Current()
+{
+    return currentApplication;
+}
+
+//请求世界加载
+std::shared_ptr<WorldLoadOperation> Application::LoadWorldOperation(const std::string& key, bool asynchronous)
+{
+    auto operation = std::make_shared<WorldLoadOperation>();
+    operation->id = nextWorldLoadId++;
+    worldLoads.emplace(operation->id, operation);
+    if ((pendingWorldLoad && !pendingWorldLoad->IsDone()) || shuttingDown || quitRequested)
     {
-        return true;
+        operation->state = WorldLoadState::Failed;
+        operation->error = "World loader is busy or shutting down.";
+        return operation;
     }
+    //校验内容根内的相对路径
+    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    if (relative.empty() || relative.is_absolute() || relative.has_root_name()
+        || *relative.begin() == ".." || relative.extension() != ".world")
+    {
+        operation->state = WorldLoadState::Failed;
+        operation->error = "Expected a Content-relative .world key.";
+        return operation;
+    }
+    std::string path = Utf8Path::ToUtf8(Utf8Path::FromUtf8(PathDefines::GetContentRoot()) / relative);
+    pendingWorldLoad = operation;
+    if (asynchronous)
+    {
+        worldRead = std::async(std::launch::async, [path]() {
+            std::string error;
+            auto document = WorldSerializer::ReadDocument(path, error);
+            return std::make_pair(document, error);
+        });
+    }
+    else
+    {
+        worldDocument = WorldSerializer::ReadDocument(path, operation->error);
+        operation->state = worldDocument ? WorldLoadState::WaitingToCommit : WorldLoadState::Failed;
+        if (!dispatching) ProcessWorldLoad();
+    }
+    return operation;
+}
 
-    //记录 World 读取失败
-    Log::Warning("World load failed, continuing with empty world.");
-    world.Clear();
-    return false;
+//获取指定加载操作
+std::shared_ptr<WorldLoadOperation> Application::GetWorldLoadOperation(uint64 id) const
+{
+    auto found = worldLoads.find(id);
+    return found == worldLoads.end() ? nullptr : found->second;
+}
+
+//在安全点完成资源准备与世界替换
+void Application::ProcessWorldLoad()
+{
+    if (dispatching || !pendingWorldLoad || pendingWorldLoad->IsDone()) return;
+    ScriptSystem* scripts = GetSystem<ScriptSystem>();
+    if (scripts && scripts->IsDispatching()) return;
+    auto operation = pendingWorldLoad;
+    if (worldRead.valid())
+    {
+        if (worldRead.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
+        try
+        {
+            auto result = worldRead.get();
+            worldDocument = std::move(result.first);
+            operation->error = std::move(result.second);
+        }
+        catch (const std::exception& exception) { operation->error = exception.what(); }
+        operation->state = worldDocument ? WorldLoadState::WaitingToCommit : WorldLoadState::Failed;
+    }
+    if (operation->state != WorldLoadState::WaitingToCommit) return;
+    auto prepared = WorldSerializer::PrepareWorld(world, *worldDocument, operation->error);
+    worldDocument.reset();
+    if (!prepared) { operation->state = WorldLoadState::Failed; return; }
+    operation->state = WorldLoadState::Committing;
+    bool restart = scripts && scripts->IsInitialized();
+    if (restart) scripts->Shutdown();
+    if (PhysicsSystem* physics = GetSystem<PhysicsSystem>()) physics->ResetWorld();
+    world.CommitReplacement(*prepared);
+    ++worldRevision;
+    fixedAccumulator = 0.0f;
+    if (restart) scripts->Initialize();
+    operation->state = WorldLoadState::Succeeded;
+}
+
+//取消未提交加载并等待读取线程结束
+void Application::CancelWorldLoad()
+{
+    if (pendingWorldLoad && !pendingWorldLoad->IsDone())
+        pendingWorldLoad->state = WorldLoadState::Cancelled;
+    if (worldRead.valid())
+    {
+        try { worldRead.get(); }
+        catch (const std::exception&) {}
+    }
+    worldDocument.reset();
+    pendingWorldLoad.reset();
 }
 
 //将当前 World 写入 XML 文件
@@ -196,6 +303,8 @@ bool Application::SaveWorld(const std::string& path) const
 void Application::Tick(float deltaTime)
 {
     if (!Initialize()) return;
+    ProcessWorldLoad();
+    dispatching = true;
 
     //校正帧时间
     if (deltaTime < 0.0f)
@@ -258,6 +367,8 @@ void Application::Tick(float deltaTime)
             systems[index].system->LateUpdate(world, deltaTime);
         }
     }
+    dispatching = false;
+    ProcessWorldLoad();
 }
 
 //渲染当前 World
@@ -269,7 +380,10 @@ void Application::Render(float deltaTime)
     if (!renderSystem) return;
 
     //渲染系统
+    dispatching = true;
     renderSystem->Render(world, deltaTime);
+    dispatching = false;
+    ProcessWorldLoad();
 }
 
 //提交窗口显示
@@ -329,6 +443,8 @@ void Application::RequestQuit()
 //退出应用并解除当前 World
 void Application::Quit()
 {
+    CancelWorldLoad();
+    if (currentApplication == this) currentApplication = nullptr;
     running = false;
     quitRequested = true;
     initialized = false;

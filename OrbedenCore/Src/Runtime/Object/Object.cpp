@@ -632,6 +632,15 @@ void Object::SetInstanceId(const StringId& id)
     instanceId = id;
 }
 
+//更新对象注册表中的实例路径
+void Object::ChangeInstancePath(const StringId& id)
+{
+    ObjectRuntime& runtime = GetObjectRuntime();
+    runtime.objectByPath.erase(instanceId.GetPath());
+    instanceId = id;
+    runtime.objectByPath[instanceId.GetPath()] = this;
+}
+
 World* Object::GetWorld() const
 {
     return ownerWorld;

@@ -127,7 +127,7 @@ public static unsafe class OrbedenCoreRuntime
         ValidateSize<quaternion>(nameof(quaternion), 16);
         ValidateSize<color>(nameof(color), 16);
 
-        ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 4);
+        ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
         ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 6);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 6);
@@ -140,8 +140,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 16);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 29 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 101 * IntPtr.Size);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 32 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 104 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

@@ -255,6 +255,9 @@ internal unsafe struct WorldBindApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, EnsId> CreateEnsWithStableId;
     public delegate* unmanaged[Cdecl]<byte*, int, EnsId> FindEns;
     public delegate* unmanaged[Cdecl]<EnsId, byte> DestroyEns;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, ulong> LoadWorld;
+    public delegate* unmanaged[Cdecl]<ulong, int> GetWorldLoadState;
+    public delegate* unmanaged[Cdecl]<ulong, byte*, int, int> GetWorldLoadError;
 }
 #pragma warning restore CS0649
 
@@ -343,6 +346,7 @@ public sealed unsafe partial class Ens
     internal static void InitializeWorldNativeApi(WorldBindApi value)
     {
         worldApi = value;
+        World.InitializeNativeApi(value);
         worldApiInitialized = worldApi.CreateEns != null;
     }
 

@@ -53,18 +53,8 @@ MyGame/
 └─ Build/                 全部构建产物
 ```
 
-**只有 `Content/` 里的东西是你的**，其中的目录结构完全自由——可以随意增删改名，把资源、场景、脚本放到任何位置。`Content/` 之外是引擎的地盘：工程文件、SDK 快照和 `Build/` 里的产物都由引擎维护，升级项目时会整块重建，请勿手工修改，也不要把自己的东西放在那里。
+`Content/` 是游戏资产目录，其中的目录结构完全自由——可以随意增删改名，把资源、场景、脚本放到任何位置。`Content/` 内任何目录中的文件都会被自动收集。`Content/` 之外是引擎的地盘：工程文件、SDK 快照和 `Build/` 里的产物都由引擎维护，升级项目时会整块重建，请勿手工修改，也不要把自己的东西放在那里。
 
-新建项目时会生成 `Meshes/`、`Materials/`、`Textures/`、`Shaders/`、`Scenes/`、`Scripts/` 这几个初始子目录，它们只是给你一个起步结构，不是约束。
-
-### 脚本、资源、场景放在哪里都能生效
-
-`Content/` 内任何目录中的文件都会被自动收集，新增文件不需要改工程文件：
-
-- `.cs` 会进入游戏程序集，`.cpp`/`.h` 会进入原生模块和 Player。
-- `.world` 场景以内容根为基准记录在项目配置里；在 Project 面板中双击某个 `.world` 即可切换到该场景。
-- 资源 Key 就是文件相对 `Content/` 的路径，例如 `Meshes/ground.obj//Mesh/Main` 对应 `Content/Meshes/ground.obj`。
-- 内置 Shader（`shadow_depth.orbshader`、`skybox.orbshader`）由引擎按文件名查找，放在 `Content/` 下任何位置都可以。
 
 ### Examples 目录
 
@@ -139,7 +129,7 @@ public 字段会进入序列化和 Inspector。private/protected 字段需要添
 
 `ens.GetComponent<MoveBehaviour>()` 返回最先挂载的实例，`ens.GetComponents<MoveBehaviour>()` 返回按挂载顺序排列的全部实例。同一个 Ens 可以添加多个同类型脚本；用 `[UniqueComponent]` 限制唯一实例，用 `[DependsOnComponent(typeof(...))]` 声明依赖。
 
-`[HideInInspector]` 只隐藏字段，字段仍可保存并随删除 Undo 恢复。不要声明名为 `domain`、`managedTypeName` 或 `enabled` 的序列化字段，这些名称由宿主管理。
+`[HideInEditor]` 只隐藏字段，字段仍可保存并随删除 Undo 恢复。不要声明名为 `domain`、`managedTypeName` 或 `enabled` 的序列化字段，这些名称由宿主管理。
 
 C# 文件修改后：
 
@@ -198,7 +188,7 @@ void MoveBehaviour::OnEnd()
 }
 ```
 
-C++ 生命周期函数同样不能声明为 `virtual`。public 支持字段会自动进入元数据、序列化和 Inspector；非 public 字段可以在声明前添加 `ORBEDEN_SERIALIZE_FIELD`。
+public 支持字段会自动进入元数据、序列化和 Inspector；非 public 字段可以在声明前添加 `ORBEDEN_SERIALIZE_FIELD`。
 
 C++ 文件修改后：
 
@@ -229,29 +219,6 @@ Object 派生的 C++ 组件由 MetaGen 自动生成强类型 C# 包装，直接 
 - Pause：暂停游戏模拟。
 - Stop：结束运行并恢复磁盘中保存的 World。
 
-默认模板使用 PhysX 刚体和简化气动模型。机翼升力垂直于气流和翼展；垂直安定面根据尾部侧向气流产生回正力矩，配合偏航、滚转和俯仰阻尼。场景采用自由飞行，地图随飞机位置动态扩展。
-
-- `Left Shift / Left Ctrl`：增加 / 减少油门，初始油门为零。
-- `W / S`：压低 / 抬高机头。
-- `A / D`：左倾 / 右倾（A 压低左翼，D 压低右翼）。
-- `Q / E`：左 / 右方向舵，接地时同时控制前轮转向。
-- `R`：返回机场并清空速度与油门。
-- `F`：切换受力箭头，默认开启。
-- 按住鼠标右键拖动：围绕飞机观察，松开后保持观察方向；相机跟随位置，不继承机身滚转。
-- `C`：将环绕相机恢复到当前机尾方向。
-
-Play 中的受力线从飞机原点出发：红色为阻力（包含垂尾侧向阻力），蓝色为升力，黄色为推力，黑色为重力。全部箭头使用相同的 `forceDrawScale`，默认 `0.0005` 米/牛顿，即 1 kN 对应 0.5 米；箭头关闭深度测试，便于从机身和地面遮挡中观察。箭头和 HUD 在物理更新后按当前姿态、速度重新计算瞬时受力，不额外施力，也不进行显示平滑；黄色推力箭头始终沿当前机头正前方，长度随油门及前向速度变化。HUD 同步显示四种力的 kN 数值、爬升率与侧滑角。重力读取 PhysX 配置，仅绘制，不重复施加；起落架地面支持力和舵面力矩不包含在这四个箭头内。
-
-`FlightController` 的翼面积默认 24 m²、升力倍率 1.3，阻力使用 `Cd0 + k × Cl²`，推力随前向速度衰减。模板刚体关闭额外线性阻尼，使空中平移受力与箭头一致。可在 Inspector 调整 `verticalFinArea`、`sideForceSlope`、`yawDamping`、`liftMultiplier` 和 `inducedDragCoefficient`。垂尾消除侧滑，不会自动把滚转姿态摆平；转弯时升力倾斜，仍需保留空速并适当拉杆。
-
-`FlightOrbitCamera` 挂在飞机下的相机实体上，启动时记录父级飞机并脱离层级，以世界竖直方向保持地平线稳定。可调整 `distance`、`sensitivity` 和 `defaultElevation`；停止时恢复原来的父级及局部姿态。
-
-`FlightTerrainStreamer` 在 Play 中围绕飞机生成地形，每块 512 × 512 米、65 × 65 个高度样本，目标加载范围为 7 × 7 块，每个物理步最多新增 2 块。外围保留一圈卸载缓冲，机场块固定保留以供返回；CPU 网格、GPU 资源及碰撞体随远块卸载回收。邻块使用全局噪声坐标、连续法线和 UV，并共享同一张可平铺噪声纹理。编辑模式预览机场所在的一块地形，Play 才扩展周围地图。
-
-飞行超过浮动原点阈值（默认 4096 米）时，世界根节点按整块距离平移，飞机速度保持不变，地形继续按原来的全局块索引生成。地图随飞行持续扩展；坐标与块索引仍受数值类型范围限制。分块生成在主线程按预算执行。`chunkSize` 与 `samplesPerSide` 在进入 Play 时确定；修改后重新进入 Play 生效。
-
-原生脚本可通过 `RenderSystem::Current()->DrawLine(world, start, end, color, depthTest, drawLayer)` 提交世界空间线条。线条在当前帧的全部相机目标中绘制后清除，推荐从 `OnLateUpdate` 提交；调用者需检查当前渲染系统指针。
-
 C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执行 `Build Game C#`，也可以让 Play 检查并构建过期脚本。
 
 构建结果和错误会显示在 Build Game 面板的状态区域以及日志中。
@@ -260,17 +227,7 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 
 脚本只需在 `OnEnd()` 中释放自己持有的资源，无需手动注销运行时或断开 Wrapper。从未启动的脚本不会调用 `OnEnd()`。停止或重载后，旧 C# Wrapper 会失效，应重新获取组件引用。
 
-### 将修改过的示例写回模板
-
-停止 Play，打开 `Views > Dev`，点击 `Write Back to Template`。编辑器先保存当前场景，再将项目的 `Content/Examples/` 同步到源码仓库的 `OrbedenEditor/Templates/Examples/`，报告新增、更新和删除数量。保存失败时不会开始同步。
-
-同步只处理文件，不修改场景字段、命名空间或项目工程文件。已知文本格式比较时忽略 LF/CRLF 差异；发生实际修改时按源文件字节复制。内容脚本继续遵循 `Native.X` 约定，新增示例时由开发者保证引用可跨项目使用。
-
-`Reset from Template` 会覆盖项目示例并删除模板中不存在的文件。它先保存当前编辑，再同步模板，之后重新构建脚本并加载场景，清理重置前的缓存和撤销记录。同步或重载失败会在面板报告；文件同步不是事务，失败前可能已有部分文件更新。项目升级不会自动重置示例。
-
 ## 7. 构建 Player
-
-正式发布建议使用 Release 版 Editor，并首先以 `Windows x64` 验证。
 
 1. 停止 Play。
 2. 按 `Ctrl+S` 保存项目。
@@ -320,13 +277,3 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 ### 生命周期函数没有执行
 
 检查名称、参数和返回类型是否完全正确，并确认方法没有声明为 `static`、`virtual` 或泛型方法。
-
-### 修改在停止 Play 后消失
-
-这是预期行为。需要持久化的修改应在非 Play 状态下完成并按 `Ctrl+S` 保存。
-
-### 飞行地形材质和机轮参数
-
-地形材质引用使用 `Meshes/ground.obj//Material/GroundMaterial`：MTL 中的材质属于 OBJ 导入产生的子资源，应使用 OBJ 下的材质资源路径。`WheelCollider.suspensionRestLength` 表示安装点到轮心的距离，轮半径单独参与接地计算。
-
-更深入的实现说明见 [脚本系统](ScriptSystem.md)，平台工具链和目录说明见 [构建与打包](BuildAndPackaging.md)。

@@ -54,7 +54,7 @@ namespace Game;
 public sealed class NpcAi : Script
 {
     public float speed = 2.0f;
-    [SerializeField, HideInInspector] private int savedCounter;
+    [SerializeField, HideInEditor] private int savedCounter;
     public Mesh? mesh;
     public EnsId target;
 
@@ -80,7 +80,7 @@ public sealed class NpcAi : Script
 
 编辑器添加 C# 组件时也在真实宿主上下文中执行构造函数，补齐字段初始化器和构造函数产生的序列化默认值，但不执行生命周期。构造函数应只做初始化；场景行为放入 `OnStart`。
 
-public 的受支持字段参与序列化；非 public 字段需要 `[SerializeField]`。`[HideInInspector]` 只隐藏字段，不取消持久化，也不影响删除 Undo 的快照。`domain`、`managedTypeName`、`enabled` 是保留字段名，不要在派生类声明同名字段。
+public 的受支持字段参与序列化；非 public 字段需要 `[SerializeField]`。`[HideInEditor]` 只隐藏字段，不取消持久化，也不影响删除 Undo 的快照。`domain`、`managedTypeName`、`enabled` 是保留字段名，不要在派生类声明同名字段。
 
 支持基本数值、字符串、vector3、color、quaternion、EnsId 和可绑定的原生 Object 引用。数组、列表、自定义结构体、委托和任意托管对象图不属于当前字段协议。
 

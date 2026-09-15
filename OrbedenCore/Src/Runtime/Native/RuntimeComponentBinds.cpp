@@ -9,6 +9,7 @@
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
+#include "Application.h"
 
 #include <algorithm>
 #include <cstring>
@@ -34,6 +35,29 @@ namespace
         }
 
         return byteCount;
+    }
+
+    //请求内容根内的世界加载
+    uint64 ORBEDEN_NATIVE_CALL NativeLoadWorld(const uint8* key, int32 length, uint8 asynchronous)
+    {
+        Application* app = Application::Current();
+        return app ? app->LoadWorldOperation(ReadUtf8Text(key, length), asynchronous != 0)->id : 0;
+    }
+
+    //查询加载操作状态
+    int32 ORBEDEN_NATIVE_CALL NativeGetWorldLoadState(uint64 id)
+    {
+        Application* app = Application::Current();
+        auto operation = app ? app->GetWorldLoadOperation(id) : nullptr;
+        return static_cast<int32>(operation ? operation->state : WorldLoadState::Cancelled);
+    }
+
+    //读取加载失败原因
+    int32 ORBEDEN_NATIVE_CALL NativeGetWorldLoadError(uint64 id, uint8* buffer, int32 size)
+    {
+        Application* app = Application::Current();
+        auto operation = app ? app->GetWorldLoadOperation(id) : nullptr;
+        return CopyText(operation ? operation->error : "World runtime is unavailable.", buffer, size);
     }
 
     //获取当前 World 中的唯一 Ens 实例。
@@ -139,6 +163,9 @@ WorldBind WorldBind::Create()
     bind.CreateEnsWithStableId = reinterpret_cast<void*>(&NativeWorldCreateEnsWithStableId);
     bind.FindEns = reinterpret_cast<void*>(&NativeWorldFindEns);
     bind.DestroyEns = reinterpret_cast<void*>(&NativeWorldDestroyEns);
+    bind.LoadWorld = reinterpret_cast<void*>(&NativeLoadWorld);
+    bind.GetWorldLoadState = reinterpret_cast<void*>(&NativeGetWorldLoadState);
+    bind.GetWorldLoadError = reinterpret_cast<void*>(&NativeGetWorldLoadError);
     return bind;
 }
 

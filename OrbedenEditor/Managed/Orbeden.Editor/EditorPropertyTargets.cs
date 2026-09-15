@@ -246,7 +246,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
         {
             foreach (FieldInfo field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             {
-                if (field.IsStatic || field.GetCustomAttribute<HideInInspectorAttribute>() != null) continue;
+                if (field.IsStatic || field.GetCustomAttribute<HideInEditorAttribute>() != null) continue;
                 if (!field.IsPublic && field.GetCustomAttribute<SerializeFieldAttribute>() == null) continue;
                 InteropValueKind kind = EditorManagedInteropValue.GetKind(field.FieldType);
                 if (kind == InteropValueKind.Empty) continue;
@@ -261,7 +261,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
             foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
                 if (property.GetIndexParameters().Length != 0 || property.GetMethod == null || property.SetMethod == null) continue;
-                if (property.GetCustomAttribute<HideInInspectorAttribute>() != null || fields.ContainsKey(property.Name)) continue;
+                if (property.GetCustomAttribute<HideInEditorAttribute>() != null || fields.ContainsKey(property.Name)) continue;
                 InteropValueKind kind = EditorManagedInteropValue.GetKind(property.PropertyType);
                 if (kind == InteropValueKind.Empty) continue;
                 if (managedProperties.ContainsKey(property.Name))
