@@ -971,6 +971,7 @@ Object* Object::CreateInstance(Type* type)
     }
 
     World* world = World::CurrentWorld();
+    if (type == Ens::StaticType()) return world ? world->CreateEns() : nullptr;
     if (world)
     {
         Object* object = CreateRawInstance(type, world->AllocateRuntimeObjectPath(type));
@@ -1046,6 +1047,9 @@ bool Object::DestroyObjectFromBinding(Object* object)
 {
     if (!object || !IsObjectAlive(object->GetObjectId())) return false;
 
+    if (Ens* ens = object->Cast<Ens>())
+        return ens->GetWorld() && ens->GetWorld()->DestroyEns(ens->GetId());
+
     if (Component* component = object->Cast<Component>())
     {
         World* world = component->GetWorld();
@@ -1076,6 +1080,8 @@ bool Object::DestroyObjectFromBinding(Object* object)
 bool Object::DeleteInstance(Object* object)
 {
     if (!object) return false;
+    if (Ens* ens = object->Cast<Ens>())
+        return ens->GetWorld() && ens->GetWorld()->DestroyEns(ens->GetId());
 
     switch (object->GetOwnership())
     {

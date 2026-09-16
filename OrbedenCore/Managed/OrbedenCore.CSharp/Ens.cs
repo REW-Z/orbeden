@@ -8,30 +8,26 @@ using System.Text;
 namespace Orbeden;
 
 /// <summary>托管侧 Ens 代理，Native Ens 本体由 World 唯一持有。</summary>
-public sealed partial class Ens : IEquatable<Ens>
+public sealed partial class Ens : Object, IEquatable<Ens>
 {
     /// <summary>空 Ens。</summary>
-    public static readonly Ens Null = new(EnsId.Null);
+    public static readonly Ens Null = new();
 
-    private static readonly Dictionary<EnsId, Ens> cache = [];
 
     /// <summary>底层 EnsId。</summary>
     public EnsId Id { get; }
 
-    private Ens(EnsId id)
-    {
-        Id = id;
-    }
+    //创建空 Ens 包装
+    private Ens() { Id = EnsId.Null; }
+
+    //连接具有独立 Object 身份的 Ens
+    internal Ens(IntPtr pointer) : base(pointer) { Id = GetId(); }
 
     /// <summary>通过 EnsId 获取托管代理。</summary>
-    public static Ens FromId(EnsId id)
+    public static unsafe Ens FromId(EnsId id)
     {
-        if (id.IsNull) return Null;
-        if (cache.TryGetValue(id, out Ens? value)) return value;
-
-        value = new(id);
-        cache[id] = value;
-        return value;
+        if (id.IsNull || !ensApiInitialized || ensApi.GetObjectId == null) return Null;
+        return NativeBindingRuntime.Wrap<Ens>(ensApi.GetObjectId(id)) ?? Null;
     }
 
     /// <summary>创建新的 Ens。</summary>
@@ -53,7 +49,7 @@ public sealed partial class Ens : IEquatable<Ens>
     }
 
     /// <summary>判断 Ens 是否仍然有效。</summary>
-    public bool IsValid => IsAlive(Id);
+    public override bool IsValid => base.IsValid && IsEnsAlive(Id);
 
     /// <summary>Ens 自身设置的激活状态。</summary>
     public bool LocalActive
@@ -244,6 +240,7 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetLocalActive;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
+    public delegate* unmanaged[Cdecl]<EnsId, int> GetObjectId;
 }
 #pragma warning restore CS0649
 
@@ -274,7 +271,7 @@ public sealed unsafe partial class Ens
     }
 
     //判断 Ens 是否有效
-    internal static bool IsAlive(EnsId ens)
+    internal static bool IsEnsAlive(EnsId ens)
     {
         return ensApiInitialized && ensApi.IsAlive != null && ensApi.IsAlive(ens) != 0;
     }

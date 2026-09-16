@@ -1,7 +1,7 @@
 #include "SampleNativeBehaviour.h"
 
 #include "Log/Log.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
 
 #include <cmath>

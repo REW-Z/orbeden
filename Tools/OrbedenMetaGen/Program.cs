@@ -51,7 +51,7 @@ if (classes.Count == 0)
 var errors = new List<string>();
 foreach (var classInfo in classes)
 {
-    if (classInfo.Name is "Script" or "Object" or "Component")
+    if (classInfo.Name is "Script" or "Object" or "Component" or "Ens")
     {
         classInfo.Fields.Clear();
         classInfo.Methods.Clear();

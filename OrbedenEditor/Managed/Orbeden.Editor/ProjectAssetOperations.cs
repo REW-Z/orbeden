@@ -49,6 +49,15 @@ internal static class ProjectAssetOperations
                 return false;
             }
 
+            if (!EditorAssetsNative.RemapWorldKeys(plan.OldResourceKey, plan.NewResourceKey, plan.Prefix))
+            {
+                message = EditorAssetsNative.GetProjectError();
+                plan.Rollback();
+                if (directory) Directory.Move(destinationPath, sourcePath);
+                else File.Move(destinationPath, sourcePath);
+                return false;
+            }
+
             EditorPanelRegistry.RemapAssetReferences(plan.OldResourceKey, plan.NewResourceKey, plan.Prefix);
             int liveCount = EditorAssetsNative.RemapLiveReferences(plan.OldResourceKey, plan.NewResourceKey, plan.Prefix);
             EditorAssetCatalog.Instance.Refresh();
@@ -69,6 +78,14 @@ internal static class ProjectAssetOperations
         message = string.Empty;
         if (!TryValidateSource(source, out string sourcePath, out message)) return false;
 
+        string startupKey = EditorAssetsNative.GetWorldKey(true);
+        if (!string.IsNullOrEmpty(startupKey)
+            && IsSameOrChild(Path.Combine(EditorAssetCatalog.Instance.ContentRoot, startupKey), sourcePath))
+        {
+            message = "Select another startup World before deleting this asset.";
+            return false;
+        }
+
         ReferenceRewritePlan plan = ReferenceRewritePlan.Create(sourcePath, null, deleting: true);
         if (plan.Errors.Count > 0)
         {
@@ -88,6 +105,7 @@ internal static class ProjectAssetOperations
                 FileSystem.DeleteFile(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
             }
 
+            EditorAssetsNative.RemapWorldKeys(plan.OldResourceKey, string.Empty, plan.Prefix);
             EditorPanelRegistry.RemapAssetReferences(plan.OldResourceKey, string.Empty, plan.Prefix);
             int liveCount = EditorAssetsNative.RemapLiveReferences(plan.OldResourceKey, string.Empty, plan.Prefix);
             EditorAssetCatalog.Instance.Refresh();
@@ -452,7 +470,7 @@ internal sealed class ReferenceRewritePlan
     private string RewriteFile(string path, string content, string oldOwnerKey, string newOwnerKey)
     {
         string lowerPath = path.ToLowerInvariant();
-        if (lowerPath.EndsWith(".world")) return RewriteWorld(content);
+        if (lowerPath.EndsWith(".world") || lowerPath.EndsWith(".prefab")) return RewriteWorld(content);
         if (lowerPath.EndsWith(".orbshader")) return RewriteRegexDependency(content, IncludeRegex, oldOwnerKey, newOwnerKey, relative: true);
         if (lowerPath.EndsWith(".mtl"))
         {
@@ -690,6 +708,7 @@ internal sealed class ReferenceRewritePlan
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return false;
         string lower = path.ToLowerInvariant();
         return lower.EndsWith(".world")
+            || lower.EndsWith(".prefab")
             || lower.EndsWith(".orbshader")
             || lower.EndsWith(".mtl")
             || lower.EndsWith(".obj")

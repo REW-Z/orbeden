@@ -49,7 +49,7 @@ NativeBindingBuffer NativeBindings::AllocateBuffer(std::span<const uint8> data)
 void NativeBindings::ReleaseBuffer(NativeBindingBuffer buffer) { delete[] buffer.data; }
 
 #include "Runtime/World.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "ResourceManager/ResourceManager.h"
 
 namespace

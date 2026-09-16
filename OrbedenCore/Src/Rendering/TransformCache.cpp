@@ -1,7 +1,7 @@
 #include "Rendering/TransformCache.h"
 
 #include "Rendering/RenderMath.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
 
 #include <algorithm>

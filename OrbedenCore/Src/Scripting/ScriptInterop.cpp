@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Script.h"
 

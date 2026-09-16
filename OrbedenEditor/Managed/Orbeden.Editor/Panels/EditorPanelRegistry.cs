@@ -151,6 +151,7 @@ internal static unsafe class EditorPanelRegistry
     /// <summary>向全部 C# Panel 广播游戏程序集卸载事件。</summary>
     public static void UnloadGameAssembly()
     {
+        EditorObjectField.Clear();
         foreach (EditorPanel panel in panels)
         {
             try

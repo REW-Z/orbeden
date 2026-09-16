@@ -303,7 +303,7 @@ void World::CommitReplacement(World& prepared)
         if (storage) storage->ownerWorld = this;
     for (Ens* ens : liveEns)
     {
-        ens->world = this;
+        ens->SetWorld(this);
         for (Component* component : ens->componentInstances) component->SetWorld(this);
     }
     for (Object* object : ownedObjects) object->SetWorld(this);
@@ -371,14 +371,23 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
         slot->version = value.version;
     }
 
-    storedEns = NEW(Ens)Ens(this, value);
+    storedEns = static_cast<Ens*>(Object::CreateRawInstance(Ens::StaticType(), stableId));
+    if (!storedEns)
+    {
+        freeEnsIds.push_back(value.id);
+        return nullptr;
+    }
+    storedEns->SetWorld(this);
+    storedEns->SetOwnership(Object::Ownership::WorldOwned);
+    storedEns->ens = value;
+    storedEns->alive = true;
     storedEns->worldActive = !preparing;
     slot->value = storedEns;
     slot->denseIndex = static_cast<uint32>(liveEns.size());
     liveEns.push_back(storedEns);
 
     ComponentStorage* transformStorage = GetOrCreateComponentStorage(Transform::StaticType());
-    Component* transformComponent = transformStorage ? transformStorage->Create(value, stableId) : nullptr;
+    Component* transformComponent = transformStorage ? transformStorage->Create(value, Object::CreateRuntimeInstancePath(stableId, Transform::StaticType())) : nullptr;
     Transform* transform = transformComponent ? transformComponent->Cast<Transform>() : nullptr;
     if (!transform)
     {
@@ -386,8 +395,9 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
         liveEns.pop_back();
         slot->value = nullptr;
         slot->denseIndex = EnsId::InvalidId;
-        storedEns->~Ens();
-        Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
+        storedEns->SetWorld(nullptr);
+        storedEns->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(storedEns);
         freeEnsIds.push_back(value.id);
         return nullptr;
     }
@@ -490,8 +500,9 @@ bool World::DestroyEns(EnsId ens)
 
     slot.value = nullptr;
     slot.denseIndex = EnsId::InvalidId;
-    storedEns->~Ens();
-    Memory::GetHeapAllocator()->Deallocate(reinterpret_cast<std::byte*>(storedEns));
+    storedEns->SetWorld(nullptr);
+    storedEns->SetOwnership(Object::Ownership::None);
+    Object::DestroyDetachedInstance(storedEns);
 
     freeEnsIds.push_back(ens.id);
     return true;
@@ -693,7 +704,7 @@ Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string&
 
     //创建并注册组件
     std::string instancePath = stablePath.empty()
-        ? Object::CreateRuntimeInstancePath(transform->GetInstanceId().GetPath(), type) : stablePath;
+        ? Object::CreateRuntimeInstancePath(storedEns->GetInstanceId().GetPath(), type) : stablePath;
     if (Object::FindObject(StringId(instancePath))) return nullptr;
     ComponentStorage* storage = GetOrCreateComponentStorage(type);
     Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
@@ -780,11 +791,8 @@ bool World::RemoveComponent(Component* component)
 Ens* World::FindEns(const StringId& id) const
 {
     Object* object = Object::FindObject(id);
-    Transform* transform = object ? object->Cast<Transform>() : nullptr;
-    if (!transform) return nullptr;
-    if (transform->GetWorld() != this) return nullptr;
-
-    return const_cast<World*>(this)->GetEns(transform->GetEnsId());
+    Ens* ens = object ? object->Cast<Ens>() : nullptr;
+    return ens && ens->GetWorld() == this && ens->IsValid() ? ens : nullptr;
 }
 
 //遍历所有存活的Ens

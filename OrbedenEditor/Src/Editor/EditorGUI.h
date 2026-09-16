@@ -47,11 +47,18 @@ public:
     void* setClipboardText = nullptr;
     void* beginDisabled = nullptr;
     void* endDisabled = nullptr;
+    void* beginChild = nullptr;
+    void* endChild = nullptr;
+    void* treeNode = nullptr;
+    void* treePop = nullptr;
+    void* openPopup = nullptr;
+    void* beginPopup = nullptr;
+    void* closePopup = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 30);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 37);
 
 //Editor ImGui 绑定层
 class EditorGUI

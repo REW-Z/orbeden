@@ -114,11 +114,12 @@ internal sealed class NativeComponentPropertyTarget : IPropertyTarget
             if (component.IsManaged && kind == InteropValueKind.EnsId) kind = InteropValueKind.StringId;
             if (string.IsNullOrEmpty(name) || kind == InteropValueKind.Empty) continue;
             fields[name] = (index, kind);
-            descriptors.Add(new PropertyDescriptor(name, kind));
+            descriptors.Add(new PropertyDescriptor(name, kind, EditorNativeComponents.GetFieldReferenceType(objectId, index)));
         }
         properties = descriptors;
     }
 
+    public bool AllowsSceneReferences => true;
     public string Identity => $"native:{stableId}";
     public IReadOnlyList<PropertyDescriptor> Properties => properties;
 
@@ -256,7 +257,7 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                     continue;
                 }
                 fields[field.Name] = field;
-                descriptors.Add(new PropertyDescriptor(field.Name, kind));
+                descriptors.Add(new PropertyDescriptor(field.Name, kind, kind is InteropValueKind.Object or InteropValueKind.EnsId ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty));
             }
             foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
@@ -270,12 +271,13 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                     continue;
                 }
                 managedProperties[property.Name] = property;
-                descriptors.Add(new PropertyDescriptor(property.Name, kind));
+                descriptors.Add(new PropertyDescriptor(property.Name, kind, kind is InteropValueKind.Object or InteropValueKind.EnsId ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty));
             }
         }
         properties = descriptors;
     }
 
+    public bool AllowsSceneReferences => instance is Component or Ens;
     public string Identity => $"managed:{RuntimeHelpers.GetHashCode(instance)}";
     public IReadOnlyList<PropertyDescriptor> Properties => properties;
 

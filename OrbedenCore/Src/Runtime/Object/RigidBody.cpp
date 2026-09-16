@@ -1,6 +1,6 @@
 #include "Runtime/Object/RigidBody.h"
 
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
 
 OBJECT_TYPE_IMPLEMENT(RigidBody, Component)

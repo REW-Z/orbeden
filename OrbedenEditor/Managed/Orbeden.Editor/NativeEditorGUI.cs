@@ -39,6 +39,13 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, void> SetClipboardText;
     public delegate* unmanaged[Cdecl]<byte, void> BeginDisabled;
     public delegate* unmanaged[Cdecl]<void> EndDisabled;
+    public delegate* unmanaged[Cdecl]<byte*, int, float*, float, byte, byte> BeginChild;
+    public delegate* unmanaged[Cdecl]<void> EndChild;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, int> TreeNode;
+    public delegate* unmanaged[Cdecl]<void> TreePop;
+    public delegate* unmanaged[Cdecl]<byte*, int, void> OpenPopup;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopup;
+    public delegate* unmanaged[Cdecl]<void> ClosePopup;
 }
 #pragma warning restore CS0649
 
@@ -53,6 +60,45 @@ internal static unsafe class NativeEditorGUI
         api = value;
         initialized = api.Label != null;
     }
+
+    //开始可调整宽度的独立滚动区域
+    internal static bool BeginChild(string id, ref float width, float height = 0, bool resizable = false)
+    {
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes)
+        fixed (float* size = &width)
+            return api.BeginChild(pointer, bytes.Length, size, height, resizable ? (byte)1 : (byte)0) != 0;
+    }
+
+    //结束滚动区域
+    internal static void EndChild() => api.EndChild();
+
+    //绘制目录节点并返回展开与点击状态
+    internal static int TreeNode(string label, bool selected)
+    {
+        byte[] bytes = Encode(label);
+        fixed (byte* pointer = bytes) return api.TreeNode(pointer, bytes.Length, selected ? (byte)1 : (byte)0);
+    }
+
+    //结束目录节点
+    internal static void TreePop() => api.TreePop();
+
+    //打开确认弹窗
+    internal static void OpenPopup(string id)
+    {
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) api.OpenPopup(pointer, bytes.Length);
+    }
+
+    //开始模态弹窗
+    internal static bool BeginPopup(string id)
+    {
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) return api.BeginPopup(pointer, bytes.Length) != 0;
+    }
+
+    //关闭当前弹窗
+    internal static void ClosePopup() => api.ClosePopup();
 
     //编码 UTF-8 文本
     private static byte[] Encode(string? text)

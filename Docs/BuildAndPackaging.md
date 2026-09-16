@@ -458,6 +458,8 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 6 | Ens 改为独立 Object，拥有自身稳定 ID，Transform 保留独立组件身份。升级项目时更新原生 Ens 头文件路径；读取旧 World/Prefab 时拆分共用身份并按字段类型重映射引用。更新 SDK、绑定和原生模块。 |
+| 5 | 新增同步／异步 World 加载操作和预制体序列化接口；更新运行时函数表，需重建托管及原生游戏模块。 |
 | 4 | 地形生成网格改用非持久化渲染覆盖，保留 `StaticMeshRenderer.mesh` 源资源路径；地形生成计数、待生成标记与运行时材质所有权不再存盘。组件布局变化，需更新 SDK 并重建游戏原生模块。历史场景中已丢失的源网格路径需从资源或版本记录恢复。 |
 | 2 | 代码工程与生成目录统一收进 `Script/`：原生工程移到 `Script/Native/`，C# 输出移到 `Script/Managed/`，AOT 输出移到 `Script/Aot/`；示例统一收进 `Examples/`；原生构建改为导入 SDK 的 `Orbeden.Native.props` / `.targets`；脚本与 C++ 源文件改为按项目根收集。 |
 | 3 | 引入内容根 `Content/`：内容根的目录结构完全自由，资源 Key 与 `startupWorld` 改为内容根相对；工程文件上移到项目根，构建产物统一收进 `Build/`；`.oeproj` 收缩为 `version` / `name` / `startupWorld`，废弃根属性被清除；内置 Shader 改为按文件名在内容根内查找。 |

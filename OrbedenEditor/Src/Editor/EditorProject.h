@@ -76,6 +76,18 @@ public:
     //切换到项目内的另一个场景并加载。路径以内容根为基准，场景放在任何目录都能打开。
     bool OpenWorld(const std::string& relativePath);
 
+    //获取启动 World 资源 Key
+    const std::string& GetStartupWorldKey() const;
+
+    //设置并持久化启动 World
+    bool SetStartupWorld(const std::string& key);
+
+    //同步移动或删除后的 World 配置
+    bool RemapWorldKeys(const std::string& oldKey, const std::string& newKey, bool prefix);
+
+    //创建默认空 World 文件
+    bool CreateWorld(const std::string& key);
+
     //判断当前场景是否已经完整加载到内存。
     bool IsWorldLoaded() const;
 

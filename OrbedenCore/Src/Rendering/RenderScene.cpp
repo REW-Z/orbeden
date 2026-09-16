@@ -2,7 +2,7 @@
 
 #include "Rendering/RenderMath.h"
 #include "Rendering/TransformCache.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"

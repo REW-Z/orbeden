@@ -1,6 +1,6 @@
 #include "FlightTerrainStreamer.h"
 #include "Runtime/Object/HeightField.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Transform.h"

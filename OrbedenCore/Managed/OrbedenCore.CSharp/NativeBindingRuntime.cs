@@ -88,6 +88,12 @@ public static unsafe class NativeBindingRuntime
     /// <summary>按实际原生类型包装对象，基类查询不会降级实例类型。</summary>
     public static T? Wrap<T>(int objectId) where T : Object => Wrap(objectId, typeof(T)) as T;
 
+    /// <summary>按已注册的原生类型名查找托管包装类型。</summary>
+    public static Type? GetManagedType(string nativeName) => names.TryGetValue(nativeName, out Entry? entry) ? entry.Type : null;
+
+    /// <summary>读取托管包装注册的原生类型名。</summary>
+    public static string? GetNativeTypeName(Type managedType) => types.TryGetValue(managedType, out Entry? entry) ? entry.Name : null;
+
     internal static Object? Wrap(int objectId, Type? requestedType = null)
     {
         if (objectId == 0 || api.GetObjectPointer == null) return null;

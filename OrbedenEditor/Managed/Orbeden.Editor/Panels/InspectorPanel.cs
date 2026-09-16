@@ -342,12 +342,12 @@ internal sealed class InspectorPanel : EditorPanel
                 ? $"{property.Name} (Mixed)"
                 : property.Name;
             InteropValue value;
-            if (nativeType.Length != 0 && property.Name == "mesh" && property.Kind == InteropValueKind.StringId)
+            if (property.ReferenceType.Length != 0)
             {
-                property.Value.TryGet(out string key);
-                Orbeden.Object? mesh = EditorGUI.LoadObjectFieldAsset(typeof(Mesh), key);
-                if (!EditorGUI.ObjectField(label, typeof(Mesh), ref mesh, ref key)) continue;
-                value = InteropValue.FromStringId(key);
+                if (!EditorObjectField.Draw(label, property, out value))
+                {
+                    continue;
+                }
             }
             else if (property.Kind == InteropValueKind.UInt32 && nativeType.Length != 0
                 && property.Name is "drawQueue" or "bodyType" or "shape")

@@ -6,7 +6,7 @@
 #include "Platform/GlfwWindow.h"
 #include "Rendering/RenderMath.h"
 #include "Rendering/RenderSystem.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Object.h"
@@ -433,15 +433,15 @@ std::string EditorScene::GetSelectedStableId() const
 std::string EditorScene::GetStableId(EnsId ens) const
 {
     if (ens.IsNull()) return std::string();
-    const Transform* transform = app.GetWorld().GetTransform(ens);
-    return transform ? transform->GetInstanceId().GetPath() : std::string();
+    const Ens* value = app.GetWorld().GetEns(ens);
+    return value ? value->GetInstanceId().GetPath() : std::string();
 }
 
 //判断 Ens 是否属于编辑器临时场景对象。
 bool EditorScene::IsTemporaryEns(EnsId ens) const
 {
-    const Transform* transform = app.GetWorld().GetTransform(ens);
-    return transform && transform->GetInstanceId().GetPath() == EditorCameraId;
+    const Ens* value = app.GetWorld().GetEns(ens);
+    return value && value->GetInstanceId().GetPath() == EditorCameraId;
 }
 
 //把观察相机状态写入布局。

@@ -563,6 +563,7 @@ internal static class GeneratedBindingRegistration
     {
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 6039789372024472840UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 10862700097017898451UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 13993513445686221592UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 7808802871571462565UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
@@ -898,6 +899,20 @@ public unsafe partial class Component
     {
         global::Orbeden.EnsId result = default;
         var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Component), 0, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.EnsId)result;
+    }
+}
+}
+namespace Orbeden
+{
+[NativeBinding("Ens")]
+public unsafe partial class Ens
+{
+    public global::Orbeden.EnsId @GetId()
+    {
+        global::Orbeden.EnsId result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 0, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.EnsId)result;
     }

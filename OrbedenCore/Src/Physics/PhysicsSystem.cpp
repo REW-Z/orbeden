@@ -7,7 +7,7 @@
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/WheelCollider.h"
 #include "Rendering/TransformCache.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Transform.h"
 

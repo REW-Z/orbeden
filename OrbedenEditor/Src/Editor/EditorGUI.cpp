@@ -22,6 +22,46 @@ namespace
         return std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length));
     }
 
+    //开始可独立滚动的内容区域
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginChild(const uint8* id, int32 length, float32* width, float32 height, uint8 resizable)
+    {
+        ImGuiChildFlags flags = ImGuiChildFlags_Borders;
+        if (resizable) flags |= ImGuiChildFlags_ResizeX;
+        bool visible = ImGui::BeginChild(ReadUtf8Text(id, length).c_str(), ImVec2(*width, height), flags);
+        *width = ImGui::GetWindowSize().x;
+        return visible ? 1 : 0;
+    }
+
+    //结束内容区域
+    void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
+
+    //绘制目录节点并返回展开与点击状态
+    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 selected)
+    {
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+        if (selected) flags |= ImGuiTreeNodeFlags_Selected;
+        bool expanded = ImGui::TreeNodeEx(ReadUtf8Text(label, length).c_str(), flags);
+        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0);
+    }
+
+    //结束目录节点
+    void ORBEDEN_NATIVE_CALL EditorGuiTreePop() { ImGui::TreePop(); }
+
+    //打开确认弹窗
+    void ORBEDEN_NATIVE_CALL EditorGuiOpenPopup(const uint8* id, int32 length)
+    {
+        ImGui::OpenPopup(ReadUtf8Text(id, length).c_str());
+    }
+
+    //开始模态确认弹窗
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginPopup(const uint8* id, int32 length)
+    {
+        return ImGui::BeginPopupModal(ReadUtf8Text(id, length).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize) ? 1 : 0;
+    }
+
+    //关闭当前弹窗
+    void ORBEDEN_NATIVE_CALL EditorGuiClosePopup() { ImGui::CloseCurrentPopup(); }
+
     //绘制文本标签
     void ORBEDEN_NATIVE_CALL EditorGuiLabel(const uint8* text, int32 length)
     {
@@ -489,6 +529,13 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.setClipboardText = reinterpret_cast<void*>(&EditorGuiSetClipboardText);
     api.beginDisabled = reinterpret_cast<void*>(&EditorGuiBeginDisabled);
     api.endDisabled = reinterpret_cast<void*>(&EditorGuiEndDisabled);
+    api.beginChild = reinterpret_cast<void*>(&EditorGuiBeginChild);
+    api.endChild = reinterpret_cast<void*>(&EditorGuiEndChild);
+    api.treeNode = reinterpret_cast<void*>(&EditorGuiTreeNode);
+    api.treePop = reinterpret_cast<void*>(&EditorGuiTreePop);
+    api.openPopup = reinterpret_cast<void*>(&EditorGuiOpenPopup);
+    api.beginPopup = reinterpret_cast<void*>(&EditorGuiBeginPopup);
+    api.closePopup = reinterpret_cast<void*>(&EditorGuiClosePopup);
     return api;
 }
 

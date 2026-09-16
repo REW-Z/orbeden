@@ -55,7 +55,7 @@ public static class ProjectContextMenuRegistry
     }
 }
 
-/// <summary>以两列表格浏览和管理项目资源文件。</summary>
+/// <summary>通过目录树和资产列表浏览及管理项目资源文件。</summary>
 internal sealed class ProjectPanel : EditorPanel
 {
     private enum PendingOperation
@@ -108,6 +108,12 @@ internal sealed class ProjectPanel : EditorPanel
     private PendingOperation pendingOperation;
     private FileSystemWatcher? watcher;
     private int refreshRequested;
+    private float directoryWidth = 200;
+    private string startupWorld = string.Empty;
+    private static string? pingKey;
+
+    //请求在项目列表中定位引用资源
+    internal static void Ping(string key) => pingKey = key.Split("//", 2, StringSplitOptions.None)[0];
 
     public override EditorPanelInfo Info => new(
         "project",
@@ -151,11 +157,24 @@ internal sealed class ProjectPanel : EditorPanel
             if (!Directory.Exists(currentDirectory)) currentDirectory = EditorAssetCatalog.Instance.ContentRoot;
         }
 
+        if (pingKey != null)
+        {
+            string path = Path.GetFullPath(Path.Combine(contentRoot, pingKey));
+            pingKey = null;
+            if (File.Exists(path) && ProjectAssetOperations.IsSameOrChild(path, contentRoot))
+            {
+                currentDirectory = Path.GetDirectoryName(path)!;
+                selectedPath = path;
+                search = string.Empty;
+            }
+        }
         DrawToolbar();
         DrawPendingOperation();
         if (!string.IsNullOrEmpty(status)) EditorGUI.Label(status);
-        EditorGUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
-        DrawAssetTable();
+        if (!string.IsNullOrEmpty(EditorWorldActions.Status)) EditorGUI.Label(EditorWorldActions.Status);
+        startupWorld = EditorAssetsNative.GetWorldKey(true);
+        DrawAssetBrowser();
+        EditorWorldActions.DrawPendingSwitch();
     }
 
     //检测项目切换并重置目录状态。
@@ -167,6 +186,7 @@ internal sealed class ProjectPanel : EditorPanel
         if (string.Equals(contentRoot, currentContentRoot, StringComparison.OrdinalIgnoreCase)
             && Directory.Exists(currentDirectory)) return true;
 
+        EditorWorldActions.Clear();
         contentRoot = currentContentRoot;
         EditorAssetCatalog.Instance.Refresh();
         currentDirectory = EditorAssetCatalog.Instance.ContentRoot;
@@ -234,6 +254,8 @@ internal sealed class ProjectPanel : EditorPanel
         if (EditorGUI.Button("Import...")) ImportFile();
         EditorGUI.SameLine();
         if (EditorGUI.Button("Create Folder")) BeginOperation(PendingOperation.CreateFolder, null);
+        EditorGUI.SameLine();
+        if (EditorGUI.Button("Create World")) CreateWorld();
         EditorGUI.EndDisabled();
 
         EditorGUI.SameLine();
@@ -271,13 +293,90 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.Separator();
     }
 
-    //绘制两列资源列表。
+    //绘制目录树与当前目录的直接子项
+    private void DrawAssetBrowser()
+    {
+        bool visible = NativeEditorGUI.BeginChild("##project_directories", ref directoryWidth, resizable: true);
+        try { if (visible) DrawDirectory(EditorAssetCatalog.Instance.ContentRoot); }
+        finally { NativeEditorGUI.EndChild(); }
+        EditorGUI.SameLine();
+        float remainingWidth = 0;
+        visible = NativeEditorGUI.BeginChild("##project_contents", ref remainingWidth);
+        try
+        {
+            if (visible)
+            {
+                EditorGUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
+                DrawAssetTable();
+            }
+        }
+        finally { NativeEditorGUI.EndChild(); }
+    }
+
+    //递归绘制展开目录并排除生成目录与目录链接
+    private void DrawDirectory(string path)
+    {
+        if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
+        string name = path == EditorAssetCatalog.Instance.ContentRoot ? "Content" : Path.GetFileName(path);
+        int state = NativeEditorGUI.TreeNode(name + "##directory_" + path,
+            string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase));
+        if ((state & 2) != 0)
+        {
+            currentDirectory = path;
+            selectedPath = null;
+        }
+        if (EditorGUI.BeginPopupContextItem("##directory_menu_" + path))
+        {
+            try { DrawItemContextMenu(path, true); }
+            finally { EditorGUI.EndPopup(); }
+        }
+        if ((state & 1) == 0) return;
+        try
+        {
+            foreach (string directory in Directory.EnumerateDirectories(path).Order(StringComparer.OrdinalIgnoreCase))
+            {
+                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0) DrawDirectory(directory);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            EditorGUI.Label("Directory read failed: " + ex.Message);
+        }
+        finally { NativeEditorGUI.TreePop(); }
+    }
+
+    //创建名称不冲突的 World 并请求打开
+    private void CreateWorld()
+    {
+        try
+        {
+            string path = Path.Combine(currentDirectory, "New World.world");
+            for (int index = 1; File.Exists(path) || Directory.Exists(path); ++index)
+                path = Path.Combine(currentDirectory, "New World " + index + ".world");
+            string key = EditorAssetCatalog.Instance.ToResourceKey(path);
+            if (!EditorAssetsNative.CreateWorld(key))
+            {
+                status = EditorAssetsNative.GetProjectError();
+                return;
+            }
+            EditorAssetCatalog.Instance.Refresh();
+            selectedPath = path;
+            EditorWorldActions.RequestOpen(key);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            status = "Create World failed: " + ex.Message;
+        }
+    }
+
+    //绘制当前目录资产列表
     private void DrawAssetTable()
     {
         List<string> entries;
         try
         {
             entries = Directory.EnumerateFileSystemEntries(currentDirectory)
+                .Where(path => !EditorAssetCatalog.Instance.IsGeneratedPath(path))
                 .Where(MatchesSearch)
                 .OrderBy(path => File.Exists(path))
                 .ThenBy(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
@@ -308,6 +407,7 @@ internal sealed class ProjectPanel : EditorPanel
             {
                 bool canModify = EditorAssetsNative.CanModifyAssets();
                 if (EditorGUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
+                if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
                 if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
                 if (EditorGUI.MenuItem("Refresh"))
                 {
@@ -327,6 +427,8 @@ internal sealed class ProjectPanel : EditorPanel
     {
         bool directory = Directory.Exists(entry);
         string name = Path.GetFileName(entry);
+        if (string.Equals(EditorAssetCatalog.Instance.ToResourceKey(entry), startupWorld, StringComparison.OrdinalIgnoreCase))
+            name += " [Startup]";
         EditorGUI.TableNextRow();
         EditorGUI.TableSetColumnIndex(0);
         bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
@@ -357,6 +459,12 @@ internal sealed class ProjectPanel : EditorPanel
     {
         bool canModify = EditorAssetsNative.CanModifyAssets();
         if (EditorGUI.MenuItem("Open")) OpenEntry(entry);
+        if (!directory && string.Equals(Path.GetExtension(entry), ".world", StringComparison.OrdinalIgnoreCase)
+            && EditorGUI.MenuItem("Set as Startup World", canModify))
+        {
+            status = EditorAssetsNative.SetStartupWorld(EditorAssetCatalog.Instance.ToResourceKey(entry))
+                ? "Startup World updated." : EditorAssetsNative.GetProjectError();
+        }
         EditorGUI.Separator();
         if (EditorGUI.MenuItem("Rename", canModify)) BeginOperation(PendingOperation.Rename, entry);
         if (EditorGUI.MenuItem("Move...", canModify)) BeginOperation(PendingOperation.Move, entry);
@@ -443,7 +551,7 @@ internal sealed class ProjectPanel : EditorPanel
         if (string.Equals(Path.GetExtension(entry), ".world", StringComparison.OrdinalIgnoreCase))
         {
             string key = EditorAssetCatalog.Instance.ToResourceKey(entry);
-            status = EditorAssetsNative.OpenWorld(key) ? "Opened scene: " + key : "Failed to open scene: " + key;
+            EditorWorldActions.RequestOpen(key);
             return;
         }
 

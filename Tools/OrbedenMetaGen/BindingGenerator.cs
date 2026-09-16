@@ -283,7 +283,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
     {
         string name = model.ManagedName(type)[8..]; string scope = name[..name.LastIndexOf('.')]; name = name[(name.LastIndexOf('.') + 1)..];
         CppType? parent = model.Resolve(type.BaseName, type);
-        bool foundation = type.Name is "Object" or "Component" or "Script";
+        bool foundation = type.Name is "Object" or "Component" or "Script" or "Ens";
         if (type.IsUnique) output.AppendLine($"namespace {scope} {{ [UniqueComponent] public partial class {name} {{ }} }}");
         output.AppendLine($"namespace {scope}\n{{\n[NativeBinding(\"{type.Name}\")]\npublic {(type.IsAbstract ? "abstract " : type.IsFinal ? "sealed " : "")}unsafe partial class {name}{(foundation || parent == null ? "" : " : " + model.ManagedName(parent))}\n{{");
         if (!foundation)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Runtime/ComponentStorage.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/ITransformListener.h"
 #include "Runtime/RenderSettings.h"
 

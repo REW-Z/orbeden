@@ -9,7 +9,7 @@
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 #include "Runtime/Reflection.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Object/Transform.h"
 #include "ResourceManager/ResourceManager.h"
@@ -86,6 +86,12 @@ namespace
         void* canModifyAssets = nullptr;
         void* remapLiveReferences = nullptr;
         void* openWorld = nullptr;
+        void* getWorldKey = nullptr;
+        void* saveWorld = nullptr;
+        void* setStartupWorld = nullptr;
+        void* createWorld = nullptr;
+        void* remapWorldKeys = nullptr;
+        void* getProjectError = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -111,6 +117,12 @@ namespace
         void* restoreComponent = nullptr;
         void* findComponent = nullptr;
         void* getHostBinding = nullptr;
+        void* getFieldReferenceType = nullptr;
+        void* getWorldEns = nullptr;
+        void* selectEns = nullptr;
+        void* matchComponentType = nullptr;
+        void* getReferenceObjects = nullptr;
+        void* getReferenceLabel = nullptr;
     };
 
     //传给 Editor C# 的应用函数表。
@@ -138,16 +150,16 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 4);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 10);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 3);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 19);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 61);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 25);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 80);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 31);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 34);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 36);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 38);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 42);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 38);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 41);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 43);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 45);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 55);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -217,6 +229,56 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         return editor && editor->OpenWorld(ReadUtf8(keyText, keyLength)) ? 1 : 0;
+    }
+
+    //读取编辑 World 或启动 World 的资源 Key
+    int32 ORBEDEN_NATIVE_CALL GetManagedWorldKey(void* context, uint8 startup, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return 0;
+        const std::string& key = startup ? editor->GetProject().GetStartupWorldKey() : editor->GetProject().GetCurrentWorldKey();
+        if (buffer && capacity >= static_cast<int32>(key.size())) std::memcpy(buffer, key.data(), key.size());
+        return static_cast<int32>(key.size());
+    }
+
+    //保存当前编辑 World
+    uint8 ORBEDEN_NATIVE_CALL SaveManagedWorld(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && !editor->IsPlaying() && editor->SaveCurrentWorld() ? 1 : 0;
+    }
+
+    //设置启动 World
+    uint8 ORBEDEN_NATIVE_CALL SetManagedStartupWorld(void* context, const uint8* key, int32 length)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && !editor->IsPlaying() && editor->GetProject().SetStartupWorld(ReadUtf8(key, length)) ? 1 : 0;
+    }
+
+    //创建空 World 文件
+    uint8 ORBEDEN_NATIVE_CALL CreateManagedWorld(void* context, const uint8* key, int32 length)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && !editor->IsPlaying() && editor->GetProject().CreateWorld(ReadUtf8(key, length)) ? 1 : 0;
+    }
+
+    //同步资产移动后的 World 配置
+    uint8 ORBEDEN_NATIVE_CALL RemapManagedWorldKeys(void* context, const uint8* oldKey, int32 oldLength,
+        const uint8* newKey, int32 newLength, uint8 prefix)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && !editor->IsPlaying()
+            && editor->GetProject().RemapWorldKeys(ReadUtf8(oldKey, oldLength), ReadUtf8(newKey, newLength), prefix != 0) ? 1 : 0;
+    }
+
+    //读取项目操作失败原因
+    int32 ORBEDEN_NATIVE_CALL GetManagedProjectError(void* context, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return 0;
+        const std::string& error = editor->GetProject().GetLastError();
+        if (buffer && capacity >= static_cast<int32>(error.size())) std::memcpy(buffer, error.data(), error.size());
+        return static_cast<int32>(error.size());
     }
 
     //请求原生 Editor 重绘。
@@ -381,6 +443,109 @@ namespace
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
         if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
         return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
+    }
+
+    //枚举符合声明类型的存活 Object 引用
+    int32 ORBEDEN_NATIVE_CALL GetManagedReferenceObjects(void* context, const uint8* name, int32 length, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return 0;
+        std::string requested = ReadUtf8(name, length);
+        if (requested.starts_with("Orbeden.")) requested.erase(0, 8);
+        Type* expected = Object::FindType(requested);
+        std::string result;
+        for (TypeRuntimeId index = 0; index < Object::GetTypeCount(); ++index)
+        {
+            Type* type = Object::FindType(index);
+            if (!type) continue;
+            type->ForEachLiveObject([&](Object* object)
+            {
+                if (object->GetWorld() && object->GetWorld() != &editor->GetWorld()) return;
+                Component* component = object->Cast<Component>();
+                Script* host = AsManagedScriptHost(component);
+                if (expected ? !object->Is(expected) : !host) return;
+                Ens* ens = object->Cast<Ens>();
+                if (!ens && component) ens = component->GetEns();
+                if (ens && editor->GetEditorScene().IsTemporaryEns(ens->GetId())) return;
+                const std::string& key = object->GetInstanceId().GetPath();
+                std::string typeName = host ? host->GetManagedTypeName() : type->GetName();
+                std::string label = ens ? ens->GetName() + " / " + typeName : key;
+                EnsId owner = ens ? ens->GetId() : EnsId();
+                result += std::to_string(object->GetObjectId()) + '\0' + key + '\0' + label + '\0'
+                    + typeName + '\0' + std::to_string(owner.id) + '\0' + std::to_string(owner.version) + '\0';
+            });
+        }
+        return CopyUtf8(result, buffer, capacity);
+    }
+
+    //读取场景引用的显示名称
+    int32 ORBEDEN_NATIVE_CALL GetManagedReferenceLabel(void* context, const uint8* key, int32 length, uint8* buffer, int32 capacity)
+    {
+        Object* object = Object::FindObject(StringId(ReadUtf8(key, length)));
+        if (!object) return 0;
+        if (Ens* ens = object->Cast<Ens>()) return CopyUtf8(ens->GetName(), buffer, capacity);
+        Component* component = object->Cast<Component>();
+        if (!component || !component->GetEns()) return CopyUtf8(object->GetInstanceId().GetPath(), buffer, capacity);
+        return CopyUtf8(component->GetEns()->GetName(), buffer, capacity);
+    }
+
+    //枚举当前 World 中可编辑的 Ens
+    int32 ORBEDEN_NATIVE_CALL GetManagedWorldEns(void* context, EnsId* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return 0;
+        int32 count = 0;
+        editor->GetWorld().ForEachEns([&](Ens& ens)
+        {
+            if (editor->GetEditorScene().IsTemporaryEns(ens.GetId())) return;
+            if (buffer && count < capacity) buffer[count] = ens.GetId();
+            ++count;
+        });
+        return count;
+    }
+
+    //在层级面板中定位 Ens
+    void ORBEDEN_NATIVE_CALL SelectManagedEns(void* context, EnsId ens)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (editor && editor->GetWorld().GetEns(ens)) editor->GetEditorScene().SelectEns(ens);
+    }
+
+    //匹配组件的声明类型或查询类型是否派生自 Component
+    uint8 ORBEDEN_NATIVE_CALL MatchManagedComponentType(void* context, int32 objectId, const uint8* name, int32 length)
+    {
+        std::string requested = ReadUtf8(name, length);
+        if (requested.starts_with("Orbeden.")) requested.erase(0, 8);
+        Component* component = objectId != 0 ? FindEditorComponent(context, objectId) : nullptr;
+        Type* type = objectId == 0 ? Object::FindType(requested) : component ? component->GetType() : nullptr;
+        std::string target = objectId == 0 ? "Component" : requested;
+        for (; type; type = type->GetBaseType())
+            if (type->GetName() == target) return 1;
+        return 0;
+    }
+
+    //读取引用字段的声明类型
+    int32 ORBEDEN_NATIVE_CALL GetManagedFieldReferenceType(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        if (Script* host = AsManagedScriptHost(component))
+        {
+            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
+            --fieldIndex;
+            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
+            const ManagedScriptField& field = *fields[fieldIndex];
+            if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
+            if (field.kind != Reflection::FieldKind::ObjectRef) return 0;
+            std::string name = field.typeName;
+            if (name.starts_with("Ref<") && name.ends_with(">")) name = name.substr(4, name.size() - 5);
+            return CopyUtf8(name, buffer, bufferSize);
+        }
+        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
+        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
+        const Reflection::FieldInfo& field = *fields[fieldIndex];
+        if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
+        return field.kind == Reflection::FieldKind::ObjectRef && field.objectRefTypeName
+            ? CopyUtf8(field.objectRefTypeName, buffer, bufferSize) : 0;
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
@@ -657,6 +822,12 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.canModifyAssets = reinterpret_cast<void*>(&CanModifyManagedAssets);
     editorApi.assets.remapLiveReferences = reinterpret_cast<void*>(&RemapManagedLiveReferences);
     editorApi.assets.openWorld = reinterpret_cast<void*>(&OpenManagedWorld);
+    editorApi.assets.getWorldKey = reinterpret_cast<void*>(&GetManagedWorldKey);
+    editorApi.assets.saveWorld = reinterpret_cast<void*>(&SaveManagedWorld);
+    editorApi.assets.setStartupWorld = reinterpret_cast<void*>(&SetManagedStartupWorld);
+    editorApi.assets.createWorld = reinterpret_cast<void*>(&CreateManagedWorld);
+    editorApi.assets.remapWorldKeys = reinterpret_cast<void*>(&RemapManagedWorldKeys);
+    editorApi.assets.getProjectError = reinterpret_cast<void*>(&GetManagedProjectError);
     editorApi.components.context = &editor;
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
@@ -676,6 +847,12 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.restoreComponent = reinterpret_cast<void*>(&RestoreManagedComponent);
     editorApi.components.findComponent = reinterpret_cast<void*>(&FindManagedComponent);
     editorApi.components.getHostBinding = reinterpret_cast<void*>(&GetEditorHostBinding);
+    editorApi.components.getFieldReferenceType = reinterpret_cast<void*>(&GetManagedFieldReferenceType);
+    editorApi.components.getWorldEns = reinterpret_cast<void*>(&GetManagedWorldEns);
+    editorApi.components.selectEns = reinterpret_cast<void*>(&SelectManagedEns);
+    editorApi.components.matchComponentType = reinterpret_cast<void*>(&MatchManagedComponentType);
+    editorApi.components.getReferenceObjects = reinterpret_cast<void*>(&GetManagedReferenceObjects);
+    editorApi.components.getReferenceLabel = reinterpret_cast<void*>(&GetManagedReferenceLabel);
     if (initializeEditor(&editorApi) == 0)
     {
         //托管侧没有日志通道，失败原因只能靠这个出口带回原生侧。

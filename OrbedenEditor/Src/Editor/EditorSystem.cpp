@@ -463,9 +463,6 @@ bool EditorSystem::OpenWorld(const std::string& relativeKey)
     }
     if (playMode.IsPlaying()) RequestStop();
 
-    //切换前先把当前场景存盘，否则未保存的编辑会随切换丢失。
-    if (project.IsWorldLoaded() && !SaveCurrentWorld()) return false;
-
     if (!project.OpenWorld(relativeKey))
     {
         projectStatus = project.GetLastError();
@@ -867,6 +864,7 @@ void EditorSystem::RequestPlay()
 
 void EditorSystem::RequestStop()
 {
+    app.CancelWorldLoad();
     if (!playMode.IsPlaying()) return;
 
     app.SetPaused(false);

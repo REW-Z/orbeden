@@ -1,6 +1,6 @@
 #include "FlightOrbitCamera.h"
 #include "InputManager/InputManager.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Transform.h"
 #include <algorithm>

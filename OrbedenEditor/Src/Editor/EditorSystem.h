@@ -104,6 +104,9 @@ public:
     //判断是否已经打开项目
     bool HasProject() const;
 
+    //读取编辑项目的 World 配置
+    EditorProject& GetProject() { return project; }
+
     //获取当前项目名
     const std::string& GetProjectName() const;
 

@@ -27,6 +27,12 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, int, int> RestoreComponent;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> FindComponent;
     public delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr*, IntPtr> GetHostBinding;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldReferenceType;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId*, int, int> GetWorldEns;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, void> SelectEns;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> MatchComponentType;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceObjects;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceLabel;
 }
 #pragma warning restore CS0649
 
@@ -95,6 +101,55 @@ internal static unsafe class EditorNativeComponents
             ? string.Empty
             : ReadText((byte* buffer, int size) => api.GetFieldName(api.Context, objectId, fieldIndex, buffer, size));
     }
+
+    //读取符合声明类型的存活引用对象
+    internal static string GetReferenceObjects(string type)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(type);
+        fixed (byte* pointer = bytes)
+        {
+            int count = api.GetReferenceObjects(api.Context, pointer, bytes.Length, null, 0);
+            byte[] output = new byte[count];
+            fixed (byte* target = output) api.GetReferenceObjects(api.Context, pointer, bytes.Length, target, count);
+            return Encoding.UTF8.GetString(output);
+        }
+    }
+
+    //读取存活引用的显示名称
+    internal static string GetReferenceLabel(string key)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        fixed (byte* pointer = bytes)
+        {
+            int count = api.GetReferenceLabel(api.Context, pointer, bytes.Length, null, 0);
+            byte[] output = new byte[count];
+            fixed (byte* target = output) api.GetReferenceLabel(api.Context, pointer, bytes.Length, target, count);
+            return Encoding.UTF8.GetString(output);
+        }
+    }
+
+    //枚举当前编辑 World 的 Ens
+    internal static EnsId[] GetWorldEns()
+    {
+        int count = api.GetWorldEns(api.Context, null, 0);
+        EnsId[] result = new EnsId[count];
+        fixed (EnsId* pointer = result) api.GetWorldEns(api.Context, pointer, count);
+        return result;
+    }
+
+    //定位场景引用所属 Ens
+    internal static void SelectEns(EnsId ens) => api.SelectEns(api.Context, ens);
+
+    //按原生继承链匹配组件声明类型
+    internal static bool MatchesComponentType(int objectId, string type)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(type);
+        fixed (byte* pointer = bytes) return api.MatchComponentType(api.Context, objectId, pointer, bytes.Length) != 0;
+    }
+
+    //读取引用字段的声明类型
+    internal static string GetFieldReferenceType(int objectId, int fieldIndex)
+        => ReadText((byte* buffer, int size) => api.GetFieldReferenceType(api.Context, objectId, fieldIndex, buffer, size));
 
     /// <summary>获取字段分类。</summary>
     internal static NativeFieldKind GetFieldKind(int objectId, int fieldIndex)

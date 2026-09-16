@@ -25,6 +25,6 @@ public:
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 29);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 33);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
-static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 19);
+static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 23);

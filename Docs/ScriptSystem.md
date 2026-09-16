@@ -42,7 +42,6 @@ C++ 根对象的实际类名为 `Orbeden::Object`，头文件通过 `using Orbed
 
 MetaGen 为全部 Object 派生类生成强类型 C# 包装、原生调用入口和注册清单。C++ `MoveBehaviour` 会生成同名 C# 包装，可直接 `ens.AddComponent<MoveBehaviour>()`、访问属性和调用方法；基类查询返回派生包装并保持同一原生实例的包装身份。生成的原生脚本包装继承 `Orbeden.Script` 但只参与 Native 生命周期，不作为托管脚本启动；手写托管脚本继承原生包装的声明会被拒绝。`ens.GetNativeComponent("MoveBehaviour")` 的动态代理保留给没有生成 Binding 的 C++ API（非 Object 派生类）。
 
-本次迁移的 API 变化：基类名由 `ScriptBehaviour` 改为 `Script`，外部项目需更新源码及 `.world` 中精确宿主的 `type="ScriptBehaviour"` 为 `type="Script"`；具体 C++ 派生类名与 C# `managedTypeName` 不变。C# 颜色类型 `color4` 改为 `color`；`Mesh.Load` / `Material.Load` / `Shader.Load` 静态加载改为 `Resources.Load<T>(key)`；Transform 的本地/世界变换不再以字段属性暴露，统一使用 `GetLocalPosition` / `SetLocalPosition` 等 getter/setter 方法；全部 Object 派生组件改用生成式强类型 Binding，旧的逐类型 Binding 已删除。原生模块 ABI 已升至 2（表头、尺寸、偏移校验），Core、Editor 与外部游戏模块必须一起重建，旧 ABI 模块会被拒绝加载。
 
 ## 2. 编写 C# 脚本
 
@@ -189,7 +188,7 @@ Editor 多选添加先检查全部目标的 Unique 冲突及依赖图，再按�
 
 上述是组件存储片段，完整 World 包含 Transform、World 根节点和场景层级。保存时 C++ 和 C# 组件共用 `<Component>/<Field>` 表达。读取时检查 domain 与真实原生类型一致。
 
-Object 引用保存资源 Key 或组件稳定路径，不保存运行时 ObjectId。组件稳定路径随组件保存和恢复，因此跨 Ens 和同类型多实例引用不会依赖本次加载的 ObjectId。托管 EnsId 字段保存目标 Ens 的稳定路径，进入运行态再解析。空引用使用空字符串。临时 orphan 资源没有可持久化身份，不能写入宿主引用字段。
+Object 引用保存资源 Key、Ens 或组件的独立稳定路径，不保存运行时 ObjectId。组件稳定路径随组件保存和恢复，因此跨 Ens 和同类型多实例引用不会依赖本次加载的 ObjectId。托管 EnsId 字段保存目标 Ens 的稳定路径，进入运行态再解析。空引用使用空字符串。临时 orphan 资源没有可持久化身份，不能写入宿主引用字段。
 
 资源加载会扫描宿主动态 Object 字段；资源移动/重命名时，Editor 对宿主字段执行同一套路径映射。Missing Script 仍保留宿主、完整类型名、字段类型、可见性和字段值，缺少程序集不会丢弃数据。
 
@@ -264,3 +263,7 @@ ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改
 首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、MSBuild 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
 游戏 C++ 构建步骤先运行 MetaGen 生成反射、生命周期 thunk 和 Binding 注册，再由 MSBuild 编译 `Native` 下的原生工程。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
+
+### Ens 的独立对象身份
+
+Ens 继承 Object；EnsId 仍是带版本的 World 内部句柄，不承担持久化身份。Ens 与 Transform 分别注册独立的 ObjectId 和稳定路径。C# 的 Ens 同样继承 Object，支持 Object 字段和 Ref<Ens> 原生字段引用。销毁 Ens 由 World 统一释放其组件及对象身份。旧文件共用的 ID 在读取时拆分：原 ID 留给 Ens，Transform 获得独立路径；既有 Transform/Object 引用按声明类型迁移，EnsId 引用继续指向 Ens。

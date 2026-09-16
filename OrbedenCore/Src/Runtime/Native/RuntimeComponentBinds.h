@@ -43,6 +43,7 @@ public:
     void* SetLocalActive = nullptr;
     void* GetName = nullptr;
     void* SetName = nullptr;
+    void* GetObjectId = nullptr;
 
     //创建 Ens 函数表。
     static EnsBind Create();
@@ -52,4 +53,4 @@ public:
 #pragma pack(pop)
 ORBEDEN_ASSERT_NATIVE_API_TABLE(WorldBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(PathDefinesBind, 2);
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 6);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 7);

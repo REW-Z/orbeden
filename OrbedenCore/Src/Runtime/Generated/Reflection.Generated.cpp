@@ -9,6 +9,7 @@
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/Component.h"
 #include "Runtime/Object/DirectionalLight.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/HeightField.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
@@ -4713,6 +4714,14 @@ namespace Reflection
                 MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_3),
                 MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_4),
                 MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_OnWorldActiveChanged_5),
+            });
+
+        RegisterTypeFields(Ens::StaticType(),
+            {
+            });
+
+        RegisterTypeMethods(Ens::StaticType(),
+            {
             });
 
         RegisterTypeFields(HeightField::StaticType(),

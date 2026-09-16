@@ -18,6 +18,7 @@ Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托
 Runtime/Object/
 ├── Object.h/.cpp              # 根类型
 ├── Component.h/.cpp           # 组件基类
+├── Ens.h/.cpp                 # 实体对象：独立稳定 ID，World 管理生命周期
 ├── Transform.h/.cpp           # 组件：不需要 Component 后缀
 ├── Camera.h/.cpp              # 组件
 ├── StaticMeshRenderer.h/.cpp  # 组件

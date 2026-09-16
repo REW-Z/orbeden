@@ -6,7 +6,7 @@
 #include "Runtime/Object/WheelCollider.h"
 #include "InputManager/InputManager.h"
 #include "Rendering/RenderSystem.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
 #include <algorithm>
 #include <cmath>

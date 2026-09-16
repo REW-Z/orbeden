@@ -4,7 +4,7 @@
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/RigidBody.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
@@ -65,6 +65,13 @@ namespace
     {
         World* world = World::CurrentWorld();
         return world ? world->GetEns(ens) : nullptr;
+    }
+
+    //读取 Ens 自身的 Object 身份
+    int32 ORBEDEN_NATIVE_CALL NativeEnsGetObjectId(EnsId id)
+    {
+        Ens* ens = GetNativeEns(id);
+        return ens ? ens->GetObjectId() : 0;
     }
 
     //创建 Ens。
@@ -186,6 +193,7 @@ EnsBind EnsBind::Create()
     bind.SetLocalActive = reinterpret_cast<void*>(&NativeEnsSetLocalActive);
     bind.GetName = reinterpret_cast<void*>(&NativeEnsGetName);
     bind.SetName = reinterpret_cast<void*>(&NativeEnsSetName);
+    bind.GetObjectId = reinterpret_cast<void*>(&NativeEnsGetObjectId);
     return bind;
 }
 

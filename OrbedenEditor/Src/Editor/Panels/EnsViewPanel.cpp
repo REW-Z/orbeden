@@ -9,7 +9,7 @@
 #include "Editor/EditorSystem.h"
 #include "Editor/Panels/EditorPanelRegistry.h"
 #include "Rendering/RenderMath.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/World.h"

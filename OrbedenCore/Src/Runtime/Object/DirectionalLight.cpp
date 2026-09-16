@@ -1,7 +1,7 @@
 #include "Runtime/Object/DirectionalLight.h"
 
 #include "Rendering/RenderScene.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 
 OBJECT_TYPE_IMPLEMENT(DirectionalLight, Component)
 

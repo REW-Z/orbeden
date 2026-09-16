@@ -195,7 +195,7 @@
     <ClInclude Include="Src\Runtime\Object\Component.h" />
     <ClInclude Include="Src\Runtime\Object\DirectionalLight.h" />
     <ClInclude Include="Src\Runtime\ComponentStorage.h" />
-    <ClInclude Include="Src\Runtime\Ens.h" />
+    <ClInclude Include="Src\Runtime\Object\Ens.h" />
     <ClInclude Include="Src\Runtime\EnsId.h" />
     <ClInclude Include="Src\Runtime\EngineTypes.h" />
     <ClInclude Include="Src\Runtime\ITransformListener.h" />
@@ -265,7 +265,7 @@
     <ClCompile Include="Src\Runtime\Object\Component.cpp" />
     <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp" />
     <ClCompile Include="Src\Runtime\ComponentStorage.cpp" />
-    <ClCompile Include="Src\Runtime\Ens.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Ens.cpp" />
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Bindings.Generated.cpp" />

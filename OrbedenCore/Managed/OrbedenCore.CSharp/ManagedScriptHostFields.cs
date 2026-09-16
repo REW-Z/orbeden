@@ -41,7 +41,7 @@ internal static partial class ManagedTypeMetadataCache
         if (field.Name == "enabled") return true;
         if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
         {
-            string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).Transform?.ResourceKey ?? string.Empty;
+            string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).ResourceKey ?? string.Empty;
             return Script.WriteHostField(host, field.Name, "EnsId", key, field.InspectorVisible);
         }
         if (field.Kind == InteropValueKind.Object)

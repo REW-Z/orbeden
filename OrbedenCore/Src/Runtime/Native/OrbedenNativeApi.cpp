@@ -1,6 +1,6 @@
 #include "Runtime/Native/OrbedenNativeApi.h"
 
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 #include "Runtime/Reflection.h"
 #include "ResourceManager/ResourceManager.h"
@@ -178,6 +178,7 @@ namespace
             if (Type* type = Object::FindType(name)) object = ResourceManager::Load(type, path);
         }
         if (!object) return nullptr;
+        if (object->GetWorld() && object->GetWorld() != static_cast<World*>(context)) return nullptr;
         if (Component* component = object->Cast<Component>())
         {
             if (component->GetWorld() != static_cast<World*>(context)) return nullptr;

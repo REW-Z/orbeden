@@ -764,6 +764,13 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
         return false;
     }
 
+    std::filesystem::path relative = Utf8Path::FromUtf8(relativePath).lexically_normal();
+    if (relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".world")
+    {
+        lastError = "Expected a Content-relative .world key.";
+        return false;
+    }
+
     std::string worldPath = ToCleanPath(Utf8Path::FromUtf8(GetContentRootPath()) / Utf8Path::FromUtf8(relativePath));
     if (!std::filesystem::exists(Utf8Path::FromUtf8(worldPath)))
     {
@@ -772,16 +779,7 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
         return false;
     }
 
-    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
-    if (renderSystem)
-    {
-        renderSystem->InvalidateResourceCaches();
-    }
-
-    worldLoaded = false;
-    app.GetWorld().Clear();
-    ResourceManager::Shutdown();
-    PathDefines::SetContentRoot(GetContentRootPath());
+    app.CancelWorldLoad();
 
     if (!app.LoadWorld(worldPath))
     {
@@ -795,6 +793,78 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
     worldLoaded = true;
     lastError.clear();
     Log::Info(("World opened: " + worldPath).c_str());
+    return true;
+}
+
+//获取启动 World 的资源 Key
+const std::string& EditorProject::GetStartupWorldKey() const
+{
+    return startupWorld;
+}
+
+//设置并持久化启动 World
+bool EditorProject::SetStartupWorld(const std::string& key)
+{
+    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    if (!HasProject() || relative.empty() || relative.has_root_path()
+        || *relative.begin() == ".." || relative.extension() != ".world"
+        || !std::filesystem::is_regular_file(Utf8Path::FromUtf8(GetContentRootPath()) / relative))
+    {
+        lastError = "Expected an existing Content-relative .world key.";
+        return false;
+    }
+    std::string cleaned = ToCleanPath(relative);
+    if (!UpdateProjectRootAttributes(projectFilePath, { { "startupWorld", cleaned } }, {}, lastError)) return false;
+    startupWorld = cleaned;
+    return true;
+}
+
+//同步资产移动后的 World 配置引用
+bool EditorProject::RemapWorldKeys(const std::string& oldKey, const std::string& newKey, bool prefix)
+{
+    auto mapKey = [&](const std::string& key)
+    {
+        bool matches = key == oldKey || (prefix && key.starts_with(oldKey + "/"));
+        return !matches ? key : newKey.empty() ? std::string() : newKey + key.substr(oldKey.size());
+    };
+    std::string startup = mapKey(startupWorld);
+    if (startup.empty())
+    {
+        lastError = "Select another startup World before deleting this asset.";
+        return false;
+    }
+    if (startup != startupWorld
+        && !UpdateProjectRootAttributes(projectFilePath, { { "startupWorld", startup } }, {}, lastError)) return false;
+    startupWorld = startup;
+    currentWorld = mapKey(currentWorld);
+    if (currentWorld.empty()) worldLoaded = false;
+    lastError.clear();
+    return true;
+}
+
+//创建带默认渲染设置的空 World
+bool EditorProject::CreateWorld(const std::string& key)
+{
+    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    if (!HasProject() || relative.empty() || relative.has_root_path()
+        || *relative.begin() == ".." || relative.extension() != ".world")
+    {
+        lastError = "Expected a Content-relative .world key.";
+        return false;
+    }
+    std::filesystem::path destination = Utf8Path::FromUtf8(GetContentRootPath()) / relative;
+    if (std::filesystem::exists(destination) || !std::filesystem::is_directory(destination.parent_path()))
+    {
+        lastError = "World already exists or its folder is missing.";
+        return false;
+    }
+    World empty;
+    if (!WorldSerializer::SaveXml(empty, Utf8Path::ToUtf8(destination)))
+    {
+        lastError = "Cannot write World: " + key;
+        return false;
+    }
+    lastError.clear();
     return true;
 }
 

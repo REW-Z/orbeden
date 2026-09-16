@@ -9,6 +9,8 @@
 #include "Log/Log.h"
 
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 
 namespace
 {
@@ -212,6 +214,35 @@ bool ProjectUpgrader::UpgradeProject(const UpgradeRequest& request, std::string&
     int32 movedCount = 0;
     if (!RelocateContent(projectRoot, contentRoot, outError, movedCount)) return false;
     Log::Info(("Project upgrade moved " + std::to_string(movedCount) + " entries into " + ProjectLayout::ContentFolder + "/").c_str());
+
+    //更新 Ens Object 头文件引用
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(contentRoot))
+    {
+        if (!entry.is_regular_file() || entry.is_symlink()) continue;
+        std::string extension = entry.path().extension().string();
+        if (extension != ".h" && extension != ".hpp" && extension != ".cpp" && extension != ".cc") continue;
+        std::ifstream input(entry.path(), std::ios::binary);
+        if (!input) { outError = "Cannot read native source: " + ToCleanPath(entry.path()); return false; }
+        std::string content((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        input.close();
+        bool changed = false;
+        for (const std::string oldPath : { std::string("\"Runtime/Ens.h\""), std::string("<Runtime/Ens.h>") })
+        {
+            std::string replacement = oldPath.front() == '"' ? "\"Runtime/Object/Ens.h\"" : "<Runtime/Object/Ens.h>";
+            usize position = 0;
+            while ((position = content.find(oldPath, position)) != std::string::npos)
+            {
+                content.replace(position, oldPath.size(), replacement);
+                position += replacement.size();
+                changed = true;
+            }
+        }
+        if (!changed) continue;
+        std::ofstream output(entry.path(), std::ios::binary | std::ios::trunc);
+        output << content;
+        output.flush();
+        if (!output) { outError = "Cannot update native source: " + ToCleanPath(entry.path()); return false; }
+    }
 
     //2. 清空内容根之外：脚手架与产物全部由下一步重铺。
     ClearOutsideContentRoot(projectRoot, Utf8Path::FromUtf8(request.projectFilePath));

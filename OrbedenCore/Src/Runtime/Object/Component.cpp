@@ -1,6 +1,6 @@
 #include "Runtime/Object/Component.h"
 
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/World.h"
 
 OBJECT_TYPE_IMPLEMENT(Component, Object)

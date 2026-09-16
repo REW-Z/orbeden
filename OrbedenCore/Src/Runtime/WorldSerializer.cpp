@@ -344,7 +344,7 @@ namespace
                 if (Reflection::SetFromXmlValue(id, fieldValue))
                 {
                     Ens* target = component->GetWorld()->GetEns(id);
-                    fieldValue = target ? target->Transform()->GetInstanceId().GetPath() : "";
+                    fieldValue = target ? target->GetInstanceId().GetPath() : "";
                 }
             }
             WriteIndent(output, depth + 1);
@@ -376,7 +376,7 @@ namespace
 
         //写入当前 Ens 和它的组件
         WriteIndent(output, depth);
-        output << "<Ens stableId=\"" << EscapeXml(transform->GetInstanceId().GetPath()) << "\" name=\""
+        output << "<Ens stableId=\"" << EscapeXml(ens.GetInstanceId().GetPath()) << "\" name=\""
             << EscapeXml(ens.GetName()) << "\" localActive=\""
             << (ens.GetLocalActive() ? "true" : "false") << "\">\n";
 
@@ -476,6 +476,14 @@ namespace
             LogSerializerError("World XML failed to create component: " + typeName);
             if (!startToken.emptyElement) reader.SkipElement(startToken.name);
             return false;
+        }
+
+        if (type == Transform::StaticType())
+        {
+            const std::string& identity = GetAttribute(startToken, "stableId");
+            Object* existing = identity.empty() ? nullptr : Object::FindObject(StringId(identity));
+            if (existing && existing != component) return false;
+            if (!identity.empty()) component->ChangeInstancePath(StringId(identity));
         }
 
         if (startToken.emptyElement) return true;
@@ -590,6 +598,16 @@ namespace
                 return true;
             }
 
+            if (token.kind == XmlTokenKind::StartElement && token.name == "RenderSettings")
+            {
+                world.renderSettings.skybox.SetInstanceId(StringId(GetAttribute(token, "skybox")));
+                const std::string& enabled = GetAttribute(token, "skyboxEnabled");
+                if (!enabled.empty() && !Reflection::SetFromXmlValue(world.renderSettings.skyboxEnabled, enabled)) return false;
+                const std::string& ambient = GetAttribute(token, "ambientColor");
+                if (!ambient.empty() && !Reflection::SetFromXmlValue(world.renderSettings.ambientColor, ambient)) return false;
+                if (!token.emptyElement && !reader.SkipElement(token.name)) return false;
+                continue;
+            }
             if (token.kind == XmlTokenKind::StartElement && token.name == "Ens")
             {
                 if (!ReadEns(reader, world, nullptr, token))
@@ -641,7 +659,7 @@ namespace
             if (!refType)
             {
                 Log::Warning(("Resource Ref uses unknown type: " + std::string(field.objectRefTypeName)).c_str());
-                continue;
+                return false;
             }
 
             if (!ResourceManager::Load(refType, key)) return false;
@@ -653,6 +671,8 @@ namespace
     bool LoadWorldResourceRefs(World& world)
     {
         bool success = true;
+        const std::string& skybox = world.renderSettings.skybox.GetInstanceId().GetPath();
+        if (!skybox.empty() && !ResourceManager::Load<Skybox>(skybox)) success = false;
         world.ForEachEns([&world, &success](Ens& ens)
             {
                 for (Component* component : ens.GetComponents())
@@ -686,7 +706,28 @@ Component* WorldSerializer::RestoreComponent(Ens& ens, const std::string& snapsh
         ens.RemoveComponent(component);
         return nullptr;
     }
-    LoadResourceRefsFromObject(*ens.GetWorld(), component);
+    //恢复快照中以稳定路径保存的 EnsId 字段
+    XmlReader referenceReader(snapshot);
+    XmlToken reference;
+    while (referenceReader.Next(reference))
+    {
+        if (reference.name != "Field" || GetAttribute(reference, "type") != "EnsId") continue;
+        const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), GetAttribute(reference, "name"));
+        if (!field || !field->setter || field->kind != Reflection::FieldKind::EnsId) continue;
+        const std::string& path = GetAttribute(reference, "value");
+        if (!path.empty() && !IsWorldObjectRef(path)) continue;
+        Ens* target = path.empty() ? nullptr : ens.GetWorld()->FindEns(StringId(path));
+        if (!field->setter(component, Reflection::ToXmlValue(target ? target->GetId() : EnsId())))
+        {
+            ens.RemoveComponent(component);
+            return nullptr;
+        }
+    }
+    if (!LoadResourceRefsFromObject(*ens.GetWorld(), component))
+    {
+        ens.RemoveComponent(component);
+        return nullptr;
+    }
     return component;
 }
 
@@ -735,6 +776,9 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
     output << "<World version=\"1\">\n";
 
+    output << "    <RenderSettings skybox=\"" << EscapeXml(world.renderSettings.skybox.GetInstanceId().GetPath())
+        << "\" skyboxEnabled=\"" << (world.renderSettings.skyboxEnabled ? "true" : "false")
+        << "\" ambientColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientColor)) << "\" />\n";
     world.ForEachEns([&output](Ens& ens)
         {
             if (ens.GetParent()) return;
@@ -742,7 +786,8 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
         });
 
     output << "</World>\n";
-    return true;
+    output.flush();
+    return static_cast<bool>(output);
 }
 
 struct WorldDocument
@@ -785,6 +830,36 @@ std::shared_ptr<WorldDocument> WorldSerializer::ParseDocument(const std::string&
     }
     if (!rootSeen || !closed || !stack.empty())
     { error = "Incomplete XML document."; return nullptr; }
+    //升级旧文档中 Ens 与 Transform 共用的身份
+    std::unordered_map<std::string, std::string> transformIds;
+    List<std::string> ensIds;
+    for (XmlToken& entry : document->tokens)
+    {
+        if (entry.name == "Ens")
+        {
+            if (entry.kind == XmlTokenKind::EndElement) { if (!ensIds.empty()) ensIds.pop_back(); }
+            else if (!entry.emptyElement) ensIds.push_back(GetAttribute(entry, "stableId"));
+        }
+        else if (entry.name == "Component" && entry.kind == XmlTokenKind::StartElement
+            && GetAttribute(entry, "type") == "Transform" && !ensIds.empty())
+        {
+            std::string identity = GetAttribute(entry, "stableId");
+            if (!identity.empty() && identity == ensIds.back())
+            {
+                std::string replacement = identity + "/Transform";
+                transformIds.emplace(identity, replacement);
+                entry.attributes["stableId"] = replacement;
+            }
+        }
+    }
+    for (XmlToken& entry : document->tokens)
+    {
+        const std::string& fieldType = GetAttribute(entry, "type");
+        if (entry.name != "Field" || !fieldType.starts_with("Ref<")
+            || fieldType == "Ref<Ens>" || fieldType == "Ref<Orbeden.Ens>") continue;
+        auto mapped = transformIds.find(GetAttribute(entry, "value"));
+        if (mapped != transformIds.end()) entry.attributes["value"] = mapped->second;
+    }
     return document;
 }
 
@@ -884,10 +959,8 @@ std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
         if (token.name != "Ens" && token.name != "Component") continue;
         const std::string& original = GetAttribute(token, "stableId");
         if (original.empty()) continue;
-        //Transform 与所属 Ens 共用稳定身份
         if (paths.contains(original))
         {
-            if (token.name == "Component" && GetAttribute(token, "type") == "Transform") continue;
             error = "Duplicate object identity: " + original;
             return nullptr;
         }

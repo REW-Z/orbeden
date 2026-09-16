@@ -51,7 +51,7 @@
     <ClInclude Include="Src\Runtime\ITransformListener.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Runtime\Ens.h">
+    <ClInclude Include="Src\Runtime\Object\Ens.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Runtime\EngineTypes.h">
@@ -251,7 +251,7 @@
     <ClCompile Include="Src\Runtime\ComponentStorage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Runtime\Ens.cpp">
+    <ClCompile Include="Src\Runtime\Object\Ens.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Runtime\World.cpp">

@@ -2,7 +2,7 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Profiler/Profiler.h"
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Material.h"

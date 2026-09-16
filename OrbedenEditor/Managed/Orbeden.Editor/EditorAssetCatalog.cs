@@ -10,6 +10,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
 {
     private readonly Dictionary<Type, List<ObjectFieldOption>> assets = [];
     private string indexedContentRoot = string.Empty;
+    private readonly Dictionary<Type, IReadOnlyList<ObjectFieldOption>> filteredAssets = [];
 
     public static EditorAssetCatalog Instance { get; } = new();
 
@@ -36,22 +37,28 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     public IReadOnlyList<ObjectFieldOption> GetAssets(Type objectType)
     {
         EnsureCurrentProject();
-        return assets.TryGetValue(objectType, out List<ObjectFieldOption>? values) ? values : [];
+        if (assets.TryGetValue(objectType, out List<ObjectFieldOption>? exact)) return exact;
+        if (filteredAssets.TryGetValue(objectType, out IReadOnlyList<ObjectFieldOption>? cached)) return cached;
+        IReadOnlyList<ObjectFieldOption> result = assets.Where(pair => objectType.IsAssignableFrom(pair.Key)).SelectMany(pair => pair.Value).ToList();
+        if (!objectType.Assembly.IsCollectible) filteredAssets[objectType] = result;
+        return result;
     }
 
     /// <summary>按资源 Key 加载一个强类型资源包装。</summary>
     public Orbeden.Object? Load(Type objectType, string resourceKey)
     {
-        if (objectType == typeof(Mesh)) return Resources.Load<Mesh>(resourceKey);
-        if (objectType == typeof(Material)) return Resources.Load<Material>(resourceKey);
-        if (objectType == typeof(Shader)) return Resources.Load<Shader>(resourceKey);
-        return null;
+        Type actualType = assets.FirstOrDefault(pair => objectType.IsAssignableFrom(pair.Key)
+            && pair.Value.Any(option => option.ResourceKey == resourceKey)).Key ?? objectType;
+        if (!typeof(Orbeden.Object).IsAssignableFrom(actualType) || actualType.IsAbstract) return null;
+        return typeof(Resources).GetMethod(nameof(Resources.Load))!.MakeGenericMethod(actualType)
+            .Invoke(null, [resourceKey]) as Orbeden.Object;
     }
 
     /// <summary>重新扫描当前项目资源。</summary>
     public void Refresh()
     {
         assets.Clear();
+        filteredAssets.Clear();
         indexedContentRoot = PathDefines.ContentRoot;
         if (string.IsNullOrWhiteSpace(indexedContentRoot)) return;
 
@@ -147,6 +154,11 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     {
         string sourceKey = ToResourceKey(file);
         string extension = Path.GetExtension(file).ToLowerInvariant();
+        if (extension is ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp")
+        {
+            AddOption(typeof(Texture2D), sourceKey, Path.GetFileName(file));
+            return;
+        }
         if (extension == ".orbshader")
         {
             AddOption(typeof(Shader), sourceKey, Path.GetFileName(file));

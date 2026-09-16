@@ -1,6 +1,6 @@
 #include "Runtime/Object/HeightField.h"
 
-#include "Runtime/Ens.h"
+#include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/StaticMeshRenderer.h"

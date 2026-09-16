@@ -7,14 +7,13 @@ namespace OrbedenEditor;
 /// <summary>Editor Immediate GUI API。</summary>
 public static class EditorGUI
 {
-    private static readonly Dictionary<string, string> ObjectFieldSearches = [];
     private static IObjectFieldAssetProvider? objectFieldAssetProvider;
 
     /// <summary>设置资源字段数据源。</summary>
     internal static void SetObjectFieldAssetProvider(IObjectFieldAssetProvider? provider)
     {
         objectFieldAssetProvider = provider;
-        ObjectFieldSearches.Clear();
+        EditorObjectField.Clear();
     }
 
     /// <summary>绘制文本标签。</summary>
@@ -76,71 +75,16 @@ public static class EditorGUI
         ref Orbeden.Object? value,
         ref string resourceKey)
     {
-        if (objectType == null || !typeof(Orbeden.Object).IsAssignableFrom(objectType)) return false;
-
-        IReadOnlyList<ObjectFieldOption> options = objectFieldAssetProvider?.GetAssets(objectType) ?? [];
-        string currentKey = resourceKey ?? string.Empty;
-        string preview = string.IsNullOrEmpty(currentKey)
-            ? $"None ({objectType.Name})"
-            : GetObjectFieldDisplayName(currentKey, options);
-        if (!BeginCombo(label, preview)) return false;
-
-        bool changed = false;
-        try
-        {
-            string searchId = $"Search##object_field_{label}";
-            string search = ObjectFieldSearches.TryGetValue(label, out string? savedSearch)
-                ? savedSearch
-                : string.Empty;
-            if (InputText(searchId, ref search)) ObjectFieldSearches[label] = search;
-
-            if (Selectable($"None ({objectType.Name})##object_field_none_{label}", string.IsNullOrEmpty(currentKey)))
-            {
-                value = null;
-                resourceKey = string.Empty;
-                changed = !string.IsNullOrEmpty(currentKey);
-            }
-
-            foreach (ObjectFieldOption option in options)
-            {
-                if (!MatchesObjectFieldSearch(option, search)) continue;
-
-                bool selected = string.Equals(option.ResourceKey, currentKey, StringComparison.Ordinal);
-                if (!Selectable($"{option.DisplayName}##object_field_{label}_{option.ResourceKey}", selected)) continue;
-
-                Orbeden.Object? loaded = objectFieldAssetProvider?.Load(objectType, option.ResourceKey);
-                if (loaded == null || !objectType.IsInstanceOfType(loaded)) continue;
-
-                value = loaded;
-                resourceKey = option.ResourceKey;
-                changed = !selected || currentKey.Length == 0;
-            }
-        }
-        finally
-        {
-            EndCombo();
-        }
-
-        return changed;
+        if (!typeof(Orbeden.Object).IsAssignableFrom(objectType)) return false;
+        int id = value?.InstanceId ?? 0;
+        if (!EditorObjectField.Draw(label, objectType.FullName ?? objectType.Name, ref resourceKey, ref id)) return false;
+        value = id == 0 ? null : NativeBindingRuntime.Wrap<Orbeden.Object>(id);
+        return true;
     }
 
-    //读取资源字段显示名
-    private static string GetObjectFieldDisplayName(string resourceKey, IReadOnlyList<ObjectFieldOption> options)
-    {
-        foreach (ObjectFieldOption option in options)
-        {
-            if (string.Equals(option.ResourceKey, resourceKey, StringComparison.Ordinal)) return option.DisplayName;
-        }
-        return $"Missing: {resourceKey}";
-    }
-
-    //匹配资源字段搜索文本
-    private static bool MatchesObjectFieldSearch(ObjectFieldOption option, string search)
-    {
-        if (string.IsNullOrWhiteSpace(search)) return true;
-        return option.DisplayName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
-            || option.ResourceKey.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
+    //读取资源选择器候选项
+    internal static IReadOnlyList<ObjectFieldOption> GetObjectFieldAssets(Type type)
+        => objectFieldAssetProvider?.GetAssets(type) ?? [];
 
     /// <summary>绘制分隔线。</summary>
     public static void Separator() => NativeEditorGUI.Separator();

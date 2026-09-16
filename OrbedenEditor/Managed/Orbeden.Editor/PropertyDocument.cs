@@ -2,10 +2,11 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind);
+internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "");
 
 internal interface IPropertyTarget
 {
+    bool AllowsSceneReferences => false;
     string Identity { get; }
     IReadOnlyList<PropertyDescriptor> Properties { get; }
     InteropStatus TryGet(string name, out InteropValue value);
@@ -100,15 +101,18 @@ public sealed class PropertyValue
 
     public string Name { get; }
     public InteropValueKind Kind { get; }
+    public string ReferenceType { get; }
+    public bool AllowsSceneReferences => document.AllowsSceneReferences;
     public bool HasMultipleDifferentValues { get; internal set; }
     public InteropValue Value => value;
     internal bool Modified { get; private set; }
 
-    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind)
+    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType)
     {
         document = owner;
         Name = name;
         Kind = kind;
+        ReferenceType = referenceType;
     }
 
     public void SetValue(InteropValue newValue)
@@ -146,6 +150,7 @@ public sealed class PropertyDocument
     }
 
     public IReadOnlyList<PropertyValue> Properties => properties;
+    internal bool AllowsSceneReferences => targets.All(target => target.AllowsSceneReferences);
     public bool HasPendingChanges => modified;
 
     public void Update()
@@ -154,22 +159,22 @@ public sealed class PropertyDocument
         modified = false;
         if (targets.Count == 0) return;
 
-        Dictionary<string, InteropValueKind> common = new(StringComparer.Ordinal);
-        foreach (PropertyDescriptor descriptor in targets[0].Properties) common[descriptor.Name] = descriptor.Kind;
+        Dictionary<string, PropertyDescriptor> common = new(StringComparer.Ordinal);
+        foreach (PropertyDescriptor descriptor in targets[0].Properties) common[descriptor.Name] = descriptor;
         for (int index = 1; index < targets.Count; ++index)
         {
-            Dictionary<string, InteropValueKind> current = new(StringComparer.Ordinal);
+            Dictionary<string, PropertyDescriptor> current = new(StringComparer.Ordinal);
             foreach (PropertyDescriptor descriptor in targets[index].Properties)
             {
-                current[descriptor.Name] = descriptor.Kind;
+                current[descriptor.Name] = descriptor;
             }
             foreach (string name in common.Keys.ToArray())
             {
-                if (!current.TryGetValue(name, out InteropValueKind kind) || kind != common[name]) common.Remove(name);
+                if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
             }
         }
 
-        foreach ((string name, InteropValueKind kind) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
             InteropValue first = default;
             bool hasFirst = false;
@@ -191,7 +196,7 @@ public sealed class PropertyDocument
             }
             if (!readable || !hasFirst) continue;
 
-            PropertyValue property = new(this, name, kind);
+            PropertyValue property = new(this, name, descriptor.Kind, descriptor.ReferenceType);
             property.SetSnapshot(first, mixed);
             properties.Add(property);
         }
