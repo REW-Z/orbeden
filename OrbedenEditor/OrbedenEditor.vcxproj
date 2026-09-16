@@ -197,6 +197,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClCompile Include="Src\Editor\EditorScene.cpp" />
     <ClCompile Include="Src\Editor\EditorSystem.cpp" />
     <ClCompile Include="Src\Editor\EditorGUI.cpp" />
+    <ClCompile Include="Src\Editor\EditorFloatingWindow.cpp" />
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
     <ClCompile Include="Src\Editor\NativeGameModule.cpp" />
@@ -212,6 +213,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClInclude Include="Src\Editor\EditorScene.h" />
     <ClInclude Include="Src\Editor\EditorSystem.h" />
     <ClInclude Include="Src\Editor\EditorGUI.h" />
+    <ClInclude Include="Src\Editor\EditorFloatingWindow.h" />
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorLayoutState.h" />
     <ClInclude Include="Src\Editor\ManagedEditorBridge.h" />

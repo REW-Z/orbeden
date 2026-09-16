@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Editor/EditorFloatingWindow.h"
 #include "Editor/EditorLayoutState.h"
 #include "Editor/Panels/IEditorPanel.h"
 #include "Runtime/EngineTypes.h"
@@ -24,8 +25,12 @@ private:
         vector2 position = { 0.0f, 0.0f };
         vector2 size = { 0.0f, 0.0f };
         int32 dockNode = -1;
+        int32 returnDockNode = -1;
         bool moving = false;
         vector2 moveOffset = { 0.0f, 0.0f };
+
+        //非空表示承载在独立 GLFW 窗口中
+        std::unique_ptr<EditorFloatingWindow> osWindow;
     };
 
     struct DockNode
@@ -56,6 +61,7 @@ private:
         bool pending = false;
         std::string panelId;
         vector2 position = { 0.0f, 0.0f };
+        bool independent = false;
     };
 
     List<PanelEntry> panels;
@@ -68,10 +74,7 @@ private:
     PendingFloatCommand pendingFloat;
     std::string pendingClosePanel;
     bool tabMergeTargetHovered = false;
-    bool workspaceHovered = false;
-    bool workspaceRectValid = false;
-    vector2 workspacePosition = { 0.0f, 0.0f };
-    vector2 workspaceSize = { 0.0f, 0.0f };
+    bool repaintPending = false;
 
 public:
     //注册一个面板实例
@@ -101,11 +104,14 @@ public:
     //隐藏全部面板（进入 Play 前调用，布局恢复由调用方负责）
     void HideAllPanels();
 
-    //判断鼠标是否位于中央编辑器工作区
-    bool IsMouseOverWorkspace() const;
+    //销毁全部独立窗口（主窗口退出与主 ImGui 上下文销毁前调用）
+    void DestroyFloatingOsWindows();
 
-    /// <summary>获取当前帧中央编辑器工作区矩形。</summary>
-    bool TryGetWorkspaceRect(vector2& position, vector2& size) const;
+    //获取并清除面板管理器的重绘请求
+    bool TakeRepaintRequest();
+
+    //判断独立窗口中是否有控件处于活动状态
+    bool IsAnyFloatingItemActive() const;
 
 private:
     PanelEntry* FindPanel(const char* id);
@@ -116,6 +122,7 @@ private:
     DockNode* FindDockNode(int32 id);
     const DockNode* FindDockNode(int32 id) const;
     DockNode& CreateDockNode();
+    bool NodeHostsFixedPanel(const DockNode& node) const;
     void BuildDefaultDockLayout();
     void DrawDockHost();
     void DrawRootDockTarget(const vector2& position, const vector2& size);
@@ -125,7 +132,12 @@ private:
     void DrawDockPreview(const vector2& position, const vector2& size, PanelDockPlacement placement) const;
     bool IsRootDockPlacement(PanelDockPlacement placement) const;
     void ApplyPendingCommands();
+    void ClearPendingCommands();
     void DrawFloatingPanel(PanelEntry& entry);
+    void DrawFloatingOsPanel(PanelEntry& entry);
+    void CreateFloatingOsWindow(PanelEntry& entry);
+    void DestroyFloatingOsWindow(PanelEntry& entry);
+    bool ClampScreenRect(vector2& position, vector2& size) const;
     void DockPanel(const std::string& panelId, int32 targetNode, PanelDockPlacement placement);
     void RemovePanelFromDock(const std::string& panelId);
     void CompactDockNode(int32 nodeId);

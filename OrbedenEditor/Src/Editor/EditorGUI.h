@@ -9,6 +9,7 @@
 #include <imgui.h>
 
 #include <array>
+#include <string>
 
 class IWindow;
 
@@ -54,11 +55,21 @@ public:
     void* openPopup = nullptr;
     void* beginPopup = nullptr;
     void* closePopup = nullptr;
+    void* dragSource = nullptr;
+    void* readDrag = nullptr;
+    void* acceptDrag = nullptr;
+    void* fillRemainingArea = nullptr;
+    void* getDropPlacement = nullptr;
+    void* setTheme = nullptr;
+    void* beginPanelContent = nullptr;
+    void* endPanelContent = nullptr;
+    void* drawSceneView = nullptr;
+    void* resolveSceneDropPosition = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 37);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 47);
 
 //Editor ImGui 绑定层
 class EditorGUI
@@ -112,6 +123,42 @@ private:
     void UpdateMouseCursor();
 
 public:
+    //应用共享主题到当前 ImGui 上下文
+    static void ApplyTheme();
+
+    //获取主题定义的停靠分隔条尺寸
+    static float32 GetSplitterSize();
+
+    //获取主题定义的内容边距
+    static ImVec2 GetWindowPadding();
+
+    //记录跨 Panel 共享拖拽载荷
+    static void SetDragPayload(int32 kind, const std::string& key);
+
+    //注册参与跨窗口拖拽判断的编辑器窗口
+    static void RegisterDragWindow(GLFWwindow* window);
+
+    //注销参与跨窗口拖拽判断的编辑器窗口
+    static void UnregisterDragWindow(GLFWwindow* window);
+
+    //判断任一编辑器窗口中左键是否按下
+    static bool IsLeftMouseDownAnywhere();
+
+    //判断鼠标是否已移出主窗口客户区
+    static bool IsCursorOutsideMainWindow();
+
+    //获取鼠标在主窗口客户区中的屏幕坐标
+    static vector2 GetCursorScreenPosition();
+
+    //获取主窗口 GLFW 句柄
+    static GLFWwindow* GetMainGlfwWindow();
+
+    //获取主 ImGui 上下文
+    static ImGuiContext* GetMainContext();
+
+    //获取主上下文共享的字体图集
+    static ImFontAtlas* GetFontAtlas();
+
     //初始化 Editor ImGui
     bool Initialize(IWindow* editorWindow);
 
@@ -126,6 +173,9 @@ public:
 
     //获取托管 EditorGUI API
     EditorGuiNativeApi GetNativeApi() const;
+
+    //按主题背景色清空主窗口帧缓冲
+    void ClearMainFramebuffer();
 
     //读取场景相机滚轮增量
     float32 ConsumeSceneMouseWheel();

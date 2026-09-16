@@ -774,7 +774,7 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
 
     //写入 World 根节点和所有根 Ens
     output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-    output << "<World version=\"1\">\n";
+    output << "<World>\n";
 
     output << "    <RenderSettings skybox=\"" << EscapeXml(world.renderSettings.skybox.GetInstanceId().GetPath())
         << "\" skyboxEnabled=\"" << (world.renderSettings.skyboxEnabled ? "true" : "false")
@@ -830,36 +830,6 @@ std::shared_ptr<WorldDocument> WorldSerializer::ParseDocument(const std::string&
     }
     if (!rootSeen || !closed || !stack.empty())
     { error = "Incomplete XML document."; return nullptr; }
-    //升级旧文档中 Ens 与 Transform 共用的身份
-    std::unordered_map<std::string, std::string> transformIds;
-    List<std::string> ensIds;
-    for (XmlToken& entry : document->tokens)
-    {
-        if (entry.name == "Ens")
-        {
-            if (entry.kind == XmlTokenKind::EndElement) { if (!ensIds.empty()) ensIds.pop_back(); }
-            else if (!entry.emptyElement) ensIds.push_back(GetAttribute(entry, "stableId"));
-        }
-        else if (entry.name == "Component" && entry.kind == XmlTokenKind::StartElement
-            && GetAttribute(entry, "type") == "Transform" && !ensIds.empty())
-        {
-            std::string identity = GetAttribute(entry, "stableId");
-            if (!identity.empty() && identity == ensIds.back())
-            {
-                std::string replacement = identity + "/Transform";
-                transformIds.emplace(identity, replacement);
-                entry.attributes["stableId"] = replacement;
-            }
-        }
-    }
-    for (XmlToken& entry : document->tokens)
-    {
-        const std::string& fieldType = GetAttribute(entry, "type");
-        if (entry.name != "Field" || !fieldType.starts_with("Ref<")
-            || fieldType == "Ref<Ens>" || fieldType == "Ref<Orbeden.Ens>") continue;
-        auto mapped = transformIds.find(GetAttribute(entry, "value"));
-        if (mapped != transformIds.end()) entry.attributes["value"] = mapped->second;
-    }
     return document;
 }
 
@@ -978,8 +948,16 @@ std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
     }
     XmlReader reader(WriteDocument(renamed, {}, false));
     XmlToken root;
-    if (!reader.Next(root) || !ReadWorld(reader, *prepared, root)
-        || !ApplyEnsReferences(*prepared, document, paths) || !LoadWorldResourceRefs(*prepared))
+
+    //构建期间把运行时对象归属到准备中的世界，否则组件在字段回调里生成的网格、贴图与材质
+    //会挂到旧世界上，并在提交时随旧世界一起销毁，留下悬空指针。
+    World* previousWorld = World::CurrentWorld();
+    World::SetCurrentWorld(prepared.get());
+    bool loaded = reader.Next(root) && ReadWorld(reader, *prepared, root)
+        && ApplyEnsReferences(*prepared, document, paths) && LoadWorldResourceRefs(*prepared);
+    World::SetCurrentWorld(previousWorld);
+
+    if (!loaded)
     {
         error = lastUnregisteredComponentType.empty() ? "World content or resource validation failed."
             : "Unregistered component: " + lastUnregisteredComponentType;
@@ -1038,8 +1016,24 @@ Ens* WorldSerializer::InstantiatePrefab(World& world, const std::string& path, E
         if (!id.empty() && !paths.contains(id)) paths.emplace(id, "world://ens/" + Object::GenerateUuidText());
     }
     std::string xml = WriteDocument(*document, paths, true);
+    return RestoreEns(world, xml, parent, error);
+}
+
+//恢复完整子树快照并在失败时清理新增对象
+Ens* WorldSerializer::RestoreEns(World& world, const std::string& xml, EnsId parent, std::string& error)
+{
     auto remapped = ParseDocument(xml, error);
-    if (!remapped) return nullptr;
+    if (!remapped || remapped->tokens.front().name != "Prefab")
+    { if (error.empty()) error = "Expected Prefab snapshot."; return nullptr; }
+    if (!parent.IsNull() && !world.IsAlive(parent))
+    { error = "Prefab parent no longer exists."; return nullptr; }
+    //检查全部身份冲突
+    for (const XmlToken& token : remapped->tokens)
+    {
+        const std::string& id = GetAttribute(token, "stableId");
+        if (!id.empty() && Object::FindObject(StringId(id)))
+        { error = "Prefab identity already exists: " + id; return nullptr; }
+    }
     //逐个创建对象前记录已有身份，失败时只清理本次新增内容
     List<EnsId> previous;
     world.ForEachEns([&](Ens& ens) { previous.push_back(ens.GetId()); });
@@ -1071,6 +1065,6 @@ Ens* WorldSerializer::InstantiatePrefab(World& world, const std::string& path, E
         if (std::find(previous.begin(), previous.end(), ens.GetId()) == previous.end()) added.push_back(ens.GetId());
     });
     for (auto it = added.rbegin(); it != added.rend(); ++it) world.DestroyEns(*it);
-    error = "Prefab instantiation failed: " + path;
+    error = "Prefab snapshot restoration failed.";
     return nullptr;
 }

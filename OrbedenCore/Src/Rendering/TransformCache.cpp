@@ -39,7 +39,7 @@ void TransformCache::OnTransformChanged(World& changedWorld, EnsId ens)
 //处理变更通知并刷新所有受影响节点的世界矩阵
 void TransformCache::Update(World& currentWorld)
 {
-    if (world != &currentWorld) BindWorld(currentWorld);
+    if (world != &currentWorld || boundRevision != currentWorld.GetContentRevision()) BindWorld(currentWorld);
 
     changedNodes.clear();
     if (pendingNodes.empty()) return;
@@ -87,6 +87,7 @@ void TransformCache::BindWorld(World& currentWorld)
     if (world) world->RemoveTransformListener(this);
 
     world = &currentWorld;
+    boundRevision = currentWorld.GetContentRevision();
     pendingNodes.clear();
     changedNodes.clear();
     world->AddTransformListener(this);

@@ -34,10 +34,12 @@ RenderScene* GetRenderScene()
 //绑定世界并完整收集一次已有渲染组件
 void RenderScene::BindWorld(World& currentWorld)
 {
-    if (world == &currentWorld && currentRenderScene == this) return;
+    if (world == &currentWorld && currentRenderScene == this
+        && boundRevision == currentWorld.GetContentRevision()) return;
 
     UnbindWorld();
     world = &currentWorld;
+    boundRevision = currentWorld.GetContentRevision();
     currentRenderScene = this;
 
     //收集世界渲染组件
@@ -73,7 +75,7 @@ void RenderScene::UnbindWorld()
 //增量刷新变换状态和组件快照
 void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
 {
-    if (world != &currentWorld) BindWorld(currentWorld);
+    if (world != &currentWorld || boundRevision != currentWorld.GetContentRevision()) BindWorld(currentWorld);
     FlushPendingChanges();
     renderSettings = currentWorld.renderSettings;
     transformCache.Update(currentWorld);

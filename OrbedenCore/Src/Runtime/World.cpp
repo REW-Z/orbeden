@@ -271,6 +271,9 @@ void World::Clear()
     liveEns.clear();
     componentStorages.clear();
     renderSettings = RenderSettings();
+
+    //内容已整体失效，渲染侧缓存的指针与矩阵都必须重新绑定
+    ++contentRevision;
 }
 
 //复制句柄版本并隔离准备中的实体

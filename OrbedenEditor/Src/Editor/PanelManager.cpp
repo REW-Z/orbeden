@@ -1,18 +1,22 @@
 #include "Editor/PanelManager.h"
+#include "Editor/EditorFloatingWindow.h"
+#include "Editor/EditorGUI.h"
 
 #include "Log/Log.h"
 
 #include <imgui.h>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace
 {
     constexpr float32 MinPanelWidth = 120.0f;
     constexpr float32 MinPanelHeight = 80.0f;
-    constexpr float32 DockTabHeight = 25.0f;
-    constexpr float32 DockSplitterSize = 5.0f;
     constexpr const char* PanelDragPayload = "ORBEDEN_PANEL";
 
     //转换为 ImGui 二维向量。
@@ -77,6 +81,9 @@ void PanelManager::DrawViewsMenu()
 
     for (PanelEntry& entry : panels)
     {
+        //固定工作区面板始终显示，不提供可见性开关
+        if (entry.info.fixedWorkspace) continue;
+
         bool visible = entry.visible;
         if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
         {
@@ -85,6 +92,16 @@ void PanelManager::DrawViewsMenu()
     }
 
     ImGui::Separator();
+    if (ImGui::MenuItem("Merge Floating Panels"))
+    {
+        for (PanelEntry& entry : panels)
+        {
+            if (!entry.visible || entry.dockNode >= 0) continue;
+            int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
+            if (target < 0) target = dockRoot;
+            if (target >= 0) DockPanel(entry.info.id, target, PanelDockPlacement::Center);
+        }
+    }
     if (ImGui::MenuItem("Reset Dock Layout"))
     {
         ResetDockLayout();
@@ -94,24 +111,54 @@ void PanelManager::DrawViewsMenu()
 //绘制所有可见面板
 void PanelManager::DrawPanels()
 {
-    workspaceHovered = false;
-    workspaceRectValid = false;
     if (defaultLayoutPending)
     {
         BuildDefaultDockLayout();
     }
 
-    DrawDockHost();
-    ApplyPendingCommands();
+    //从浮动标题栏发布停靠载荷
     for (PanelEntry& entry : panels)
     {
-        if (entry.visible && entry.panel && entry.dockNode < 0) DrawFloatingPanel(entry);
+        if (!entry.visible || !entry.moving || entry.dockNode >= 0) continue;
+        if (!ImGui::IsMouseDragging(ImGuiMouseButton_Left) && draggedPanel != entry.info.id) continue;
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern | ImGuiDragDropFlags_SourceNoPreviewTooltip))
+        {
+            draggedPanel = entry.info.id;
+            ImGui::SetDragDropPayload(PanelDragPayload, entry.info.id.c_str(), entry.info.id.size() + 1);
+            ImGui::EndDragDropSource();
+        }
     }
+    DrawDockHost();
+    for (PanelEntry& entry : panels)
+    {
+        if (entry.visible && entry.panel && entry.dockNode < 0 && !entry.osWindow) DrawFloatingPanel(entry);
+    }
+    for (PanelEntry& entry : panels)
+    {
+        if (entry.visible && entry.panel && entry.dockNode < 0 && entry.osWindow) DrawFloatingOsPanel(entry);
+    }
+    //释放位置决定主窗口内浮动还是独立 GLFW 窗口
+    if (!draggedPanel.empty() && !EditorGUI::IsLeftMouseDownAnywhere())
+    {
+        PanelEntry* entry = FindPanel(draggedPanel.c_str());
+        if (entry && entry->dockNode >= 0 && !pendingDock.pending)
+        {
+            if (EditorGUI::IsCursorOutsideMainWindow())
+                pendingFloat = { true, draggedPanel, EditorGUI::GetCursorScreenPosition(), true };
+            else
+                pendingFloat = { true, draggedPanel, ToVector2(ImGui::GetIO().MousePos), false };
+        }
+        draggedPanel.clear();
+    }
+    ApplyPendingCommands();
 }
 
 //恢复内置默认停靠布局
 void PanelManager::ResetDockLayout()
 {
+    ClearPendingCommands();
+    for (PanelEntry& entry : panels) DestroyFloatingOsWindow(entry);
+
     dockNodes.clear();
     dockRoot = -1;
     nextDockNodeId = 1;
@@ -119,6 +166,7 @@ void PanelManager::ResetDockLayout()
     for (PanelEntry& entry : panels)
     {
         entry.dockNode = -1;
+        entry.returnDockNode = -1;
         entry.applyPosition = false;
         entry.applySize = false;
     }
@@ -127,6 +175,9 @@ void PanelManager::ResetDockLayout()
 //应用项目中保存的面板布局
 void PanelManager::ApplyLayout(const EditorLayoutState& layout)
 {
+    ClearPendingCommands();
+    for (PanelEntry& entry : panels) DestroyFloatingOsWindow(entry);
+
     dockNodes.clear();
     dockRoot = layout.dockRoot;
     nextDockNodeId = 1;
@@ -151,6 +202,7 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
 
         ApplyVisibility(*entry, state.visible);
         entry->dockNode = state.visible && FindDockNode(state.dockNode) ? state.dockNode : -1;
+        entry->returnDockNode = state.returnDockNode;
         if (DockNode* node = FindDockNode(entry->dockNode))
         {
             node->tabs.push_back(entry->info.id);
@@ -167,6 +219,14 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
             entry->size = state.size;
             entry->applySize = true;
         }
+        //恢复上次承载在独立窗口中的面板，固定工作区面板不参与
+        if (state.floatingWindow && state.visible && !entry->info.fixedWorkspace)
+        {
+            entry->dockNode = -1;
+            entry->applyPosition = false;
+            entry->applySize = false;
+            CreateFloatingOsWindow(*entry);
+        }
     }
 
     defaultLayoutPending = dockNodes.empty() || !FindDockNode(dockRoot);
@@ -177,13 +237,49 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
     else
     {
         SynchronizeDockAssignments();
+
+        //修复历史布局中误并入固定工作区节点的面板
+        for (PanelEntry& entry : panels)
+        {
+            if (entry.info.fixedWorkspace || entry.dockNode < 0) continue;
+            const DockNode* node = FindDockNode(entry.dockNode);
+            if (node && NodeHostsFixedPanel(*node)) DockPanel(entry.info.id, entry.dockNode, PanelDockPlacement::Left);
+        }
+
+        //固定工作区面板始终停靠，布局失效时重新放回工作区节点
+        for (PanelEntry& entry : panels)
+        {
+            if (!entry.info.fixedWorkspace || entry.dockNode >= 0) continue;
+
+            int32 workspaceNodeId = dockRoot;
+            for (const DockNode& node : dockNodes)
+            {
+                if (!node.workspace) continue;
+                workspaceNodeId = node.id;
+                break;
+            }
+            if (workspaceNodeId >= 0) DockPanel(entry.info.id, workspaceNodeId, PanelDockPlacement::Center);
+        }
+
         bool hasWorkspace = std::any_of(dockNodes.begin(), dockNodes.end(), [](const DockNode& node)
             { return node.workspace; });
         if (!hasWorkspace)
         {
-            int32 candidateId = FindBestDockTarget(dockRoot);
-            DockNode* candidate = FindDockNode(candidateId);
-            if (candidate && candidate->tabs.empty()) candidate->workspace = true;
+            //固定工作区面板所在节点优先作为受保护的工作区节点
+            DockNode* candidate = nullptr;
+            for (const PanelEntry& entry : panels)
+            {
+                if (!entry.info.fixedWorkspace || entry.dockNode < 0) continue;
+                candidate = FindDockNode(entry.dockNode);
+                break;
+            }
+            if (!candidate)
+            {
+                int32 candidateId = FindBestDockTarget(dockRoot);
+                candidate = FindDockNode(candidateId);
+                if (candidate && !candidate->tabs.empty()) candidate = nullptr;
+            }
+            if (candidate) candidate->workspace = true;
         }
     }
 }
@@ -199,11 +295,14 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
         EditorPanelState state;
         state.id = entry.info.id;
         state.visible = entry.visible;
+        //独立窗口以屏幕坐标覆盖主窗口内浮动使用的逻辑坐标
+        state.floatingWindow = entry.osWindow != nullptr;
         state.hasPosition = entry.hasPosition;
         state.hasSize = entry.hasSize;
-        state.position = entry.position;
-        state.size = entry.hasSize ? entry.size : entry.info.defaultSize;
+        state.position = entry.osWindow ? entry.osWindow->GetPosition() : entry.position;
+        state.size = entry.osWindow ? entry.osWindow->GetSize() : (entry.hasSize ? entry.size : entry.info.defaultSize);
         state.dockNode = entry.dockNode;
+        state.returnDockNode = entry.returnDockNode;
         layout.panels.push_back(state);
     }
     for (const DockNode& node : dockNodes)
@@ -231,18 +330,29 @@ bool PanelManager::IsPanelVisible(const char* id) const
 void PanelManager::SetPanelVisible(const char* id, bool visible)
 {
     PanelEntry* entry = FindPanel(id);
-    if (!entry) return;
+    if (!entry || entry->visible == visible) return;
+
+    //隐藏独立窗口中的面板时释放其窗口，重新显示时按记录的位置重建
+    bool wasDetached = entry->osWindow != nullptr;
+    if (!visible && entry->osWindow) DestroyFloatingOsWindow(*entry);
 
     if (!visible && entry->dockNode >= 0)
     {
         int32 oldNode = entry->dockNode;
+        entry->returnDockNode = oldNode;
         RemovePanelFromDock(entry->info.id);
         CompactDockNode(oldNode);
     }
     ApplyVisibility(*entry, visible);
-    if (visible && entry->dockNode < 0 && FindDockNode(dockRoot))
+    if (visible && wasDetached)
     {
-        DockPanel(entry->info.id, dockRoot, PanelDockPlacement::Center);
+        CreateFloatingOsWindow(*entry);
+        return;
+    }
+    if (visible && entry->dockNode < 0 && entry->returnDockNode >= 0 && FindDockNode(dockRoot))
+    {
+        int32 target = FindDockNode(entry->returnDockNode) ? entry->returnDockNode : dockRoot;
+        DockPanel(entry->info.id, target, PanelDockPlacement::Center);
     }
 }
 
@@ -258,22 +368,6 @@ void PanelManager::HideAllPanels()
     {
         SetPanelVisible(id.c_str(), false);
     }
-}
-
-//判断鼠标是否位于中央编辑器工作区
-bool PanelManager::IsMouseOverWorkspace() const
-{
-    return workspaceHovered;
-}
-
-//获取当前帧中央编辑器工作区矩形
-bool PanelManager::TryGetWorkspaceRect(vector2& position, vector2& size) const
-{
-    if (!workspaceRectValid) return false;
-
-    position = workspacePosition;
-    size = workspaceSize;
-    return true;
 }
 
 PanelManager::PanelEntry* PanelManager::FindPanel(const char* id)
@@ -445,8 +539,12 @@ void PanelManager::DrawDockHost()
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     if (ImGui::Begin("##EditorDockHost", nullptr, flags))
     {
-        vector2 position = ToVector2(viewport->WorkPos);
-        vector2 size = ToVector2(viewport->WorkSize);
+        //停靠区取整：子窗口尺寸按整数截断，浮点边界会让面板之间漏出 1px 缝隙
+        vector2 position = { std::floor(viewport->WorkPos.x), std::floor(viewport->WorkPos.y) };
+        vector2 size = {
+            std::floor(viewport->WorkPos.x + viewport->WorkSize.x) - position.x,
+            std::floor(viewport->WorkPos.y + viewport->WorkSize.y) - position.y
+        };
         tabMergeTargetHovered = false;
         DrawDockNode(dockRoot, position, size);
         DrawRootDockTarget(position, size);
@@ -498,22 +596,24 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
         return;
     }
 
+    //分裂长度取整：子窗口尺寸被整数截断，浮点边界会在面板之间留下 1px 未覆盖的像素
+    float32 splitterSize = std::floor(EditorGUI::GetSplitterSize());
     float32 total = node->vertical ? size.x : size.y;
-    float32 firstLength = std::max(0.0f, (total - DockSplitterSize) * node->ratio);
+    float32 firstLength = std::floor(std::max(0.0f, (total - splitterSize) * node->ratio));
     vector2 firstSize = size;
     vector2 secondPosition = position;
     vector2 secondSize = size;
     if (node->vertical)
     {
         firstSize.x = firstLength;
-        secondPosition.x += firstLength + DockSplitterSize;
-        secondSize.x = std::max(0.0f, total - firstLength - DockSplitterSize);
+        secondPosition.x += firstLength + splitterSize;
+        secondSize.x = std::max(0.0f, total - firstLength - splitterSize);
     }
     else
     {
         firstSize.y = firstLength;
-        secondPosition.y += firstLength + DockSplitterSize;
-        secondSize.y = std::max(0.0f, total - firstLength - DockSplitterSize);
+        secondPosition.y += firstLength + splitterSize;
+        secondSize.y = std::max(0.0f, total - firstLength - splitterSize);
     }
 
     int32 firstChild = node->firstChild;
@@ -522,15 +622,32 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
     DrawDockNode(secondChild, secondPosition, secondSize);
 
     std::string splitterId = "##DockSplitter" + std::to_string(nodeId);
-    ImGui::SetCursorScreenPos(node->vertical
-        ? ImVec2(position.x + firstLength, position.y)
-        : ImVec2(position.x, position.y + firstLength));
-    ImGui::InvisibleButton(splitterId.c_str(), node->vertical
-        ? ImVec2(DockSplitterSize, size.y)
-        : ImVec2(size.x, DockSplitterSize));
-    if (ImGui::IsItemHovered() || ImGui::IsItemActive())
+    vector2 splitterPosition = node->vertical
+        ? vector2 { position.x + firstLength, position.y }
+        : vector2 { position.x, position.y + firstLength };
+    vector2 splitterExtent = node->vertical
+        ? vector2 { splitterSize, size.y }
+        : vector2 { size.x, splitterSize };
+
+    //分隔带铺面板底色，只有悬停或拖动时才画高亮线，停靠组之间因此看不出缝隙
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    drawList->AddRectFilled(ToImVec2(splitterPosition),
+        ToImVec2(vector2 { splitterPosition.x + splitterExtent.x, splitterPosition.y + splitterExtent.y }),
+        ImGui::GetColorU32(ImGuiCol_WindowBg));
+    ImGui::SetCursorScreenPos(ToImVec2(splitterPosition));
+    ImGui::InvisibleButton(splitterId.c_str(), ToImVec2(splitterExtent));
+    bool draggingSplitter = ImGui::IsItemActive();
+    if (ImGui::IsItemHovered() || draggingSplitter)
     {
         ImGui::SetMouseCursor(node->vertical ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS);
+        float32 center = splitterSize * 0.5f;
+        ImU32 color = ImGui::GetColorU32(draggingSplitter ? ImGuiCol_SeparatorActive : ImGuiCol_SeparatorHovered);
+        if (node->vertical)
+            drawList->AddLine(ImVec2(position.x + firstLength + center, position.y),
+                ImVec2(position.x + firstLength + center, position.y + size.y), color, 2.0f);
+        else
+            drawList->AddLine(ImVec2(position.x, position.y + firstLength + center),
+                ImVec2(position.x + size.x, position.y + firstLength + center), color, 2.0f);
     }
     if (ImGui::IsItemActive() && total > 1.0f)
     {
@@ -542,30 +659,34 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
 //绘制一个带标签页的停靠叶子。
 void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size)
 {
-    if (node.workspace)
-    {
-        workspacePosition = position;
-        workspaceSize = size;
-        workspaceRectValid = size.x >= 1.0f && size.y >= 1.0f;
-    }
     if (size.x < 1.0f || size.y < 1.0f) return;
+
+    //固定工作区面板透明铺底，可见像素全部来自场景背景绘制
+    bool fixedLeaf = false;
+    for (const std::string& panelId : node.tabs)
+    {
+        PanelEntry* entry = FindPanel(panelId.c_str());
+        if (entry && entry->info.fixedWorkspace)
+        {
+            fixedLeaf = true;
+            break;
+        }
+    }
+    bool transparentLeaf = node.tabs.empty() || fixedLeaf;
 
     ImGui::SetCursorScreenPos(ToImVec2(position));
     std::string childId = "##DockLeaf" + std::to_string(node.id);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, node.tabs.empty() ? 0.0f : 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f, 4.0f));
-    if (!node.tabs.empty()) ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
-    bool open = ImGui::BeginChild(childId.c_str(), ToImVec2(size), node.tabs.empty() ? ImGuiChildFlags_None : ImGuiChildFlags_Borders,
-        node.tabs.empty() ? ImGuiWindowFlags_NoBackground : ImGuiWindowFlags_None);
-    if (node.workspace && node.tabs.empty()
-        && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
-    {
-        workspaceHovered = true;
-    }
+    //停靠宿主已把 WindowPadding 压成 0，这里必须重新给出主题值，读当前样式只会拿到 0
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, fixedLeaf ? ImVec2(0.0f, 0.0f) : EditorGUI::GetWindowPadding());
+    if (!transparentLeaf) ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+    //叶子不画边框，停靠组之间只靠分隔带区分，否则相邻两条边框会夹出一条缝隙
+    bool open = ImGui::BeginChild(childId.c_str(), ToImVec2(size), ImGuiChildFlags_AlwaysUseWindowPadding,
+        transparentLeaf ? ImGuiWindowFlags_NoBackground : ImGuiWindowFlags_None);
 
     std::string closePanel;
     bool floatActive = false;
+    bool detachActive = false;
     if (!node.tabs.empty())
     {
         PanelEntry* activeEntry = FindPanel(node.activePanel.c_str());
@@ -583,46 +704,59 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             }
         }
 
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1.0f, 2.0f));
-        bool drewTab = false;
-        for (std::size_t index = 0; index < node.tabs.size(); index++)
+        //固定工作区面板不绘制标签栏、关闭按钮与停靠拖拽源
+        if (!fixedLeaf)
         {
-            PanelEntry* entry = FindPanel(node.tabs[index].c_str());
-            if (!entry || !entry->visible) continue;
-            if (drewTab) ImGui::SameLine();
+            float32 closeWidth = ImGui::GetFrameHeight();
+            float32 tabWidthAvailable = std::max(1.0f, ImGui::GetContentRegionAvail().x - closeWidth - ImGui::GetStyle().ItemSpacing.x);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+            ImGui::BeginChild("##PanelTabs", ImVec2(tabWidthAvailable, closeWidth), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
+            ImGui::PopStyleVar();
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1.0f, 2.0f));
+            bool drewTab = false;
+            for (std::size_t index = 0; index < node.tabs.size(); index++)
+            {
+                PanelEntry* entry = FindPanel(node.tabs[index].c_str());
+                if (!entry || !entry->visible) continue;
+                if (drewTab) ImGui::SameLine();
 
-            bool selected = node.activePanel == entry->info.id;
-            std::string tabLabel = entry->info.title + "###DockTab" + entry->info.id;
-            float32 tabWidth = ImGui::CalcTextSize(entry->info.title.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f + 10.0f;
-            if (selected)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_TabSelected));
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_TabHovered));
+                bool selected = node.activePanel == entry->info.id;
+                std::string tabLabel = entry->info.title + "###DockTab" + entry->info.id;
+                float32 tabWidth = ImGui::CalcTextSize(entry->info.title.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f + 10.0f;
+                if (selected)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_TabSelected));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_TabHovered));
+                }
+                bool tabClicked = ImGui::Button(tabLabel.c_str(), ImVec2(tabWidth, ImGui::GetFrameHeight()));
+                if (selected) ImGui::PopStyleColor(2);
+                if (tabClicked)
+                {
+                    node.activePanel = entry->info.id;
+                }
+                std::string popupId = "DockTabContext##" + entry->info.id;
+                if (ImGui::BeginPopupContextItem(popupId.c_str()))
+                {
+                    if (ImGui::MenuItem("Float")) floatActive = true;
+                    if (ImGui::MenuItem("Float in New Window")) detachActive = true;
+                    if (ImGui::MenuItem("Close")) closePanel = entry->info.id;
+                    ImGui::EndPopup();
+                }
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+                {
+                    draggedPanel = entry->info.id;
+                    ImGui::SetDragDropPayload(PanelDragPayload, entry->info.id.c_str(), entry->info.id.size() + 1);
+                    ImGui::TextUnformatted(entry->info.title.c_str());
+                    ImGui::EndDragDropSource();
+                }
+                drewTab = true;
             }
-            bool tabClicked = ImGui::Button(tabLabel.c_str(), ImVec2(tabWidth, DockTabHeight));
-            if (selected) ImGui::PopStyleColor(2);
-            if (tabClicked)
-            {
-                node.activePanel = entry->info.id;
-            }
-            std::string popupId = "DockTabContext##" + entry->info.id;
-            if (ImGui::BeginPopupContextItem(popupId.c_str()))
-            {
-                if (ImGui::MenuItem("Float")) floatActive = true;
-                if (ImGui::MenuItem("Close")) closePanel = entry->info.id;
-                ImGui::EndPopup();
-            }
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
-            {
-                draggedPanel = entry->info.id;
-                ImGui::SetDragDropPayload(PanelDragPayload, entry->info.id.c_str(), entry->info.id.size() + 1);
-                ImGui::TextUnformatted(entry->info.title.c_str());
-                ImGui::EndDragDropSource();
-            }
-            drewTab = true;
+            ImGui::PopStyleVar();
+            ImGui::EndChild();
+            ImGui::SameLine();
+            if (ImGui::Button("×##ClosePanel", ImVec2(closeWidth, closeWidth))) closePanel = node.activePanel;
+            ImGui::Separator();
         }
-        ImGui::PopStyleVar();
-        ImGui::Separator();
 
         PanelEntry* active = FindPanel(node.activePanel.c_str());
         if (open && active && active->visible && active->panel)
@@ -631,8 +765,8 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         }
     }
     ImGui::EndChild();
-    if (!node.tabs.empty()) ImGui::PopStyleColor();
-    ImGui::PopStyleVar(3);
+    if (!transparentLeaf) ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     PanelDockPlacement rootPlacement = PanelDockPlacement::Center;
@@ -641,11 +775,11 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         rootPlacement = GetDockPlacement(ToVector2(viewport->WorkPos), ToVector2(viewport->WorkSize), 0.12f);
     }
     ImVec2 mouse = ImGui::GetIO().MousePos;
-    bool mergeOnTabBar = !node.tabs.empty()
+    bool mergeOnTabBar = !fixedLeaf && !node.tabs.empty()
         && mouse.x >= position.x
         && mouse.x <= position.x + size.x
         && mouse.y >= position.y
-        && mouse.y <= position.y + DockTabHeight + 8.0f;
+        && mouse.y <= position.y + ImGui::GetFrameHeight() + 8.0f;
     const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
     if (mergeOnTabBar && activePayload && activePayload->IsDataType(PanelDragPayload)) tabMergeTargetHovered = true;
 
@@ -655,9 +789,11 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
         if (payload)
         {
+            //固定工作区面板只接受四边拆分，不接受并入为标签页
             PanelDockPlacement placement = mergeOnTabBar
                 ? PanelDockPlacement::Center
                 : GetDockPlacement(position, size, 0.28f);
+            if (fixedLeaf && placement == PanelDockPlacement::Center) placement = PanelDockPlacement::Left;
             DrawDockPreview(position, size, placement);
             if (payload->IsDelivery())
             {
@@ -672,14 +808,20 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
     }
 
     if (!closePanel.empty()) pendingClosePanel = closePanel;
-    if (floatActive && !node.activePanel.empty())
+    if ((floatActive || detachActive) && !node.activePanel.empty())
     {
         PanelEntry* entry = FindPanel(node.activePanel.c_str());
         if (entry)
         {
+            //独立窗口在光标处打开，主窗口内浮动沿用面板内部的偏移位置
+            float32 offsetX = position.x + 30.0f;
+            float32 offsetY = position.y + 30.0f;
             pendingFloat.pending = true;
             pendingFloat.panelId = entry->info.id;
-            pendingFloat.position = { position.x + 30.0f, position.y + 30.0f };
+            pendingFloat.independent = detachActive;
+            pendingFloat.position = detachActive
+                ? EditorGUI::GetCursorScreenPosition()
+                : vector2 { offsetX, offsetY };
         }
     }
 }
@@ -754,33 +896,58 @@ void PanelManager::ApplyPendingCommands()
         pendingDock = PendingDockCommand();
     }
 
+    //面板离开停靠树后转为主窗口内浮动或独立 GLFW 窗口
     if (pendingFloat.pending)
     {
         PanelEntry* entry = FindPanel(pendingFloat.panelId.c_str());
-        if (entry)
+        //固定工作区面板不参与浮动与独立窗口
+        if (entry && !entry->info.fixedWorkspace)
         {
             int32 oldNode = entry->dockNode;
+            entry->returnDockNode = oldNode;
             RemovePanelFromDock(entry->info.id);
             CompactDockNode(oldNode);
             entry->hasPosition = true;
             entry->position = pendingFloat.position;
             entry->applyPosition = true;
+            if (pendingFloat.independent)
+            {
+                entry->size = entry->hasSize ? entry->size : entry->info.defaultSize;
+                CreateFloatingOsWindow(*entry);
+            }
         }
         pendingFloat = PendingFloatCommand();
     }
 
+    //回到停靠树的面板立即释放独立窗口
+    for (PanelEntry& entry : panels)
+    {
+        if (entry.osWindow && entry.dockNode >= 0) DestroyFloatingOsWindow(entry);
+    }
 
     if (!pendingClosePanel.empty())
     {
         std::string panelId = pendingClosePanel;
         pendingClosePanel.clear();
         SetPanelVisible(panelId.c_str(), false);
+        repaintPending = true;
     }
+}
+
+//清空跨布局切换不需要保留的待处理命令
+void PanelManager::ClearPendingCommands()
+{
+    pendingDock = PendingDockCommand();
+    pendingFloat = PendingFloatCommand();
+    pendingClosePanel.clear();
+    draggedPanel.clear();
 }
 
 //绘制未停靠的传统浮动窗口。
 void PanelManager::DrawFloatingPanel(PanelEntry& entry)
 {
+    if (entry.info.fixedWorkspace) return;
+
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     if (!viewport) return;
 
@@ -811,17 +978,18 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
 
     bool visible = entry.visible;
     std::string windowTitle = entry.info.title + "###Panel" + entry.info.id;
-    constexpr ImGuiWindowFlags flags =
+    ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse;
+    if (entry.moving && draggedPanel == entry.info.id) flags |= ImGuiWindowFlags_NoInputs;
     bool open = ImGui::Begin(windowTitle.c_str(), &visible, flags);
     vector2 position = ToVector2(ImGui::GetWindowPos());
     vector2 size = ToVector2(ImGui::GetWindowSize());
     float32 titleHeight = ImGui::GetFrameHeight();
     bool titleHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
         && io.MousePos.x >= position.x
-        && io.MousePos.x <= position.x + size.x
+        && io.MousePos.x < position.x + size.x - titleHeight
         && io.MousePos.y >= position.y
         && io.MousePos.y <= position.y + titleHeight;
     if (titleHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
@@ -829,26 +997,21 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
         entry.moving = true;
         entry.moveOffset = { io.MousePos.x - position.x, io.MousePos.y - position.y };
     }
-    if (open)
+    //在标题栏菜单中合并回原停靠组
+    std::string menuId = "PanelTitleMenu##" + entry.info.id;
+    if (titleHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) ImGui::OpenPopup(menuId.c_str());
+    if (ImGui::BeginPopup(menuId.c_str()))
     {
-        std::string dockButtonId = "Dock###FloatDock" + entry.info.id;
-        if (ImGui::SmallButton(dockButtonId.c_str()))
+        if (ImGui::MenuItem("Merge into Main Window"))
         {
-            int32 target = FindBestDockTarget(dockRoot);
-            if (target >= 0) DockPanel(entry.info.id, target, PanelDockPlacement::Center);
+            int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
+            if (target < 0) target = dockRoot;
+            if (target >= 0) pendingDock = { true, entry.info.id, target, PanelDockPlacement::Center };
         }
-        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
-        {
-            draggedPanel = entry.info.id;
-            ImGui::SetDragDropPayload(PanelDragPayload, entry.info.id.c_str(), entry.info.id.size() + 1);
-            ImGui::Text("Dock %s", entry.info.title.c_str());
-            ImGui::EndDragDropSource();
-        }
-        ImGui::SameLine();
-        ImGui::TextDisabled("Drag Dock into a panel to merge");
-        ImGui::Separator();
-        entry.panel->DrawPanel();
+        if (ImGui::MenuItem("Close")) pendingClosePanel = entry.info.id;
+        ImGui::EndPopup();
     }
+    if (open) entry.panel->DrawPanel();
     position = ToVector2(ImGui::GetWindowPos());
     size = ToVector2(ImGui::GetWindowSize());
     ClampPanelRect(position, size);
@@ -866,6 +1029,142 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
     }
 }
 
+//把独立窗口矩形限制在任一显示器工作区内，完全离屏时移回主显示器
+bool PanelManager::ClampScreenRect(vector2& position, vector2& size) const
+{
+    int32 monitorCount = 0;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+    if (!monitors || monitorCount <= 0) return false;
+
+    //与任一显示器工作区重叠足够面积即视为可见
+    constexpr float32 MinVisible = 64.0f;
+    for (int32 index = 0; index < monitorCount; index++)
+    {
+        int32 areaX = 0;
+        int32 areaY = 0;
+        int32 areaWidth = 0;
+        int32 areaHeight = 0;
+        glfwGetMonitorWorkarea(monitors[index], &areaX, &areaY, &areaWidth, &areaHeight);
+        float32 overlapX = std::min(position.x + size.x, static_cast<float32>(areaX + areaWidth)) - std::max(position.x, static_cast<float32>(areaX));
+        float32 overlapY = std::min(position.y + size.y, static_cast<float32>(areaY + areaHeight)) - std::max(position.y, static_cast<float32>(areaY));
+        if (overlapX >= MinVisible && overlapY >= MinVisible) return false;
+    }
+
+    int32 areaX = 0;
+    int32 areaY = 0;
+    int32 areaWidth = 0;
+    int32 areaHeight = 0;
+    glfwGetMonitorWorkarea(monitors[0], &areaX, &areaY, &areaWidth, &areaHeight);
+    size.x = std::clamp(size.x, MinPanelWidth, static_cast<float32>(areaWidth));
+    size.y = std::clamp(size.y, MinPanelHeight, static_cast<float32>(areaHeight));
+    position = { static_cast<float32>(areaX) + 40.0f, static_cast<float32>(areaY) + 40.0f };
+    return true;
+}
+
+//创建承载面板的独立 GLFW 窗口。
+void PanelManager::CreateFloatingOsWindow(PanelEntry& entry)
+{
+    if (entry.osWindow) return;
+
+    vector2 position = entry.hasPosition ? entry.position : vector2 { 120.0f, 120.0f };
+    vector2 size = entry.hasSize ? entry.size : entry.info.defaultSize;
+    ClampScreenRect(position, size);
+
+    auto osWindow = std::make_unique<EditorFloatingWindow>();
+    if (!osWindow->Create(entry.info.title, position, size))
+    {
+        Log::Error("Panel detach failed: independent window create failed.");
+        return;
+    }
+    entry.osWindow = std::move(osWindow);
+    entry.position = position;
+    entry.size = size;
+    entry.hasPosition = true;
+    entry.hasSize = true;
+    repaintPending = true;
+}
+
+//销毁承载面板的独立 GLFW 窗口。
+void PanelManager::DestroyFloatingOsWindow(PanelEntry& entry)
+{
+    if (!entry.osWindow) return;
+
+    //保存关闭前的实际窗口矩形，恢复时回到同一位置
+    entry.position = entry.osWindow->GetPosition();
+    entry.size = entry.osWindow->GetSize();
+    entry.hasPosition = true;
+    entry.hasSize = true;
+    entry.moving = false;
+    entry.osWindow.reset();
+    repaintPending = true;
+}
+
+//销毁全部独立窗口
+void PanelManager::DestroyFloatingOsWindows()
+{
+    for (PanelEntry& entry : panels) DestroyFloatingOsWindow(entry);
+}
+
+//获取并清除面板管理器的重绘请求
+bool PanelManager::TakeRepaintRequest()
+{
+    bool requested = repaintPending;
+    repaintPending = false;
+    return requested;
+}
+
+//判断独立窗口中是否有控件处于活动状态
+bool PanelManager::IsAnyFloatingItemActive() const
+{
+    for (const PanelEntry& entry : panels)
+    {
+        if (entry.osWindow && entry.osWindow->IsItemActive()) return true;
+    }
+    return false;
+}
+
+//在独立 GLFW 窗口中绘制面板。
+void PanelManager::DrawFloatingOsPanel(PanelEntry& entry)
+{
+    if (entry.info.fixedWorkspace) return;
+
+    EditorFloatingWindow& host = *entry.osWindow;
+
+    //关闭与停靠回主窗口先转成命令，由 ApplyPendingCommands 统一提交
+    if (host.ShouldClose()) pendingClosePanel = entry.info.id;
+    if (host.TakeDockBackRequest())
+    {
+        int32 target = FindDockNode(entry.returnDockNode) ? entry.returnDockNode : FindBestDockTarget(dockRoot);
+        if (target < 0) target = dockRoot;
+        if (target >= 0) pendingDock = { true, entry.info.id, target, PanelDockPlacement::Center };
+    }
+
+    if (!host.BeginFrame()) return;
+
+    //窗口外壳由系统标题栏提供，内部只铺满内容并保留统一主题
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(viewport->WorkSize, ImGuiCond_Always);
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoSavedSettings;
+
+    std::string windowTitle = entry.info.title + "###Panel" + entry.info.id;
+    if (ImGui::Begin(windowTitle.c_str(), nullptr, flags))
+    {
+        entry.panel->DrawPanel();
+    }
+    ImGui::End();
+
+    host.EndFrame();
+}
+
 //将面板放入标签区或在目标边缘创建新分区。
 void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, PanelDockPlacement placement)
 {
@@ -879,6 +1178,18 @@ void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, Pan
         targetNodeId = FindBestDockTarget(targetNodeId);
         target = FindDockNode(targetNodeId);
         if (!target) return;
+    }
+
+    //固定工作区节点不接受并入为标签页，改为并入其他叶子或拆分到它旁边
+    if (placement == PanelDockPlacement::Center && NodeHostsFixedPanel(*target))
+    {
+        int32 alternative = FindBestDockTarget(dockRoot);
+        if (alternative >= 0 && alternative != targetNodeId)
+        {
+            targetNodeId = alternative;
+            target = FindDockNode(targetNodeId);
+        }
+        if (NodeHostsFixedPanel(*target)) placement = PanelDockPlacement::Left;
     }
 
     if (entry->dockNode == targetNodeId && placement == PanelDockPlacement::Center)
@@ -911,6 +1222,8 @@ void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, Pan
     newContent.id = nextDockNodeId++;
     newContent.tabs.push_back(panelId);
     newContent.activePanel = panelId;
+    for (PanelEntry& panel : panels)
+        if (panel.returnDockNode == targetNodeId) panel.returnDockNode = oldContent.id;
     dockNodes.push_back(oldContent);
     dockNodes.push_back(newContent);
 
@@ -967,6 +1280,7 @@ void PanelManager::CompactDockNode(int32 nodeId)
         for (PanelEntry& entry : panels)
         {
             if (entry.dockNode == siblingId) entry.dockNode = parentId;
+            if (entry.returnDockNode == siblingId) entry.returnDockNode = parentId;
         }
         dockNodes.erase(std::remove_if(dockNodes.begin(), dockNodes.end(), [emptyNodeId, siblingId](const DockNode& value)
             { return value.id == emptyNodeId || value.id == siblingId; }), dockNodes.end());
@@ -1003,18 +1317,33 @@ void PanelManager::SynchronizeDockAssignments()
 }
 
 //查找可停靠叶子
+//判断节点是否承载固定工作区面板
+bool PanelManager::NodeHostsFixedPanel(const DockNode& node) const
+{
+    for (const std::string& panelId : node.tabs)
+    {
+        const PanelEntry* entry = FindPanel(panelId.c_str());
+        if (entry && entry->info.fixedWorkspace) return true;
+    }
+    return false;
+}
+
 int32 PanelManager::FindBestDockTarget(int32 nodeId) const
 {
     const DockNode* node = FindDockNode(nodeId);
     if (!node) return -1;
-    if (node->firstChild < 0 || node->secondChild < 0) return node->id;
+    if (node->firstChild < 0 || node->secondChild < 0)
+    {
+        return NodeHostsFixedPanel(*node) ? -1 : node->id;
+    }
 
     int32 first = FindBestDockTarget(node->firstChild);
     int32 second = FindBestDockTarget(node->secondChild);
     const DockNode* firstNode = FindDockNode(first);
     const DockNode* secondNode = FindDockNode(second);
-    if (firstNode && firstNode->workspace) return first;
-    if (secondNode && secondNode->workspace) return second;
+    //固定工作区节点不能作为并入目标，其 workspace 偏好不再参与选择
+    if (firstNode && firstNode->workspace && !NodeHostsFixedPanel(*firstNode)) return first;
+    if (secondNode && secondNode->workspace && !NodeHostsFixedPanel(*secondNode)) return second;
     if (firstNode && firstNode->tabs.empty()) return first;
     if (secondNode && secondNode->tabs.empty()) return second;
     return first >= 0 ? first : second;

@@ -264,6 +264,7 @@ namespace
             EditorPanelState panel;
             panel.id = GetAttribute(panelToken, "id");
             panel.visible = GetBoolAttribute(panelToken, "visible", true);
+            panel.floatingWindow = GetBoolAttribute(panelToken, "floating", false);
             panel.hasPosition = HasAttribute(panelToken, "x") && HasAttribute(panelToken, "y");
             panel.hasSize = HasAttribute(panelToken, "width") && HasAttribute(panelToken, "height");
             panel.position.x = GetFloatAttribute(panelToken, "x", 0.0f);
@@ -271,6 +272,7 @@ namespace
             panel.size.x = GetFloatAttribute(panelToken, "width", 0.0f);
             panel.size.y = GetFloatAttribute(panelToken, "height", 0.0f);
             panel.dockNode = GetIntAttribute(panelToken, "dockNode", -1);
+            panel.returnDockNode = GetIntAttribute(panelToken, "returnDockNode", -1);
             if (!panel.id.empty())
             {
                 layout.panels.push_back(panel);
@@ -367,11 +369,13 @@ namespace
         {
             output << "        <Panel id=\"" << EscapeXml(panel.id)
                 << "\" visible=\"" << (panel.visible ? "true" : "false")
+                << "\" floating=\"" << (panel.floatingWindow ? "true" : "false")
                 << "\" x=\"" << ToFloatText(panel.position.x)
                 << "\" y=\"" << ToFloatText(panel.position.y)
                 << "\" width=\"" << ToFloatText(panel.size.x)
                 << "\" height=\"" << ToFloatText(panel.size.y)
                 << "\" dockNode=\"" << panel.dockNode
+                << "\" returnDockNode=\"" << panel.returnDockNode
                 << "\" />\n";
         }
 

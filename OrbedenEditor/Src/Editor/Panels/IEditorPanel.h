@@ -25,6 +25,9 @@ public:
     PanelDockPlacement defaultDock = PanelDockPlacement::Center;
     float32 defaultDockRatio = 0.25f;
     int32 order = 0;
+
+    //固定占据中央工作区，不可关闭、拖动或浮动
+    bool fixedWorkspace = false;
 };
 
 //编辑器面板接口。

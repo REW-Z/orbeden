@@ -4,7 +4,6 @@
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/ProjectLayout.h"
 #include "Editor/ProjectUpgrader.h"
-#include "Editor/Panels/EditorPanelRegistry.h"
 #include "InputManager/InputManager.h"
 #include "FileSystem/Utf8Path.h"
 
@@ -326,7 +325,7 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     : app(application)
     , project(application)
     , executablePath(startupExecutablePath ? startupExecutablePath : "")
-    , editorScene(application, panelManager, managedBridge)
+    , editorScene(application, managedBridge)
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
@@ -336,10 +335,6 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
         return;
     }
     SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
-    for (std::unique_ptr<IEditorPanel>& panel : EditorPanelRegistry::CreatePanels(*this))
-    {
-        panelManager.RegisterPanel(std::move(panel));
-    }
     CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
 
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
@@ -371,6 +366,9 @@ EditorSystem::~EditorSystem()
     managedBridge.Shutdown();
     clrHost.Shutdown();
     InputManager::SetEnabled(previousInputEnabled);
+
+    //独立窗口共享主上下文的字体图集，必须在主 ImGui 上下文销毁前释放
+    panelManager.DestroyFloatingOsWindows();
     editorGUI.Shutdown();
 }
 
@@ -381,6 +379,12 @@ void EditorSystem::Update(World& world, float deltaTime)
     {
         editorScene.Update(world, deltaTime, mouseWheel);
     }
+
+    //场景改为离屏渲染后主窗口不再被场景填充，需要在渲染前清空
+    if (!playMode.IsPlaying()) editorGUI.ClearMainFramebuffer();
+
+    //按场景视口当前可见性维护离屏目标，Play 期间同样需要释放
+    editorScene.RefreshSceneViewTarget(world);
 }
 
 //请求编辑器重绘并唤醒事件循环
@@ -415,17 +419,14 @@ void EditorSystem::RenderEditorGUI()
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     panelManager.DrawPanels();
 
-    if (!playMode.IsPlaying())
-    {
-        editorScene.DrawBackground();
-    }
-    else
-    {
-        editorScene.CancelInteraction();
-    }
+    //场景视口由 Scene 面板在自身内容区内绘制，Play 期间取消鼠标交互
+    if (playMode.IsPlaying()) editorScene.CancelInteraction();
 
-    //更新连续重绘状态
-    continuousRepaint = ImGui::IsAnyItemActive();
+    //独立窗口创建或销毁发生在绘制之后，需要唤醒下一轮事件循环
+    if (panelManager.TakeRepaintRequest()) RequestRepaint();
+
+    //更新连续重绘状态，独立窗口中的活动控件同样需要连续帧
+    continuousRepaint = ImGui::IsAnyItemActive() || panelManager.IsAnyFloatingItemActive();
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)
         || ImGui::IsMouseReleased(ImGuiMouseButton_Right)
         || ImGui::IsMouseReleased(ImGuiMouseButton_Middle))

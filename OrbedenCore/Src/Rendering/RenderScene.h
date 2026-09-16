@@ -133,6 +133,7 @@ private:
     };
 
     World* world = nullptr;
+    uint64 boundRevision = 0;//绑定时世界的内容序号，原地换内容后据此重新收集
     List<Camera*> cameraComponents;
     List<DirectionalLight*> directionalLightComponents;
     List<PendingChange> pendingChanges;

@@ -2,7 +2,6 @@
 
 #include "Application.h"
 #include "Editor/ManagedEditorBridge.h"
-#include "Editor/PanelManager.h"
 #include "Platform/GlfwWindow.h"
 #include "Rendering/RenderMath.h"
 #include "Rendering/RenderSystem.h"
@@ -28,8 +27,93 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+EditorScene* EditorScene::activeScene = nullptr;
+
 namespace
 {
+    //读取变换矩阵中一个轴的长度。
+    float32 GetAxisLength(const matrix4x4& matrix, int32 offset)
+    {
+        float32 x = matrix.m[offset];
+        float32 y = matrix.m[offset + 1];
+        float32 z = matrix.m[offset + 2];
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    //把旋转矩阵转换为单位四元数。
+    quaternion GetRotation(const matrix4x4& matrix, const vector3& scale)
+    {
+        float32 xScale = std::abs(scale.x) > 0.000001f ? scale.x : 1.0f;
+        float32 yScale = std::abs(scale.y) > 0.000001f ? scale.y : 1.0f;
+        float32 zScale = std::abs(scale.z) > 0.000001f ? scale.z : 1.0f;
+        float32 m00 = matrix.m[0] / xScale;
+        float32 m01 = matrix.m[4] / yScale;
+        float32 m02 = matrix.m[8] / zScale;
+        float32 m10 = matrix.m[1] / xScale;
+        float32 m11 = matrix.m[5] / yScale;
+        float32 m12 = matrix.m[9] / zScale;
+        float32 m20 = matrix.m[2] / xScale;
+        float32 m21 = matrix.m[6] / yScale;
+        float32 m22 = matrix.m[10] / zScale;
+
+        quaternion result;
+        float32 trace = m00 + m11 + m22;
+        if (trace > 0.0f)
+        {
+            float32 value = std::sqrt(trace + 1.0f) * 2.0f;
+            result.w = 0.25f * value;
+            result.x = (m21 - m12) / value;
+            result.y = (m02 - m20) / value;
+            result.z = (m10 - m01) / value;
+        }
+        else if (m00 > m11 && m00 > m22)
+        {
+            float32 value = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f;
+            result.w = (m21 - m12) / value;
+            result.x = 0.25f * value;
+            result.y = (m01 + m10) / value;
+            result.z = (m02 + m20) / value;
+        }
+        else if (m11 > m22)
+        {
+            float32 value = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f;
+            result.w = (m02 - m20) / value;
+            result.x = (m01 + m10) / value;
+            result.y = 0.25f * value;
+            result.z = (m12 + m21) / value;
+        }
+        else
+        {
+            float32 value = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f;
+            result.w = (m10 - m01) / value;
+            result.x = (m02 + m20) / value;
+            result.y = (m12 + m21) / value;
+            result.z = 0.25f * value;
+        }
+
+        float32 length = std::sqrt(result.x * result.x + result.y * result.y + result.z * result.z + result.w * result.w);
+        if (length <= 0.000001f) return quaternion();
+        result.x /= length;
+        result.y /= length;
+        result.z /= length;
+        result.w /= length;
+        return result;
+    }
+
+    //把局部矩阵分解回Transform使用的TRS字段。
+    void DecomposeTransform(const matrix4x4& matrix, vector3& position, quaternion& rotation, vector3& scale)
+    {
+        position = RenderMath::GetTranslation(matrix);
+        scale = { GetAxisLength(matrix, 0), GetAxisLength(matrix, 4), GetAxisLength(matrix, 8) };
+
+        vector3 xAxis = { matrix.m[0], matrix.m[1], matrix.m[2] };
+        vector3 yAxis = { matrix.m[4], matrix.m[5], matrix.m[6] };
+        vector3 zAxis = { matrix.m[8], matrix.m[9], matrix.m[10] };
+        if (RenderMath::Dot(RenderMath::Cross(xAxis, yAxis), zAxis) < 0.0f) scale.x = -scale.x;
+        rotation = GetRotation(matrix, scale);
+    }
+
+
     constexpr float32 Pi = 3.14159265358979323846f;
     constexpr const char* EditorCameraId = "world://editor/camera";
     constexpr uint8 ExplicitSelection = 1;
@@ -132,12 +216,6 @@ namespace
         return window && glfwGetMouseButton(window, button) == GLFW_PRESS;
     }
 
-    //判断 ImGui 是否正在捕获鼠标。
-    bool ImGuiCapturesMouse()
-    {
-        return ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse;
-    }
-
     //判断是否有真实 ImGui 控件正在占用场景点击。
     bool HasBlockingImGuiActiveItem()
     {
@@ -186,9 +264,8 @@ namespace
         if (!CurrentGizmoScene) return false;
 
         const matrix4x4& viewProjection = CurrentGizmoScene->GetGizmoViewProjection();
-        int32 width = CurrentGizmoScene->GetGizmoViewportWidth();
-        int32 height = CurrentGizmoScene->GetGizmoViewportHeight();
-        if (width <= 0 || height <= 0) return false;
+        const EditorSceneViewState& view = CurrentGizmoScene->GetSceneViewState();
+        if (view.renderSize.x <= 0.0f || view.renderSize.y <= 0.0f) return false;
 
         float32 x = viewProjection.m[0] * point.x + viewProjection.m[4] * point.y + viewProjection.m[8] * point.z + viewProjection.m[12];
         float32 y = viewProjection.m[1] * point.x + viewProjection.m[5] * point.y + viewProjection.m[9] * point.z + viewProjection.m[13];
@@ -202,8 +279,8 @@ namespace
         float32 ndcZ = z * inverseW;
         if (ndcZ < -1.0f || ndcZ > 1.0f) return false;
 
-        screen.x = (ndcX * 0.5f + 0.5f) * static_cast<float32>(width);
-        screen.y = (1.0f - (ndcY * 0.5f + 0.5f)) * static_cast<float32>(height);
+        screen.x = view.renderPosition.x + (ndcX * 0.5f + 0.5f) * view.renderSize.x;
+        screen.y = view.renderPosition.y + (1.0f - (ndcY * 0.5f + 0.5f)) * view.renderSize.y;
         return true;
     }
 
@@ -228,11 +305,134 @@ namespace
     }
 }
 
-EditorScene::EditorScene(Application& application, PanelManager& panels, ManagedEditorBridge& bridge)
+EditorScene::EditorScene(Application& application, ManagedEditorBridge& bridge)
     : app(application)
-    , panelManager(panels)
     , managedBridge(bridge)
 {
+    activeScene = this;
+}
+
+//释放场景视口的离屏目标。
+EditorScene::~EditorScene()
+{
+    ReleaseSceneViewTarget();
+    if (activeScene == this) activeScene = nullptr;
+}
+
+//获取当前活动的编辑器场景。
+EditorScene* EditorScene::GetActiveScene()
+{
+    return activeScene;
+}
+
+//获取本帧场景视口矩形与像素尺寸。
+const EditorSceneViewState& EditorScene::GetSceneViewState() const
+{
+    return sceneView;
+}
+
+//释放场景视口的离屏目标。
+void EditorScene::ReleaseSceneViewTarget()
+{
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    if (renderSystem && sceneTarget.IsValid()) renderSystem->DeleteRenderTarget(sceneTarget);
+    sceneTarget = RenderTargetID();
+    sceneTargetTexture = GpuTextureID();
+    sceneTargetWidth = 0;
+    sceneTargetHeight = 0;
+}
+
+//按场景视口可见性维护离屏目标并绑定编辑相机。
+void EditorScene::RefreshSceneViewTarget(World& world)
+{
+    //本帧记录只对下一次刷新有效，未绘制即视为不可见
+    int32 requestedWidth = sceneView.visible ? std::max(sceneView.pixelWidth, 1) : 0;
+    int32 requestedHeight = sceneView.visible ? std::max(sceneView.pixelHeight, 1) : 0;
+    sceneView.visible = false;
+
+    //尺寸或可见性变化时整体重建，后端不支持原位 resize
+    if (requestedWidth != sceneTargetWidth || requestedHeight != sceneTargetHeight)
+    {
+        ReleaseSceneViewTarget();
+        if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        {
+            if (requestedWidth > 0 && requestedHeight > 0)
+            {
+                sceneTarget = renderSystem->CreateRenderTarget(requestedWidth, requestedHeight);
+                if (sceneTarget.IsValid())
+                {
+                    sceneTargetTexture = renderSystem->GetRenderTargetTexture(sceneTarget);
+                    sceneTargetWidth = requestedWidth;
+                    sceneTargetHeight = requestedHeight;
+                }
+            }
+        }
+    }
+
+    //把编辑相机绑定到当前离屏目标，无目标时回到主窗口帧缓冲
+    Ens* editorCamera = world.GetEns(cameraEns);
+    Camera* camera = editorCamera ? editorCamera->GetComponent<Camera>() : nullptr;
+    if (camera) camera->renderTargetId = sceneTarget.id;
+}
+
+//绘制原生场景视口图像并叠加轮廓与 Handles。
+void EditorScene::DrawSceneView()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImVec2 interactMin = ImGui::GetCursorScreenPos();
+    ImVec2 interactSize = ImGui::GetContentRegionAvail();
+    if (!viewport || interactSize.x < 8.0f || interactSize.y < 8.0f)
+    {
+        //内容区过小时暂停视口渲染
+        ImGui::Dummy(ImVec2(std::max(interactSize.x, 1.0f), std::max(interactSize.y, 1.0f)));
+        return;
+    }
+
+    //渲染区域始终铺满主窗口，可交互区域是本面板内容区
+    sceneView.renderPosition = { viewport->Pos.x, viewport->Pos.y };
+    sceneView.renderSize = { viewport->Size.x, viewport->Size.y };
+    sceneView.interactPosition = { interactMin.x, interactMin.y };
+    sceneView.interactSize = { interactSize.x, interactSize.y };
+    sceneView.pixelWidth = std::max(static_cast<int32>(std::lround(sceneView.renderSize.x * io.DisplayFramebufferScale.x)), 1);
+    sceneView.pixelHeight = std::max(static_cast<int32>(std::lround(sceneView.renderSize.y * io.DisplayFramebufferScale.y)), 1);
+    sceneView.visible = true;
+
+    //图像绘制到背景列表，保证像改造前一样始终铺在停靠面板之下
+    if (sceneTargetTexture.id != 0)
+    {
+        //离屏纹理原点在左下角，交换 V 轴与 ImGui 的左上角原点对齐
+        ImVec2 min(sceneView.renderPosition.x, sceneView.renderPosition.y);
+        ImVec2 max(min.x + sceneView.renderSize.x, min.y + sceneView.renderSize.y);
+        ImGui::GetBackgroundDrawList()->AddImage(static_cast<ImTextureID>(sceneTargetTexture.id),
+            min, max, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+    }
+
+    //透明占位项只提供悬停与投放目标，可见像素全部来自背景列表
+    if (sceneTargetTexture.id != 0)
+    {
+        ImGui::ImageWithBg(static_cast<ImTextureID>(sceneTargetTexture.id), interactSize,
+            ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 0.0f), ImVec4(1.0f, 1.0f, 1.0f, 0.0f));
+    }
+    else
+    {
+        ImGui::Dummy(interactSize);
+    }
+
+    DrawSceneOverlay();
+}
+
+//在背景绘制列表上提交选择轮廓与托管 Handles。
+void EditorScene::DrawSceneOverlay()
+{
+    World& world = app.GetWorld();
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    if (!renderSystem || sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return;
+
+    const RenderScene& scene = renderSystem->GetCurrentScene();
+    HandleSelection(scene);
+    DrawSelectionOutline(scene, world, sceneView.renderPosition, sceneView.renderSize);
+    DrawManagedGizmos();
 }
 
 //更新编辑器观察相机。
@@ -245,9 +445,7 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
     GLFWwindow* window = GetGlfwWindow(app);
     if (!transform || !window) return;
 
-    bool cameraOwnsMouse = cameraMouseDragging
-        || !ImGuiCapturesMouse()
-        || panelManager.IsMouseOverWorkspace();
+    bool cameraOwnsMouse = cameraMouseDragging || IsMouseOverSceneView();
     if (cameraOwnsMouse)
     {
         //判断当前鼠标拖拽模式。
@@ -320,25 +518,20 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
     cameraState.pitch = cameraPitch;
 }
 
-//绘制场景选择、轮廓和托管 Handles。
-void EditorScene::DrawBackground()
+//判断鼠标是否位于场景视口矩形内。
+bool EditorScene::IsMouseOverSceneView() const
 {
-    World& world = app.GetWorld();
-    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
-    if (renderSystem)
-    {
-        const RenderScene& scene = renderSystem->GetCurrentScene();
-        HandleSelection(scene);
+    GLFWwindow* window = GetGlfwWindow(app);
+    if (!window || !sceneView.visible
+        || sceneView.interactSize.x <= 0.0f || sceneView.interactSize.y <= 0.0f) return false;
 
-        vector2 workspacePosition;
-        vector2 workspaceSize;
-        if (panelManager.TryGetWorkspaceRect(workspacePosition, workspaceSize))
-        {
-            DrawSelectionOutline(scene, world, workspacePosition, workspaceSize);
-        }
-    }
-
-    DrawManagedGizmos();
+    double mouseX = 0.0;
+    double mouseY = 0.0;
+    glfwGetCursorPos(window, &mouseX, &mouseY);
+    return mouseX >= sceneView.interactPosition.x
+        && mouseX <= sceneView.interactPosition.x + sceneView.interactSize.x
+        && mouseY >= sceneView.interactPosition.y
+        && mouseY <= sceneView.interactPosition.y + sceneView.interactSize.y;
 }
 
 //取消当前鼠标交互。
@@ -373,6 +566,29 @@ void EditorScene::PruneSelection(const World& world)
 }
 
 //选择一个 Ens。
+//移动层级节点并保持指定的变换空间
+bool EditorScene::MoveEns(World& world, EnsId child, EnsId parent, EnsId before, bool preserveWorld)
+{
+    if (IsTemporaryEns(child) || (!parent.IsNull() && IsTemporaryEns(parent))
+        || (!before.IsNull() && IsTemporaryEns(before))) return false;
+    Transform* transform = world.GetTransform(child);
+    if (!transform) return false;
+    EnsId oldParent = transform->parent;
+    matrix4x4 worldMatrix = transform->worldMatrix;
+    if (!world.MoveEns(child, parent, before)) return false;
+    if (!preserveWorld || oldParent == parent) return true;
+    Transform* parentTransform = world.GetTransform(parent);
+    matrix4x4 localMatrix = parentTransform
+        ? RenderMath::Mul(RenderMath::Inverse(parentTransform->worldMatrix), worldMatrix) : worldMatrix;
+    vector3 position, scale;
+    quaternion rotation;
+    DecomposeTransform(localMatrix, position, rotation, scale);
+    transform->SetLocalPosition(position);
+    transform->SetLocalRotation(rotation);
+    transform->SetLocalScale(scale);
+    return true;
+}
+
 void EditorScene::SelectEns(EnsId ens)
 {
     selectedEns.clear();
@@ -522,18 +738,6 @@ const matrix4x4& EditorScene::GetGizmoViewProjection() const
     return gizmoViewProjection;
 }
 
-//获取当前 Handles 视口宽度。
-int32 EditorScene::GetGizmoViewportWidth() const
-{
-    return gizmoViewportWidth;
-}
-
-//获取当前 Handles 视口高度。
-int32 EditorScene::GetGizmoViewportHeight() const
-{
-    return gizmoViewportHeight;
-}
-
 //创建或修复编辑器观察相机。
 void EditorScene::CreateEditorCamera(World& world)
 {
@@ -620,10 +824,10 @@ void EditorScene::HandleSelection(const RenderScene& scene)
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    //只在中央工作区捕获一次普通左键点击。
+    //只在场景视口内捕获一次普通左键点击。
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
     {
-        selectionPressed = panelManager.IsMouseOverWorkspace()
+        selectionPressed = IsMouseOverSceneView()
             && !io.KeyAlt
             && !cameraMouseDragging
             && !HasBlockingImGuiActiveItem();
@@ -651,13 +855,15 @@ void EditorScene::HandleSelection(const RenderScene& scene)
     }
 
     bool shouldPick = !selectionDragged
-        && panelManager.IsMouseOverWorkspace()
+        && IsMouseOverSceneView()
         && !HasBlockingImGuiActiveItem();
     selectionPressed = false;
     selectionDragged = false;
     if (!shouldPick) return;
 
-    EnsId hit = PickEns(scene, { io.MousePos.x, io.MousePos.y });
+    EnsId hit;
+    vector3 hitPosition;
+    RaycastScene(scene, { io.MousePos.x, io.MousePos.y }, hit, hitPosition);
     if (selectionCtrl)
     {
         if (!hit.IsNull()) ToggleEns(hit);
@@ -666,9 +872,13 @@ void EditorScene::HandleSelection(const RenderScene& scene)
     else ClearSelection();
 }
 
-//拾取鼠标下距离相机最近的场景对象。
-EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPosition) const
+//投射鼠标射线并返回最近命中的对象与命中点。
+bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPosition,
+    EnsId& hitEns, vector3& hitPosition) const
 {
+    hitEns = EnsId();
+    hitPosition = { 0.0f, 0.0f, 0.0f };
+
     const RenderCamera* camera = nullptr;
     for (const RenderCamera& candidate : scene.cameras)
     {
@@ -678,32 +888,26 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
             break;
         }
     }
-    if (!camera || camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return EnsId();
+    if (!camera || !camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return false;
+    if (sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return false;
 
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    if (!viewport || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f) return EnsId();
-
-    //把 ImGui 逻辑坐标转换为相机 NDC。
-    float32 cameraLeft = viewport->Pos.x + camera->normalizedViewportX * viewport->Size.x;
-    float32 cameraTop = viewport->Pos.y
-        + (1.0f - camera->normalizedViewportY - camera->normalizedViewportHeight) * viewport->Size.y;
-    float32 cameraWidth = camera->normalizedViewportWidth * viewport->Size.x;
-    float32 cameraHeight = camera->normalizedViewportHeight * viewport->Size.y;
-    if (cameraWidth <= 0.0f || cameraHeight <= 0.0f
-        || screenPosition.x < cameraLeft || screenPosition.x > cameraLeft + cameraWidth
-        || screenPosition.y < cameraTop || screenPosition.y > cameraTop + cameraHeight)
+    //把 ImGui 逻辑坐标按铺满主窗口的渲染矩形转换为相机 NDC。
+    if (screenPosition.x < sceneView.renderPosition.x
+        || screenPosition.x > sceneView.renderPosition.x + sceneView.renderSize.x
+        || screenPosition.y < sceneView.renderPosition.y
+        || screenPosition.y > sceneView.renderPosition.y + sceneView.renderSize.y)
     {
-        return EnsId();
+        return false;
     }
 
-    float32 ndcX = ((screenPosition.x - cameraLeft) / cameraWidth) * 2.0f - 1.0f;
-    float32 ndcY = 1.0f - ((screenPosition.y - cameraTop) / cameraHeight) * 2.0f;
+    float32 ndcX = ((screenPosition.x - sceneView.renderPosition.x) / sceneView.renderSize.x) * 2.0f - 1.0f;
+    float32 ndcY = 1.0f - ((screenPosition.y - sceneView.renderPosition.y) / sceneView.renderSize.y) * 2.0f;
     matrix4x4 inverseViewProjection = RenderMath::Inverse(camera->viewProjectionMatrix);
     vector3 rayOrigin = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
     vector3 rayEnd = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
     vector3 rayDelta = { rayEnd.x - rayOrigin.x, rayEnd.y - rayOrigin.y, rayEnd.z - rayOrigin.z };
     float32 rayLengthSquared = RenderMath::Dot(rayDelta, rayDelta);
-    if (rayLengthSquared <= 0.000001f) return EnsId();
+    if (rayLengthSquared <= 0.000001f) return false;
 
     float32 rayLength = std::sqrt(rayLengthSquared);
     vector3 rayDirection = { rayDelta.x / rayLength, rayDelta.y / rayLength, rayDelta.z / rayLength };
@@ -809,14 +1013,57 @@ EnsId EditorScene::PickEns(const RenderScene& scene, const vector2& screenPositi
         }
     }
 
-    return closestEns;
+    if (closestEns.IsNull()) return false;
+    hitEns = closestEns;
+    hitPosition = Add(rayOrigin, Scale(rayDirection, closestDistance));
+    return true;
+}
+
+//解析场景投放点：优先表面命中，其次地面交点，最后相机前方。
+bool EditorScene::ResolveSceneDropPosition(vector3& position) const
+{
+    World& world = app.GetWorld();
+    Transform* transform = world.GetTransform(cameraEns);
+    if (!transform) return false;
+
+    //优先使用鼠标命中的表面位置
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        const ImVec2 mouse = ImGui::GetIO().MousePos;
+        EnsId hitEns;
+        vector3 hitPosition;
+        if (RaycastScene(renderSystem->GetCurrentScene(), { mouse.x, mouse.y }, hitEns, hitPosition))
+        {
+            position = hitPosition;
+            return true;
+        }
+    }
+
+    vector3 origin = transform->GetLocalPosition();
+    vector3 forward = GetForward(cameraYaw, cameraPitch);
+
+    //其次使用视线与世界地面 Y=0 的交点
+    constexpr float32 GroundPlaneY = 0.0f;
+    if (std::abs(forward.y) > 0.000001f)
+    {
+        float32 distance = (GroundPlaneY - origin.y) / forward.y;
+        if (distance > 0.0f)
+        {
+            position = Add(origin, Scale(forward, distance));
+            return true;
+        }
+    }
+
+    //最后放在相机前方十个世界单位处
+    position = Add(origin, Scale(forward, 10.0f));
+    return true;
 }
 
 //绘制当前选择及其后代的屏幕空间轮廓。
 void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
-    const vector2& workspacePosition, const vector2& workspaceSize)
+    const vector2& viewPosition, const vector2& viewSize)
 {
-    if (selectedEns.empty() || workspaceSize.x <= 0.0f || workspaceSize.y <= 0.0f) return;
+    if (selectedEns.empty() || viewSize.x <= 0.0f || viewSize.y <= 0.0f) return;
 
     //定期回收已经销毁或长期未使用的拓扑缓存。
     ++frameIndex;
@@ -843,7 +1090,7 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
             break;
         }
     }
-    if (!camera || camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return;
+    if (!camera || !camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return;
 
     //收集显式选择和层级后代。
     std::unordered_map<uint64, uint8> selectionTypes;
@@ -949,21 +1196,14 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
         return a.selectionType > b.selectionType;
     });
 
-    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-    if (!mainViewport || mainViewport->Size.x <= 0.0f || mainViewport->Size.y <= 0.0f) return;
-
-    ImVec2 cameraPosition(
-        mainViewport->Pos.x + camera->normalizedViewportX * mainViewport->Size.x,
-        mainViewport->Pos.y + (1.0f - camera->normalizedViewportY - camera->normalizedViewportHeight) * mainViewport->Size.y);
-    ImVec2 cameraSize(
-        camera->normalizedViewportWidth * mainViewport->Size.x,
-        camera->normalizedViewportHeight * mainViewport->Size.y);
+    ImVec2 cameraPosition(sceneView.renderPosition.x, sceneView.renderPosition.y);
+    ImVec2 cameraSize(sceneView.renderSize.x, sceneView.renderSize.y);
     if (cameraSize.x <= 0.0f || cameraSize.y <= 0.0f) return;
 
     ImDrawList* drawList = ImGui::GetBackgroundDrawList();
     drawList->PushClipRect(
-        ImVec2(workspacePosition.x, workspacePosition.y),
-        ImVec2(workspacePosition.x + workspaceSize.x, workspacePosition.y + workspaceSize.y),
+        ImVec2(viewPosition.x, viewPosition.y),
+        ImVec2(viewPosition.x + viewSize.x, viewPosition.y + viewSize.y),
         true);
 
     for (const InstanceGroup& group : groups)
@@ -1310,11 +1550,8 @@ void EditorScene::DrawManagedGizmos()
     if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
     if (!transform || !camera || !camera->IsRenderSceneEligible()) return;
 
-    IWindow* window = app.GetWindow();
-    gizmoViewportWidth = window ? window->GetFramebufferWidth() : 0;
-    gizmoViewportHeight = window ? window->GetFramebufferHeight() : 0;
-    float32 aspect = gizmoViewportHeight > 0
-        ? static_cast<float32>(gizmoViewportWidth) / static_cast<float32>(gizmoViewportHeight)
+    float32 aspect = sceneView.pixelHeight > 0
+        ? static_cast<float32>(sceneView.pixelWidth) / static_cast<float32>(sceneView.pixelHeight)
         : 1.0f;
     matrix4x4 worldMatrix = RenderMath::TRS(
         transform->GetLocalPosition(),

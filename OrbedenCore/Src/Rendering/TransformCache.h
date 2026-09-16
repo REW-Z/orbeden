@@ -11,6 +11,9 @@ private:
     //当前缓存绑定的世界。
     World* world = nullptr;
 
+    //绑定时世界的内容序号，原地换内容后据此重建缓存
+    uint64 boundRevision = 0;
+
     //等待处理的变换失效根节点
     List<EnsId> pendingNodes;
 

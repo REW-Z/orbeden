@@ -2,6 +2,7 @@
 
 #include "Editor/EditorScene.h"
 #include "Editor/EditorSystem.h"
+#include "Editor/NewProjectTemplate.h"
 #include "Editor/EditorGUI.h"
 #include "Editor/PanelManager.h"
 #include "Editor/Panels/ManagedPanelAdapter.h"
@@ -92,6 +93,10 @@ namespace
         void* createWorld = nullptr;
         void* remapWorldKeys = nullptr;
         void* getProjectError = nullptr;
+        void* savePrefab = nullptr;
+        void* instantiatePrefab = nullptr;
+        void* captureEns = nullptr;
+        void* destroyEnsTree = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -123,6 +128,7 @@ namespace
         void* matchComponentType = nullptr;
         void* getReferenceObjects = nullptr;
         void* getReferenceLabel = nullptr;
+        void* moveEns = nullptr;
     };
 
     //传给 Editor C# 的应用函数表。
@@ -132,6 +138,11 @@ namespace
         void* context = nullptr;
         void* requestRepaint = nullptr;
         void* isPlaying = nullptr;
+        void* getProjectText = nullptr;
+        void* requestBuild = nullptr;
+        void* getSelectedPlayerTarget = nullptr;
+        void* setSelectedPlayerTarget = nullptr;
+        void* mirrorExamples = nullptr;
     };
 
     //传给 Editor C# 的原生函数表。
@@ -150,16 +161,16 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 10);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 3);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 25);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 80);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 14);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 8);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 100);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 38);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 41);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 43);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 45);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 55);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 48);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 56);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 58);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 60);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 74);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -271,6 +282,79 @@ namespace
             && editor->GetProject().RemapWorldKeys(ReadUtf8(oldKey, oldLength), ReadUtf8(newKey, newLength), prefix != 0) ? 1 : 0;
     }
 
+    //把当前 World 的 Ens 子树保存为独立预制体
+    uint8 ORBEDEN_NATIVE_CALL SaveManagedPrefab(void* context, const uint8* source, int32 sourceLength,
+        const uint8* key, int32 keyLength)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
+        Ens* ens = editor->GetWorld().FindEns(StringId(ReadUtf8(source, sourceLength)));
+        if (!ens || editor->GetEditorScene().IsTemporaryEns(ens->GetId())) return 0;
+        std::filesystem::path relative = Utf8Path::FromUtf8(ReadUtf8(key, keyLength)).lexically_normal();
+        if (relative.empty() || relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".prefab") return 0;
+        std::filesystem::path path = Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative;
+        if (std::filesystem::exists(path)) return 0;
+        std::string error;
+        bool saved = WorldSerializer::SavePrefab(*ens, Utf8Path::ToUtf8(path), error);
+        if (!saved) Log::Error(error.c_str());
+        return saved ? 1 : 0;
+    }
+
+    //销毁完整子树并清理失效选择
+    uint8 ORBEDEN_NATIVE_CALL DestroyManagedEnsTree(void* context, EnsId root)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->GetWorld().IsAlive(root)
+            || editor->GetEditorScene().IsTemporaryEns(root)) return 0;
+        World& world = editor->GetWorld();
+        List<EnsId> tree { root };
+        for (usize index = 0; index < tree.size(); ++index)
+        {
+            Transform* transform = world.GetTransform(tree[index]);
+            for (EnsId child = transform->firstChild; !child.IsNull(); child = world.GetTransform(child)->next)
+                tree.push_back(child);
+        }
+        for (auto it = tree.rbegin(); it != tree.rend(); ++it) world.DestroyEns(*it);
+        editor->GetEditorScene().PruneSelection(world);
+        editor->RequestRepaint();
+        return 1;
+    }
+
+    //捕获子树快照供撤销恢复
+    int32 ORBEDEN_NATIVE_CALL CaptureManagedEns(void* context, EnsId root, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        Ens* ens = editor ? editor->GetWorld().GetEns(root) : nullptr;
+        return CopyUtf8(ens ? WorldSerializer::CaptureEns(*ens) : std::string(), buffer, capacity);
+    }
+
+    //实例化资产或恢复快照并设置层级顺序
+    int32 ORBEDEN_NATIVE_CALL InstantiateManagedPrefab(void* context, const uint8* text, int32 length,
+        uint8 snapshot, EnsId parent, EnsId before)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
+        World& world = editor->GetWorld();
+        if ((!parent.IsNull() && (!world.IsAlive(parent) || editor->GetEditorScene().IsTemporaryEns(parent)))
+            || (!before.IsNull() && (!world.IsAlive(before) || world.GetTransform(before)->parent != parent))) return 0;
+        std::string value = ReadUtf8(text, length), error;
+        Ens* root = nullptr;
+        if (snapshot) root = WorldSerializer::RestoreEns(world, value, parent, error);
+        else
+        {
+            std::filesystem::path relative = Utf8Path::FromUtf8(value).lexically_normal();
+            if (relative.empty() || relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".prefab") return 0;
+            root = WorldSerializer::InstantiatePrefab(world,
+                Utf8Path::ToUtf8(Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative), parent, error);
+        }
+        if (!root) { Log::Error(error.c_str()); return 0; }
+        if (!world.MoveEns(root->GetId(), parent, before))
+        { DestroyManagedEnsTree(context, root->GetId()); return 0; }
+        editor->GetEditorScene().SelectEns(root->GetId());
+        editor->RequestRepaint();
+        return root->GetObjectId();
+    }
+
     //读取项目操作失败原因
     int32 ORBEDEN_NATIVE_CALL GetManagedProjectError(void* context, uint8* buffer, int32 capacity)
     {
@@ -279,6 +363,98 @@ namespace
         const std::string& error = editor->GetProject().GetLastError();
         if (buffer && capacity >= static_cast<int32>(error.size())) std::memcpy(buffer, error.data(), error.size());
         return static_cast<int32>(error.size());
+    }
+
+    //读取项目路径、构建状态与可选平台
+    int32 ORBEDEN_NATIVE_CALL GetManagedProjectText(void* context, int32 field, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return 0;
+        std::string text;
+        switch (field)
+        {
+        case 0: text = editor->GetProjectName(); break;
+        case 1: text = editor->GetProjectRoot(); break;
+        case 2: text = editor->GetProjectContentRootPath(); break;
+        case 3: text = editor->GetWorldPath(); break;
+        case 4: text = editor->GetProjectManagedRootPath(); break;
+        case 5: text = editor->GetProjectNativeBuildPath(); break;
+        case 6: text = editor->GetRepositoryRoot(); break;
+        case 7: text = editor->GetSourceTemplateRoot(); break;
+        case 8: text = editor->GetProjectStatusText(); break;
+        case 9:
+            for (int32 index = 0; index < editor->GetPlayerTargetPlatformCount(); ++index)
+            {
+                text += editor->GetPlayerTargetPlatformName(index);
+                text.push_back(0);
+                text += editor->IsPlayerTargetPlatformAvailable(index) ? "1" : "0";
+                text.push_back(0);
+            }
+            break;
+        }
+        return CopyUtf8(text, buffer, capacity);
+    }
+
+    //请求现有原生构建流程
+    void ORBEDEN_NATIVE_CALL RequestManagedBuild(void* context, int32 kind)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->HasProject()) return;
+        if (kind == 0) editor->RequestBuildScripts();
+        else if (kind == 1) editor->RequestBuildNative();
+        else if (kind == 2) editor->RequestBuildPlayer();
+    }
+
+    //读取当前 Player 构建目标
+    int32 ORBEDEN_NATIVE_CALL GetManagedPlayerTarget(void* context)
+    {
+        return static_cast<EditorSystem*>(context)->GetSelectedPlayerTargetPlatformIndex();
+    }
+
+    //设置可用的 Player 构建目标
+    void ORBEDEN_NATIVE_CALL SetManagedPlayerTarget(void* context, int32 index)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (index >= 0 && index < editor->GetPlayerTargetPlatformCount() && editor->IsPlayerTargetPlatformAvailable(index))
+            editor->SetSelectedPlayerTargetPlatformIndex(index);
+    }
+
+    //同步示例目录并返回本次操作报告
+    int32 ORBEDEN_NATIVE_CALL MirrorManagedExamples(void* context, uint8 reset, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        std::string report;
+        try
+        {
+            if (!editor || !editor->HasProject() || editor->IsPlaying())
+                report = "Load a project and stop Play-In-Editor first.";
+            else
+            {
+                std::string templates = editor->GetSourceTemplateRoot();
+                std::string project = Utf8Path::ToUtf8(Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / "Examples");
+                if (templates.empty() || !std::filesystem::is_directory(Utf8Path::FromUtf8(project)))
+                    report = "Project examples or source template not found.";
+                else if (!editor->SaveCurrentWorld()) report = editor->GetProjectStatusText();
+                else
+                {
+                    templates = Utf8Path::ToUtf8(Utf8Path::FromUtf8(templates) / "Examples");
+                    NewProjectTemplate::MirrorReport changes;
+                    std::string error;
+                    bool mirrored = NewProjectTemplate::MirrorTree(reset ? templates : project,
+                        reset ? project : templates, changes, error);
+                    bool reloaded = !reset || editor->ReloadProjectContent();
+                    report = mirrored ? (reset ? "Restored examples: " : "Wrote back examples: ")
+                        + std::to_string(changes.added) + " added, " + std::to_string(changes.updated)
+                        + " updated, " + std::to_string(changes.removed) + " removed." : error;
+                    if (!reloaded) report += "\nContent reload failed: " + editor->GetProjectStatusText();
+                    if (!reset && mirrored) report += "\nReview with: git diff OrbedenEditor/Templates";
+                }
+            }
+        }
+        catch (const std::exception& exception) { report = exception.what(); }
+        int32 count = std::min(capacity, static_cast<int32>(report.size()));
+        if (buffer && count > 0) std::memcpy(buffer, report.data(), count);
+        return count;
     }
 
     //请求原生 Editor 重绘。
@@ -494,21 +670,42 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor) return 0;
+        World& world = editor->GetWorld();
+        editor->GetEditorScene().PruneSelection(world);
         int32 count = 0;
-        editor->GetWorld().ForEachEns([&](Ens& ens)
+        auto visit = [&](auto&& self, Ens& ens) -> void
         {
             if (editor->GetEditorScene().IsTemporaryEns(ens.GetId())) return;
             if (buffer && count < capacity) buffer[count] = ens.GetId();
             ++count;
-        });
+            for (EnsId child = ens.Transform()->firstChild; !child.IsNull(); child = world.GetTransform(child)->next)
+                self(self, *world.GetEns(child));
+        };
+        world.ForEachEns([&](Ens& ens) { if (!ens.GetParent()) visit(visit, ens); });
         return count;
     }
 
-    //在层级面板中定位 Ens
-    void ORBEDEN_NATIVE_CALL SelectManagedEns(void* context, EnsId ens)
+    //选择、切换或清空层级对象选择
+    void ORBEDEN_NATIVE_CALL SelectManagedEns(void* context, EnsId ens, uint8 toggle)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
-        if (editor && editor->GetWorld().GetEns(ens)) editor->GetEditorScene().SelectEns(ens);
+        if (!editor) return;
+        if (ens.IsNull()) editor->GetEditorScene().ClearSelection();
+        else if (editor->GetWorld().IsAlive(ens) && !editor->GetEditorScene().IsTemporaryEns(ens))
+        {
+            if (toggle) editor->GetEditorScene().ToggleEns(ens);
+            else editor->GetEditorScene().SelectEns(ens);
+        }
+    }
+
+    //移动节点并按需保持世界变换
+    uint8 ORBEDEN_NATIVE_CALL MoveManagedEns(void* context, EnsId child, EnsId parent, EnsId before, uint8 preserveWorld)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying()) return 0;
+        bool moved = editor->GetEditorScene().MoveEns(editor->GetWorld(), child, parent, before, preserveWorld != 0);
+        if (moved) editor->RequestRepaint();
+        return moved ? 1 : 0;
     }
 
     //匹配组件的声明类型或查询类型是否派生自 Component
@@ -742,7 +939,8 @@ namespace
         float32 defaultHeight,
         int32 defaultDock,
         float32 defaultDockRatio,
-        int32 order)
+        int32 order,
+        uint8 fixedWorkspace)
     {
         ManagedPanelRegistrationContext* registration = static_cast<ManagedPanelRegistrationContext*>(context);
         if (!registration || !registration->editor || !registration->panelManager || handle < 0) return 0;
@@ -761,6 +959,7 @@ namespace
         info.defaultDock = static_cast<PanelDockPlacement>(defaultDock);
         info.defaultDockRatio = defaultDockRatio;
         info.order = order;
+        info.fixedWorkspace = fixedWorkspace != 0;
         return registration->panelManager->RegisterPanel(
             std::make_unique<ManagedPanelAdapter>(*registration->editor, std::move(info), handle)) ? 1 : 0;
     }
@@ -815,6 +1014,11 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.context = &editor;
     editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
     editorApi.application.isPlaying = reinterpret_cast<void*>(&IsManagedEditorPlaying);
+    editorApi.application.getProjectText = reinterpret_cast<void*>(&GetManagedProjectText);
+    editorApi.application.requestBuild = reinterpret_cast<void*>(&RequestManagedBuild);
+    editorApi.application.getSelectedPlayerTarget = reinterpret_cast<void*>(&GetManagedPlayerTarget);
+    editorApi.application.setSelectedPlayerTarget = reinterpret_cast<void*>(&SetManagedPlayerTarget);
+    editorApi.application.mirrorExamples = reinterpret_cast<void*>(&MirrorManagedExamples);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
@@ -828,6 +1032,10 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.createWorld = reinterpret_cast<void*>(&CreateManagedWorld);
     editorApi.assets.remapWorldKeys = reinterpret_cast<void*>(&RemapManagedWorldKeys);
     editorApi.assets.getProjectError = reinterpret_cast<void*>(&GetManagedProjectError);
+    editorApi.assets.savePrefab = reinterpret_cast<void*>(&SaveManagedPrefab);
+    editorApi.assets.instantiatePrefab = reinterpret_cast<void*>(&InstantiateManagedPrefab);
+    editorApi.assets.captureEns = reinterpret_cast<void*>(&CaptureManagedEns);
+    editorApi.assets.destroyEnsTree = reinterpret_cast<void*>(&DestroyManagedEnsTree);
     editorApi.components.context = &editor;
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
@@ -850,6 +1058,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.getFieldReferenceType = reinterpret_cast<void*>(&GetManagedFieldReferenceType);
     editorApi.components.getWorldEns = reinterpret_cast<void*>(&GetManagedWorldEns);
     editorApi.components.selectEns = reinterpret_cast<void*>(&SelectManagedEns);
+    editorApi.components.moveEns = reinterpret_cast<void*>(&MoveManagedEns);
     editorApi.components.matchComponentType = reinterpret_cast<void*>(&MatchManagedComponentType);
     editorApi.components.getReferenceObjects = reinterpret_cast<void*>(&GetManagedReferenceObjects);
     editorApi.components.getReferenceLabel = reinterpret_cast<void*>(&GetManagedReferenceLabel);

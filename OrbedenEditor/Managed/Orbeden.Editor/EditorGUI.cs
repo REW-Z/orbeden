@@ -19,6 +19,12 @@ public static class EditorGUI
     /// <summary>绘制文本标签。</summary>
     public static void Label(string text) => NativeEditorGUI.Label(text);
 
+    /// <summary>绘制 Scene 面板的原生场景视口。</summary>
+    public static void DrawSceneView() => NativeEditorGUI.DrawSceneView();
+
+    /// <summary>解析场景视口当前鼠标位置的投放点。</summary>
+    internal static bool ResolveSceneDropPosition(out vector3 position) => NativeEditorGUI.ResolveSceneDropPosition(out position);
+
     /// <summary>绘制按钮。</summary>
     public static bool Button(string text) => NativeEditorGUI.Button(text);
 

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<World version="1">
+<World>
     <Ens stableId="world://FlightTraining/main/root" name="FreeFlight">
-        <Component type="Transform">
+        <Component type="Transform" stableId="world://FlightTraining/main/root/Transform/3a639e9e-57f0-4557-b9b6-dbc1327fd307">
             <Field name="localPosition" type="vector3" value="0 0 0" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
         </Component>
         <Ens stableId="world://FlightTraining/main/terrain" name="Terrain">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/terrain/Transform/40a62da1-3052-444e-887a-ce195dfddf6f">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
@@ -46,7 +46,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/runway" name="Runway">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/runway/Transform/e3c1fc2c-70ad-4788-9ef2-226ac53ef01b">
                 <Field name="localPosition" type="vector3" value="0 0.05 -10" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="6 0.05 140" />
@@ -72,7 +72,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/runway_stripe_1" name="RunwayStripe01">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/runway_stripe_1/Transform/0dc5de47-8e98-4153-a264-5e90b00d3273">
                 <Field name="localPosition" type="vector3" value="0 0.12 15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -87,7 +87,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/runway_stripe_2" name="RunwayStripe02">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/runway_stripe_2/Transform/6e963322-a4e1-4848-ad3e-c4510d47bc1f">
                 <Field name="localPosition" type="vector3" value="0 0.12 4" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -102,7 +102,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/runway_stripe_3" name="RunwayStripe03">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/runway_stripe_3/Transform/b92d2834-eb35-4824-a5b1-b39ded8ed4fb">
                 <Field name="localPosition" type="vector3" value="0 0.12 -7" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.02 2.2" />
@@ -117,7 +117,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/hangar_1" name="Hangar01">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/hangar_1/Transform/34d954ec-e88a-40db-bd77-095c4673f16e">
                 <Field name="localPosition" type="vector3" value="-15 2 -4" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="5 2 7" />
@@ -143,7 +143,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/hangar_2" name="Hangar02">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/hangar_2/Transform/c7a05e6f-625a-4c1c-8ead-f9efa8007be5">
                 <Field name="localPosition" type="vector3" value="15 1.5 -15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="4 1.5 5" />
@@ -169,7 +169,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/directional_light" name="Sun">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/directional_light/Transform/74f45e94-6bbe-413b-b2c6-ddcfcb577d32">
                 <Field name="localPosition" type="vector3" value="0 50 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
@@ -187,7 +187,7 @@
         </Ens>
     </Ens>
     <Ens stableId="world://FlightTraining/main/aircraft" name="PlayerAircraft">
-        <Component type="Transform">
+        <Component type="Transform" stableId="world://FlightTraining/main/aircraft/Transform/f11b6fc6-1a4a-4ba2-ba06-094c53317db9">
             <Field name="localPosition" type="vector3" value="0 1.22 60" />
             <Field name="localRotation" type="quaternion" value="0 0 0 1" />
             <Field name="localScale" type="vector3" value="1 1 1" />
@@ -347,7 +347,7 @@
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
         <Ens stableId="world://FlightTraining/main/aircraft_body" name="AircraftBody">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_body/Transform/f2031651-4b55-46fd-b643-b2d3e8d88e7a">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.55 0.42 2.1" />
@@ -362,7 +362,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/aircraft_nose" name="AircraftNose">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_nose/Transform/9dda6325-cf18-4c47-b6c8-e97283eb724e">
                 <Field name="localPosition" type="vector3" value="0 -0.05 -2.35" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.42 0.32 0.42" />
@@ -377,7 +377,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/aircraft_wing" name="AircraftWing">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_wing/Transform/71207c43-6e0b-4493-9f16-c87f0379da98">
                 <Field name="localPosition" type="vector3" value="0 0 0" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="3.4 0.09 0.72" />
@@ -392,7 +392,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/aircraft_tail_wing" name="AircraftTailWing">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_tail_wing/Transform/93f15a3c-8a0b-4eb8-a551-b26e6f1d9459">
                 <Field name="localPosition" type="vector3" value="0 0.15 1.72" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1.35 0.07 0.42" />
@@ -407,7 +407,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/aircraft_tail_fin" name="AircraftTailFin">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_tail_fin/Transform/4aa02484-5f44-418a-9722-a6f4ce227081">
                 <Field name="localPosition" type="vector3" value="0 0.72 1.72" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.10 0.75 0.42" />
@@ -422,7 +422,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/aircraft_cockpit" name="AircraftCockpit">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_cockpit/Transform/7be507f7-21ee-4eb1-83ea-00a209da9df4">
                 <Field name="localPosition" type="vector3" value="0 0.48 -0.62" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.36 0.25 0.58" />
@@ -437,7 +437,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/wheel_nose" name="WheelNose">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/wheel_nose/Transform/793b23c2-5200-4020-bb7c-a5527689a374">
                 <Field name="localPosition" type="vector3" value="0 -0.87 -2.15" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.24 0.24" />
@@ -452,7 +452,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/wheel_left" name="WheelLeft">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/wheel_left/Transform/f0914fa1-4970-453a-b40e-cbf30a8b3b18">
                 <Field name="localPosition" type="vector3" value="-0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
@@ -467,7 +467,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/wheel_right" name="WheelRight">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/wheel_right/Transform/66c543a4-b777-4226-909a-f57662926631">
                 <Field name="localPosition" type="vector3" value="0.75 -0.81 0.55" />
                 <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="0.12 0.3 0.3" />
@@ -482,7 +482,7 @@
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/flight_camera" name="ChaseCamera">
-            <Component type="Transform">
+            <Component type="Transform" stableId="world://FlightTraining/main/flight_camera/Transform/fab79020-9b48-41bb-b701-6ce2805928a0">
                 <Field name="localPosition" type="vector3" value="0 3.2 9" />
                 <Field name="localRotation" type="quaternion" value="-0.1305 0 0 0.9914" />
                 <Field name="localScale" type="vector3" value="1 1 1" />

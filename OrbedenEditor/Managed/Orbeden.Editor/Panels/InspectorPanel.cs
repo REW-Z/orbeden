@@ -89,7 +89,7 @@ internal sealed class InspectorPanel : EditorPanel
     public override bool SavePendingChanges() => true;
 
     /// <summary>绘制当前选择对象及其组件。</summary>
-    public override void Draw(EditorPanelContext context)
+    protected override void DrawContent(EditorPanelContext context)
     {
         if (context.SelectedEns.IsNull)
         {

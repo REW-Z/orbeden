@@ -1,4 +1,5 @@
 using System;
+using Orbeden;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -18,6 +19,10 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> CreateWorld;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte, byte> RemapWorldKeys;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> GetProjectError;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte> SavePrefab;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, EnsId, EnsId, int> InstantiatePrefab;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte*, int, int> CaptureEns;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte> DestroyEnsTree;
 }
 #pragma warning restore CS0649
 
@@ -30,6 +35,36 @@ internal static unsafe class EditorAssetsNative
     internal static void Initialize(EditorAssetNativeApi value)
     {
         api = value;
+    }
+
+    //实例化预制体或恢复子树快照
+    internal static Ens InstantiatePrefab(string text, bool snapshot, EnsId parent, EnsId before)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        fixed (byte* pointer = bytes)
+            return NativeBindingRuntime.Wrap<Ens>(api.InstantiatePrefab(api.Context, pointer, bytes.Length,
+                snapshot ? (byte)1 : (byte)0, parent, before)) ?? Ens.Null;
+    }
+
+    //捕获完整子树及其稳定身份
+    internal static string CaptureEns(EnsId root)
+    {
+        int length = api.CaptureEns(api.Context, root, null, 0);
+        byte[] bytes = new byte[length];
+        fixed (byte* pointer = bytes) api.CaptureEns(api.Context, root, pointer, length);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    //销毁子树中的全部对象
+    internal static bool DestroyEnsTree(EnsId root) => api.DestroyEnsTree(api.Context, root) != 0;
+
+    //保存 Ens 子树为独立预制体
+    internal static bool SavePrefab(string source, string key)
+    {
+        byte[] sourceBytes = Encoding.UTF8.GetBytes(source), keyBytes = Encoding.UTF8.GetBytes(key);
+        fixed (byte* sourcePointer = sourceBytes)
+        fixed (byte* keyPointer = keyBytes)
+            return api.SavePrefab(api.Context, sourcePointer, sourceBytes.Length, keyPointer, keyBytes.Length) != 0;
     }
 
     //读取当前编辑或启动 World 的资源 Key

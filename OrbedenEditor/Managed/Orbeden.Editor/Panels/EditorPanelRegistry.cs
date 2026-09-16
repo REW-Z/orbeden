@@ -92,7 +92,8 @@ internal static unsafe class EditorPanelRegistry
                     info.DefaultSize.y,
                     (int)info.DefaultDock,
                     info.DefaultDockRatio,
-                    info.Order);
+                    info.Order,
+                    info.FixedWorkspace ? (byte)1 : (byte)0);
                 if (accepted != 0) panels.Add(panel);
             }
         }
@@ -105,15 +106,7 @@ internal static unsafe class EditorPanelRegistry
     {
         if (handle < 0 || handle >= panels.Count) return;
 
-        try
-        {
-            panels[handle].Draw(context);
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Editor Panel draw failed: {panels[handle].GetType().FullName}: {ex}");
-            EditorGUI.Label($"Panel error: {ex.Message}");
-        }
+        panels[handle].Draw(context);
     }
 
     /// <summary>通知指定 C# Panel 显隐状态变化。</summary>

@@ -47,6 +47,7 @@ public static class EditorRuntime
             EditorManagedApi api = *(EditorManagedApi*)editorApi;
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
+            EditorTheme.ApplyCurrent();
             EditorApplication.Initialize(api.Application);
             EditorApplication.ClearDirty();
             EditorPropertyHistory.Clear();
@@ -110,11 +111,19 @@ public static class EditorRuntime
 
     /// <summary>撤销最近一次属性或组件事务。</summary>
     [UnmanagedCallersOnly]
-    public static byte Undo() => EditorPropertyHistory.Undo() ? (byte)1 : (byte)0;
+    public static byte Undo()
+    {
+        try { return EditorPropertyHistory.Undo() ? (byte)1 : (byte)0; }
+        catch (Exception ex) { Console.Error.WriteLine($"Undo failed: {ex}"); return 0; }
+    }
 
     /// <summary>重做最近一次属性或组件事务。</summary>
     [UnmanagedCallersOnly]
-    public static byte Redo() => EditorPropertyHistory.Redo() ? (byte)1 : (byte)0;
+    public static byte Redo()
+    {
+        try { return EditorPropertyHistory.Redo() ? (byte)1 : (byte)0; }
+        catch (Exception ex) { Console.Error.WriteLine($"Redo failed: {ex}"); return 0; }
+    }
 
     /// <summary>通知托管 Editor 原生 World 已成功保存。</summary>
     [UnmanagedCallersOnly]
@@ -249,13 +258,13 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 37);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 3);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 47);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 8);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 10);
-        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 25);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 80);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 14);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 100);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

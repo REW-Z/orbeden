@@ -29,10 +29,11 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr*, IntPtr> GetHostBinding;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldReferenceType;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId*, int, int> GetWorldEns;
-    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, void> SelectEns;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte, void> SelectEns;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> MatchComponentType;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceObjects;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceLabel;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, EnsId, EnsId, byte, byte> MoveEns;
 }
 #pragma warning restore CS0649
 
@@ -138,7 +139,11 @@ internal static unsafe class EditorNativeComponents
     }
 
     //定位场景引用所属 Ens
-    internal static void SelectEns(EnsId ens) => api.SelectEns(api.Context, ens);
+    internal static void SelectEns(EnsId ens, bool toggle = false) => api.SelectEns(api.Context, ens, toggle ? (byte)1 : (byte)0);
+
+    //移动层级节点并设置变换保持规则
+    internal static bool MoveEns(EnsId child, EnsId parent, EnsId before, bool preserveWorld)
+        => api.MoveEns(api.Context, child, parent, before, preserveWorld ? (byte)1 : (byte)0) != 0;
 
     //按原生继承链匹配组件声明类型
     internal static bool MatchesComponentType(int objectId, string type)

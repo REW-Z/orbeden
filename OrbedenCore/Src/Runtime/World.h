@@ -25,6 +25,7 @@ private:
     };
 
     bool preparing = false;
+    uint64 contentRevision = 0;//内容整体替换序号，原地换内容时渲染侧据此重新绑定
     List<std::pair<Object*, StringId>> preparedObjectPaths;
     List<EnsSlot> ensSlots;//按EnsId索引的稀疏槽位表
     List<Ens*> liveEns;//所有存活Ens指针
@@ -80,6 +81,9 @@ public:
 
     //判断世界是否正在准备尚未激活的内容
     bool IsPreparing() const { return preparing; }
+
+    //获取内容整体替换序号
+    uint64 GetContentRevision() const { return contentRevision; }
 
     //复制句柄版本并准备独立加载容器
     void PrepareReplacement(const World& source);

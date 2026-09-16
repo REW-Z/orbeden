@@ -24,6 +24,7 @@ internal readonly struct EditorPanelInfo
     public PanelDockPlacement DefaultDock { get; }
     public float DefaultDockRatio { get; }
     public int Order { get; }
+    public bool FixedWorkspace { get; }
 
     /// <summary>创建一份硬编码 Panel 信息。</summary>
     public EditorPanelInfo(string id,
@@ -32,7 +33,8 @@ internal readonly struct EditorPanelInfo
         vector2 defaultSize,
         PanelDockPlacement defaultDock,
         float defaultDockRatio,
-        int order)
+        int order,
+        bool fixedWorkspace = false)
     {
         Id = id;
         Title = title;
@@ -41,6 +43,7 @@ internal readonly struct EditorPanelInfo
         DefaultDock = defaultDock;
         DefaultDockRatio = defaultDockRatio;
         Order = order;
+        FixedWorkspace = fixedWorkspace;
     }
 }
 
@@ -66,10 +69,35 @@ internal readonly struct EditorPanelContext
 /// <summary>C# Editor Panel 基类。</summary>
 internal abstract class EditorPanel
 {
+    private vector2 scroll;
+    private ulong contentHost;
+    private bool restoreScroll;
     public abstract EditorPanelInfo Info { get; }
 
-    /// <summary>绘制 Panel 内容。</summary>
-    public abstract void Draw(EditorPanelContext context);
+    /// <summary>统一绘制面板并保留滚动状态、隔离内容异常。</summary>
+    public void Draw(EditorPanelContext context)
+    {
+        ulong previousHost = contentHost;
+        bool visible = NativeEditorGUI.BeginPanelContent("##PanelContent_" + Info.Id, ref contentHost, scroll, restoreScroll);
+        try
+        {
+            if (visible) DrawContent(context);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor Panel draw failed: {GetType().FullName}: {ex}");
+            EditorGUI.Label($"Panel error: {ex.Message}");
+        }
+        finally
+        {
+            vector2 currentScroll = NativeEditorGUI.EndPanelContent();
+            restoreScroll = previousHost != contentHost;
+            if (!restoreScroll) scroll = currentScroll;
+        }
+    }
+
+    //绘制面板业务内容
+    protected abstract void DrawContent(EditorPanelContext context);
 
     /// <summary>Panel 显示时调用。</summary>
     public virtual void OnShown() { }
@@ -95,6 +123,6 @@ internal abstract class EditorPanel
 internal unsafe struct EditorPanelNativeApi
 {
     public IntPtr Context;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte> RegisterPanel;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte, byte> RegisterPanel;
 }
 #pragma warning restore CS0649

@@ -1,6 +1,11 @@
 #include "Editor/EditorGUI.h"
 
+#include "Editor/EditorScene.h"
 #include "Log/Log.h"
+#include "Application.h"
+#include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
+#include <filesystem>
 #include "Platform/GlfwWindow.h"
 #include "Runtime/Native/NativeCall.h"
 
@@ -15,6 +20,129 @@ EditorGUI* EditorGUI::activeInstance = nullptr;
 
 namespace
 {
+    struct EditorThemeData
+    {
+        uint32 background = 0xff242424, text = 0xffe8e8e8, border = 0xff505050;
+        uint32 header = 0xff383838, control = 0xff505050, hovered = 0xff765638, active = 0xff9c683c;
+        float32 paddingX = 6, paddingY = 6, spacingX = 6, spacingY = 4;
+        float32 framePaddingX = 6, framePaddingY = 4, splitterSize = 5;
+    };
+    static_assert(sizeof(EditorThemeData) == 56);
+    EditorThemeData theme;
+
+    //接收托管主题参数
+    void ORBEDEN_NATIVE_CALL EditorGuiSetTheme(const EditorThemeData* value)
+    {
+        if (value) theme = *value;
+    }
+
+    struct EditorDragPayload
+    {
+        int32 kind = 0;
+        std::string key;
+        std::string contentRoot;
+        uint64 worldRevision = 0;
+        int32 sourceObjectId = 0;
+    };
+    EditorDragPayload dragPayload;
+
+    //参与跨窗口拖拽与左键状态判断的编辑器窗口
+    List<GLFWwindow*> dragWindows;
+
+    //主上下文持有的字体图集，供独立窗口的 ImGui 上下文共享
+    ImFontAtlas* mainFontAtlas = nullptr;
+
+    //验证源对象与 World 会话仍然有效
+    bool HasValidDrag()
+    {
+        Application* app = Application::Current();
+        if (!app || dragPayload.kind == 0 || dragPayload.worldRevision != app->GetWorldRevision()
+            || dragPayload.contentRoot != PathDefines::GetContentRoot()) return false;
+        if (dragPayload.kind == 1)
+        {
+            Object* source = Object::FindObjectById(dragPayload.sourceObjectId);
+            return source && source->GetWorld() == &app->GetWorld() && source->GetInstanceId().GetPath() == dragPayload.key;
+        }
+        std::error_code error;
+        return std::filesystem::exists(Utf8Path::FromUtf8(dragPayload.contentRoot) / Utf8Path::FromUtf8(dragPayload.key), error);
+    }
+
+    //从当前 GUI 项开始资源拖动
+    void ORBEDEN_NATIVE_CALL EditorGuiDragSource(int32 kind, const uint8* key, int32 length)
+    {
+        if (!ImGui::BeginDragDropSource()) return;
+        EditorGUI::SetDragPayload(kind, std::string(reinterpret_cast<const char*>(key), static_cast<usize>(length)));
+        ImGui::SetDragDropPayload("EditorShared", &kind, sizeof(kind));
+        ImGui::TextUnformatted(dragPayload.key.c_str());
+        ImGui::EndDragDropSource();
+    }
+
+    //读取悬停目标上的共享拖拽载荷
+    int32 ORBEDEN_NATIVE_CALL EditorGuiReadDrag(int32* kind, uint8* buffer, int32 capacity)
+    {
+        if (kind) *kind = 0;
+        if (!HasValidDrag() || !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) return 0;
+        if (kind) *kind = dragPayload.kind;
+        int32 count = static_cast<int32>(dragPayload.key.size());
+        if (buffer && capacity >= count) std::memcpy(buffer, dragPayload.key.data(), count);
+        return count;
+    }
+
+    //绘制接收预览并仅在鼠标释放时提交
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiAcceptDrag(uint8 valid, int32 placement)
+    {
+        if (!HasValidDrag() || !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) return 0;
+        ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
+        ImU32 color = valid ? IM_COL32(75, 180, 255, 255) : IM_COL32(220, 70, 70, 255);
+        if (placement == 0) ImGui::GetWindowDrawList()->AddRect(min, max, color, 2.0f, 0, 2.0f);
+        else
+        {
+            float32 y = placement < 0 ? min.y : max.y;
+            ImGui::GetWindowDrawList()->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), color, 2.0f);
+        }
+        if (!valid || EditorGUI::IsLeftMouseDownAnywhere()) return 0;
+        dragPayload = {};
+        return 1;
+    }
+
+
+    //创建面板专属内容区并在换宿主后恢复滚动
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginPanelContent(const uint8* id, int32 length,
+        uint64* host, const vector2* scroll, uint8 restoreScroll)
+    {
+        std::string name(reinterpret_cast<const char*>(id), static_cast<usize>(length));
+        uint64 currentHost = (static_cast<uint64>(ImGui::GetID(name.c_str())) << 32)
+            ^ reinterpret_cast<uint64>(ImGui::GetCurrentContext());
+        if (*host != currentHost || restoreScroll) ImGui::SetNextWindowScroll(ImVec2(scroll->x, scroll->y));
+        *host = currentHost;
+        //内容区不铺背景也不自带边距，底色与内边距由停靠叶子或浮窗统一给出
+        return ImGui::BeginChild(name.c_str(), ImVec2(0, 0),
+            ImGuiChildFlags_None, ImGuiWindowFlags_NoBackground) ? 1 : 0;
+    }
+
+    //记录面板滚动位置并结束内容区域
+    void ORBEDEN_NATIVE_CALL EditorGuiEndPanelContent(vector2* scroll)
+    {
+        *scroll = { ImGui::GetScrollX(), ImGui::GetScrollY() };
+        ImGui::EndChild();
+    }
+
+    //提交占满剩余区域的空白投放项
+    int32 ORBEDEN_NATIVE_CALL EditorGuiFillRemainingArea()
+    {
+        ImVec2 size = ImGui::GetContentRegionAvail();
+        ImGui::InvisibleButton("##panel_empty_area", ImVec2(std::max(size.x, 1.0f), std::max(size.y, 28.0f)));
+        return (ImGui::IsItemClicked() ? 1 : 0) | (ImGui::GetIO().KeyCtrl ? 2 : 0);
+    }
+
+    //按鼠标在节点内的高度确定前后或子级投放
+    int32 ORBEDEN_NATIVE_CALL EditorGuiGetDropPlacement()
+    {
+        ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
+        float32 ratio = (ImGui::GetIO().MousePos.y - min.y) / std::max(1.0f, max.y - min.y);
+        return ratio < 0.25f ? -1 : ratio > 0.75f ? 1 : 0;
+    }
+
     //读取 UTF-8 文本
     std::string ReadUtf8Text(const uint8* text, int32 length)
     {
@@ -36,12 +164,14 @@ namespace
     void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
 
     //绘制目录节点并返回展开与点击状态
-    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 selected)
+    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options)
     {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-        if (selected) flags |= ImGuiTreeNodeFlags_Selected;
+        if (options & 1) flags |= ImGuiTreeNodeFlags_Selected;
+        if (options & 2) flags |= ImGuiTreeNodeFlags_Leaf;
+        if (options & 4) flags |= ImGuiTreeNodeFlags_DefaultOpen;
         bool expanded = ImGui::TreeNodeEx(ReadUtf8Text(label, length).c_str(), flags);
-        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0);
+        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0) | (ImGui::GetIO().KeyCtrl ? 4 : 0);
     }
 
     //结束目录节点
@@ -89,7 +219,8 @@ namespace
         ImGui::PushID(value.c_str());
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+        //组件块用表面色铺底，不能借用控件填充色，否则块内控件看不出来
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_Header));
         ImGui::BeginChild("##component",
             ImVec2(0.0f, 0.0f),
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
@@ -126,7 +257,8 @@ namespace
         ImGui::PushID(identity.c_str());
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+        //组件块用表面色铺底，不能借用控件填充色，否则块内控件看不出来
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_Header));
         ImGui::BeginChild("##component",
             ImVec2(0.0f, 0.0f),
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
@@ -349,6 +481,27 @@ namespace
     {
         ImGui::EndDisabled();
     }
+
+    //绘制 Scene 面板的原生视口，提交离屏图像并叠加轮廓与 Handles
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawSceneView()
+    {
+        EditorScene* scene = EditorScene::GetActiveScene();
+        if (scene) scene->DrawSceneView();
+    }
+
+    //解析场景视口当前鼠标位置的投放点
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiResolveSceneDropPosition(EditorGizmoVector3* position)
+    {
+        EditorScene* scene = EditorScene::GetActiveScene();
+        if (!scene || !position) return 0;
+
+        vector3 resolved;
+        if (!scene->ResolveSceneDropPosition(resolved)) return 0;
+        position->x = resolved.x;
+        position->y = resolved.y;
+        position->z = resolved.z;
+        return 1;
+    }
 }
 
 bool EditorGUI::Initialize(IWindow* editorWindow)
@@ -406,6 +559,8 @@ bool EditorGUI::Initialize(IWindow* editorWindow)
     mouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
     mouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
 
+    mainFontAtlas = io.Fonts;
+    RegisterDragWindow(glfwWindow);
     activeInstance = this;
     previousWindowFocusCallback = glfwSetWindowFocusCallback(glfwWindow, WindowFocusCallback);
     previousCursorEnterCallback = glfwSetCursorEnterCallback(glfwWindow, CursorEnterCallback);
@@ -430,6 +585,8 @@ void EditorGUI::Shutdown()
     glfwSetScrollCallback(glfwWindow, previousScrollCallback);
     glfwSetKeyCallback(glfwWindow, previousKeyCallback);
     glfwSetCharCallback(glfwWindow, previousCharCallback);
+    UnregisterDragWindow(glfwWindow);
+    mainFontAtlas = nullptr;
     activeInstance = nullptr;
 
     ImGui::SetCurrentContext(context);
@@ -446,6 +603,119 @@ void EditorGUI::Shutdown()
     window = nullptr;
     sceneMouseWheel = 0.0f;
     initialized = false;
+}
+
+//应用共享颜色与尺寸到当前上下文
+void EditorGUI::ApplyTheme()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.Colors[ImGuiCol_WindowBg] = ImGui::ColorConvertU32ToFloat4(theme.background);
+    style.Colors[ImGuiCol_ChildBg] = style.Colors[ImGuiCol_WindowBg];
+    style.Colors[ImGuiCol_PopupBg] = style.Colors[ImGuiCol_WindowBg];
+    style.Colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(theme.text);
+    style.Colors[ImGuiCol_Border] = ImGui::ColorConvertU32ToFloat4(theme.border);
+    for (ImGuiCol index : { ImGuiCol_Header, ImGuiCol_Tab, ImGuiCol_TitleBg })
+        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.header);
+    //输入框与按钮必须与承载它们的卡片不同色，否则控件会退化成标签
+    for (ImGuiCol index : { ImGuiCol_FrameBg, ImGuiCol_Button })
+        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.control);
+    for (ImGuiCol index : { ImGuiCol_HeaderHovered, ImGuiCol_ButtonHovered, ImGuiCol_FrameBgHovered, ImGuiCol_TabHovered, ImGuiCol_SeparatorHovered })
+        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.hovered);
+    for (ImGuiCol index : { ImGuiCol_HeaderActive, ImGuiCol_ButtonActive, ImGuiCol_FrameBgActive, ImGuiCol_TabSelected, ImGuiCol_TitleBgActive, ImGuiCol_SeparatorActive })
+        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.active);
+    //滚动条与面板同底，滑块用边框色，否则默认深色滚动条会像贴在面板右缘的一条把手
+    style.Colors[ImGuiCol_ScrollbarBg] = style.Colors[ImGuiCol_WindowBg];
+    style.Colors[ImGuiCol_ScrollbarGrab] = ImGui::ColorConvertU32ToFloat4(theme.border);
+    style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImGui::ColorConvertU32ToFloat4(theme.hovered);
+    style.Colors[ImGuiCol_ScrollbarGrabActive] = ImGui::ColorConvertU32ToFloat4(theme.active);
+    style.WindowPadding = ImVec2(theme.paddingX, theme.paddingY);
+    style.ItemSpacing = ImVec2(theme.spacingX, theme.spacingY);
+    style.FramePadding = ImVec2(theme.framePaddingX, theme.framePaddingY);
+}
+
+//获取共享停靠分隔尺寸
+float32 EditorGUI::GetSplitterSize()
+{
+    return std::clamp(theme.splitterSize, 1.0f, 20.0f);
+}
+
+//获取共享内容边距
+ImVec2 EditorGUI::GetWindowPadding()
+{
+    return ImVec2(theme.paddingX, theme.paddingY);
+}
+
+//注册参与跨窗口拖拽判断的编辑器窗口
+void EditorGUI::RegisterDragWindow(GLFWwindow* window)
+{
+    if (!window) return;
+    if (std::find(dragWindows.begin(), dragWindows.end(), window) == dragWindows.end())
+        dragWindows.push_back(window);
+}
+
+//注销参与跨窗口拖拽判断的编辑器窗口
+void EditorGUI::UnregisterDragWindow(GLFWwindow* window)
+{
+    dragWindows.erase(std::remove(dragWindows.begin(), dragWindows.end(), window), dragWindows.end());
+}
+
+//判断任一编辑器窗口中左键是否按下
+bool EditorGUI::IsLeftMouseDownAnywhere()
+{
+    for (GLFWwindow* window : dragWindows)
+    {
+        if (window && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) return true;
+    }
+    return false;
+}
+
+//判断鼠标是否已移出主窗口客户区
+bool EditorGUI::IsCursorOutsideMainWindow()
+{
+    GLFWwindow* window = activeInstance ? activeInstance->glfwWindow : nullptr;
+    if (!window) return false;
+
+    double cursorX = 0.0;
+    double cursorY = 0.0;
+    int32 width = 0;
+    int32 height = 0;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
+    glfwGetWindowSize(window, &width, &height);
+    return cursorX < 0.0 || cursorY < 0.0 || cursorX >= static_cast<double>(width) || cursorY >= static_cast<double>(height);
+}
+
+//获取鼠标在主窗口客户区中的屏幕坐标
+vector2 EditorGUI::GetCursorScreenPosition()
+{
+    GLFWwindow* window = activeInstance ? activeInstance->glfwWindow : nullptr;
+    if (!window) return { 0.0f, 0.0f };
+
+    double cursorX = 0.0;
+    double cursorY = 0.0;
+    int32 windowX = 0;
+    int32 windowY = 0;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
+    glfwGetWindowPos(window, &windowX, &windowY);
+    return { static_cast<float32>(cursorX) + static_cast<float32>(windowX),
+        static_cast<float32>(cursorY) + static_cast<float32>(windowY) };
+}
+
+//获取主窗口 GLFW 句柄
+GLFWwindow* EditorGUI::GetMainGlfwWindow()
+{
+    return activeInstance ? activeInstance->glfwWindow : nullptr;
+}
+
+//获取主 ImGui 上下文
+ImGuiContext* EditorGUI::GetMainContext()
+{
+    return activeInstance ? activeInstance->context : nullptr;
+}
+
+//获取主上下文共享的字体图集
+ImFontAtlas* EditorGUI::GetFontAtlas()
+{
+    return mainFontAtlas;
 }
 
 void EditorGUI::BeginFrame()
@@ -476,8 +746,18 @@ void EditorGUI::BeginFrame()
         glfwSetCursorPos(glfwWindow, static_cast<double>(io.MousePos.x), static_cast<double>(io.MousePos.y));
     }
 
+    ApplyTheme();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
+}
+
+//记录当前 World 会话中的拖拽源
+void EditorGUI::SetDragPayload(int32 kind, const std::string& key)
+{
+    Application* app = Application::Current();
+    if (!app || !IsLeftMouseDownAnywhere()) return;
+    Object* object = kind == 1 ? Object::FindObject(StringId(key)) : nullptr;
+    dragPayload = { kind, key, PathDefines::GetContentRoot(), app->GetWorldRevision(), object ? object->GetObjectId() : 0 };
 }
 
 void EditorGUI::Render()
@@ -485,6 +765,7 @@ void EditorGUI::Render()
     if (!initialized) return;
 
     ImGui::SetCurrentContext(context);
+    if (!IsLeftMouseDownAnywhere() || !HasValidDrag()) dragPayload = {};
     ImGui::Render();
     UpdateMouseCursor();
 
@@ -494,6 +775,23 @@ void EditorGUI::Render()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, framebufferWidth, framebufferHeight);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+//场景改为离屏渲染后主窗口不再被场景填充，需要按主题背景色自行清空
+void EditorGUI::ClearMainFramebuffer()
+{
+    if (!initialized) return;
+
+    int32 framebufferWidth = 0;
+    int32 framebufferHeight = 0;
+    glfwGetFramebufferSize(glfwWindow, &framebufferWidth, &framebufferHeight);
+
+    ImVec4 background = ImGui::ColorConvertU32ToFloat4(theme.background);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, framebufferWidth, framebufferHeight);
+    glDisable(GL_SCISSOR_TEST);
+    glClearColor(background.x, background.y, background.z, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 EditorGuiNativeApi EditorGUI::GetNativeApi() const
@@ -536,6 +834,16 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.openPopup = reinterpret_cast<void*>(&EditorGuiOpenPopup);
     api.beginPopup = reinterpret_cast<void*>(&EditorGuiBeginPopup);
     api.closePopup = reinterpret_cast<void*>(&EditorGuiClosePopup);
+    api.dragSource = reinterpret_cast<void*>(&EditorGuiDragSource);
+    api.readDrag = reinterpret_cast<void*>(&EditorGuiReadDrag);
+    api.acceptDrag = reinterpret_cast<void*>(&EditorGuiAcceptDrag);
+    api.fillRemainingArea = reinterpret_cast<void*>(&EditorGuiFillRemainingArea);
+    api.getDropPlacement = reinterpret_cast<void*>(&EditorGuiGetDropPlacement);
+    api.setTheme = reinterpret_cast<void*>(&EditorGuiSetTheme);
+    api.beginPanelContent = reinterpret_cast<void*>(&EditorGuiBeginPanelContent);
+    api.endPanelContent = reinterpret_cast<void*>(&EditorGuiEndPanelContent);
+    api.drawSceneView = reinterpret_cast<void*>(&EditorGuiDrawSceneView);
+    api.resolveSceneDropPosition = reinterpret_cast<void*>(&EditorGuiResolveSceneDropPosition);
     return api;
 }
 

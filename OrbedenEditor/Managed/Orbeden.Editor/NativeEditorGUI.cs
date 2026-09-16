@@ -46,6 +46,16 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, void> OpenPopup;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopup;
     public delegate* unmanaged[Cdecl]<void> ClosePopup;
+    public delegate* unmanaged[Cdecl]<int, byte*, int, void> DragSource;
+    public delegate* unmanaged[Cdecl]<int*, byte*, int, int> ReadDrag;
+    public delegate* unmanaged[Cdecl]<byte, int, byte> AcceptDrag;
+    public delegate* unmanaged[Cdecl]<int> FillRemainingArea;
+    public delegate* unmanaged[Cdecl]<int> GetDropPlacement;
+    public delegate* unmanaged[Cdecl]<EditorThemeData*, void> SetTheme;
+    public delegate* unmanaged[Cdecl]<byte*, int, ulong*, vector2*, byte, byte> BeginPanelContent;
+    public delegate* unmanaged[Cdecl]<vector2*, void> EndPanelContent;
+    public delegate* unmanaged[Cdecl]<void> DrawSceneView;
+    public delegate* unmanaged[Cdecl]<vector3*, byte> ResolveSceneDropPosition;
 }
 #pragma warning restore CS0649
 
@@ -61,6 +71,73 @@ internal static unsafe class NativeEditorGUI
         initialized = api.Label != null;
     }
 
+    //从当前条目开始拖动对象或资源
+    internal static void DragSource(int kind, string key)
+    {
+        byte[] bytes = Encode(key);
+        fixed (byte* pointer = bytes) api.DragSource(kind, pointer, bytes.Length);
+    }
+
+    //读取悬停目标上的共享载荷
+    internal static string ReadDrag(out int kind)
+    {
+        int nativeKind = 0;
+        int count = api.ReadDrag(&nativeKind, null, 0);
+        byte[] bytes = new byte[count];
+        fixed (byte* pointer = bytes) api.ReadDrag(&nativeKind, pointer, count);
+        kind = nativeKind;
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    //绘制类型匹配预览并接收释放操作
+    internal static bool AcceptDrag(bool valid, int placement = 0) => api.AcceptDrag(valid ? (byte)1 : (byte)0, placement) != 0;
+
+    //创建统一面板内容区域
+    internal static bool BeginPanelContent(string id, ref ulong host, vector2 scroll, bool restoreScroll)
+    {
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes)
+        fixed (ulong* hostPointer = &host)
+            return api.BeginPanelContent(pointer, bytes.Length, hostPointer, &scroll, restoreScroll ? (byte)1 : (byte)0) != 0;
+    }
+
+    //结束面板内容并读取滚动位置
+    internal static vector2 EndPanelContent()
+    {
+        vector2 scroll = default;
+        api.EndPanelContent(&scroll);
+        return scroll;
+    }
+
+    //绘制 Scene 面板的原生场景视口
+    internal static void DrawSceneView()
+    {
+        if (initialized && api.DrawSceneView != null) api.DrawSceneView();
+    }
+
+    //解析场景视口当前鼠标位置的投放点
+    internal static bool ResolveSceneDropPosition(out vector3 position)
+    {
+        position = default;
+        if (!initialized || api.ResolveSceneDropPosition == null) return false;
+        vector3 resolved = default;
+        if (api.ResolveSceneDropPosition(&resolved) == 0) return false;
+        position = resolved;
+        return true;
+    }
+
+    //提交共享主题参数
+    internal static void SetTheme(EditorThemeData value)
+    {
+        if (initialized && api.SetTheme != null) api.SetTheme(&value);
+    }
+
+    //绘制空白投放区域并读取点击状态
+    internal static int FillRemainingArea() => api.FillRemainingArea();
+
+    //获取节点前后或子级投放位置
+    internal static int GetDropPlacement() => api.GetDropPlacement();
+
     //开始可调整宽度的独立滚动区域
     internal static bool BeginChild(string id, ref float width, float height = 0, bool resizable = false)
     {
@@ -74,10 +151,10 @@ internal static unsafe class NativeEditorGUI
     internal static void EndChild() => api.EndChild();
 
     //绘制目录节点并返回展开与点击状态
-    internal static int TreeNode(string label, bool selected)
+    internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false)
     {
         byte[] bytes = Encode(label);
-        fixed (byte* pointer = bytes) return api.TreeNode(pointer, bytes.Length, selected ? (byte)1 : (byte)0);
+        fixed (byte* pointer = bytes) return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0) | (defaultOpen ? 4 : 0)));
     }
 
     //结束目录节点

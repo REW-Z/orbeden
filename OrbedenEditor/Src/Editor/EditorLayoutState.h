@@ -10,11 +10,15 @@ struct EditorPanelState
 public:
     std::string id;
     bool visible = true;
+
+    //承载在独立 GLFW 窗口中，此时位置尺寸使用屏幕坐标
+    bool floatingWindow = false;
     bool hasPosition = false;
     bool hasSize = false;
     vector2 position = { 0.0f, 0.0f };
     vector2 size = { 0.0f, 0.0f };
     int32 dockNode = -1;
+    int32 returnDockNode = -1;
 };
 
 //编辑器停靠节点布局状态。

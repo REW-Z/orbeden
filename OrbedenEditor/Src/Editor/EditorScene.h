@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Editor/EditorLayoutState.h"
+#include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderScene.h"
+#include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/Native/NativeApiAbi.h"
 
@@ -11,7 +13,6 @@
 class Application;
 class ManagedEditorBridge;
 class Mesh;
-class PanelManager;
 class World;
 
 #pragma pack(push, 4)
@@ -56,6 +57,19 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 2);
+
+//场景视口的渲染矩形、可交互内容区与离屏目标像素尺寸。
+struct EditorSceneViewState
+{
+public:
+    vector2 renderPosition = { 0.0f, 0.0f };
+    vector2 renderSize = { 0.0f, 0.0f };
+    vector2 interactPosition = { 0.0f, 0.0f };
+    vector2 interactSize = { 0.0f, 0.0f };
+    int32 pixelWidth = 0;
+    int32 pixelHeight = 0;
+    bool visible = false;
+};
 
 //编辑器背景场景，负责相机、选择、轮廓和 Handles 绘制。
 class EditorScene
@@ -115,9 +129,15 @@ private:
         float32 w = 1.0f;
     };
 
+    static EditorScene* activeScene;
+
     Application& app;
-    PanelManager& panelManager;
     ManagedEditorBridge& managedBridge;
+    RenderTargetID sceneTarget;
+    GpuTextureID sceneTargetTexture;
+    int32 sceneTargetWidth = 0;
+    int32 sceneTargetHeight = 0;
+    EditorSceneViewState sceneView;
     List<EnsId> selectedEns;
     EnsId activeEns;
     EditorCameraState cameraState;
@@ -139,18 +159,31 @@ private:
     List<int8> faceOrientationsScratch;
     uint64 frameIndex = 0;
     matrix4x4 gizmoViewProjection;
-    int32 gizmoViewportWidth = 0;
-    int32 gizmoViewportHeight = 0;
 
 public:
     /// <summary>创建编辑器背景场景。</summary>
-    EditorScene(Application& application, PanelManager& panels, ManagedEditorBridge& bridge);
+    EditorScene(Application& application, ManagedEditorBridge& bridge);
+
+    /// <summary>释放场景视口的离屏目标。</summary>
+    ~EditorScene();
+
+    /// <summary>获取当前活动的编辑器场景。</summary>
+    static EditorScene* GetActiveScene();
 
     /// <summary>更新编辑器观察相机。</summary>
     void Update(World& world, float32 deltaTime, float32 mouseWheel);
 
-    /// <summary>绘制场景选择、轮廓和托管 Handles。</summary>
-    void DrawBackground();
+    /// <summary>按场景视口可见性维护离屏目标并绑定编辑相机。</summary>
+    void RefreshSceneViewTarget(World& world);
+
+    /// <summary>绘制原生场景视口图像并叠加轮廓与 Handles。</summary>
+    void DrawSceneView();
+
+    /// <summary>获取本帧场景视口矩形与像素尺寸。</summary>
+    const EditorSceneViewState& GetSceneViewState() const;
+
+    /// <summary>解析场景投放点：优先表面命中，其次地面交点，最后相机前方。</summary>
+    bool ResolveSceneDropPosition(vector3& position) const;
 
     /// <summary>取消当前鼠标交互。</summary>
     void CancelInteraction();
@@ -163,6 +196,9 @@ public:
 
     /// <summary>选择一个 Ens。</summary>
     void SelectEns(EnsId ens);
+
+    //移动节点并按需保持世界变换
+    bool MoveEns(World& world, EnsId child, EnsId parent, EnsId before, bool preserveWorld);
 
     /// <summary>切换一个 Ens 的选择状态。</summary>
     void ToggleEns(EnsId ens);
@@ -212,15 +248,18 @@ public:
     /// <summary>获取当前 Handles 视图投影矩阵。</summary>
     const matrix4x4& GetGizmoViewProjection() const;
 
-    /// <summary>获取当前 Handles 视口宽度。</summary>
-    int32 GetGizmoViewportWidth() const;
-
-    /// <summary>获取当前 Handles 视口高度。</summary>
-    int32 GetGizmoViewportHeight() const;
-
 private:
     //创建或修复编辑器观察相机。
     void CreateEditorCamera(World& world);
+
+    //在当前上下文的绘制列表上提交选择轮廓与托管 Handles。
+    void DrawSceneOverlay();
+
+    //判断鼠标是否位于场景视口矩形内。
+    bool IsMouseOverSceneView() const;
+
+    //释放场景视口的离屏目标。
+    void ReleaseSceneViewTarget();
 
     //记录当前编辑器观察相机状态。
     void CaptureCameraState(World& world);
@@ -231,12 +270,13 @@ private:
     //处理中央工作区鼠标选择。
     void HandleSelection(const RenderScene& scene);
 
-    //拾取鼠标下距离相机最近的场景对象。
-    EnsId PickEns(const RenderScene& scene, const vector2& screenPosition) const;
+    //投射鼠标射线并返回最近命中的对象与命中点。
+    bool RaycastScene(const RenderScene& scene, const vector2& screenPosition,
+        EnsId& hitEns, vector3& hitPosition) const;
 
     //绘制当前选择及其后代的屏幕空间轮廓。
     void DrawSelectionOutline(const RenderScene& scene, World& world,
-        const vector2& workspacePosition, const vector2& workspaceSize);
+        const vector2& viewPosition, const vector2& viewSize);
 
     //清空网格拓扑缓存。
     void ClearTopologyCache();

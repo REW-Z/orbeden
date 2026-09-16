@@ -28,6 +28,9 @@ public:
     //实例化预制体并重映射内部身份
     static Ens* InstantiatePrefab(World& world, const std::string& path, EnsId parent, std::string& error);
 
+    //恢复子树快照并保留稳定身份
+    static Ens* RestoreEns(World& world, const std::string& snapshot, EnsId parent, std::string& error);
+
     //捕获组件全部持久化字段及其稳定身份。
     static std::string CaptureComponent(Component* component);
 

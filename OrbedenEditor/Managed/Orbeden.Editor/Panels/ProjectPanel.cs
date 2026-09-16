@@ -143,7 +143,7 @@ internal sealed class ProjectPanel : EditorPanel
     }
 
     /// <summary>绘制 ProjectPanel。</summary>
-    public override void Draw(EditorPanelContext context)
+    protected override void DrawContent(EditorPanelContext context)
     {
         if (!EnsureProject())
         {
@@ -311,6 +311,47 @@ internal sealed class ProjectPanel : EditorPanel
             }
         }
         finally { NativeEditorGUI.EndChild(); }
+        DrawDirectoryDrop(currentDirectory);
+    }
+
+    //接收目录移动或将 Ens 子树保存为预制体
+    private void DrawDirectoryDrop(string destinationDirectory)
+    {
+        string sourceKey = NativeEditorGUI.ReadDrag(out int kind);
+        if (sourceKey.Length == 0) return;
+        bool valid = EditorAssetsNative.CanModifyAssets();
+        string source = kind == 2 ? Path.GetFullPath(Path.Combine(contentRoot, sourceKey)) : string.Empty;
+        if (kind == 2)
+            valid &= !string.Equals(Path.GetDirectoryName(source), destinationDirectory, StringComparison.OrdinalIgnoreCase)
+                && !ProjectAssetOperations.IsSameOrChild(destinationDirectory, source);
+        if (!NativeEditorGUI.AcceptDrag(valid)) return;
+        if (kind == 2)
+        {
+            string destination = Path.Combine(destinationDirectory, Path.GetFileName(source));
+            if (ProjectAssetOperations.Move(source, destination, out status))
+            {
+                if (ProjectAssetOperations.IsSameOrChild(currentDirectory, source))
+                    currentDirectory = Path.Combine(destination, Path.GetRelativePath(source, currentDirectory));
+                selectedPath = destination;
+            }
+            return;
+        }
+        Ens ens = Ens.Find(sourceKey);
+        if (!ens.IsValid) return;
+        string name = string.Concat(ens.Name.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character));
+        if (string.IsNullOrWhiteSpace(name)) name = "New Prefab";
+        string path = Path.Combine(destinationDirectory, name + ".prefab");
+        for (int index = 1; File.Exists(path) || Directory.Exists(path); ++index)
+            path = Path.Combine(destinationDirectory, name + " " + index + ".prefab");
+        string key = EditorAssetCatalog.Instance.ToResourceKey(path);
+        if (!EditorAssetsNative.SavePrefab(sourceKey, key))
+        {
+            status = "Failed to save prefab: " + key;
+            return;
+        }
+        selectedPath = path;
+        status = "Saved prefab: " + key;
+        EditorAssetCatalog.Instance.Refresh();
     }
 
     //递归绘制展开目录并排除生成目录与目录链接
@@ -325,6 +366,8 @@ internal sealed class ProjectPanel : EditorPanel
             currentDirectory = path;
             selectedPath = null;
         }
+        DrawDirectoryDrop(path);
+        NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(path));
         if (EditorGUI.BeginPopupContextItem("##directory_menu_" + path))
         {
             try { DrawItemContextMenu(path, true); }
@@ -436,6 +479,8 @@ internal sealed class ProjectPanel : EditorPanel
         bool doubleClicked = EditorGUI.IsItemDoubleClicked();
         if (clicked) selectedPath = entry;
         if (doubleClicked) OpenEntry(entry);
+        if (directory) DrawDirectoryDrop(entry);
+        NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
 
         if (EditorGUI.BeginPopupContextItem("##project_item_menu_" + entry))
         {
