@@ -2,13 +2,13 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>显示原生场景渲染结果的中央场景 Panel。</summary>
-/// <remarks>本面板只是承载视口的固定工作区叶子，不画面板外壳；渲染铺满整窗、交互只用面板内容区，
-/// 两套矩形的约定见 OrbedenEditor/Src/Editor/EditorScene.cpp 顶部说明。</remarks>
+/// <summary>显示原生场景渲染结果的场景 Panel，与其它面板同样参与停靠。</summary>
+/// <remarks>渲染区域就是本面板内容区，画面直接画在面板里；交互范围与之相同，
+/// 相关约定见 OrbedenEditor/Src/Editor/EditorScene.cpp 顶部说明。</remarks>
 internal sealed class ScenePanel : EditorPanel
 {
     public override EditorPanelInfo Info => new("scene", "Scene", true,
-        new vector2(960, 540), PanelDockPlacement.Center, 0.6f, 50, true);
+        new vector2(960, 540), PanelDockPlacement.Center, 0.6f, 50, false, false);
 
     //绘制原生场景视口并接收预制体投放
     protected override void DrawContent(EditorPanelContext context)

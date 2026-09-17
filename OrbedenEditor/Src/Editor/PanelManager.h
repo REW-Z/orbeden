@@ -87,6 +87,9 @@ private:
         vector2 min = { 0.0f, 0.0f };
         vector2 max = { 0.0f, 0.0f };
         bool opaque = true;
+
+        //是否绘制 1px 边框，由当前显示的面板决定
+        bool showBorder = true;
     };
     List<PanelFrame> framePanels;
 

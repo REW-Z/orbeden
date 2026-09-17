@@ -289,6 +289,7 @@ internal sealed class InspectorPanel : EditorPanel
             || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         bool expanded = EditorGUI.BeginCollapsibleComponentBlock(
             title,
+            EditorComponentIcons.Resolve(primary.TypeName, primary.IsManaged),
             $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}",
             removable,
             out bool removeRequested);

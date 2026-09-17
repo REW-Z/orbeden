@@ -11,9 +11,9 @@ internal unsafe struct EditorGuiNativeApi
 {
     public delegate* unmanaged[Cdecl]<byte*, int, void> Label;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> Button;
-    public delegate* unmanaged[Cdecl]<byte*, int, void> BeginComponentBlock;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, void> BeginComponentBlock;
     public delegate* unmanaged[Cdecl]<void> EndComponentBlock;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte, byte*, byte> BeginCollapsibleComponentBlock;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte, byte*, byte> BeginCollapsibleComponentBlock;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> BeginCombo;
     public delegate* unmanaged[Cdecl]<void> EndCombo;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> Selectable;
@@ -56,6 +56,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<vector2*, void> EndPanelContent;
     public delegate* unmanaged[Cdecl]<void> DrawSceneView;
     public delegate* unmanaged[Cdecl]<vector3*, byte> ResolveSceneDropPosition;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> ReferenceField;
 }
 #pragma warning restore CS0649
 
@@ -200,11 +201,14 @@ internal static unsafe class NativeEditorGUI
     }
 
     //开始组件块
-    internal static void BeginComponentBlock(string? title)
+    internal static void BeginComponentBlock(string? icon, string? title)
     {
         if (!initialized || api.BeginComponentBlock == null) return;
-        byte[] bytes = Encode(title);
-        fixed (byte* pointer = bytes) api.BeginComponentBlock(pointer, bytes.Length);
+        byte[] iconBytes = Encode(icon);
+        byte[] titleBytes = Encode(title);
+        fixed (byte* iconPointer = iconBytes)
+        fixed (byte* titlePointer = titleBytes)
+            api.BeginComponentBlock(iconPointer, iconBytes.Length, titlePointer, titleBytes.Length);
     }
 
     //结束组件块
@@ -214,7 +218,8 @@ internal static unsafe class NativeEditorGUI
     }
 
     //开始可折叠组件块
-    internal static bool BeginCollapsibleComponentBlock(string? title,
+    internal static bool BeginCollapsibleComponentBlock(string? icon,
+        string? title,
         string? id,
         bool removable,
         out bool removeRequested)
@@ -222,13 +227,17 @@ internal static unsafe class NativeEditorGUI
         removeRequested = false;
         if (!initialized || api.BeginCollapsibleComponentBlock == null) return false;
 
+        byte[] iconBytes = Encode(icon);
         byte[] titleBytes = Encode(title);
         byte[] idBytes = Encode(id);
         byte nativeRemoveRequested = 0;
+        fixed (byte* iconPointer = iconBytes)
         fixed (byte* titlePointer = titleBytes)
         fixed (byte* idPointer = idBytes)
         {
             bool expanded = api.BeginCollapsibleComponentBlock(
+                iconPointer,
+                iconBytes.Length,
                 titlePointer,
                 titleBytes.Length,
                 idPointer,
@@ -238,6 +247,19 @@ internal static unsafe class NativeEditorGUI
             removeRequested = nativeRemoveRequested != 0;
             return expanded;
         }
+    }
+
+    //绘制对象引用框并返回操作：0 无 1 点击 2 清空 3 选择器
+    internal static int ReferenceField(string? icon, string? text, string? id)
+    {
+        if (!initialized || api.ReferenceField == null) return 0;
+        byte[] iconBytes = Encode(icon);
+        byte[] textBytes = Encode(text);
+        byte[] idBytes = Encode(id);
+        fixed (byte* iconPointer = iconBytes)
+        fixed (byte* textPointer = textBytes)
+        fixed (byte* idPointer = idBytes)
+            return api.ReferenceField(iconPointer, iconBytes.Length, textPointer, textBytes.Length, idPointer, idBytes.Length);
     }
 
     //开始下拉选择框

@@ -93,7 +93,8 @@ internal static unsafe class EditorPanelRegistry
                     (int)info.DefaultDock,
                     info.DefaultDockRatio,
                     info.Order,
-                    info.FixedWorkspace ? (byte)1 : (byte)0);
+                    info.FixedWorkspace ? (byte)1 : (byte)0,
+                    info.ShowBorder ? (byte)1 : (byte)0);
                 if (accepted != 0) panels.Add(panel);
             }
         }

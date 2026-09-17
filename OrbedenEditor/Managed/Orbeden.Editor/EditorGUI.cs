@@ -28,19 +28,32 @@ public static class EditorGUI
     /// <summary>绘制按钮。</summary>
     public static bool Button(string text) => NativeEditorGUI.Button(text);
 
-    /// <summary>开始组件块。</summary>
-    public static void BeginComponentBlock(string title) => NativeEditorGUI.BeginComponentBlock(title);
+    /// <summary>开始组件块，未指定图标时使用通用图标。</summary>
+    public static void BeginComponentBlock(string title) => NativeEditorGUI.BeginComponentBlock("Other", title);
+
+    /// <summary>开始带图标的组件块。</summary>
+    public static void BeginComponentBlock(string title, string icon) => NativeEditorGUI.BeginComponentBlock(icon, title);
 
     /// <summary>结束组件块。</summary>
     public static void EndComponentBlock() => NativeEditorGUI.EndComponentBlock();
 
-    /// <summary>开始可折叠组件块。</summary>
+    /// <summary>开始可折叠组件块，未指定图标时使用通用图标。</summary>
     public static bool BeginCollapsibleComponentBlock(string title,
         string id,
         bool removable,
         out bool removeRequested)
     {
-        return NativeEditorGUI.BeginCollapsibleComponentBlock(title, id, removable, out removeRequested);
+        return NativeEditorGUI.BeginCollapsibleComponentBlock("Other", title, id, removable, out removeRequested);
+    }
+
+    /// <summary>开始带图标与显示名称的可折叠组件块。</summary>
+    public static bool BeginCollapsibleComponentBlock(string title,
+        string icon,
+        string id,
+        bool removable,
+        out bool removeRequested)
+    {
+        return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id, removable, out removeRequested);
     }
 
     /// <summary>开始下拉选择框。</summary>

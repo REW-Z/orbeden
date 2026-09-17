@@ -36,6 +36,9 @@
     <ClCompile Include="Src\Editor\EditorGUI.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EditorIcons.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\EditorFloatingWindow.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -75,6 +78,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorGUI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorIcons.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Editor\EditorFloatingWindow.h">

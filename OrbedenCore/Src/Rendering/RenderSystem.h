@@ -89,6 +89,9 @@ private:
     bool initialized = false;
     bool warnedMissingCamera = false;
     bool fpsLabelVisible = true;
+
+    //是否渲染直接画到主 framebuffer 的相机（游戏相机）；编辑器编辑态关闭，Play 与 Player 打开
+    bool mainFramebufferRendering = true;
     float32 elapsedTime = 0.0f;
 
     //在主 framebuffer 上绘制运行时 GUI 和调试覆盖层
@@ -135,6 +138,9 @@ public:
 
     //设置是否在调试覆盖层中绘制 FPS 标签  
     void SetFpsLabelVisible(bool value);
+
+    //设置是否渲染直接画到主 framebuffer 的相机  
+    void SetMainFramebufferRendering(bool value);
 
     //创建带深度缓冲的离屏渲染目标并返回逻辑 ID  
     RenderTargetID CreateRenderTarget(int32 width, int32 height);

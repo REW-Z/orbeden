@@ -99,6 +99,8 @@ if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
 xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -128,6 +130,8 @@ if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
 xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -156,6 +160,8 @@ if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
 xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -186,6 +192,8 @@ if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
 if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
 xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -197,6 +205,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClCompile Include="Src\Editor\EditorScene.cpp" />
     <ClCompile Include="Src\Editor\EditorSystem.cpp" />
     <ClCompile Include="Src\Editor\EditorGUI.cpp" />
+    <ClCompile Include="Src\Editor\EditorIcons.cpp" />
     <ClCompile Include="Src\Editor\EditorFloatingWindow.cpp" />
     <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
     <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
@@ -213,6 +222,7 @@ xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
     <ClInclude Include="Src\Editor\EditorScene.h" />
     <ClInclude Include="Src\Editor\EditorSystem.h" />
     <ClInclude Include="Src\Editor\EditorGUI.h" />
+    <ClInclude Include="Src\Editor\EditorIcons.h" />
     <ClInclude Include="Src\Editor\EditorFloatingWindow.h" />
     <ClInclude Include="Src\Editor\EditorClrHost.h" />
     <ClInclude Include="Src\Editor\EditorLayoutState.h" />

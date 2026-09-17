@@ -164,13 +164,13 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 14);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 8);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 100);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 101);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 48);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 56);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 58);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 60);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 74);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 49);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 57);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 59);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 61);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 75);
 
     //获取可执行文件所在目录
     std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
@@ -940,7 +940,8 @@ namespace
         int32 defaultDock,
         float32 defaultDockRatio,
         int32 order,
-        uint8 fixedWorkspace)
+        uint8 fixedWorkspace,
+        uint8 showBorder)
     {
         ManagedPanelRegistrationContext* registration = static_cast<ManagedPanelRegistrationContext*>(context);
         if (!registration || !registration->editor || !registration->panelManager || handle < 0) return 0;
@@ -959,6 +960,7 @@ namespace
         info.defaultDock = static_cast<PanelDockPlacement>(defaultDock);
         info.defaultDockRatio = defaultDockRatio;
         info.order = order;
+        info.showBorder = showBorder != 0;
         info.fixedWorkspace = fixedWorkspace != 0;
         return registration->panelManager->RegisterPanel(
             std::make_unique<ManagedPanelAdapter>(*registration->editor, std::move(info), handle)) ? 1 : 0;

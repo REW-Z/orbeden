@@ -17,6 +17,8 @@
 namespace
 {
     constexpr float32 MinPanelWidth = 120.0f;
+    //停靠投放只在面板靠边这条比例范围内生效，正中留给浮动
+    constexpr float32 DockEdgeRatio = 0.2f;
     constexpr float32 MinPanelHeight = 80.0f;
     constexpr const char* PanelDragPayload = "ORBEDEN_PANEL";
 
@@ -82,19 +84,6 @@ void PanelManager::DrawViewsMenu()
 
     for (PanelEntry& entry : panels)
     {
-        //固定工作区面板始终显示：列出状态供确认，并且只允许重新调出、不允许隐藏，
-        //否则一旦它被写成不可见，就再没有入口能把它弄回来
-        if (entry.info.fixedWorkspace)
-        {
-            bool workspaceVisible = entry.visible;
-            if (ImGui::Checkbox((entry.info.title + " (Fixed Workspace)").c_str(), &workspaceVisible)
-                && workspaceVisible)
-            {
-                SetPanelVisible(entry.info.id.c_str(), true);
-            }
-            continue;
-        }
-
         bool visible = entry.visible;
         if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
         {
@@ -211,14 +200,7 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
         PanelEntry* entry = FindPanel(state.id.c_str());
         if (!entry) continue;
 
-        //固定工作区面板始终可见：旧布局可能把它存成不可见，会让场景不绘制、相机交互全部失效
-        if (entry->info.fixedWorkspace && !state.visible)
-        {
-            std::string warning = "Panel layout stored the fixed workspace as hidden; forcing it visible: "
-                + entry->info.id;
-            Log::Warning(warning.c_str());
-        }
-        ApplyVisibility(*entry, entry->info.fixedWorkspace ? true : state.visible);
+        ApplyVisibility(*entry, state.visible);
         entry->dockNode = state.visible && FindDockNode(state.dockNode) ? state.dockNode : -1;
         entry->returnDockNode = state.returnDockNode;
         if (DockNode* node = FindDockNode(entry->dockNode))
@@ -312,9 +294,7 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
     {
         EditorPanelState state;
         state.id = entry.info.id;
-        //固定工作区恒记为可见：Play 期间保存布局时它是隐藏的，否则会把 false 写进项目，
-        //下次打开场景不绘制、相机拖拽与滚轮全部失效
-        state.visible = entry.info.fixedWorkspace ? true : entry.visible;
+        state.visible = entry.visible;
         //独立窗口以屏幕坐标覆盖主窗口内浮动使用的逻辑坐标
         state.floatingWindow = entry.osWindow != nullptr;
         state.hasPosition = entry.hasPosition;
@@ -582,19 +562,38 @@ void PanelManager::DrawDockHost()
         //每个面板四角都做圆角，相邻面板交界处圆弧让开的小块会露出背后背景
         float32 cornerRadius = EditorGUI::GetPanelCornerRadius();
         ImU32 bandColor = ImGui::GetColorU32(ImGuiCol_WindowBg);
-        ImU32 outlineColor = EditorGUI::GetPanelOutlineColor();
+        ImU32 outlineColor = EditorGUI::GetActiveColor();
+        //面板 1px 边框的坑：不能用 ImDrawList::AddRect(..., thickness) 描边。
+        //它走 ImGui 的抗锯齿路径，抗锯齿是沿整条路径铺裙边的，直线段也会被摊到相邻像素上，
+        //结果 1px 边框看起来是一条 2px 的模糊粗线——这与坐标是否取整无关，取整了照样糊。
+        //正确做法是用两次实心填充拼出 1px 环：先按整数边界铺满描边色，再内缩 1px 铺面板底色。
+        //实心四边形走 PrimRect，不做抗锯齿，直边正好落在整像素上；只有四个圆角保留抗锯齿。
+        //浮窗清晰是因为那个边框由 ImGui 的窗口装饰代码绘制，用的是同一类实心路径。
         for (const PanelFrame& frame : framePanels)
         {
-            if (!frame.opaque) continue;
-            ImGui::GetWindowDrawList()->AddRectFilled(ToImVec2(frame.min), ToImVec2(frame.max),
-                bandColor, cornerRadius, ImDrawFlags_RoundCornersAll);
-        }
-        for (const PanelFrame& frame : framePanels)
-        {
-            ImGui::GetWindowDrawList()->AddRect(
-                ImVec2(std::floor(frame.min.x) + 0.5f, std::floor(frame.min.y) + 0.5f),
-                ImVec2(std::floor(frame.max.x) - 0.5f, std::floor(frame.max.y) - 0.5f),
-                outlineColor, cornerRadius, ImDrawFlags_RoundCornersAll, 1.0f);
+            ImVec2 outerMin(std::floor(frame.min.x), std::floor(frame.min.y));
+            ImVec2 outerMax(std::floor(frame.max.x), std::floor(frame.max.y));
+            if (!frame.opaque)
+            {
+                //透明面板只描边不铺底，当前只有空节点会走到
+                ImGui::GetWindowDrawList()->AddRect(ImVec2(outerMin.x + 0.5f, outerMin.y + 0.5f),
+                    ImVec2(outerMax.x - 0.5f, outerMax.y - 0.5f), outlineColor,
+                    cornerRadius, ImDrawFlags_RoundCornersAll, 1.0f);
+                continue;
+            }
+
+            if (!frame.showBorder)
+            {
+                //关掉边框的面板只铺底色
+                ImGui::GetWindowDrawList()->AddRectFilled(outerMin, outerMax, bandColor,
+                    cornerRadius, ImDrawFlags_RoundCornersAll);
+                continue;
+            }
+            ImGui::GetWindowDrawList()->AddRectFilled(outerMin, outerMax, outlineColor,
+                cornerRadius, ImDrawFlags_RoundCornersAll);
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(outerMin.x + 1.0f, outerMin.y + 1.0f),
+                ImVec2(outerMax.x - 1.0f, outerMax.y - 1.0f), bandColor,
+                std::max(cornerRadius - 1.0f, 0.0f), ImDrawFlags_RoundCornersAll);
         }
         DrawRootDockTarget(position, size);
     }
@@ -677,15 +676,15 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
     vector2 secondVisualMax = visualMax;
     if (node->vertical)
     {
-        float32 lineX = position.x + firstLength + lineOffset;
-        firstVisualMax.x = lineX + 1.0f;
-        secondVisualMin.x = lineX;
+        //近侧面板吃进分隔带一半，远侧面板保持自己的布局边，中间留出空隙，
+        //两条 1px 描边才不会因为抗锯齿叠成一条粗线
+        firstVisualMax.x = position.x + firstLength + lineOffset;
+        secondVisualMin.x = secondPosition.x;
     }
     else
     {
-        float32 lineY = position.y + firstLength + lineOffset;
-        firstVisualMax.y = lineY + 1.0f;
-        secondVisualMin.y = lineY;
+        firstVisualMax.y = position.y + firstLength + lineOffset;
+        secondVisualMin.y = secondPosition.y;
     }
     DrawDockNode(firstChild, position, firstSize, firstVisualMin, firstVisualMax);
     DrawDockNode(secondChild, secondPosition, secondSize, secondVisualMin, secondVisualMax);
@@ -774,6 +773,7 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         {
             float32 closeWidth = ImGui::GetFrameHeight();
             float32 tabWidthAvailable = std::max(1.0f, ImGui::GetContentRegionAvail().x - closeWidth - ImGui::GetStyle().ItemSpacing.x);
+            //标签栏不铺底：标签本体自绘，上圆角、下平口，选中标签填充卡片色并在顶部压一条强调线
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::BeginChild("##PanelTabs", ImVec2(tabWidthAvailable, closeWidth), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
             ImGui::PopStyleVar();
@@ -788,13 +788,32 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
                 bool selected = node.activePanel == entry->info.id;
                 std::string tabLabel = entry->info.title + "###DockTab" + entry->info.id;
                 float32 tabWidth = ImGui::CalcTextSize(entry->info.title.c_str()).x + ImGui::GetStyle().FramePadding.x * 2.0f + 10.0f;
+                float32 tabHeight = ImGui::GetFrameHeight();
+                ImVec2 tabMin = ImGui::GetCursorScreenPos();
+                bool tabClicked = ImGui::InvisibleButton(tabLabel.c_str(), ImVec2(tabWidth, tabHeight));
+                bool tabHovered = ImGui::IsItemHovered();
+
+                //自绘标签：条底为卡片色，悬停上色，选中用面板底色挖出来并在顶部压一条强调线
+                ImVec2 tabMax(tabMin.x + tabWidth, tabMin.y + tabHeight);
+                ImDrawList* tabList = ImGui::GetWindowDrawList();
+                float32 tabRounding = EditorGUI::GetPanelCornerRadius();
                 if (selected)
                 {
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_TabSelected));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_TabHovered));
+                    tabList->AddRectFilled(tabMin, tabMax, ImGui::GetColorU32(ImGuiCol_Header), tabRounding,
+                        ImDrawFlags_RoundCornersTop);
+                    tabList->AddRectFilled(tabMin, ImVec2(tabMax.x, tabMin.y + 2.0f),
+                        ImGui::GetColorU32(ImGuiCol_ButtonActive), tabRounding, ImDrawFlags_RoundCornersTop);
                 }
-                bool tabClicked = ImGui::Button(tabLabel.c_str(), ImVec2(tabWidth, ImGui::GetFrameHeight()));
-                if (selected) ImGui::PopStyleColor(2);
+                else if (tabHovered)
+                {
+                    tabList->AddRectFilled(tabMin, tabMax, ImGui::GetColorU32(ImGuiCol_ButtonHovered), tabRounding,
+                        ImDrawFlags_RoundCornersTop);
+                }
+                ImVec2 textSize = ImGui::CalcTextSize(entry->info.title.c_str());
+                tabList->AddText(ImVec2(tabMin.x + (tabWidth - textSize.x) * 0.5f,
+                    tabMin.y + (tabHeight - textSize.y) * 0.5f),
+                    ImGui::GetColorU32(selected ? ImGuiCol_Text : ImGuiCol_TextDisabled), entry->info.title.c_str());
+
                 if (tabClicked)
                 {
                     node.activePanel = entry->info.id;
@@ -832,8 +851,10 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         //面板边界登记给宿主统一绘制：绘制矩形有一部分伸在叶子窗口之外，
         //在这里画会被窗口裁剪矩形裁掉，内部交界线会整条消失。
         //固定工作区（场景全屏视口）不是普通面板，不画底色也不画边框。
+        //是否画边框由当前显示的面板决定：场景视口这类内容自身占满面板的关掉边框
+        const PanelEntry* shown = FindPanel(node.activePanel.c_str());
         if (!fixedLeaf)
-            framePanels.push_back({ visualMin, visualMax, !transparentLeaf });
+            framePanels.push_back({ visualMin, visualMax, !transparentLeaf, !shown || shown->info.showBorder });
     }
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
@@ -855,14 +876,18 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
 
     if ((mergeOnTabBar || !IsRootDockPlacement(rootPlacement)) && ImGui::BeginDragDropTarget())
     {
-        const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(PanelDragPayload,
-            ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+        //只接受标签栏与靠边一圈的投放，正中区域不响应，浮动面板才不会一拖就停靠
+        PanelDockPlacement placement = mergeOnTabBar
+            ? PanelDockPlacement::Center
+            : GetDockPlacement(position, size, DockEdgeRatio);
+        bool dockable = mergeOnTabBar || placement != PanelDockPlacement::Center;
+        const ImGuiPayload* payload = dockable
+            ? ImGui::AcceptDragDropPayload(PanelDragPayload,
+                ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect)
+            : nullptr;
         if (payload)
         {
             //固定工作区面板只接受四边拆分，不接受并入为标签页
-            PanelDockPlacement placement = mergeOnTabBar
-                ? PanelDockPlacement::Center
-                : GetDockPlacement(position, size, 0.28f);
             if (fixedLeaf && placement == PanelDockPlacement::Center) placement = PanelDockPlacement::Left;
             DrawDockPreview(position, size, placement);
             if (payload->IsDelivery())
@@ -1056,7 +1081,7 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
     //浮动窗口用窗口自身的圆角边框：边框色换成面板描边色，圆角取主题半径
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, EditorGUI::GetPanelCornerRadius());
-    ImGui::PushStyleColor(ImGuiCol_Border, EditorGUI::GetPanelOutlineColor());
+    ImGui::PushStyleColor(ImGuiCol_Border, EditorGUI::GetActiveColor());
     bool open = ImGui::Begin(windowTitle.c_str(), &visible, flags);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);

@@ -65,11 +65,12 @@ public:
     void* endPanelContent = nullptr;
     void* drawSceneView = nullptr;
     void* resolveSceneDropPosition = nullptr;
+    void* referenceField = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 47);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 48);
 
 //Editor ImGui 绑定层
 class EditorGUI
@@ -132,8 +133,8 @@ public:
     //获取主题定义的内容边距
     static ImVec2 GetWindowPadding();
 
-    //获取主题定义的面板描边色
-    static ImU32 GetPanelOutlineColor();
+    //获取主题定义的强调色
+    static ImU32 GetActiveColor();
 
     //获取主题定义的面板圆角半径
     static float32 GetPanelCornerRadius();

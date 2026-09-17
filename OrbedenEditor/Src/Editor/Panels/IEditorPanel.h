@@ -28,6 +28,9 @@ public:
 
     //固定占据中央工作区，不可关闭、拖动或浮动
     bool fixedWorkspace = false;
+
+    //是否绘制面板边框，场景视口这类内容自身占满面板的可以关掉
+    bool showBorder = true;
 };
 
 //编辑器面板接口。

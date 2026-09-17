@@ -307,7 +307,7 @@ namespace
         ImVec2 screenA;
         ImVec2 screenB;
         if (!ProjectGizmoPoint(a, screenA) || !ProjectGizmoPoint(b, screenB)) return;
-        ImGui::GetBackgroundDrawList()->AddLine(screenA, screenB, ToImColor(color), 2.0f);
+        ImGui::GetWindowDrawList()->AddLine(screenA, screenB, ToImColor(color), 2.0f);
     }
 
     //绘制一个托管三维 Handle 标签。
@@ -318,7 +318,7 @@ namespace
 
         const char* begin = text && length > 0 ? reinterpret_cast<const char*>(text) : "";
         const char* end = begin + std::max(length, 0);
-        ImGui::GetBackgroundDrawList()->AddText(screen, IM_COL32(255, 245, 180, 255), begin, end);
+        ImGui::GetWindowDrawList()->AddText(screen, IM_COL32(255, 245, 180, 255), begin, end);
     }
 }
 
@@ -396,45 +396,31 @@ void EditorScene::RefreshSceneViewTarget(World& world)
 void EditorScene::DrawSceneView()
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 interactMin = ImGui::GetCursorScreenPos();
-    ImVec2 interactSize = ImGui::GetContentRegionAvail();
-    if (!viewport || interactSize.x < 8.0f || interactSize.y < 8.0f)
+    ImVec2 viewMin = ImGui::GetCursorScreenPos();
+    ImVec2 viewSize = ImGui::GetContentRegionAvail();
+    if (viewSize.x < 8.0f || viewSize.y < 8.0f)
     {
         //内容区过小时暂停视口渲染
-        ImGui::Dummy(ImVec2(std::max(interactSize.x, 1.0f), std::max(interactSize.y, 1.0f)));
+        sceneView.visible = false;
+        ImGui::Dummy(ImVec2(std::max(viewSize.x, 1.0f), std::max(viewSize.y, 1.0f)));
         return;
     }
 
-    //渲染区域始终铺满主窗口，可交互区域是本面板内容区
-    sceneView.renderPosition = { viewport->Pos.x, viewport->Pos.y };
-    sceneView.renderSize = { viewport->Size.x, viewport->Size.y };
-    sceneView.interactPosition = { interactMin.x, interactMin.y };
-    sceneView.interactSize = { interactSize.x, interactSize.y };
-    sceneView.pixelWidth = std::max(static_cast<int32>(std::lround(sceneView.renderSize.x * io.DisplayFramebufferScale.x)), 1);
-    sceneView.pixelHeight = std::max(static_cast<int32>(std::lround(sceneView.renderSize.y * io.DisplayFramebufferScale.y)), 1);
+    //渲染区域就是本面板内容区，不再铺满主窗口：渲染范围与交互范围一致
+    sceneView.renderPosition = { viewMin.x, viewMin.y };
+    sceneView.renderSize = { viewSize.x, viewSize.y };
+    sceneView.interactPosition = { viewMin.x, viewMin.y };
+    sceneView.interactSize = { viewSize.x, viewSize.y };
+    sceneView.pixelWidth = std::max(static_cast<int32>(std::lround(viewSize.x * io.DisplayFramebufferScale.x)), 1);
+    sceneView.pixelHeight = std::max(static_cast<int32>(std::lround(viewSize.y * io.DisplayFramebufferScale.y)), 1);
     sceneView.visible = true;
 
-    //图像绘制到背景列表，保证像改造前一样始终铺在停靠面板之下
+    //离屏纹理原点在左下角，交换 V 轴与 ImGui 的左上角原点对齐
     if (sceneTargetTexture.id != 0)
-    {
-        //离屏纹理原点在左下角，交换 V 轴与 ImGui 的左上角原点对齐
-        ImVec2 min(sceneView.renderPosition.x, sceneView.renderPosition.y);
-        ImVec2 max(min.x + sceneView.renderSize.x, min.y + sceneView.renderSize.y);
-        ImGui::GetBackgroundDrawList()->AddImage(static_cast<ImTextureID>(sceneTargetTexture.id),
-            min, max, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
-    }
-
-    //透明占位项只提供悬停与投放目标，可见像素全部来自背景列表
-    if (sceneTargetTexture.id != 0)
-    {
-        ImGui::ImageWithBg(static_cast<ImTextureID>(sceneTargetTexture.id), interactSize,
-            ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec4(0.0f, 0.0f, 0.0f, 0.0f), ImVec4(1.0f, 1.0f, 1.0f, 0.0f));
-    }
+        ImGui::Image(static_cast<ImTextureID>(sceneTargetTexture.id), viewSize,
+            ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
     else
-    {
-        ImGui::Dummy(interactSize);
-    }
+        ImGui::Dummy(viewSize);
 
     DrawSceneOverlay();
 }
@@ -1217,7 +1203,7 @@ void EditorScene::DrawSelectionOutline(const RenderScene& scene, World& world,
     ImVec2 cameraSize(sceneView.renderSize.x, sceneView.renderSize.y);
     if (cameraSize.x <= 0.0f || cameraSize.y <= 0.0f) return;
 
-    ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
     drawList->PushClipRect(
         ImVec2(viewPosition.x, viewPosition.y),
         ImVec2(viewPosition.x + viewSize.x, viewPosition.y + viewSize.y),

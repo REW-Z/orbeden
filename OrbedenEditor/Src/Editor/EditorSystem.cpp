@@ -1,6 +1,7 @@
 #include "Editor/EditorSystem.h"
 
 #include "Log/Log.h"
+#include "Editor/EditorIcons.h"
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/ProjectLayout.h"
 #include "Editor/ProjectUpgrader.h"
@@ -329,6 +330,9 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 {
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
+    //编辑器以编辑态启动：只渲染场景面板的离屏目标，游戏相机不直接画主 framebuffer
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetMainFramebufferRendering(false);
     if (!editorGUI.Initialize(app.GetWindow()))
     {
         Log::Error("EditorSystem initialize failed: EditorGUI initialize failed.");
@@ -338,6 +342,8 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
 
     std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    //组件图标与 Templates 一样随 exe 分发
+    EditorIcons::SetDirectory(executableDirectory / "Resources" / "Icons");
     std::filesystem::path managedDirectory = executableDirectory / "Managed";
     EditorClrHostConfig clrConfig;
     clrConfig.runtimeConfigPath = ToCleanPath(executableDirectory / "OrbedenEditor.runtimeconfig.json");
@@ -861,6 +867,9 @@ void EditorSystem::RequestPlay()
     //记录面板布局并隐藏全部编辑器面板，停止 Play 后恢复。
     panelManager.WriteLayout(playPanelLayout);
     panelManager.HideAllPanels();
+    //Play 期间游戏相机直接画主 framebuffer，编辑态则只渲染场景面板的离屏目标
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetMainFramebufferRendering(true);
 
     projectStatus = "Play-In-Editor started.";
     RequestRepaint();
@@ -875,6 +884,8 @@ void EditorSystem::RequestStop()
     app.SetSimulationEnabled(false);
     playMode.Stop();
     InputManager::SetEnabled(false);
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetMainFramebufferRendering(false);
 
     //恢复 Play 前的面板布局。
     panelManager.ApplyLayout(playPanelLayout);

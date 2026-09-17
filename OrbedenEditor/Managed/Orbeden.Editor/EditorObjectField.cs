@@ -119,7 +119,11 @@ internal static class EditorObjectField
         bool changed = false;
         EditorGUI.Label(label.Split("##", StringSplitOptions.None)[0]);
         EditorGUI.SameLine();
-        if (EditorGUI.Button(name + " (" + shortType + ")##reference_" + label) && key.Length != 0)
+        int action = NativeEditorGUI.ReferenceField(
+            EditorComponentIcons.ResolveReference(declaredType),
+            name + " (" + shortType + ")",
+            label);
+        if (action == 1 && key.Length != 0)
         {
             if (key.StartsWith("world://", StringComparison.Ordinal))
             {
@@ -157,15 +161,13 @@ internal static class EditorObjectField
                 }
             }
         }
-        EditorGUI.SameLine();
-        if (EditorGUI.Button("×##reference_clear_" + label) && key.Length != 0)
+        else if (action == 2 && key.Length != 0)
         {
             key = string.Empty;
             objectId = 0;
             changed = true;
         }
-        EditorGUI.SameLine();
-        if (EditorGUI.Button("...##reference_select_" + label))
+        else if (action == 3)
         {
             choices = CollectChoices(declaredType, ensHandle, allowScene);
             search = string.Empty;

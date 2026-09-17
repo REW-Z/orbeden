@@ -132,6 +132,12 @@ void RenderSystem::SetFpsLabelVisible(bool value)
     fpsLabelVisible = value;
 }
 
+//设置是否渲染直接画到主 framebuffer 的相机
+void RenderSystem::SetMainFramebufferRendering(bool value)
+{
+    mainFramebufferRendering = value;
+}
+
 RenderTargetID RenderSystem::CreateRenderTarget(int32 width, int32 height)
 {
     //验证 RenderTarget 创建参数
@@ -403,6 +409,14 @@ void RenderSystem::PrepareCameraRenderData()
     for (RenderCamera& camera : scene.cameras)
     {
         camera.elapsedTime = elapsedTime;
+
+        //编辑态只渲染带离屏目标的相机，直接画主 framebuffer 的游戏相机不参与
+        if (!mainFramebufferRendering && !camera.renderTargetId.IsValid())
+        {
+            camera.viewportWidth = 0;
+            camera.viewportHeight = 0;
+            continue;
+        }
 
         //解析相机离屏 RenderTarget
         const ManagedRenderTarget* target = FindRenderTarget(camera.renderTargetId);

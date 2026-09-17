@@ -1,5 +1,6 @@
 #include "Editor/EditorGUI.h"
 
+#include "Editor/EditorIcons.h"
 #include "Editor/EditorScene.h"
 #include "Log/Log.h"
 #include "Application.h"
@@ -20,15 +21,42 @@ EditorGUI* EditorGUI::activeInstance = nullptr;
 
 namespace
 {
+    //把 0xRRGGBB 展开成引擎颜色，与托管侧的主题字面量一一对应
+    constexpr color FromHex(uint32 rgb, float32 alpha = 1.0f)
+    {
+        return color {
+            static_cast<float32>((rgb >> 16) & 0xFFu) / 255.0f,
+            static_cast<float32>((rgb >> 8) & 0xFFu) / 255.0f,
+            static_cast<float32>(rgb & 0xFFu) / 255.0f,
+            alpha
+        };
+    }
+
+    //转换为 ImGui 颜色
+    ImVec4 ToImVec4(const color& value)
+    {
+        return ImVec4(value.r, value.g, value.b, value.a);
+    }
+
+    //在名称前绘制图标并停在同一行，没有图标时不占位
+    void DrawInlineIcon(const std::string& name, float32 size)
+    {
+        ImTextureID texture = EditorIcons::Get(name);
+        if (texture == 0) return;
+
+        ImGui::Image(texture, ImVec2(size, size));
+        ImGui::SameLine();
+    }
+
     struct EditorThemeData
     {
-        uint32 background = 0xff242424, text = 0xffe8e8e8, border = 0xff505050;
-        uint32 panelOutline = 0xffff00ff;
-        uint32 header = 0xff383838, control = 0xff505050, hovered = 0xff765638, active = 0xff9c683c;
+        color background = FromHex(0x242424), text = FromHex(0xE8E8E8), border = FromHex(0x505050);
+        color header = FromHex(0x383838), control = FromHex(0x505050);
+        color hovered = FromHex(0x385676), active = FromHex(0x9184EE);
         float32 paddingX = 6, paddingY = 6, spacingX = 6, spacingY = 4;
         float32 framePaddingX = 6, framePaddingY = 4, splitterSize = 5, cornerRadius = 6;
     };
-    static_assert(sizeof(EditorThemeData) == 64);
+    static_assert(sizeof(EditorThemeData) == 144);
     EditorThemeData theme;
 
     //接收托管主题参数
@@ -211,8 +239,10 @@ namespace
     }
 
     //开始组件块
-    void ORBEDEN_NATIVE_CALL EditorGuiBeginComponentBlock(const uint8* title, int32 length)
+    void ORBEDEN_NATIVE_CALL EditorGuiBeginComponentBlock(const uint8* icon, int32 iconLength,
+        const uint8* title, int32 length)
     {
+        std::string iconName = ReadUtf8Text(icon, iconLength);
         std::string value = ReadUtf8Text(title, length);
         if (value.empty()) value = "Component";
 
@@ -226,6 +256,7 @@ namespace
             ImVec2(0.0f, 0.0f),
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        DrawInlineIcon(iconName, ImGui::GetFrameHeight());
         ImGui::TextUnformatted(value.c_str());
         ImGui::Separator();
     }
@@ -241,13 +272,16 @@ namespace
     }
 
     //开始可折叠组件块
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginCollapsibleComponentBlock(const uint8* title,
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginCollapsibleComponentBlock(const uint8* icon,
+        int32 iconLength,
+        const uint8* title,
         int32 titleLength,
         const uint8* id,
         int32 idLength,
         uint8 removable,
         uint8* removeRequested)
     {
+        std::string iconName = ReadUtf8Text(icon, iconLength);
         std::string value = ReadUtf8Text(title, titleLength);
         std::string identity = ReadUtf8Text(id, idLength);
         if (value.empty()) value = "Component";
@@ -267,6 +301,7 @@ namespace
 
         constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
         bool visible = true;
+        DrawInlineIcon(iconName, ImGui::GetFrameHeight());
         bool expanded = removable != 0
             ? ImGui::CollapsingHeader(value.c_str(), &visible, flags)
             : ImGui::CollapsingHeader(value.c_str(), flags);
@@ -353,6 +388,62 @@ namespace
         buffer[bufferSize - 1] = 0;
         bool changed = ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize));
         return changed ? static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer))) : -1;
+    }
+
+    //绘制对象引用框并返回操作：0 无 1 点击引用框 2 清空 3 打开选择器
+    int32 ORBEDEN_NATIVE_CALL EditorGuiReferenceField(const uint8* icon, int32 iconLength,
+        const uint8* text, int32 textLength, const uint8* id, int32 idLength)
+    {
+        std::string iconName = ReadUtf8Text(icon, iconLength);
+        std::string label = ReadUtf8Text(text, textLength);
+        std::string identity = ReadUtf8Text(id, idLength);
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        float32 height = ImGui::GetFrameHeight();
+        ImVec2 lineStart = ImGui::GetCursorScreenPos();
+        //清空与选择器两个方按钮先占位，引用框只取剩余宽度，与输入框一样贴满卡片
+        float32 reserved = 2.0f * (height + style.ItemSpacing.x);
+        float32 width = std::max(ImGui::GetContentRegionAvail().x - reserved, height);
+
+        ImGui::PushID(identity.c_str());
+        //两个方按钮先提交，引用框最后提交：跨面板拖拽以本行最后一个条目作为投放目标
+        ImGui::SetCursorScreenPos(ImVec2(lineStart.x + width + style.ItemSpacing.x, lineStart.y));
+        int32 action = 0;
+        if (ImGui::Button("×", ImVec2(height, height))) action = 2;
+        ImGui::SameLine();
+        if (ImGui::Button("...", ImVec2(height, height))) action = 3;
+
+        ImGui::SetCursorScreenPos(lineStart);
+        ImVec2 min = lineStart;
+        ImVec2 max { min.x + width, min.y + height };
+        bool clicked = ImGui::InvisibleButton("##reference", ImVec2(width, height));
+        bool hovered = ImGui::IsItemHovered();
+        bool held = ImGui::IsItemActive();
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(min, max, ImGui::GetColorU32(held ? ImGuiCol_FrameBgActive
+            : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), style.FrameRounding);
+        if (style.FrameBorderSize > 0.0f)
+            drawList->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_Border), style.FrameRounding);
+
+        //图标与文本都按行高居中，文本超出引用框时只画放得下的部分
+        float32 lineHeight = ImGui::GetTextLineHeight();
+        float32 textLeft = min.x + style.FramePadding.x;
+        ImTextureID texture = EditorIcons::Get(iconName);
+        if (texture != 0)
+        {
+            float32 iconTop = min.y + (height - lineHeight) * 0.5f;
+            drawList->AddImage(texture, ImVec2(textLeft, iconTop), ImVec2(textLeft + lineHeight, iconTop + lineHeight));
+            textLeft += lineHeight + style.ItemInnerSpacing.x;
+        }
+        drawList->PushClipRect(min, max, true);
+        drawList->AddText(ImVec2(textLeft, min.y + (height - lineHeight) * 0.5f),
+            ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
+        drawList->PopClipRect();
+
+        if (clicked) action = 1;
+        ImGui::PopID();
+        return action;
     }
 
     //绘制分隔线
@@ -590,6 +681,7 @@ void EditorGUI::Shutdown()
     mainFontAtlas = nullptr;
     activeInstance = nullptr;
 
+    EditorIcons::Shutdown();
     ImGui::SetCurrentContext(context);
     ImGui_ImplOpenGL3_Shutdown();
     for (GLFWcursor*& cursor : mouseCursors)
@@ -610,25 +702,25 @@ void EditorGUI::Shutdown()
 void EditorGUI::ApplyTheme()
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    style.Colors[ImGuiCol_WindowBg] = ImGui::ColorConvertU32ToFloat4(theme.background);
+    style.Colors[ImGuiCol_WindowBg] = ToImVec4(theme.background);
     style.Colors[ImGuiCol_ChildBg] = style.Colors[ImGuiCol_WindowBg];
     style.Colors[ImGuiCol_PopupBg] = style.Colors[ImGuiCol_WindowBg];
-    style.Colors[ImGuiCol_Text] = ImGui::ColorConvertU32ToFloat4(theme.text);
-    style.Colors[ImGuiCol_Border] = ImGui::ColorConvertU32ToFloat4(theme.border);
+    style.Colors[ImGuiCol_Text] = ToImVec4(theme.text);
+    style.Colors[ImGuiCol_Border] = ToImVec4(theme.border);
     for (ImGuiCol index : { ImGuiCol_Header, ImGuiCol_Tab, ImGuiCol_TitleBg })
-        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.header);
+        style.Colors[index] = ToImVec4(theme.header);
     //输入框与按钮必须与承载它们的卡片不同色，否则控件会退化成标签
     for (ImGuiCol index : { ImGuiCol_FrameBg, ImGuiCol_Button })
-        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.control);
+        style.Colors[index] = ToImVec4(theme.control);
     for (ImGuiCol index : { ImGuiCol_HeaderHovered, ImGuiCol_ButtonHovered, ImGuiCol_FrameBgHovered, ImGuiCol_TabHovered, ImGuiCol_SeparatorHovered })
-        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.hovered);
+        style.Colors[index] = ToImVec4(theme.hovered);
     for (ImGuiCol index : { ImGuiCol_HeaderActive, ImGuiCol_ButtonActive, ImGuiCol_FrameBgActive, ImGuiCol_TabSelected, ImGuiCol_TitleBgActive, ImGuiCol_SeparatorActive })
-        style.Colors[index] = ImGui::ColorConvertU32ToFloat4(theme.active);
+        style.Colors[index] = ToImVec4(theme.active);
     //滚动条与面板同底，滑块用边框色，否则默认深色滚动条会像贴在面板右缘的一条把手
     style.Colors[ImGuiCol_ScrollbarBg] = style.Colors[ImGuiCol_WindowBg];
-    style.Colors[ImGuiCol_ScrollbarGrab] = ImGui::ColorConvertU32ToFloat4(theme.border);
-    style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImGui::ColorConvertU32ToFloat4(theme.hovered);
-    style.Colors[ImGuiCol_ScrollbarGrabActive] = ImGui::ColorConvertU32ToFloat4(theme.active);
+    style.Colors[ImGuiCol_ScrollbarGrab] = ToImVec4(theme.border);
+    style.Colors[ImGuiCol_ScrollbarGrabHovered] = ToImVec4(theme.hovered);
+    style.Colors[ImGuiCol_ScrollbarGrabActive] = ToImVec4(theme.active);
     style.WindowPadding = ImVec2(theme.paddingX, theme.paddingY);
     style.ItemSpacing = ImVec2(theme.spacingX, theme.spacingY);
     style.FramePadding = ImVec2(theme.framePaddingX, theme.framePaddingY);
@@ -646,10 +738,10 @@ ImVec2 EditorGUI::GetWindowPadding()
     return ImVec2(theme.paddingX, theme.paddingY);
 }
 
-//获取共享面板描边色
-ImU32 EditorGUI::GetPanelOutlineColor()
+//获取共享强调色，面板描边与浮窗标题栏取同一份
+ImU32 EditorGUI::GetActiveColor()
 {
-    return ImGui::GetColorU32(ImGui::ColorConvertU32ToFloat4(theme.panelOutline));
+    return ImGui::GetColorU32(ToImVec4(theme.active));
 }
 
 //获取共享面板圆角半径
@@ -799,7 +891,7 @@ void EditorGUI::ClearMainFramebuffer()
     int32 framebufferHeight = 0;
     glfwGetFramebufferSize(glfwWindow, &framebufferWidth, &framebufferHeight);
 
-    ImVec4 background = ImGui::ColorConvertU32ToFloat4(theme.background);
+    ImVec4 background = ToImVec4(theme.background);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, framebufferWidth, framebufferHeight);
     glDisable(GL_SCISSOR_TEST);
@@ -857,6 +949,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.endPanelContent = reinterpret_cast<void*>(&EditorGuiEndPanelContent);
     api.drawSceneView = reinterpret_cast<void*>(&EditorGuiDrawSceneView);
     api.resolveSceneDropPosition = reinterpret_cast<void*>(&EditorGuiResolveSceneDropPosition);
+    api.referenceField = reinterpret_cast<void*>(&EditorGuiReferenceField);
     return api;
 }
 

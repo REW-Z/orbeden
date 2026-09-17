@@ -25,6 +25,7 @@ internal readonly struct EditorPanelInfo
     public float DefaultDockRatio { get; }
     public int Order { get; }
     public bool FixedWorkspace { get; }
+    public bool ShowBorder { get; }
 
     /// <summary>创建一份硬编码 Panel 信息。</summary>
     public EditorPanelInfo(string id,
@@ -34,7 +35,8 @@ internal readonly struct EditorPanelInfo
         PanelDockPlacement defaultDock,
         float defaultDockRatio,
         int order,
-        bool fixedWorkspace = false)
+        bool fixedWorkspace = false,
+        bool showBorder = true)
     {
         Id = id;
         Title = title;
@@ -44,6 +46,7 @@ internal readonly struct EditorPanelInfo
         DefaultDockRatio = defaultDockRatio;
         Order = order;
         FixedWorkspace = fixedWorkspace;
+        ShowBorder = showBorder;
     }
 }
 
@@ -123,6 +126,6 @@ internal abstract class EditorPanel
 internal unsafe struct EditorPanelNativeApi
 {
     public IntPtr Context;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte, byte> RegisterPanel;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte, float, float, int, float, int, byte, byte, byte> RegisterPanel;
 }
 #pragma warning restore CS0649
