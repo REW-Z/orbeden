@@ -355,6 +355,9 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 
 EditorSystem::~EditorSystem()
 {
+    //Play 期间面板被隐藏，先把可见性恢复成 Play 前的记录再保存布局，
+    //否则在 Play 中退出编辑器会把“全部隐藏”写进项目
+    if (playMode.IsPlaying()) panelManager.ApplyLayout(playPanelLayout);
     SaveEditorLayout();
     app.SetPaused(false);
     app.SetSimulationEnabled(false);

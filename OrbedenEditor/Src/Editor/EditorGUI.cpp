@@ -23,11 +23,12 @@ namespace
     struct EditorThemeData
     {
         uint32 background = 0xff242424, text = 0xffe8e8e8, border = 0xff505050;
+        uint32 panelOutline = 0xffff00ff;
         uint32 header = 0xff383838, control = 0xff505050, hovered = 0xff765638, active = 0xff9c683c;
         float32 paddingX = 6, paddingY = 6, spacingX = 6, spacingY = 4;
-        float32 framePaddingX = 6, framePaddingY = 4, splitterSize = 5;
+        float32 framePaddingX = 6, framePaddingY = 4, splitterSize = 5, cornerRadius = 6;
     };
-    static_assert(sizeof(EditorThemeData) == 56);
+    static_assert(sizeof(EditorThemeData) == 64);
     EditorThemeData theme;
 
     //接收托管主题参数
@@ -643,6 +644,18 @@ float32 EditorGUI::GetSplitterSize()
 ImVec2 EditorGUI::GetWindowPadding()
 {
     return ImVec2(theme.paddingX, theme.paddingY);
+}
+
+//获取共享面板描边色
+ImU32 EditorGUI::GetPanelOutlineColor()
+{
+    return ImGui::GetColorU32(ImGui::ColorConvertU32ToFloat4(theme.panelOutline));
+}
+
+//获取共享面板圆角半径
+float32 EditorGUI::GetPanelCornerRadius()
+{
+    return std::clamp(theme.cornerRadius, 0.0f, 32.0f);
 }
 
 //注册参与跨窗口拖拽判断的编辑器窗口

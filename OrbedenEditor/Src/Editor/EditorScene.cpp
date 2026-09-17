@@ -1,3 +1,20 @@
+//SceneView（场景视口）的渲染与交互是两套矩形，维护时不要混用。
+//
+//渲染：
+//- 离屏目标按主视口整块创建，renderPosition/renderSize 取 viewport->Pos/Size，乘 DisplayFramebufferScale
+//  得到像素尺寸；图像提交到背景绘制列表，因此永远铺在所有面板之下。没被面板覆盖的像素会直接露出场景，
+//  停靠区缝隙、圆角缺口这类空白显示的都是场景画面。
+//- 目标尺寸跟随窗口而不是面板：尺寸变化时整体重建（后端不支持原位 resize）；面板不可见或内容区过小时
+//  释放目标并跳过渲染。可见性用 sceneView.visible 的单帧闩锁判断，本帧绘制过才为 true。
+//
+//交互：
+//- 能不能交互只看面板内容区 interactPosition/interactSize（IsMouseOverSceneView），拾取、相机拖拽、
+//  Gizmo 与预制体投放都以它为闸门。
+//- 把鼠标位置换算到场景坐标要用渲染矩形 renderPosition/renderSize（RaycastScene、ProjectGizmoPoint），
+//  因为图像铺满窗口而不是铺满面板；两者混用会让拾取和绘制错位。
+//
+//面板侧 ScenePanel 是固定工作区叶子：不可关闭、拖出或并入标签页，也不绘制面板外壳。
+
 #include "Editor/EditorScene.h"
 
 #include "Application.h"

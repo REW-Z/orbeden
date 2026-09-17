@@ -132,6 +132,12 @@ public:
     //获取主题定义的内容边距
     static ImVec2 GetWindowPadding();
 
+    //获取主题定义的面板描边色
+    static ImU32 GetPanelOutlineColor();
+
+    //获取主题定义的面板圆角半径
+    static float32 GetPanelCornerRadius();
+
     //记录跨 Panel 共享拖拽载荷
     static void SetDragPayload(int32 kind, const std::string& key);
 

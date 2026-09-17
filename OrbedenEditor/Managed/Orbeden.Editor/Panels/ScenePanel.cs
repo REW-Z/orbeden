@@ -3,6 +3,8 @@ using Orbeden;
 namespace OrbedenEditor;
 
 /// <summary>显示原生场景渲染结果的中央场景 Panel。</summary>
+/// <remarks>本面板只是承载视口的固定工作区叶子，不画面板外壳；渲染铺满整窗、交互只用面板内容区，
+/// 两套矩形的约定见 OrbedenEditor/Src/Editor/EditorScene.cpp 顶部说明。</remarks>
 internal sealed class ScenePanel : EditorPanel
 {
     public override EditorPanelInfo Info => new("scene", "Scene", true,

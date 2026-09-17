@@ -76,6 +76,20 @@ private:
     bool tabMergeTargetHovered = false;
     bool repaintPending = false;
 
+    //本帧停靠区矩形，供面板判断自己是否贴着外圈
+    vector2 dockAreaPosition = { 0.0f, 0.0f };
+    vector2 dockAreaSize = { 0.0f, 0.0f };
+
+    //本帧各面板的绘制矩形：每个面板一步画成完整的圆角矩形，统一由宿主绘制
+    struct PanelFrame
+    {
+    public:
+        vector2 min = { 0.0f, 0.0f };
+        vector2 max = { 0.0f, 0.0f };
+        bool opaque = true;
+    };
+    List<PanelFrame> framePanels;
+
 public:
     //注册一个面板实例
     bool RegisterPanel(std::unique_ptr<IEditorPanel> panel);
@@ -126,8 +140,10 @@ private:
     void BuildDefaultDockLayout();
     void DrawDockHost();
     void DrawRootDockTarget(const vector2& position, const vector2& size);
-    void DrawDockNode(int32 nodeId, const vector2& position, const vector2& size);
-    void DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size);
+    void DrawDockNode(int32 nodeId, const vector2& position, const vector2& size,
+        const vector2& visualMin, const vector2& visualMax);
+    void DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size,
+        const vector2& visualMin, const vector2& visualMax);
     PanelDockPlacement GetDockPlacement(const vector2& position, const vector2& size, float32 edgeRatio) const;
     void DrawDockPreview(const vector2& position, const vector2& size, PanelDockPlacement placement) const;
     bool IsRootDockPlacement(PanelDockPlacement placement) const;

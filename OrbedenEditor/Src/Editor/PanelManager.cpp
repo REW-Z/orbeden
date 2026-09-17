@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <utility>
 
 namespace
 {
@@ -81,8 +82,18 @@ void PanelManager::DrawViewsMenu()
 
     for (PanelEntry& entry : panels)
     {
-        //固定工作区面板始终显示，不提供可见性开关
-        if (entry.info.fixedWorkspace) continue;
+        //固定工作区面板始终显示：列出状态供确认，并且只允许重新调出、不允许隐藏，
+        //否则一旦它被写成不可见，就再没有入口能把它弄回来
+        if (entry.info.fixedWorkspace)
+        {
+            bool workspaceVisible = entry.visible;
+            if (ImGui::Checkbox((entry.info.title + " (Fixed Workspace)").c_str(), &workspaceVisible)
+                && workspaceVisible)
+            {
+                SetPanelVisible(entry.info.id.c_str(), true);
+            }
+            continue;
+        }
 
         bool visible = entry.visible;
         if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
@@ -200,7 +211,14 @@ void PanelManager::ApplyLayout(const EditorLayoutState& layout)
         PanelEntry* entry = FindPanel(state.id.c_str());
         if (!entry) continue;
 
-        ApplyVisibility(*entry, state.visible);
+        //固定工作区面板始终可见：旧布局可能把它存成不可见，会让场景不绘制、相机交互全部失效
+        if (entry->info.fixedWorkspace && !state.visible)
+        {
+            std::string warning = "Panel layout stored the fixed workspace as hidden; forcing it visible: "
+                + entry->info.id;
+            Log::Warning(warning.c_str());
+        }
+        ApplyVisibility(*entry, entry->info.fixedWorkspace ? true : state.visible);
         entry->dockNode = state.visible && FindDockNode(state.dockNode) ? state.dockNode : -1;
         entry->returnDockNode = state.returnDockNode;
         if (DockNode* node = FindDockNode(entry->dockNode))
@@ -294,7 +312,9 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
     {
         EditorPanelState state;
         state.id = entry.info.id;
-        state.visible = entry.visible;
+        //固定工作区恒记为可见：Play 期间保存布局时它是隐藏的，否则会把 false 写进项目，
+        //下次打开场景不绘制、相机拖拽与滚轮全部失效
+        state.visible = entry.info.fixedWorkspace ? true : entry.visible;
         //独立窗口以屏幕坐标覆盖主窗口内浮动使用的逻辑坐标
         state.floatingWindow = entry.osWindow != nullptr;
         state.hasPosition = entry.hasPosition;
@@ -331,6 +351,7 @@ void PanelManager::SetPanelVisible(const char* id, bool visible)
 {
     PanelEntry* entry = FindPanel(id);
     if (!entry || entry->visible == visible) return;
+
 
     //隐藏独立窗口中的面板时释放其窗口，重新显示时按记录的位置重建
     bool wasDetached = entry->osWindow != nullptr;
@@ -537,6 +558,8 @@ void PanelManager::DrawDockHost()
         ImGuiWindowFlags_NoBackground;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    //窗口边框尺寸必须为 0：ImGui 会按边框内缩裁剪矩形，非零会让贴外圈的 1px 描边画不出来
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     if (ImGui::Begin("##EditorDockHost", nullptr, flags))
     {
         //停靠区取整：子窗口尺寸按整数截断，浮点边界会让面板之间漏出 1px 缝隙
@@ -545,12 +568,38 @@ void PanelManager::DrawDockHost()
             std::floor(viewport->WorkPos.x + viewport->WorkSize.x) - position.x,
             std::floor(viewport->WorkPos.y + viewport->WorkSize.y) - position.y
         };
+        dockAreaPosition = position;
+        dockAreaSize = size;
+        framePanels.clear();
         tabMergeTargetHovered = false;
-        DrawDockNode(dockRoot, position, size);
+
+        //每个面板各自一步画完整的圆角矩形边界，绘制矩形由布局直接给出，宿主不再拼线段
+        DrawDockNode(dockRoot, position, size, position,
+            { position.x + size.x, position.y + size.y });
+
+        //每个面板一步画成一个完整的圆角矩形：先统一铺底，再统一描边，
+        //避免后铺的底色盖住相邻面板的边；只有贴工作区外圈的角做圆角。
+        //每个面板四角都做圆角，相邻面板交界处圆弧让开的小块会露出背后背景
+        float32 cornerRadius = EditorGUI::GetPanelCornerRadius();
+        ImU32 bandColor = ImGui::GetColorU32(ImGuiCol_WindowBg);
+        ImU32 outlineColor = EditorGUI::GetPanelOutlineColor();
+        for (const PanelFrame& frame : framePanels)
+        {
+            if (!frame.opaque) continue;
+            ImGui::GetWindowDrawList()->AddRectFilled(ToImVec2(frame.min), ToImVec2(frame.max),
+                bandColor, cornerRadius, ImDrawFlags_RoundCornersAll);
+        }
+        for (const PanelFrame& frame : framePanels)
+        {
+            ImGui::GetWindowDrawList()->AddRect(
+                ImVec2(std::floor(frame.min.x) + 0.5f, std::floor(frame.min.y) + 0.5f),
+                ImVec2(std::floor(frame.max.x) - 0.5f, std::floor(frame.max.y) - 0.5f),
+                outlineColor, cornerRadius, ImDrawFlags_RoundCornersAll, 1.0f);
+        }
         DrawRootDockTarget(position, size);
     }
     ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
 }
 
 //处理整个工作区外圈的停靠目标。
@@ -586,13 +635,14 @@ void PanelManager::DrawRootDockTarget(const vector2& position, const vector2& si
 }
 
 //递归绘制分割节点和叶子面板组。
-void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vector2& size)
+void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vector2& size,
+    const vector2& visualMin, const vector2& visualMax)
 {
     DockNode* node = FindDockNode(nodeId);
     if (!node) return;
     if (node->firstChild < 0 || node->secondChild < 0)
     {
-        DrawDockLeaf(*node, position, size);
+        DrawDockLeaf(*node, position, size, visualMin, visualMax);
         return;
     }
 
@@ -616,10 +666,29 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
         secondSize.y = std::max(0.0f, total - firstLength - splitterSize);
     }
 
+    //子面板的绘制矩形：内部一侧延伸到分隔线所在像素，相邻两块正好共用这一条边界，
+    //每个面板因此都能一步画出自己完整的圆角矩形，不需要事后拼接线段
+    float32 lineOffset = std::floor(splitterSize * 0.5f);
     int32 firstChild = node->firstChild;
     int32 secondChild = node->secondChild;
-    DrawDockNode(firstChild, position, firstSize);
-    DrawDockNode(secondChild, secondPosition, secondSize);
+    vector2 firstVisualMin = visualMin;
+    vector2 firstVisualMax = visualMax;
+    vector2 secondVisualMin = visualMin;
+    vector2 secondVisualMax = visualMax;
+    if (node->vertical)
+    {
+        float32 lineX = position.x + firstLength + lineOffset;
+        firstVisualMax.x = lineX + 1.0f;
+        secondVisualMin.x = lineX;
+    }
+    else
+    {
+        float32 lineY = position.y + firstLength + lineOffset;
+        firstVisualMax.y = lineY + 1.0f;
+        secondVisualMin.y = lineY;
+    }
+    DrawDockNode(firstChild, position, firstSize, firstVisualMin, firstVisualMax);
+    DrawDockNode(secondChild, secondPosition, secondSize, secondVisualMin, secondVisualMax);
 
     std::string splitterId = "##DockSplitter" + std::to_string(nodeId);
     vector2 splitterPosition = node->vertical
@@ -629,11 +698,7 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
         ? vector2 { splitterSize, size.y }
         : vector2 { size.x, splitterSize };
 
-    //分隔带铺面板底色，只有悬停或拖动时才画高亮线，停靠组之间因此看不出缝隙
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    drawList->AddRectFilled(ToImVec2(splitterPosition),
-        ToImVec2(vector2 { splitterPosition.x + splitterExtent.x, splitterPosition.y + splitterExtent.y }),
-        ImGui::GetColorU32(ImGuiCol_WindowBg));
     ImGui::SetCursorScreenPos(ToImVec2(splitterPosition));
     ImGui::InvisibleButton(splitterId.c_str(), ToImVec2(splitterExtent));
     bool draggingSplitter = ImGui::IsItemActive();
@@ -657,7 +722,8 @@ void PanelManager::DrawDockNode(int32 nodeId, const vector2& position, const vec
 }
 
 //绘制一个带标签页的停靠叶子。
-void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size)
+void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size,
+    const vector2& visualMin, const vector2& visualMax)
 {
     if (size.x < 1.0f || size.y < 1.0f) return;
 
@@ -679,10 +745,9 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     //停靠宿主已把 WindowPadding 压成 0，这里必须重新给出主题值，读当前样式只会拿到 0
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, fixedLeaf ? ImVec2(0.0f, 0.0f) : EditorGUI::GetWindowPadding());
-    if (!transparentLeaf) ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
-    //叶子不画边框，停靠组之间只靠分隔带区分，否则相邻两条边框会夹出一条缝隙
+    //叶子一律不铺底：面板底色由这里自绘的圆角矩形给出，内容直接画在它上面
     bool open = ImGui::BeginChild(childId.c_str(), ToImVec2(size), ImGuiChildFlags_AlwaysUseWindowPadding,
-        transparentLeaf ? ImGuiWindowFlags_NoBackground : ImGuiWindowFlags_None);
+        ImGuiWindowFlags_NoBackground);
 
     std::string closePanel;
     bool floatActive = false;
@@ -763,9 +828,14 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         {
             active->panel->DrawPanel();
         }
+
+        //面板边界登记给宿主统一绘制：绘制矩形有一部分伸在叶子窗口之外，
+        //在这里画会被窗口裁剪矩形裁掉，内部交界线会整条消失。
+        //固定工作区（场景全屏视口）不是普通面板，不画底色也不画边框。
+        if (!fixedLeaf)
+            framePanels.push_back({ visualMin, visualMax, !transparentLeaf });
     }
     ImGui::EndChild();
-    if (!transparentLeaf) ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -983,7 +1053,13 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse;
     if (entry.moving && draggedPanel == entry.info.id) flags |= ImGuiWindowFlags_NoInputs;
+    //浮动窗口用窗口自身的圆角边框：边框色换成面板描边色，圆角取主题半径
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, EditorGUI::GetPanelCornerRadius());
+    ImGui::PushStyleColor(ImGuiCol_Border, EditorGUI::GetPanelOutlineColor());
     bool open = ImGui::Begin(windowTitle.c_str(), &visible, flags);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(2);
     vector2 position = ToVector2(ImGui::GetWindowPos());
     vector2 size = ToVector2(ImGui::GetWindowSize());
     float32 titleHeight = ImGui::GetFrameHeight();
