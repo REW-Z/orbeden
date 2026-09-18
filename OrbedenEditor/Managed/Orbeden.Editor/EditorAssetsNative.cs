@@ -23,6 +23,7 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, EnsId, EnsId, int> InstantiatePrefab;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte*, int, int> CaptureEns;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte> DestroyEnsTree;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> CreateEns;
 }
 #pragma warning restore CS0649
 
@@ -57,6 +58,14 @@ internal static unsafe class EditorAssetsNative
 
     //销毁子树中的全部对象
     internal static bool DestroyEnsTree(EnsId root) => api.DestroyEnsTree(api.Context, root) != 0;
+
+    //在当前 World 根下创建空 Ens
+    internal static Ens CreateEns(string name)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(name);
+        fixed (byte* pointer = bytes)
+            return NativeBindingRuntime.Wrap<Ens>(api.CreateEns(api.Context, pointer, bytes.Length)) ?? Ens.Null;
+    }
 
     //保存 Ens 子树为独立预制体
     internal static bool SavePrefab(string source, string key)

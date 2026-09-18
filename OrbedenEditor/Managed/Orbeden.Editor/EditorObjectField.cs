@@ -120,7 +120,7 @@ internal static class EditorObjectField
         EditorGUI.Label(label.Split("##", StringSplitOptions.None)[0]);
         EditorGUI.SameLine();
         int action = NativeEditorGUI.ReferenceField(
-            EditorComponentIcons.ResolveReference(declaredType),
+            EditorIconCatalog.ForReference(declaredType),
             name + " (" + shortType + ")",
             label);
         if (action == 1 && key.Length != 0)

@@ -301,6 +301,12 @@ static bool IsPersistentField(string className, string fieldName)
 //映射字段类型到 C++ FieldKind
 static FieldKindInfo? GetFieldKind(string type)
 {
+    string normalizedType = NormalizeValueType(type);
+    if (IsReferenceListType(normalizedType))
+    {
+        return new FieldKindInfo("Reflection::FieldKind::ObjectRefList");
+    }
+
     if (GetObjectRefTypeName(type) is not null)
     {
         return new FieldKindInfo("Reflection::FieldKind::ObjectRef");
@@ -326,11 +332,20 @@ static FieldKindInfo? GetFieldKind(string type)
     };
 }
 
-//读取 Ref<T> 的目标类型名
+//判断字段类型是否为对象引用列表
+static bool IsReferenceListType(string normalizedType)
+{
+    return FieldTypePatterns.ReferenceList.IsMatch(normalizedType);
+}
+
+//读取 Ref<T> 与 List<Ref<T>> 的目标类型名
 static string? GetObjectRefTypeName(string type)
 {
     var normalized = NormalizeValueType(type);
-    var match = Regex.Match(normalized, @"^Ref<(?<target>[A-Za-z_]\w*(?:::\w+)*)>$");
+    var match = FieldTypePatterns.ReferenceList.Match(normalized);
+    if (match.Success) return match.Groups["target"].Value;
+
+    match = Regex.Match(normalized, @"^Ref<(?<target>[A-Za-z_]\w*(?:::\w+)*)>$");
     return match.Success ? match.Groups["target"].Value : null;
 }
 
@@ -671,4 +686,11 @@ sealed class ParameterInfo
 sealed class ValueKindInfo(string cppName)
 {
     public string CppName { get; } = cppName;
+}
+
+//字段类型识别用的共享正则
+static class FieldTypePatterns
+{
+    //List<Ref<T>> 形式的对象引用列表
+    public static readonly Regex ReferenceList = new(@"^List<Ref<(?<target>[A-Za-z_]\w*(?:::\w+)*)>>$", RegexOptions.Compiled);
 }

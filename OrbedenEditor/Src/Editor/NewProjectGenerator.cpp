@@ -1,7 +1,9 @@
 #include "Editor/NewProjectGenerator.h"
+#include "Editor/EditorProject.h"
 #include "Editor/NewProjectTemplate.h"
 #include "Editor/ProjectLayout.h"
 
+#include "Defines/Version.h"
 #include "FileSystem/Utf8Path.h"
 #include "Log/Log.h"
 
@@ -257,6 +259,15 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
     if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, templateRoot, outError)) return false;
 
     if (!SyncBindingBuildFiles(ToCleanPath(projectRoot / (projectName + ".csproj")), runtimeDllPath, outError)) return false;
+
+    //模板里的版本号只是占位：新建项目直接写成当前引擎版本，否则首次打开就会提示升级。
+    List<std::pair<std::string, std::string>> versionAttribute;
+    versionAttribute.emplace_back("version", std::to_string(OrbedenProjectVersion));
+    if (!EditorProject::UpdateProjectRootAttributes(ToCleanPath(projectRoot / (projectName + ".oeproj")),
+        versionAttribute, List<std::string>(), outError))
+    {
+        return false;
+    }
 
     outProjectRoot = ToCleanPath(projectRoot);
     Log::Info(("New project created: " + outProjectRoot).c_str());

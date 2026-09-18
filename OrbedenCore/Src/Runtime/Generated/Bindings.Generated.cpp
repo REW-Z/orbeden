@@ -75,16 +75,12 @@ void Write_List_uint32_(NativeBindingWriter& writer, List<uint32> const& value);
 List<uint32> Read_List_uint32_(NativeBindingReader& reader);
 void Write_SubMesh(NativeBindingWriter& writer, SubMesh const& value);
 SubMesh Read_SubMesh(NativeBindingReader& reader);
-void Write_Ref_Material_(NativeBindingWriter& writer, Ref<Material> const& value);
-Ref<Material> Read_Ref_Material_(NativeBindingReader& reader);
 void Write_List_SubMesh_(NativeBindingWriter& writer, List<SubMesh> const& value);
 List<SubMesh> Read_List_SubMesh_(NativeBindingReader& reader);
 void Write_bounds3(NativeBindingWriter& writer, bounds3 const& value);
 bounds3 Read_bounds3(NativeBindingReader& reader);
 void Write_MeshDirtyFlags(NativeBindingWriter& writer, MeshDirtyFlags const& value);
 MeshDirtyFlags Read_MeshDirtyFlags(NativeBindingReader& reader);
-void Write_Material_(NativeBindingWriter& writer, Material* const& value);
-Material* Read_Material_(NativeBindingReader& reader);
 void Write_ShaderPass(NativeBindingWriter& writer, ShaderPass const& value);
 ShaderPass Read_ShaderPass(NativeBindingReader& reader);
 void Write_ShaderPassState(NativeBindingWriter& writer, ShaderPassState const& value);
@@ -120,6 +116,10 @@ void Write_CharacterControllerShape(NativeBindingWriter& writer, CharacterContro
 CharacterControllerShape Read_CharacterControllerShape(NativeBindingReader& reader);
 void Write_ColliderGeometryType(NativeBindingWriter& writer, ColliderGeometryType const& value);
 ColliderGeometryType Read_ColliderGeometryType(NativeBindingReader& reader);
+void Write_Ref_Material_(NativeBindingWriter& writer, Ref<Material> const& value);
+Ref<Material> Read_Ref_Material_(NativeBindingReader& reader);
+void Write_Material_(NativeBindingWriter& writer, Material* const& value);
+Material* Read_Material_(NativeBindingReader& reader);
 void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32> const& value);
 std::vector<float32> Read_std__vector_float32_(NativeBindingReader& reader);
 void Write_PhysicsBodyType(NativeBindingWriter& writer, PhysicsBodyType const& value);
@@ -130,6 +130,8 @@ void Write_Reflection__FieldKind(NativeBindingWriter& writer, Reflection::FieldK
 Reflection::FieldKind Read_Reflection__FieldKind(NativeBindingReader& reader);
 void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value);
 Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader);
+void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value);
+List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader);
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value);
 DrawQueue Read_DrawQueue(NativeBindingReader& reader);
 void Write_quaternion(NativeBindingWriter& writer, quaternion const& value);
@@ -375,7 +377,6 @@ void Write_SubMesh(NativeBindingWriter& writer, SubMesh const& value)
     Write_std__string(writer, value.name);
     Write_uint32(writer, value.indexStart);
     Write_uint32(writer, value.indexCount);
-    Write_Ref_Material_(writer, value.material);
 }
 SubMesh Read_SubMesh(NativeBindingReader& reader)
 {
@@ -383,16 +384,7 @@ SubMesh Read_SubMesh(NativeBindingReader& reader)
     value.name = Read_std__string(reader);
     value.indexStart = Read_uint32(reader);
     value.indexCount = Read_uint32(reader);
-    value.material = Read_Ref_Material_(reader);
     return value;
-}
-void Write_Ref_Material_(NativeBindingWriter& writer, Ref<Material> const& value)
-{
-    writer.Scalar(NativeBindings::Id(value.Get()));
-}
-Ref<Material> Read_Ref_Material_(NativeBindingReader& reader)
-{
-    return Ref<Material>(NativeBindings::Optional<Material>(reader.Scalar<int32>()));
 }
 void Write_List_SubMesh_(NativeBindingWriter& writer, List<SubMesh> const& value)
 {
@@ -427,14 +419,6 @@ void Write_MeshDirtyFlags(NativeBindingWriter& writer, MeshDirtyFlags const& val
 MeshDirtyFlags Read_MeshDirtyFlags(NativeBindingReader& reader)
 {
     return static_cast<MeshDirtyFlags>(reader.Scalar<uint32>());
-}
-void Write_Material_(NativeBindingWriter& writer, Material* const& value)
-{
-    writer.Scalar(NativeBindings::Id(value));
-}
-Material* Read_Material_(NativeBindingReader& reader)
-{
-    return NativeBindings::Optional<Material>(reader.Scalar<int32>());
 }
 void Write_ShaderPass(NativeBindingWriter& writer, ShaderPass const& value)
 {
@@ -631,6 +615,22 @@ ColliderGeometryType Read_ColliderGeometryType(NativeBindingReader& reader)
 {
     return static_cast<ColliderGeometryType>(reader.Scalar<uint32>());
 }
+void Write_Ref_Material_(NativeBindingWriter& writer, Ref<Material> const& value)
+{
+    writer.Scalar(NativeBindings::Id(value.Get()));
+}
+Ref<Material> Read_Ref_Material_(NativeBindingReader& reader)
+{
+    return Ref<Material>(NativeBindings::Optional<Material>(reader.Scalar<int32>()));
+}
+void Write_Material_(NativeBindingWriter& writer, Material* const& value)
+{
+    writer.Scalar(NativeBindings::Id(value));
+}
+Material* Read_Material_(NativeBindingReader& reader)
+{
+    return NativeBindings::Optional<Material>(reader.Scalar<int32>());
+}
 void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32> const& value)
 {
     writer.Scalar(static_cast<int32>(value.size()));
@@ -674,6 +674,18 @@ void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value)
 Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader)
 {
     return Ref<Mesh>(NativeBindings::Optional<Mesh>(reader.Scalar<int32>()));
+}
+void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_Ref_Material_(writer, item);
+}
+List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<Ref<Material>> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_Ref_Material_(reader));
+    return value;
 }
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value)
 {
@@ -1213,7 +1225,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Mesh_1(int32 objectId)
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Mesh_2(int32 objectId, int32 index, NativeBindingSlice subMeshName, uint32 indexStart, uint32 indexCount, int32 material, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Mesh_2(int32 objectId, int32 index, NativeBindingSlice subMeshName, uint32 indexStart, uint32 indexCount, uint8* result)
 {
     try
     {
@@ -1222,7 +1234,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Mesh_2(int32 objectId, int32 index,
         NativeBindingReader reader_subMeshName(subMeshName);
         auto decoded_subMeshName = Read_std__string(reader_subMeshName);
         reader_subMeshName.Complete();
-        *result = static_cast<uint8>(instance->ConfigureSubMesh(index, decoded_subMeshName, indexStart, indexCount, NativeBindings::Optional<Material>(material)));
+        *result = static_cast<uint8>(instance->ConfigureSubMesh(index, decoded_subMeshName, indexStart, indexCount));
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -4186,7 +4198,33 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_8(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<StaticMeshRenderer>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_List_Ref_Material__(writer, instance->materials); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectId, NativeBindingSlice value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<StaticMeshRenderer>(objectId);
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_List_Ref_Material__(reader_value);
+        reader_value.Complete();
+        instance->materials = decoded_value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectId, int32* result)
 {
     try
     {
@@ -4198,7 +4236,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_12(int32 objectId, int32 value)
 {
     try
     {
@@ -4209,7 +4247,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_13(int32 objectId, uint8* result)
 {
     try
     {
@@ -4221,7 +4259,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_12(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_14(int32 objectId, uint8 value)
 {
     try
     {
@@ -4882,7 +4920,7 @@ void RegisterBindings_Orbeden()
     static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25) };
     NativeBindings::Register(Material::StaticType(), 10862700097017898451ULL, { functions_Material, 26 });
     static void* functions_Mesh[] = { reinterpret_cast<void*>(&Call_Mesh_0), reinterpret_cast<void*>(&Call_Mesh_1), reinterpret_cast<void*>(&Call_Mesh_2), reinterpret_cast<void*>(&Call_Mesh_3), reinterpret_cast<void*>(&Call_Mesh_4), reinterpret_cast<void*>(&Call_Mesh_5), reinterpret_cast<void*>(&Call_Mesh_6), reinterpret_cast<void*>(&Call_Mesh_7), reinterpret_cast<void*>(&Call_Mesh_8), reinterpret_cast<void*>(&Call_Mesh_9), reinterpret_cast<void*>(&Call_Mesh_10), reinterpret_cast<void*>(&Call_Mesh_11), reinterpret_cast<void*>(&Call_Mesh_12), reinterpret_cast<void*>(&Call_Mesh_13), reinterpret_cast<void*>(&Call_Mesh_14), reinterpret_cast<void*>(&Call_Mesh_15), reinterpret_cast<void*>(&Call_Mesh_16), reinterpret_cast<void*>(&Call_Mesh_17), reinterpret_cast<void*>(&Call_Mesh_18), reinterpret_cast<void*>(&Call_Mesh_19), reinterpret_cast<void*>(&Call_Mesh_20), reinterpret_cast<void*>(&Call_Mesh_21), reinterpret_cast<void*>(&Call_Mesh_22), reinterpret_cast<void*>(&Call_Mesh_23), reinterpret_cast<void*>(&Call_Mesh_24), reinterpret_cast<void*>(&Call_Mesh_25), reinterpret_cast<void*>(&Call_Mesh_26), reinterpret_cast<void*>(&Call_Mesh_27), reinterpret_cast<void*>(&Call_Mesh_28) };
-    NativeBindings::Register(Mesh::StaticType(), 13993513445686221592ULL, { functions_Mesh, 29 });
+    NativeBindings::Register(Mesh::StaticType(), 6127609266950937557ULL, { functions_Mesh, 29 });
     static void* functions_Shader[] = { reinterpret_cast<void*>(&Call_Shader_0), reinterpret_cast<void*>(&Call_Shader_1), reinterpret_cast<void*>(&Call_Shader_2), reinterpret_cast<void*>(&Call_Shader_3), reinterpret_cast<void*>(&Call_Shader_4), reinterpret_cast<void*>(&Call_Shader_5), reinterpret_cast<void*>(&Call_Shader_6), reinterpret_cast<void*>(&Call_Shader_7), reinterpret_cast<void*>(&Call_Shader_8), reinterpret_cast<void*>(&Call_Shader_9), reinterpret_cast<void*>(&Call_Shader_10), reinterpret_cast<void*>(&Call_Shader_11), reinterpret_cast<void*>(&Call_Shader_12), reinterpret_cast<void*>(&Call_Shader_13), reinterpret_cast<void*>(&Call_Shader_14), reinterpret_cast<void*>(&Call_Shader_15), reinterpret_cast<void*>(&Call_Shader_16), reinterpret_cast<void*>(&Call_Shader_17), reinterpret_cast<void*>(&Call_Shader_18), reinterpret_cast<void*>(&Call_Shader_19), reinterpret_cast<void*>(&Call_Shader_20) };
     NativeBindings::Register(Shader::StaticType(), 7808802871571462565ULL, { functions_Shader, 21 });
     static void* functions_Skybox[] = { reinterpret_cast<void*>(&Call_Skybox_0), reinterpret_cast<void*>(&Call_Skybox_1), reinterpret_cast<void*>(&Call_Skybox_2), reinterpret_cast<void*>(&Call_Skybox_3), reinterpret_cast<void*>(&Call_Skybox_4), reinterpret_cast<void*>(&Call_Skybox_5), reinterpret_cast<void*>(&Call_Skybox_6), reinterpret_cast<void*>(&Call_Skybox_7), reinterpret_cast<void*>(&Call_Skybox_8), reinterpret_cast<void*>(&Call_Skybox_9), reinterpret_cast<void*>(&Call_Skybox_10), reinterpret_cast<void*>(&Call_Skybox_11) };
@@ -4890,7 +4928,7 @@ void RegisterBindings_Orbeden()
     static void* functions_Texture2D[] = { reinterpret_cast<void*>(&Call_Texture2D_0), reinterpret_cast<void*>(&Call_Texture2D_1), reinterpret_cast<void*>(&Call_Texture2D_2), reinterpret_cast<void*>(&Call_Texture2D_3), reinterpret_cast<void*>(&Call_Texture2D_4), reinterpret_cast<void*>(&Call_Texture2D_5), reinterpret_cast<void*>(&Call_Texture2D_6), reinterpret_cast<void*>(&Call_Texture2D_7), reinterpret_cast<void*>(&Call_Texture2D_8), reinterpret_cast<void*>(&Call_Texture2D_9), reinterpret_cast<void*>(&Call_Texture2D_10), reinterpret_cast<void*>(&Call_Texture2D_11) };
     NativeBindings::Register(Texture2D::StaticType(), 2216937908629194539ULL, { functions_Texture2D, 12 });
     static void* functions_Camera[] = { reinterpret_cast<void*>(&Call_Camera_0), reinterpret_cast<void*>(&Call_Camera_1), reinterpret_cast<void*>(&Call_Camera_2), reinterpret_cast<void*>(&Call_Camera_3), reinterpret_cast<void*>(&Call_Camera_4), reinterpret_cast<void*>(&Call_Camera_5), reinterpret_cast<void*>(&Call_Camera_6), reinterpret_cast<void*>(&Call_Camera_7), reinterpret_cast<void*>(&Call_Camera_8), reinterpret_cast<void*>(&Call_Camera_9), reinterpret_cast<void*>(&Call_Camera_10), reinterpret_cast<void*>(&Call_Camera_11), reinterpret_cast<void*>(&Call_Camera_12), reinterpret_cast<void*>(&Call_Camera_13), reinterpret_cast<void*>(&Call_Camera_14), reinterpret_cast<void*>(&Call_Camera_15), reinterpret_cast<void*>(&Call_Camera_16), reinterpret_cast<void*>(&Call_Camera_17), reinterpret_cast<void*>(&Call_Camera_18), reinterpret_cast<void*>(&Call_Camera_19), reinterpret_cast<void*>(&Call_Camera_20), reinterpret_cast<void*>(&Call_Camera_21), reinterpret_cast<void*>(&Call_Camera_22), reinterpret_cast<void*>(&Call_Camera_23), reinterpret_cast<void*>(&Call_Camera_24), reinterpret_cast<void*>(&Call_Camera_25), reinterpret_cast<void*>(&Call_Camera_26) };
-    NativeBindings::Register(Camera::StaticType(), 5067385782490808872ULL, { functions_Camera, 27 });
+    NativeBindings::Register(Camera::StaticType(), 13768001414681919564ULL, { functions_Camera, 27 });
     static void* functions_CharacterController[] = { reinterpret_cast<void*>(&Call_CharacterController_0), reinterpret_cast<void*>(&Call_CharacterController_1), reinterpret_cast<void*>(&Call_CharacterController_2), reinterpret_cast<void*>(&Call_CharacterController_3), reinterpret_cast<void*>(&Call_CharacterController_4), reinterpret_cast<void*>(&Call_CharacterController_5), reinterpret_cast<void*>(&Call_CharacterController_6), reinterpret_cast<void*>(&Call_CharacterController_7), reinterpret_cast<void*>(&Call_CharacterController_8), reinterpret_cast<void*>(&Call_CharacterController_9), reinterpret_cast<void*>(&Call_CharacterController_10), reinterpret_cast<void*>(&Call_CharacterController_11), reinterpret_cast<void*>(&Call_CharacterController_12), reinterpret_cast<void*>(&Call_CharacterController_13), reinterpret_cast<void*>(&Call_CharacterController_14), reinterpret_cast<void*>(&Call_CharacterController_15), reinterpret_cast<void*>(&Call_CharacterController_16), reinterpret_cast<void*>(&Call_CharacterController_17), reinterpret_cast<void*>(&Call_CharacterController_18), reinterpret_cast<void*>(&Call_CharacterController_19), reinterpret_cast<void*>(&Call_CharacterController_20), reinterpret_cast<void*>(&Call_CharacterController_21) };
     NativeBindings::Register(CharacterController::StaticType(), 5570124596910826920ULL, { functions_CharacterController, 22 });
     static void* functions_Collider[] = { reinterpret_cast<void*>(&Call_Collider_0), reinterpret_cast<void*>(&Call_Collider_1), reinterpret_cast<void*>(&Call_Collider_2), reinterpret_cast<void*>(&Call_Collider_3), reinterpret_cast<void*>(&Call_Collider_4), reinterpret_cast<void*>(&Call_Collider_5), reinterpret_cast<void*>(&Call_Collider_6), reinterpret_cast<void*>(&Call_Collider_7), reinterpret_cast<void*>(&Call_Collider_8), reinterpret_cast<void*>(&Call_Collider_9), reinterpret_cast<void*>(&Call_Collider_10), reinterpret_cast<void*>(&Call_Collider_11), reinterpret_cast<void*>(&Call_Collider_12), reinterpret_cast<void*>(&Call_Collider_13), reinterpret_cast<void*>(&Call_Collider_14), reinterpret_cast<void*>(&Call_Collider_15), reinterpret_cast<void*>(&Call_Collider_16) };
@@ -4902,9 +4940,9 @@ void RegisterBindings_Orbeden()
     static void* functions_RigidBody[] = { reinterpret_cast<void*>(&Call_RigidBody_0), reinterpret_cast<void*>(&Call_RigidBody_1), reinterpret_cast<void*>(&Call_RigidBody_2), reinterpret_cast<void*>(&Call_RigidBody_3), reinterpret_cast<void*>(&Call_RigidBody_4), reinterpret_cast<void*>(&Call_RigidBody_5), reinterpret_cast<void*>(&Call_RigidBody_6), reinterpret_cast<void*>(&Call_RigidBody_7), reinterpret_cast<void*>(&Call_RigidBody_8), reinterpret_cast<void*>(&Call_RigidBody_9), reinterpret_cast<void*>(&Call_RigidBody_10), reinterpret_cast<void*>(&Call_RigidBody_11), reinterpret_cast<void*>(&Call_RigidBody_12), reinterpret_cast<void*>(&Call_RigidBody_13), reinterpret_cast<void*>(&Call_RigidBody_14), reinterpret_cast<void*>(&Call_RigidBody_15), reinterpret_cast<void*>(&Call_RigidBody_16), reinterpret_cast<void*>(&Call_RigidBody_17), reinterpret_cast<void*>(&Call_RigidBody_18), reinterpret_cast<void*>(&Call_RigidBody_19), reinterpret_cast<void*>(&Call_RigidBody_20), reinterpret_cast<void*>(&Call_RigidBody_21), reinterpret_cast<void*>(&Call_RigidBody_22) };
     NativeBindings::Register(RigidBody::StaticType(), 11999458345191868740ULL, { functions_RigidBody, 23 });
     static void* functions_Script[] = { reinterpret_cast<void*>(&Call_Script_0), reinterpret_cast<void*>(&Call_Script_1), reinterpret_cast<void*>(&Call_Script_2), reinterpret_cast<void*>(&Call_Script_3), reinterpret_cast<void*>(&Call_Script_4) };
-    NativeBindings::Register(Script::StaticType(), 17691651498899278057ULL, { functions_Script, 5 });
-    static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12) };
-    NativeBindings::Register(StaticMeshRenderer::StaticType(), 13879568821056445254ULL, { functions_StaticMeshRenderer, 13 });
+    NativeBindings::Register(Script::StaticType(), 14353557076775384815ULL, { functions_Script, 5 });
+    static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12), reinterpret_cast<void*>(&Call_StaticMeshRenderer_13), reinterpret_cast<void*>(&Call_StaticMeshRenderer_14) };
+    NativeBindings::Register(StaticMeshRenderer::StaticType(), 1378393800963719229ULL, { functions_StaticMeshRenderer, 15 });
     static void* functions_Transform[] = { reinterpret_cast<void*>(&Call_Transform_0), reinterpret_cast<void*>(&Call_Transform_1), reinterpret_cast<void*>(&Call_Transform_2), reinterpret_cast<void*>(&Call_Transform_3), reinterpret_cast<void*>(&Call_Transform_4), reinterpret_cast<void*>(&Call_Transform_5), reinterpret_cast<void*>(&Call_Transform_6), reinterpret_cast<void*>(&Call_Transform_7), reinterpret_cast<void*>(&Call_Transform_8), reinterpret_cast<void*>(&Call_Transform_9) };
     NativeBindings::Register(Transform::StaticType(), 13157070993901949905ULL, { functions_Transform, 10 });
     static void* functions_WheelCollider[] = { reinterpret_cast<void*>(&Call_WheelCollider_0), reinterpret_cast<void*>(&Call_WheelCollider_1), reinterpret_cast<void*>(&Call_WheelCollider_2), reinterpret_cast<void*>(&Call_WheelCollider_3), reinterpret_cast<void*>(&Call_WheelCollider_4), reinterpret_cast<void*>(&Call_WheelCollider_5), reinterpret_cast<void*>(&Call_WheelCollider_6), reinterpret_cast<void*>(&Call_WheelCollider_7), reinterpret_cast<void*>(&Call_WheelCollider_8), reinterpret_cast<void*>(&Call_WheelCollider_9), reinterpret_cast<void*>(&Call_WheelCollider_10), reinterpret_cast<void*>(&Call_WheelCollider_11), reinterpret_cast<void*>(&Call_WheelCollider_12), reinterpret_cast<void*>(&Call_WheelCollider_13), reinterpret_cast<void*>(&Call_WheelCollider_14), reinterpret_cast<void*>(&Call_WheelCollider_15), reinterpret_cast<void*>(&Call_WheelCollider_16), reinterpret_cast<void*>(&Call_WheelCollider_17), reinterpret_cast<void*>(&Call_WheelCollider_18), reinterpret_cast<void*>(&Call_WheelCollider_19), reinterpret_cast<void*>(&Call_WheelCollider_20), reinterpret_cast<void*>(&Call_WheelCollider_21), reinterpret_cast<void*>(&Call_WheelCollider_22), reinterpret_cast<void*>(&Call_WheelCollider_23), reinterpret_cast<void*>(&Call_WheelCollider_24), reinterpret_cast<void*>(&Call_WheelCollider_25), reinterpret_cast<void*>(&Call_WheelCollider_26), reinterpret_cast<void*>(&Call_WheelCollider_27) };

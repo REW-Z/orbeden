@@ -66,11 +66,13 @@ public:
     void* drawSceneView = nullptr;
     void* resolveSceneDropPosition = nullptr;
     void* referenceField = nullptr;
+    void* assetTile = nullptr;
+    void* viewToggleButton = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 48);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 50);
 
 //Editor ImGui 绑定层
 class EditorGUI

@@ -78,6 +78,9 @@
     <ClInclude Include="Src\Runtime\AssetPipeline.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\CookedAssetSerializer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Native\NativeCall.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -124,6 +127,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Platform\DynamicLibrary.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Platform\ExecutablePath.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Platform\GlfwWindow.h">
@@ -275,6 +281,9 @@
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Runtime\CookedAssetSerializer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -309,6 +318,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Platform\DynamicLibrary.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Platform\ExecutablePath.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\InputManager\InputManager.cpp">

@@ -282,12 +282,13 @@ void HeightField::RebuildRenderMesh()
     mesh->SetVertexTexcoords(texcoords.data(), vertexCount);
     mesh->SetIndexData(indices.data(), static_cast<int32>(indices.size()));
     mesh->ResizeSubMeshes(1);
-    //运行时材质创建失败时回退到源材质，保证地形始终可见。
-    Material* submeshMaterial = runtimeMaterial ? runtimeMaterial : material.Get();
-    mesh->ConfigureSubMesh(0, "Main", 0, static_cast<uint32>(indices.size()), submeshMaterial);
+    mesh->ConfigureSubMesh(0, "Main", 0, static_cast<uint32>(indices.size()));
     mesh->SetVertexNormals(normals.data(), vertexCount);
 
     renderer->SetRuntimeMesh(mesh);
+    //运行时材质创建失败时回退到源材质，保证地形始终可见。
+    renderer->materials.resize(1);
+    renderer->materials[0].Set(runtimeMaterial ? runtimeMaterial : material.Get());
     mesh->MarkDirty();
     meshPending = false;
     generatedMesh = mesh;

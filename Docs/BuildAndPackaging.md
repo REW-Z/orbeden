@@ -97,7 +97,7 @@ flowchart LR
 | Editor C# | Windows Editor CLR 工具程序集 | Editor 工程构建时自动构建 | `OrbedenEditor/x64/{Configuration}/Managed/Orbeden.Editor.dll`；不进入 Player |
 | Game C# Debug | CLR Assembly Build | Debug Editor `Build Game C#` | `{ProjectRoot}/Build/Managed/{AssemblyName}.dll` |
 | Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Build/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
-| Player | MSVC Executable（`OrbedenGame.vcxproj`） | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/OrbedenGame.exe` |
+| Player | MSVC Executable（`OrbedenGame.vcxproj`）+ 资源打包 | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/`，自包含发布目录：`OrbedenGame.exe`、`.oeproj`、`Content/` |
 
 ## 完整打包流程
 
@@ -113,9 +113,13 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 
 4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
 
-5. **整理发布目录**：保留 Player 可执行文件以及项目的 `.oeproj`、`Content/`。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
+5. **打包资源**：Player 构建成功后，Editor 接着把内容根内的资源打成发布产物，`Build Player` 结束即得到完整发布目录。
+   - 内容根内每个可导入的源文件经 `AssetPipeline` 导入，产生的**每个资源对象**序列化为一个 `.orbo`（`Orbeden::Object` 二进制），先写入 `{ProjectRoot}/ResourceCache/`，再整体同步到 `{ProjectRoot}/Build/windows-x64/bin/Content/`。
+   - `.world` 场景**不 cook**，保持 XML 原样复制，并保留其相对内容根的目录结构。
+   - `.oeproj` 复制到包根，供 Player 读取启动场景；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
+   - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/` 是可由 cook 全量重建的缓存，可以随时删除。
 
-> 当前 `Build Player` 会通过 `ORBEDEN_PROJECT_DIR` 绑定 Editor 中打开的项目，Player 从该项目的 `.oeproj` 读取启动 World；项目文件和资源仍未自动复制到发布目录。
+> Player 以**可执行文件所在目录**为根解析内容，发布目录整体拷到别的路径或别的机器都能运行。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
 ## 核心工程文件职责
 
@@ -327,6 +331,7 @@ RigidBody? sameBody = bodyEns.GetComponent<RigidBody>();
 
 1. C++ Editor 将项目、配置和目标传给 `Orbeden.Editor`，由 C# `PlayerBuildPipeline` 直接执行 `dotnet restore/publish` 并校验 Game NativeAOT 库。
 2. 以 MSBuild 构建 `OrbedenGame/OrbedenGame.vcxproj`：编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方库与 AOT 导入库，最后拷贝 AOT DLL 与 `glfw3.dll` 到输出目录。Core 静态库缺失时构建失败并提示先构建 `OrbedenCore.vcxproj`。
+3. C++ Editor 调 `PlayerContentCooker` 把内容根内的资源导入并序列化为 `.orbo` 写入 `ResourceCache/`，再同步到包内 `Content/`、复制 `.oeproj` 到包根；随后保存并重载一次当前场景。
 
 NativeAOT 命令参数、RID 和输出目录集中在 `OrbedenEditor/Managed/Orbeden.Editor/PlayerBuildPipeline.cs`，可直接随 Editor C# 代码定制。失败时不会回退到 PowerShell、DLL 或 CLR 工作流。
 
@@ -355,9 +360,12 @@ flowchart LR
 发布版 Player 携带：
 
 - `OrbedenGame`
-- Player 资源文件
-- world / 项目配置
+- `Content/` 下的资源产物 `.orbo`（`Orbeden::Object` 二进制）与清单 `cooked.index`
+- `Content/` 下原样复制的 `.world` 场景
+- 包根的 `.oeproj` 项目配置
 - 平台需要的原生依赖
+
+发布目录里**没有**原始资源文件（`.obj` / `.png` / `.mtl` / `.orbshader`）与脚本源码——它们已经在打包时转换进 `.orbo` 或编译进 Player。
 
 Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静态链接到 Player，不再以托管 DLL 形式部署。不同平台的 NativeAOT 静态库、Core C++ 静态库和第三方平台库不能混用。
 
@@ -369,6 +377,36 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 - `hostfxr`
 - `nethost`
 - `runtimeconfig.json`
+
+## 资源产物与解析规则
+
+### `.orbo` 格式
+
+一个资源对象一个 `.orbo` 文件，**位置式二进制**：只写字段顺序与长度，不写字段名。
+
+- 变长字段靠长度前缀自洽：`string` = `uint32 字节数 + 字节`，数组 = `uint32 个数 + 元素整块`。
+- 顶点、索引、像素等长数组按原始字节块读写，依赖 `Runtime/EngineTypes.h` 对数学类型 `trivially_copyable` 的静态断言。
+- 头部带资源 Key、运行时类型名、依赖 Key 列表，以及源文件时间戳/大小与导入器版本（当前只写不读，留给将来的失效机制）。
+- 读完后游标必须正好落在文件末尾，否则判定为格式错配。
+
+**位置式格式的代价**：引擎改动一旦触及资源字段（增删字段、调整顺序、改类型），**已发布的旧包不再可读，必须重新 `Build Player`**。这与「world 文件不带版本号、格式变更靠改文件而非读时兼容」是同一套约定。
+
+### 文件名与清单
+
+扁平存放，文件名是资源 Key 的十六进制哈希（`StringId::CalculateHash`）。`Key → 文件名` 是纯函数，不需要索引就能查找。
+
+`cooked.index` 是 cook 生成的对照表，每行 `<hash16>\t<资源Key>`。它有两个用途：内置 Shader（`shadow_depth.orbshader` / `skybox.orbshader`）本来就靠**文件名**在内容根内查找，哈希命名抹掉了文件名，打包后只能靠清单匹配；同时它也让人能看出哈希文件对应哪个资源。
+
+### 解析顺序与回退
+
+`ResourceManager` 按 Key 取资源时是**对称的双向回退**，没有 Editor/Player 分支：先找 `Content/<hash16>.orbo`，找不到再按 Key 读源文件并导入。
+
+由此得出两条必须遵守的约定：
+
+1. **工程 `Content/` 内绝不能出现 `.orbo`。** 产物与源文件同目录时产物优先，且**不会有任何提示**——Editor 会静默改用产物，改源文件不再生效。cook 只写 `ResourceCache/` 与发布目录，天然满足，但这是约定而不是代码约束。
+2. **发布目录里只放产物，不放源文件。** 否则产物缺失时会静默回退到源文件导入，问题被掩盖。
+
+`Content/` 之外（即 Editor）永远是源优先：那里没有 `.orbo`，读不到产物自然走导入。**当前不做任何过期校验**——改了源文件不会自动重建产物，`Build Player` 一律全量重 cook。
 
 ## 游戏工程布局与引擎升级
 
@@ -397,6 +435,7 @@ MyGame/
 ├─ MyGameNative.vcxproj
 ├─ Directory.Build.props
 ├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path
+├─ ResourceCache/           资源导入产物缓存，可由 cook 全量重建（可删除，不进版本控制）
 ├─ Content/                 内容根：内部结构完全自由
 │   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/
 │   └─ Examples/FlightTraining/   可编辑的示例游戏（升级保留）
@@ -404,10 +443,19 @@ MyGame/
     ├─ Managed/             C# 开发程序集、obj、PIE 影子副本
     ├─ Aot/                 NativeAOT 库
     ├─ Native/              模块 DLL、obj 与 MetaGen 的 Generated/
-    └─ windows-x64/         Player 打包产物
+    └─ windows-x64/
+        ├─ obj/             编译中间文件
+        └─ bin/             自包含发布目录
+            ├─ OrbedenGame.exe / glfw3.dll / {AssemblyName}.dll
+            ├─ {ProjectName}.oeproj
+            └─ Content/     .orbo 产物（扁平，文件名是资源 Key 的哈希）
+                            cooked.index（文件名与资源 Key 对照表）
+                            **/*.world（保持原目录结构）
 ```
 
 `Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`——位置既然固定，就不该做成可配置属性。
+
+`ResourceCache/` 与 `Content/` 同级，对应 Unity 的 `Library/`：cook 先把产物写在这里，再整体同步进发布目录。它是**只写不读**的暂存区——Editor 始终从 `Content/` 的源文件导入，不参与产物解析。
 
 ### 内容根与资源 Key
 
@@ -458,6 +506,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 7 | Player 改为自包含发布目录：`Build Player` 把内容根内可导入的资源经 AssetPipeline 导入后序列化为 `.orbo` 二进制（先落 `ResourceCache/`，再同步进包内 `Content/`），`.world` 原样复制，`.oeproj` 复制到包根。Player 以**可执行文件所在目录**为内容根，不再依赖编译期的 `ORBEDEN_PROJECT_DIR`。`.orbo` 为位置式二进制，改动资源字段即需重新打包。项目文件本身无需迁移，但**必须重新执行 `Build Player`**，旧发布目录不能继续使用。 |
 | 6 | Ens 改为独立 Object，拥有自身稳定 ID，Transform 保留独立组件身份。升级项目时更新原生 Ens 头文件路径；读取旧 World/Prefab 时拆分共用身份并按字段类型重映射引用。更新 SDK、绑定和原生模块。 |
 | 5 | 新增同步／异步 World 加载操作和预制体序列化接口；更新运行时函数表，需重建托管及原生游戏模块。 |
 | 4 | 地形生成网格改用非持久化渲染覆盖，保留 `StaticMeshRenderer.mesh` 源资源路径；地形生成计数、待生成标记与运行时材质所有权不再存盘。组件布局变化，需更新 SDK 并重建游戏原生模块。历史场景中已丢失的源网格路径需从资源或版本记录恢复。 |

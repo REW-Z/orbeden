@@ -282,7 +282,8 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
             usize count = static_cast<usize>(subMesh.indexCount);
             if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
 
-            Material* material = subMesh.material.Get();
+            //材质由渲染器按子网格槽位给出，槽位为空则这个子网格不画
+            Material* material = index < renderer->materials.size() ? renderer->materials[index].Get() : nullptr;
             if (!material) continue;
 
             RenderItem item;

@@ -98,6 +98,9 @@ internal sealed class ProjectPanel : EditorPanel
     private const int FileMustExist = 0x00001000;
     private const int PathMustExist = 0x00000800;
     private const int ExplorerDialog = 0x00080000;
+    //网格瓦片的期望宽度与竖向滚动条余量，两者共同决定一行放几块
+    private const float MinTileWidth = 96.0f;
+    private const float ScrollbarAllowance = 16.0f;
 
     private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
@@ -110,6 +113,7 @@ internal sealed class ProjectPanel : EditorPanel
     private int refreshRequested;
     private float directoryWidth = 200;
     private string startupWorld = string.Empty;
+    private bool gridView;
     private static string? pingKey;
 
     //请求在项目列表中定位引用资源
@@ -242,21 +246,7 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.EndDisabled();
 
         EditorGUI.SameLine();
-        if (EditorGUI.Button("Refresh"))
-        {
-            EditorAssetCatalog.Instance.Refresh();
-            status = "Assets refreshed.";
-        }
-
-        bool canModify = EditorAssetsNative.CanModifyAssets();
-        EditorGUI.SameLine();
-        EditorGUI.BeginDisabled(!canModify);
-        if (EditorGUI.Button("Import...")) ImportFile();
-        EditorGUI.SameLine();
-        if (EditorGUI.Button("Create Folder")) BeginOperation(PendingOperation.CreateFolder, null);
-        EditorGUI.SameLine();
-        if (EditorGUI.Button("Create World")) CreateWorld();
-        EditorGUI.EndDisabled();
+        if (EditorGUI.ViewToggleButton("##project_view_mode", gridView)) gridView = !gridView;
 
         EditorGUI.SameLine();
         EditorGUI.InputText("Search##project_search", ref search);
@@ -307,7 +297,7 @@ internal sealed class ProjectPanel : EditorPanel
             if (visible)
             {
                 EditorGUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
-                DrawAssetTable();
+                DrawAssets(remainingWidth);
             }
         }
         finally { NativeEditorGUI.EndChild(); }
@@ -359,8 +349,10 @@ internal sealed class ProjectPanel : EditorPanel
     {
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
         string name = path == EditorAssetCatalog.Instance.ContentRoot ? "Content" : Path.GetFileName(path);
+        //没有下级目录的叶子不该显示展开箭头
         int state = NativeEditorGUI.TreeNode(name + "##directory_" + path,
-            string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase));
+            string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
+            leaf: !HasSubDirectories(path));
         if ((state & 2) != 0)
         {
             currentDirectory = path;
@@ -388,6 +380,24 @@ internal sealed class ProjectPanel : EditorPanel
         finally { NativeEditorGUI.TreePop(); }
     }
 
+    //判断目录下还有没有可展开的子目录，生成目录与目录链接不算
+    private static bool HasSubDirectories(string path)
+    {
+        try
+        {
+            foreach (string directory in Directory.EnumerateDirectories(path))
+            {
+                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue;
+                if (EditorAssetCatalog.Instance.IsGeneratedPath(directory)) continue;
+                return true;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
+        return false;
+    }
+
     //创建名称不冲突的 World 并请求打开
     private void CreateWorld()
     {
@@ -412,8 +422,8 @@ internal sealed class ProjectPanel : EditorPanel
         }
     }
 
-    //绘制当前目录资产列表
-    private void DrawAssetTable()
+    //绘制当前目录资源：列表与网格共用一份枚举结果与背景菜单
+    private void DrawAssets(float width)
     {
         List<string> entries;
         try
@@ -431,18 +441,8 @@ internal sealed class ProjectPanel : EditorPanel
             return;
         }
 
-        if (!EditorGUI.BeginTable("##project_assets", 2)) return;
-        try
-        {
-            EditorGUI.TableSetupColumn("Name");
-            EditorGUI.TableSetupColumn("Type", 150.0f, fixedWidth: true);
-            EditorGUI.TableHeadersRow();
-            foreach (string entry in entries) DrawAssetRow(entry);
-        }
-        finally
-        {
-            EditorGUI.EndTable();
-        }
+        if (gridView) DrawAssetGrid(entries, width);
+        else DrawAssetTable(entries);
 
         if (EditorGUI.BeginPopupContextWindow("##project_background_menu"))
         {
@@ -457,6 +457,9 @@ internal sealed class ProjectPanel : EditorPanel
                     EditorAssetCatalog.Instance.Refresh();
                     status = "Assets refreshed.";
                 }
+                //背景菜单以当前目录为上下文，扩展项在空白处也能用
+                ProjectContextMenuRegistry.Draw(new ProjectAssetContext(currentDirectory,
+                    EditorAssetCatalog.Instance.ToResourceKey(currentDirectory), true), value => status = value);
             }
             finally
             {
@@ -465,13 +468,70 @@ internal sealed class ProjectPanel : EditorPanel
         }
     }
 
+    //绘制资源列表视图
+    private void DrawAssetTable(List<string> entries)
+    {
+        if (!EditorGUI.BeginTable("##project_assets", 2)) return;
+        try
+        {
+            EditorGUI.TableSetupColumn("Name");
+            EditorGUI.TableSetupColumn("Type", 150.0f, fixedWidth: true);
+            EditorGUI.TableHeadersRow();
+            foreach (string entry in entries) DrawAssetRow(entry);
+        }
+        finally
+        {
+            EditorGUI.EndTable();
+        }
+    }
+
+    //绘制资源网格视图：按可用宽度决定列数，剩余宽度均分给每块瓦片
+    private void DrawAssetGrid(List<string> entries, float width)
+    {
+        //子窗口宽度含边框与内边距，再留出竖向滚动条余量，避免铺满一行后挤出横向滚动条
+        float spacing = EditorTheme.Current.SpacingX;
+        float available = width - (EditorTheme.Current.PaddingX + 1.0f) * 2.0f - ScrollbarAllowance;
+        int columns = Math.Max(1, (int)((available + spacing) / (MinTileWidth + spacing)));
+        float tileWidth = Math.Max(MinTileWidth, (available - (columns - 1) * spacing) / columns);
+        for (int index = 0; index < entries.Count; index++)
+        {
+            if (index % columns != 0) EditorGUI.SameLine();
+            DrawAssetTile(entries[index], tileWidth);
+        }
+    }
+
+    //绘制一个资源瓦片，交互与列表行保持一致
+    private void DrawAssetTile(string entry, float width)
+    {
+        bool directory = Directory.Exists(entry);
+        bool selected = string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase);
+        if (EditorGUI.AssetTile(EditorIconCatalog.ForResource(entry, directory), GetDisplayName(entry), entry, width, selected))
+            selectedPath = entry;
+        if (EditorGUI.IsItemDoubleClicked()) OpenEntry(entry);
+        if (directory) DrawDirectoryDrop(entry);
+        NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
+        if (EditorGUI.BeginPopupContextItem("##project_tile_menu_" + entry))
+        {
+            selectedPath = entry;
+            try { DrawItemContextMenu(entry, directory); }
+            finally { EditorGUI.EndPopup(); }
+        }
+    }
+
+    //取资源显示名，启动 World 追加标记
+    private string GetDisplayName(string entry)
+    {
+        string name = Path.GetFileName(entry);
+        return string.Equals(EditorAssetCatalog.Instance.ToResourceKey(entry), startupWorld, StringComparison.OrdinalIgnoreCase)
+            ? name + " [Startup]"
+            : name;
+    }
+
     //绘制一行资源。
     private void DrawAssetRow(string entry)
     {
         bool directory = Directory.Exists(entry);
-        string name = Path.GetFileName(entry);
-        if (string.Equals(EditorAssetCatalog.Instance.ToResourceKey(entry), startupWorld, StringComparison.OrdinalIgnoreCase))
-            name += " [Startup]";
+        string name = GetDisplayName(entry);
         EditorGUI.TableNextRow();
         EditorGUI.TableSetColumnIndex(0);
         bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
@@ -521,6 +581,17 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.Separator();
         if (EditorGUI.MenuItem("Reveal in Explorer")) EditorAssetCatalog.Reveal(entry);
         if (EditorGUI.MenuItem("Copy Resource Key")) EditorGUI.SetClipboardText(EditorAssetCatalog.Instance.ToResourceKey(entry));
+
+        //创建类操作也放进条目菜单：列表铺满时空白处点不到背景菜单
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
+        if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
+        if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
+        if (EditorGUI.MenuItem("Refresh"))
+        {
+            EditorAssetCatalog.Instance.Refresh();
+            status = "Assets refreshed.";
+        }
 
         ProjectAssetContext context = new(entry, EditorAssetCatalog.Instance.ToResourceKey(entry), directory);
         ProjectContextMenuRegistry.Draw(context, value => status = value);

@@ -258,13 +258,13 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 48);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 50);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 8);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 14);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 15);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 101);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 104);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

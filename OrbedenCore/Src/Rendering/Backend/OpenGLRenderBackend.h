@@ -20,6 +20,8 @@ private:
     bool depthTestEnabled = false;
     bool depthWriteEnabled = false;
     bool blendEnabled = false;
+    DepthCompare depthCompare = DepthCompare::Less;
+    bool polygonOffsetEnabled = false;
     CullMode cullMode = CullMode::None;
     std::unordered_map<uint32, uint32> renderTargetColorAttachments;
     std::unordered_map<uint32, uint32> indexBufferCounts;
@@ -67,7 +69,9 @@ public:
     void SetUniformInt(const char* name, int32 value) override;
     void SetUniformFloat(const char* name, float32 value) override;
     void SetDepthTest(bool enabled) override;
+    void SetDepthCompare(DepthCompare compare) override;
     void SetDepthWrite(bool enabled) override;
+    void SetPolygonOffset(bool enabled, float32 factor, float32 units) override;
     void SetBlend(bool enabled) override;
     void SetCullMode(CullMode mode) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;

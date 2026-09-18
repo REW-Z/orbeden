@@ -186,6 +186,12 @@ private:
     //构建并热重载项目 C++ 模块。
     bool BuildNativeGameModule(bool saveWorldBeforeReload);
 
+    //把内容根内的资源 cook 到 ResourceCache，并重建当前场景
+    bool CookPlayerContent(std::string& error);
+
+    //清空包内 Content 后同步 cook 产物，再把 .oeproj 复制到包根
+    bool SyncPlayerPackage(const std::string& packageRoot, std::string& error);
+
     //查找仓库根目录
     std::string FindRepositoryRoot() const;
 

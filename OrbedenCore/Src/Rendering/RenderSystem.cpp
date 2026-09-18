@@ -33,6 +33,86 @@ namespace
         int32 end = std::clamp(static_cast<int32>((normalizedStart + normalizedSize) * static_cast<float32>(targetSize)), start + 1, targetSize);
         size = end - start;
     }
+
+    //选择描边遮罩：把选中几何按描边色平涂进遮罩，深度测试照常进行以保留遮挡关系。
+    //裁剪坐标必须和材质着色器用同一套算式，深度才能逐位相等，否则遮罩会出现深度抖动。
+    constexpr const char* OutlineMaskVertexSource = R"(#version 430 core
+layout(location = 0) in vec3 a_Position;
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+uniform vec4 u_Tint;
+out vec4 v_Tint;
+void main()
+{
+    v_Tint = u_Tint;
+    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+}
+)";
+
+    constexpr const char* OutlineMaskFragmentSource = R"(#version 430 core
+in vec4 v_Tint;
+out vec4 FragColor;
+void main()
+{
+    FragColor = v_Tint;
+}
+)";
+
+    //选择描边合成：全屏采样遮罩，只在轮廓外侧压色，物体自身保持原色
+    constexpr const char* OutlineCompositeVertexSource = R"(#version 430 core
+layout(location = 0) in vec3 a_Position;
+out vec2 v_Uv;
+void main()
+{
+    v_Uv = a_Position.xy * 0.5 + 0.5;
+    gl_Position = vec4(a_Position.xy, 0.0, 1.0);
+}
+)";
+
+    constexpr const char* OutlineCompositeFragmentSource = R"(#version 430 core
+in vec2 v_Uv;
+out vec4 FragColor;
+uniform sampler2D u_Mask;
+uniform vec3 u_TexelSize;
+uniform float u_CoreRadius;
+uniform float u_GlowRadius;
+uniform float u_GlowAlpha;
+
+//沿固定方向在指定半径的圆周上取覆盖，得到这一圈里最强的描边色
+vec4 SampleRing(float radius)
+{
+    vec4 result = vec4(0.0);
+    for (int index = 0; index < 16; ++index)
+    {
+        float angle = 6.28318531 * float(index) / 16.0;
+        vec2 offset = vec2(cos(angle), sin(angle)) * radius * u_TexelSize.xy;
+        vec4 sampled = texture(u_Mask, v_Uv + offset);
+        if (sampled.a > result.a) result = sampled;
+    }
+    return result;
+}
+
+void main()
+{
+    //物体自身保持原色，只有外侧才压描边
+    if (texture(u_Mask, v_Uv).a > 0.0) discard;
+
+    vec4 core = SampleRing(u_CoreRadius);
+    vec4 glow = SampleRing(u_GlowRadius);
+    float coreAlpha = core.a;
+    float glowAlpha = glow.a * u_GlowAlpha;
+    float alpha = max(coreAlpha, glowAlpha);
+    if (alpha <= 0.001) discard;
+
+    vec3 tint = coreAlpha >= glowAlpha ? core.rgb : glow.rgb;
+    FragColor = vec4(tint, alpha);
+}
+)";
+
+    //描边合成结果的混合方式：按覆盖度叠加，未覆盖像素不写入
+    constexpr float32 OutlineCoreRadius = 2.0f;
+    constexpr float32 OutlineGlowRadius = 7.0f;
+    constexpr float32 OutlineGlowAlpha = 0.35f;
 }
 
 //获取资源依赖并初始化窗口渲染后端
@@ -112,6 +192,7 @@ void RenderSystem::Shutdown()
     debugLineWorld = nullptr;
     //释放渲染系统资源
     imguiLayer.Shutdown();
+    ReleaseOutlineResources();
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
     forwardPipeline.Shutdown();
@@ -312,6 +393,7 @@ void RenderSystem::Render(World& world, float deltaTime)
         scene.BuildRenderItems(visibleSet);
         sorter.Sort(visibleSet);//排序
         forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
+        RenderSelectionOutline(camera, visibleSet);//选择描边后处理
         if (debugLineWorld == &world && !debugLines.empty())
         {
             RenderPassDesc pass;
@@ -564,4 +646,226 @@ void RenderSystem::DrawLine(World& world, const vector3& start, const vector3& e
     }
     if (debugLines.size() >= 4096) return;
     debugLines.push_back({ start, end, tint, depthTest, drawLayer });
+}
+
+/// <summary>提交本帧需要描边的物体。</summary>
+void RenderSystem::SetSelectionHighlights(const List<SelectionHighlight>& highlights)
+{
+    selectionHighlights = highlights;
+}
+
+/// <summary>获取离屏目标的深度纹理。</summary>
+GpuDepthTextureID RenderSystem::GetRenderTargetDepthTexture(RenderTargetID id) const
+{
+    const ManagedRenderTarget* target = FindRenderTarget(id);
+    return target ? target->depthTexture : GpuDepthTextureID();
+}
+
+//查找本帧提交的描边颜色
+color RenderSystem::FindHighlightTint(EnsId ens) const
+{
+    for (const SelectionHighlight& highlight : selectionHighlights)
+    {
+        if (highlight.ens == ens) return highlight.tint;
+    }
+    return color { 0.0f, 0.0f, 0.0f, 0.0f };
+}
+
+//准备选择描边所需的内置 shader 和全屏四边形
+bool RenderSystem::PrepareOutlineResources()
+{
+    if (!outlineMaskProgram.IsValid())
+    {
+        GpuShaderProgramDesc maskDesc;
+        maskDesc.vertexSource = OutlineMaskVertexSource;
+        maskDesc.fragmentSource = OutlineMaskFragmentSource;
+        outlineMaskProgram = backend.CreateShaderProgram(maskDesc);
+    }
+
+    if (!outlineCompositeProgram.IsValid())
+    {
+        GpuShaderProgramDesc compositeDesc;
+        compositeDesc.vertexSource = OutlineCompositeVertexSource;
+        compositeDesc.fragmentSource = OutlineCompositeFragmentSource;
+        outlineCompositeProgram = backend.CreateShaderProgram(compositeDesc);
+    }
+
+    if (!outlineQuadInput.IsValid())
+    {
+        //后端固定按 位置/法线/uv/切线 取顶点，四边形要按同样步长补齐到 11 个 float
+        constexpr int32 VertexFloatCount = 11;
+        constexpr float32 Corners[4][2] = { { -1.0f, -1.0f }, { 1.0f, -1.0f }, { 1.0f, 1.0f }, { -1.0f, 1.0f } };
+        constexpr uint32 Indices[6] = { 0, 1, 2, 0, 2, 3 };
+
+        float32 vertexData[4 * VertexFloatCount] = {};
+        for (int32 index = 0; index < 4; ++index)
+        {
+            vertexData[index * VertexFloatCount + 0] = Corners[index][0];
+            vertexData[index * VertexFloatCount + 1] = Corners[index][1];
+        }
+
+        GpuBufferDesc vertexBufferDesc;
+        vertexBufferDesc.data = vertexData;
+        vertexBufferDesc.size = sizeof(vertexData);
+        outlineQuadVertexBuffer = backend.CreateVertexBuffer(vertexBufferDesc);
+
+        GpuBufferDesc indexBufferDesc;
+        indexBufferDesc.data = Indices;
+        indexBufferDesc.size = sizeof(Indices);
+        outlineQuadIndexBuffer = backend.CreateIndexBuffer(indexBufferDesc);
+
+        if (outlineQuadVertexBuffer.IsValid() && outlineQuadIndexBuffer.IsValid())
+        {
+            GpuVertexInputDesc inputDesc;
+            inputDesc.vertexBuffer = outlineQuadVertexBuffer;
+            inputDesc.indexBuffer = outlineQuadIndexBuffer;
+            inputDesc.stride = sizeof(float32) * VertexFloatCount;
+            outlineQuadInput = backend.CreateVertexInput(inputDesc);
+        }
+    }
+
+    const bool ready = outlineMaskProgram.IsValid() && outlineCompositeProgram.IsValid() && outlineQuadInput.IsValid();
+    if (!ready && !outlineWarned)
+    {
+        Log::Error("RenderSystem selection outline setup failed: builtin outline resources are unavailable.");
+        outlineWarned = true;
+    }
+    return ready;
+}
+
+//释放选择描边持有的后端资源
+void RenderSystem::ReleaseOutlineResources()
+{
+    if (outlineQuadInput.IsValid()) backend.DeleteVertexInput(outlineQuadInput);
+    if (outlineQuadVertexBuffer.IsValid()) backend.DeleteVertexBuffer(outlineQuadVertexBuffer);
+    if (outlineQuadIndexBuffer.IsValid()) backend.DeleteIndexBuffer(outlineQuadIndexBuffer);
+    if (outlineMaskTarget.IsValid()) backend.DeleteRenderTarget(outlineMaskTarget);
+    if (outlineMaskProgram.IsValid()) backend.DeleteShaderProgram(outlineMaskProgram);
+    if (outlineCompositeProgram.IsValid()) backend.DeleteShaderProgram(outlineCompositeProgram);
+
+    outlineQuadInput = GpuVertexInputID();
+    outlineQuadVertexBuffer = GpuVertexBufferID();
+    outlineQuadIndexBuffer = GpuIndexBufferID();
+    outlineMaskTarget = GpuRenderTargetID();
+    outlineMaskTexture = GpuTextureID();
+    outlineMaskProgram = GpuShaderProgramID();
+    outlineCompositeProgram = GpuShaderProgramID();
+    outlineMaskWidth = 0;
+    outlineMaskHeight = 0;
+    outlineWarned = false;
+}
+
+//为指定相机绘制选择描边：先写遮罩，再合成到相机颜色目标
+void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const VisibleSet& visibleSet)
+{
+    if (selectionHighlights.empty() || !camera.renderTarget.IsValid()) return;
+
+    const int32 viewportWidth = camera.viewportWidth;
+    const int32 viewportHeight = camera.viewportHeight;
+    if (viewportWidth <= 0 || viewportHeight <= 0) return;
+    if (!PrepareOutlineResources()) return;
+
+    //遮罩目标与相机视口同尺寸，并共享相机的深度纹理：描边因此会被前景遮挡
+    if (!outlineMaskTarget.IsValid() || outlineMaskWidth != viewportWidth || outlineMaskHeight != viewportHeight)
+    {
+        if (outlineMaskTarget.IsValid()) backend.DeleteRenderTarget(outlineMaskTarget);
+        outlineMaskTarget = GpuRenderTargetID();
+        outlineMaskTexture = GpuTextureID();
+        outlineMaskWidth = 0;
+        outlineMaskHeight = 0;
+
+        GpuRenderTargetDesc maskDesc;
+        maskDesc.width = viewportWidth;
+        maskDesc.height = viewportHeight;
+        maskDesc.depthTexture = GetRenderTargetDepthTexture(camera.renderTargetId);
+        outlineMaskTarget = backend.CreateRenderTarget(maskDesc);
+        if (!outlineMaskTarget.IsValid()) return;
+
+        outlineMaskTexture = backend.GetRenderTargetColorTexture(outlineMaskTarget);
+        outlineMaskWidth = viewportWidth;
+        outlineMaskHeight = viewportHeight;
+    }
+
+    //遮罩只在视口范围里有意义，先整张清成透明且不动共享深度
+    RenderPassDesc clearPass;
+    clearPass.width = outlineMaskWidth;
+    clearPass.height = outlineMaskHeight;
+    clearPass.renderTarget = outlineMaskTarget;
+    clearPass.clearMode = ClearMode::ColorOnly;
+    clearPass.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+    backend.BeginPass(clearPass);
+    backend.EndPass();
+
+    //第一遍：把选中几何按描边色平涂进遮罩，只测深度不写深度
+    //深度偏移把遮罩几何朝观察者推一点，抵消两次 pass 之间浮点误差造成的深度抖动
+    RenderPassDesc maskPass;
+    maskPass.x = camera.viewportX;
+    maskPass.y = camera.viewportY;
+    maskPass.width = viewportWidth;
+    maskPass.height = viewportHeight;
+    maskPass.renderTarget = outlineMaskTarget;
+    maskPass.clearMode = ClearMode::None;
+    backend.BeginPass(maskPass);
+    backend.SetDepthTest(true);
+    //场景刚写入的深度与被描边几何同层，必须用 LessEqual 才能通过深度测试
+    backend.SetDepthCompare(DepthCompare::LessEqual);
+    backend.SetDepthWrite(false);
+    backend.SetBlend(false);
+    backend.SetCullMode(CullMode::Back);
+    backend.SetPolygonOffset(true, -1.0f, -2.0f);
+    backend.BindShaderProgram(outlineMaskProgram);
+
+    bool drewAny = false;
+    for (const RenderItem& item : visibleSet.renderItems)
+    {
+        const color tint = FindHighlightTint(item.ens);
+        if (tint.a <= 0.0f) continue;
+
+        const GpuMesh* mesh = gpuResourceManager.GetMesh(item.mesh);
+        if (!mesh || !mesh->IsValid() || item.indexCount == 0) continue;
+
+        backend.BindVertexInput(mesh->vertexInput);
+        backend.SetUniformMatrix4("u_Model", item.localToWorld);
+        backend.SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        backend.SetUniformColor("u_Tint", tint);
+        backend.DrawIndexed(item.indexStart, item.indexCount);
+        drewAny = true;
+    }
+    backend.EndPass();
+    backend.SetPolygonOffset(false, 0.0f, 0.0f);
+    backend.SetDepthCompare(DepthCompare::Less);
+    backend.SetDepthWrite(true);
+    if (!drewAny) return;
+
+    //第二遍：把遮罩轮廓按覆盖度混合到相机颜色目标，物体自身保持原色
+    RenderPassDesc compositePass;
+    compositePass.x = camera.viewportX;
+    compositePass.y = camera.viewportY;
+    compositePass.width = viewportWidth;
+    compositePass.height = viewportHeight;
+    compositePass.renderTarget = camera.renderTarget;
+    compositePass.clearMode = ClearMode::None;
+    backend.BeginPass(compositePass);
+    backend.SetDepthTest(false);
+    backend.SetDepthWrite(false);
+    backend.SetBlend(true);
+    backend.SetCullMode(CullMode::None);
+    backend.BindShaderProgram(outlineCompositeProgram);
+    backend.BindTexture(0, outlineMaskTexture);
+    backend.SetUniformInt("u_Mask", 0);
+    backend.SetUniformVector3("u_TexelSize", vector3 {
+        1.0f / static_cast<float32>(viewportWidth),
+        1.0f / static_cast<float32>(viewportHeight),
+        0.0f });
+    backend.SetUniformFloat("u_CoreRadius", OutlineCoreRadius);
+    backend.SetUniformFloat("u_GlowRadius", OutlineGlowRadius);
+    backend.SetUniformFloat("u_GlowAlpha", OutlineGlowAlpha);
+    backend.BindVertexInput(outlineQuadInput);
+    backend.DrawIndexed(0, 6);
+    backend.EndPass();
+
+    //恢复后续绘制依赖的常规状态
+    backend.SetDepthTest(true);
+    backend.SetBlend(false);
+    backend.SetCullMode(CullMode::Back);
 }

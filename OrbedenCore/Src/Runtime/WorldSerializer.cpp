@@ -650,10 +650,28 @@ namespace
 
         for (const Reflection::FieldInfo& field : typeInfo->fields)
         {
-            if (field.kind != Reflection::FieldKind::ObjectRef || !field.objectRefTypeName || !field.getter) continue;
+            bool isList = field.kind == Reflection::FieldKind::ObjectRefList;
+            if ((!isList && field.kind != Reflection::FieldKind::ObjectRef) || !field.objectRefTypeName || !field.getter) continue;
 
-            std::string key = field.GetValueAsString(object);
-            if (key.empty() || IsWorldObjectRef(key)) continue;
+            //引用列表逐条预加载，空槽跳过
+            std::vector<std::string> keys;
+            std::string value = field.GetValueAsString(object);
+            if (!isList)
+            {
+                keys.push_back(value);
+            }
+            else
+            {
+                usize start = 0;
+                while (true)
+                {
+                    usize separator = value.find(Reflection::ReferenceListSeparator, start);
+                    usize length = separator == std::string::npos ? std::string::npos : separator - start;
+                    keys.push_back(value.substr(start, length));
+                    if (separator == std::string::npos) break;
+                    start = separator + 1;
+                }
+            }
 
             Type* refType = Object::FindType(field.objectRefTypeName);
             if (!refType)
@@ -662,7 +680,11 @@ namespace
                 return false;
             }
 
-            if (!ResourceManager::Load(refType, key)) return false;
+            for (const std::string& key : keys)
+            {
+                if (key.empty() || IsWorldObjectRef(key)) continue;
+                if (!ResourceManager::Load(refType, key)) return false;
+            }
         }
         return true;
     }

@@ -41,6 +41,7 @@ namespace Reflection
         String,
         StringId,
         ObjectRef,
+        ObjectRefList,
         Vector3,
         Color,
         Quaternion,
@@ -145,6 +146,44 @@ namespace Reflection
         static bool FromString(FieldKind kind, const std::string& text, Value& value);
     };
 
+    //对象引用列表用 '|' 分隔：Windows 文件名不允许 '|'，可以安全当分隔符
+    constexpr char ReferenceListSeparator = '|';
+
+    //把引用列表文本切成 Key，空段保留为空槽以维持槽位对齐
+    template<typename T>
+    void ParseReferenceList(const std::string& text, List<Ref<T>>& target)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        target.clear();
+        if (text.empty()) return;
+
+        usize start = 0;
+        while (true)
+        {
+            usize separator = text.find(ReferenceListSeparator, start);
+            usize length = separator == std::string::npos ? std::string::npos : separator - start;
+            Ref<T> element;
+            element.SetInstanceId(StringId(text.substr(start, length)));
+            target.push_back(std::move(element));
+            if (separator == std::string::npos) return;
+            start = separator + 1;
+        }
+    }
+
+    //把引用列表写成 '|' 连接的 Key 文本，空槽写成空段
+    template<typename T>
+    std::string FormatReferenceList(const List<Ref<T>>& value)
+    {
+        static_assert(std::is_base_of_v<Object, T>);
+        std::string text;
+        for (usize index = 0; index < value.size(); ++index)
+        {
+            if (index > 0) text += ReferenceListSeparator;
+            text += value[index].GetInstanceId().GetPath();
+        }
+        return text;
+    }
+
     //把受支持的 C++ 字段值直接装入类型化反射值。
     template<typename T>
     std::enable_if_t<!std::is_enum_v<T>, Value> ToValue(const T& value)
@@ -164,6 +203,13 @@ namespace Reflection
     Value ToValue(const Ref<T>& value)
     {
         return Value(value.Get());
+    }
+
+    //把对象引用列表按 Key 文本装入类型化反射值。
+    template<typename T>
+    Value ToValue(const List<Ref<T>>& value)
+    {
+        return Value(FormatReferenceList(value));
     }
 
     //从同类型反射值直接写入 C++ 字段。
@@ -192,6 +238,16 @@ namespace Reflection
         T* typedObject = object ? object->Cast<T>() : nullptr;
         if (object && !typedObject) return false;
         target.Set(typedObject);
+        return true;
+    }
+
+    //从 Key 文本反射值写入对象引用列表。
+    template<typename T>
+    bool SetFromValue(List<Ref<T>>& target, const Value& value)
+    {
+        std::string text;
+        if (!value.TryGet(text)) return false;
+        ParseReferenceList(text, target);
         return true;
     }
 
@@ -343,6 +399,13 @@ namespace Reflection
         return ToXmlValue(value.GetInstanceId());
     }
 
+    //把对象引用列表写成 '|' 连接的 Key 文本
+    template<typename T>
+    std::string ToXmlValue(const List<Ref<T>>& value)
+    {
+        return FormatReferenceList(value);
+    }
+
     //转换枚举为 XML 文本
     template<typename T>
     std::enable_if_t<std::is_enum_v<T>, std::string> ToXmlValue(T value)
@@ -389,6 +452,14 @@ namespace Reflection
     {
         static_assert(std::is_base_of_v<Object, T>);
         target.SetInstanceId(StringId(value));
+        return true;
+    }
+
+    //从 XML 文本读取对象引用列表
+    template<typename T>
+    bool SetFromXmlValue(List<Ref<T>>& target, const std::string& value)
+    {
+        ParseReferenceList(value, target);
         return true;
     }
 

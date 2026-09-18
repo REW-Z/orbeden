@@ -1226,7 +1226,6 @@ namespace
         Mesh& mesh,
         const std::string& meshKey,
         const std::unordered_map<const cgltf_material*, MaterialImportInfo>& materials,
-        const MaterialImportInfo& defaultMaterial,
         AssetCollection& collection,
         bool& needsNormals,
         bool& needsTangents)
@@ -1415,14 +1414,7 @@ namespace
         subMesh.indexStart = indexStart;
         subMesh.indexCount = static_cast<uint32>(mesh.indices.size()) - indexStart;
 
-        MaterialImportInfo materialInfo = defaultMaterial;
-        auto materialIt = materials.find(primitive.material);
-        if (materialIt != materials.end()) materialInfo = materialIt->second;
-        if (materialInfo.material)
-        {
-            subMesh.material.SetInstanceId(StringId(materialInfo.key));
-            ResourceManager::RegisterDependency(meshKey, materialInfo.key);
-        }
+        //材质仍然作为独立资源导入，但不挂到子网格上：由渲染器的槽位引用
         mesh.subMeshes.push_back(subMesh);
 
         needsNormals = needsNormals || !normals;
@@ -1499,35 +1491,52 @@ void AssetCollection::AddError(const std::string& error)
     Log::Error(error.c_str());
 }
 
-//按主文件路径选择导入器
-AssetCollection AssetPipeline::ImportSource(std::string path)
+//按主文件路径判断可用导入器
+AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
 {
-    std::string sourceKey = ResourceManager::GetSourceKey(path);
     std::string extension = GetLowerExtension(sourceKey);
 
     if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".tga" || extension == ".bmp")
     {
-        return Import_IMG(sourceKey);
+        return AssetImporter::Image;
     }
 
     if (extension == ".obj")
     {
-        return Import_OBJ(sourceKey);
+        return AssetImporter::Obj;
     }
 
     if (extension == ".gltf" || extension == ".glb")
     {
-        return Import_GLTF(sourceKey);
+        return AssetImporter::Gltf;
     }
 
     if (extension == ".orbshader")
     {
-        return Import_ORBSHADER(sourceKey);
+        return AssetImporter::OrbShader;
     }
 
     if (FileSystem::Exist(GetAssetFilePath(sourceKey + ".vert.glsl")) && FileSystem::Exist(GetAssetFilePath(sourceKey + ".frag.glsl")))
     {
-        return Import_GLSL(sourceKey);
+        return AssetImporter::Glsl;
+    }
+
+    return AssetImporter::None;
+}
+
+//按主文件路径选择导入器
+AssetCollection AssetPipeline::ImportSource(std::string path)
+{
+    std::string sourceKey = ResourceManager::GetSourceKey(path);
+
+    switch (SelectImporter(sourceKey))
+    {
+    case AssetImporter::Image: return Import_IMG(sourceKey);
+    case AssetImporter::Obj: return Import_OBJ(sourceKey);
+    case AssetImporter::Gltf: return Import_GLTF(sourceKey);
+    case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
+    case AssetImporter::Glsl: return Import_GLSL(sourceKey);
+    case AssetImporter::None: break;
     }
 
     AssetCollection collection;
@@ -1741,7 +1750,7 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path)
                 collection.AddWarning("glTF morph targets are not supported and were ignored: " + meshKey);
             }
 
-            if (!AppendGltfPrimitive(primitive, *mesh, meshKey, materials, defaultMaterial, collection, needsNormals, needsTangents))
+            if (!AppendGltfPrimitive(primitive, *mesh, meshKey, materials, collection, needsNormals, needsTangents))
             {
                 break;
             }
@@ -1817,16 +1826,10 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
         {
             if (currentSubMesh) return currentSubMesh;
 
+            //OBJ 的 usemtl 只用来给子网格起名，材质本身不再挂到子网格上
             SubMesh subMesh;
             subMesh.name = currentMaterialName.empty() ? "Default" : currentMaterialName;
             subMesh.indexStart = static_cast<uint32>(mesh->indices.size());
-
-            auto materialIt = materials.find(currentMaterialName);
-            if (materialIt != materials.end())
-            {
-                subMesh.material.SetInstanceId(StringId(materialIt->second.key));
-                ResourceManager::RegisterDependency(meshKey, materialIt->second.key);
-            }
 
             mesh->subMeshes.push_back(subMesh);
             currentSubMesh = &mesh->subMeshes.back();

@@ -43,6 +43,9 @@ public:
     //释放指定资源
     static bool Unload(const std::string& key);
 
+    //把已加载资源的 Key 迁移到新路径，对象身份保持不变，返回迁移的记录数
+    static uint32 RemapKeys(const std::string& oldKey, const std::string& newKey, bool prefix);
+
     //注册导入出来的资源对象
     static bool RegisterObject(const std::string& key, Object* object);
 

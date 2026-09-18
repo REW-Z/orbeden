@@ -4,6 +4,7 @@
 #include "Platform/GlfwWindow.h"
 #include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
+#include "Platform/ExecutablePath.h"
 #include "Scripting/ScriptSystem.h"
 
 #include <filesystem>
@@ -28,10 +29,6 @@ extern "C"
     void ORBEDEN_NATIVE_CALL OrbedenGame_EnsDestroyed(EnsId ens);
     void ORBEDEN_NATIVE_CALL OrbedenGame_DrawGui();
 }
-
-#if !defined(ORBEDEN_PROJECT_DIR)
-#error ORBEDEN_PROJECT_DIR must identify the project packaged with this player.
-#endif
 
 namespace
 {
@@ -80,9 +77,8 @@ namespace
         return found;
     }
 
-    bool LoadConfiguredProject(Application& app)
+    bool LoadConfiguredProject(Application& app, const std::filesystem::path& projectRoot)
     {
-        std::filesystem::path projectRoot = Utf8Path::FromUtf8(ORBEDEN_PROJECT_DIR);
         if (!std::filesystem::is_directory(projectRoot))
         {
             Log::Error(("Player project directory does not exist: " + ToCleanPath(projectRoot)).c_str());
@@ -115,7 +111,7 @@ namespace
     }
 }
 
-int main()
+int main(int argc, char** argv)
 {
     GlfwWindow window;
     WindowDesc windowDesc;
@@ -140,7 +136,7 @@ int main()
     OrbedenGameNative_RegisterReflection();
 #endif
 
-    if (!LoadConfiguredProject(app))
+    if (!LoadConfiguredProject(app, ExecutablePath::GetDirectory(argc > 0 ? argv[0] : "")))
     {
         app.Quit();
         return 1;

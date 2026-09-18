@@ -289,7 +289,7 @@ internal sealed class InspectorPanel : EditorPanel
             || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         bool expanded = EditorGUI.BeginCollapsibleComponentBlock(
             title,
-            EditorComponentIcons.Resolve(primary.TypeName, primary.IsManaged),
+            EditorIconCatalog.ForComponent(primary.TypeName, primary.IsManaged),
             $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}",
             removable,
             out bool removeRequested);
@@ -336,8 +336,10 @@ internal sealed class InspectorPanel : EditorPanel
             _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
             _ => [],
         };
-        foreach (PropertyValue property in document.Properties.OrderBy(value =>
-            Array.IndexOf(order, value.Name) is int index && index >= 0 ? index : int.MaxValue).ToArray())
+        foreach (PropertyValue property in document.Properties
+            .OrderBy(value => GetPropertyOrder(value.Name, order))
+            .ThenBy(value => GetMaterialSlotIndex(value.Name))
+            .ToArray())
         {
             string label = property.HasMultipleDifferentValues
                 ? $"{property.Name} (Mixed)"
@@ -373,6 +375,24 @@ internal sealed class InspectorPanel : EditorPanel
         if (document.HasPendingChanges)
             propertyError = document.ApplyChanges($"Edit {undoPrefix}") ? string.Empty
                 : $"Failed to apply {undoPrefix}; changes were rolled back.";
+    }
+
+    //字段排序：顺序表里的按表排，渲染器的材质槽紧跟 mesh，其余排最后
+    private static int GetPropertyOrder(string name, string[] order)
+    {
+        int index = Array.IndexOf(order, name);
+        if (index >= 0) return index * 10;
+
+        int meshIndex = Array.IndexOf(order, "mesh");
+        if (meshIndex >= 0 && name.StartsWith("material[", StringComparison.Ordinal)) return meshIndex * 10 + 5;
+        return int.MaxValue;
+    }
+
+    //取材质槽下标，其余字段统一返回 0
+    private static int GetMaterialSlotIndex(string name)
+    {
+        return name.StartsWith("material[", StringComparison.Ordinal) && name.EndsWith(']')
+            && int.TryParse(name.AsSpan(9, name.Length - 10), out int slot) ? slot : 0;
     }
 
     //绘制单个属性并返回用户提交的新值。

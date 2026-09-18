@@ -58,9 +58,10 @@ internal static class ProjectAssetOperations
                 return false;
             }
 
+            EditorAssetCatalog.Instance.Refresh();
+            //进程内状态更新放在所有可能失败的磁盘步骤之后，失败回滚才不会留下半套映射
             EditorPanelRegistry.RemapAssetReferences(plan.OldResourceKey, plan.NewResourceKey, plan.Prefix);
             int liveCount = EditorAssetsNative.RemapLiveReferences(plan.OldResourceKey, plan.NewResourceKey, plan.Prefix);
-            EditorAssetCatalog.Instance.Refresh();
             message = $"Moved asset and updated {plan.ChangedReferenceCount + liveCount} references.";
             return true;
         }
@@ -106,9 +107,10 @@ internal static class ProjectAssetOperations
             }
 
             EditorAssetsNative.RemapWorldKeys(plan.OldResourceKey, string.Empty, plan.Prefix);
+            EditorAssetCatalog.Instance.Refresh();
+            //进程内状态更新放在所有可能失败的磁盘步骤之后，失败回滚才不会留下半套映射
             EditorPanelRegistry.RemapAssetReferences(plan.OldResourceKey, string.Empty, plan.Prefix);
             int liveCount = EditorAssetsNative.RemapLiveReferences(plan.OldResourceKey, string.Empty, plan.Prefix);
-            EditorAssetCatalog.Instance.Refresh();
             message = $"Moved asset to Recycle Bin and cleared {plan.ChangedReferenceCount + liveCount} references.";
             return true;
         }

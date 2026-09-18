@@ -21,6 +21,15 @@ public:
 //渲染系统
 class RenderSystem : public IEngineSystem
 {
+public:
+    //选中物体描边：目标 Ens 与其描边颜色，alpha 为 0 表示不描边
+    struct SelectionHighlight
+    {
+    public:
+        EnsId ens;
+        color tint;
+    };
+
 private:
     struct ManagedRenderTarget
     {
@@ -81,6 +90,19 @@ private:
     List<ManagedCameraFrameTextures> cameraFrameTextures;
     uint32 nextRenderTargetId = 1;
 
+    //选择描边：内置 shader、全屏四边形和复用的遮罩目标
+    GpuShaderProgramID outlineMaskProgram;
+    GpuShaderProgramID outlineCompositeProgram;
+    GpuRenderTargetID outlineMaskTarget;
+    GpuTextureID outlineMaskTexture;
+    GpuVertexInputID outlineQuadInput;
+    GpuVertexBufferID outlineQuadVertexBuffer;
+    GpuIndexBufferID outlineQuadIndexBuffer;
+    int32 outlineMaskWidth = 0;
+    int32 outlineMaskHeight = 0;
+    bool outlineWarned = false;
+    List<SelectionHighlight> selectionHighlights;
+
     //主 framebuffer 尺寸。
     int32 framebufferWidth = 0;
     int32 framebufferHeight = 0;
@@ -109,6 +131,18 @@ private:
 
     //准备当前帧相机的目标、像素 viewport 和投影数据
     void PrepareCameraRenderData();
+
+    //准备选择描边所需的内置 shader 和全屏四边形
+    bool PrepareOutlineResources();
+
+    //释放选择描边持有的后端资源
+    void ReleaseOutlineResources();
+
+    //为指定相机绘制选择描边：先把选中几何写成遮罩，再合成到相机颜色目标
+    void RenderSelectionOutline(const RenderCamera& camera, const VisibleSet& visibleSet);
+
+    //查找本帧提交的描边颜色，未选中时 alpha 为 0
+    color FindHighlightTint(EnsId ens) const;
 
     //查找指定相机持有的颜色和深度快照资源
     ManagedCameraFrameTextures* FindCameraFrameTextures(EnsId cameraEns);
@@ -151,8 +185,14 @@ public:
     //删除离屏渲染目标及其关联的深度纹理  
     void DeleteRenderTarget(RenderTargetID id);
 
-    //获取离屏目标的颜色纹理  
+    //获取离屏目标的颜色纹理
     GpuTextureID GetRenderTargetTexture(RenderTargetID id) const;
+
+    //获取离屏目标的深度纹理，供后处理共享同一份深度
+    GpuDepthTextureID GetRenderTargetDepthTexture(RenderTargetID id) const;
+
+    //提交本帧需要描边的物体；传空列表关闭描边
+    void SetSelectionHighlights(const List<SelectionHighlight>& highlights);
 
     const RenderScene& GetCurrentScene() const;
 

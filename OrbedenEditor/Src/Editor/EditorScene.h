@@ -75,60 +75,6 @@ public:
 class EditorScene
 {
 private:
-    struct IndexRange
-    {
-    public:
-        uint32 start = 0;
-        uint32 count = 0;
-
-        /// <summary>判断两个索引范围是否一致。</summary>
-        bool operator==(const IndexRange& other) const
-        {
-            return start == other.start && count == other.count;
-        }
-    };
-
-    struct TopologyTriangle
-    {
-    public:
-        uint32 a = 0;
-        uint32 b = 0;
-        uint32 c = 0;
-    };
-
-    struct TopologyEdge
-    {
-    public:
-        uint32 a = 0;
-        uint32 b = 0;
-        uint32 faceOffset = 0;
-        uint32 faceCount = 0;
-    };
-
-    struct MeshTopology
-    {
-    public:
-        int32 objectId = 0;
-        uint64 instanceHash = 0;
-        usize vertexCount = 0;
-        usize indexCount = 0;
-        uint64 lastUsedFrame = 0;
-        List<IndexRange> ranges;
-        List<vector3> vertices;
-        List<TopologyTriangle> triangles;
-        List<TopologyEdge> edges;
-        List<uint32> edgeFaces;
-    };
-
-    struct ClipPoint
-    {
-    public:
-        float32 x = 0.0f;
-        float32 y = 0.0f;
-        float32 z = 0.0f;
-        float32 w = 1.0f;
-    };
-
     static EditorScene* activeScene;
 
     Application& app;
@@ -153,11 +99,6 @@ private:
     bool selectionDragged = false;
     bool selectionCtrl = false;
     vector2 selectionStart = { 0.0f, 0.0f };
-    std::unordered_map<Mesh*, List<MeshTopology>> topologyCache;
-    List<vector3> worldVerticesScratch;
-    List<ClipPoint> clipVerticesScratch;
-    List<int8> faceOrientationsScratch;
-    uint64 frameIndex = 0;
     matrix4x4 gizmoViewProjection;
 
 public:
@@ -274,21 +215,8 @@ private:
     bool RaycastScene(const RenderScene& scene, const vector2& screenPosition,
         EnsId& hitEns, vector3& hitPosition) const;
 
-    //绘制当前选择及其后代的屏幕空间轮廓。
-    void DrawSelectionOutline(const RenderScene& scene, World& world,
-        const vector2& viewPosition, const vector2& viewSize);
-
-    //清空网格拓扑缓存。
-    void ClearTopologyCache();
-
-    //获取与网格数据和有效索引范围匹配的拓扑缓存。
-    const MeshTopology& GetTopology(Mesh* mesh, const List<IndexRange>& ranges);
-
-    //计算顶点的齐次裁剪空间坐标。
-    static ClipPoint TransformClip(const matrix4x4& matrix, const vector3& point);
-
-    //将齐次裁剪空间线段裁剪到六个视锥平面内。
-    static bool ClipLine(ClipPoint& a, ClipPoint& b);
+    //把当前选择及其后代提交给渲染系统做屏幕空间描边。
+    void SubmitSelectionHighlight(World& world);
 
     //绘制托管 Scene Handles。
     void DrawManagedGizmos();

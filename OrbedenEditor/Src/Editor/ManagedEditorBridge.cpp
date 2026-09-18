@@ -8,10 +8,12 @@
 #include "Editor/Panels/ManagedPanelAdapter.h"
 #include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
+#include "Platform/ExecutablePath.h"
 #include "Log/Log.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/WorldSerializer.h"
+#include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/Object/Transform.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Script.h"
@@ -97,6 +99,7 @@ namespace
         void* instantiatePrefab = nullptr;
         void* captureEns = nullptr;
         void* destroyEnsTree = nullptr;
+        void* createEns = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -161,25 +164,16 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 14);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 8);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 101);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 104);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 49);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 57);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 59);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 61);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 75);
-
-    //获取可执行文件所在目录
-    std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
-    {
-        if (executablePath.empty()) return std::filesystem::current_path();
-
-        std::filesystem::path path = std::filesystem::absolute(Utf8Path::FromUtf8(executablePath));
-        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
-    }
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 51);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 59);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 61);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 63);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 78);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -226,6 +220,33 @@ namespace
 
         mapped = newKey + source.substr(oldKey.size()) + subId;
         return mapped != value;
+    }
+
+    //重写 '|' 连接的引用列表文本，空槽与分隔符原样保留
+    bool TryMapResourceKeyList(const std::string& value, const std::string& oldKey, const std::string& newKey,
+        bool prefix, std::string& mapped)
+    {
+        std::string result;
+        usize start = 0;
+        bool changed = false;
+        while (true)
+        {
+            usize separator = value.find(Reflection::ReferenceListSeparator, start);
+            usize length = separator == std::string::npos ? std::string::npos : separator - start;
+            std::string entry = value.substr(start, length);
+            std::string entryMapped;
+            if (TryMapResourceKey(entry, oldKey, newKey, prefix, entryMapped))
+            {
+                entry = entryMapped;
+                changed = true;
+            }
+            result += entry;
+            if (separator == std::string::npos) break;
+            result += Reflection::ReferenceListSeparator;
+            start = separator + 1;
+        }
+        mapped = result;
+        return changed;
     }
 
     //判断是否允许托管层修改资源。
@@ -353,6 +374,19 @@ namespace
         editor->GetEditorScene().SelectEns(root->GetId());
         editor->RequestRepaint();
         return root->GetObjectId();
+    }
+
+    //在当前 World 根下创建空 Ens 并返回对象号
+    int32 ORBEDEN_NATIVE_CALL CreateManagedEns(void* context, const uint8* name, int32 nameLength)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
+
+        Ens* ens = editor->GetWorld().CreateEns(ReadUtf8(name, nameLength));
+        if (!ens) return 0;
+        editor->GetEditorScene().SelectEns(ens->GetId());
+        editor->RequestRepaint();
+        return ens->GetObjectId();
     }
 
     //读取项目操作失败原因
@@ -507,17 +541,21 @@ namespace
                 }
                 for (const Reflection::FieldInfo& field : fields)
                 {
-                    if (field.kind != Reflection::FieldKind::ObjectRef || !field.getter || !field.setter) continue;
+                    bool isList = field.kind == Reflection::FieldKind::ObjectRefList;
+                    if ((!isList && field.kind != Reflection::FieldKind::ObjectRef) || !field.getter || !field.setter) continue;
 
-                    std::string mapped;
-                    if (!TryMapResourceKey(field.GetValueAsString(object), oldKey, newKey, prefix != 0, mapped)) continue;
-                    if (field.SetValueFromString(object, mapped)) changed++;
+                    std::string current = field.GetValueAsString(object), mapped;
+                    bool matched = isList
+                        ? TryMapResourceKeyList(current, oldKey, newKey, prefix != 0, mapped)
+                        : TryMapResourceKey(current, oldKey, newKey, prefix != 0, mapped);
+                    if (!matched) continue;
+                    if (field.SetValueFromString(object, mapped)) ++changed;
                 }
             });
         }
 
-        //刷新资源引用缓存
-        ResourceManager::Shutdown();
+        //已加载资源跟着新路径重登记：销毁它们会让场景里现有的引用全部悬空
+        ResourceManager::RemapKeys(oldKey, newKey, prefix != 0);
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (editor) editor->RequestRepaint();
         return changed;
@@ -540,6 +578,39 @@ namespace
         fields.erase(std::remove_if(fields.begin(), fields.end(), [](const Reflection::FieldInfo* field)
             { return !field || !field->persistent || !field->getter || !field->setter; }), fields.end());
         return fields;
+    }
+
+    //渲染器按子网格合成的材质槽数量，其余组件为 0
+    int32 GetComponentMaterialSlotCount(Component* component)
+    {
+        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
+        Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
+        return mesh ? static_cast<int32>(mesh->subMeshes.size()) : 0;
+    }
+
+    //取渲染器某个材质槽的当前资源 Key
+    std::string GetComponentMaterialSlotKey(Component* component, int32 slot)
+    {
+        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
+        if (!renderer || slot < 0 || static_cast<usize>(slot) >= renderer->materials.size()) return std::string();
+        return renderer->materials[static_cast<usize>(slot)].GetInstanceId().GetPath();
+    }
+
+    //写入渲染器某个材质槽，槽位超出当前数组长度时补齐
+    bool SetComponentMaterialSlotKey(Component* component, int32 slot, const std::string& key)
+    {
+        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
+        if (!renderer || slot < 0) return false;
+        if (static_cast<usize>(slot) >= renderer->materials.size())
+            renderer->materials.resize(static_cast<usize>(slot) + 1);
+        renderer->materials[static_cast<usize>(slot)].SetInstanceId(StringId(key));
+        return true;
+    }
+
+    //材质槽在 Inspector 里的显示名
+    std::string GetComponentMaterialSlotName(int32 slot)
+    {
+        return "material[" + std::to_string(slot) + "]";
     }
     //把精确 Script 识别为 C# 脚本宿主。
     Script* AsManagedScriptHost(Component* component)
@@ -600,7 +671,8 @@ namespace
         Component* component = FindEditorComponent(context, objectId);
         Script* host = AsManagedScriptHost(component);
         if (host) return 1 + static_cast<int32>(GetManagedScriptFields(host).size());
-        return static_cast<int32>(GetEditorComponentFields(component).size());
+        //反射字段之后追加渲染器按子网格合成的材质槽
+        return static_cast<int32>(GetEditorComponentFields(component).size()) + GetComponentMaterialSlotCount(component);
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldName(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
@@ -617,8 +689,12 @@ namespace
         }
 
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
-        return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
+        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
+            return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
+
+        int32 slot = fieldIndex - static_cast<int32>(fields.size());
+        if (slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
+        return CopyUtf8(GetComponentMaterialSlotName(slot), buffer, bufferSize);
     }
 
     //枚举符合声明类型的存活 Object 引用
@@ -738,11 +814,18 @@ namespace
             return CopyUtf8(name, buffer, bufferSize);
         }
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
-        const Reflection::FieldInfo& field = *fields[fieldIndex];
-        if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
-        return field.kind == Reflection::FieldKind::ObjectRef && field.objectRefTypeName
-            ? CopyUtf8(field.objectRefTypeName, buffer, bufferSize) : 0;
+        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()))
+        {
+            const Reflection::FieldInfo& field = *fields[fieldIndex];
+            if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
+            return (field.kind == Reflection::FieldKind::ObjectRef || field.kind == Reflection::FieldKind::ObjectRefList)
+                && field.objectRefTypeName ? CopyUtf8(field.objectRefTypeName, buffer, bufferSize) : 0;
+        }
+
+        //合成材质槽按 Material 过滤候选资源
+        int32 slot = fieldIndex - static_cast<int32>(fields.size());
+        if (slot >= 0 && slot < GetComponentMaterialSlotCount(component)) return CopyUtf8("Material", buffer, bufferSize);
+        return 0;
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
@@ -760,8 +843,13 @@ namespace
         }
 
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
-        return static_cast<int32>(fields[fieldIndex]->kind);
+        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
+            return static_cast<int32>(fields[fieldIndex]->kind);
+
+        //合成材质槽按普通对象引用对绘制
+        int32 slot = fieldIndex - static_cast<int32>(fields.size());
+        if (slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
+        return static_cast<int32>(Reflection::FieldKind::ObjectRef);
     }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldValue(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
@@ -778,8 +866,12 @@ namespace
         }
 
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
-        return CopyUtf8(fields[fieldIndex]->GetValueAsString(component), buffer, bufferSize);
+        if (component && fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
+            return CopyUtf8(fields[fieldIndex]->GetValueAsString(component), buffer, bufferSize);
+
+        int32 slot = fieldIndex - static_cast<int32>(fields.size());
+        if (!component || slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
+        return CopyUtf8(GetComponentMaterialSlotKey(component, slot), buffer, bufferSize);
     }
 
     uint8 ORBEDEN_NATIVE_CALL SetManagedComponentFieldValue(void* context,
@@ -808,8 +900,12 @@ namespace
         }
 
         List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (!component || fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size()) || !fields[fieldIndex]) return 0;
-        return fields[fieldIndex]->SetValueFromString(component, valueText) ? 1 : 0;
+        if (component && fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
+            return fields[fieldIndex]->SetValueFromString(component, valueText) ? 1 : 0;
+
+        int32 slot = fieldIndex - static_cast<int32>(fields.size());
+        if (!component || slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
+        return SetComponentMaterialSlotKey(component, slot, valueText) ? 1 : 0;
     }
 
     uint8 ORBEDEN_NATIVE_CALL SetManagedScriptField(void* context,
@@ -981,7 +1077,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         return false;
     }
 
-    std::filesystem::path managedDirectory = GetExecutableDirectory(executablePath) / "Managed";
+    std::filesystem::path managedDirectory = ExecutablePath::GetDirectory(executablePath) / "Managed";
     std::string editorAssemblyPath = Utf8Path::ToUtf8((managedDirectory / "Orbeden.Editor.dll").lexically_normal());
 
     //绑定托管入口并注册面板
@@ -1038,6 +1134,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.instantiatePrefab = reinterpret_cast<void*>(&InstantiateManagedPrefab);
     editorApi.assets.captureEns = reinterpret_cast<void*>(&CaptureManagedEns);
     editorApi.assets.destroyEnsTree = reinterpret_cast<void*>(&DestroyManagedEnsTree);
+    editorApi.assets.createEns = reinterpret_cast<void*>(&CreateManagedEns);
     editorApi.components.context = &editor;
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);

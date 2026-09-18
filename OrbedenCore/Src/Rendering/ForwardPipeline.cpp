@@ -6,6 +6,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Runtime/CookedAssetSerializer.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 
@@ -33,21 +34,36 @@ namespace
         return keys;
     }
 
-    //在内容根内递归查找指定文件名，返回内容根相对 Key；找不到返回空串。
+    //在内容根内按文件名查找资源 Key；找不到返回空串。
+    //打包目录内只有产物与清单、没有源文件，因此存在清单时按清单匹配。
     std::string FindContentKeyByFileName(const std::string& fileName)
     {
         if (!PathDefines::HasContentRoot()) return std::string();
 
-        std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot());
         List<std::string> matches;
-        std::error_code error;
-        for (std::filesystem::recursive_directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error))
+        List<std::string> cookedKeys;
+        if (CookedAssetSerializer::ReadIndex(cookedKeys))
         {
-            const std::filesystem::directory_entry& entry = *iterator;
-            if (!entry.is_regular_file()) continue;
-            if (Utf8Path::ToUtf8(entry.path().filename()) != fileName) continue;
+            for (const std::string& key : cookedKeys)
+            {
+                if (Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).filename()) != fileName) continue;
 
-            matches.push_back(Utf8Path::ToUtf8(entry.path().lexically_relative(root)));
+                matches.push_back(key);
+            }
+        }
+        else
+        {
+            //未打包的内容根按文件名递归扫描，目录结构完全自由。
+            std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot());
+            std::error_code error;
+            for (std::filesystem::recursive_directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error))
+            {
+                const std::filesystem::directory_entry& entry = *iterator;
+                if (!entry.is_regular_file()) continue;
+                if (Utf8Path::ToUtf8(entry.path().filename()) != fileName) continue;
+
+                matches.push_back(Utf8Path::ToUtf8(entry.path().lexically_relative(root)));
+            }
         }
 
         if (matches.empty()) return std::string();
@@ -613,11 +629,12 @@ bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDir
 
         backend->SetUniformMatrix4("u_Model", state.localToWorld);
         backend->BindVertexInput(mesh->vertexInput);
-        for (const SubMesh& subMesh : sourceMesh->subMeshes)
+        for (usize index = 0; index < sourceMesh->subMeshes.size(); ++index)
         {
+            const SubMesh& subMesh = sourceMesh->subMeshes[index];
             usize start = static_cast<usize>(subMesh.indexStart);
             usize count = static_cast<usize>(subMesh.indexCount);
-            if (!subMesh.material.Get() || count == 0 ||
+            if (index >= renderer->materials.size() || !renderer->materials[index].Get() || count == 0 ||
                 start > sourceMesh->indices.size() || count > sourceMesh->indices.size() - start) continue;
 
             backend->DrawIndexed(subMesh.indexStart, subMesh.indexCount);

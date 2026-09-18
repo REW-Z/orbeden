@@ -328,6 +328,12 @@ namespace Reflection
             value = Value(StringId(text));
             return true;
         }
+        case FieldKind::ObjectRefList:
+        {
+            //引用列表整体以 '|' 连接的 Key 文本传递
+            value = Value(text);
+            return true;
+        }
         case FieldKind::Vector3:
         {
             vector3 parsed;

@@ -3,6 +3,7 @@
 #include "FileSystem/FileSystem.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
+#include "Runtime/CookedAssetSerializer.h"
 #include "Runtime/Object/Component.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
@@ -12,6 +13,7 @@
 
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace
 {
@@ -57,6 +59,16 @@ namespace
         return nullptr;
     }
 
+    //正在加载中的资源 Key，防止跨文件引用成环时无限递归
+    std::unordered_set<std::string>& GetLoadingAssetKeys()
+    {
+        static std::unordered_set<std::string> loadingAssetKeys;
+        return loadingAssetKeys;
+    }
+
+    //优先按打包产物加载，缺失或读取失败时返回 false
+    bool LoadCookedAsset(const std::string& resourceKey);
+
     //加载资源 Key 对应的资源记录
     ResourceManager::ResourceRecord* LoadResourceRecord(Type* type, const std::string& key)
     {
@@ -66,8 +78,13 @@ namespace
         ResourceManager::ResourceRecord* record = FindRecordMutable(resourceKey);
         if (!record)
         {
-            AssetCollection collection = AssetPipeline::ImportSource(ResourceManager::GetSourceKey(resourceKey));
-            (void)collection;
+            //打包产物按对象存放，用完整 Key 查找；缺失时回退到源文件导入，两者都没有才报错。
+            if (!LoadCookedAsset(resourceKey))
+            {
+                AssetCollection collection = AssetPipeline::ImportSource(ResourceManager::GetSourceKey(resourceKey));
+                (void)collection;
+            }
+
             record = FindRecordMutable(resourceKey);
         }
 
@@ -84,6 +101,34 @@ namespace
         }
 
         return record;
+    }
+
+    //优先按打包产物加载，缺失或读取失败时返回 false
+    bool LoadCookedAsset(const std::string& resourceKey)
+    {
+        std::string blobPath = CookedAssetSerializer::GetBlobPath(resourceKey);
+        if (!FileSystem::Exist(blobPath)) return false;
+
+        if (!GetLoadingAssetKeys().insert(resourceKey).second) return false;
+
+        List<std::string> externalRefs;
+        std::string error;
+        bool loaded = CookedAssetSerializer::Read(blobPath, externalRefs, error);
+        if (!loaded)
+        {
+            Log::Error(error.c_str());
+        }
+        else
+        {
+            //补齐跨文件引用，与导入期的即时导入行为保持一致。
+            for (const std::string& referenceKey : externalRefs)
+            {
+                LoadResourceRecord(nullptr, referenceKey);
+            }
+        }
+
+        GetLoadingAssetKeys().erase(resourceKey);
+        return loaded;
     }
 }
 
@@ -121,6 +166,55 @@ void ResourceManager::Shutdown()
     }
 
     records.clear();
+}
+
+//把已加载资源的 Key 迁移到新路径，对象身份保持不变
+uint32 ResourceManager::RemapKeys(const std::string& oldKey, const std::string& newKey, bool prefix)
+{
+    std::string source = ToResourceKey(oldKey);
+    std::string target = ToResourceKey(newKey);
+    if (source.empty() || target.empty() || source == target) return 0;
+
+    //判断某个 Key 是否落在被迁移的路径下
+    auto matches = [&](const std::string& key)
+    {
+        std::string keySource = GetSourceKey(key);
+        if (keySource == source) return true;
+        return prefix && keySource.size() > source.size()
+            && keySource.compare(0, source.size(), source) == 0 && keySource[source.size()] == '/';
+    };
+
+    auto& records = GetResourceRuntime().records;
+    //先收集命中的记录：边遍历边改哈希表会让迭代器失效
+    List<std::string> matched;
+    for (const auto& pair : records)
+    {
+        if (matches(pair.first)) matched.push_back(pair.first);
+    }
+
+    uint32 moved = 0;
+    for (const std::string& key : matched)
+    {
+        ResourceRecord record = records[key];
+        std::string mapped = target + key.substr(source.size());
+        //对象按新 Key 重新登记：场景里已存在的引用仍然指向同一个实例，不能销毁重建
+        if (record.object) record.object->ChangeInstancePath(StringId(mapped));
+        record.key = mapped;
+        records.erase(key);
+        records[mapped] = std::move(record);
+        ++moved;
+    }
+
+    //依赖表里记录的旧 Key 一并改到新 Key
+    for (auto& pair : records)
+    {
+        for (std::string& dependency : pair.second.dependencies)
+        {
+            if (matches(dependency)) dependency = target + dependency.substr(source.size());
+        }
+    }
+
+    return moved;
 }
 
 //释放指定资源
@@ -209,14 +303,8 @@ void ResourceManager::MarkObjectGraph(Object* object, std::unordered_set<int32>&
     if (!object || object->Is(Component::StaticType())) return;
     if (!marked.insert(object->GetObjectId()).second) return;
 
-    if (Mesh* mesh = object->Cast<Mesh>())
-    {
-        for (const SubMesh& subMesh : mesh->subMeshes)
-        {
-            MarkObjectGraph(subMesh.material.Get(), marked);
-        }
-    }
-    else if (Material* material = object->Cast<Material>())
+    //网格只持有几何，材质由渲染器引用，不再进入网格的资源依赖图
+    if (Material* material = object->Cast<Material>())
     {
         MarkObjectGraph(material->shader.Get(), marked);
         for (const MaterialTextureSlot& slot : material->textureSlots)

@@ -16,6 +16,7 @@ class IChunk;
 class World;
 class WorldSerializer;
 class AssetPipelineObjectFactory;
+class CookedAssetSerializer;
 class ComponentStorage;
 namespace Reflection
 {
@@ -282,6 +283,7 @@ private:
 
     friend class ::World;
     friend class ::WorldSerializer;
+    friend class ::CookedAssetSerializer;
     friend class ::ResourceManager;
     friend class ::AssetPipelineObjectFactory;
     friend class ::ComponentStorage;

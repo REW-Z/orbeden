@@ -49,6 +49,7 @@ internal enum NativeFieldKind
     String,
     StringId,
     ObjectRef,
+    ObjectRefList,
     Vector3,
     Color,
     Quaternion,

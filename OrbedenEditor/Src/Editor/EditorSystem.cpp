@@ -3,10 +3,15 @@
 #include "Log/Log.h"
 #include "Editor/EditorIcons.h"
 #include "Editor/NewProjectGenerator.h"
+#include "Editor/PlayerContentCooker.h"
 #include "Editor/ProjectLayout.h"
 #include "Editor/ProjectUpgrader.h"
 #include "InputManager/InputManager.h"
+#include "FileSystem/PathDefines.h"
 #include "FileSystem/Utf8Path.h"
+#include "Platform/ExecutablePath.h"
+#include "Rendering/RenderSystem.h"
+#include "ResourceManager/ResourceManager.h"
 
 #include <algorithm>
 #include <array>
@@ -130,17 +135,12 @@ namespace
     //两处必须一致，否则构建完成后会在这里找不到产物。
     constexpr const char* PlayerAotDirectory = "Build/Aot";
 
+    //Player 打包目录相对项目根，必须与 OrbedenGame.vcxproj 的 OutDir 一致。
+    constexpr const char* PlayerPackageDirectory = "Build/windows-x64/bin";
+
     std::string ToCleanPath(const std::filesystem::path& path)
     {
         return Utf8Path::ToUtf8(path.lexically_normal());
-    }
-
-    std::filesystem::path GetExecutableDirectory(const std::string& executablePath)
-    {
-        if (executablePath.empty()) return std::filesystem::current_path();
-
-        std::filesystem::path path = std::filesystem::absolute(Utf8Path::FromUtf8(executablePath));
-        return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
     }
 
     void CopyToBuffer(char* buffer, std::size_t bufferSize, const std::string& value)
@@ -341,7 +341,7 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     SetDialogDirectory(ToCleanPath(std::filesystem::current_path()));
     CopyToBuffer(newProjectNameBuffer, sizeof(newProjectNameBuffer), "NewGame");
 
-    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    std::filesystem::path executableDirectory = ExecutablePath::GetDirectory(executablePath);
     //组件图标与 Templates 一样随 exe 分发
     EditorIcons::SetDirectory(executableDirectory / "Resources" / "Icons");
     std::filesystem::path managedDirectory = executableDirectory / "Managed";
@@ -1041,7 +1041,90 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    projectStatus = "Built Player (" + std::string(target.displayName) + "): " + project.GetProjectRoot() + "/Build/windows-x64/bin/OrbedenGame.exe";
+    //Player 只读打包产物：先把内容根内的资源导入后写成二进制，再同步进发布目录。
+    std::string packageError;
+    if (!CookPlayerContent(packageError))
+    {
+        projectStatus = "Build Player packaging failed: " + packageError;
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string packageRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / PlayerPackageDirectory);
+    if (!SyncPlayerPackage(packageRoot, packageError))
+    {
+        projectStatus = "Build Player packaging failed: " + packageError;
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    projectStatus = "Built Player (" + std::string(target.displayName) + "): " + packageRoot + "/OrbedenGame.exe";
+}
+
+//把内容根内的资源 cook 到 ResourceCache，并重建当前场景
+bool EditorSystem::CookPlayerContent(std::string& error)
+{
+    error.clear();
+
+    //导入会写进进程级资源表，先按打开项目的既有流程清空，结束后再从磁盘重建场景。
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        renderSystem->InvalidateResourceCaches();
+    }
+
+    project.MarkWorldPendingReload();
+    app.GetWorld().Clear();
+    ResourceManager::Shutdown();
+    PathDefines::SetContentRoot(project.GetContentRootPath());
+
+    std::string cacheRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::ResourceCacheFolder);
+    bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error);
+
+    //cook 导入的全部资源都是一次性的，释放后由场景重载重新取用。
+    ResourceManager::Shutdown();
+    editorScene.ClearSceneState();
+
+    bool reloaded = project.ReloadWorld();
+    if (!cooked) return false;
+    if (!reloaded)
+    {
+        error = project.GetLastError();
+        return false;
+    }
+
+    return true;
+}
+
+//清空包内 Content 后同步 cook 产物，再把 .oeproj 复制到包根
+bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string& error)
+{
+    error.clear();
+
+    std::filesystem::path cacheRoot = Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::ResourceCacheFolder;
+    std::filesystem::path packageContentRoot = Utf8Path::FromUtf8(packageRoot) / ProjectLayout::ContentFolder;
+
+    //先删干净，避免上一次打包残留的产物留在包里。
+    std::error_code code;
+    std::filesystem::remove_all(packageContentRoot, code);
+    std::filesystem::copy(cacheRoot, packageContentRoot,
+        std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing, code);
+    if (code)
+    {
+        error = "Cooked content could not be copied into the package: " + ToCleanPath(packageContentRoot);
+        return false;
+    }
+
+    //Player 从包根的项目文件读取启动场景。
+    std::filesystem::path projectFile = Utf8Path::FromUtf8(project.GetProjectFilePath());
+    std::filesystem::copy_file(projectFile, Utf8Path::FromUtf8(packageRoot) / projectFile.filename(),
+        std::filesystem::copy_options::overwrite_existing, code);
+    if (code)
+    {
+        error = "Project file could not be copied into the package: " + ToCleanPath(projectFile);
+        return false;
+    }
+
+    return true;
 }
 
 bool EditorSystem::IsPlaying() const
@@ -1219,7 +1302,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
 std::string EditorSystem::FindRepositoryRoot() const
 {
     List<std::filesystem::path> starts;
-    starts.push_back(GetExecutableDirectory(executablePath));
+    starts.push_back(ExecutablePath::GetDirectory(executablePath));
     starts.push_back(std::filesystem::current_path());
     if (project.HasProject())
     {
@@ -1250,7 +1333,7 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     constexpr const char* RuntimeDllRelativePath = "Sdk/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll";
 
     List<std::filesystem::path> candidates;
-    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    std::filesystem::path executableDirectory = ExecutablePath::GetDirectory(executablePath);
     candidates.push_back(executableDirectory / RuntimeDllRelativePath);
 
     std::filesystem::path parentDirectory = executableDirectory.parent_path();
@@ -1814,7 +1897,7 @@ void EditorSystem::SetDialogDirectory(const std::string& path)
 //模板根下分为脚手架（Project/）与示例（Examples/）两部分。
 std::string EditorSystem::GetProjectTemplateDirectory() const
 {
-    std::filesystem::path executableDirectory = GetExecutableDirectory(executablePath);
+    std::filesystem::path executableDirectory = ExecutablePath::GetDirectory(executablePath);
     const std::array<std::filesystem::path, 2> candidates =
     {
         executableDirectory / "Templates",

@@ -54,7 +54,7 @@
     <ClCompile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 /EHsc %(AdditionalOptions)</AdditionalOptions>
-      <PreprocessorDefinitions>WIN32;_CONSOLE;ORBEDEN_PLAYER;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;ORBEDEN_HAS_NATIVE_GAME;ORBEDEN_PROJECT_DIR="$(OrbedenProjectDir.Replace('\', '/'))";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CONSOLE;ORBEDEN_PLAYER;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;ORBEDEN_HAS_NATIVE_GAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(OrbedenEngineRoot)\OrbedenCore\Src;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\backends;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf;$(OrbedenEngineRoot)\OrbedenGame\Src;$(OrbedenProjectDir);$(OrbedenContentRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

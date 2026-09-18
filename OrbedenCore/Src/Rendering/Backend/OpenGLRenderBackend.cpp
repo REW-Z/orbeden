@@ -205,6 +205,11 @@ void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
     {
         clearMask |= GL_DEPTH_BUFFER_BIT;
     }
+    else if (desc.clearMode == ClearMode::ColorOnly)
+    {
+        glClearColor(desc.clearColor.r, desc.clearColor.g, desc.clearColor.b, desc.clearColor.a);
+        clearMask |= GL_COLOR_BUFFER_BIT;
+    }
 
     if (clearMask != 0)
     {
@@ -656,6 +661,27 @@ void OpenGLRenderBackend::SetDepthTest(bool enabled)
     }
 
     depthTestEnabled = enabled;
+}
+
+void OpenGLRenderBackend::SetDepthCompare(DepthCompare compare)
+{
+    if (depthCompare == compare) return;
+
+    glDepthFunc(compare == DepthCompare::LessEqual ? GL_LEQUAL : GL_LESS);
+    depthCompare = compare;
+}
+
+void OpenGLRenderBackend::SetPolygonOffset(bool enabled, float32 factor, float32 units)
+{
+    if (polygonOffsetEnabled != enabled)
+    {
+        if (enabled) glEnable(GL_POLYGON_OFFSET_FILL);
+        else glDisable(GL_POLYGON_OFFSET_FILL);
+        polygonOffsetEnabled = enabled;
+    }
+
+    //偏移量每帧都可能不同，启用时每次都提交
+    if (enabled) glPolygonOffset(factor, units);
 }
 
 void OpenGLRenderBackend::SetDepthWrite(bool enabled)

@@ -263,20 +263,40 @@ C++ 代码修改后必须先执行 `Build Game C++`。C# 代码可以手动执�
 2. 运行 MetaGen，并把游戏 C++ 源码编译进 Player。
 3. 重新编译 Player 版 OrbedenCore。
 4. 链接最终 Player。
+5. 把 `Content/` 内的资源导入后打包成二进制产物，生成完整发布目录。
+
+第 5 步会把内容根内全部资源导入当前进程，因此**构建结束后当前场景会重载一次**。
 
 默认 Windows 输出位置（在被打包的项目目录内）：
 
 ```text
-{项目目录}/Build/windows-x64/bin/OrbedenGame.exe
+{项目目录}/Build/windows-x64/bin/
 ```
+
+这是一个**自包含发布目录**，整个目录拷到别的路径或别的机器都能直接运行：
+
+```text
+bin/
+├─ OrbedenGame.exe
+├─ glfw3.dll
+├─ {程序集名}.dll          游戏脚本 AOT 库
+├─ {项目名}.oeproj         启动场景配置
+└─ Content/
+    ├─ <哈希>.orbo         资源产物，扁平存放
+    ├─ cooked.index        文件名与资源名对照表
+    └─ **/*.world          场景，保持原目录结构
+```
+
+发布目录里**没有** `.obj` / `.png` / `.mtl` / `.orbshader` 等原始资源，也没有脚本源码——它们已在打包时转换或编译。
 
 其他目标平台需要对应的编译器、系统库和 NativeAOT 工具链。FreeBSD 与 Switch 目前只是预留目标，不能作为完整发布流程使用。
 
-### 当前打包限制
+### 打包相关约定
 
-`Build Player` 当前完成代码构建，但不会自动生成完整的可分发目录。Player 在构建时绑定当前打开的项目路径，并从该项目读取 `.oeproj`、`World` 和 `Resource`。
-
-产物适合在开发机器上验证，运行时需要保留构建时绑定的项目路径及项目数据，不能直接作为独立发行包复制到其他机器。
+- **不要把 `.orbo` 放进工程的 `Content/`。** 引擎解析资源时产物优先于源文件，且不会有任何提示；一旦 `Content/` 里出现同名产物，改源文件就不再生效。产物只会生成在 `ResourceCache/` 和发布目录。
+- `ResourceCache/` 是打包用的中间缓存（相当于 Unity 的 `Library/`），可以随时删除，`Build Player` 会全量重建。Editor 不读它，开发时改资源即时生效。
+- 改了资源的字段结构（增删字段、调顺序）后，**必须重新 `Build Player`**，旧发布目录不能再使用。
+- `Build Player` 每次都会重新导入全部资源，项目资源多时这一步会比代码构建更久。
 
 ## 8. 常见问题
 

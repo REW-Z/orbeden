@@ -65,6 +65,13 @@ public static class EditorGUI
     /// <summary>绘制选择项。</summary>
     public static bool Selectable(string label, bool selected = false) => NativeEditorGUI.Selectable(label, selected);
 
+    /// <summary>绘制资源瓦片，整块作为一个条目。</summary>
+    public static bool AssetTile(string icon, string label, string id, float width, bool selected = false)
+        => NativeEditorGUI.AssetTile(icon, label, id, width, selected);
+
+    /// <summary>绘制视图切换按钮，按钮上是当前模式的图标。</summary>
+    public static bool ViewToggleButton(string id, bool gridMode) => NativeEditorGUI.ViewToggleButton(id, gridMode);
+
     /// <summary>绘制强类型资源字段。</summary>
     public static bool ObjectField<T>(string label, ref T? value) where T : Orbeden.Object
     {

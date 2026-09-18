@@ -163,6 +163,7 @@
     <ClInclude Include="Src\Runtime\Object\RigidBody.h" />
     <ClInclude Include="Src\Runtime\Object\WheelCollider.h" />
     <ClInclude Include="Src\Platform\DynamicLibrary.h" />
+    <ClInclude Include="Src\Platform\ExecutablePath.h" />
     <ClInclude Include="Src\Platform\GlfwWindow.h" />
     <ClInclude Include="Src\InputManager\InputManager.h" />
     <ClInclude Include="Src\Platform\Window.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="Src\Rendering\SceneCuller.h" />
     <ClInclude Include="Src\Rendering\TransformCache.h" />
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
+    <ClInclude Include="Src\Runtime\CookedAssetSerializer.h" />
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenEngineNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
@@ -240,6 +242,7 @@
     <ClCompile Include="Src\Runtime\Object\RigidBody.cpp" />
     <ClCompile Include="Src\Runtime\Object\WheelCollider.cpp" />
     <ClCompile Include="Src\Platform\DynamicLibrary.cpp" />
+    <ClCompile Include="Src\Platform\ExecutablePath.cpp" />
     <ClCompile Include="Src\Platform\GlfwWindow.cpp" />
     <ClCompile Include="Src\InputManager\InputManager.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
@@ -257,6 +260,7 @@
     <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
     <ClCompile Include="Src\Rendering\TransformCache.cpp" />
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
+    <ClCompile Include="Src\Runtime\CookedAssetSerializer.cpp" />
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeResourceBinds.cpp" />

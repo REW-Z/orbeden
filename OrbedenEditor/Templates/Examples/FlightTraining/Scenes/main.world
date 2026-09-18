@@ -15,6 +15,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Material/GroundMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -54,6 +55,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/runway.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/runway.obj//Material/RunwayMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -80,6 +82,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -95,6 +98,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -110,6 +114,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="false" />
@@ -125,6 +130,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -151,6 +157,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -355,6 +362,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -370,6 +378,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -385,6 +394,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -400,6 +410,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -415,6 +426,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -430,6 +442,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -445,6 +458,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -460,6 +474,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />
@@ -475,6 +490,7 @@
             <Component type="StaticMeshRenderer">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="drawQueue" type="DrawQueue" value="0" />
                 <Field name="castShadows" type="bool" value="true" />

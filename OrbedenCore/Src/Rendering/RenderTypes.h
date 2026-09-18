@@ -24,6 +24,15 @@ enum class ClearMode : uint32
     None = 0,
     DepthOnly = 1,
     SolidColor = 2,
+    //只清颜色，用于与其它目标共享深度缓冲的中间 pass
+    ColorOnly = 3,
+};
+
+//深度比较函数：默认严格小于，需要与已有深度同层绘制时用 LessEqual
+enum class DepthCompare : uint32
+{
+    Less = 0,
+    LessEqual = 1,
 };
 
 //绘制队列

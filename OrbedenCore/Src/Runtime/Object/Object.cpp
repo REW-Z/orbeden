@@ -1193,8 +1193,10 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
 
     uint32 removedCount = ResourceManager::ReleaseUnmarkedObjects(marked);
 
-    //运行时创建的非组件对象按可达性释放
-    List<Object*> unusedObjects;
+    //运行时创建的非组件对象按可达性释放。
+    //只记 ID 不记指针：销毁一个 Ens 会经 RemoveComponent 冲刷待销毁队列，
+    //一次性带走另外几个 Ens，指针快照到第二轮就指向已释放内存。
+    List<int32> unusedObjectIds;
     for (const auto& pair : runtime.objectById)
     {
         Object* object = pair.second;
@@ -1202,11 +1204,15 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
         if (object->GetOwnership() == Ownership::ResourceOwned) continue;
         if (marked.find(object->GetObjectId()) != marked.end()) continue;
 
-        unusedObjects.push_back(object);
+        unusedObjectIds.push_back(object->GetObjectId());
     }
 
-    for (Object* object : unusedObjects)
+    for (int32 objectId : unusedObjectIds)
     {
+        //前面的销毁可能已经把这个对象一并带走了
+        Object* object = FindObjectById(objectId);
+        if (!object || object->Is(Component::StaticType())) continue;
+
         if (DeleteInstance(object))
         {
             removedCount++;

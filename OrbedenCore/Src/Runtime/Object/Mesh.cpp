@@ -219,7 +219,7 @@ bool Mesh::ResizeSubMeshes(int32 count)
     return true;
 }
 
-bool Mesh::ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount, Material* material)
+bool Mesh::ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount)
 {
     if (index < 0 || static_cast<usize>(index) >= subMeshes.size()) return false;
 
@@ -231,7 +231,6 @@ bool Mesh::ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 
     subMesh.name = subMeshName;
     subMesh.indexStart = indexStart;
     subMesh.indexCount = indexCount;
-    subMesh.material.Set(material);
     MarkDirty(MeshDirtyFlags::Editor);
     return true;
 }

@@ -2685,8 +2685,28 @@ public:
         return Reflection::Value(result);
     }
 
+    //调用 Mesh.ConfigureSubMesh 方法
+    static Reflection::Value Invoke_Mesh_ConfigureSubMesh_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 4) return Reflection::Value();
+
+        int32 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        std::string arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        uint32 arg2{};
+        if (!args[2].TryGet(arg2)) return Reflection::Value();
+        uint32 arg3{};
+        if (!args[3].TryGet(arg3)) return Reflection::Value();
+        auto result = instance->ConfigureSubMesh(arg0, arg1, arg2, arg3);
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Mesh.RefreshNormals 方法
-    static Reflection::Value Invoke_Mesh_RefreshNormals_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_RefreshNormals_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -3505,6 +3525,35 @@ public:
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->mesh, value);
+    }
+
+    //读取 StaticMeshRenderer.materials 字段
+    static std::string Get_StaticMeshRenderer_materials(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->materials);
+    }
+
+    //直接读取 StaticMeshRenderer.materials 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_materials(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->materials) : Reflection::Value();
+    }
+
+    //写入 StaticMeshRenderer.materials 字段
+    static bool Set_StaticMeshRenderer_materials(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->materials, value);
+    }
+
+    //直接写入 StaticMeshRenderer.materials 字段
+    static bool SetValue_StaticMeshRenderer_materials(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->materials, value);
     }
 
     //读取 StaticMeshRenderer.drawLayer 字段
@@ -4817,7 +4866,8 @@ namespace Reflection
                 MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_0),
                 MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_1),
                 MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_2),
-                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_3),
+                MethodInfo("ConfigureSubMesh", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("index", "int32", Reflection::ValueKind::Int32), ParameterInfo("subMeshName", "std::string", Reflection::ValueKind::String), ParameterInfo("indexStart", "uint32", Reflection::ValueKind::UInt32), ParameterInfo("indexCount", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_Mesh_ConfigureSubMesh_3),
+                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_4),
             });
 
         RegisterTypeFields(Orbeden::Object::StaticType(),
@@ -4898,6 +4948,7 @@ namespace Reflection
                 FieldInfo("runtimeMesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr),
                 FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh),
+                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Set_StaticMeshRenderer_materials, "Material", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_materials),
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer),
                 FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawQueue, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawQueue, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawQueue),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows),

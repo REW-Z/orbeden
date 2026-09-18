@@ -136,7 +136,10 @@ public:
     virtual void SetUniformInt(const char* name, int32 value) = 0;
     virtual void SetUniformFloat(const char* name, float32 value) = 0;
     virtual void SetDepthTest(bool enabled) = 0;
+    virtual void SetDepthCompare(DepthCompare compare) = 0;
     virtual void SetDepthWrite(bool enabled) = 0;
+    //多边形深度偏移：与已有表面同层绘制时用它压过浮点误差
+    virtual void SetPolygonOffset(bool enabled, float32 factor, float32 units) = 0;
     virtual void SetBlend(bool enabled) = 0;
     virtual void SetCullMode(CullMode mode) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;

@@ -57,6 +57,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<void> DrawSceneView;
     public delegate* unmanaged[Cdecl]<vector3*, byte> ResolveSceneDropPosition;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> ReferenceField;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, float, byte, byte> AssetTile;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> ViewToggleButton;
 }
 #pragma warning restore CS0649
 
@@ -260,6 +262,28 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* textPointer = textBytes)
         fixed (byte* idPointer = idBytes)
             return api.ReferenceField(iconPointer, iconBytes.Length, textPointer, textBytes.Length, idPointer, idBytes.Length);
+    }
+
+    //绘制资源瓦片
+    internal static bool AssetTile(string? icon, string? label, string? id, float width, bool selected)
+    {
+        if (!initialized || api.AssetTile == null) return false;
+        byte[] iconBytes = Encode(icon);
+        byte[] labelBytes = Encode(label);
+        byte[] idBytes = Encode(id);
+        fixed (byte* iconPointer = iconBytes)
+        fixed (byte* labelPointer = labelBytes)
+        fixed (byte* idPointer = idBytes)
+            return api.AssetTile(iconPointer, iconBytes.Length, labelPointer, labelBytes.Length, idPointer, idBytes.Length,
+                width, selected ? (byte)1 : (byte)0) != 0;
+    }
+
+    //绘制视图切换按钮
+    internal static bool ViewToggleButton(string? id, bool gridMode)
+    {
+        if (!initialized || api.ViewToggleButton == null) return false;
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) return api.ViewToggleButton(pointer, bytes.Length, gridMode ? (byte)1 : (byte)0) != 0;
     }
 
     //开始下拉选择框

@@ -32,10 +32,24 @@ public:
     void AddError(const std::string& error);
 };
 
+//资源导入器种类
+enum class AssetImporter
+{
+    None,
+    Image,
+    Obj,
+    Gltf,
+    OrbShader,
+    Glsl,
+};
+
 //资源导入管道，负责把文件输入转换为Object资源
 class AssetPipeline
 {
 public:
+    //按主文件路径判断可用导入器，无对应导入器时返回 None
+    static AssetImporter SelectImporter(const std::string& sourceKey);
+
     //按主文件路径选择导入器
     static AssetCollection ImportSource(std::string path);
 

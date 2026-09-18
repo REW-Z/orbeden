@@ -27,14 +27,13 @@ constexpr MeshDirtyFlags operator|(MeshDirtyFlags left, MeshDirtyFlags right)
     return static_cast<MeshDirtyFlags>(static_cast<uint32>(left) | static_cast<uint32>(right));
 }
 
-//子网格
+//子网格：只描述几何区间，材质由渲染器按槽位提供
 struct SubMesh
 {
 public:
     std::string name;
     uint32 indexStart = 0;
     uint32 indexCount = 0;
-    Ref<Material> material;
 };
 
 //CPU网格资源
@@ -110,7 +109,7 @@ public:
     bool SetSubMeshes(const List<SubMesh>& value);
 
     //配置子网格
-    bool ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount, Material* material);
+    bool ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount);
 
     //根据三角形索引重新计算法线
     bool RefreshNormals();

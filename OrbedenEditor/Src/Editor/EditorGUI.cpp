@@ -38,6 +38,29 @@ namespace
         return ImVec4(value.r, value.g, value.b, value.a);
     }
 
+    //按可用宽度截断 UTF-8 文本，超宽时在尾部补省略号
+    std::string EllipsizeToWidth(const std::string& text, float32 maxWidth)
+    {
+        if (maxWidth <= 0.0f) return std::string();
+        if (ImGui::CalcTextSize(text.c_str()).x <= maxWidth) return text;
+
+        //按字符逐个累加宽度，遇到放不下的字符就停，避免整串反复测量
+        const float32 ellipsisWidth = ImGui::CalcTextSize("...").x;
+        float32 width = 0.0f;
+        usize length = 0;
+        while (length < text.size())
+        {
+            usize next = length + 1;
+            //UTF-8 续字节不单独成字，连同首字节一起取
+            while (next < text.size() && (static_cast<uint8>(text[next]) & 0xC0) == 0x80) ++next;
+            float32 characterWidth = ImGui::CalcTextSize(text.c_str() + length, text.c_str() + next).x;
+            if (width + characterWidth + ellipsisWidth > maxWidth) break;
+            width += characterWidth;
+            length = next;
+        }
+        return text.substr(0, length) + "...";
+    }
+
     //在名称前绘制图标并停在同一行，没有图标时不占位
     void DrawInlineIcon(const std::string& name, float32 size)
     {
@@ -444,6 +467,107 @@ namespace
         if (clicked) action = 1;
         ImGui::PopID();
         return action;
+    }
+
+    //绘制资源瓦片并返回点击状态：图标在上、名称在下，整块作为一个条目
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiAssetTile(const uint8* icon, int32 iconLength,
+        const uint8* label, int32 labelLength, const uint8* id, int32 idLength,
+        float32 width, uint8 selected)
+    {
+        std::string iconName = ReadUtf8Text(icon, iconLength);
+        std::string text = ReadUtf8Text(label, labelLength);
+        std::string identity = ReadUtf8Text(id, idLength);
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        //图标取原生 32px 一档，缩放后正好接近资源本身的尺寸
+        float32 iconSize = ImGui::GetFrameHeight() * 1.5f;
+        float32 height = style.FramePadding.y * 2.0f + iconSize + style.ItemSpacing.y + ImGui::GetTextLineHeight();
+
+        ImGui::PushID(identity.c_str());
+        ImVec2 min = ImGui::GetCursorScreenPos();
+        ImVec2 max { min.x + width, min.y + height };
+        bool clicked = ImGui::InvisibleButton("##asset_tile", ImVec2(width, height));
+        bool hovered = ImGui::IsItemHovered();
+        bool held = ImGui::IsItemActive();
+
+        //选中与悬停共用一块表面色底，选中额外压一圈强调色边框
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        if (selected || hovered || held)
+            drawList->AddRectFilled(min, max, ImGui::GetColorU32(selected ? ImGuiCol_Header : ImGuiCol_HeaderHovered),
+                style.FrameRounding);
+        if (selected)
+            drawList->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_ButtonActive), style.FrameRounding);
+
+        ImTextureID texture = EditorIcons::Get(iconName);
+        if (texture != 0)
+        {
+            float32 iconLeft = min.x + (width - iconSize) * 0.5f;
+            float32 iconTop = min.y + style.FramePadding.y;
+            drawList->AddImage(texture, ImVec2(iconLeft, iconTop), ImVec2(iconLeft + iconSize, iconTop + iconSize));
+        }
+
+        //名称居中，放不下的名字截断补省略号，悬停时用提示给出全名
+        float32 textTop = min.y + style.FramePadding.y + iconSize + style.ItemSpacing.y;
+        float32 available = width - style.FramePadding.x * 2.0f;
+        std::string display = EllipsizeToWidth(text, available);
+        float32 textWidth = ImGui::CalcTextSize(display.c_str()).x;
+        float32 textLeft = min.x + style.FramePadding.x + std::max(0.0f, (available - textWidth) * 0.5f);
+        drawList->PushClipRect(min, max, true);
+        drawList->AddText(ImVec2(textLeft, textTop), ImGui::GetColorU32(ImGuiCol_Text), display.c_str());
+        drawList->PopClipRect();
+        if (hovered && display != text) ImGui::SetTooltip("%s", text.c_str());
+
+        ImGui::PopID();
+        return clicked ? 1 : 0;
+    }
+
+    //绘制视图切换按钮：按钮上是当前模式的图标，点击切到另一种
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiViewToggleButton(const uint8* id, int32 length, uint8 gridMode)
+    {
+        std::string identity = ReadUtf8Text(id, length);
+        float32 size = ImGui::GetFrameHeight();
+        bool clicked = ImGui::Button(identity.c_str(), ImVec2(size, size));
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        ImVec2 min = ImGui::GetItemRectMin();
+        ImVec2 max = ImGui::GetItemRectMax();
+        float32 side = std::min(max.x - min.x, max.y - min.y);
+        ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+        ImVec2 center((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+
+        //按钮不写字，用图形表示模式：四宫格是网格，三条带行首块的是列表
+        if (gridMode != 0)
+        {
+            float32 cell = side * 0.24f;
+            float32 gap = side * 0.12f;
+            for (int32 row = 0; row < 2; row++)
+            {
+                for (int32 column = 0; column < 2; column++)
+                {
+                    ImVec2 cellMin(center.x - cell - gap * 0.5f + static_cast<float32>(column) * (cell + gap),
+                        center.y - cell - gap * 0.5f + static_cast<float32>(row) * (cell + gap));
+                    drawList->AddRectFilled(cellMin, ImVec2(cellMin.x + cell, cellMin.y + cell), color, 1.0f);
+                }
+            }
+        }
+        else
+        {
+            float32 rowHeight = side * 0.14f;
+            float32 rowGap = side * 0.1f;
+            float32 block = side * 0.14f;
+            float32 bar = side * 0.42f;
+            float32 left = center.x - (block + rowGap + bar) * 0.5f;
+            float32 top = center.y - (rowHeight * 3.0f + rowGap * 2.0f) * 0.5f;
+            for (int32 row = 0; row < 3; row++)
+            {
+                float32 y = top + static_cast<float32>(row) * (rowHeight + rowGap);
+                drawList->AddRectFilled(ImVec2(left, y), ImVec2(left + block, y + rowHeight), color, 1.0f);
+                drawList->AddRectFilled(ImVec2(left + block + rowGap, y), ImVec2(left + block + rowGap + bar, y + rowHeight), color, 1.0f);
+            }
+        }
+
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip(gridMode != 0 ? "Switch to list" : "Switch to grid");
+        return clicked ? 1 : 0;
     }
 
     //绘制分隔线
@@ -950,6 +1074,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.drawSceneView = reinterpret_cast<void*>(&EditorGuiDrawSceneView);
     api.resolveSceneDropPosition = reinterpret_cast<void*>(&EditorGuiResolveSceneDropPosition);
     api.referenceField = reinterpret_cast<void*>(&EditorGuiReferenceField);
+    api.assetTile = reinterpret_cast<void*>(&EditorGuiAssetTile);
+    api.viewToggleButton = reinterpret_cast<void*>(&EditorGuiViewToggleButton);
     return api;
 }
 
