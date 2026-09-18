@@ -1,17 +1,16 @@
-//SceneView（场景视口）的渲染与交互是两套矩形，维护时不要混用。
+//SceneView（场景视口）的渲染与交互。
 //
 //渲染：
-//- 离屏目标按主视口整块创建，renderPosition/renderSize 取 viewport->Pos/Size，乘 DisplayFramebufferScale
-//  得到像素尺寸；图像提交到背景绘制列表，因此永远铺在所有面板之下。没被面板覆盖的像素会直接露出场景，
-//  停靠区缝隙、圆角缺口这类空白显示的都是场景画面。
-//- 目标尺寸跟随窗口而不是面板：尺寸变化时整体重建（后端不支持原位 resize）；面板不可见或内容区过小时
+//- 渲染区域就是面板内容区：renderPosition/renderSize 取内容区左上角与可用尺寸，乘 DisplayFramebufferScale
+//  得到离屏目标的像素尺寸。尺寸变化时整体重建（后端不支持原位 resize）；面板不可见或内容区过小时
 //  释放目标并跳过渲染。可见性用 sceneView.visible 的单帧闩锁判断，本帧绘制过才为 true。
+//- 场景图由 DrawSceneView 提交，选择轮廓、托管 Gizmo 与手柄随后叠在它上面。
 //
 //交互：
-//- 能不能交互只看面板内容区 interactPosition/interactSize（IsMouseOverSceneView），拾取、相机拖拽、
-//  Gizmo 与预制体投放都以它为闸门。
-//- 把鼠标位置换算到场景坐标要用渲染矩形 renderPosition/renderSize（RaycastScene、ProjectGizmoPoint），
-//  因为图像铺满窗口而不是铺满面板；两者混用会让拾取和绘制错位。
+//- 能不能交互只看 interactPosition/interactSize（IsMouseOverSceneView），拾取、相机拖拽、手柄与
+//  预制体投放都以它为闸门。
+//- 投影与拾取共用 RenderCamera::viewProjectionMatrix（PrepareGizmoView 缓存），鼠标坐标按渲染矩形
+//  换算；换用别的矩阵会让手柄位置与命中区错位。
 //
 //面板侧 ScenePanel 是固定工作区叶子：不可关闭、拖出或并入标签页，也不绘制面板外壳。
 
@@ -269,29 +268,19 @@ namespace
             std::clamp(color.a, 0.0f, 1.0f)));
     }
 
-    //把三维点投影到屏幕坐标。
+    //把三维点投影到屏幕坐标，与手柄共用同一套投影约定。
     bool ProjectGizmoPoint(const EditorGizmoVector3& point, ImVec2& screen)
     {
         if (!CurrentGizmoScene) return false;
 
-        const matrix4x4& viewProjection = CurrentGizmoScene->GetGizmoViewProjection();
         const EditorSceneViewState& view = CurrentGizmoScene->GetSceneViewState();
-        if (view.renderSize.x <= 0.0f || view.renderSize.y <= 0.0f) return false;
+        vector2 projected;
+        if (!EditorGizmoHandles::ProjectPoint(CurrentGizmoScene->GetGizmoViewProjection(),
+            view.renderPosition, view.renderSize, { point.x, point.y, point.z }, projected))
+            return false;
 
-        float32 x = viewProjection.m[0] * point.x + viewProjection.m[4] * point.y + viewProjection.m[8] * point.z + viewProjection.m[12];
-        float32 y = viewProjection.m[1] * point.x + viewProjection.m[5] * point.y + viewProjection.m[9] * point.z + viewProjection.m[13];
-        float32 z = viewProjection.m[2] * point.x + viewProjection.m[6] * point.y + viewProjection.m[10] * point.z + viewProjection.m[14];
-        float32 w = viewProjection.m[3] * point.x + viewProjection.m[7] * point.y + viewProjection.m[11] * point.z + viewProjection.m[15];
-        if (std::abs(w) <= 0.000001f || w < 0.0f) return false;
-
-        float32 inverseW = 1.0f / w;
-        float32 ndcX = x * inverseW;
-        float32 ndcY = y * inverseW;
-        float32 ndcZ = z * inverseW;
-        if (ndcZ < -1.0f || ndcZ > 1.0f) return false;
-
-        screen.x = view.renderPosition.x + (ndcX * 0.5f + 0.5f) * view.renderSize.x;
-        screen.y = view.renderPosition.y + (1.0f - (ndcY * 0.5f + 0.5f)) * view.renderSize.y;
+        screen.x = projected.x;
+        screen.y = projected.y;
         return true;
     }
 
@@ -302,6 +291,52 @@ namespace
         ImVec2 screenB;
         if (!ProjectGizmoPoint(a, screenA) || !ProjectGizmoPoint(b, screenB)) return;
         ImGui::GetWindowDrawList()->AddLine(screenA, screenB, ToImColor(color), 2.0f);
+    }
+
+    //取出一次待提交的手柄编辑，供托管侧每帧轮询。
+    int32 ORBEDEN_NATIVE_CALL TakeGizmoEditNative(EditorGizmoEdit* edit)
+    {
+        EditorScene* scene = edit ? EditorScene::GetActiveScene() : nullptr;
+        return scene && scene->TakeGizmoEdit(*edit) ? 1 : 0;
+    }
+
+    //绘制手柄模式图标：位移四向箭头、旋转半圆弧、缩放方块加实心角。
+    void DrawHandleModeIcon(ImDrawList* drawList, const ImVec2& min, const ImVec2& max,
+        EditorGizmoMode mode, ImU32 color)
+    {
+        ImVec2 center((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+        float32 side = std::min(max.x - min.x, max.y - min.y);
+        float32 arm = side * 0.32f;
+
+        if (mode == EditorGizmoMode::Move)
+        {
+            drawList->AddLine(ImVec2(center.x - arm, center.y), ImVec2(center.x + arm, center.y), color, 1.6f);
+            drawList->AddLine(ImVec2(center.x, center.y - arm), ImVec2(center.x, center.y + arm), color, 1.6f);
+            drawList->AddTriangleFilled(ImVec2(center.x + arm, center.y),
+                ImVec2(center.x + arm - 4.0f, center.y - 3.0f), ImVec2(center.x + arm - 4.0f, center.y + 3.0f), color);
+            drawList->AddTriangleFilled(ImVec2(center.x, center.y - arm),
+                ImVec2(center.x - 3.0f, center.y - arm + 4.0f), ImVec2(center.x + 3.0f, center.y - arm + 4.0f), color);
+        }
+        else if (mode == EditorGizmoMode::Rotate)
+        {
+            constexpr int32 Segments = 20;
+            ImVec2 points[Segments + 1];
+            for (int32 index = 0; index <= Segments; ++index)
+            {
+                float32 angle = 4.71238898f + 5.49778714f
+                    * static_cast<float32>(index) / static_cast<float32>(Segments);
+                points[index] = ImVec2(center.x + std::cos(angle) * arm,
+                    center.y + std::sin(angle) * arm);
+            }
+            drawList->AddPolyline(points, Segments + 1, color, ImDrawFlags_None, 1.6f);
+        }
+        else
+        {
+            drawList->AddRect(ImVec2(center.x - arm, center.y - arm),
+                ImVec2(center.x + arm * 0.2f, center.y + arm * 0.2f), color, 1.0f, ImDrawFlags_None, 1.6f);
+            drawList->AddRectFilled(ImVec2(center.x + arm * 0.2f, center.y + arm * 0.2f),
+                ImVec2(center.x + arm, center.y + arm), color);
+        }
     }
 
     //绘制一个托管三维 Handle 标签。
@@ -319,6 +354,7 @@ namespace
 EditorScene::EditorScene(Application& application, ManagedEditorBridge& bridge)
     : app(application)
     , managedBridge(bridge)
+    , gizmoHandles(*this)
 {
     activeScene = this;
 }
@@ -427,9 +463,14 @@ void EditorScene::DrawSceneOverlay()
     if (!renderSystem || sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return;
 
     const RenderScene& scene = renderSystem->GetCurrentScene();
+    //手柄与托管 Gizmo 共用渲染这张离屏图用的相机矩阵；手柄的写入必须早于拾取
+    PrepareGizmoView(scene);
+    DrawGizmoToolbar();
+    UpdateGizmoHandles(world);
     HandleSelection(scene);
     SubmitSelectionHighlight(world);
     DrawManagedGizmos();
+    DrawGizmoHandles();
 }
 
 //更新编辑器观察相机。
@@ -538,6 +579,7 @@ void EditorScene::CancelInteraction()
     cameraMouseMode = 0;
     selectionPressed = false;
     selectionDragged = false;
+    gizmoHandles.CancelDrag(app.GetWorld());
 }
 
 //清空选择和场景绘制缓存。
@@ -707,6 +749,8 @@ void EditorScene::RestoreCamera(World& world)
 //进入 Play 前移除临时相机并清理无效选择。
 void EditorScene::EnterPlayMode(World& world)
 {
+    gizmoHandles.CancelDrag(world);
+    playModeActive = true;
     bool clearSelection = activeEns.IsNull() || !world.IsAlive(activeEns) || IsTemporaryEns(activeEns);
     RemoveCameraForSerialization(world);
     if (clearSelection) ClearSelection();
@@ -715,6 +759,7 @@ void EditorScene::EnterPlayMode(World& world)
 //退出 Play 后重置选择并恢复观察相机。
 void EditorScene::ExitPlayMode(World& world)
 {
+    playModeActive = false;
     ClearSceneState();
     RestoreCamera(world);
 }
@@ -725,6 +770,7 @@ EditorGizmoApi EditorScene::GetGizmoApi()
     EditorGizmoApi api;
     api.Line3D = reinterpret_cast<void*>(&DrawGizmoLine);
     api.Label3D = reinterpret_cast<void*>(&DrawGizmoLabel);
+    api.TakeEdit = reinterpret_cast<void*>(&TakeGizmoEditNative);
     return api;
 }
 
@@ -826,7 +872,8 @@ void EditorScene::HandleSelection(const RenderScene& scene)
         selectionPressed = IsMouseOverSceneView()
             && !io.KeyAlt
             && !cameraMouseDragging
-            && !HasBlockingImGuiActiveItem();
+            && !HasBlockingImGuiActiveItem()
+            && !gizmoHandles.OwnsMouse();
         selectionDragged = false;
         selectionCtrl = io.KeyCtrl;
         selectionStart = { io.MousePos.x, io.MousePos.y };
@@ -887,7 +934,7 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
     if (!camera || !camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return false;
     if (sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return false;
 
-    //把 ImGui 逻辑坐标按铺满主窗口的渲染矩形转换为相机 NDC。
+    //把 ImGui 逻辑坐标按场景渲染矩形转换为相机 NDC。
     if (screenPosition.x < sceneView.renderPosition.x
         || screenPosition.x > sceneView.renderPosition.x + sceneView.renderSize.x
         || screenPosition.y < sceneView.renderPosition.y
@@ -896,17 +943,13 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
         return false;
     }
 
-    float32 ndcX = ((screenPosition.x - sceneView.renderPosition.x) / sceneView.renderSize.x) * 2.0f - 1.0f;
-    float32 ndcY = 1.0f - ((screenPosition.y - sceneView.renderPosition.y) / sceneView.renderSize.y) * 2.0f;
-    matrix4x4 inverseViewProjection = RenderMath::Inverse(camera->viewProjectionMatrix);
-    vector3 rayOrigin = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, -1.0f });
-    vector3 rayEnd = RenderMath::TransformPoint(inverseViewProjection, { ndcX, ndcY, 1.0f });
-    vector3 rayDelta = { rayEnd.x - rayOrigin.x, rayEnd.y - rayOrigin.y, rayEnd.z - rayOrigin.z };
-    float32 rayLengthSquared = RenderMath::Dot(rayDelta, rayDelta);
-    if (rayLengthSquared <= 0.000001f) return false;
-
-    float32 rayLength = std::sqrt(rayLengthSquared);
-    vector3 rayDirection = { rayDelta.x / rayLength, rayDelta.y / rayLength, rayDelta.z / rayLength };
+    //射线与手柄共用同一套投影约定，保证命中区和手柄绘制一致
+    vector3 rayOrigin;
+    vector3 rayDirection;
+    float32 rayLength = 0.0f;
+    if (!EditorGizmoHandles::BuildScreenRay(camera->viewProjectionMatrix, sceneView.renderPosition,
+        sceneView.renderSize, screenPosition, rayOrigin, rayDirection, rayLength))
+        return false;
     EnsId closestEns;
     float32 closestDistance = rayLength;
     for (StaticMeshRenderer* renderer : scene.renderers)
@@ -1117,24 +1160,167 @@ void EditorScene::SubmitSelectionHighlight(World& world)
 //绘制托管 Scene Handles。
 void EditorScene::DrawManagedGizmos()
 {
-    World& world = app.GetWorld();
-    Transform* transform = world.GetTransform(cameraEns);
-    Camera* camera = nullptr;
-    if (Ens* editorCamera = world.GetEns(cameraEns)) camera = editorCamera->GetComponent<Camera>();
-    if (!transform || !camera || !camera->IsRenderSceneEligible()) return;
-
-    float32 aspect = sceneView.pixelHeight > 0
-        ? static_cast<float32>(sceneView.pixelWidth) / static_cast<float32>(sceneView.pixelHeight)
-        : 1.0f;
-    matrix4x4 worldMatrix = RenderMath::TRS(
-        transform->GetLocalPosition(),
-        transform->GetLocalRotation(),
-        transform->GetLocalScale());
-    matrix4x4 viewMatrix = RenderMath::Inverse(worldMatrix);
-    matrix4x4 projectionMatrix = RenderMath::Perspective(camera->fieldOfView, aspect, camera->nearPlane, camera->farPlane);
-    gizmoViewProjection = RenderMath::Mul(projectionMatrix, viewMatrix);
+    if (!gizmoViewValid) return;
 
     CurrentGizmoScene = this;
     managedBridge.DrawSceneGizmos();
     if (CurrentGizmoScene == this) CurrentGizmoScene = nullptr;
 }
+
+//准备本帧手柄与托管 Gizmo 共用的视图投影。
+void EditorScene::PrepareGizmoView(const RenderScene& scene)
+{
+    gizmoViewValid = false;
+    gizmoView = EditorGizmoView();
+    if (sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return;
+
+    //渲染这张离屏图用的就是这份矩阵，手柄位置与命中才能和画面像素严格对齐
+    const RenderCamera* camera = nullptr;
+    for (const RenderCamera& candidate : scene.cameras)
+    {
+        if (candidate.ens == cameraEns)
+        {
+            camera = &candidate;
+            break;
+        }
+    }
+    //与 RaycastScene 用同一组门槛，保证画得出手柄就一定拾取得到
+    if (!camera || !camera->renderTargetId.IsValid()
+        || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return;
+
+    gizmoViewProjection = camera->viewProjectionMatrix;
+    gizmoCameraRight = RenderMath::Normalize(
+        RenderMath::TransformDirection(camera->worldMatrix, { 1.0f, 0.0f, 0.0f }));
+    gizmoCameraUp = RenderMath::Normalize(
+        RenderMath::TransformDirection(camera->worldMatrix, { 0.0f, 1.0f, 0.0f }));
+    gizmoCameraForward = RenderMath::Normalize(
+        RenderMath::TransformDirection(camera->worldMatrix, { 0.0f, 0.0f, -1.0f }));
+
+    gizmoView.viewProjection = gizmoViewProjection;
+    gizmoView.cameraRight = gizmoCameraRight;
+    gizmoView.cameraUp = gizmoCameraUp;
+    gizmoView.cameraForward = gizmoCameraForward;
+    gizmoView.renderPosition = sceneView.renderPosition;
+    gizmoView.renderSize = sceneView.renderSize;
+    gizmoView.valid = true;
+    gizmoViewValid = true;
+}
+
+//绘制场景视图左上角的模式工具栏。
+void EditorScene::DrawGizmoToolbar()
+{
+    gizmoToolbarHovered = false;
+    if (!gizmoViewValid) return;
+    if (sceneView.renderSize.x < 200.0f || sceneView.renderSize.y < 90.0f) return;
+
+    //工具栏是压在视口上的叠加层，不参与本窗口的内容尺寸：
+    //借用的光标位、被撑大的内容边界与 SetCursorScreenPos 标记都要还原，
+    //否则 End() 会判定"用 SetCursorPos 撑大窗口边界"而断言。
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    ImGuiWindow* window = context ? context->CurrentWindow : nullptr;
+    if (!window) return;
+
+    const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
+    const ImVec2 savedMax = window->DC.CursorMaxPos;
+    ImGui::SetCursorScreenPos(ImVec2(sceneView.renderPosition.x + 8.0f, sceneView.renderPosition.y + 8.0f));
+
+    //鼠标落在按钮上时手柄要让位，否则点不动按钮
+    bool overToolbar = false;
+    const EditorGizmoMode modes[3] = { EditorGizmoMode::Move, EditorGizmoMode::Rotate, EditorGizmoMode::Scale };
+    const char* ids[3] = { "##handle_mode_move", "##handle_mode_rotate", "##handle_mode_scale" };
+    for (int32 index = 0; index < 3; ++index)
+    {
+        if (index > 0) ImGui::SameLine(0.0f, 4.0f);
+
+        bool current = gizmoHandles.GetMode() == modes[index];
+        if (current) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        bool clicked = ImGui::Button(ids[index], ImVec2(26.0f, 22.0f));
+        if (current) ImGui::PopStyleColor();
+
+        overToolbar |= ImGui::IsItemHovered();
+        DrawHandleModeIcon(ImGui::GetWindowDrawList(), ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+            modes[index], ImGui::GetColorU32(ImGuiCol_Text));
+        if (clicked) gizmoHandles.SetMode(modes[index]);
+    }
+
+    //坐标空间切换：显示的是当前空间，点击切到另一个
+    ImGui::SameLine(0.0f, 8.0f);
+    bool localMode = gizmoHandles.GetOrientation() == EditorGizmoOrientation::Local;
+    if (localMode) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    if (ImGui::Button(localMode ? "Local##handle_space" : "Global##handle_space", ImVec2(56.0f, 22.0f)))
+    {
+        gizmoHandles.SetOrientation(localMode ? EditorGizmoOrientation::Global : EditorGizmoOrientation::Local);
+    }
+    if (localMode) ImGui::PopStyleColor();
+
+    overToolbar |= ImGui::IsItemHovered();
+    ImGui::SetCursorScreenPos(savedCursor);
+    window->DC.CursorMaxPos = savedMax;
+    window->DC.IsSetPos = false;
+    gizmoToolbarHovered = overToolbar;
+}
+
+//处理手柄命中与拖拽。
+void EditorScene::UpdateGizmoHandles(World& world)
+{
+    if (!gizmoViewValid)
+    {
+        gizmoHandles.CancelDrag(world);
+        return;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    bool overSceneView = IsMouseOverSceneView();
+    bool interactive = !playModeActive
+        && overSceneView
+        && !gizmoToolbarHovered
+        && !io.KeyAlt
+        && !cameraMouseDragging
+        && !HasBlockingImGuiActiveItem();
+
+    //快捷键与坐标空间切换跟随同一批闸门
+    if (!playModeActive && overSceneView && !io.WantTextInput)
+    {
+        if (ImGui::IsKeyPressed(ImGuiKey_W, false)) gizmoHandles.SetMode(EditorGizmoMode::Move);
+        if (ImGui::IsKeyPressed(ImGuiKey_E, false)) gizmoHandles.SetMode(EditorGizmoMode::Rotate);
+        if (ImGui::IsKeyPressed(ImGuiKey_R, false)) gizmoHandles.SetMode(EditorGizmoMode::Scale);
+        if (ImGui::IsKeyPressed(ImGuiKey_X, false))
+        {
+            gizmoHandles.SetOrientation(gizmoHandles.GetOrientation() == EditorGizmoOrientation::Global
+                ? EditorGizmoOrientation::Local : EditorGizmoOrientation::Global);
+        }
+    }
+
+    gizmoHandles.Update(world, gizmoView, interactive);
+}
+
+//绘制手柄。
+void EditorScene::DrawGizmoHandles()
+{
+    if (!gizmoViewValid || playModeActive) return;
+    gizmoHandles.Draw(app.GetWorld(), gizmoView);
+}
+
+//取出一条待提交的手柄编辑。
+bool EditorScene::TakeGizmoEdit(EditorGizmoEdit& edit)
+{
+    return gizmoHandles.TakeEdit(edit);
+}
+
+//判断手柄是否正在拖拽。
+bool EditorScene::IsGizmoDragging() const
+{
+    return gizmoHandles.IsDragging();
+}
+
+//获取手柄编辑模式。
+EditorGizmoMode EditorScene::GetGizmoMode() const { return gizmoHandles.GetMode(); }
+
+//设置手柄编辑模式。
+void EditorScene::SetGizmoMode(EditorGizmoMode value) { gizmoHandles.SetMode(value); }
+
+//获取手柄坐标系。
+EditorGizmoOrientation EditorScene::GetGizmoOrientation() const { return gizmoHandles.GetOrientation(); }
+
+//设置手柄坐标系。
+void EditorScene::SetGizmoOrientation(EditorGizmoOrientation value) { gizmoHandles.SetOrientation(value); }

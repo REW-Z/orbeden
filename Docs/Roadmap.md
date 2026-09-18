@@ -3,7 +3,6 @@
 
 # Editor  
 
-移动、旋转、缩放Handles。  
 
 Components可修改字段太少了。    
 

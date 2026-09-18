@@ -175,20 +175,56 @@ public static class EditorRuntime
         }
     }
 
-    /// <summary>绘制 C# Scene Handles。</summary>
+    /// <summary>绘制 C# Scene Handles，并提交原生手柄产生的编辑。</summary>
     [UnmanagedCallersOnly]
     public static void DrawSceneGizmos()
     {
         try
         {
-            Gizmos.Line(new vector3(-1.5f, 0.05f, 0.0f), new vector3(1.5f, 0.05f, 0.0f), new color(0.95f, 0.25f, 0.20f, 1.0f));
-            Gizmos.Line(new vector3(0.0f, 0.05f, -1.5f), new vector3(0.0f, 0.05f, 1.5f), new color(0.20f, 0.80f, 0.95f, 1.0f));
-            Gizmos.Label(new vector3(0.0f, 1.35f, 0.0f), "C# Gizmo");
+            //原生侧每帧调用一次，正好用来轮询已松手的手柄拖拽
+            while (Gizmos.TakeEdit(out EditorGizmoEdit edit)) CommitGizmoEdit(edit);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Editor Scene Handles draw failed: {ex}");
         }
+    }
+
+    //把一次手柄拖拽记成一条撤销事务，撤销/重做直接写局部变换
+    private static void CommitGizmoEdit(EditorGizmoEdit edit)
+    {
+        if (edit.Ens.IsNull) return;
+
+        EnsId id = edit.Ens;
+        vector3 startPosition = edit.StartPosition;
+        quaternion startRotation = edit.StartRotation;
+        vector3 startScale = edit.StartScale;
+        vector3 endPosition = edit.EndPosition;
+        quaternion endRotation = edit.EndRotation;
+        vector3 endScale = edit.EndScale;
+
+        string label = edit.Mode switch
+        {
+            1 => "Rotate Ens",
+            2 => "Scale Ens",
+            _ => "Move Ens",
+        };
+        EditorPropertyHistory.PushAction(label,
+            () => RestoreGizmoTransform(id, startPosition, startRotation, startScale),
+            () => RestoreGizmoTransform(id, endPosition, endRotation, endScale));
+        EditorApplication.MarkWorldDirty();
+    }
+
+    //按撤销记录写回一个 Ens 的局部变换
+    private static void RestoreGizmoTransform(EnsId id, vector3 position, quaternion rotation, vector3 scale)
+    {
+        Ens ens = Ens.FromId(id);
+        if (!ens.IsValid) return;
+
+        ens.Transform.SetLocalPosition(position);
+        ens.Transform.SetLocalRotation(rotation);
+        ens.Transform.SetLocalScale(scale);
+        EditorApplication.MarkWorldDirty();
     }
 
     /// <summary>发布当前项目的 NativeAOT 库。</summary>
@@ -260,11 +296,11 @@ public static class EditorRuntime
     {
         ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 50);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 8);
-        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 2);
+        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 15);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 104);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 105);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Editor/EditorGizmoAbi.h"
+#include "Editor/EditorGizmoHandles.h"
 #include "Editor/EditorLayoutState.h"
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderScene.h"
@@ -14,49 +16,6 @@ class Application;
 class ManagedEditorBridge;
 class Mesh;
 class World;
-
-#pragma pack(push, 4)
-
-//Editor Gizmo 三维向量，布局与 C# Orbeden.vector3 一致。
-struct EditorGizmoVector3
-{
-public:
-    float32 x = 0.0f;
-    float32 y = 0.0f;
-    float32 z = 0.0f;
-};
-
-//Editor Gizmo 颜色，布局与 C# Orbeden.color4 一致。
-struct EditorGizmoColor
-{
-public:
-    float32 r = 1.0f;
-    float32 g = 1.0f;
-    float32 b = 1.0f;
-    float32 a = 1.0f;
-};
-
-#pragma pack(pop)
-
-static_assert(std::is_standard_layout_v<EditorGizmoVector3> && std::is_trivially_copyable_v<EditorGizmoVector3>);
-static_assert(sizeof(EditorGizmoVector3) == sizeof(float32) * 3 && alignof(EditorGizmoVector3) <= 4);
-static_assert(offsetof(EditorGizmoVector3, x) == 0 && offsetof(EditorGizmoVector3, y) == sizeof(float32) && offsetof(EditorGizmoVector3, z) == sizeof(float32) * 2);
-
-static_assert(std::is_standard_layout_v<EditorGizmoColor> && std::is_trivially_copyable_v<EditorGizmoColor>);
-static_assert(sizeof(EditorGizmoColor) == sizeof(float32) * 4 && alignof(EditorGizmoColor) <= 4);
-static_assert(offsetof(EditorGizmoColor, r) == 0 && offsetof(EditorGizmoColor, g) == sizeof(float32) && offsetof(EditorGizmoColor, b) == sizeof(float32) * 2 && offsetof(EditorGizmoColor, a) == sizeof(float32) * 3);
-
-//Editor Gizmo 原生函数表，传给 C# Editor 保存。
-#pragma pack(push, 8)
-struct EditorGizmoApi
-{
-public:
-    void* Line3D = nullptr;
-    void* Label3D = nullptr;
-};
-#pragma pack(pop)
-
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 2);
 
 //场景视口的渲染矩形、可交互内容区与离屏目标像素尺寸。
 struct EditorSceneViewState
@@ -100,6 +59,15 @@ private:
     bool selectionCtrl = false;
     vector2 selectionStart = { 0.0f, 0.0f };
     matrix4x4 gizmoViewProjection;
+    //手柄与托管 Gizmo 共用的相机数据，取自渲染这张离屏图的 RenderCamera
+    EditorGizmoHandles gizmoHandles;
+    bool gizmoViewValid = false;
+    bool gizmoToolbarHovered = false;
+    vector3 gizmoCameraRight = { 1.0f, 0.0f, 0.0f };
+    vector3 gizmoCameraUp = { 0.0f, 1.0f, 0.0f };
+    vector3 gizmoCameraForward = { 0.0f, 0.0f, -1.0f };
+    bool playModeActive = false;
+    EditorGizmoView gizmoView;
 
 public:
     /// <summary>创建编辑器背景场景。</summary>
@@ -189,6 +157,24 @@ public:
     /// <summary>获取当前 Handles 视图投影矩阵。</summary>
     const matrix4x4& GetGizmoViewProjection() const;
 
+    /// <summary>取出一条待提交的手柄编辑，没有时返回 false。</summary>
+    bool TakeGizmoEdit(EditorGizmoEdit& edit);
+
+    /// <summary>判断手柄是否正在拖拽。</summary>
+    bool IsGizmoDragging() const;
+
+    /// <summary>获取手柄编辑模式。</summary>
+    EditorGizmoMode GetGizmoMode() const;
+
+    /// <summary>设置手柄编辑模式。</summary>
+    void SetGizmoMode(EditorGizmoMode value);
+
+    /// <summary>获取手柄坐标系。</summary>
+    EditorGizmoOrientation GetGizmoOrientation() const;
+
+    /// <summary>设置手柄坐标系。</summary>
+    void SetGizmoOrientation(EditorGizmoOrientation value);
+
 private:
     //创建或修复编辑器观察相机。
     void CreateEditorCamera(World& world);
@@ -217,6 +203,18 @@ private:
 
     //把当前选择及其后代提交给渲染系统做屏幕空间描边。
     void SubmitSelectionHighlight(World& world);
+
+    //准备本帧手柄与托管 Gizmo 共用的视图投影
+    void PrepareGizmoView(const RenderScene& scene);
+
+    //绘制场景视图左上角的模式工具栏
+    void DrawGizmoToolbar();
+
+    //处理手柄命中与拖拽
+    void UpdateGizmoHandles(World& world);
+
+    //绘制手柄
+    void DrawGizmoHandles();
 
     //绘制托管 Scene Handles。
     void DrawManagedGizmos();

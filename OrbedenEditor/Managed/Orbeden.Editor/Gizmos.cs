@@ -7,11 +7,25 @@ using Orbeden;
 namespace OrbedenEditor;
 
 #pragma warning disable CS0649
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+internal struct EditorGizmoEdit
+{
+    public EnsId Ens;
+    public int Mode;
+    public vector3 StartPosition;
+    public quaternion StartRotation;
+    public vector3 StartScale;
+    public vector3 EndPosition;
+    public quaternion EndRotation;
+    public vector3 EndScale;
+}
+
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct EditorGizmoApi
 {
     public delegate* unmanaged[Cdecl]<vector3, vector3, color, void> Line3D;
     public delegate* unmanaged[Cdecl]<vector3, byte*, int, void> Label3D;
+    public delegate* unmanaged[Cdecl]<EditorGizmoEdit*, int> TakeEdit;
 }
 #pragma warning restore CS0649
 
@@ -49,5 +63,18 @@ public static unsafe class Gizmos
         {
             api.Label3D(position, pointer, byteCount);
         }
+    }
+
+    /// <summary>取出一条待提交的手柄编辑，没有时返回 false。</summary>
+    internal static bool TakeEdit(out EditorGizmoEdit edit)
+    {
+        edit = default;
+        if (!initialized || api.TakeEdit == null) return false;
+
+        EditorGizmoEdit value = default;
+        if (api.TakeEdit(&value) == 0) return false;
+
+        edit = value;
+        return true;
     }
 }

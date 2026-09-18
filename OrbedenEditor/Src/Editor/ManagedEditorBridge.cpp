@@ -167,13 +167,13 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 8);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 104);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 105);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 51);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 59);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 61);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 63);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 78);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 62);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 64);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 79);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
