@@ -24,7 +24,6 @@ private:
     void* SaveProjectStateFunction = nullptr;
     void* UndoFunction = nullptr;
     void* RedoFunction = nullptr;
-    void* WorldSavedFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -67,9 +66,6 @@ public:
 
     //重做最近一次托管属性或组件事务。
     bool Redo();
-
-    //通知托管 Editor 原生 World 已成功保存。
-    void NotifyWorldSaved();
 
     // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,

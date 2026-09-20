@@ -175,15 +175,15 @@ public:
     /// <summary>设置手柄坐标系。</summary>
     void SetGizmoOrientation(EditorGizmoOrientation value);
 
+    //判断鼠标是否位于场景视口矩形内。
+    bool IsMouseOverSceneView() const;
+
 private:
     //创建或修复编辑器观察相机。
     void CreateEditorCamera(World& world);
 
     //在当前上下文的绘制列表上提交选择轮廓与托管 Handles。
     void DrawSceneOverlay();
-
-    //判断鼠标是否位于场景视口矩形内。
-    bool IsMouseOverSceneView() const;
 
     //释放场景视口的离屏目标。
     void ReleaseSceneViewTarget();

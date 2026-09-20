@@ -25,7 +25,7 @@ namespace examples
     {
         File* file = nullptr;
         {
-            PROFILE("SyncReadFile");
+            PROFILE("FileIO/SyncReadFile");
             file = FileSystem::LoadFile(path, FileSystem::IOSLIB::Fstream, FileSystem::MODE::NORMAL);
         }
 

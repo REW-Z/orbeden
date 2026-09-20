@@ -15,6 +15,29 @@
 
 class ManagedPanelAdapter;
 
+//编辑器快捷键的生效范围
+enum class EditorShortcutScope
+{
+    Global,    //任何位置都生效
+    SceneView, //鼠标位于场景视口内才生效
+    Gizmo,     //手柄正在拖拽时才生效
+};
+
+//一条编辑器快捷键；menu 为空表示只参与分发，不出现在菜单里
+struct EditorShortcut
+{
+    const char* menu = nullptr;
+    const char* menuLabel = nullptr;
+    const char* display = nullptr;
+    ImGuiKey key = ImGuiKey_None;
+    bool ctrl = false;
+    bool shift = false;
+    bool alt = false;
+    EditorShortcutScope scope = EditorShortcutScope::Global;
+    //执行快捷键动作，函数指针而不是 lambda：整张表是静态常量
+    void (*action)(EditorSystem& editor) = nullptr;
+};
+
 //编辑器主系统
 class EditorSystem
 {
@@ -35,6 +58,7 @@ private:
     bool upgradeProjectDialog = false;
     ProjectVersionProbe pendingUpgrade;
     bool previousInputEnabled = true;
+    std::string windowTitle;
     EditorLayoutState playPanelLayout;
     PanelManager panelManager;
     EditorClrHost clrHost;
@@ -239,6 +263,21 @@ private:
 
     //绘制顶部菜单栏
     void DrawMainMenuBar();
+
+    //获取编辑器快捷键表，菜单显示文本与按键分发共用这一份
+    const List<EditorShortcut>& GetEditorShortcuts();
+
+    //分发编辑器快捷键；Play 期间整套失效，按键交给游戏
+    void ProcessEditorShortcuts();
+
+    //绘制指定菜单里的快捷键条目
+    void DrawShortcutMenuItems(const char* menu);
+
+    //获取场景标题：<场景名> * - <项目名>，未保存时带星号
+    std::string GetSceneTitle() const;
+
+    //按场景标题更新主窗口标题
+    void UpdateWindowTitle();
 
     //绘制顶部播放工具栏
     void DrawPlayToolbar();

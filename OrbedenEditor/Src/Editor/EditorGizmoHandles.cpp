@@ -781,12 +781,7 @@ void EditorGizmoHandles::Update(World& world, const EditorGizmoView& view, bool 
 
     if (dragActive)
     {
-        //拖拽中按 Esc 立即回滚，其余情况下持续按当前鼠标推进
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
-        {
-            CancelDrag(world);
-            return;
-        }
+        //取消拖拽的 Esc 由编辑器快捷键表分发，这里按当前鼠标推进
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
         {
             ApplyDrag(world, view);

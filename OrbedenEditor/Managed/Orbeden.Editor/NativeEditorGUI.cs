@@ -23,7 +23,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, vector3*, byte> InputVector3;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, int> InputText;
     public delegate* unmanaged[Cdecl]<void> Separator;
-    public delegate* unmanaged[Cdecl]<void> SameLine;
+    public delegate* unmanaged[Cdecl]<float, void> SameLine;
     public delegate* unmanaged[Cdecl]<byte*, int, int, byte> BeginTable;
     public delegate* unmanaged[Cdecl]<void> EndTable;
     public delegate* unmanaged[Cdecl]<byte*, int, float, byte, void> TableSetupColumn;
@@ -59,8 +59,33 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> ReferenceField;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, float, byte, byte> AssetTile;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> ViewToggleButton;
+    public delegate* unmanaged[Cdecl]<color*, byte*, int, void> TextColored;
+    public delegate* unmanaged[Cdecl]<byte*, int, void> TextWrapped;
+    public delegate* unmanaged[Cdecl]<float, void> SetScrollHereY;
+    public delegate* unmanaged[Cdecl]<vector2*, void> GetContentRegionAvail;
+    public delegate* unmanaged[Cdecl]<vector2*, void> GetCursorScreenPos;
+    public delegate* unmanaged[Cdecl]<EditorRectPrimitive*, int, void> DrawRects;
+    public delegate* unmanaged[Cdecl]<vector2*, vector2*, vector2*, color*, byte*, int, void> DrawTextClipped;
+    public delegate* unmanaged[Cdecl]<byte*, int, vector2*, byte> InvisibleButton;
+    public delegate* unmanaged[Cdecl]<byte> IsItemHovered;
+    public delegate* unmanaged[Cdecl]<byte> IsItemClicked;
+    public delegate* unmanaged[Cdecl]<vector2*, void> GetMousePos;
+    public delegate* unmanaged[Cdecl]<byte*, int, void> SetTooltip;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, float, byte, int> InputTextMultiline;
+    public delegate* unmanaged[Cdecl]<float> GetMouseWheel;
+    public delegate* unmanaged[Cdecl]<byte> IsWindowFocused;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> ToggleButton;
 }
 #pragma warning restore CS0649
+
+//批量矩形绘制单元，字段顺序与原生侧一一对应，全部拍平成 float
+[StructLayout(LayoutKind.Sequential, Pack = 4)]
+internal struct EditorRectPrimitive
+{
+    public float MinX, MinY, MaxX, MaxY;
+    public float R, G, B, A;
+    public float Rounding;
+}
 
 internal static unsafe class NativeEditorGUI
 {
@@ -286,6 +311,129 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* pointer = bytes) return api.ViewToggleButton(pointer, bytes.Length, gridMode ? (byte)1 : (byte)0) != 0;
     }
 
+    //绘制带颜色文本
+    internal static void TextColored(string? text, color value)
+    {
+        if (!initialized || api.TextColored == null) return;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes) api.TextColored(&value, pointer, bytes.Length);
+    }
+
+    //绘制自动换行文本
+    internal static void TextWrapped(string? text)
+    {
+        if (!initialized || api.TextWrapped == null) return;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes) api.TextWrapped(pointer, bytes.Length);
+    }
+
+    //把滚动位置移到当前光标处
+    internal static void SetScrollHereY(float ratio)
+    {
+        if (initialized && api.SetScrollHereY != null) api.SetScrollHereY(ratio);
+    }
+
+    //读取内容区剩余空间
+    internal static vector2 GetContentRegionAvail()
+    {
+        vector2 size = default;
+        if (initialized && api.GetContentRegionAvail != null) api.GetContentRegionAvail(&size);
+        return size;
+    }
+
+    //读取屏幕坐标下的光标位置
+    internal static vector2 GetCursorScreenPos()
+    {
+        vector2 position = default;
+        if (initialized && api.GetCursorScreenPos != null) api.GetCursorScreenPos(&position);
+        return position;
+    }
+
+    //批量绘制实心矩形
+    internal static void DrawRects(EditorRectPrimitive[] rects, int count)
+    {
+        if (!initialized || api.DrawRects == null || rects.Length == 0 || count <= 0) return;
+        fixed (EditorRectPrimitive* pointer = rects) api.DrawRects(pointer, count);
+    }
+
+    //在指定位置绘制被裁剪的文本
+    internal static void DrawTextClipped(vector2 clipMin, vector2 clipMax, vector2 position, color value, string? text)
+    {
+        if (!initialized || api.DrawTextClipped == null) return;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes)
+            api.DrawTextClipped(&clipMin, &clipMax, &position, &value, pointer, bytes.Length);
+    }
+
+    //预留一块可交互空白区域
+    internal static bool InvisibleButton(string? id, vector2 size)
+    {
+        if (!initialized || api.InvisibleButton == null) return false;
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) return api.InvisibleButton(pointer, bytes.Length, &size) != 0;
+    }
+
+    //判断上一个条目是否悬停
+    internal static bool IsItemHovered()
+    {
+        return initialized && api.IsItemHovered != null && api.IsItemHovered() != 0;
+    }
+
+    //判断上一个条目是否被点击
+    internal static bool IsItemClicked()
+    {
+        return initialized && api.IsItemClicked != null && api.IsItemClicked() != 0;
+    }
+
+    //读取当前鼠标位置
+    internal static vector2 GetMousePos()
+    {
+        vector2 position = default;
+        if (initialized && api.GetMousePos != null) api.GetMousePos(&position);
+        return position;
+    }
+
+    //显示单行提示
+    internal static void SetTooltip(string? text)
+    {
+        if (!initialized || api.SetTooltip == null) return;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes) api.SetTooltip(pointer, bytes.Length);
+    }
+
+    //绘制只读多行文本，可框选复制；缓冲区复用，避免每帧为详情文本分配
+    private static byte[] multilineBuffer = new byte[256];
+
+    internal static void InputTextMultiline(string? label, string? text, float height)
+    {
+        if (!initialized || api.InputTextMultiline == null) return;
+
+        byte[] labelBytes = Encode(label);
+        byte[] textBytes = Encode(text);
+        int required = textBytes.Length + 1;
+        if (multilineBuffer.Length < required) multilineBuffer = new byte[required];
+
+        Array.Copy(textBytes, multilineBuffer, textBytes.Length);
+        multilineBuffer[textBytes.Length] = 0;
+        if (textBytes.Length + 1 < multilineBuffer.Length) multilineBuffer[textBytes.Length + 1] = 0;
+
+        fixed (byte* labelPointer = labelBytes)
+        fixed (byte* bufferPointer = multilineBuffer)
+            api.InputTextMultiline(labelPointer, labelBytes.Length, bufferPointer, multilineBuffer.Length, height, 1);
+    }
+
+    //读取本帧的鼠标滚轮增量
+    internal static float GetMouseWheel()
+    {
+        return initialized && api.GetMouseWheel != null ? api.GetMouseWheel() : 0.0f;
+    }
+
+    //判断当前面板是否拥有焦点
+    internal static bool IsWindowFocused()
+    {
+        return initialized && api.IsWindowFocused != null && api.IsWindowFocused() != 0;
+    }
+
     //开始下拉选择框
     internal static bool BeginCombo(string? label, string? preview)
     {
@@ -397,7 +545,21 @@ internal static unsafe class NativeEditorGUI
     //切换到同行布局
     internal static void SameLine()
     {
-        if (initialized && api.SameLine != null) api.SameLine();
+        if (initialized && api.SameLine != null) api.SameLine(-1.0f);
+    }
+
+    //切换到同行布局并按偏移定位，用来把控件贴到行的右侧
+    internal static void SameLine(float offset)
+    {
+        if (initialized && api.SameLine != null) api.SameLine(offset);
+    }
+
+    //绘制开关按钮：开启时用强调色底
+    internal static bool ToggleButton(string? text, bool active)
+    {
+        if (!initialized || api.ToggleButton == null) return false;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes) return api.ToggleButton(pointer, bytes.Length, active ? (byte)1 : (byte)0) != 0;
     }
 
     //开始表格

@@ -3,11 +3,7 @@
 
 # Editor  
 
-快捷键保存场景。  
-
-Console面板。
-
-Profiler面板。
+EnsView重命名Ens 输入框位置就在原来Ens的Label按钮位置。同理ProjectPanel也是。
 
 Components可修改字段太少了。    
 
@@ -17,7 +13,9 @@ Components可修改字段太少了。
 
 着色器生成器。  
 
+粒子系统。  
 
+RetainedGUI。  
 
 # 渲染系统  
 

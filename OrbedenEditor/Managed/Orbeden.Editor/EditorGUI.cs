@@ -118,6 +118,12 @@ public static class EditorGUI
     /// <summary>切换到同行布局。</summary>
     public static void SameLine() => NativeEditorGUI.SameLine();
 
+    /// <summary>切换到同行布局并按偏移定位。</summary>
+    public static void SameLine(float offset) => NativeEditorGUI.SameLine(offset);
+
+    /// <summary>绘制开关按钮；开启时用强调色底。</summary>
+    public static bool ToggleButton(string text, bool active) => NativeEditorGUI.ToggleButton(text, active);
+
     /// <summary>开始表格。</summary>
     public static bool BeginTable(string id, int columns) => NativeEditorGUI.BeginTable(id, columns);
 
@@ -179,6 +185,18 @@ public static class EditorGUI
 
     /// <summary>绘制字符串输入框。</summary>
     public static bool InputText(string label, ref string value) => NativeEditorGUI.InputText(label, ref value);
+
+    /// <summary>绘制带颜色文本。</summary>
+    public static void TextColored(string text, color value) => NativeEditorGUI.TextColored(text, value);
+
+    /// <summary>绘制自动换行文本。</summary>
+    public static void TextWrapped(string text) => NativeEditorGUI.TextWrapped(text);
+
+    /// <summary>把滚动位置移到当前光标处。</summary>
+    public static void SetScrollHereY(float ratio) => NativeEditorGUI.SetScrollHereY(ratio);
+
+    /// <summary>显示单行提示。</summary>
+    public static void SetTooltip(string text) => NativeEditorGUI.SetTooltip(text);
 }
 
 public readonly struct ObjectFieldOption

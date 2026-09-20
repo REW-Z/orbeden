@@ -16,6 +16,8 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetSelectedPlayerTarget;
     public delegate* unmanaged[Cdecl]<IntPtr, int, void> SetSelectedPlayerTarget;
     public delegate* unmanaged[Cdecl]<IntPtr, byte, byte*, int, int> MirrorExamples;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte> IsWorldDirty;
+    public delegate* unmanaged[Cdecl]<IntPtr, void> SetWorldDirty;
 }
 #pragma warning restore CS0649
 
@@ -30,7 +32,10 @@ internal enum EditorBuildKind { Scripts, Native, Player }
 public static unsafe class EditorApplication
 {
     private static EditorApplicationNativeApi api;
-    public static bool WorldDirty { get; private set; }
+
+    /// <summary>当前编辑 World 是否相对磁盘文件有未保存改动，真相源在原生 World。</summary>
+    public static bool WorldDirty => api.IsWorldDirty != null && api.IsWorldDirty(api.Context) != 0;
+
     public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 
     /// <summary>保存原生 Editor 应用 API。</summary>
@@ -74,10 +79,9 @@ public static unsafe class EditorApplication
         }
     }
 
-    internal static void MarkWorldDirty() { if (!IsPlaying) WorldDirty = true; }
-    internal static void ClearWorldDirty() => WorldDirty = false;
-    internal static void ClearDirty()
+    //标记 World 有改动。托管脚本字段的写入与撤销回放不经过原生钩子，只能由这里上报。
+    internal static void MarkWorldDirty()
     {
-        WorldDirty = false;
+        if (!IsPlaying && api.SetWorldDirty != null) api.SetWorldDirty(api.Context);
     }
 }

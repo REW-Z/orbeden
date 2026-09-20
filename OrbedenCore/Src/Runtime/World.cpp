@@ -130,6 +130,7 @@ void World::SetEnsLocalActive(EnsId ens, bool active)
     if (!storedEns || storedEns->localActive == active) return;
 
     storedEns->localActive = active;
+    SetDirty();
     RefreshEnsWorldActive(ens);
 }
 
@@ -211,12 +212,27 @@ void World::RemoveTransformListener(ITransformListener* listener)
     if (it != transformListeners.end()) transformListeners.erase(it);
 }
 
+//标记场景内容已有改动
+void World::SetDirty()
+{
+    if (IsDirtySuppressed()) return;
+    dirty = true;
+}
+
+//退出脏标记抑制区
+void World::EndDirtySuppression()
+{
+    if (dirtySuppressionDepth > 0) --dirtySuppressionDepth;
+}
+
 //通知指定节点及其子树的世界变换失效
 void World::NotifyTransformChanged(EnsId ens)
 {
     Transform* transform = GetTransform(ens);
     if (!transform) return;
 
+    //任何变换写入都算场景内容改动，手柄、脚本与 Inspector 都汇到这里
+    SetDirty();
     transform->transformDirty = true;
     for (ITransformListener* listener : transformListeners)
     {
@@ -274,6 +290,7 @@ void World::Clear()
 
     //内容已整体失效，渲染侧缓存的指针与矩阵都必须重新绑定
     ++contentRevision;
+    SetDirty();
 }
 
 //复制句柄版本并隔离准备中的实体
@@ -331,6 +348,9 @@ void World::CommitReplacement(World& prepared)
         Component* component = object ? object->Cast<Component>() : nullptr;
         if (component && component->GetWorld() == this) component->OnAttach();
     }
+
+    //内容已整体替换为磁盘上的场景，与文件一致
+    dirty = false;
 }
 
 //创建Ens
@@ -507,6 +527,7 @@ bool World::DestroyEns(EnsId ens)
     storedEns->SetOwnership(Object::Ownership::None);
     Object::DestroyDetachedInstance(storedEns);
 
+    SetDirty();
     freeEnsIds.push_back(ens.id);
     return true;
 }
@@ -588,7 +609,12 @@ void World::SetParent(EnsId child, EnsId parent)
 
     //挂到新父级末尾
     Transform* parentTransform = GetTransform(parent);
-    if (!parentTransform) return;
+    if (!parentTransform)
+    {
+        //父级已失效，节点此刻挂在根下，层级数据同样变了
+        SetDirty();
+        return;
+    }
 
     Transform* lastChild = GetTransform(parentTransform->lastChild);
     transform->parent = parent;
@@ -650,10 +676,13 @@ bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
         {
             ensSlots[liveEns[index]->GetId().id].denseIndex = static_cast<uint32>(index);
         }
+        //同级重排不经过变换通知，写入的场景节点顺序已经变了
+        SetDirty();
         return true;
     }
 
     //处理空插入目标
+    SetDirty();
     if (beforeSibling.IsNull()) return true;
 
     Transform* parentTransform = GetTransform(parent);
@@ -714,6 +743,7 @@ Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string&
     if (!component) return nullptr;
 
     storedEns->AddComponentInstance(component);
+    SetDirty();
     if (!preparing) component->OnAttach();
     return component;
 }
@@ -781,6 +811,7 @@ bool World::RemoveComponent(Component* component)
     component->SetOwnership(Object::Ownership::None);
     bool deleted = Object::DestroyDetachedInstance(component);
     assert(deleted);
+    SetDirty();
     if (removingComponents.empty())
     {
         List<EnsId> pending;

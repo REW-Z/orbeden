@@ -1,6 +1,7 @@
 #include "Rendering/RenderSystem.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/RenderMath.h"
 #include "ResourceManager/ResourceManager.h"
 
@@ -330,6 +331,8 @@ void RenderSystem::InvalidateResourceCaches()
 
 void RenderSystem::Render(World& world, float deltaTime)
 {
+    PROFILE("Render/Frame");
+
     if (!initialized || !window) return;
 
     //累加 Shader 时间
@@ -342,7 +345,10 @@ void RenderSystem::Render(World& world, float deltaTime)
     gpuResourceManager.ReleaseDestroyedResources();
 
     //刷新持久渲染场景
-    scene.Update(world, transformCache);
+    {
+        PROFILE("Render/SceneSync");
+        scene.Update(world, transformCache);
+    }
 
     //准备相机渲染数据
     PrepareCameraRenderData();
@@ -389,10 +395,18 @@ void RenderSystem::Render(World& world, float deltaTime)
     {
         if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
 
-        culler.Cull(scene, camera, visibleSet); //剔除
-        scene.BuildRenderItems(visibleSet);
-        sorter.Sort(visibleSet);//排序
-        forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
+        {
+            PROFILE("Render/Cull");
+            culler.Cull(scene, camera, visibleSet); //剔除
+            scene.BuildRenderItems(visibleSet);
+            sorter.Sort(visibleSet);//排序
+        }
+
+        {
+            PROFILE("Render/Pipeline");
+            forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
+        }
+
         RenderSelectionOutline(camera, visibleSet);//选择描边后处理
         if (debugLineWorld == &world && !debugLines.empty())
         {

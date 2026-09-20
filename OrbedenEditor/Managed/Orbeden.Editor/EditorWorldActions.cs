@@ -30,7 +30,6 @@ internal static class EditorWorldActions
         }
         EditorPropertyHistory.Clear();
         EditorObjectField.Clear();
-        EditorApplication.ClearWorldDirty();
         pendingKey = null;
         Status = "Opened World: " + key;
         return true;

@@ -10,6 +10,7 @@
 #include "FileSystem/Utf8Path.h"
 #include "Platform/ExecutablePath.h"
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/WorldSerializer.h"
@@ -61,7 +62,6 @@ namespace
     constexpr const char* EditorSaveProjectStateMethod = "SaveProjectState";
     constexpr const char* EditorUndoMethod = "Undo";
     constexpr const char* EditorRedoMethod = "Redo";
-    constexpr const char* EditorWorldSavedMethod = "WorldSaved";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -146,6 +146,33 @@ namespace
         void* getSelectedPlayerTarget = nullptr;
         void* setSelectedPlayerTarget = nullptr;
         void* mirrorExamples = nullptr;
+        void* isWorldDirty = nullptr;
+        void* setWorldDirty = nullptr;
+    };
+
+    //传给 Editor C# 的日志函数表。
+    struct EditorLogNativeApi
+    {
+    public:
+        void* getRange = nullptr;
+        void* copyEntry = nullptr;
+        void* getCounts = nullptr;
+        void* append = nullptr;
+        void* clear = nullptr;
+    };
+
+    //传给 Editor C# 的性能剖析函数表。
+    struct EditorProfilerNativeApi
+    {
+    public:
+        void* setCapturing = nullptr;
+        void* isCapturing = nullptr;
+        void* clearFrames = nullptr;
+        void* getFrameRange = nullptr;
+        void* copyFrameSummaries = nullptr;
+        void* copyFrameEvents = nullptr;
+        void* getNameCount = nullptr;
+        void* copyName = nullptr;
     };
 
     //传给 Editor C# 的原生函数表。
@@ -159,21 +186,28 @@ namespace
         EditorPanelNativeApi panels;
         EditorAssetNativeApi assets;
         EditorComponentNativeApi components;
+        EditorLogNativeApi log;
+        EditorProfilerNativeApi profiler;
     };
 
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 8);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 105);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
+    //gui 表扩容后，排在它后面的每张表偏移都跟着后移
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 136);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 51);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 59);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 62);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 64);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 79);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 67);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 77);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 80);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 82);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 97);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 123);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 128);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -503,6 +537,20 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         return editor && editor->IsPlaying() ? 1 : 0;
+    }
+
+    //读取编辑 World 的未保存标记
+    uint8 ORBEDEN_NATIVE_CALL IsManagedWorldDirty(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        return editor && editor->GetWorld().IsDirty() ? 1 : 0;
+    }
+
+    //标记编辑 World 有改动，供原生感知不到的托管字段写入使用
+    void ORBEDEN_NATIVE_CALL SetManagedWorldDirty(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (editor && !editor->IsPlaying()) editor->GetWorld().SetDirty();
     }
 
     //重映射原生对象资源引用
@@ -1061,6 +1109,100 @@ namespace
         return registration->panelManager->RegisterPanel(
             std::make_unique<ManagedPanelAdapter>(*registration->editor, std::move(info), handle)) ? 1 : 0;
     }
+
+    //读取日志保留窗口的序号范围
+    int32 ORBEDEN_NATIVE_CALL EditorLogGetRange(int64* oldestRevision, int64* newestRevision)
+    {
+        int64 oldest = 0;
+        int64 newest = 0;
+        int32 count = Log::GetRange(oldest, newest);
+        if (oldestRevision) *oldestRevision = oldest;
+        if (newestRevision) *newestRevision = newest;
+        return count;
+    }
+
+    //按序号取出一条日志
+    int32 ORBEDEN_NATIVE_CALL EditorLogCopyEntry(int64 revision, uint8* text, int32 capacity, int32* level, int64* timestampMilliseconds)
+    {
+        LogLevel value = LogLevel::Info;
+        int64 timestamp = 0;
+        int32 length = Log::CopyEntry(revision, reinterpret_cast<char*>(text), capacity, value, timestamp);
+        if (level) *level = static_cast<int32>(value);
+        if (timestampMilliseconds) *timestampMilliseconds = timestamp;
+        return length;
+    }
+
+    //统计保留窗口内各级别的条数
+    void ORBEDEN_NATIVE_CALL EditorLogGetCounts(int32* counts)
+    {
+        if (!counts) return;
+        Log::GetCounts(counts);
+    }
+
+    //接收托管侧日志，托管侧已经输出过控制台，这里只入保留窗口
+    void ORBEDEN_NATIVE_CALL EditorLogAppend(int32 level, const uint8* text, int32 length)
+    {
+        Log::Append(static_cast<LogLevel>(level), ReadUtf8(text, length).c_str());
+    }
+
+    //清空日志保留窗口
+    void ORBEDEN_NATIVE_CALL EditorLogClear()
+    {
+        Log::Clear();
+    }
+
+    //开关按帧采集
+    void ORBEDEN_NATIVE_CALL EditorProfilerSetCapturing(uint8 value)
+    {
+        Profiler::SetCapturing(value != 0);
+    }
+
+    //判断是否正在按帧采集
+    uint8 ORBEDEN_NATIVE_CALL EditorProfilerIsCapturing()
+    {
+        return Profiler::IsCapturing() ? 1 : 0;
+    }
+
+    //清空帧历史
+    void ORBEDEN_NATIVE_CALL EditorProfilerClearFrames()
+    {
+        Profiler::ClearFrames();
+    }
+
+    //读取帧历史的帧序号范围
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerGetFrameRange(int64* oldestFrame, int64* newestFrame)
+    {
+        int64 oldest = 0;
+        int64 newest = 0;
+        int32 count = Profiler::GetFrameRange(oldest, newest);
+        if (oldestFrame) *oldestFrame = oldest;
+        if (newestFrame) *newestFrame = newest;
+        return count;
+    }
+
+    //拷贝帧摘要
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerCopyFrameSummaries(ProfileFrameSummary* output, int32 capacity)
+    {
+        return Profiler::CopyFrameSummaries(output, capacity);
+    }
+
+    //拷贝指定帧的采样事件
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerCopyFrameEvents(int64 frameIndex, ProfileEvent* output, int32 capacity)
+    {
+        return Profiler::CopyFrameEvents(frameIndex, output, capacity);
+    }
+
+    //读取名字驻留表的条数
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerGetNameCount()
+    {
+        return Profiler::GetNameCount();
+    }
+
+    //按编号拷贝采样名
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerCopyName(int32 nameId, uint8* text, int32 capacity)
+    {
+        return Profiler::CopyName(nameId, reinterpret_cast<char*>(text), capacity);
+    }
 }
 
 bool ManagedEditorBridge::Initialize(EditorClrHost& host,
@@ -1095,7 +1237,6 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
-        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorWorldSavedMethod, &WorldSavedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -1117,6 +1258,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.getSelectedPlayerTarget = reinterpret_cast<void*>(&GetManagedPlayerTarget);
     editorApi.application.setSelectedPlayerTarget = reinterpret_cast<void*>(&SetManagedPlayerTarget);
     editorApi.application.mirrorExamples = reinterpret_cast<void*>(&MirrorManagedExamples);
+    editorApi.application.isWorldDirty = reinterpret_cast<void*>(&IsManagedWorldDirty);
+    editorApi.application.setWorldDirty = reinterpret_cast<void*>(&SetManagedWorldDirty);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
@@ -1161,6 +1304,19 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.matchComponentType = reinterpret_cast<void*>(&MatchManagedComponentType);
     editorApi.components.getReferenceObjects = reinterpret_cast<void*>(&GetManagedReferenceObjects);
     editorApi.components.getReferenceLabel = reinterpret_cast<void*>(&GetManagedReferenceLabel);
+    editorApi.log.getRange = reinterpret_cast<void*>(&EditorLogGetRange);
+    editorApi.log.copyEntry = reinterpret_cast<void*>(&EditorLogCopyEntry);
+    editorApi.log.getCounts = reinterpret_cast<void*>(&EditorLogGetCounts);
+    editorApi.log.append = reinterpret_cast<void*>(&EditorLogAppend);
+    editorApi.log.clear = reinterpret_cast<void*>(&EditorLogClear);
+    editorApi.profiler.setCapturing = reinterpret_cast<void*>(&EditorProfilerSetCapturing);
+    editorApi.profiler.isCapturing = reinterpret_cast<void*>(&EditorProfilerIsCapturing);
+    editorApi.profiler.clearFrames = reinterpret_cast<void*>(&EditorProfilerClearFrames);
+    editorApi.profiler.getFrameRange = reinterpret_cast<void*>(&EditorProfilerGetFrameRange);
+    editorApi.profiler.copyFrameSummaries = reinterpret_cast<void*>(&EditorProfilerCopyFrameSummaries);
+    editorApi.profiler.copyFrameEvents = reinterpret_cast<void*>(&EditorProfilerCopyFrameEvents);
+    editorApi.profiler.getNameCount = reinterpret_cast<void*>(&EditorProfilerGetNameCount);
+    editorApi.profiler.copyName = reinterpret_cast<void*>(&EditorProfilerCopyName);
     if (initializeEditor(&editorApi) == 0)
     {
         //托管侧没有日志通道，失败原因只能靠这个出口带回原生侧。
@@ -1189,7 +1345,6 @@ void ManagedEditorBridge::Shutdown()
     SaveProjectStateFunction = nullptr;
     UndoFunction = nullptr;
     RedoFunction = nullptr;
-    WorldSavedFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -1267,13 +1422,6 @@ bool ManagedEditorBridge::Redo()
     if (!initialized || !RedoFunction) return false;
     ManagedCommandFn redo = reinterpret_cast<ManagedCommandFn>(RedoFunction);
     return redo() != 0;
-}
-
-void ManagedEditorBridge::NotifyWorldSaved()
-{
-    if (!initialized || !WorldSavedFunction) return;
-    ManagedDrawEditorFn worldSaved = reinterpret_cast<ManagedDrawEditorFn>(WorldSavedFunction);
-    worldSaved();
 }
 
 bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,

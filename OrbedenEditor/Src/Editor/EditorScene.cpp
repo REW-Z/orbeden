@@ -476,6 +476,8 @@ void EditorScene::DrawSceneOverlay()
 //更新编辑器观察相机。
 void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
 {
+    //编辑器相机是临时对象，每帧都在写它，不能因此把场景标成有改动
+    World::DirtySuppressionScope suppression(world);
     (void)deltaTime;
     CreateEditorCamera(world);
 
@@ -708,6 +710,8 @@ void EditorScene::WriteLayout(EditorLayoutState& layout)
 //应用布局中的观察相机状态。
 void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
 {
+    //布局恢复的是编辑器相机，不属于场景内容
+    World::DirtySuppressionScope suppression(world);
     cameraState = layout.editorCamera;
     cameraYaw = cameraState.yaw;
     cameraPitch = cameraState.pitch;
@@ -735,6 +739,8 @@ bool EditorScene::RemoveCameraForSerialization(World& world)
 //恢复编辑器观察相机。
 void EditorScene::RestoreCamera(World& world)
 {
+    //恢复编辑器相机同样不改变场景内容
+    World::DirtySuppressionScope suppression(world);
     CreateEditorCamera(world);
     if (!cameraState.hasValue) return;
 
@@ -783,6 +789,8 @@ const matrix4x4& EditorScene::GetGizmoViewProjection() const
 //创建或修复编辑器观察相机。
 void EditorScene::CreateEditorCamera(World& world)
 {
+    //编辑器相机不进场景文件，它的创建与写入都不算场景改动
+    World::DirtySuppressionScope suppression(world);
     Ens* editorCamera = world.GetEns(cameraEns);
     if (!editorCamera) editorCamera = world.FindEns(StringId(EditorCameraId));
     if (!editorCamera)
@@ -853,6 +861,8 @@ void EditorScene::CaptureCameraState(World& world)
 //移除当前编辑器观察相机。
 void EditorScene::RemoveCamera(World& world)
 {
+    //编辑器相机的销毁同样不算场景改动
+    World::DirtySuppressionScope suppression(world);
     Ens* editorCamera = world.GetEns(cameraEns);
     if (!editorCamera) editorCamera = world.FindEns(StringId(EditorCameraId));
     if (editorCamera) editorCamera->Destroy();
@@ -1278,19 +1288,7 @@ void EditorScene::UpdateGizmoHandles(World& world)
         && !cameraMouseDragging
         && !HasBlockingImGuiActiveItem();
 
-    //快捷键与坐标空间切换跟随同一批闸门
-    if (!playModeActive && overSceneView && !io.WantTextInput)
-    {
-        if (ImGui::IsKeyPressed(ImGuiKey_W, false)) gizmoHandles.SetMode(EditorGizmoMode::Move);
-        if (ImGui::IsKeyPressed(ImGuiKey_E, false)) gizmoHandles.SetMode(EditorGizmoMode::Rotate);
-        if (ImGui::IsKeyPressed(ImGuiKey_R, false)) gizmoHandles.SetMode(EditorGizmoMode::Scale);
-        if (ImGui::IsKeyPressed(ImGuiKey_X, false))
-        {
-            gizmoHandles.SetOrientation(gizmoHandles.GetOrientation() == EditorGizmoOrientation::Global
-                ? EditorGizmoOrientation::Local : EditorGizmoOrientation::Global);
-        }
-    }
-
+    //模式与坐标系快捷键由 EditorSystem 的快捷键表统一分发
     gizmoHandles.Update(world, gizmoView, interactive);
 }
 

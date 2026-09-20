@@ -577,9 +577,24 @@ namespace
     }
 
     //切换到同行布局
-    void ORBEDEN_NATIVE_CALL EditorGuiSameLine()
+    // 换到同一行；offset 大于 0 时按该偏移定位，用来把控件贴到行的右侧
+    void ORBEDEN_NATIVE_CALL EditorGuiSameLine(float32 offset)
     {
-        ImGui::SameLine();
+        if (offset > 0.0f) ImGui::SameLine(offset);
+        else ImGui::SameLine();
+    }
+
+    // 绘制开关按钮：开启时用强调色底，比勾选框更适合紧凑工具条
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiToggleButton(const uint8* text, int32 length, uint8 active)
+    {
+        std::string label = ReadUtf8Text(text, length);
+        bool on = active != 0;
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(on ? theme.active : theme.control));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(on ? theme.active : theme.hovered));
+        bool pressed = ImGui::Button(label.c_str());
+        ImGui::PopStyleColor(2);
+        return pressed ? 1 : 0;
     }
 
     //开始表格
@@ -717,6 +732,148 @@ namespace
         position->y = resolved.y;
         position->z = resolved.z;
         return 1;
+    }
+
+    //批量矩形绘制单元，字段顺序与托管侧一一对应，全部拍平成 float32
+    struct EditorRectPrimitive
+    {
+        float32 minX = 0.0f, minY = 0.0f, maxX = 0.0f, maxY = 0.0f;
+        float32 r = 0.0f, g = 0.0f, b = 0.0f, a = 1.0f;
+        float32 rounding = 0.0f;
+    };
+    static_assert(sizeof(EditorRectPrimitive) == 36);
+
+    //绘制带颜色文本
+    void ORBEDEN_NATIVE_CALL EditorGuiTextColored(const color* value, const uint8* text, int32 length)
+    {
+        std::string body = ReadUtf8Text(text, length);
+        if (!value)
+        {
+            ImGui::TextUnformatted(body.c_str());
+            return;
+        }
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(*value));
+        ImGui::TextUnformatted(body.c_str());
+        ImGui::PopStyleColor();
+    }
+
+    //绘制自动换行文本
+    void ORBEDEN_NATIVE_CALL EditorGuiTextWrapped(const uint8* text, int32 length)
+    {
+        std::string body = ReadUtf8Text(text, length);
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextUnformatted(body.c_str());
+        ImGui::PopTextWrapPos();
+    }
+
+    //把滚动位置移到当前光标处
+    void ORBEDEN_NATIVE_CALL EditorGuiSetScrollHereY(float32 ratio) { ImGui::SetScrollHereY(ratio); }
+
+    //读取内容区剩余空间
+    void ORBEDEN_NATIVE_CALL EditorGuiGetContentRegionAvail(vector2* size)
+    {
+        if (!size) return;
+
+        ImVec2 available = ImGui::GetContentRegionAvail();
+        size->x = available.x;
+        size->y = available.y;
+    }
+
+    //读取屏幕坐标下的光标位置
+    void ORBEDEN_NATIVE_CALL EditorGuiGetCursorScreenPos(vector2* position)
+    {
+        if (!position) return;
+
+        ImVec2 cursor = ImGui::GetCursorScreenPos();
+        position->x = cursor.x;
+        position->y = cursor.y;
+    }
+
+    //批量绘制实心矩形，绘制内容由当前窗口裁剪
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawRects(const EditorRectPrimitive* rects, int32 count)
+    {
+        if (!rects || count <= 0) return;
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        for (int32 index = 0; index < count; index++)
+        {
+            const EditorRectPrimitive& rect = rects[index];
+            if (rect.maxX <= rect.minX || rect.maxY <= rect.minY) continue;
+
+            drawList->AddRectFilled(ImVec2(rect.minX, rect.minY), ImVec2(rect.maxX, rect.maxY),
+                ImGui::GetColorU32(ImVec4(rect.r, rect.g, rect.b, rect.a)), rect.rounding);
+        }
+    }
+
+    //在指定位置绘制被裁剪的文本
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawTextClipped(const vector2* clipMin, const vector2* clipMax,
+        const vector2* position, const color* value, const uint8* text, int32 length)
+    {
+        if (!clipMin || !clipMax || !position) return;
+
+        std::string body = ReadUtf8Text(text, length);
+        ImU32 textColor = value ? ImGui::GetColorU32(ToImVec4(*value)) : ImGui::GetColorU32(ImGuiCol_Text);
+
+        ImGui::PushClipRect(ImVec2(clipMin->x, clipMin->y), ImVec2(clipMax->x, clipMax->y), true);
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(),
+            ImVec2(position->x, position->y), textColor, body.c_str());
+        ImGui::PopClipRect();
+    }
+
+    //预留一块可交互空白区域
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiInvisibleButton(const uint8* id, int32 length, const vector2* size)
+    {
+        if (!size) return 0;
+
+        //尺寸必须为正，否则 ImGui 断言
+        ImVec2 area(std::max(size->x, 1.0f), std::max(size->y, 1.0f));
+        return ImGui::InvisibleButton(ReadUtf8Text(id, length).c_str(), area) ? 1 : 0;
+    }
+
+    //判断上一个条目是否悬停
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiIsItemHovered() { return ImGui::IsItemHovered() ? 1 : 0; }
+
+    //判断上一个条目是否被点击
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiIsItemClicked() { return ImGui::IsItemClicked() ? 1 : 0; }
+
+    //读取当前鼠标位置
+    void ORBEDEN_NATIVE_CALL EditorGuiGetMousePos(vector2* position)
+    {
+        if (!position) return;
+
+        ImVec2 mouse = ImGui::GetIO().MousePos;
+        position->x = mouse.x;
+        position->y = mouse.y;
+    }
+
+    //显示单行提示
+    void ORBEDEN_NATIVE_CALL EditorGuiSetTooltip(const uint8* text, int32 length)
+    {
+        ImGui::SetTooltip("%s", ReadUtf8Text(text, length).c_str());
+    }
+
+    //绘制只读多行文本，支持框选复制
+    int32 ORBEDEN_NATIVE_CALL EditorGuiInputTextMultiline(const uint8* label, int32 labelLength,
+        uint8* text, int32 capacity, float32 height, uint8 readOnly)
+    {
+        if (!text || capacity <= 0) return 0;
+
+        std::string labelText = ReadUtf8Text(label, labelLength);
+        ImGuiInputTextFlags flags = readOnly != 0 ? ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_None;
+        return ImGui::InputTextMultiline(labelText.c_str(), reinterpret_cast<char*>(text),
+            static_cast<usize>(capacity), ImVec2(-1.0f, height), flags) ? 1 : 0;
+    }
+
+    //读取本帧的鼠标滚轮增量
+    float32 ORBEDEN_NATIVE_CALL EditorGuiGetMouseWheel() { return ImGui::GetIO().MouseWheel; }
+
+    //判断当前窗口是否拥有焦点。
+    //必须带 ChildWindows：不加时要求 NavWindow 与当前窗口完全相等，
+    //而面板里真正拿到焦点的往往是内容区里的子窗口（列表、滚动区）。
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiIsWindowFocused()
+    {
+        return ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? 1 : 0;
     }
 }
 
@@ -866,6 +1023,12 @@ ImVec2 EditorGUI::GetWindowPadding()
 ImU32 EditorGUI::GetActiveColor()
 {
     return ImGui::GetColorU32(ToImVec4(theme.active));
+}
+
+//获取面板边框色：只有拥有焦点的面板才用强调色，其余用这个
+ImU32 EditorGUI::GetBorderColor()
+{
+    return ImGui::GetColorU32(ToImVec4(theme.border));
 }
 
 //获取共享面板圆角半径
@@ -1076,6 +1239,22 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.referenceField = reinterpret_cast<void*>(&EditorGuiReferenceField);
     api.assetTile = reinterpret_cast<void*>(&EditorGuiAssetTile);
     api.viewToggleButton = reinterpret_cast<void*>(&EditorGuiViewToggleButton);
+    api.textColored = reinterpret_cast<void*>(&EditorGuiTextColored);
+    api.textWrapped = reinterpret_cast<void*>(&EditorGuiTextWrapped);
+    api.setScrollHereY = reinterpret_cast<void*>(&EditorGuiSetScrollHereY);
+    api.getContentRegionAvail = reinterpret_cast<void*>(&EditorGuiGetContentRegionAvail);
+    api.getCursorScreenPos = reinterpret_cast<void*>(&EditorGuiGetCursorScreenPos);
+    api.drawRects = reinterpret_cast<void*>(&EditorGuiDrawRects);
+    api.drawTextClipped = reinterpret_cast<void*>(&EditorGuiDrawTextClipped);
+    api.invisibleButton = reinterpret_cast<void*>(&EditorGuiInvisibleButton);
+    api.isItemHovered = reinterpret_cast<void*>(&EditorGuiIsItemHovered);
+    api.isItemClicked = reinterpret_cast<void*>(&EditorGuiIsItemClicked);
+    api.getMousePos = reinterpret_cast<void*>(&EditorGuiGetMousePos);
+    api.setTooltip = reinterpret_cast<void*>(&EditorGuiSetTooltip);
+    api.inputTextMultiline = reinterpret_cast<void*>(&EditorGuiInputTextMultiline);
+    api.getMouseWheel = reinterpret_cast<void*>(&EditorGuiGetMouseWheel);
+    api.isWindowFocused = reinterpret_cast<void*>(&EditorGuiIsWindowFocused);
+    api.toggleButton = reinterpret_cast<void*>(&EditorGuiToggleButton);
     return api;
 }
 

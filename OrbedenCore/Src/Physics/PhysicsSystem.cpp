@@ -1,6 +1,7 @@
 #include "Physics/PhysicsSystem.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/HeightField.h"
@@ -1321,13 +1322,25 @@ public:
         if (!Initialize()) return;
         world = &currentWorld;
         events.clear();
-        transformCache.Update(currentWorld);
-        SyncBodies(currentWorld);
-        SyncControllers(currentWorld);
-        SyncWheels(currentWorld);
-        scene->simulate(deltaTime);
-        scene->fetchResults(true);
-        WriteDynamicPoses(currentWorld);
+
+        {
+            PROFILE("Physics/Sync");
+            transformCache.Update(currentWorld);
+            SyncBodies(currentWorld);
+            SyncControllers(currentWorld);
+            SyncWheels(currentWorld);
+        }
+
+        {
+            PROFILE("Physics/Simulate");
+            scene->simulate(deltaTime);
+        }
+
+        {
+            PROFILE("Physics/FetchResults");
+            scene->fetchResults(true);
+            WriteDynamicPoses(currentWorld);
+        }
     }
 
     bool FillHit(const PxLocationHit& nativeHit, const PxRigidActor* actor, PhysicsQueryHit& hit) const
@@ -1476,6 +1489,8 @@ void PhysicsSystem::ResetWorld()
 //执行固定步长同步和模拟
 void PhysicsSystem::FixedUpdate(World& world, float fixedDeltaTime)
 {
+    PROFILE("Physics/Step");
+
     if (impl && fixedDeltaTime > 0.0f) impl->FixedUpdate(world, fixedDeltaTime);
 }
 

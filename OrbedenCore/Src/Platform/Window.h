@@ -47,6 +47,9 @@ public:
     //阻塞等待平台事件
     virtual void WaitEvents() = 0;
 
+    //阻塞等待事件，但最多等 seconds 秒；用于需要周期性刷新的界面
+    virtual void WaitEventsTimeout(float64 seconds) = 0;
+
     //唤醒等待中的平台事件循环
     virtual void WakeEventLoop() = 0;
 

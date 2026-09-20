@@ -240,7 +240,9 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 274 个；Editor 组件表为 19 个，完整 Editor 表为 202 个。C++ static_assert 和 C# 初始化布局检查保持对应。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 105 个；Editor 组件表为 26 个，完整 Editor 表为 132 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+
+`EditorGuiNativeApi` 是本仓库唯一带绘制原语的表：彩色文本、批量矩形、坐标读取与命中测试都在这里。批量矩形用 `EditorRectPrimitive`（9 个 float32，Pack=4）而不是嵌套 `vector2`/`color`，避免两端 pack 不一致导致的静默错位。
 
 ### 生命周期清理入口
 

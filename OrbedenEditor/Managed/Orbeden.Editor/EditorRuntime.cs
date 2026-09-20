@@ -18,6 +18,8 @@ public static class EditorRuntime
         public EditorPanelNativeApi Panels;
         public EditorAssetNativeApi Assets;
         public EditorComponentNativeApi Components;
+        public EditorLogNativeApi Log;
+        public EditorProfilerNativeApi Profiler;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -36,6 +38,9 @@ public static class EditorRuntime
             {
                 OrbedenCoreRuntime.InitializeEngineBindings(IntPtr.Zero);
                 NativeEditorGUI.Initialize(default);
+                NativeEditorLog.Initialize(default);
+                NativeEditorProfiler.Initialize(default);
+                EditorConsole.Install();
                 EditorApplication.Initialize(default);
                 Gizmos.Initialize(default);
                 EditorAssetsNative.Initialize(default);
@@ -47,9 +52,13 @@ public static class EditorRuntime
             EditorManagedApi api = *(EditorManagedApi*)editorApi;
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
+            NativeEditorLog.Initialize(api.Log);
+            NativeEditorProfiler.Initialize(api.Profiler);
+
+            //面板注册期间的警告也要进 Console 面板，所以先装日志通道
+            EditorConsole.Install();
             EditorTheme.ApplyCurrent();
             EditorApplication.Initialize(api.Application);
-            EditorApplication.ClearDirty();
             EditorPropertyHistory.Clear();
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
@@ -124,10 +133,6 @@ public static class EditorRuntime
         try { return EditorPropertyHistory.Redo() ? (byte)1 : (byte)0; }
         catch (Exception ex) { Console.Error.WriteLine($"Redo failed: {ex}"); return 0; }
     }
-
-    /// <summary>通知托管 Editor 原生 World 已成功保存。</summary>
-    [UnmanagedCallersOnly]
-    public static void WorldSaved() => EditorApplication.ClearWorldDirty();
 
     /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
@@ -212,7 +217,6 @@ public static class EditorRuntime
         EditorPropertyHistory.PushAction(label,
             () => RestoreGizmoTransform(id, startPosition, startRotation, startScale),
             () => RestoreGizmoTransform(id, endPosition, endRotation, endScale));
-        EditorApplication.MarkWorldDirty();
     }
 
     //按撤销记录写回一个 Ens 的局部变换
@@ -224,7 +228,6 @@ public static class EditorRuntime
         ens.Transform.SetLocalPosition(position);
         ens.Transform.SetLocalRotation(rotation);
         ens.Transform.SetLocalScale(scale);
-        EditorApplication.MarkWorldDirty();
     }
 
     /// <summary>发布当前项目的 NativeAOT 库。</summary>
@@ -294,19 +297,31 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 50);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 8);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 66);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 15);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 105);
+        ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
+        ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 136);
+        ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
+        ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
+        ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 88);
     }
 
     //验证全由函数指针槽组成的函数表尺寸。
     private static unsafe void ValidateFunctionTable<T>(string name, int slotCount) where T : unmanaged
     {
         int expectedSize = checked(slotCount * IntPtr.Size);
+        if (sizeof(T) != expectedSize)
+            throw new TypeLoadException($"{name} ABI size mismatch: expected {expectedSize}, actual {sizeof(T)}.");
+    }
+
+    //验证结构体的托管布局与原生侧一致。
+    private static unsafe void ValidateSize<T>(string name, int expectedSize) where T : unmanaged
+    {
         if (sizeof(T) != expectedSize)
             throw new TypeLoadException($"{name} ABI size mismatch: expected {expectedSize}, actual {sizeof(T)}.");
     }

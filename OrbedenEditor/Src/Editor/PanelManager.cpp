@@ -350,11 +350,29 @@ void PanelManager::SetPanelVisible(const char* id, bool visible)
         CreateFloatingOsWindow(*entry);
         return;
     }
-    if (visible && entry->dockNode < 0 && entry->returnDockNode >= 0 && FindDockNode(dockRoot))
+    if (visible && entry->dockNode < 0 && FindDockNode(dockRoot))
     {
-        int32 target = FindDockNode(entry->returnDockNode) ? entry->returnDockNode : dockRoot;
-        DockPanel(entry->info.id, target, PanelDockPlacement::Center);
+        if (entry->returnDockNode >= 0 && FindDockNode(entry->returnDockNode))
+        {
+            DockPanel(entry->info.id, entry->returnDockNode, PanelDockPlacement::Center);
+        }
+        else if (entry->info.defaultDock != PanelDockPlacement::Floating)
+        {
+            //从未停靠过：按默认停靠位置放进工作区旁，和其它停靠面板落在同一片区域
+            DockPanel(entry->info.id, FindWorkspaceNode(), entry->info.defaultDock);
+        }
     }
+}
+
+//查找工作区节点：默认停靠位置相对它拆分才落在左右面板之间
+int32 PanelManager::FindWorkspaceNode() const
+{
+    for (const DockNode& node : dockNodes)
+    {
+        if (node.workspace) return node.id;
+    }
+
+    return dockRoot;
 }
 
 //隐藏全部面板
@@ -491,11 +509,13 @@ void PanelManager::BuildDefaultDockLayout()
         PanelDockPlacement::Top,
         PanelDockPlacement::Bottom
     };
+    //只给可见面板分位置：注册了但默认隐藏的面板不占停靠区，
+    //否则会留下一个没有标签、关不掉、也点不出焦点的空叶子
     for (PanelDockPlacement placement : sideOrder)
     {
         for (PanelEntry& entry : panels)
         {
-            if (entry.info.defaultDock != placement) continue;
+            if (entry.info.defaultDock != placement || !entry.visible) continue;
 
             int32 splitNode = centerNode;
             DockPanel(entry.info.id, splitNode, placement);
@@ -507,7 +527,7 @@ void PanelManager::BuildDefaultDockLayout()
 
     for (PanelEntry& entry : panels)
     {
-        if (entry.info.defaultDock == PanelDockPlacement::Center)
+        if (entry.info.defaultDock == PanelDockPlacement::Center && entry.visible)
         {
             DockPanel(entry.info.id, centerNode, PanelDockPlacement::Center);
         }
@@ -562,7 +582,6 @@ void PanelManager::DrawDockHost()
         //每个面板四角都做圆角，相邻面板交界处圆弧让开的小块会露出背后背景
         float32 cornerRadius = EditorGUI::GetPanelCornerRadius();
         ImU32 bandColor = ImGui::GetColorU32(ImGuiCol_WindowBg);
-        ImU32 outlineColor = EditorGUI::GetActiveColor();
         //面板 1px 边框的坑：不能用 ImDrawList::AddRect(..., thickness) 描边。
         //它走 ImGui 的抗锯齿路径，抗锯齿是沿整条路径铺裙边的，直线段也会被摊到相邻像素上，
         //结果 1px 边框看起来是一条 2px 的模糊粗线——这与坐标是否取整无关，取整了照样糊。
@@ -573,6 +592,8 @@ void PanelManager::DrawDockHost()
         {
             ImVec2 outerMin(std::floor(frame.min.x), std::floor(frame.min.y));
             ImVec2 outerMax(std::floor(frame.max.x), std::floor(frame.max.y));
+            //只有拥有焦点的面板用强调色，其余用普通边框色
+            ImU32 outlineColor = frame.focused ? EditorGUI::GetActiveColor() : EditorGUI::GetBorderColor();
             if (!frame.opaque)
             {
                 //透明面板只描边不铺底，当前只有空节点会走到
@@ -843,9 +864,13 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         }
 
         PanelEntry* active = FindPanel(node.activePanel.c_str());
+        bool panelFocused = false;
         if (open && active && active->visible && active->panel)
         {
             active->panel->DrawPanel();
+
+            //内容子窗口刚结束，带 ChildWindows 查就能覆盖到它
+            panelFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
         }
 
         //面板边界登记给宿主统一绘制：绘制矩形有一部分伸在叶子窗口之外，
@@ -854,7 +879,7 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         //是否画边框由当前显示的面板决定：场景视口这类内容自身占满面板的关掉边框
         const PanelEntry* shown = FindPanel(node.activePanel.c_str());
         if (!fixedLeaf)
-            framePanels.push_back({ visualMin, visualMax, !transparentLeaf, !shown || shown->info.showBorder });
+            framePanels.push_back({ visualMin, visualMax, !transparentLeaf, !shown || shown->info.showBorder, panelFocused });
     }
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
@@ -1078,13 +1103,17 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse;
     if (entry.moving && draggedPanel == entry.info.id) flags |= ImGuiWindowFlags_NoInputs;
-    //浮动窗口用窗口自身的圆角边框：边框色换成面板描边色，圆角取主题半径
+    //浮动窗口用窗口自身的圆角边框：边框色换成面板描边色，圆角取主题半径。
+    //边框在 Begin 时就画掉了，当帧的焦点还拿不到，所以用上一帧记下的聚焦状态。
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, EditorGUI::GetPanelCornerRadius());
-    ImGui::PushStyleColor(ImGuiCol_Border, EditorGUI::GetActiveColor());
+    ImGui::PushStyleColor(ImGuiCol_Border, entry.focused ? EditorGUI::GetActiveColor() : EditorGUI::GetBorderColor());
     bool open = ImGui::Begin(windowTitle.c_str(), &visible, flags);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);
+
+    //窗口本身或它的子窗口拿到焦点就算聚焦
+    entry.focused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
     vector2 position = ToVector2(ImGui::GetWindowPos());
     vector2 size = ToVector2(ImGui::GetWindowSize());
     float32 titleHeight = ImGui::GetFrameHeight();

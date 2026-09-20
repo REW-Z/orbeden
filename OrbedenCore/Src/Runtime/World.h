@@ -25,6 +25,9 @@ private:
     };
 
     bool preparing = false;
+    bool dirty = false;//场景内容相对磁盘文件已有改动
+    bool dirtyTrackingEnabled = true;//Play 期间关闭，运行时改动不污染磁盘脏标记
+    int32 dirtySuppressionDepth = 0;//大于 0 表示正在写编辑器临时对象
     uint64 contentRevision = 0;//内容整体替换序号，原地换内容时渲染侧据此重新绑定
     List<std::pair<Object*, StringId>> preparedObjectPaths;
     List<EnsSlot> ensSlots;//按EnsId索引的稀疏槽位表
@@ -84,6 +87,44 @@ public:
 
     //获取内容整体替换序号
     uint64 GetContentRevision() const { return contentRevision; }
+
+    //判断场景内容相对磁盘文件是否已有改动
+    bool IsDirty() const { return dirty; }
+
+    //标记场景内容已有改动，抑制期间自动忽略
+    void SetDirty();
+
+    //清除场景脏标记，保存成功后调用
+    void ClearDirty() { dirty = false; }
+
+    //开关脏标记记录，编辑器进入与退出 Play 时切换
+    void SetDirtyTrackingEnabled(bool enabled) { dirtyTrackingEnabled = enabled; }
+
+    //进入脏标记抑制区，写编辑器临时对象时使用
+    void BeginDirtySuppression() { ++dirtySuppressionDepth; }
+
+    //退出脏标记抑制区，必须与 BeginDirtySuppression 成对
+    void EndDirtySuppression();
+
+    //判断当前是否抑制脏标记：加载准备中、Play 中或处于抑制区
+    bool IsDirtySuppressed() const { return preparing || !dirtyTrackingEnabled || dirtySuppressionDepth > 0; }
+
+    //脏标记抑制区，离开作用域自动退出
+    class DirtySuppressionScope
+    {
+    public:
+        //进入抑制区
+        explicit DirtySuppressionScope(World& world) : target(world) { target.BeginDirtySuppression(); }
+
+        //离开抑制区
+        ~DirtySuppressionScope() { target.EndDirtySuppression(); }
+
+        DirtySuppressionScope(const DirtySuppressionScope&) = delete;
+        DirtySuppressionScope& operator=(const DirtySuppressionScope&) = delete;
+
+    private:
+        World& target;
+    };
 
     //复制句柄版本并准备独立加载容器
     void PrepareReplacement(const World& source);

@@ -74,6 +74,7 @@ const std::string& Ens::GetName() const
 void Ens::SetName(const std::string& name)
 {
     this->name = name;
+    if (World* world = GetWorld()) world->SetDirty();
 }
 
 //记录一个已挂载组件实例

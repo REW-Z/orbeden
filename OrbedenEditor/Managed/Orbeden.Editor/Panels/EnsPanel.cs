@@ -100,10 +100,8 @@ internal sealed class EnsPanel : EditorPanel
             {
                 Ens value = Ens.Find(key);
                 if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
-                EditorApplication.MarkWorldDirty();
             },
             () => RestoreSnapshot(snapshot, parentKey));
-        EditorApplication.MarkWorldDirty();
     }
 
     //在同级位置复制子树，撤销删除副本、重做按快照恢复
@@ -121,10 +119,8 @@ internal sealed class EnsPanel : EditorPanel
             {
                 Ens value = Ens.Find(key);
                 if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
-                EditorApplication.MarkWorldDirty();
             },
             () => RestoreSnapshot(snapshot, parentKey));
-        EditorApplication.MarkWorldDirty();
     }
 
     //删除子树，撤销按快照放回原父节点
@@ -142,9 +138,7 @@ internal sealed class EnsPanel : EditorPanel
             {
                 Ens value = Ens.Find(key);
                 if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
-                EditorApplication.MarkWorldDirty();
             });
-        EditorApplication.MarkWorldDirty();
     }
 
     //按快照把子树放回指定父节点
@@ -155,7 +149,6 @@ internal sealed class EnsPanel : EditorPanel
             throw new InvalidOperationException("Ens hierarchy target no longer exists.");
         if (!EditorAssetsNative.InstantiatePrefab(snapshot, true, parent.Id, EnsId.Null).IsValid)
             throw new InvalidOperationException("Cannot restore Ens subtree.");
-        EditorApplication.MarkWorldDirty();
     }
 
     //判断目标位置并在释放后排队提交
@@ -223,7 +216,6 @@ internal sealed class EnsPanel : EditorPanel
         ens.Transform.SetLocalPosition(position.Translation);
         ens.Transform.SetLocalRotation(position.Rotation);
         ens.Transform.SetLocalScale(position.Scale);
-        EditorApplication.MarkWorldDirty();
     }
 
     //移动节点并记录一次撤销事务
@@ -235,6 +227,5 @@ internal sealed class EnsPanel : EditorPanel
         string key = ens.ResourceKey;
         EditorPropertyHistory.PushAction("Move Ens",
             () => RestorePosition(key, previous), () => RestorePosition(key, current));
-        EditorApplication.MarkWorldDirty();
     }
 }

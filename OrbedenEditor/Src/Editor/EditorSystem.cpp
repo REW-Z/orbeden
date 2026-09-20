@@ -1,6 +1,7 @@
 #include "Editor/EditorSystem.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Editor/EditorIcons.h"
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/PlayerContentCooker.h"
@@ -28,6 +29,12 @@
 
 namespace
 {
+    //日志唤醒回调：新日志写入时叫醒编辑器主循环
+    void WakeEditorLoop(void* context)
+    {
+        static_cast<EditorSystem*>(context)->RequestRepaint();
+    }
+
     struct PlayerTargetPlatformInfo
     {
         const char* displayName;
@@ -328,6 +335,11 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
     , executablePath(startupExecutablePath ? startupExecutablePath : "")
     , editorScene(application, managedBridge)
 {
+    //日志一到达就唤醒消息循环：面板因此不必靠连续重绘保持刷新。
+    //注册与摘除都跟着本对象的生命周期走——回调用的是 this，对象析构后
+    //退出阶段（Quit、内存分析）的日志还会触发它，那时就是空悬指针了。
+    Log::SetWakeHandler(&WakeEditorLoop, this);
+
     previousInputEnabled = InputManager::IsEnabled();
     InputManager::SetEnabled(false);
     //编辑器以编辑态启动：只渲染场景面板的离屏目标，游戏相机不直接画主 framebuffer
@@ -361,6 +373,9 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
 
 EditorSystem::~EditorSystem()
 {
+    //先摘掉日志唤醒，后面析构过程中再写日志就不会打到正在析构的对象上
+    Log::SetWakeHandler(nullptr, nullptr);
+
     //Play 期间面板被隐藏，先把可见性恢复成 Play 前的记录再保存布局，
     //否则在 Play 中退出编辑器会把“全部隐藏”写进项目
     if (playMode.IsPlaying()) panelManager.ApplyLayout(playPanelLayout);
@@ -383,6 +398,11 @@ EditorSystem::~EditorSystem()
 
 void EditorSystem::Update(World& world, float deltaTime)
 {
+    PROFILE("Editor/Update");
+
+    //Play 期间的改动不落盘，脏标记跟随 Play 状态；每帧赋值，异常路径也能自愈
+    world.SetDirtyTrackingEnabled(!playMode.IsPlaying());
+
     float32 mouseWheel = editorGUI.ConsumeSceneMouseWheel();
     if (!playMode.IsPlaying())
     {
@@ -417,16 +437,23 @@ bool EditorSystem::NeedsContinuousRepaint() const
 
 void EditorSystem::RenderEditorGUI()
 {
+    PROFILE("Editor/GUI");
+
     if (!editorGUI.IsInitialized()) return;
 
     editorGUI.BeginFrame();
+    ProcessEditorShortcuts();
+    UpdateWindowTitle();
     DrawMainMenuBar();
     DrawPlayToolbar();
     DrawProjectDialog();
     DrawNewProjectDialog();
     DrawUpgradeProjectDialog();
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
-    panelManager.DrawPanels();
+    {
+        PROFILE("Editor/Panels");
+        panelManager.DrawPanels();
+    }
 
     //场景视口由 Scene 面板在自身内容区内绘制，Play 期间取消鼠标交互
     if (playMode.IsPlaying()) editorScene.CancelInteraction();
@@ -845,6 +872,8 @@ void EditorSystem::RequestPlay()
         return;
     }
 
+    //Play 期间的改动不落盘，进入前先关掉脏标记记录，避免同帧窗口漏标
+    app.GetWorld().SetDirtyTrackingEnabled(false);
     editorScene.EnterPlayMode(app.GetWorld());
 
     std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".pie";
@@ -1452,17 +1481,22 @@ bool EditorSystem::SaveCurrentWorld()
     }
 
     World& world = app.GetWorld();
-    bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
-
-    bool managedSaved = managedBridge.SaveProjectState();
-    bool worldSaved = managedSaved && project.SaveWorld();
-    if (worldSaved) managedBridge.NotifyWorldSaved();
-    bool saved = managedSaved && worldSaved;
-    projectStatus = saved ? ("Saved: " + project.GetWorldPath())
-        : (managedSaved ? project.GetLastError() : "Managed project data save failed.");
-
-    if (hadEditorCamera) editorScene.RestoreCamera(world);
+    bool saved = false;
+    {
+        //编辑器的临时候选相机不写进场景，摘除与恢复都不算场景改动
+        World::DirtySuppressionScope suppression(world);
+        bool hadEditorCamera = editorScene.RemoveCameraForSerialization(world);
+        bool managedSaved = managedBridge.SaveProjectState();
+        bool worldSaved = managedSaved && project.SaveWorld();
+        saved = managedSaved && worldSaved;
+        projectStatus = saved ? ("Saved: " + project.GetWorldPath())
+            : (managedSaved ? project.GetLastError() : "Managed project data save failed.");
+        if (hadEditorCamera) editorScene.RestoreCamera(world);
+    }
     editorScene.CancelInteraction();
+
+    //保存成功才清脏：失败时保留未保存标记
+    if (saved) world.ClearDirty();
     return saved;
 }
 
@@ -1516,28 +1550,107 @@ void EditorSystem::OpenNewProjectDialog()
     }
 }
 
-void EditorSystem::DrawMainMenuBar()
+//获取编辑器快捷键表，菜单显示文本与按键分发共用这一份
+const List<EditorShortcut>& EditorSystem::GetEditorShortcuts()
 {
-    //文本控件编辑时保留 ImGui 自身的 Undo，其余情况处理全局项目快捷键。
-    //Play 期间屏蔽编辑器快捷键，按键交由游戏读取。
-    const ImGuiIO& io = ImGui::GetIO();
-    if (!playMode.IsPlaying() && !io.WantTextInput && io.KeyCtrl)
+    //整张表是静态常量：菜单提示与实际键位不会各写一份而漂移
+    static const List<EditorShortcut> shortcuts =
     {
-        if (ImGui::IsKeyPressed(ImGuiKey_S, false))
-        {
-            SaveCurrentWorld();
-        }
-        if (ImGui::IsKeyPressed(ImGuiKey_Z, false))
-        {
-            if (io.KeyShift) managedBridge.Redo();
-            else managedBridge.Undo();
-        }
-        else if (ImGui::IsKeyPressed(ImGuiKey_Y, false))
-        {
-            managedBridge.Redo();
-        }
+        { "Project", "Save", "Ctrl+S", ImGuiKey_S, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.SaveCurrentWorld(); } },
+        { "Edit", "Undo", "Ctrl+Z", ImGuiKey_Z, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.Undo(); } },
+        { "Edit", "Redo", "Ctrl+Y", ImGuiKey_Y, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.Redo(); } },
+
+        //重做的别名键位，菜单里只显示 Ctrl+Y
+        { nullptr, nullptr, "Ctrl+Shift+Z", ImGuiKey_Z, true, true, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.Redo(); } },
+
+        //手柄模式与坐标系跟随鼠标位置，鼠标不在场景视口内时不生效
+        { nullptr, nullptr, "W", ImGuiKey_W, false, false, false, EditorShortcutScope::SceneView,
+            [](EditorSystem& editor) { editor.editorScene.SetGizmoMode(EditorGizmoMode::Move); } },
+        { nullptr, nullptr, "E", ImGuiKey_E, false, false, false, EditorShortcutScope::SceneView,
+            [](EditorSystem& editor) { editor.editorScene.SetGizmoMode(EditorGizmoMode::Rotate); } },
+        { nullptr, nullptr, "R", ImGuiKey_R, false, false, false, EditorShortcutScope::SceneView,
+            [](EditorSystem& editor) { editor.editorScene.SetGizmoMode(EditorGizmoMode::Scale); } },
+        { nullptr, nullptr, "X", ImGuiKey_X, false, false, false, EditorShortcutScope::SceneView,
+            [](EditorSystem& editor)
+            {
+                editor.editorScene.SetGizmoOrientation(
+                    editor.editorScene.GetGizmoOrientation() == EditorGizmoOrientation::Global
+                        ? EditorGizmoOrientation::Local : EditorGizmoOrientation::Global);
+            } },
+
+        //取消拖拽只在手柄拖拽期间有意义
+        { nullptr, nullptr, "Esc", ImGuiKey_Escape, false, false, false, EditorShortcutScope::Gizmo,
+            [](EditorSystem& editor) { editor.editorScene.CancelInteraction(); } },
+    };
+    return shortcuts;
+}
+
+//分发编辑器快捷键；Play 期间整套失效，按键交给游戏
+void EditorSystem::ProcessEditorShortcuts()
+{
+    const ImGuiIO& io = ImGui::GetIO();
+    //文本控件编辑时保留 ImGui 自身的 Undo，其余情况才走编辑器快捷键
+    if (playMode.IsPlaying() || io.WantTextInput) return;
+
+    for (const EditorShortcut& shortcut : GetEditorShortcuts())
+    {
+        if (shortcut.ctrl != io.KeyCtrl || shortcut.shift != io.KeyShift || shortcut.alt != io.KeyAlt) continue;
+        if (shortcut.scope == EditorShortcutScope::SceneView && !editorScene.IsMouseOverSceneView()) continue;
+        if (shortcut.scope == EditorShortcutScope::Gizmo && !editorScene.IsGizmoDragging()) continue;
+        if (!ImGui::IsKeyPressed(shortcut.key, false)) continue;
+
+        if (shortcut.action) shortcut.action(*this);
+    }
+}
+
+//绘制指定菜单里的快捷键条目
+void EditorSystem::DrawShortcutMenuItems(const char* menu)
+{
+    for (const EditorShortcut& shortcut : GetEditorShortcuts())
+    {
+        if (!shortcut.menu || !shortcut.menuLabel || std::strcmp(shortcut.menu, menu) != 0) continue;
+
+        if (ImGui::MenuItem(shortcut.menuLabel, shortcut.display) && shortcut.action) shortcut.action(*this);
+    }
+}
+
+//获取场景标题：<场景名> * - <项目名>，未保存时带星号
+std::string EditorSystem::GetSceneTitle() const
+{
+    if (!project.HasProject()) return std::string();
+
+    std::string title = project.GetProjectName();
+    std::string scene = project.GetCurrentWorldKey();
+    if (!scene.empty())
+    {
+        //只取文件名，标题栏不显示内容根内的目录
+        usize separator = scene.find_last_of("/\\");
+        if (separator != std::string::npos) scene.erase(0, separator + 1);
+        title = title.empty() ? scene : scene + " - " + title;
     }
 
+    if (app.GetWorld().IsDirty()) title += " *";
+    return title;
+}
+
+//按场景标题更新主窗口标题
+void EditorSystem::UpdateWindowTitle()
+{
+    std::string sceneTitle = GetSceneTitle();
+    std::string title = sceneTitle.empty() ? std::string("Orbeden Editor") : sceneTitle + " - Orbeden Editor";
+    //标题没变就不碰窗口，避免每帧写一次系统标题
+    if (title == windowTitle) return;
+
+    windowTitle = title;
+    if (GLFWwindow* window = EditorGUI::GetMainGlfwWindow()) glfwSetWindowTitle(window, windowTitle.c_str());
+}
+
+void EditorSystem::DrawMainMenuBar()
+{
     if (!ImGui::BeginMainMenuBar()) return;
 
     if (ImGui::BeginMenu("Project"))
@@ -1553,10 +1666,7 @@ void EditorSystem::DrawMainMenuBar()
             ImGui::BeginDisabled();
         }
 
-        if (ImGui::Selectable("Save", false))
-        {
-            SaveCurrentWorld();
-        }
+        DrawShortcutMenuItems("Project");
 
         if (!project.HasProject() || playMode.IsPlaying())
         {
@@ -1588,14 +1698,7 @@ void EditorSystem::DrawMainMenuBar()
         {
             ImGui::BeginDisabled();
         }
-        if (ImGui::MenuItem("Undo", "Ctrl+Z"))
-        {
-            managedBridge.Undo();
-        }
-        if (ImGui::MenuItem("Redo", "Ctrl+Y / Ctrl+Shift+Z"))
-        {
-            managedBridge.Redo();
-        }
+        DrawShortcutMenuItems("Edit");
         if (playMode.IsPlaying())
         {
             ImGui::EndDisabled();

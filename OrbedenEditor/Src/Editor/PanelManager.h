@@ -29,6 +29,9 @@ private:
         bool moving = false;
         vector2 moveOffset = { 0.0f, 0.0f };
 
+        //浮窗的聚焦状态：窗口边框在 Begin 时就画掉了，只能拿上一帧的结果选颜色
+        bool focused = false;
+
         //非空表示承载在独立 GLFW 窗口中
         std::unique_ptr<EditorFloatingWindow> osWindow;
     };
@@ -90,6 +93,9 @@ private:
 
         //是否绘制 1px 边框，由当前显示的面板决定
         bool showBorder = true;
+
+        //面板内容是否拥有焦点：只有聚焦的面板才用强调色描边
+        bool focused = false;
     };
     List<PanelFrame> framePanels;
 
@@ -161,6 +167,7 @@ private:
     void RemovePanelFromDock(const std::string& panelId);
     void CompactDockNode(int32 nodeId);
     int32 FindDockParent(int32 nodeId) const;
+    int32 FindWorkspaceNode() const;
     void SynchronizeDockAssignments();
     int32 FindBestDockTarget(int32 nodeId) const;
 };

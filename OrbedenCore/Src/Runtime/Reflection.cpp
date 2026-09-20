@@ -5,6 +5,7 @@
 
 #include "Runtime/Reflection.h"
 #include "Runtime/EnsId.h"
+#include "Runtime/World.h"
 
 namespace
 {
@@ -395,10 +396,13 @@ namespace Reflection
     bool FieldInfo::SetValue(Object* object, const Value& value) const
     {
         if (!object) return false;
-        if (valueSetter) return valueSetter(object, value);
-        if (!setter) return false;
+        bool written = valueSetter ? valueSetter(object, value)
+            : (setter ? setter(object, value.ToString()) : false);
+        if (!written) return false;
 
-        return setter(object, value.ToString());
+        //字段属于哪个 World 就标脏哪个 World，裸字段只能在这一层统一接管
+        if (World* world = object->GetWorld()) world->SetDirty();
+        return true;
     }
 
     //读取字段文本值
@@ -413,8 +417,11 @@ namespace Reflection
     bool FieldInfo::SetValueFromString(Object* object, const std::string& value) const
     {
         if (!object || !setter) return false;
+        if (!setter(object, value)) return false;
 
-        return setter(object, value);
+        //字段属于哪个 World 就标脏哪个 World，裸字段只能在这一层统一接管
+        if (World* world = object->GetWorld()) world->SetDirty();
+        return true;
     }
 
     //创建方法元数据

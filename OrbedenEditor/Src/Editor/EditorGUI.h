@@ -68,11 +68,27 @@ public:
     void* referenceField = nullptr;
     void* assetTile = nullptr;
     void* viewToggleButton = nullptr;
+    void* textColored = nullptr;
+    void* textWrapped = nullptr;
+    void* setScrollHereY = nullptr;
+    void* getContentRegionAvail = nullptr;
+    void* getCursorScreenPos = nullptr;
+    void* drawRects = nullptr;
+    void* drawTextClipped = nullptr;
+    void* invisibleButton = nullptr;
+    void* isItemHovered = nullptr;
+    void* isItemClicked = nullptr;
+    void* getMousePos = nullptr;
+    void* setTooltip = nullptr;
+    void* inputTextMultiline = nullptr;
+    void* getMouseWheel = nullptr;
+    void* isWindowFocused = nullptr;
+    void* toggleButton = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 50);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 66);
 
 //Editor ImGui 绑定层
 class EditorGUI
@@ -137,6 +153,9 @@ public:
 
     //获取主题定义的强调色
     static ImU32 GetActiveColor();
+
+    //获取主题定义的边框色
+    static ImU32 GetBorderColor();
 
     //获取主题定义的面板圆角半径
     static float32 GetPanelCornerRadius();

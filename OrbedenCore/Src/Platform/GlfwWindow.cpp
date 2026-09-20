@@ -10,6 +10,12 @@
 struct HWND__;
 typedef HWND__* HWND;
 #include <GLFW/glfw3native.h>
+
+#ifdef _WIN32
+//本 TU 按上面的做法不引 windows.h，这两个 winmm 导出按同样方式直接声明
+extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned int period);
+extern "C" __declspec(dllimport) unsigned int __stdcall timeEndPeriod(unsigned int period);
+#endif
 #endif
 
 #include "Log/Log.h"
@@ -93,9 +99,23 @@ namespace
             return false;
         }
 
+#ifdef _WIN32
+        //把系统计时器精度提到 1ms。默认粒度是 15.6ms，sleep_for(1ms) 会睡满一个 tick，
+        //帧节流器因此会偶尔睡过目标时刻，表现为偶发的整帧晚一拍。
+        timeBeginPeriod(1);
+#endif
+
         InitializeKeyMap();
         glfwInitialized = true;
         return true;
+    }
+
+    //归还系统计时器精度
+    void StopGlfwTimer()
+    {
+#ifdef _WIN32
+        timeEndPeriod(1);
+#endif
     }
 
     KeyEnum MapKey(int key)
@@ -192,6 +212,7 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
         Log::Error("GLFW window create failed.");
         if (glfwInitialized && glfwWindowCount == 0)
         {
+            StopGlfwTimer();
             glfwTerminate();
             glfwInitialized = false;
         }
@@ -231,6 +252,7 @@ void GlfwWindow::Destroy()
 
     if (glfwInitialized && glfwWindowCount == 0)
     {
+        StopGlfwTimer();
         glfwTerminate();
         glfwInitialized = false;
     }
@@ -250,6 +272,14 @@ void GlfwWindow::WaitEvents()
     if (!window) return;
 
     glfwWaitEvents();
+}
+
+//阻塞等待 GLFW 事件，最多等 seconds 秒
+void GlfwWindow::WaitEventsTimeout(float64 seconds)
+{
+    if (!window) return;
+
+    glfwWaitEventsTimeout(seconds > 0.0 ? seconds : 0.0);
 }
 
 //唤醒等待中的 GLFW 事件循环

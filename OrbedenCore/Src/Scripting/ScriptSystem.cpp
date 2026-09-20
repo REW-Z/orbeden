@@ -1,6 +1,7 @@
 #include "Scripting/ScriptSystem.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Runtime/Native/OrbedenNativeApi.h"
 #include "Scripting/ScriptInterop.h"
 
@@ -509,6 +510,8 @@ void ScriptSystem::ManagedDrawGuiDomain(void* context)
 
 void ScriptSystem::Update(World& currentWorld, float32 deltaTime)
 {
+    PROFILE("Script/Update");
+
     (void)currentWorld;
     if (!initialized) return;
 
@@ -523,6 +526,8 @@ void ScriptSystem::Update(World& currentWorld, float32 deltaTime)
 
 void ScriptSystem::FixedUpdate(World& currentWorld, float32 fixedDeltaTime)
 {
+    PROFILE("Script/FixedUpdate");
+
     (void)currentWorld;
     if (!initialized) return;
 
@@ -537,6 +542,8 @@ void ScriptSystem::FixedUpdate(World& currentWorld, float32 fixedDeltaTime)
 
 void ScriptSystem::LateUpdate(World& currentWorld, float32 deltaTime)
 {
+    PROFILE("Script/LateUpdate");
+
     (void)currentWorld;
     if (!initialized) return;
 

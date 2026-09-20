@@ -26,7 +26,6 @@ internal static class EditorPrefabActions
                     Ens instance = Ens.Find(rootKey);
                     if (!instance.IsValid || !EditorAssetsNative.DestroyEnsTree(instance.Id))
                         throw new InvalidOperationException("Cannot remove prefab instance.");
-                    EditorApplication.MarkWorldDirty();
                 },
                 () =>
                 {
@@ -37,9 +36,7 @@ internal static class EditorPrefabActions
                         throw new InvalidOperationException("Prefab hierarchy target no longer exists.");
                     if (!EditorAssetsNative.InstantiatePrefab(snapshot, true, restoredParent.Id, restoredBefore.Id).IsValid)
                         throw new InvalidOperationException("Cannot restore prefab instance.");
-                    EditorApplication.MarkWorldDirty();
                 });
-            EditorApplication.MarkWorldDirty();
         }
         catch (Exception ex)
         {

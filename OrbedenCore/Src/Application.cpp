@@ -42,6 +42,11 @@ namespace
         using Microseconds = std::chrono::microseconds;
         constexpr auto shortSleep = std::chrono::milliseconds(1);
         constexpr auto sleepPadding = std::chrono::microseconds(100);
+
+        //自旋窗口：只有最后这一段才允许忙等。
+        //系统睡眠粒度可能差到十几毫秒，若按预估睡眠耗时撑大自旋窗口，尾段会整个变成忙等，
+        //一个核就被白烧掉了；这里给自旋窗口封顶，粒度再粗也只是睡过头一点。
+        constexpr auto spinWindow = Microseconds(300);
         static int64 estimatedSleepUs = 1000;
 
         //计算可接受的帧结束时间
@@ -51,9 +56,9 @@ namespace
             auto remaining = acceptedTime - Clock::now();
             auto sleepGuard = Microseconds(estimatedSleepUs) + sleepPadding;
 
-            //根据剩余时间执行短睡眠或线程让出
             if (remaining > sleepGuard)
             {
+                //按预估做短睡眠，避免睡过头
                 auto sleepStart = Clock::now();
                 std::this_thread::sleep_for(shortSleep);
                 auto sleepEnd = Clock::now();
@@ -69,6 +74,11 @@ namespace
                 {
                     estimatedSleepUs = (estimatedSleepUs * 7 + sleptUs) / 8;
                 }
+            }
+            else if (remaining > spinWindow)
+            {
+                //睡到只剩自旋窗口：睡眠粒度粗时由这一段承担等待，而不是靠忙等
+                std::this_thread::sleep_for(remaining - spinWindow);
             }
             else
             {
@@ -312,6 +322,9 @@ void Application::Tick(float deltaTime)
         deltaTime = 0.0f;
     }
 
+    //开新一轮帧采样，未开启采集时不做任何事
+    Profiler::NewFrame();
+
     //重置固定时间积累
     bool runSimulation = simulationEnabled && !paused;
     if(!runSimulation)
@@ -429,6 +442,9 @@ void Application::Run()
         Present();
 
         WaitForNextFrame(frameStartTime);
+
+        //节拍等完再收帧，帧耗时才是这一帧真正占用的时间
+        Profiler::EndFrame();
     }
 
     running = false;
@@ -536,9 +552,18 @@ void Application::SetTargetFrameRate(uint32 value)
 //等待到当前目标帧的结束时间
 void Application::WaitForNextFrame(std::chrono::steady_clock::time_point frameStartTime) const
 {
+    using Clock = std::chrono::steady_clock;
+    auto waitStartTime = Clock::now();
+    auto reportWait = [&waitStartTime]()
+        {
+            Profiler::AddFrameWait(std::chrono::duration_cast<std::chrono::microseconds>(
+                Clock::now() - waitStartTime).count());
+        };
+
     if (targetFrameRate == 0)
     {
         std::this_thread::yield();
+        reportWait();
         return;
     }
 
@@ -546,6 +571,7 @@ void Application::WaitForNextFrame(std::chrono::steady_clock::time_point frameSt
     auto targetEndTime = frameStartTime
         + std::chrono::duration_cast<std::chrono::steady_clock::duration>(targetFrameTime);
     WaitUntilFrameTime(targetEndTime, targetFrameRate);
+    reportWait();
 }
 
 //获取单帧最多补跑 FixedUpdate 的次数

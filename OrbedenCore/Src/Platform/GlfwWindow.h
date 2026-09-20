@@ -35,6 +35,9 @@ public:
     //阻塞等待 GLFW 事件
     void WaitEvents() override;
 
+    //阻塞等待 GLFW 事件，最多等 seconds 秒
+    void WaitEventsTimeout(float64 seconds) override;
+
     //唤醒等待中的 GLFW 事件循环
     void WakeEventLoop() override;
 

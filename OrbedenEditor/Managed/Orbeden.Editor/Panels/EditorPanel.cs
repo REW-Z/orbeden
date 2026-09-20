@@ -102,6 +102,16 @@ internal abstract class EditorPanel
     //绘制面板业务内容
     protected abstract void DrawContent(EditorPanelContext context);
 
+    /// <summary>按最小间隔请求重绘，避免面板把编辑器一直拖在连续重绘上。</summary>
+    protected static void RequestPeriodicRepaint(ref DateTime lastRequest, double intervalSeconds)
+    {
+        DateTime now = DateTime.UtcNow;
+        if ((now - lastRequest).TotalSeconds < intervalSeconds) return;
+
+        lastRequest = now;
+        EditorApplication.RequestRepaint();
+    }
+
     /// <summary>Panel 显示时调用。</summary>
     public virtual void OnShown() { }
 
