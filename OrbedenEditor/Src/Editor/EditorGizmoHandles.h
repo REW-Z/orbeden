@@ -143,7 +143,6 @@ private:
     float32 startAxisParameter = 0.0f;
     float32 startAxisReference = 0.0f;
     float32 startMouseAngle = 0.0f;
-    float32 previousMouseAngle = 0.0f;
     vector3 startPlaneHit;
     vector2 startMouse;
     vector2 startPivotScreen;

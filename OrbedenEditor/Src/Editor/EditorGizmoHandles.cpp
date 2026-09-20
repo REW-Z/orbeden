@@ -409,12 +409,11 @@ EditorGizmoHandle EditorGizmoHandles::Pick(const EditorGizmoView& view, const Co
 
         for (int32 axisIndex = 0; axisIndex < 3; ++axisIndex)
         {
-            vector3 u = BaseAxes[axisIndex];
-            vector3 v = BaseAxes[(axisIndex + 1) % 3];
+            //圆环落在与该轴垂直的平面上，环的法线才是它代表的旋转轴
             quaternion pivotRotation = context.pivotRotation;
             matrix4x4 rotationMatrix = RenderMath::Rotation(pivotRotation);
-            u = RenderMath::TransformDirection(rotationMatrix, u);
-            v = RenderMath::TransformDirection(rotationMatrix, v);
+            vector3 u = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
+            vector3 v = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
 
             vector2 previous;
             bool hasPrevious = false;
@@ -584,7 +583,6 @@ void EditorGizmoHandles::BeginDrag(World& world, const EditorGizmoView& view, co
         //外圈没有对应的世界轴，绕视线方向转，与它画在屏幕平面上一致
         if (handle == EditorGizmoHandle::Center) startAxes[axisIndex] = view.cameraForward;
         startMouseAngle = std::atan2(startMouse.y - startPivotScreen.y, startMouse.x - startPivotScreen.x);
-        previousMouseAngle = startMouseAngle;
         break;
     }
     case EditorGizmoMode::Scale:
@@ -657,12 +655,11 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
     if (mode == EditorGizmoMode::Rotate)
     {
         float32 angle = std::atan2(mouse.y - startPivotScreen.y, mouse.x - startPivotScreen.x);
-        float32 step = WrapPi(angle - previousMouseAngle);
-        if (RenderMath::Dot(startAxes[axisIndex], view.cameraForward) > 0.0f) step = -step;
-        previousMouseAngle = angle;
 
-        //圆心固定，用起始角度累加得到总旋转量，避免跨 ±π 跳变
+        //圆心固定，用起始角度累加得到总旋转量，避免跨 ±π 跳变；
+        //屏幕角度按 y 向下计算，轴指向相机时鼠标的顺逆时针与旋转正方向相反
         float32 accumulated = WrapPi(angle - startMouseAngle);
+        if (RenderMath::Dot(startAxes[axisIndex], view.cameraForward) < 0.0f) accumulated = -accumulated;
         quaternion rotation = AxisAngleQuaternion(startAxes[axisIndex], accumulated);
 
         for (const Target& target : targets)
@@ -975,8 +972,9 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
         {
             EditorGizmoHandle handle = static_cast<EditorGizmoHandle>(static_cast<int32>(EditorGizmoHandle::AxisX) + axisIndex);
             EditorGizmoColor color = effective == handle ? HotColor : AxisColors[axisIndex];
-            vector3 u = RenderMath::TransformDirection(rotationMatrix, BaseAxes[axisIndex]);
-            vector3 v = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
+            //圆环落在与该轴垂直的平面上，环的法线才是它代表的旋转轴
+            vector3 u = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 1) % 3]);
+            vector3 v = RenderMath::TransformDirection(rotationMatrix, BaseAxes[(axisIndex + 2) % 3]);
 
             ImVec2 points[RingSegments + 1];
             int32 count = 0;

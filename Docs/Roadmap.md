@@ -3,12 +3,13 @@
 
 # Editor  
 
-
-Components可修改字段太少了。    
+快捷键保存场景。  
 
 Console面板。
 
 Profiler面板。
+
+Components可修改字段太少了。    
 
 # Core  
 
