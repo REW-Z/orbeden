@@ -340,6 +340,7 @@ namespace Reflection
         List<MethodInfo> methods;
     };
 
+    //注册表修改及模块卸载必须与反射读取互斥；返回的字段指针不跨越注册代次
     //注册类型字段元数据
     void RegisterTypeFields(Type* type, const List<FieldInfo>& fields);
 

@@ -23,16 +23,22 @@ namespace
         return generation;
     }
 
-    //获取继承字段缓存
+    //按注册代次刷新当前线程的继承字段缓存
     auto& GetCollectedFields()
     {
-        static std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> fields;
+        static thread_local uint32 generation = 0;
+        static thread_local std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> fields;
+        uint32 current = GetReflectionRegistryGeneration();
+        if (generation != current)
+        {
+            fields.clear();
+            generation = current;
+        }
         return fields;
     }
 
     void AdvanceReflectionRegistryGeneration()
     {
-        GetCollectedFields().clear();
         uint32& generation = GetReflectionRegistryGeneration();
         ++generation;
         if (generation == 0) generation = 1;

@@ -623,8 +623,8 @@ namespace
     //收集一个组件从基类到派生类的可见字段。
     const List<const Reflection::FieldInfo*>& GetEditorComponentFields(Component* component)
     {
-        static uint32 generation = 0;
-        static std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> cache;
+        static thread_local uint32 generation = 0;
+        static thread_local std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> cache;
         static const List<const Reflection::FieldInfo*> empty;
         if (generation != Reflection::GetRegistryGeneration())
         {
@@ -705,6 +705,8 @@ namespace
         EditorTextAbi name;
         EditorTextAbi referenceType;
         EditorValueAbi value;
+        Reflection::ValueKind declaredKind = Reflection::ValueKind::Empty;
+        uint32 reserved = 0;
     };
 
     struct EditorComponentSnapshotAbi
@@ -717,7 +719,7 @@ namespace
 
     static_assert(sizeof(EditorTextAbi) == 16);
     static_assert(sizeof(EditorValueAbi) == 24);
-    static_assert(sizeof(EditorPropertyAbi) == 56);
+    static_assert(sizeof(EditorPropertyAbi) == 64);
     static_assert(sizeof(EditorComponentSnapshotAbi) == 32);
 
     //读取内存中的类型化值
@@ -837,6 +839,7 @@ namespace
         {
             EditorPropertyAbi enabled;
             enabled.name = EditorTextAbi("enabled");
+            enabled.declaredKind = Reflection::ValueKind::Bool;
             EncodeEditorValue(Reflection::Value(host->GetEnabled()), enabled.value, strings[0]);
             properties.push_back(enabled);
             for (const auto& field : host->GetManagedFields())
@@ -847,6 +850,7 @@ namespace
                 usize index = properties.size();
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field.name);
+                entry.declaredKind = kind;
                 if (field.kind == Reflection::FieldKind::ObjectRef)
                 {
                     std::string& reference = strings[index * 2 + 1];
@@ -855,15 +859,10 @@ namespace
                     entry.referenceType = EditorTextAbi(reference);
                 }
                 if (field.kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
-                Reflection::Value value;
-                if (kind == Reflection::ValueKind::StringId)
-                {
-                    EncodeEditorValue(Reflection::Value(field.value), entry.value, strings[index * 2]);
-                    entry.value.kind = kind;
-                }
-                else if (Reflection::Value::FromString(field.kind, field.value, value))
-                    EncodeEditorValue(value, entry.value, strings[index * 2]);
-                else { entry.value.kind = kind; entry.value.status = S::InvocationFailed; }
+                //传递原始文本，由托管快照在文本或声明类型变化时解析
+                entry.value.kind = Reflection::ValueKind::String;
+                EditorTextAbi text(field.value);
+                std::memcpy(entry.value.payload, &text, sizeof(text));
                 properties.push_back(entry);
             }
         }
@@ -877,6 +876,7 @@ namespace
                 usize index = properties.size();
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field->name);
+                entry.declaredKind = kind;
                 if (field->kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
                 else if (field->kind == Reflection::FieldKind::ObjectRef && field->objectRefTypeName)
                     entry.referenceType = EditorTextAbi(field->objectRefTypeName);
@@ -894,6 +894,7 @@ namespace
                 strings[index * 2 + 1] = GetComponentMaterialSlotName(slot);
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(strings[index * 2 + 1]);
+                entry.declaredKind = Reflection::ValueKind::StringId;
                 entry.referenceType = EditorTextAbi("Material");
                 EncodeEditorValue(Reflection::Value(GetComponentMaterialSlotKey(component, slot)), entry.value, strings[index * 2]);
                 entry.value.kind = Reflection::ValueKind::StringId;

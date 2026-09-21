@@ -324,7 +324,7 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 137);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
-        ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 56);
+        ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);
         ValidateSize<EditorComponentSnapshotAbi>(nameof(EditorComponentSnapshotAbi), 32);
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);

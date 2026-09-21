@@ -81,6 +81,8 @@ internal struct EditorPropertyAbi
     public EditorTextAbi Name;
     public EditorTextAbi ReferenceType;
     public EditorValueAbi Value;
+    public InteropValueKind DeclaredKind;
+    public uint Reserved;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -99,6 +101,42 @@ internal readonly record struct NativeComponentInfo(int ObjectId, string TypeNam
 internal static unsafe class EditorNativeComponents
 {
     private unsafe delegate int CopyText(byte* buffer, int size);
+
+    /// <summary>完全由托管内存持有的属性快照。</summary>
+    internal sealed class PropertySnapshot
+    {
+        internal PropertyDescriptor Descriptor;
+        internal byte[] Name = [];
+        internal byte[] ReferenceType = [];
+        internal byte[] Text = [];
+        internal ulong PayloadLow;
+        internal ulong PayloadHigh;
+        internal InteropStatus Status;
+        internal InteropStatus SourceStatus;
+        internal InteropValueKind SourceKind;
+        internal InteropValue Value;
+    }
+
+    /// <summary>可复用的组件快照，不保存借用指针。</summary>
+    internal sealed class ComponentSnapshot
+    {
+        internal string StableId = string.Empty;
+        internal uint Generation;
+        internal int PropertyVersion;
+        internal readonly List<PropertySnapshot> Fields = [];
+        internal readonly Dictionary<string, PropertySnapshot> FieldsByName = new(StringComparer.Ordinal);
+        internal readonly List<PropertyDescriptor> Properties = [];
+
+        /// <summary>清空失效属性，保留供 Undo 恢复使用的稳定身份。</summary>
+        internal void ClearProperties()
+        {
+            if (Properties.Count == 0) return;
+            Properties.Clear();
+            Fields.Clear();
+            FieldsByName.Clear();
+            ++PropertyVersion;
+        }
+    }
 
     private static EditorComponentNativeApi api;
 
@@ -126,13 +164,95 @@ internal static unsafe class EditorNativeComponents
         return result;
     }
 
-    /// <summary>一次借用组件全部属性，调用方立即复制结果。</summary>
-    internal static InteropStatus ReadComponentSnapshot(int objectId, out EditorComponentSnapshotAbi snapshot)
+    /// <summary>在借用期内复制组件属性，向调用方仅提供托管快照。</summary>
+    internal static InteropStatus ReadComponentSnapshot(int objectId, ComponentSnapshot destination)
     {
-        snapshot = default;
         if (api.ReadComponentSnapshot == null) return InteropStatus.NotFound;
-        fixed (EditorComponentSnapshotAbi* pointer = &snapshot)
-            return api.ReadComponentSnapshot(api.Context, objectId, pointer);
+        EditorComponentSnapshotAbi snapshot = default;
+        InteropStatus status = api.ReadComponentSnapshot(api.Context, objectId, &snapshot);
+        if (status != InteropStatus.Ok) return status;
+        //本方法复制完成前不调用其他原生接口，不向外暴露 ABI 指针或 Span
+        if (destination.StableId.Length == 0) destination.StableId = snapshot.StableId.ToString();
+
+        //比较字段结构，不分配名称字符串
+        bool changed = destination.Generation != snapshot.Generation || destination.Fields.Count != snapshot.Count;
+        for (int index = 0; !changed && index < snapshot.Count; ++index)
+        {
+            ref EditorPropertyAbi source = ref snapshot.Properties[index];
+            PropertySnapshot field = destination.Fields[index];
+            changed = field.Descriptor.Kind != source.DeclaredKind
+                || !source.Name.Bytes.SequenceEqual(field.Name)
+                || !source.ReferenceType.Bytes.SequenceEqual(field.ReferenceType);
+        }
+        if (changed)
+        {
+            destination.Fields.Clear();
+            destination.FieldsByName.Clear();
+            destination.Properties.Clear();
+            destination.Generation = snapshot.Generation;
+            for (int index = 0; index < snapshot.Count; ++index)
+            {
+                ref EditorPropertyAbi source = ref snapshot.Properties[index];
+                PropertySnapshot field = new()
+                {
+                    Descriptor = new(source.Name.ToString(), source.DeclaredKind, source.ReferenceType.ToString()),
+                    Name = source.Name.Bytes.ToArray(),
+                    ReferenceType = source.ReferenceType.Bytes.ToArray(),
+                };
+                destination.Fields.Add(field);
+                destination.FieldsByName[field.Descriptor.Name] = field;
+                destination.Properties.Add(field.Descriptor);
+            }
+            ++destination.PropertyVersion;
+        }
+
+        //复制变化值，静态数值沿用已有装箱结果
+        for (int index = 0; index < snapshot.Count; ++index)
+        {
+            EditorValueAbi source = snapshot.Properties[index].Value;
+            PropertySnapshot field = destination.Fields[index];
+            bool valueChanged = changed || field.SourceStatus != source.Status || field.SourceKind != source.Kind;
+            if (source.Status == InteropStatus.Ok)
+            {
+                if (source.Kind is InteropValueKind.String or InteropValueKind.StringId)
+                {
+                    EditorTextAbi text = *(EditorTextAbi*)source.Payload;
+                    if (!text.Bytes.SequenceEqual(field.Text))
+                    {
+                        field.Text = text.Bytes.ToArray();
+                        valueChanged = true;
+                    }
+                }
+                else
+                {
+                    ulong low = *(ulong*)source.Payload;
+                    ulong high = *((ulong*)source.Payload + 1);
+                    valueChanged |= field.PayloadLow != low || field.PayloadHigh != high;
+                    field.PayloadLow = low;
+                    field.PayloadHigh = high;
+                }
+            }
+            if (valueChanged)
+            {
+                field.Status = source.Status;
+                field.Value = default;
+                if (source.Status == InteropStatus.Ok)
+                {
+                    //解析发生变化的宿主文本，并缓存解析失败状态
+                    if (source.Kind == InteropValueKind.String && field.Descriptor.Kind != InteropValueKind.String)
+                    {
+                        string text = Encoding.UTF8.GetString(field.Text);
+                        if (!EditorInteropValueText.TryParse(field.Descriptor.Kind, text, out field.Value))
+                            field.Status = InteropStatus.InvocationFailed;
+                    }
+                    else if (source.Kind != field.Descriptor.Kind) field.Status = InteropStatus.TypeMismatch;
+                    else field.Value = source.Decode();
+                }
+            }
+            field.SourceStatus = source.Status;
+            field.SourceKind = source.Kind;
+        }
+        return InteropStatus.Ok;
     }
 
     /// <summary>读取原生字段注册代次。</summary>
