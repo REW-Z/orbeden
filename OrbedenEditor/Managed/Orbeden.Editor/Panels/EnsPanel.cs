@@ -8,8 +8,15 @@ internal sealed class EnsPanel : EditorPanel
     private readonly Dictionary<EnsId, List<Ens>> children = [];
     private Action? pendingDrop;
     private string status = string.Empty;
+    private EnsId selectedEns = EnsId.Null;
+    private EnsId renamingEns = EnsId.Null;
+    private string renameBuffer = string.Empty;
+    private bool renameFocusRequested;
+    private bool panelFocused;
 
     private sealed record Position(string Parent, string Before, vector3 Translation, quaternion Rotation, vector3 Scale);
+
+    private const string InvalidNameMessage = "Ens name cannot be empty or contain control characters.";
 
     public override EditorPanelInfo Info => new("ens_view", "EnsView", true,
         new vector2(320, 420), PanelDockPlacement.Left, 0.22f, 200);
@@ -17,6 +24,12 @@ internal sealed class EnsPanel : EditorPanel
     /// <summary>绘制层级并在遍历结束后提交投放。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
+        //F2 与 Delete 由选择系统按焦点派发到这里，重命名还要认得当前选中的是谁
+        panelFocused = NativeEditorGUI.IsWindowFocused();
+        selectedEns = context.SelectedEns;
+        EditorSelection.Report(Info.Id, panelFocused, !selectedEns.IsNull);
+        if (EditorApplication.IsPlaying) EndRename();
+
         children.Clear();
         pendingDrop = null;
         foreach (EnsId id in EditorNativeComponents.GetWorldEns())
@@ -51,8 +64,15 @@ internal sealed class EnsPanel : EditorPanel
     private void DrawNode(Ens ens, EditorPanelContext context)
     {
         bool hasChildren = children.TryGetValue(ens.Id, out List<Ens>? descendants);
-        int state = NativeEditorGUI.TreeNode(ens.Name + "##ens_" + ens.ResourceKey,
+        bool renaming = renamingEns.Equals(ens.Id);
+        //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始
+        int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + ens.ResourceKey,
             context.SelectedEnsList.Contains(ens.Id), !hasChildren, true);
+        if (renaming)
+        {
+            EditorGUI.SameLine();
+            DrawRenameInput(ens);
+        }
         if ((state & 2) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
         NativeEditorGUI.DragSource(1, ens.ResourceKey);
@@ -70,12 +90,100 @@ internal sealed class EnsPanel : EditorPanel
         finally { NativeEditorGUI.TreePop(); }
     }
 
+    /// <summary>面板隐藏后不再持有选择。</summary>
+    public override void OnHidden() => EditorSelection.Clear(Info.Id);
+
+    /// <summary>F2 触发：就地重命名当前选中的 Ens。</summary>
+    public override void OnRenameRequested()
+    {
+        if (EditorApplication.IsPlaying) return;
+        BeginRename(selectedEns);
+    }
+
+    /// <summary>Delete 触发：删除当前选中的 Ens。</summary>
+    public override void OnDeleteRequested()
+    {
+        if (EditorApplication.IsPlaying) return;
+        //Ens 删除可撤销，所以不弹确认；Project 的资源删除进回收站且不可撤销，那边才确认
+        DeleteEns(Ens.FromId(selectedEns));
+    }
+
+    //进入就地重命名，输入框落在原来名称的位置
+    private void BeginRename(EnsId id)
+    {
+        Ens ens = Ens.FromId(id);
+        if (!ens.IsValid) return;
+        renamingEns = id;
+        renameBuffer = ens.Name;
+        renameFocusRequested = true;
+        EditorApplication.RequestRepaint();
+    }
+
+    //退出就地重命名
+    private void EndRename()
+    {
+        renamingEns = EnsId.Null;
+        renameBuffer = string.Empty;
+        renameFocusRequested = false;
+    }
+
+    //绘制就地重命名输入框：回车或失焦应用，Esc 放弃
+    private void DrawRenameInput(Ens ens)
+    {
+        int result = EditorGUI.RenameInput("##ens_rename", ref renameBuffer, ref renameFocusRequested);
+        if (result == 0) return;
+        if (result == 3) { EndRename(); return; }   //Esc，文本已由框架还原
+
+        string name = renameBuffer.Trim();
+        if (!IsValidName(name))
+        {
+            status = InvalidNameMessage;
+            //失焦时人的注意力已经走了，只能放弃；回车则留在原地接着改
+            if (result == 2) EndRename();
+            else renameFocusRequested = true;
+            return;
+        }
+
+        ApplyRename(ens, name);
+        EndRename();
+    }
+
+    //改名并记一次撤销事务
+    private static void ApplyRename(Ens ens, string name)
+    {
+        if (string.Equals(ens.Name, name, StringComparison.Ordinal)) return;
+
+        string key = ens.ResourceKey;
+        string previous = ens.Name;
+        ens.Name = name;
+        EditorPropertyHistory.PushAction("Rename Ens",
+            () => SetEnsName(key, previous),
+            () => SetEnsName(key, name));
+    }
+
+    //按稳定 ID 写回名称，对象已经不在了就跳过
+    private static void SetEnsName(string key, string name)
+    {
+        Ens ens = Ens.Find(key);
+        if (ens.IsValid) ens.Name = name;
+    }
+
+    //名称会作为属性写进 world XML，空白名与不可见字符读回来会被规范化，直接拒绝
+    private static bool IsValidName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 128) return false;
+        foreach (char value in name)
+            if (char.IsControl(value)) return false;
+        return true;
+    }
+
     //绘制节点右键菜单，末段留给扩展项
     private void DrawContextMenu(Ens target)
     {
         bool canModify = !EditorApplication.IsPlaying;
         string label = target.IsValid ? $"Create Empty Ens under {target.Name}" : "Create Empty Ens";
         if (EditorGUI.MenuItem(label, canModify)) CreateEmptyEns(target);
+        if (EditorGUI.MenuItem("Rename", canModify && target.IsValid)) BeginRename(target.Id);
         if (EditorGUI.MenuItem("Duplicate", canModify && target.IsValid)) DuplicateEns(target);
         if (EditorGUI.MenuItem("Delete", canModify && target.IsValid)) DeleteEns(target);
         EnsContextMenuRegistry.Draw(new EnsContext(target.Id, target.IsValid ? target.ResourceKey : string.Empty,
@@ -83,7 +191,7 @@ internal sealed class EnsPanel : EditorPanel
     }
 
     //在目标节点下创建空 Ens，撤销删除、重做按快照恢复
-    private static void CreateEmptyEns(Ens parent)
+    private void CreateEmptyEns(Ens parent)
     {
         Ens created = EditorAssetsNative.CreateEns("Ens");
         if (!created.IsValid) return;
@@ -102,6 +210,9 @@ internal sealed class EnsPanel : EditorPanel
                 if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
             },
             () => RestoreSnapshot(snapshot, parentKey));
+
+        //建完立刻进入重命名，和主流编辑器一样不用先想好名字
+        BeginRename(created.Id);
     }
 
     //在同级位置复制子树，撤销删除副本、重做按快照恢复

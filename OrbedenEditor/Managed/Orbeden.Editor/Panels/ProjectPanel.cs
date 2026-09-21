@@ -61,10 +61,7 @@ internal sealed class ProjectPanel : EditorPanel
     private enum PendingOperation
     {
         None,
-        Rename,
         Move,
-        Delete,
-        CreateFolder,
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -98,13 +95,19 @@ internal sealed class ProjectPanel : EditorPanel
     private const int FileMustExist = 0x00001000;
     private const int PathMustExist = 0x00000800;
     private const int ExplorerDialog = 0x00080000;
-    //网格瓦片的期望宽度与竖向滚动条余量，两者共同决定一行放几块
-    private const float MinTileWidth = 96.0f;
+    //网格瓦片宽度由缩放滑条控制，它就是一行放几块的依据；ScrollbarAllowance 是竖向滚动条余量
+    private const float TileSizeMin = 64.0f;
+    private const float TileSizeMax = 192.0f;
+    private const float TileSizeDefault = 96.0f;
     private const float ScrollbarAllowance = 16.0f;
 
     private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
     private string? selectedPath;
+    private string? renamingEntry;
+    private string renameBuffer = string.Empty;
+    private bool renameFocusRequested;
+    private bool panelFocused;
     private string search = string.Empty;
     private string status = string.Empty;
     private string operationValue = string.Empty;
@@ -113,8 +116,12 @@ internal sealed class ProjectPanel : EditorPanel
     private int refreshRequested;
     private float directoryWidth = 200;
     private string startupWorld = string.Empty;
-    private bool gridView;
+    private float tileSize = TileSizeDefault;
     private static string? pingKey;
+
+    //浏览模式由缩放值推导：滑到最小端就是列表模式，其余按网格排。
+    //不额外存一个模式字段，免得滑条与模式各说各话
+    private bool gridView => tileSize > TileSizeMin;
 
     //请求在项目列表中定位引用资源
     internal static void Ping(string key) => pingKey = key.Split("//", 2, StringSplitOptions.None)[0];
@@ -139,16 +146,23 @@ internal sealed class ProjectPanel : EditorPanel
         SetupWatcher();
     }
 
-    /// <summary>Panel 隐藏时停止目录监听。</summary>
+    /// <summary>Panel 隐藏时停止目录监听，并交还选择。</summary>
     public override void OnHidden()
     {
         watcher?.Dispose();
         watcher = null;
+        EditorSelection.Clear(Info.Id);
     }
 
     /// <summary>绘制 ProjectPanel。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
+        //F2 与 Delete 由选择系统按焦点派发到这里；进入 Play 后资源被锁，重命名必须收工
+        panelFocused = NativeEditorGUI.IsWindowFocused();
+        EditorSelection.Report(Info.Id, panelFocused, selectedPath != null);
+        EditorDialog.Draw(Info.Id);
+        if (renamingEntry != null && !EditorAssetsNative.CanModifyAssets()) EndRename();
+
         if (!EnsureProject())
         {
             EditorGUI.Label("No project loaded.");
@@ -197,6 +211,7 @@ internal sealed class ProjectPanel : EditorPanel
         Directory.CreateDirectory(currentDirectory);
         SetupWatcher();
         selectedPath = null;
+        EndRename();
         pendingOperation = PendingOperation.None;
         status = string.Empty;
         return true;
@@ -245,8 +260,9 @@ internal sealed class ProjectPanel : EditorPanel
         }
         EditorGUI.EndDisabled();
 
+        //缩放滑条就是浏览模式控件：拉到最小端即列表模式。它同时改格子宽度、图标大小与一行放几块
         EditorGUI.SameLine();
-        if (EditorGUI.ViewToggleButton("##project_view_mode", gridView)) gridView = !gridView;
+        EditorGUI.SliderFloat("##project_tile_size", ref tileSize, TileSizeMin, TileSizeMax, 120.0f);
 
         EditorGUI.SameLine();
         EditorGUI.InputText("Search##project_search", ref search);
@@ -260,20 +276,9 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.Separator();
         switch (pendingOperation)
         {
-        case PendingOperation.Rename:
-            EditorGUI.Label("Rename selected asset:");
-            EditorGUI.InputText("Name##project_operation", ref operationValue);
-            break;
         case PendingOperation.Move:
             EditorGUI.Label("Destination folder (project-relative):");
             EditorGUI.InputText("Folder##project_operation", ref operationValue);
-            break;
-        case PendingOperation.Delete:
-            EditorGUI.Label($"Move '{Path.GetFileName(selectedPath)}' to Recycle Bin? Soft references will be cleared.");
-            break;
-        case PendingOperation.CreateFolder:
-            EditorGUI.Label("Create folder in the current directory:");
-            EditorGUI.InputText("Name##project_operation", ref operationValue);
             break;
         }
 
@@ -296,7 +301,9 @@ internal sealed class ProjectPanel : EditorPanel
         {
             if (visible)
             {
-                EditorGUI.Label(EditorAssetCatalog.Instance.ToResourceKey(currentDirectory));
+                //内容根的项目内相对键算出来是个点，换成目录名，和目录树里的叫法一致
+                string location = EditorAssetCatalog.Instance.ToResourceKey(currentDirectory);
+                EditorGUI.Label(location.Length == 0 || location == "." ? GetDirectoryName(currentDirectory) : location);
                 DrawAssets(remainingWidth);
             }
         }
@@ -348,15 +355,23 @@ internal sealed class ProjectPanel : EditorPanel
     private void DrawDirectory(string path)
     {
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
-        string name = path == EditorAssetCatalog.Instance.ContentRoot ? "Content" : Path.GetFileName(path);
+        string name = GetDirectoryName(path);
+        bool renaming = string.Equals(renamingEntry, path, StringComparison.OrdinalIgnoreCase) && RenamesInTree(path);
         //没有下级目录的叶子不该显示展开箭头
-        int state = NativeEditorGUI.TreeNode(name + "##directory_" + path,
+        //重命名时把名称让给输入框；隐藏标签后节点宽度仍是「箭头+标签」，输入框正好从原名称的位置开始
+        int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : name) + "##directory_" + path,
             string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
             leaf: !HasSubDirectories(path));
+        if (renaming)
+        {
+            EditorGUI.SameLine();
+            DrawRenameInput(path);
+        }
         if ((state & 2) != 0)
         {
             currentDirectory = path;
-            selectedPath = null;
+            //当前选中项就是点中的这个目录：F2 与右键 Rename 都作用在它身上
+            selectedPath = path;
         }
         DrawDirectoryDrop(path);
         NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(path));
@@ -379,6 +394,12 @@ internal sealed class ProjectPanel : EditorPanel
         }
         finally { NativeEditorGUI.TreePop(); }
     }
+
+    //目录的显示名：内容根统一叫 Content（与目录树、项目模板一致），其余取文件夹名
+    private static string GetDirectoryName(string path)
+        => string.Equals(path, EditorAssetCatalog.Instance.ContentRoot, StringComparison.OrdinalIgnoreCase)
+            ? "Content"
+            : Path.GetFileName(path);
 
     //判断目录下还有没有可展开的子目录，生成目录与目录链接不算
     private static bool HasSubDirectories(string path)
@@ -449,7 +470,7 @@ internal sealed class ProjectPanel : EditorPanel
             try
             {
                 bool canModify = EditorAssetsNative.CanModifyAssets();
-                if (EditorGUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
+                if (EditorGUI.MenuItem("Create Folder", canModify)) CreateFolder();
                 if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
                 if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
                 if (EditorGUI.MenuItem("Refresh"))
@@ -466,6 +487,109 @@ internal sealed class ProjectPanel : EditorPanel
                 EditorGUI.EndPopup();
             }
         }
+    }
+
+    /// <summary>F2 触发：就地重命名当前选中的资源。</summary>
+    public override void OnRenameRequested()
+    {
+        if (!EditorAssetsNative.CanModifyAssets()) return;
+        BeginRename(selectedPath ?? string.Empty);
+    }
+
+    /// <summary>Delete 触发：删除当前选中的资源，先弹确认窗。</summary>
+    public override void OnDeleteRequested() => BeginDelete(selectedPath);
+
+    //请求删除：资源删除进回收站且没有撤销，所以先确认
+    private void BeginDelete(string? entry)
+    {
+        if (string.IsNullOrEmpty(entry) || !EditorAssetsNative.CanModifyAssets()) return;
+        EditorDialog.Confirm(Info.Id, "Delete",
+            $"Move '{Path.GetFileName(entry)}' to Recycle Bin? Soft references will be cleared.",
+            "Delete", () => DeleteEntry(entry));
+    }
+
+    //确认后真正删除
+    private void DeleteEntry(string entry)
+    {
+        if (!ProjectAssetOperations.Delete(entry, out status)) return;
+        if (string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase)) selectedPath = null;
+    }
+
+    //进入就地重命名，输入框落在原来名称的位置
+    private void BeginRename(string entry)
+    {
+        if (string.IsNullOrEmpty(entry)) return;
+        //内容根改名会让项目里的 ContentRoot 指向不存在的目录，直接挡掉
+        if (string.Equals(entry, EditorAssetCatalog.Instance.ContentRoot, StringComparison.OrdinalIgnoreCase)) return;
+        selectedPath = entry;
+        renamingEntry = entry;
+        renameBuffer = Path.GetFileName(entry);
+        renameFocusRequested = true;
+        pendingOperation = PendingOperation.None;
+        EditorApplication.RequestRepaint();
+    }
+
+    //重命名输入框只画一处：当前目录的儿子在列表/网格里，更深的目录只有目录树看得到。
+    //同一个目录两处都在屏幕上时画两次会共用一个输入框状态
+    private bool RenamesInTree(string entry)
+    {
+        return !string.Equals(Path.GetDirectoryName(entry), currentDirectory, StringComparison.OrdinalIgnoreCase);
+    }
+
+    //退出就地重命名
+    private void EndRename()
+    {
+        renamingEntry = null;
+        renameBuffer = string.Empty;
+        renameFocusRequested = false;
+    }
+
+    //绘制就地重命名输入框：回车或失焦应用，Esc 放弃。width 为 0 时占满本行剩余宽度。
+    private void DrawRenameInput(string entry, float width = 0.0f)
+        => ApplyRenameResult(entry, EditorGUI.RenameInput("##project_rename", ref renameBuffer, ref renameFocusRequested, width));
+
+    //处理输入框结果：列表、目录树、网格瓦片三种画法共用这一段。
+    //0 继续编辑、1 回车、2 失焦、3 Esc
+    private void ApplyRenameResult(string entry, int result)
+    {
+        if (result == 0) return;
+        if (result == 3) { EndRename(); return; }   //Esc，文本已由框架还原
+
+        //回车留在原地接着改，失焦时人的注意力已经走了，只能放弃
+        bool keepEditing = result == 1;
+        string name = renameBuffer.Trim();
+        if (!IsValidName(name))
+        {
+            status = "Name contains invalid path characters.";
+        }
+        else
+        {
+            string target = Path.Combine(Path.GetDirectoryName(entry)!, name);
+            if (ProjectAssetOperations.Move(entry, target, out status))
+            {
+                //改的是目录时，当前目录可能就在它下面，跟着一起搬
+                if (Directory.Exists(target) && ProjectAssetOperations.IsSameOrChild(currentDirectory, entry))
+                    currentDirectory = Path.Combine(target, Path.GetRelativePath(entry, currentDirectory));
+                if (string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase)) selectedPath = target;
+                EndRename();
+                return;
+            }
+        }
+
+        if (keepEditing) renameFocusRequested = true;
+        else EndRename();
+    }
+
+    //直接建目录再立刻进入重命名：和主流编辑器一样，不用先填名字再确认
+    private void CreateFolder()
+    {
+        string path = Path.Combine(currentDirectory, "New Folder");
+        for (int index = 1; Directory.Exists(path) || File.Exists(path); ++index)
+            path = Path.Combine(currentDirectory, "New Folder " + index);
+        if (!ProjectAssetOperations.CreateFolder(path, out status)) return;
+
+        selectedPath = path;
+        BeginRename(path);
     }
 
     //绘制资源列表视图
@@ -491,8 +615,8 @@ internal sealed class ProjectPanel : EditorPanel
         //子窗口宽度含边框与内边距，再留出竖向滚动条余量，避免铺满一行后挤出横向滚动条
         float spacing = EditorTheme.Current.SpacingX;
         float available = width - (EditorTheme.Current.PaddingX + 1.0f) * 2.0f - ScrollbarAllowance;
-        int columns = Math.Max(1, (int)((available + spacing) / (MinTileWidth + spacing)));
-        float tileWidth = Math.Max(MinTileWidth, (available - (columns - 1) * spacing) / columns);
+        int columns = Math.Max(1, (int)((available + spacing) / (tileSize + spacing)));
+        float tileWidth = Math.Max(tileSize, (available - (columns - 1) * spacing) / columns);
         for (int index = 0; index < entries.Count; index++)
         {
             if (index % columns != 0) EditorGUI.SameLine();
@@ -505,6 +629,14 @@ internal sealed class ProjectPanel : EditorPanel
     {
         bool directory = Directory.Exists(entry);
         bool selected = string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase);
+        //重命名的瓦片由原生一次画出来：图标照旧，名称那一行就地变成输入框。
+        //网格一行一个 SameLine 单元格、一个单元格只能放一个控件，分两次调用会把输入框挤到下一行
+        if (string.Equals(renamingEntry, entry, StringComparison.OrdinalIgnoreCase) && !RenamesInTree(entry))
+        {
+            ApplyRenameResult(entry, EditorGUI.AssetRenameTile(EditorIconCatalog.ForResource(entry, directory), entry,
+                ref renameBuffer, ref renameFocusRequested, width, selected));
+            return;
+        }
         if (EditorGUI.AssetTile(EditorIconCatalog.ForResource(entry, directory), GetDisplayName(entry), entry, width, selected))
             selectedPath = entry;
         if (EditorGUI.IsItemDoubleClicked()) OpenEntry(entry);
@@ -534,13 +666,21 @@ internal sealed class ProjectPanel : EditorPanel
         string name = GetDisplayName(entry);
         EditorGUI.TableNextRow();
         EditorGUI.TableSetColumnIndex(0);
-        bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
-            string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase));
-        bool doubleClicked = EditorGUI.IsItemDoubleClicked();
-        if (clicked) selectedPath = entry;
-        if (doubleClicked) OpenEntry(entry);
-        if (directory) DrawDirectoryDrop(entry);
-        NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
+        if (string.Equals(renamingEntry, entry, StringComparison.OrdinalIgnoreCase) && !RenamesInTree(entry))
+        {
+            //重命名时名称位置让给输入框，它占满这一列，与原来的标签同宽同位
+            DrawRenameInput(entry);
+        }
+        else
+        {
+            bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
+                string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase));
+            bool doubleClicked = EditorGUI.IsItemDoubleClicked();
+            if (clicked) selectedPath = entry;
+            if (doubleClicked) OpenEntry(entry);
+            if (directory) DrawDirectoryDrop(entry);
+            NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
+        }
 
         if (EditorGUI.BeginPopupContextItem("##project_item_menu_" + entry))
         {
@@ -571,20 +711,23 @@ internal sealed class ProjectPanel : EditorPanel
                 ? "Startup World updated." : EditorAssetsNative.GetProjectError();
         }
         EditorGUI.Separator();
-        if (EditorGUI.MenuItem("Rename", canModify)) BeginOperation(PendingOperation.Rename, entry);
+        //内容根不能改名，菜单项跟着置灰
+        bool renamable = canModify
+            && !string.Equals(entry, EditorAssetCatalog.Instance.ContentRoot, StringComparison.OrdinalIgnoreCase);
+        if (EditorGUI.MenuItem("Rename", renamable)) BeginRename(entry);
         if (EditorGUI.MenuItem("Move...", canModify)) BeginOperation(PendingOperation.Move, entry);
         if (EditorGUI.MenuItem("Duplicate", canModify))
         {
             if (ProjectAssetOperations.Duplicate(entry, out string duplicate, out status)) selectedPath = duplicate;
         }
-        if (EditorGUI.MenuItem("Delete", canModify)) BeginOperation(PendingOperation.Delete, entry);
+        if (EditorGUI.MenuItem("Delete", canModify)) BeginDelete(entry);
         EditorGUI.Separator();
         if (EditorGUI.MenuItem("Reveal in Explorer")) EditorAssetCatalog.Reveal(entry);
         if (EditorGUI.MenuItem("Copy Resource Key")) EditorGUI.SetClipboardText(EditorAssetCatalog.Instance.ToResourceKey(entry));
 
         //创建类操作也放进条目菜单：列表铺满时空白处点不到背景菜单
         EditorGUI.Separator();
-        if (EditorGUI.MenuItem("Create Folder", canModify)) BeginOperation(PendingOperation.CreateFolder, null);
+        if (EditorGUI.MenuItem("Create Folder", canModify)) CreateFolder();
         if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
         if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
         if (EditorGUI.MenuItem("Refresh"))
@@ -604,9 +747,7 @@ internal sealed class ProjectPanel : EditorPanel
         pendingOperation = operation;
         operationValue = operation switch
         {
-            PendingOperation.Rename => selectedPath == null ? string.Empty : Path.GetFileName(selectedPath),
             PendingOperation.Move => EditorAssetCatalog.Instance.ToResourceKey(currentDirectory),
-            PendingOperation.CreateFolder => "New Folder",
             _ => string.Empty,
         };
     }
@@ -618,35 +759,11 @@ internal sealed class ProjectPanel : EditorPanel
         bool succeeded = false;
         switch (pendingOperation)
         {
-        case PendingOperation.Rename when path != null:
-            if (!IsValidName(operationValue))
-            {
-                status = "Name contains invalid path characters.";
-                return;
-            }
-            string renamed = Path.Combine(Path.GetDirectoryName(path)!, operationValue);
-            succeeded = ProjectAssetOperations.Move(path, renamed, out status);
-            if (succeeded) selectedPath = renamed;
-            break;
         case PendingOperation.Move when path != null:
             string destinationDirectory = Path.GetFullPath(Path.Combine(contentRoot, operationValue.Replace('/', Path.DirectorySeparatorChar)));
             string moved = Path.Combine(destinationDirectory, Path.GetFileName(path));
             succeeded = ProjectAssetOperations.Move(path, moved, out status);
             if (succeeded) selectedPath = moved;
-            break;
-        case PendingOperation.Delete when path != null:
-            succeeded = ProjectAssetOperations.Delete(path, out status);
-            if (succeeded) selectedPath = null;
-            break;
-        case PendingOperation.CreateFolder:
-            if (!IsValidName(operationValue))
-            {
-                status = "Folder name contains invalid path characters.";
-                return;
-            }
-            string folder = Path.Combine(currentDirectory, operationValue);
-            succeeded = ProjectAssetOperations.CreateFolder(folder, out status);
-            if (succeeded) selectedPath = folder;
             break;
         }
 

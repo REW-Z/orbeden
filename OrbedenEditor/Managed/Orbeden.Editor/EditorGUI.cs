@@ -69,6 +69,10 @@ public static class EditorGUI
     public static bool AssetTile(string icon, string label, string id, float width, bool selected = false)
         => NativeEditorGUI.AssetTile(icon, label, id, width, selected);
 
+    /// <summary>绘制重命名中的资源瓦片：图标照画，名称那一行是输入框。返回 0 继续编辑、1 回车、2 失焦、3 Esc。</summary>
+    public static int AssetRenameTile(string icon, string id, ref string value, ref bool focusRequested, float width, bool selected)
+        => NativeEditorGUI.AssetRenameTile(icon, id, ref value, ref focusRequested, width, selected);
+
     /// <summary>绘制视图切换按钮，按钮上是当前模式的图标。</summary>
     public static bool ViewToggleButton(string id, bool gridMode) => NativeEditorGUI.ViewToggleButton(id, gridMode);
 
@@ -124,6 +128,10 @@ public static class EditorGUI
     /// <summary>绘制开关按钮；开启时用强调色底。</summary>
     public static bool ToggleButton(string text, bool active) => NativeEditorGUI.ToggleButton(text, active);
 
+    /// <summary>绘制行内重命名输入框；width 为 0 时占满本行剩余宽度。返回 0 继续编辑、1 回车、2 失焦、3 Esc。</summary>
+    public static int RenameInput(string id, ref string value, ref bool focusRequested, float width = 0.0f)
+        => NativeEditorGUI.RenameInput(id, ref value, ref focusRequested, width);
+
     /// <summary>开始表格。</summary>
     public static bool BeginTable(string id, int columns) => NativeEditorGUI.BeginTable(id, columns);
 
@@ -176,6 +184,10 @@ public static class EditorGUI
 
     /// <summary>绘制整数输入框。</summary>
     public static bool InputInt(string label, ref int value) => NativeEditorGUI.InputInt(label, ref value);
+
+    /// <summary>绘制浮点滑条。</summary>
+    public static bool SliderFloat(string id, ref float value, float minimum, float maximum, float width = 0.0f)
+        => NativeEditorGUI.SliderFloat(id, ref value, minimum, maximum, width);
 
     /// <summary>绘制浮点输入框。</summary>
     public static bool InputFloat(string label, ref float value) => NativeEditorGUI.InputFloat(label, ref value);

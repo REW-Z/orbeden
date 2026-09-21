@@ -12,6 +12,9 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Runtime/Reflection.h"
+#include "Scripting/ScriptInterop.h"
+#include <unordered_map>
+#include <string_view>
 #include "Runtime/Object/Ens.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
@@ -62,6 +65,8 @@ namespace
     constexpr const char* EditorSaveProjectStateMethod = "SaveProjectState";
     constexpr const char* EditorUndoMethod = "Undo";
     constexpr const char* EditorRedoMethod = "Redo";
+    constexpr const char* EditorRequestRenameSelectedMethod = "RequestRenameSelected";
+    constexpr const char* EditorRequestDeleteSelectedMethod = "RequestDeleteSelected";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -111,11 +116,9 @@ namespace
         void* getComponentObjectId = nullptr;
         void* getComponentTypeName = nullptr;
         void* getComponentDomain = nullptr;
-        void* getFieldCount = nullptr;
-        void* getFieldName = nullptr;
-        void* getFieldKind = nullptr;
-        void* getFieldValue = nullptr;
-        void* setFieldValue = nullptr;
+        void* readComponentSnapshot = nullptr;
+        void* setComponentProperty = nullptr;
+        void* getRegistryGeneration = nullptr;
         void* setManagedField = nullptr;
         void* getAddableTypeCount = nullptr;
         void* getAddableTypeName = nullptr;
@@ -125,7 +128,6 @@ namespace
         void* restoreComponent = nullptr;
         void* findComponent = nullptr;
         void* getHostBinding = nullptr;
-        void* getFieldReferenceType = nullptr;
         void* getWorldEns = nullptr;
         void* selectEns = nullptr;
         void* matchComponentType = nullptr;
@@ -195,19 +197,19 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 26);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 23);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 136);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 137);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 67);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 77);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 80);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 82);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 97);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 123);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 128);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 71);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 81);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 84);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 86);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 101);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 124);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 129);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -619,13 +621,26 @@ namespace
     }
 
     //收集一个组件从基类到派生类的可见字段。
-    List<const Reflection::FieldInfo*> GetEditorComponentFields(Component* component)
+    const List<const Reflection::FieldInfo*>& GetEditorComponentFields(Component* component)
     {
-        List<const Reflection::FieldInfo*> fields;
-        if (component) Reflection::CollectFields(component->GetType(), fields);
-        fields.erase(std::remove_if(fields.begin(), fields.end(), [](const Reflection::FieldInfo* field)
-            { return !field || !field->persistent || !field->getter || !field->setter; }), fields.end());
-        return fields;
+        static uint32 generation = 0;
+        static std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> cache;
+        static const List<const Reflection::FieldInfo*> empty;
+        if (generation != Reflection::GetRegistryGeneration())
+        {
+            cache.clear();
+            generation = Reflection::GetRegistryGeneration();
+        }
+        if (!component) return empty;
+        Type* type = component->GetType();
+        auto [entry, added] = cache.try_emplace(type->GetId());
+        if (added)
+        {
+            Reflection::CollectFields(type, entry->second);
+            std::erase_if(entry->second, [](const Reflection::FieldInfo* field)
+                { return !field || !field->name || !field->persistent || !field->getter || !field->setter; });
+        }
+        return entry->second;
     }
 
     //渲染器按子网格合成的材质槽数量，其余组件为 0
@@ -667,18 +682,281 @@ namespace
         return script && script->IsManagedHost() ? script : nullptr;
     }
 
-    //收集允许在 Inspector 显示的 C# 动态字段。
-    List<const ManagedScriptField*> GetManagedScriptFields(Script* host)
+
+    //跨域文本视图，仅在当前同步调用期间借用
+    struct EditorTextAbi
     {
-        List<const ManagedScriptField*> fields;
-        if (!host) return fields;
-        for (const ManagedScriptField& field : host->GetManagedFields())
-        {
-            if (field.inspectorVisible) fields.push_back(&field);
-        }
-        return fields;
+        const char* data = nullptr;
+        int32 length = 0;
+        int32 reserved = 0;
+        EditorTextAbi() = default;
+        explicit EditorTextAbi(std::string_view text) : data(text.data()), length(static_cast<int32>(text.size())) {}
+    };
+
+    struct EditorValueAbi
+    {
+        Reflection::ValueKind kind = Reflection::ValueKind::Empty;
+        ScriptInterop::InteropStatus status = ScriptInterop::InteropStatus::Ok;
+        uint64 payload[2]{};
+    };
+
+    struct EditorPropertyAbi
+    {
+        EditorTextAbi name;
+        EditorTextAbi referenceType;
+        EditorValueAbi value;
+    };
+
+    struct EditorComponentSnapshotAbi
+    {
+        EditorTextAbi stableId;
+        const EditorPropertyAbi* properties = nullptr;
+        int32 count = 0;
+        uint32 generation = 0;
+    };
+
+    static_assert(sizeof(EditorTextAbi) == 16);
+    static_assert(sizeof(EditorValueAbi) == 24);
+    static_assert(sizeof(EditorPropertyAbi) == 56);
+    static_assert(sizeof(EditorComponentSnapshotAbi) == 32);
+
+    //读取内存中的类型化值
+    template<typename T> T ReadEditorPayload(const EditorValueAbi& value)
+    {
+        T result{};
+        static_assert(sizeof(T) <= sizeof(value.payload));
+        std::memcpy(&result, value.payload, sizeof(T));
+        return result;
     }
 
+    //写入基础数值载荷
+    template<typename T> void WriteEditorPayload(const Reflection::Value& source, EditorValueAbi& result)
+    {
+        T value{};
+        if (!source.TryGet(value)) { result.status = ScriptInterop::InteropStatus::TypeMismatch; return; }
+        static_assert(sizeof(T) <= sizeof(result.payload));
+        std::memcpy(result.payload, &value, sizeof(T));
+    }
+
+    //映射 Inspector 的字段值类型
+    Reflection::ValueKind GetEditorValueKind(Reflection::FieldKind kind, bool managed = false)
+    {
+        using F = Reflection::FieldKind;
+        using V = Reflection::ValueKind;
+        switch (kind)
+        {
+        case F::Bool: return V::Bool;
+        case F::Int32: return V::Int32;
+        case F::UInt32: return V::UInt32;
+        case F::UInt64: return V::UInt64;
+        case F::Float32: return V::Float32;
+        case F::String: return V::String;
+        case F::StringId: case F::ObjectRef: return V::StringId;
+        case F::Vector3: return V::Vector3;
+        case F::Color: return V::Color;
+        case F::Quaternion: return V::Quaternion;
+        case F::EnsId: return managed ? V::StringId : V::EnsId;
+        default: return V::Empty;
+        }
+    }
+
+    //编码类型化快照，文本保存在调用方的复用存储中
+    void EncodeEditorValue(const Reflection::Value& source, EditorValueAbi& result, std::string& storage)
+    {
+        using V = Reflection::ValueKind;
+        result.kind = source.GetKind();
+        switch (result.kind)
+        {
+        case V::Bool: WriteEditorPayload<bool>(source, result); break;
+        case V::Int32: WriteEditorPayload<int32>(source, result); break;
+        case V::UInt32: WriteEditorPayload<uint32>(source, result); break;
+        case V::UInt64: WriteEditorPayload<uint64>(source, result); break;
+        case V::Float32: WriteEditorPayload<float32>(source, result); break;
+        case V::Vector3: WriteEditorPayload<vector3>(source, result); break;
+        case V::Color: WriteEditorPayload<color>(source, result); break;
+        case V::Quaternion: WriteEditorPayload<quaternion>(source, result); break;
+        case V::EnsId: WriteEditorPayload<EnsId>(source, result); break;
+        case V::String: case V::StringId:
+        {
+            storage = source.ToString();
+            EditorTextAbi text(storage);
+            std::memcpy(result.payload, &text, sizeof(text));
+            break;
+        }
+        default: result.status = ScriptInterop::InteropStatus::UnsupportedType; break;
+        }
+    }
+
+    //解码托管侧写入的类型化值
+    bool DecodeEditorValue(const EditorValueAbi& input, Reflection::Value& result)
+    {
+        using V = Reflection::ValueKind;
+        switch (input.kind)
+        {
+        case V::Bool: result = Reflection::Value(ReadEditorPayload<bool>(input)); return true;
+        case V::Int32: result = Reflection::Value(ReadEditorPayload<int32>(input)); return true;
+        case V::UInt32: result = Reflection::Value(ReadEditorPayload<uint32>(input)); return true;
+        case V::UInt64: result = Reflection::Value(ReadEditorPayload<uint64>(input)); return true;
+        case V::Float32: result = Reflection::Value(ReadEditorPayload<float32>(input)); return true;
+        case V::Vector3: result = Reflection::Value(ReadEditorPayload<vector3>(input)); return true;
+        case V::Color: result = Reflection::Value(ReadEditorPayload<color>(input)); return true;
+        case V::Quaternion: result = Reflection::Value(ReadEditorPayload<quaternion>(input)); return true;
+        case V::EnsId: result = Reflection::Value(ReadEditorPayload<EnsId>(input)); return true;
+        case V::String: case V::StringId:
+        {
+            EditorTextAbi text = ReadEditorPayload<EditorTextAbi>(input);
+            if (text.length < 0 || (text.length && !text.data)) return false;
+            std::string value(text.data ? text.data : "", text.length);
+            result = input.kind == V::StringId ? Reflection::Value(StringId(value)) : Reflection::Value(value);
+            return true;
+        }
+        default: return false;
+        }
+    }
+
+    //一次读取完整组件属性，返回缓冲区有效至下一次快照读取
+    ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL ReadComponentSnapshot(void* context, int32 objectId, EditorComponentSnapshotAbi* output)
+    {
+        using S = ScriptInterop::InteropStatus;
+        if (!output) return S::InvalidArgument;
+        *output = {};
+        Component* component = FindEditorComponent(context, objectId);
+        if (!component) return S::NotFound;
+        Script* host = AsManagedScriptHost(component);
+        const auto& fields = GetEditorComponentFields(component);
+        int32 slots = GetComponentMaterialSlotCount(component);
+        usize capacity = host ? host->GetManagedFields().size() + 1 : fields.size() + slots;
+        static thread_local List<EditorPropertyAbi> properties;
+        static thread_local List<std::string> strings;
+        properties.clear();
+        properties.reserve(capacity);
+        strings.resize(capacity * 2);
+
+        //生成托管宿主字段快照
+        if (host)
+        {
+            EditorPropertyAbi enabled;
+            enabled.name = EditorTextAbi("enabled");
+            EncodeEditorValue(Reflection::Value(host->GetEnabled()), enabled.value, strings[0]);
+            properties.push_back(enabled);
+            for (const auto& field : host->GetManagedFields())
+            {
+                if (!field.inspectorVisible) continue;
+                Reflection::ValueKind kind = GetEditorValueKind(field.kind, true);
+                if (kind == Reflection::ValueKind::Empty) continue;
+                usize index = properties.size();
+                EditorPropertyAbi entry;
+                entry.name = EditorTextAbi(field.name);
+                if (field.kind == Reflection::FieldKind::ObjectRef)
+                {
+                    std::string& reference = strings[index * 2 + 1];
+                    reference = field.typeName;
+                    if (reference.starts_with("Ref<") && reference.ends_with(">")) reference = reference.substr(4, reference.size() - 5);
+                    entry.referenceType = EditorTextAbi(reference);
+                }
+                if (field.kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
+                Reflection::Value value;
+                if (kind == Reflection::ValueKind::StringId)
+                {
+                    EncodeEditorValue(Reflection::Value(field.value), entry.value, strings[index * 2]);
+                    entry.value.kind = kind;
+                }
+                else if (Reflection::Value::FromString(field.kind, field.value, value))
+                    EncodeEditorValue(value, entry.value, strings[index * 2]);
+                else { entry.value.kind = kind; entry.value.status = S::InvocationFailed; }
+                properties.push_back(entry);
+            }
+        }
+        else
+        {
+            //直接读取原生类型化字段
+            for (const auto* field : fields)
+            {
+                Reflection::ValueKind kind = GetEditorValueKind(field->kind);
+                if (kind == Reflection::ValueKind::Empty) continue;
+                usize index = properties.size();
+                EditorPropertyAbi entry;
+                entry.name = EditorTextAbi(field->name);
+                if (field->kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
+                else if (field->kind == Reflection::FieldKind::ObjectRef && field->objectRefTypeName)
+                    entry.referenceType = EditorTextAbi(field->objectRefTypeName);
+                Reflection::Value value = field->kind == Reflection::FieldKind::ObjectRef
+                    ? Reflection::Value(field->GetValueAsString(component)) : field->GetValue(component);
+                EncodeEditorValue(value, entry.value, strings[index * 2]);
+                if (field->kind == Reflection::FieldKind::ObjectRef) entry.value.kind = kind;
+                else if (entry.value.kind != kind) { entry.value.kind = kind; entry.value.status = S::TypeMismatch; }
+                properties.push_back(entry);
+            }
+            //追加动态材质槽
+            for (int32 slot = 0; slot < slots; ++slot)
+            {
+                usize index = properties.size();
+                strings[index * 2 + 1] = GetComponentMaterialSlotName(slot);
+                EditorPropertyAbi entry;
+                entry.name = EditorTextAbi(strings[index * 2 + 1]);
+                entry.referenceType = EditorTextAbi("Material");
+                EncodeEditorValue(Reflection::Value(GetComponentMaterialSlotKey(component, slot)), entry.value, strings[index * 2]);
+                entry.value.kind = Reflection::ValueKind::StringId;
+                properties.push_back(entry);
+            }
+        }
+        output->stableId = EditorTextAbi(component->GetInstanceId().GetPath());
+        output->properties = properties.data();
+        output->count = static_cast<int32>(properties.size());
+        output->generation = Reflection::GetRegistryGeneration();
+        return S::Ok;
+    }
+
+    //按字段名和精确值类型执行业务写入
+    ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetComponentProperty(void* context, int32 objectId,
+        const uint8* name, int32 length, const EditorValueAbi* input)
+    {
+        using S = ScriptInterop::InteropStatus;
+        Component* component = FindEditorComponent(context, objectId);
+        if (!component) return S::NotFound;
+        if (!input || !name || length <= 0) return S::InvalidArgument;
+        Reflection::Value value;
+        if (!DecodeEditorValue(*input, value)) return S::TypeMismatch;
+        std::string fieldName = ReadUtf8(name, length);
+        if (Script* host = AsManagedScriptHost(component))
+        {
+            if (fieldName == "enabled")
+            {
+                bool enabled;
+                if (!value.TryGet(enabled)) return S::TypeMismatch;
+                host->SetEnabled(enabled);
+                return S::Ok;
+            }
+            for (const auto& field : host->GetManagedFields())
+            {
+                if (field.name != fieldName || !field.inspectorVisible) continue;
+                if (GetEditorValueKind(field.kind, true) != input->kind) return S::TypeMismatch;
+                return host->SetManagedFieldValue(fieldName, value.ToString()) ? S::Ok : S::InvocationFailed;
+            }
+            return S::NotFound;
+        }
+        for (const auto* field : GetEditorComponentFields(component))
+        {
+            if (fieldName != field->name) continue;
+            if (GetEditorValueKind(field->kind) != input->kind) return S::TypeMismatch;
+            bool written = field->kind == Reflection::FieldKind::ObjectRef
+                ? field->SetValueFromString(component, value.ToString()) : field->SetValue(component, value);
+            return written ? S::Ok : S::InvocationFailed;
+        }
+        for (int32 slot = 0; slot < GetComponentMaterialSlotCount(component); ++slot)
+        {
+            if (fieldName != GetComponentMaterialSlotName(slot)) continue;
+            if (input->kind != Reflection::ValueKind::StringId) return S::TypeMismatch;
+            return SetComponentMaterialSlotKey(component, slot, value.ToString()) ? S::Ok : S::InvocationFailed;
+        }
+        return S::NotFound;
+    }
+
+    //读取字段注册代次以刷新托管类型菜单
+    uint32 ORBEDEN_NATIVE_CALL GetEditorRegistryGeneration(void*)
+    {
+        return Reflection::GetRegistryGeneration();
+    }
 
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentCount(void* context, uint32 ensId, uint32 ensVersion)
     {
@@ -712,37 +990,6 @@ namespace
     int32 ORBEDEN_NATIVE_CALL GetManagedComponentDomain(void* context, int32 objectId)
     {
         return AsManagedScriptHost(FindEditorComponent(context, objectId)) ? 1 : 0;
-    }
-
-    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldCount(void* context, int32 objectId)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        Script* host = AsManagedScriptHost(component);
-        if (host) return 1 + static_cast<int32>(GetManagedScriptFields(host).size());
-        //反射字段之后追加渲染器按子网格合成的材质槽
-        return static_cast<int32>(GetEditorComponentFields(component).size()) + GetComponentMaterialSlotCount(component);
-    }
-
-    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldName(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        Script* host = AsManagedScriptHost(component);
-        if (host)
-        {
-            if (fieldIndex == 0) return CopyUtf8("enabled", buffer, bufferSize);
-            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
-            --fieldIndex;
-            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
-            return CopyUtf8(fields[fieldIndex]->name, buffer, bufferSize);
-        }
-
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
-            return CopyUtf8(fields[fieldIndex]->name ? fields[fieldIndex]->name : "", buffer, bufferSize);
-
-        int32 slot = fieldIndex - static_cast<int32>(fields.size());
-        if (slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
-        return CopyUtf8(GetComponentMaterialSlotName(slot), buffer, bufferSize);
     }
 
     //枚举符合声明类型的存活 Object 引用
@@ -846,116 +1093,6 @@ namespace
     }
 
     //读取引用字段的声明类型
-    int32 ORBEDEN_NATIVE_CALL GetManagedFieldReferenceType(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        if (Script* host = AsManagedScriptHost(component))
-        {
-            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
-            --fieldIndex;
-            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
-            const ManagedScriptField& field = *fields[fieldIndex];
-            if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
-            if (field.kind != Reflection::FieldKind::ObjectRef) return 0;
-            std::string name = field.typeName;
-            if (name.starts_with("Ref<") && name.ends_with(">")) name = name.substr(4, name.size() - 5);
-            return CopyUtf8(name, buffer, bufferSize);
-        }
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()))
-        {
-            const Reflection::FieldInfo& field = *fields[fieldIndex];
-            if (field.kind == Reflection::FieldKind::EnsId) return CopyUtf8("EnsId", buffer, bufferSize);
-            return (field.kind == Reflection::FieldKind::ObjectRef || field.kind == Reflection::FieldKind::ObjectRefList)
-                && field.objectRefTypeName ? CopyUtf8(field.objectRefTypeName, buffer, bufferSize) : 0;
-        }
-
-        //合成材质槽按 Material 过滤候选资源
-        int32 slot = fieldIndex - static_cast<int32>(fields.size());
-        if (slot >= 0 && slot < GetComponentMaterialSlotCount(component)) return CopyUtf8("Material", buffer, bufferSize);
-        return 0;
-    }
-
-    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldKind(void* context, int32 objectId, int32 fieldIndex)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        Script* host = AsManagedScriptHost(component);
-        if (host)
-        {
-            if (fieldIndex == 0) return static_cast<int32>(Reflection::FieldKind::Bool);
-            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
-            --fieldIndex;
-            return fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size())
-                ? static_cast<int32>(fields[fieldIndex]->kind)
-                : 0;
-        }
-
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
-            return static_cast<int32>(fields[fieldIndex]->kind);
-
-        //合成材质槽按普通对象引用对绘制
-        int32 slot = fieldIndex - static_cast<int32>(fields.size());
-        if (slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
-        return static_cast<int32>(Reflection::FieldKind::ObjectRef);
-    }
-
-    int32 ORBEDEN_NATIVE_CALL GetManagedComponentFieldValue(void* context, int32 objectId, int32 fieldIndex, uint8* buffer, int32 bufferSize)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        Script* host = AsManagedScriptHost(component);
-        if (host)
-        {
-            if (fieldIndex == 0) return CopyUtf8(host->GetEnabled() ? "true" : "false", buffer, bufferSize);
-            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
-            --fieldIndex;
-            if (fieldIndex < 0 || fieldIndex >= static_cast<int32>(fields.size())) return 0;
-            return CopyUtf8(fields[fieldIndex]->value, buffer, bufferSize);
-        }
-
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (component && fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
-            return CopyUtf8(fields[fieldIndex]->GetValueAsString(component), buffer, bufferSize);
-
-        int32 slot = fieldIndex - static_cast<int32>(fields.size());
-        if (!component || slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
-        return CopyUtf8(GetComponentMaterialSlotKey(component, slot), buffer, bufferSize);
-    }
-
-    uint8 ORBEDEN_NATIVE_CALL SetManagedComponentFieldValue(void* context,
-        int32 objectId,
-        int32 fieldIndex,
-        const uint8* value,
-        int32 valueLength)
-    {
-        Component* component = FindEditorComponent(context, objectId);
-        Script* host = AsManagedScriptHost(component);
-        std::string valueText = ReadUtf8(value, valueLength);
-        if (host)
-        {
-            if (fieldIndex == 0)
-            {
-                if (valueText != "true" && valueText != "false" && valueText != "1" && valueText != "0") return 0;
-                host->SetEnabled(valueText == "true" || valueText == "1");
-                return 1;
-            }
-
-            List<const ManagedScriptField*> fields = GetManagedScriptFields(host);
-            --fieldIndex;
-            return fieldIndex >= 0
-                && fieldIndex < static_cast<int32>(fields.size())
-                && host->SetManagedFieldValue(fields[fieldIndex]->name, valueText) ? 1 : 0;
-        }
-
-        List<const Reflection::FieldInfo*> fields = GetEditorComponentFields(component);
-        if (component && fieldIndex >= 0 && fieldIndex < static_cast<int32>(fields.size()) && fields[fieldIndex])
-            return fields[fieldIndex]->SetValueFromString(component, valueText) ? 1 : 0;
-
-        int32 slot = fieldIndex - static_cast<int32>(fields.size());
-        if (!component || slot < 0 || slot >= GetComponentMaterialSlotCount(component)) return 0;
-        return SetComponentMaterialSlotKey(component, slot, valueText) ? 1 : 0;
-    }
-
     uint8 ORBEDEN_NATIVE_CALL SetManagedScriptField(void* context,
         int32 objectId,
         const uint8* name,
@@ -1237,6 +1374,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestRenameSelectedMethod, &RequestRenameSelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestDeleteSelectedMethod, &RequestDeleteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -1279,15 +1418,13 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.destroyEnsTree = reinterpret_cast<void*>(&DestroyManagedEnsTree);
     editorApi.assets.createEns = reinterpret_cast<void*>(&CreateManagedEns);
     editorApi.components.context = &editor;
+    editorApi.components.readComponentSnapshot = reinterpret_cast<void*>(&ReadComponentSnapshot);
+    editorApi.components.setComponentProperty = reinterpret_cast<void*>(&SetComponentProperty);
+    editorApi.components.getRegistryGeneration = reinterpret_cast<void*>(&GetEditorRegistryGeneration);
     editorApi.components.getComponentCount = reinterpret_cast<void*>(&GetManagedComponentCount);
     editorApi.components.getComponentObjectId = reinterpret_cast<void*>(&GetManagedComponentObjectId);
     editorApi.components.getComponentTypeName = reinterpret_cast<void*>(&GetManagedComponentTypeName);
     editorApi.components.getComponentDomain = reinterpret_cast<void*>(&GetManagedComponentDomain);
-    editorApi.components.getFieldCount = reinterpret_cast<void*>(&GetManagedComponentFieldCount);
-    editorApi.components.getFieldName = reinterpret_cast<void*>(&GetManagedComponentFieldName);
-    editorApi.components.getFieldKind = reinterpret_cast<void*>(&GetManagedComponentFieldKind);
-    editorApi.components.getFieldValue = reinterpret_cast<void*>(&GetManagedComponentFieldValue);
-    editorApi.components.setFieldValue = reinterpret_cast<void*>(&SetManagedComponentFieldValue);
     editorApi.components.setManagedField = reinterpret_cast<void*>(&SetManagedScriptField);
     editorApi.components.getAddableTypeCount = reinterpret_cast<void*>(&GetManagedAddableComponentTypeCount);
     editorApi.components.getAddableTypeName = reinterpret_cast<void*>(&GetManagedAddableComponentTypeName);
@@ -1297,7 +1434,6 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.restoreComponent = reinterpret_cast<void*>(&RestoreManagedComponent);
     editorApi.components.findComponent = reinterpret_cast<void*>(&FindManagedComponent);
     editorApi.components.getHostBinding = reinterpret_cast<void*>(&GetEditorHostBinding);
-    editorApi.components.getFieldReferenceType = reinterpret_cast<void*>(&GetManagedFieldReferenceType);
     editorApi.components.getWorldEns = reinterpret_cast<void*>(&GetManagedWorldEns);
     editorApi.components.selectEns = reinterpret_cast<void*>(&SelectManagedEns);
     editorApi.components.moveEns = reinterpret_cast<void*>(&MoveManagedEns);
@@ -1345,6 +1481,8 @@ void ManagedEditorBridge::Shutdown()
     SaveProjectStateFunction = nullptr;
     UndoFunction = nullptr;
     RedoFunction = nullptr;
+    RequestRenameSelectedFunction = nullptr;
+    RequestDeleteSelectedFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -1422,6 +1560,20 @@ bool ManagedEditorBridge::Redo()
     if (!initialized || !RedoFunction) return false;
     ManagedCommandFn redo = reinterpret_cast<ManagedCommandFn>(RedoFunction);
     return redo() != 0;
+}
+
+void ManagedEditorBridge::RequestRenameSelected()
+{
+    if (!initialized || !RequestRenameSelectedFunction) return;
+    ManagedDrawEditorFn requestRename = reinterpret_cast<ManagedDrawEditorFn>(RequestRenameSelectedFunction);
+    requestRename();
+}
+
+void ManagedEditorBridge::RequestDeleteSelected()
+{
+    if (!initialized || !RequestDeleteSelectedFunction) return;
+    ManagedDrawEditorFn requestDelete = reinterpret_cast<ManagedDrawEditorFn>(RequestDeleteSelectedFunction);
+    requestDelete();
 }
 
 bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,

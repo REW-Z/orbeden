@@ -38,17 +38,18 @@ internal static class EditorWorldActions
     //绘制保存、放弃与取消确认
     internal static void DrawPendingSwitch()
     {
-        const string popup = "Unsaved World changes";
+        const string popup = "Unsaved World changes###world_switch";
         if (openRequested)
         {
             NativeEditorGUI.OpenPopup(popup);
             openRequested = false;
         }
-        if (pendingKey == null || !NativeEditorGUI.BeginPopup(popup)) return;
+        if (pendingKey == null || !NativeEditorGUI.BeginDialog(popup)) return;
         try
         {
             EditorGUI.Label("Save changes before opening " + pendingKey + "?");
             if (!string.IsNullOrEmpty(Status)) EditorGUI.Label(Status);
+            EditorGUI.Separator();
             if (EditorGUI.Button("Save"))
             {
                 if (EditorAssetsNative.SaveWorld()) CommitOpen();

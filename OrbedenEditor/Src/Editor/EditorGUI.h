@@ -84,11 +84,15 @@ public:
     void* getMouseWheel = nullptr;
     void* isWindowFocused = nullptr;
     void* toggleButton = nullptr;
+    void* renameInput = nullptr;
+    void* beginDialog = nullptr;
+    void* assetRenameTile = nullptr;
+    void* sliderFloat = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 66);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 70);
 
 //Editor ImGui 绑定层
 class EditorGUI

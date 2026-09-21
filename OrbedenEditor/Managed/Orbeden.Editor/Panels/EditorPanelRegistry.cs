@@ -10,11 +10,14 @@ namespace OrbedenEditor;
 internal static unsafe class EditorPanelRegistry
 {
     private static readonly List<EditorPanel> panels = [];
+    //与 panels 同索引：选择系统要知道持有选中项的面板是否还在显示
+    private static readonly List<bool> panelVisible = [];
 
     /// <summary>发现 C# Panel 并推送给原生 PanelManager。</summary>
     public static bool Initialize(EditorPanelNativeApi api)
     {
         panels.Clear();
+        panelVisible.Clear();
         if (api.RegisterPanel == null)
         {
             Console.Error.WriteLine("Editor Panel registration callback is null.");
@@ -95,7 +98,12 @@ internal static unsafe class EditorPanelRegistry
                     info.Order,
                     info.FixedWorkspace ? (byte)1 : (byte)0,
                     info.ShowBorder ? (byte)1 : (byte)0);
-                if (accepted != 0) panels.Add(panel);
+                if (accepted != 0)
+                {
+                    panels.Add(panel);
+                    //默认可见性先落地：可见性没变过时原生侧不会回调 SetPanelVisible
+                    panelVisible.Add(info.DefaultVisible);
+                }
             }
         }
 
@@ -115,6 +123,7 @@ internal static unsafe class EditorPanelRegistry
     {
         if (handle < 0 || handle >= panels.Count) return;
 
+        panelVisible[handle] = visible;
         try
         {
             if (visible) panels[handle].OnShown();
@@ -124,6 +133,18 @@ internal static unsafe class EditorPanelRegistry
         {
             Console.Error.WriteLine($"Editor Panel visibility callback failed: {panels[handle].GetType().FullName}: {ex}");
         }
+    }
+
+    /// <summary>按 id 查找仍在显示的面板；隐藏的面板不参与全局命令。</summary>
+    public static EditorPanel? FindVisiblePanel(string panelId)
+    {
+        if (string.IsNullOrEmpty(panelId)) return null;
+        for (int index = 0; index < panels.Count; index++)
+        {
+            if (!panelVisible[index]) continue;
+            if (string.Equals(panels[index].Info.Id, panelId, StringComparison.Ordinal)) return panels[index];
+        }
+        return null;
     }
 
     /// <summary>向全部 C# Panel 广播游戏程序集加载事件。</summary>

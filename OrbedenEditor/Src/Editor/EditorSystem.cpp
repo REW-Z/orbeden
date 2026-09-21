@@ -1567,6 +1567,12 @@ const List<EditorShortcut>& EditorSystem::GetEditorShortcuts()
         { nullptr, nullptr, "Ctrl+Shift+Z", ImGuiKey_Z, true, true, false, EditorShortcutScope::Global,
             [](EditorSystem& editor) { editor.managedBridge.Redo(); } },
 
+        //重命名与删除都由选择系统指名持有选中项的面板：EnsView 改/删 Ens，Project 改/删资源
+        { "Edit", "Rename", "F2", ImGuiKey_F2, false, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestRenameSelected(); } },
+        { "Edit", "Delete", "Delete", ImGuiKey_Delete, false, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestDeleteSelected(); } },
+
         //手柄模式与坐标系跟随鼠标位置，鼠标不在场景视口内时不生效
         { nullptr, nullptr, "W", ImGuiKey_W, false, false, false, EditorShortcutScope::SceneView,
             [](EditorSystem& editor) { editor.editorScene.SetGizmoMode(EditorGizmoMode::Move); } },

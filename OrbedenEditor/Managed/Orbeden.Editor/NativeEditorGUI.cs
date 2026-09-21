@@ -75,6 +75,10 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<float> GetMouseWheel;
     public delegate* unmanaged[Cdecl]<byte> IsWindowFocused;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> ToggleButton;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, float, int> RenameInput;
+    public delegate* unmanaged[Cdecl]<byte*, int, float, byte> BeginDialog;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte*, float, byte, int> AssetRenameTile;
+    public delegate* unmanaged[Cdecl]<byte*, int, float*, float, float, float, byte> SliderFloat;
 }
 #pragma warning restore CS0649
 
@@ -202,6 +206,14 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* pointer = bytes) return api.BeginPopup(pointer, bytes.Length) != 0;
     }
 
+    //开始固定宽度的模态确认窗；id 里 ### 之前是标题栏文字，之后是稳定 ID
+    internal static bool BeginDialog(string id, float width = 0.0f)
+    {
+        if (!initialized || api.BeginDialog == null) return false;
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) return api.BeginDialog(pointer, bytes.Length, width) != 0;
+    }
+
     //关闭当前弹窗
     internal static void ClosePopup() => api.ClosePopup();
 
@@ -301,6 +313,33 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* idPointer = idBytes)
             return api.AssetTile(iconPointer, iconBytes.Length, labelPointer, labelBytes.Length, idPointer, idBytes.Length,
                 width, selected ? (byte)1 : (byte)0) != 0;
+    }
+
+    //绘制重命名中的资源瓦片：图标照画，名称那一行是输入框。返回 0 继续编辑、1 回车、2 失焦、3 Esc
+    internal static int AssetRenameTile(string? icon, string? id, ref string value, ref bool focusRequested, float width, bool selected)
+    {
+        if (!initialized || api.AssetRenameTile == null) return 0;
+
+        byte[] iconBytes = Encode(icon);
+        byte[] idBytes = Encode(id);
+        value ??= string.Empty;
+        Span<byte> buffer = stackalloc byte[RenameBufferCapacity];
+        int maxBytes = buffer.Length - 1;
+        Encoder encoder = Encoding.UTF8.GetEncoder();
+        encoder.Convert(value.AsSpan(), buffer[..maxBytes], true, out _, out int bytesUsed, out _);
+        buffer[bytesUsed] = 0;
+
+        byte focus = focusRequested ? (byte)1 : (byte)0;
+        fixed (byte* iconPointer = iconBytes)
+        fixed (byte* idPointer = idBytes)
+        fixed (byte* bufferPointer = buffer)
+        {
+            int result = api.AssetRenameTile(iconPointer, iconBytes.Length, idPointer, idBytes.Length,
+                bufferPointer, buffer.Length, &focus, width, selected ? (byte)1 : (byte)0);
+            focusRequested = focus != 0;
+            value = Marshal.PtrToStringUTF8((IntPtr)bufferPointer) ?? string.Empty;
+            return result;
+        }
     }
 
     //绘制视图切换按钮
@@ -420,6 +459,44 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* bufferPointer = multilineBuffer)
             api.InputTextMultiline(labelPointer, labelBytes.Length, bufferPointer, multilineBuffer.Length, height, 1);
+    }
+
+    //行内重命名输入框的缓冲区：够放下一般名称
+    private const int RenameBufferCapacity = 256;
+
+    //绘制浮点滑条；width <= 0 时用默认宽度
+    internal static bool SliderFloat(string? id, ref float value, float minimum, float maximum, float width = 0.0f)
+    {
+        if (!initialized || api.SliderFloat == null) return false;
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes)
+        fixed (float* valuePointer = &value)
+            return api.SliderFloat(pointer, bytes.Length, valuePointer, minimum, maximum, width) != 0;
+    }
+
+    //绘制行内重命名输入框；首帧自动聚焦并全选。width <= 0 时占满本行剩余宽度。
+    //返回 0 继续编辑、1 回车、2 失焦、3 Esc
+    internal static int RenameInput(string? id, ref string value, ref bool focusRequested, float width = 0.0f)
+    {
+        if (!initialized || api.RenameInput == null) return 0;
+
+        byte[] idBytes = Encode(id);
+        value ??= string.Empty;
+        Span<byte> buffer = stackalloc byte[RenameBufferCapacity];
+        int maxBytes = buffer.Length - 1;
+        Encoder encoder = Encoding.UTF8.GetEncoder();
+        encoder.Convert(value.AsSpan(), buffer[..maxBytes], true, out _, out int bytesUsed, out _);
+        buffer[bytesUsed] = 0;
+
+        byte focus = focusRequested ? (byte)1 : (byte)0;
+        fixed (byte* idPointer = idBytes)
+        fixed (byte* bufferPointer = buffer)
+        {
+            int result = api.RenameInput(idPointer, idBytes.Length, bufferPointer, buffer.Length, &focus, width);
+            focusRequested = focus != 0;
+            value = Marshal.PtrToStringUTF8((IntPtr)bufferPointer) ?? string.Empty;
+            return result;
+        }
     }
 
     //读取本帧的鼠标滚轮增量

@@ -134,6 +134,22 @@ public static class EditorRuntime
         catch (Exception ex) { Console.Error.WriteLine($"Redo failed: {ex}"); return 0; }
     }
 
+    /// <summary>请求当前聚焦的面板开始重命名选中项。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestRenameSelected()
+    {
+        try { EditorSelection.Rename(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor rename dispatch failed: {ex}"); }
+    }
+
+    /// <summary>请求当前聚焦的面板删除选中项。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestDeleteSelected()
+    {
+        try { EditorSelection.Delete(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor delete dispatch failed: {ex}"); }
+    }
+
     /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
     public static unsafe void DrawPanel(int handle,
@@ -297,7 +313,7 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 66);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 70);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
@@ -305,7 +321,7 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 136);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 140);
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 88);

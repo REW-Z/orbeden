@@ -38,6 +38,9 @@ namespace
         return ImVec4(value.r, value.g, value.b, value.a);
     }
 
+    //确认窗的默认宽度：够放下一行完整提示，又不至于横跨整个编辑器
+    constexpr float32 DefaultDialogWidth = 420.0f;
+
     //按可用宽度截断 UTF-8 文本，超宽时在尾部补省略号
     std::string EllipsizeToWidth(const std::string& text, float32 maxWidth)
     {
@@ -243,6 +246,24 @@ namespace
 
     //关闭当前弹窗
     void ORBEDEN_NATIVE_CALL EditorGuiClosePopup() { ImGui::CloseCurrentPopup(); }
+
+    //绘制浮点滑条；宽度 <= 0 时用 ImGui 默认宽度
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiSliderFloat(const uint8* id, int32 length, float32* value,
+        float32 minimum, float32 maximum, float32 width)
+    {
+        if (!value || maximum <= minimum) return 0;
+        ImGui::SetNextItemWidth(width > 0.0f ? width : -1.0f);
+        return ImGui::SliderFloat(ReadUtf8Text(id, length).c_str(), value, minimum, maximum,
+            "%.0f", ImGuiSliderFlags_AlwaysClamp) ? 1 : 0;
+    }
+
+    //开始一个固定宽度的模态确认窗；id 里 ### 之前是标题栏文字、之后是稳定 ID
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginDialog(const uint8* id, int32 length, float32 width)
+    {
+        //宽度先定死再开窗：自动宽度下首帧文本会先按极窄的宽度折行，窗体会被拉成细高条
+        ImGui::SetNextWindowSize(ImVec2(width > 0.0f ? width : DefaultDialogWidth, 0.0f), ImGuiCond_Always);
+        return ImGui::BeginPopupModal(ReadUtf8Text(id, length).c_str(), nullptr, 0) ? 1 : 0;
+    }
 
     //绘制文本标签
     void ORBEDEN_NATIVE_CALL EditorGuiLabel(const uint8* text, int32 length)
@@ -469,28 +490,11 @@ namespace
         return action;
     }
 
-    //绘制资源瓦片并返回点击状态：图标在上、名称在下，整块作为一个条目
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiAssetTile(const uint8* icon, int32 iconLength,
-        const uint8* label, int32 labelLength, const uint8* id, int32 idLength,
-        float32 width, uint8 selected)
+    //瓦片的底板、选中圈与图标；只绘制不参与命中，命中由 SubmitTileHit 单独提交
+    void DrawTileSurface(const std::string& iconName, const ImVec2& min, const ImVec2& max,
+        bool selected, bool hovered, bool held, float32 iconSize)
     {
-        std::string iconName = ReadUtf8Text(icon, iconLength);
-        std::string text = ReadUtf8Text(label, labelLength);
-        std::string identity = ReadUtf8Text(id, idLength);
-
         ImGuiStyle& style = ImGui::GetStyle();
-        //图标取原生 32px 一档，缩放后正好接近资源本身的尺寸
-        float32 iconSize = ImGui::GetFrameHeight() * 1.5f;
-        float32 height = style.FramePadding.y * 2.0f + iconSize + style.ItemSpacing.y + ImGui::GetTextLineHeight();
-
-        ImGui::PushID(identity.c_str());
-        ImVec2 min = ImGui::GetCursorScreenPos();
-        ImVec2 max { min.x + width, min.y + height };
-        bool clicked = ImGui::InvisibleButton("##asset_tile", ImVec2(width, height));
-        bool hovered = ImGui::IsItemHovered();
-        bool held = ImGui::IsItemActive();
-
-        //选中与悬停共用一块表面色底，选中额外压一圈强调色边框
         ImDrawList* drawList = ImGui::GetWindowDrawList();
         if (selected || hovered || held)
             drawList->AddRectFilled(min, max, ImGui::GetColorU32(selected ? ImGuiCol_Header : ImGuiCol_HeaderHovered),
@@ -501,12 +505,102 @@ namespace
         ImTextureID texture = EditorIcons::Get(iconName);
         if (texture != 0)
         {
-            float32 iconLeft = min.x + (width - iconSize) * 0.5f;
+            float32 iconLeft = min.x + (max.x - min.x - iconSize) * 0.5f;
             float32 iconTop = min.y + style.FramePadding.y;
             drawList->AddImage(texture, ImVec2(iconLeft, iconTop), ImVec2(iconLeft + iconSize, iconTop + iconSize));
         }
+    }
+
+    //提交整块瓦片的命中区；后提交的控件优先，所以重命名时它排在输入框后面
+    bool SubmitTileHit(const ImVec2& min, const ImVec2& max, bool& hovered, bool& held)
+    {
+        bool clicked = ImGui::InvisibleButton("##asset_tile", ImVec2(max.x - min.x, max.y - min.y));
+        hovered = ImGui::IsItemHovered();
+        held = ImGui::IsItemActive();
+        return clicked;
+    }
+
+    //行内重命名输入框的结果码：0 继续编辑、1 回车、2 失焦、3 Esc
+    int32 RenameInputResult(bool committed)
+    {
+        if (committed) return 1;
+        if (!ImGui::IsItemDeactivated()) return 0;
+        return ImGui::IsKeyPressed(ImGuiKey_Escape) ? 3 : 2;
+    }
+
+    //瓦片图标尺寸随瓦片宽度缩放，缩放滑条才能同时改变格子与图标。
+    //0.375 让默认格子宽（96）算出的图标与原先的 GetFrameHeight() * 1.5 一致
+    float32 TileIconSize(float32 width)
+    {
+        return std::max(width * 0.375f, ImGui::GetFrameHeight());
+    }
+
+    //重命名中的资源瓦片：图标照画，名称那一行就地换成输入框。
+    //网格是一行一个 SameLine 单元格、一个单元格只能放一个控件，所以图标与输入框必须由同一次调用画出来
+    int32 ORBEDEN_NATIVE_CALL EditorGuiAssetRenameTile(const uint8* icon, int32 iconLength,
+        const uint8* id, int32 idLength, uint8* text, int32 capacity, uint8* focusRequested,
+        float32 width, uint8 selected)
+    {
+        if (!text || capacity <= 0) return 0;
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        std::string iconName = ReadUtf8Text(icon, iconLength);
+        float32 iconSize = TileIconSize(width);
+        float32 height = style.FramePadding.y * 2.0f + iconSize + style.ItemSpacing.y + ImGui::GetTextLineHeight();
+
+        ImGui::PushID(ReadUtf8Text(id, idLength).c_str());
+        ImVec2 min = ImGui::GetCursorScreenPos();
+        ImVec2 max { min.x + width, min.y + height };
+
+        //先铺瓦片底板与图标，再画输入框，输入框才不会被底色盖住（选中底色是铺满整格的）
+        DrawTileSurface(iconName, min, max, selected != 0, false, false, iconSize);
+
+        //输入框位置正是名称那一行，所以换进换出名字落在同一行上
+        if (focusRequested && *focusRequested != 0)
+        {
+            ImGui::SetKeyboardFocusHere();
+            *focusRequested = 0;
+        }
+        float32 textTop = min.y + style.FramePadding.y + iconSize + style.ItemSpacing.y;
+        ImGui::SetCursorScreenPos(ImVec2(min.x + style.FramePadding.x, textTop));
+        ImGui::SetNextItemWidth(width - style.FramePadding.x * 2.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, 0.0f));
+        bool committed = ImGui::InputText("##rename", reinterpret_cast<char*>(text),
+            static_cast<usize>(capacity), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+        ImGui::PopStyleVar();
+        int32 result = RenameInputResult(committed);
+
+        //命中区最后提交：谁后提交谁没被先提交的控件占住才拿到点击，
+        //这样鼠标在输入框上时不会被整块瓦片的按钮抢走
+        ImGui::SetCursorScreenPos(min);
+        bool hovered = false, held = false;
+        SubmitTileHit(min, max, hovered, held);
+
+        ImGui::PopID();
+        return result;
+    }
+
+    //绘制资源瓦片并返回点击状态：图标在上、名称在下，整块作为一个条目
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiAssetTile(const uint8* icon, int32 iconLength,
+        const uint8* label, int32 labelLength, const uint8* id, int32 idLength,
+        float32 width, uint8 selected)
+    {
+        std::string iconName = ReadUtf8Text(icon, iconLength);
+        std::string text = ReadUtf8Text(label, labelLength);
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        float32 iconSize = TileIconSize(width);
+        float32 height = style.FramePadding.y * 2.0f + iconSize + style.ItemSpacing.y + ImGui::GetTextLineHeight();
+
+        ImGui::PushID(ReadUtf8Text(id, idLength).c_str());
+        ImVec2 min = ImGui::GetCursorScreenPos();
+        ImVec2 max { min.x + width, min.y + height };
+        bool hovered = false, held = false;
+        bool clicked = SubmitTileHit(min, max, hovered, held);
+        DrawTileSurface(iconName, min, max, selected != 0, hovered, held, iconSize);
 
         //名称居中，放不下的名字截断补省略号，悬停时用提示给出全名
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
         float32 textTop = min.y + style.FramePadding.y + iconSize + style.ItemSpacing.y;
         float32 available = width - style.FramePadding.x * 2.0f;
         std::string display = EllipsizeToWidth(text, available);
@@ -867,6 +961,34 @@ namespace
 
     //读取本帧的鼠标滚轮增量
     float32 ORBEDEN_NATIVE_CALL EditorGuiGetMouseWheel() { return ImGui::GetIO().MouseWheel; }
+
+    //绘制行内重命名输入框：首帧自动聚焦并全选。
+    //返回 0 继续编辑、1 回车、2 失焦、3 Esc（文本已由框架还原）。
+    //回车与失焦分开报，调用方才能在名称非法时区别处理：回车留在原地改，失焦只能放弃。
+    int32 ORBEDEN_NATIVE_CALL EditorGuiRenameInput(const uint8* id, int32 idLength,
+        uint8* text, int32 capacity, uint8* focusRequested, float32 width)
+    {
+        if (!text || capacity <= 0) return 0;
+
+        //必须先请求聚焦，再绘制输入框
+        if (focusRequested && *focusRequested != 0)
+        {
+            ImGui::SetKeyboardFocusHere();
+            *focusRequested = 0;
+        }
+
+        //宽度 <= 0 时占满本行剩余宽度：树节点与表格单元里，那就是原来名称的位置
+        ImGui::SetNextItemWidth(width > 0.0f ? width : -1.0f);
+        //输入框高度是 FontSize + 2*FramePadding.y，树节点与表格行只有 FontSize；
+        //纵向内边距归零后两者严格等高，换进换出不会顶动整行
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+            ImVec2(ImGui::GetStyle().FramePadding.x, 0.0f));
+        std::string label = ReadUtf8Text(id, idLength);
+        bool committed = ImGui::InputText(label.c_str(), reinterpret_cast<char*>(text),
+            static_cast<usize>(capacity), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+        ImGui::PopStyleVar();
+        return RenameInputResult(committed);
+    }
 
     //判断当前窗口是否拥有焦点。
     //必须带 ChildWindows：不加时要求 NavWindow 与当前窗口完全相等，
@@ -1255,6 +1377,10 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.getMouseWheel = reinterpret_cast<void*>(&EditorGuiGetMouseWheel);
     api.isWindowFocused = reinterpret_cast<void*>(&EditorGuiIsWindowFocused);
     api.toggleButton = reinterpret_cast<void*>(&EditorGuiToggleButton);
+    api.renameInput = reinterpret_cast<void*>(&EditorGuiRenameInput);
+    api.beginDialog = reinterpret_cast<void*>(&EditorGuiBeginDialog);
+    api.assetRenameTile = reinterpret_cast<void*>(&EditorGuiAssetRenameTile);
+    api.sliderFloat = reinterpret_cast<void*>(&EditorGuiSliderFloat);
     return api;
 }
 

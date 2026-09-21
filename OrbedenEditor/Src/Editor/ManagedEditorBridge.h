@@ -24,6 +24,8 @@ private:
     void* SaveProjectStateFunction = nullptr;
     void* UndoFunction = nullptr;
     void* RedoFunction = nullptr;
+    void* RequestRenameSelectedFunction = nullptr;
+    void* RequestDeleteSelectedFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -66,6 +68,12 @@ public:
 
     //重做最近一次托管属性或组件事务。
     bool Redo();
+
+    //请求当前聚焦的面板开始重命名选中项。
+    void RequestRenameSelected();
+
+    //请求当前聚焦的面板删除选中项。
+    void RequestDeleteSelected();
 
     // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,

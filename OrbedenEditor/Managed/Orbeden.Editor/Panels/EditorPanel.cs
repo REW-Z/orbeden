@@ -118,6 +118,12 @@ internal abstract class EditorPanel
     /// <summary>Panel 隐藏时调用。</summary>
     public virtual void OnHidden() { }
 
+    /// <summary>收到重命名请求（F2 或菜单）时调用；只有选择系统点名的面板会收到。</summary>
+    public virtual void OnRenameRequested() { }
+
+    /// <summary>收到删除请求（Delete）时调用；只有选择系统点名的面板会收到。</summary>
+    public virtual void OnDeleteRequested() { }
+
     /// <summary>用户游戏程序集加载时调用。</summary>
     public virtual void OnGameAssemblyLoaded(string assemblyPath) { }
 
