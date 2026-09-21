@@ -1092,7 +1092,7 @@ namespace
         return 0;
     }
 
-    //读取引用字段的声明类型
+    //写入托管宿主的序列化字段
     uint8 ORBEDEN_NATIVE_CALL SetManagedScriptField(void* context,
         int32 objectId,
         const uint8* name,

@@ -7,25 +7,6 @@ namespace OrbedenEditor;
 
 internal static class EditorInteropValueText
 {
-    internal static InteropValueKind ToInteropKind(NativeFieldKind kind)
-    {
-        return kind switch
-        {
-            NativeFieldKind.Bool => InteropValueKind.Bool,
-            NativeFieldKind.Int32 => InteropValueKind.Int32,
-            NativeFieldKind.UInt32 => InteropValueKind.UInt32,
-            NativeFieldKind.UInt64 => InteropValueKind.UInt64,
-            NativeFieldKind.Float32 => InteropValueKind.Float32,
-            NativeFieldKind.String => InteropValueKind.String,
-            NativeFieldKind.StringId or NativeFieldKind.ObjectRef => InteropValueKind.StringId,
-            NativeFieldKind.Vector3 => InteropValueKind.Vector3,
-            NativeFieldKind.Color => InteropValueKind.Color,
-            NativeFieldKind.Quaternion => InteropValueKind.Quaternion,
-            NativeFieldKind.EnsId => InteropValueKind.EnsId,
-            _ => InteropValueKind.Empty,
-        };
-    }
-
     internal static bool TryParse(InteropValueKind kind, string text, out InteropValue value)
     {
         switch (kind)
@@ -93,60 +74,142 @@ internal static class EditorInteropValueText
     private static string Join(params float[] values) => string.Join(' ', values.Select(value => value.ToString("R", CultureInfo.InvariantCulture)));
 }
 
-internal sealed class NativeComponentPropertyTarget : IPropertyTarget
+internal sealed unsafe class NativeComponentPropertyTarget : IPropertyTarget
 {
-    private readonly string stableId;
-    private int objectId => EditorNativeComponents.FindComponent(stableId);
-    private readonly Dictionary<string, (int Index, InteropValueKind Kind)> fields = new(StringComparer.Ordinal);
-    private readonly IReadOnlyList<PropertyDescriptor> properties;
-    private readonly Action dirty;
+    private sealed class FieldSnapshot
+    {
+        internal PropertyDescriptor Descriptor;
+        internal byte[] Name = [];
+        internal byte[] ReferenceType = [];
+        internal byte[] Text = [];
+        internal EditorValueAbi Raw;
+        internal InteropValue Value;
+    }
 
+    private string stableId = string.Empty;
+    private byte[] stableIdBytes = [];
+    private int objectId;
+    private uint generation;
+    private InteropStatus status = InteropStatus.NotFound;
+    private readonly List<FieldSnapshot> fields = [];
+    private readonly Dictionary<string, FieldSnapshot> fieldsByName = new(StringComparer.Ordinal);
+    private readonly List<PropertyDescriptor> properties = [];
+    private readonly Action dirty;
+    public int PropertyVersion { get; private set; }
+
+    /// <summary>保存运行时身份，延后到文档刷新时读取属性。</summary>
     internal NativeComponentPropertyTarget(NativeComponentInfo component, Action markDirty)
     {
-        stableId = (string?)System.Xml.Linq.XElement.Parse(EditorNativeComponents.CaptureComponent(component.ObjectId)).Attribute("stableId") ?? string.Empty;
+        objectId = component.ObjectId;
         dirty = markDirty;
-        List<PropertyDescriptor> descriptors = [];
-        int count = EditorNativeComponents.GetFieldCount(objectId);
-        for (int index = 0; index < count; ++index)
-        {
-            string name = EditorNativeComponents.GetFieldName(objectId, index);
-            InteropValueKind kind = EditorInteropValueText.ToInteropKind(EditorNativeComponents.GetFieldKind(objectId, index));
-            if (component.IsManaged && kind == InteropValueKind.EnsId) kind = InteropValueKind.StringId;
-            if (string.IsNullOrEmpty(name) || kind == InteropValueKind.Empty) continue;
-            fields[name] = (index, kind);
-            descriptors.Add(new PropertyDescriptor(name, kind, EditorNativeComponents.GetFieldReferenceType(objectId, index)));
-        }
-        properties = descriptors;
     }
 
     public bool AllowsSceneReferences => true;
     public string Identity => $"native:{stableId}";
     public IReadOnlyList<PropertyDescriptor> Properties => properties;
 
+    /// <summary>批量刷新值，仅在字段结构变化时重建描述信息。</summary>
+    public void Refresh()
+    {
+        status = EditorNativeComponents.ReadComponentSnapshot(objectId, out EditorComponentSnapshotAbi snapshot);
+        if (status != InteropStatus.Ok || (stableId.Length != 0 && !snapshot.StableId.Bytes.SequenceEqual(stableIdBytes)))
+        {
+            //通过稳定身份跟随 Undo 恢复后的组件
+            objectId = stableId.Length == 0 ? 0 : EditorNativeComponents.FindComponent(stableId);
+            status = EditorNativeComponents.ReadComponentSnapshot(objectId, out snapshot);
+        }
+        if (status != InteropStatus.Ok)
+        {
+            if (properties.Count != 0) { properties.Clear(); fields.Clear(); fieldsByName.Clear(); ++PropertyVersion; }
+            return;
+        }
+        if (stableId.Length == 0)
+        {
+            stableId = snapshot.StableId.ToString();
+            stableIdBytes = snapshot.StableId.Bytes.ToArray();
+        }
+
+        //比较字段结构，不分配名称字符串
+        bool changed = generation != snapshot.Generation || fields.Count != snapshot.Count;
+        for (int index = 0; !changed && index < snapshot.Count; ++index)
+        {
+            ref EditorPropertyAbi source = ref snapshot.Properties[index];
+            FieldSnapshot field = fields[index];
+            changed = field.Descriptor.Kind != source.Value.Kind
+                || !source.Name.Bytes.SequenceEqual(field.Name)
+                || !source.ReferenceType.Bytes.SequenceEqual(field.ReferenceType);
+        }
+        if (changed)
+        {
+            fields.Clear(); fieldsByName.Clear(); properties.Clear();
+            generation = snapshot.Generation;
+            for (int index = 0; index < snapshot.Count; ++index)
+            {
+                ref EditorPropertyAbi source = ref snapshot.Properties[index];
+                FieldSnapshot field = new()
+                {
+                    Descriptor = new(source.Name.ToString(), source.Value.Kind, source.ReferenceType.ToString()),
+                    Name = source.Name.Bytes.ToArray(),
+                    ReferenceType = source.ReferenceType.Bytes.ToArray(),
+                };
+                fields.Add(field);
+                fieldsByName[field.Descriptor.Name] = field;
+                properties.Add(field.Descriptor);
+            }
+            ++PropertyVersion;
+        }
+
+        //只转换发生变化的值，避免静态数值逐帧装箱
+        for (int index = 0; index < snapshot.Count; ++index)
+        {
+            EditorValueAbi source = snapshot.Properties[index].Value;
+            FieldSnapshot field = fields[index];
+            bool valueChanged = changed || field.Raw.Status != source.Status;
+            if (source.Kind is InteropValueKind.String or InteropValueKind.StringId)
+            {
+                EditorTextAbi text = *(EditorTextAbi*)source.Payload;
+                if (!text.Bytes.SequenceEqual(field.Text)) { field.Text = text.Bytes.ToArray(); valueChanged = true; }
+            }
+            else
+            {
+                fixed (byte* previous = field.Raw.Payload)
+                    valueChanged |= !new ReadOnlySpan<byte>(source.Payload, 16).SequenceEqual(new ReadOnlySpan<byte>(previous, 16));
+            }
+            if (valueChanged) field.Value = source.Status == InteropStatus.Ok ? source.Decode() : default;
+            field.Raw = source;
+            //托管缓存只保存已复制的文本，不保留原生文本指针
+            if (source.Kind is InteropValueKind.String or InteropValueKind.StringId)
+                fixed (byte* payload = field.Raw.Payload) new Span<byte>(payload, 16).Clear();
+        }
+    }
+
+    /// <summary>读取本次文档刷新持有的属性快照。</summary>
     public InteropStatus TryGet(string name, out InteropValue value)
     {
         value = default;
-        if (objectId == 0) return InteropStatus.NotFound;
-        if (!fields.TryGetValue(name, out var field)) return InteropStatus.NotFound;
-        return EditorInteropValueText.TryParse(field.Kind, EditorNativeComponents.GetFieldValue(objectId, field.Index), out value)
-            ? InteropStatus.Ok
-            : InteropStatus.InvocationFailed;
+        if (status != InteropStatus.Ok) return status;
+        if (!fieldsByName.TryGetValue(name, out FieldSnapshot? field)) return InteropStatus.NotFound;
+        value = field.Value;
+        return field.Raw.Status;
     }
 
+    /// <summary>验证字段仍存在且值类型一致。</summary>
     public InteropStatus Validate(string name, InteropValue value)
     {
-        return fields.TryGetValue(name, out var field) && field.Kind == value.Kind ? InteropStatus.Ok : InteropStatus.TypeMismatch;
+        if (status != InteropStatus.Ok) return status;
+        return fieldsByName.TryGetValue(name, out FieldSnapshot? field) && field.Descriptor.Kind == value.Kind
+            ? InteropStatus.Ok : InteropStatus.TypeMismatch;
     }
 
+    /// <summary>通过稳定身份和字段名执行写入。</summary>
     public InteropStatus Set(string name, InteropValue value)
     {
         if (Validate(name, value) != InteropStatus.Ok) return InteropStatus.TypeMismatch;
-        var field = fields[name];
-        return EditorNativeComponents.SetFieldValue(objectId, field.Index, EditorInteropValueText.Format(value))
-            ? InteropStatus.Ok
-            : InteropStatus.InvocationFailed;
+        int current = EditorNativeComponents.FindComponent(stableId);
+        return EditorNativeComponents.SetComponentProperty(current, name, value);
     }
 
+    /// <summary>标记属性所属场景已修改。</summary>
     public void MarkDirty() => dirty();
 }
 

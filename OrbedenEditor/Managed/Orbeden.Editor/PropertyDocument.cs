@@ -7,6 +7,8 @@ internal readonly record struct PropertyDescriptor(string Name, InteropValueKind
 internal interface IPropertyTarget
 {
     bool AllowsSceneReferences => false;
+    int PropertyVersion => 0;
+    void Refresh() { }
     string Identity { get; }
     IReadOnlyList<PropertyDescriptor> Properties { get; }
     InteropStatus TryGet(string name, out InteropValue value);
@@ -106,6 +108,7 @@ public sealed class PropertyValue
     public bool HasMultipleDifferentValues { get; internal set; }
     public InteropValue Value => value;
     internal bool Modified { get; private set; }
+    internal bool IsReadable { get; set; } = true;
 
     internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType)
     {
@@ -143,63 +146,98 @@ public sealed class PropertyDocument
     private readonly IReadOnlyList<IPropertyTarget> targets;
     private readonly List<PropertyValue> properties = [];
     private bool modified;
+    private readonly int[] targetVersions;
+    private bool initialized;
+    private int structureVersion;
+    private int sortedVersion = -1;
+    private string sortedType = string.Empty;
+    private PropertyValue[] drawProperties = [];
 
     internal PropertyDocument(IReadOnlyList<IPropertyTarget> propertyTargets)
     {
         targets = propertyTargets;
+        targetVersions = new int[targets.Count];
     }
 
     public IReadOnlyList<PropertyValue> Properties => properties;
     internal bool AllowsSceneReferences => targets.All(target => target.AllowsSceneReferences);
     public bool HasPendingChanges => modified;
 
+    /// <summary>批量刷新目标，仅在字段结构变化时重建公共属性。</summary>
     public void Update()
     {
-        properties.Clear();
         modified = false;
-        if (targets.Count == 0) return;
-
-        Dictionary<string, PropertyDescriptor> common = new(StringComparer.Ordinal);
-        foreach (PropertyDescriptor descriptor in targets[0].Properties) common[descriptor.Name] = descriptor;
-        for (int index = 1; index < targets.Count; ++index)
+        bool rebuild = !initialized;
+        for (int index = 0; index < targets.Count; ++index)
         {
-            Dictionary<string, PropertyDescriptor> current = new(StringComparer.Ordinal);
-            foreach (PropertyDescriptor descriptor in targets[index].Properties)
+            targets[index].Refresh();
+            rebuild |= targetVersions[index] != targets[index].PropertyVersion;
+            targetVersions[index] = targets[index].PropertyVersion;
+        }
+        if (rebuild)
+        {
+            properties.Clear();
+            Dictionary<string, PropertyDescriptor> common = new(StringComparer.Ordinal);
+            if (targets.Count != 0)
+                foreach (PropertyDescriptor descriptor in targets[0].Properties) common[descriptor.Name] = descriptor;
+            for (int index = 1; index < targets.Count; ++index)
             {
-                current[descriptor.Name] = descriptor;
+                Dictionary<string, PropertyDescriptor> current = new(StringComparer.Ordinal);
+                foreach (PropertyDescriptor descriptor in targets[index].Properties) current[descriptor.Name] = descriptor;
+                foreach (string name in common.Keys.ToArray())
+                    if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
             }
-            foreach (string name in common.Keys.ToArray())
-            {
-                if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
-            }
+            foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType));
+            initialized = true;
+            ++structureVersion;
         }
 
-        foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        //更新当前值与多选混合状态
+        foreach (PropertyValue property in properties)
         {
             InteropValue first = default;
-            bool hasFirst = false;
             bool mixed = false;
-            bool readable = true;
-            foreach (IPropertyTarget target in targets)
+            bool readable = targets.Count != 0;
+            for (int index = 0; index < targets.Count; ++index)
             {
-                if (target.TryGet(name, out InteropValue current) != InteropStatus.Ok)
+                if (targets[index].TryGet(property.Name, out InteropValue current) != InteropStatus.Ok)
                 {
                     readable = false;
                     break;
                 }
-                if (!hasFirst)
-                {
-                    first = current;
-                    hasFirst = true;
-                }
+                if (index == 0) first = current;
                 else if (!first.Equals(current)) mixed = true;
             }
-            if (!readable || !hasFirst) continue;
-
-            PropertyValue property = new(this, name, descriptor.Kind, descriptor.ReferenceType);
+            property.IsReadable = readable;
             property.SetSnapshot(first, mixed);
-            properties.Add(property);
         }
+    }
+
+    /// <summary>按组件布局缓存属性绘制顺序。</summary>
+    internal IReadOnlyList<PropertyValue> GetDrawProperties(string nativeType)
+    {
+        if (sortedVersion == structureVersion && sortedType == nativeType) return drawProperties;
+        string[] order = nativeType switch
+        {
+            "Transform" => ["localPosition", "localRotation", "localScale"],
+            "StaticMeshRenderer" => ["enabled", "mesh", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
+            "RigidBody" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
+            "CharacterController" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
+            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
+            _ => [],
+        };
+        drawProperties = properties.OrderBy(property =>
+        {
+            int index = Array.IndexOf(order, property.Name);
+            if (index >= 0) return index * 10;
+            int mesh = Array.IndexOf(order, "mesh");
+            return mesh >= 0 && property.Name.StartsWith("material[", StringComparison.Ordinal) ? mesh * 10 + 5 : int.MaxValue;
+        }).ThenBy(property => property.Name.StartsWith("material[", StringComparison.Ordinal) && property.Name.EndsWith(']')
+            && int.TryParse(property.Name.AsSpan(9, property.Name.Length - 10), out int slot) ? slot : 0).ToArray();
+        sortedVersion = structureVersion;
+        sortedType = nativeType;
+        return drawProperties;
     }
 
     public PropertyValue? FindProperty(string name)
@@ -212,6 +250,7 @@ public sealed class PropertyDocument
         List<PropertyValue> changes = properties.Where(property => property.Modified).ToList();
         if (changes.Count == 0) return true;
 
+        foreach (IPropertyTarget target in targets) target.Refresh();
         List<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> writes = [];
         foreach (PropertyValue property in changes)
         {
@@ -258,6 +297,7 @@ public sealed class PropertyDocument
 
     private static void ApplyHistory(IReadOnlyList<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> writes, bool useNewValue)
     {
+        foreach (IPropertyTarget target in writes.Select(write => write.Target).Distinct()) target.Refresh();
         List<InteropValue> previous = [];
         foreach (var write in writes)
         {

@@ -318,10 +318,14 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 15);
-        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 26);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 23);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 140);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 137);
+        ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
+        ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
+        ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 56);
+        ValidateSize<EditorComponentSnapshotAbi>(nameof(EditorComponentSnapshotAbi), 32);
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
         ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 88);

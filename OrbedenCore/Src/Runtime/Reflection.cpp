@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <unordered_map>
+#include <string_view>
 
 #include "Runtime/Reflection.h"
 #include "Runtime/EnsId.h"
@@ -22,8 +23,16 @@ namespace
         return generation;
     }
 
+    //获取继承字段缓存
+    auto& GetCollectedFields()
+    {
+        static std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> fields;
+        return fields;
+    }
+
     void AdvanceReflectionRegistryGeneration()
     {
+        GetCollectedFields().clear();
         uint32& generation = GetReflectionRegistryGeneration();
         ++generation;
         if (generation == 0) generation = 1;
@@ -520,25 +529,27 @@ namespace Reflection
     {
         output.clear();
         if (!type) return;
+        auto& cache = GetCollectedFields();
+        auto cached = cache.find(type->GetId());
+        if (cached != cache.end()) { output = cached->second; return; }
 
+        //展开继承字段并保留派生覆盖位置
         List<Type*> chain;
+        std::unordered_map<std::string_view, usize> positions;
         for (Type* current = type; current; current = current->GetBaseType()) chain.push_back(current);
-
         for (auto typeIt = chain.rbegin(); typeIt != chain.rend(); ++typeIt)
         {
             const TypeInfo* info = FindTypeInfo(*typeIt);
             if (!info) continue;
-
             for (const FieldInfo& field : info->fields)
             {
-                auto duplicate = std::find_if(output.begin(), output.end(), [&field](const FieldInfo* value)
-                    {
-                        return value && value->name && field.name && std::string(value->name) == field.name;
-                    });
-                if (duplicate != output.end()) *duplicate = &field;
-                else output.push_back(&field);
+                if (!field.name) { output.push_back(&field); continue; }
+                auto [position, added] = positions.emplace(field.name, output.size());
+                if (added) output.push_back(&field);
+                else output[position->second] = &field;
             }
         }
+        cache.emplace(type->GetId(), output);
     }
 
     //查找方法元数据

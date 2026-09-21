@@ -52,6 +52,20 @@ internal sealed class InspectorPanel : EditorPanel
         public int Index;
         public string Xml = string.Empty;
     }
+    private sealed class ComponentDocument
+    {
+        internal int[] ObjectIds = [];
+        internal PropertyDocument Document = null!;
+    }
+
+    private readonly Dictionary<int, ComponentDocument> componentDocuments = [];
+    private readonly List<int> staleDocuments = [];
+    private EnsId[] cachedSelection = [];
+    private PropertyDocument? headerDocument;
+    private readonly List<ComponentAddChoice> addChoices = [];
+    private uint addChoicesGeneration;
+    private bool addChoicesDirty = true;
+
     private readonly List<Type> scriptTypes = [];
     private GameAssemblyLoadContext? gameContext;
     private Assembly? gameAssembly;
@@ -93,6 +107,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         if (context.SelectedEns.IsNull)
         {
+            ClearPropertyDocuments();
             EditorGUI.Label("No Ens selected.");
             return;
         }
@@ -100,10 +115,16 @@ internal sealed class InspectorPanel : EditorPanel
         List<EnsId> selection = GetValidSelection(context.SelectedEns, context.SelectedEnsList);
         if (selection.Count == 0)
         {
+            ClearPropertyDocuments();
             EditorGUI.Label("Selected Ens is not alive.");
             return;
         }
 
+        if (!selection.SequenceEqual(cachedSelection))
+        {
+            ClearPropertyDocuments();
+            cachedSelection = selection.ToArray();
+        }
         Ens active = Ens.FromId(context.SelectedEns);
         DrawObjectHeader(active, selection, context.SelectedStableId);
         if (!string.IsNullOrWhiteSpace(status)) EditorGUI.Label($"C# Assembly: {status}");
@@ -117,6 +138,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
+        addChoicesDirty = true;
         if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))
         {
             status = "Game assembly is not loaded.";
@@ -141,6 +163,7 @@ internal sealed class InspectorPanel : EditorPanel
         {
             UnloadReflectionAssembly();
             scriptTypes.Clear();
+            addChoicesDirty = true;
             status = "Game assembly load failed: " + exception.Message;
         }
     }
@@ -150,6 +173,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
+        addChoicesDirty = true;
         componentSearch = string.Empty;
         status = "Game assembly is not loaded.";
     }
@@ -157,6 +181,9 @@ internal sealed class InspectorPanel : EditorPanel
     //卸载仅供 Inspector 反射的可收集程序集上下文。
     private void UnloadReflectionAssembly()
     {
+        ClearPropertyDocuments();
+        addChoices.Clear();
+        addChoicesDirty = true;
         if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
         gameAssembly = null;
         if (gameContext == null) return;
@@ -196,28 +223,32 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //绘制对象名称与运行时身份。
-    private static void DrawObjectHeader(Ens active, IReadOnlyList<EnsId> selection, string stableId)
+    private void DrawObjectHeader(Ens active, IReadOnlyList<EnsId> selection, string stableId)
     {
         EditorGUI.BeginComponentBlock("Selected Ens");
         try
         {
-            List<IPropertyTarget> targets = selection
-                .Select(Ens.FromId)
-                .Where(value => value.IsValid)
-                .Select(value => (IPropertyTarget)new DelegatedPropertyTarget(
-                    $"ens:{value.Id.id}:{value.Id.version}",
-                    "Name",
-                    InteropValueKind.String,
-                    () => InteropValue.From(value.Name),
-                    updated =>
-                    {
-                        if (!updated.TryGet(out string name)) return InteropStatus.TypeMismatch;
-                        value.Name = name;
-                        return InteropStatus.Ok;
-                    },
-                    EditorApplication.MarkWorldDirty))
-                .ToList();
-            DrawPropertyDocument(new PropertyDocument(targets), "Ens");
+            if (headerDocument == null)
+            {
+                List<IPropertyTarget> targets = selection
+                    .Select(Ens.FromId)
+                    .Where(value => value.IsValid)
+                    .Select(value => (IPropertyTarget)new DelegatedPropertyTarget(
+                        $"ens:{value.Id.id}:{value.Id.version}",
+                        "Name",
+                        InteropValueKind.String,
+                        () => InteropValue.From(value.Name),
+                        updated =>
+                        {
+                            if (!updated.TryGet(out string name)) return InteropStatus.TypeMismatch;
+                            value.Name = name;
+                            return InteropStatus.Ok;
+                        },
+                        EditorApplication.MarkWorldDirty))
+                    .ToList();
+                headerDocument = new PropertyDocument(targets);
+            }
+            DrawPropertyDocument(headerDocument, "Ens");
             EditorGUI.Label($"Runtime Id: {active.Id.id}:{active.Id.version}");
             if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
             EditorGUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
@@ -231,7 +262,12 @@ internal sealed class InspectorPanel : EditorPanel
     //按活动对象挂载顺序绘制所有选择对象共同拥有的组件。
     private void DrawComponents(IReadOnlyList<EnsId> selection)
     {
-        List<NativeComponentInfo> primary = EditorNativeComponents.GetComponents(selection[0]);
+        List<NativeComponentInfo>[] componentLists = selection.Select(EditorNativeComponents.GetComponents).ToArray();
+        List<NativeComponentInfo> primary = componentLists[0];
+        staleDocuments.Clear();
+        foreach (int id in componentDocuments.Keys)
+            if (!primary.Any(component => component.ObjectId == id)) staleDocuments.Add(id);
+        foreach (int id in staleDocuments) componentDocuments.Remove(id);
         Dictionary<(string TypeName, bool Managed), int> occurrences = [];
         foreach (NativeComponentInfo component in primary)
         {
@@ -240,10 +276,10 @@ internal sealed class InspectorPanel : EditorPanel
             occurrences[key] = occurrence + 1;
 
             List<NativeComponentInfo> matches = [];
-            foreach (EnsId target in selection)
+            foreach (List<NativeComponentInfo> target in componentLists)
             {
                 NativeComponentInfo match = FindOccurrence(
-                    EditorNativeComponents.GetComponents(target),
+                    target,
                     component.TypeName,
                     component.IsManaged,
                     occurrence);
@@ -297,12 +333,23 @@ internal sealed class InspectorPanel : EditorPanel
         {
             if (expanded && !removeRequested)
             {
-                List<IPropertyTarget> targets = components
-                    .Select(component => (IPropertyTarget)new NativeComponentPropertyTarget(
-                        component,
-                        EditorApplication.MarkWorldDirty))
-                    .ToList();
-                DrawPropertyDocument(new PropertyDocument(targets), title, primary.IsManaged ? "" : primary.TypeName);
+                bool rebuild = !componentDocuments.TryGetValue(primary.ObjectId, out ComponentDocument? cached)
+                    || cached.ObjectIds.Length != components.Count;
+                for (int index = 0; !rebuild && index < components.Count; ++index)
+                    rebuild = cached!.ObjectIds[index] != components[index].ObjectId;
+                if (rebuild)
+                {
+                    List<IPropertyTarget> targets = components
+                        .Select(component => (IPropertyTarget)new NativeComponentPropertyTarget(component, EditorApplication.MarkWorldDirty))
+                        .ToList();
+                    cached = new ComponentDocument
+                    {
+                        ObjectIds = components.Select(component => component.ObjectId).ToArray(),
+                        Document = new PropertyDocument(targets),
+                    };
+                    componentDocuments[primary.ObjectId] = cached;
+                }
+                DrawPropertyDocument(cached!.Document, title, primary.IsManaged ? "" : primary.TypeName);
             }
         }
         finally
@@ -327,20 +374,9 @@ internal sealed class InspectorPanel : EditorPanel
     private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "")
     {
         document.Update();
-        string[] order = nativeType switch
+        foreach (PropertyValue property in document.GetDrawProperties(nativeType))
         {
-            "Transform" => ["localPosition", "localRotation", "localScale"],
-            "StaticMeshRenderer" => ["enabled", "mesh", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
-            "RigidBody" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
-            "CharacterController" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
-            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
-            _ => [],
-        };
-        foreach (PropertyValue property in document.Properties
-            .OrderBy(value => GetPropertyOrder(value.Name, order))
-            .ThenBy(value => GetMaterialSlotIndex(value.Name))
-            .ToArray())
-        {
+            if (!property.IsReadable) continue;
             string label = property.HasMultipleDifferentValues
                 ? $"{property.Name} (Mixed)"
                 : property.Name;
@@ -375,24 +411,6 @@ internal sealed class InspectorPanel : EditorPanel
         if (document.HasPendingChanges)
             propertyError = document.ApplyChanges($"Edit {undoPrefix}") ? string.Empty
                 : $"Failed to apply {undoPrefix}; changes were rolled back.";
-    }
-
-    //字段排序：顺序表里的按表排，渲染器的材质槽紧跟 mesh，其余排最后
-    private static int GetPropertyOrder(string name, string[] order)
-    {
-        int index = Array.IndexOf(order, name);
-        if (index >= 0) return index * 10;
-
-        int meshIndex = Array.IndexOf(order, "mesh");
-        if (meshIndex >= 0 && name.StartsWith("material[", StringComparison.Ordinal)) return meshIndex * 10 + 5;
-        return int.MaxValue;
-    }
-
-    //取材质槽下标，其余字段统一返回 0
-    private static int GetMaterialSlotIndex(string name)
-    {
-        return name.StartsWith("material[", StringComparison.Ordinal) && name.EndsWith(']')
-            && int.TryParse(name.AsSpan(9, name.Length - 10), out int slot) ? slot : 0;
     }
 
     //绘制单个属性并返回用户提交的新值。
@@ -476,25 +494,33 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制统一的 C++ / C# 添加组件菜单。
     private void DrawAddComponent(IReadOnlyList<EnsId> selection)
     {
-        List<ComponentAddChoice> choices = [];
-        foreach (string typeName in EditorNativeComponents.GetAddableTypes())
+        List<ComponentAddChoice> choices = addChoices;
+        uint generation = EditorNativeComponents.RegistryGeneration;
+        if (addChoicesDirty || generation != addChoicesGeneration)
         {
-            choices.Add(new ComponentAddChoice(
-                typeName,
-                $"[C++] {GetShortTypeName(typeName)}",
-                false,
-                null));
+            choices.Clear();
+            foreach (string typeName in EditorNativeComponents.GetAddableTypes())
+            {
+                choices.Add(new ComponentAddChoice(
+                    typeName,
+                    $"[C++] {GetShortTypeName(typeName)}",
+                    false,
+                    null));
+            }
+            foreach (Type type in scriptTypes)
+            {
+                string typeName = GetScriptTypeName(type);
+                choices.Add(new ComponentAddChoice(
+                    typeName,
+                    $"[C#] {GetShortTypeName(typeName)}",
+                    true,
+                    type));
+            }
+            choices.Sort((left, right) => string.Compare(left.Label, right.Label, StringComparison.Ordinal));
+
+            addChoicesGeneration = generation;
+            addChoicesDirty = false;
         }
-        foreach (Type type in scriptTypes)
-        {
-            string typeName = GetScriptTypeName(type);
-            choices.Add(new ComponentAddChoice(
-                typeName,
-                $"[C#] {GetShortTypeName(typeName)}",
-                true,
-                type));
-        }
-        choices.Sort((left, right) => string.Compare(left.Label, right.Label, StringComparison.Ordinal));
 
         if (choices.Count == 0)
         {
@@ -689,6 +715,14 @@ internal sealed class InspectorPanel : EditorPanel
     {
         EditorApplication.MarkWorldDirty();
         EditorApplication.RequestRepaint();
+    }
+
+    /// <summary>释放当前选择的绘制文档，不影响 Undo 持有的稳定身份。</summary>
+    private void ClearPropertyDocuments()
+    {
+        componentDocuments.Clear();
+        headerDocument = null;
+        cachedSelection = [];
     }
 
     //按完整名称查找 Inspector 已加载的 C# 类型。

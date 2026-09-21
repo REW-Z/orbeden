@@ -13,11 +13,9 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, int, int> GetComponentObjectId;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetComponentTypeName;
     public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetComponentDomain;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int> GetFieldCount;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldName;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int, int> GetFieldKind;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldValue;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, byte> SetFieldValue;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, EditorComponentSnapshotAbi*, InteropStatus> ReadComponentSnapshot;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, EditorValueAbi*, InteropStatus> SetComponentProperty;
+    public delegate* unmanaged[Cdecl]<IntPtr, uint> GetRegistryGeneration;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte*, int, byte*, int, byte, byte> SetManagedField;
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetAddableTypeCount;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetAddableTypeName;
@@ -27,7 +25,6 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, uint, uint, byte*, int, int, int> RestoreComponent;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> FindComponent;
     public delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr*, IntPtr> GetHostBinding;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte*, int, int> GetFieldReferenceType;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId*, int, int> GetWorldEns;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte, void> SelectEns;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> MatchComponentType;
@@ -37,23 +34,62 @@ internal unsafe struct EditorComponentNativeApi
 }
 #pragma warning restore CS0649
 
-/// <summary>原生反射字段分类，与 C++ Reflection::FieldKind 保持一致。</summary>
-internal enum NativeFieldKind
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal unsafe struct EditorTextAbi
 {
-    Unsupported,
-    Bool,
-    Int32,
-    UInt32,
-    UInt64,
-    Float32,
-    String,
-    StringId,
-    ObjectRef,
-    ObjectRefList,
-    Vector3,
-    Color,
-    Quaternion,
-    EnsId,
+    public byte* Data;
+    public int Length;
+    public int Reserved;
+    public readonly ReadOnlySpan<byte> Bytes => new(Data, Length);
+    public override readonly string ToString() => Encoding.UTF8.GetString(Bytes);
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal unsafe struct EditorValueAbi
+{
+    public InteropValueKind Kind;
+    public InteropStatus Status;
+    public fixed byte Payload[16];
+
+    /// <summary>复制快照载荷到托管值。</summary>
+    internal InteropValue Decode()
+    {
+        fixed (byte* pointer = Payload)
+        {
+            return Kind switch
+            {
+                InteropValueKind.Bool => InteropValue.From(*pointer != 0),
+                InteropValueKind.Int32 => InteropValue.From(*(int*)pointer),
+                InteropValueKind.UInt32 => InteropValue.From(*(uint*)pointer),
+                InteropValueKind.UInt64 => InteropValue.From(*(ulong*)pointer),
+                InteropValueKind.Float32 => InteropValue.From(*(float*)pointer),
+                InteropValueKind.Vector3 => InteropValue.From(*(vector3*)pointer),
+                InteropValueKind.Color => InteropValue.From(*(color*)pointer),
+                InteropValueKind.Quaternion => InteropValue.From(*(quaternion*)pointer),
+                InteropValueKind.EnsId => InteropValue.From(*(EnsId*)pointer),
+                InteropValueKind.String => InteropValue.From(((EditorTextAbi*)pointer)->ToString()),
+                InteropValueKind.StringId => InteropValue.FromStringId(((EditorTextAbi*)pointer)->ToString()),
+                _ => default,
+            };
+        }
+    }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal struct EditorPropertyAbi
+{
+    public EditorTextAbi Name;
+    public EditorTextAbi ReferenceType;
+    public EditorValueAbi Value;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal unsafe struct EditorComponentSnapshotAbi
+{
+    public EditorTextAbi StableId;
+    public EditorPropertyAbi* Properties;
+    public int Count;
+    public uint Generation;
 }
 
 /// <summary>一个无需 C# binding 的原生组件实例。</summary>
@@ -90,18 +126,47 @@ internal static unsafe class EditorNativeComponents
         return result;
     }
 
-    /// <summary>获取组件可见字段数量。</summary>
-    internal static int GetFieldCount(int objectId)
+    /// <summary>一次借用组件全部属性，调用方立即复制结果。</summary>
+    internal static InteropStatus ReadComponentSnapshot(int objectId, out EditorComponentSnapshotAbi snapshot)
     {
-        return api.GetFieldCount != null ? Math.Max(0, api.GetFieldCount(api.Context, objectId)) : 0;
+        snapshot = default;
+        if (api.ReadComponentSnapshot == null) return InteropStatus.NotFound;
+        fixed (EditorComponentSnapshotAbi* pointer = &snapshot)
+            return api.ReadComponentSnapshot(api.Context, objectId, pointer);
     }
 
-    /// <summary>获取字段名称。</summary>
-    internal static string GetFieldName(int objectId, int fieldIndex)
+    /// <summary>读取原生字段注册代次。</summary>
+    internal static uint RegistryGeneration => api.GetRegistryGeneration == null ? 0 : api.GetRegistryGeneration(api.Context);
+
+    /// <summary>按字段名写入类型化值。</summary>
+    internal static InteropStatus SetComponentProperty(int objectId, string name, InteropValue value)
     {
-        return api.GetFieldName == null
-            ? string.Empty
-            : ReadText((byte* buffer, int size) => api.GetFieldName(api.Context, objectId, fieldIndex, buffer, size));
+        if (api.SetComponentProperty == null) return InteropStatus.NotFound;
+        EditorValueAbi encoded = new() { Kind = value.Kind };
+        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
+        byte[] text = value.Kind is InteropValueKind.String or InteropValueKind.StringId
+            && value.TryGet(out string content) ? Encoding.UTF8.GetBytes(content) : [];
+        fixed (byte* namePointer = nameBytes)
+        fixed (byte* textPointer = text)
+        {
+            byte* pointer = encoded.Payload;
+            switch (value.Kind)
+            {
+                case InteropValueKind.Bool: value.TryGet(out bool boolean); *pointer = boolean ? (byte)1 : (byte)0; break;
+                case InteropValueKind.Int32: value.TryGet(out int integer); *(int*)pointer = integer; break;
+                case InteropValueKind.UInt32: value.TryGet(out uint unsigned); *(uint*)pointer = unsigned; break;
+                case InteropValueKind.UInt64: value.TryGet(out ulong wide); *(ulong*)pointer = wide; break;
+                case InteropValueKind.Float32: value.TryGet(out float number); *(float*)pointer = number; break;
+                case InteropValueKind.Vector3: value.TryGet(out vector3 vector); *(vector3*)pointer = vector; break;
+                case InteropValueKind.Color: value.TryGet(out color color); *(color*)pointer = color; break;
+                case InteropValueKind.Quaternion: value.TryGet(out quaternion rotation); *(quaternion*)pointer = rotation; break;
+                case InteropValueKind.EnsId: value.TryGet(out EnsId ens); *(EnsId*)pointer = ens; break;
+                case InteropValueKind.String: case InteropValueKind.StringId:
+                    *(EditorTextAbi*)pointer = new EditorTextAbi { Data = textPointer, Length = text.Length }; break;
+                default: return InteropStatus.UnsupportedType;
+            }
+            return api.SetComponentProperty(api.Context, objectId, namePointer, nameBytes.Length, &encoded);
+        }
     }
 
     //读取符合声明类型的存活引用对象
@@ -151,37 +216,6 @@ internal static unsafe class EditorNativeComponents
     {
         byte[] bytes = Encoding.UTF8.GetBytes(type);
         fixed (byte* pointer = bytes) return api.MatchComponentType(api.Context, objectId, pointer, bytes.Length) != 0;
-    }
-
-    //读取引用字段的声明类型
-    internal static string GetFieldReferenceType(int objectId, int fieldIndex)
-        => ReadText((byte* buffer, int size) => api.GetFieldReferenceType(api.Context, objectId, fieldIndex, buffer, size));
-
-    /// <summary>获取字段分类。</summary>
-    internal static NativeFieldKind GetFieldKind(int objectId, int fieldIndex)
-    {
-        return api.GetFieldKind != null
-            ? (NativeFieldKind)api.GetFieldKind(api.Context, objectId, fieldIndex)
-            : NativeFieldKind.Unsupported;
-    }
-
-    /// <summary>获取字段序列化文本。</summary>
-    internal static string GetFieldValue(int objectId, int fieldIndex)
-    {
-        return api.GetFieldValue == null
-            ? string.Empty
-            : ReadText((byte* buffer, int size) => api.GetFieldValue(api.Context, objectId, fieldIndex, buffer, size));
-    }
-
-    /// <summary>写入字段序列化文本。</summary>
-    internal static bool SetFieldValue(int objectId, int fieldIndex, string value)
-    {
-        if (api.SetFieldValue == null) return false;
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
-        fixed (byte* pointer = bytes)
-        {
-            return api.SetFieldValue(api.Context, objectId, fieldIndex, pointer, bytes.Length) != 0;
-        }
     }
 
     /// <summary>枚举当前注册表中可创建的原生组件类型。</summary>
