@@ -124,6 +124,9 @@ internal abstract class EditorPanel
     /// <summary>收到删除请求（Delete）时调用；只有选择系统点名的面板会收到。</summary>
     public virtual void OnDeleteRequested() { }
 
+    /// <summary>Reimport 触发：重新导入选中资源，只有资源面板需要处理。</summary>
+    public virtual void OnReimportRequested() { }
+
     /// <summary>用户游戏程序集加载时调用。</summary>
     public virtual void OnGameAssemblyLoaded(string assemblyPath) { }
 

@@ -1,0 +1,56 @@
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+layout(location = 3) in vec3 a_Tangent;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+
+out vec3 v_WorldNormal;
+out vec4 v_ClipPosition;
+
+void main()
+{
+    v_WorldNormal = mat3(u_Model) * a_Normal;
+    v_ClipPosition = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+    gl_Position = v_ClipPosition;
+}
+
+--------frag
+#version 430 core
+
+#include "Builtin/camera_texture_common.orbinc"
+
+in vec3 v_WorldNormal;
+in vec4 v_ClipPosition;
+
+uniform vec4 u_TintColor;
+uniform float u_RefractionStrength;
+uniform float u_Opacity;
+
+out vec4 FragColor;
+
+void main()
+{
+    float opacity = clamp(u_Opacity, 0.0, 1.0);
+    //折射队列在相机颜色可用前先画一次，此时退化成一层很淡的染色
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(u_TintColor.rgb, opacity * 0.15);
+        return;
+    }
+
+    //只取屏幕平面内的法线分量扰动 UV：背向相机的分量会把采样拉出画面
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    vec3 normal = normalize(v_WorldNormal);
+    vec2 offset = vec2(normal.x, normal.y) * max(u_RefractionStrength, 0.0);
+    vec2 distortedUv = ClampCameraScreenUv(screenUv + offset);
+    //背景比折射面更近时放弃偏移，避免把前景物体糊到表面上
+    distortedUv = RejectForegroundCameraUv(screenUv, distortedUv, gl_FragCoord.z);
+
+    vec3 sceneColor = texture(u_CameraColorTexture, distortedUv).rgb;
+    FragColor = vec4(mix(sceneColor, sceneColor * u_TintColor.rgb, 0.3), opacity);
+}

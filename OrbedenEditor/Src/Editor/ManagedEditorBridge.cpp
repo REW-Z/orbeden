@@ -67,6 +67,8 @@ namespace
     constexpr const char* EditorRedoMethod = "Redo";
     constexpr const char* EditorRequestRenameSelectedMethod = "RequestRenameSelected";
     constexpr const char* EditorRequestDeleteSelectedMethod = "RequestDeleteSelected";
+    constexpr const char* EditorRequestReimportSelectedMethod = "RequestReimportSelected";
+    constexpr const char* EditorRequestReimportAllMethod = "RequestReimportAll";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -105,6 +107,8 @@ namespace
         void* captureEns = nullptr;
         void* destroyEnsTree = nullptr;
         void* createEns = nullptr;
+        void* reimportAsset = nullptr;
+        void* reimportAllAssets = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -196,21 +200,21 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 17);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 138);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 140);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 71);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 81);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 84);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 86);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 101);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 125);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 130);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 103);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 127);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 132);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -502,21 +506,45 @@ namespace
             else
             {
                 std::string templates = editor->GetSourceTemplateRoot();
-                std::string project = Utf8Path::ToUtf8(Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / "Examples");
-                if (templates.empty() || !std::filesystem::is_directory(Utf8Path::FromUtf8(project)))
+                std::string content = editor->GetProjectContentRootPath();
+                std::string examples = Utf8Path::ToUtf8(Utf8Path::FromUtf8(content) / NewProjectTemplate::ExamplesFolderName);
+                if (templates.empty() || !std::filesystem::is_directory(Utf8Path::FromUtf8(examples)))
                     report = "Project examples or source template not found.";
                 else if (!editor->SaveCurrentWorld()) report = editor->GetProjectStatusText();
                 else
                 {
-                    templates = Utf8Path::ToUtf8(Utf8Path::FromUtf8(templates) / "Examples");
+                    //示例引用 Builtin，两个内容目录必须一起迁移，否则材质会指向不存在的默认资源。
                     NewProjectTemplate::MirrorReport changes;
                     std::string error;
-                    bool mirrored = NewProjectTemplate::MirrorTree(reset ? templates : project,
-                        reset ? project : templates, changes, error);
+                    std::string skipped;
+                    bool mirrored = true;
+                    for (const char* folder : { NewProjectTemplate::ExamplesFolderName,
+                        NewProjectTemplate::BuiltinFolderName })
+                    {
+                        std::string source = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? templates : content) / folder);
+                        std::string target = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? content : templates) / folder);
+                        //某一侧缺这个目录就跳过（例如 Builtin 之前的旧项目），不让单个目录废掉整次迁移
+                        if (!std::filesystem::is_directory(Utf8Path::FromUtf8(source)))
+                        {
+                            skipped += " ";
+                            skipped += folder;
+                            continue;
+                        }
+                        NewProjectTemplate::MirrorReport folderChanges;
+                        if (!NewProjectTemplate::MirrorTree(source, target, folderChanges, error))
+                        {
+                            mirrored = false;
+                            break;
+                        }
+                        changes.added += folderChanges.added;
+                        changes.updated += folderChanges.updated;
+                        changes.removed += folderChanges.removed;
+                    }
                     bool reloaded = !reset || editor->ReloadProjectContent();
-                    report = mirrored ? (reset ? "Restored examples: " : "Wrote back examples: ")
+                    report = mirrored ? (reset ? "Restored template content: " : "Wrote back template content: ")
                         + std::to_string(changes.added) + " added, " + std::to_string(changes.updated)
                         + " updated, " + std::to_string(changes.removed) + " removed." : error;
+                    if (!skipped.empty()) report += "\nSkipped missing folders:" + skipped;
                     if (!reloaded) report += "\nContent reload failed: " + editor->GetProjectStatusText();
                     if (!reset && mirrored) report += "\nReview with: git diff OrbedenEditor/Templates";
                 }
@@ -526,6 +554,22 @@ namespace
         int32 count = std::min(capacity, static_cast<int32>(report.size()));
         if (buffer && count > 0) std::memcpy(buffer, report.data(), count);
         return count;
+    }
+
+    //强制重新导入指定资源，返回处理的源文件数
+    int32 ORBEDEN_NATIVE_CALL ReimportManagedAsset(void* context, uint8* key, int32 length, uint8 prefix)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->HasProject() || editor->IsPlaying()) return 0;
+        return static_cast<int32>(ResourceManager::Reimport(ReadUtf8(key, length), prefix != 0));
+    }
+
+    //强制重新导入全部已加载资源，返回处理的源文件数
+    int32 ORBEDEN_NATIVE_CALL ReimportAllManagedAssets(void* context)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->HasProject() || editor->IsPlaying()) return 0;
+        return static_cast<int32>(ResourceManager::Reimport(std::string(), true));
     }
 
     //请求原生 Editor 重绘。
@@ -1388,6 +1432,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestRenameSelectedMethod, &RequestRenameSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestDeleteSelectedMethod, &RequestDeleteSelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportSelectedMethod, &RequestReimportSelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportAllMethod, &RequestReimportAllFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -1429,6 +1475,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.captureEns = reinterpret_cast<void*>(&CaptureManagedEns);
     editorApi.assets.destroyEnsTree = reinterpret_cast<void*>(&DestroyManagedEnsTree);
     editorApi.assets.createEns = reinterpret_cast<void*>(&CreateManagedEns);
+    editorApi.assets.reimportAsset = reinterpret_cast<void*>(&ReimportManagedAsset);
+    editorApi.assets.reimportAllAssets = reinterpret_cast<void*>(&ReimportAllManagedAssets);
     editorApi.components.context = &editor;
     editorApi.components.readComponentSnapshot = reinterpret_cast<void*>(&ReadComponentSnapshot);
     editorApi.components.setComponentProperty = reinterpret_cast<void*>(&SetComponentProperty);
@@ -1496,6 +1544,8 @@ void ManagedEditorBridge::Shutdown()
     RedoFunction = nullptr;
     RequestRenameSelectedFunction = nullptr;
     RequestDeleteSelectedFunction = nullptr;
+    RequestReimportSelectedFunction = nullptr;
+    RequestReimportAllFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -1587,6 +1637,20 @@ void ManagedEditorBridge::RequestDeleteSelected()
     if (!initialized || !RequestDeleteSelectedFunction) return;
     ManagedDrawEditorFn requestDelete = reinterpret_cast<ManagedDrawEditorFn>(RequestDeleteSelectedFunction);
     requestDelete();
+}
+
+void ManagedEditorBridge::RequestReimportSelected()
+{
+    if (!initialized || !RequestReimportSelectedFunction) return;
+    ManagedDrawEditorFn requestReimport = reinterpret_cast<ManagedDrawEditorFn>(RequestReimportSelectedFunction);
+    requestReimport();
+}
+
+void ManagedEditorBridge::RequestReimportAll()
+{
+    if (!initialized || !RequestReimportAllFunction) return;
+    ManagedDrawEditorFn requestReimportAll = reinterpret_cast<ManagedDrawEditorFn>(RequestReimportAllFunction);
+    requestReimportAll();
 }
 
 bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,

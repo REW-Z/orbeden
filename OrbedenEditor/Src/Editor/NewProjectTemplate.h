@@ -9,15 +9,20 @@
 //
 //模板里没有占位符：复制到项目就能直接用，项目名由工程文件名与 .oeproj 文件基名决定。
 //
-//模板根下分为三部分：
+//模板根下分为四部分：
 //  Project/   项目脚手架，铺到项目根。
-//  Examples/  示例内容，整体铺到 <项目根>/Content/Examples/，新建时初始化，升级保留。
+//  Builtin/   默认着色器、材质与基础网格，整体铺到 <项目根>/Content/Builtin/，新建时初始化，升级保留。
+//  Examples/  示例内容，整体铺到 <项目根>/Content/Examples/，新建时初始化，升级保留。示例引用 Builtin，两者必须同时存在。
 //  Shared/    固定的桥接源码与共享属性表，发布到 SDK，不铺进项目。
 //
 //Project/ 中不得包含任何游戏内容：示例内容一旦与项目自身内容同名，
 //会同时撞上 C# 的全限定类型名和 MetaGen 的类型字典。
 namespace NewProjectTemplate
 {
+    //模板里随项目铺到 <项目根>/Content/ 下的内容目录名。示例引用 Builtin，迁移时两者必须成对处理。
+    constexpr const char* BuiltinFolderName = "Builtin";
+    constexpr const char* ExamplesFolderName = "Examples";
+
     //镜像结果统计，用于把项目里的改动写回模板时给出可核对的报告。
     struct MirrorReport
     {

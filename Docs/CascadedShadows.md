@@ -42,8 +42,8 @@ DirectionLight 继续通过 `DirectionalLight` 组件配置；`RenderDirectional
 - `Rendering/Backend/RenderBackend.h`：`GpuDepthDistribution`（64 个 uint32 对数桶、near/far）；新增异步统计的创建、提交、轮询、释放接口。
 - `Rendering/Backend/GpuResourceIDs.h`：强类型 `GpuDepthDistributionID`。
 - `Rendering/Backend/OpenGLRenderBackend.h/.cpp`：每个统计句柄一个 SSBO 与 fence，compute program 在后端延迟创建。
-- `Templates/Examples/FlightTraining/Shaders/Builtin/shadow_common.orbinc`：统一 CSM atlas 查询与 PCF。
-- `blinn_phong_shadow.orbshader`：通过 include 使用统一查询。
+- `Templates/Builtin/shadow_common.orbinc`：统一 CSM atlas 查询与 PCF。
+- `Templates/Builtin/Shaders/blinn_phong.orbshader`：通过 include 使用统一查询。
 - `Templates/Project/Content/Shaders/shadow_depth.orbshader`：继续承担不透明几何深度绘制。
 
 新增文件更新 Core vcxproj 与 filters；Object 绑定只通过 MetaGen 构建刷新。
@@ -132,7 +132,7 @@ CSM 模式不执行统计 compute。adaptive 创建或提交失败时保留正�
 
 ## 自定义 Shader 迁移
 
-1. 将模板的 Shaders/Builtin/shadow_common.orbinc 复制到自定义 Shader 可访问的 include 路径。
+1. 将模板的 `Builtin/shadow_common.orbinc` 复制到自定义 Shader 可访问的 include 路径。include 先按内容根解析、再按 Shader 所在目录解析，所以放进内容根的 `Builtin/` 就能被所有 Shader 共用，无需各自再拷贝一份。
 2. 删除旧 v_LightSpacePosition、顶点阶段 u_LightViewProjection 计算及旧 SampleShadow() 函数。
 3. 片元阶段声明 u_LightDirection 后 include 新文件。
 4. 使用 SampleShadow(worldPosition, surfaceNormal) 获取遮挡，仅用 (1-shadow) 调制太阳直接光。
@@ -159,6 +159,7 @@ DevPanel 的 `Reset from Template` 可以直接用于把示例的旧 Shader 换�
 - MSBuild 参数在本仓库的 Git Bash 下必须用 `-` 前缀。`/m`、`/nologo`、`/p:` 会被 MSYS 改写成 `M:/`、`C:/Program Files/Git/nologo` 这类路径，MSBuild 报 MSB1008；而 `MSBuild ... | tail` 的管道退出码取自 `tail`，会把构建失败伪装成通过（需用 `${PIPESTATUS[0]}` 或先落盘日志）。`Build/*.ps1` 中的 `/m /p:` 写法在 PowerShell 下不受影响。
 - 人工验收要跑刚重建出来的 `x64/Debug/OrbedenEditor.exe`。编辑器按 `<exe目录>/Templates` 优先解析模板（`EditorSystem.cpp:2021`），所以 **exe 旁边那份 `Templates` 副本必须是新的**；`OrbedenEditor/x64/Debug/Templates` 下的副本停留在 9 月 10 日、仍是旧阴影 ABI，跑那个 exe 会加载旧 Shader。两份 `Templates` 都是构建产物副本，重建 Editor 时会自动刷新，不要手工编辑。模板源只有 `OrbedenEditor/Templates/` 一处。
 - 文档侧修正：`RenderingPipeline.md` 总流程图中残留的 `共享 Shadow Pass` 节点已删除，`有相机?` 直接进入按 `Camera.depth` 遍历。
+- 后续整理：阴影 Shader 与两个共享 include 已随模板整理移入 `Templates/Builtin/`（原在 `Templates/Examples/FlightTraining/Shaders/` 下），本文件的路径按移动后的位置记录；上一条"初次回归记录"里的旧路径对应移动前的状态。
 
 ## 人工验收边界
 

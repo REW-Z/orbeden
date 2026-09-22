@@ -150,6 +150,22 @@ public static class EditorRuntime
         catch (Exception ex) { Console.Error.WriteLine($"Editor delete dispatch failed: {ex}"); }
     }
 
+    /// <summary>请求当前聚焦的面板重新导入选中资源。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestReimportSelected()
+    {
+        try { EditorSelection.Reimport(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor reimport dispatch failed: {ex}"); }
+    }
+
+    /// <summary>请求重新导入全部已加载资源，不依赖当前选择。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestReimportAll()
+    {
+        try { EditorAssetsNative.ReimportAllAssets(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor reimport all failed: {ex}"); }
+    }
+
     /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
     public static unsafe void DrawPanel(int handle,
@@ -317,11 +333,11 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 15);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 17);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 138);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 140);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

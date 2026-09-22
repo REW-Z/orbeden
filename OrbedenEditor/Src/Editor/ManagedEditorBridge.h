@@ -26,6 +26,8 @@ private:
     void* RedoFunction = nullptr;
     void* RequestRenameSelectedFunction = nullptr;
     void* RequestDeleteSelectedFunction = nullptr;
+    void* RequestReimportSelectedFunction = nullptr;
+    void* RequestReimportAllFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -74,6 +76,12 @@ public:
 
     //请求当前聚焦的面板删除选中项。
     void RequestDeleteSelected();
+
+    //请求当前聚焦的面板重新导入选中资源。
+    void RequestReimportSelected();
+
+    //请求重新导入全部已加载资源。
+    void RequestReimportAll();
 
     // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,

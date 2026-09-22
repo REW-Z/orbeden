@@ -492,7 +492,7 @@ MyGame/
 
 1. **内容归位**：按旧布局把内容收进内容根（`Resource/` 这一层去掉，`World/` 改名 `Scenes/`，其余顶层目录整体搬入）。
 2. **清空内容根之外**：`Content/`、`.oeproj` 以及以点开头的条目保留，其余全部删除。
-3. **重铺脚手架**：更新 `Templates/Project/` 中的工程文件，跳过 `.oeproj` 和 `Content/`；不复制 `Templates/Examples/`，保留用户对示例的修改与删除。
+3. **重铺脚手架**：更新 `Templates/Project/` 中的工程文件，跳过 `.oeproj` 和 `Content/`；不复制 `Templates/Examples/` 与 `Templates/Builtin/`，保留用户对示例与默认资源的修改和删除（`Builtin/` 只在新建项目时铺设）。
 4. **同步 SDK 产物**：Core C# 运行库与绑定目标。
 5. **写根属性**：最后更新版本号，清掉 `name` / `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景映射后仍存在才更新路径；其它配置保留，不用模板覆盖原 `.oeproj`。
 

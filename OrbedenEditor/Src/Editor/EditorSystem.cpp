@@ -1589,6 +1589,12 @@ const List<EditorShortcut>& EditorSystem::GetEditorShortcuts()
         { "Edit", "Delete", "Delete", ImGuiKey_Delete, false, false, false, EditorShortcutScope::Global,
             [](EditorSystem& editor) { editor.managedBridge.RequestDeleteSelected(); } },
 
+        //重新导入同样由选择系统指名面板；全量版本不依赖选择，直接派发
+        { "Project", "Reimport", "Ctrl+R", ImGuiKey_R, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestReimportSelected(); } },
+        { "Project", "Reimport All", "Ctrl+Shift+R", ImGuiKey_R, true, true, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestReimportAll(); } },
+
         //手柄模式与坐标系跟随鼠标位置，鼠标不在场景视口内时不生效
         { nullptr, nullptr, "W", ImGuiKey_W, false, false, false, EditorShortcutScope::SceneView,
             [](EditorSystem& editor) { editor.editorScene.SetGizmoMode(EditorGizmoMode::Move); } },

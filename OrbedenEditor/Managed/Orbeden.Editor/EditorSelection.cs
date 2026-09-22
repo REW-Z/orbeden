@@ -32,6 +32,9 @@ internal static class EditorSelection
     /// <summary>请求删除当前选中项。</summary>
     public static void Delete() => Dispatch("delete", panel => panel.OnDeleteRequested());
 
+    /// <summary>请求重新导入当前选中项。</summary>
+    public static void Reimport() => Dispatch("reimport", panel => panel.OnReimportRequested());
+
     //只派发给持有选择的面板，且它必须还在显示
     private static void Dispatch(string command, Action<EditorPanel> handler)
     {

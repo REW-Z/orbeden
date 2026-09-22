@@ -483,6 +483,9 @@ internal sealed class ProjectPanel : EditorPanel
                     EditorAssetCatalog.Instance.Refresh();
                     status = "Assets refreshed.";
                 }
+                //这里的 Reimport 以当前目录为范围，覆盖其下全部已加载资源
+                if (EditorGUI.MenuItem("Reimport")) ReimportEntry(currentDirectory);
+                if (EditorGUI.MenuItem("Reimport All")) ReimportAll();
                 //背景菜单以当前目录为上下文，扩展项在空白处也能用
                 ProjectContextMenuRegistry.Draw(new ProjectAssetContext(currentDirectory,
                     EditorAssetCatalog.Instance.ToResourceKey(currentDirectory), true), value => status = value);
@@ -503,6 +506,26 @@ internal sealed class ProjectPanel : EditorPanel
 
     /// <summary>Delete 触发：删除当前选中的资源，先弹确认窗。</summary>
     public override void OnDeleteRequested() => BeginDelete(selectedPath);
+
+    /// <summary>Reimport 触发：重新导入当前选中的资源。</summary>
+    public override void OnReimportRequested() => ReimportEntry(selectedPath);
+
+    //重新导入指定路径的已加载资源；目录连带子路径，两种都报出处理的源文件数
+    private void ReimportEntry(string? entry)
+    {
+        if (string.IsNullOrEmpty(entry)) return;
+        int count = EditorAssetsNative.ReimportAsset(
+            EditorAssetCatalog.Instance.ToResourceKey(entry), Directory.Exists(entry));
+        status = count == 0 ? "Nothing to reimport: no loaded asset under this path."
+            : $"Reimported {count} source file(s).";
+    }
+
+    //重新导入全部已加载资源
+    private void ReimportAll()
+    {
+        int count = EditorAssetsNative.ReimportAllAssets();
+        status = count == 0 ? "Nothing to reimport: no loaded assets." : $"Reimported {count} source file(s).";
+    }
 
     //请求删除：资源删除进回收站且没有撤销，所以先确认
     private void BeginDelete(string? entry)
@@ -740,6 +763,11 @@ internal sealed class ProjectPanel : EditorPanel
             EditorAssetCatalog.Instance.Refresh();
             status = "Assets refreshed.";
         }
+
+        //Reimport 重读磁盘上的源文件，会改已加载对象的内容，空白处的背景菜单也放一份
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Reimport")) ReimportEntry(entry);
+        if (EditorGUI.MenuItem("Reimport All")) ReimportAll();
 
         ProjectAssetContext context = new(entry, EditorAssetCatalog.Instance.ToResourceKey(entry), directory);
         ProjectContextMenuRegistry.Draw(context, value => status = value);

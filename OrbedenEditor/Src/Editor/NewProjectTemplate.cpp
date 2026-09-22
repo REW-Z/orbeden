@@ -15,7 +15,6 @@ namespace
 {
     //项目脚手架与示例内容在模板根下的子目录名。
     constexpr const char* ProjectFolder = "Project";
-    constexpr const char* ExamplesFolder = "Examples";
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
@@ -357,12 +356,17 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
     std::filesystem::path projectRootPath = Utf8Path::FromUtf8(projectRoot);
     if (!CopyTemplateTree(ToCleanPath(root / ProjectFolder), projectRoot, projectName, outError, preserveProjectContent)) return false;
 
-    //仅新建项目初始化示例；升级不覆盖用户已修改或删除的内容。
-    std::filesystem::path examplesRoot = root / ExamplesFolder;
-    if (!preserveProjectContent && std::filesystem::is_directory(examplesRoot))
+    //仅新建项目初始化模板内容；升级不覆盖用户已修改或删除的内容。
+    //Builtin 是默认着色器、材质与基础网格，示例内容引用它，两者一起铺。
+    if (!preserveProjectContent)
     {
-        std::filesystem::path targetRoot = projectRootPath / ProjectLayout::ContentFolder / ExamplesFolder;
-        if (!CopyTemplateTree(ToCleanPath(examplesRoot), ToCleanPath(targetRoot), projectName, outError)) return false;
+        for (const char* folder : { ExamplesFolderName, BuiltinFolderName })
+        {
+            std::filesystem::path sourceRoot = root / folder;
+            if (!std::filesystem::is_directory(sourceRoot)) continue;
+            std::filesystem::path targetRoot = projectRootPath / ProjectLayout::ContentFolder / folder;
+            if (!CopyTemplateTree(ToCleanPath(sourceRoot), ToCleanPath(targetRoot), projectName, outError)) return false;
+        }
     }
 
     Log::Info(("New project template generated: " + ToCleanPath(projectRootPath)).c_str());
