@@ -243,6 +243,32 @@ bool ResourceManager::Unload(const std::string& key)
     return true;
 }
 
+//强制重新导入已加载资源，导入器复用原对象，因此对象身份与引用都不变
+uint32 ResourceManager::Reimport(const std::string& key, bool prefix)
+{
+    const std::string target = key.empty() ? std::string() : GetSourceKey(ToResourceKey(key));
+
+    //先收集命中的源文件 Key：边遍历边导入会让记录表迭代器失效
+    List<std::string> sources;
+    for (const auto& pair : GetResourceRuntime().records)
+    {
+        const std::string source = GetSourceKey(pair.first);
+        if (source.empty()) continue;
+        bool matched = target.empty() || source == target
+            || (prefix && source.size() > target.size()
+                && source.compare(0, target.size(), target) == 0 && source[target.size()] == '/');
+        if (matched && std::find(sources.begin(), sources.end(), source) == sources.end()) sources.push_back(source);
+    }
+
+    //重新导入读源文件并原地写入原对象，各资源按自身脏标记重建 GPU 资源
+    for (const std::string& source : sources)
+    {
+        AssetCollection collection = AssetPipeline::ImportSource(source);
+        (void)collection;
+    }
+    return static_cast<uint32>(sources.size());
+}
+
 //注册导入出来的资源对象
 bool ResourceManager::RegisterObject(const std::string& key, Object* object)
 {

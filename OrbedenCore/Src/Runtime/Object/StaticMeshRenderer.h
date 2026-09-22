@@ -29,6 +29,7 @@ private:
     friend class RenderScene;
     friend class SceneCuller;
     friend class ForwardPipeline;
+    friend class CascadedShadowMap;
 
     bool enabled = true;
     Ref<Mesh> runtimeMesh;

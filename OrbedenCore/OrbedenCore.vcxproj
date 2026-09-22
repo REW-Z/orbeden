@@ -171,6 +171,8 @@
     <ClInclude Include="Src\Rendering\Backend\OpenGLContext.h" />
     <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h" />
     <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />
+    <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h" />
+    <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
     <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
     <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
     <ClInclude Include="Src\Rendering\ImGuiLayer.h" />
@@ -247,6 +249,8 @@
     <ClCompile Include="Src\InputManager\InputManager.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
+    <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
     <ClCompile Include="Src\Rendering\ImGuiLayer.cpp" />

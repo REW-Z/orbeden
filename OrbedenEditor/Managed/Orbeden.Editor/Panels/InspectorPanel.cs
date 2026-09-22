@@ -73,6 +73,10 @@ internal sealed class InspectorPanel : EditorPanel
     private string status = "Game assembly is not loaded.";
     private static string propertyError = string.Empty;
 
+    //组件卡片右键菜单的弹窗 id 后缀。原生 EditorGuiBeginCollapsibleComponentBlock 用同一个后缀开弹窗，
+    //两边算出的 ID 必须一致，改这里就要同步改那边。
+    private const string MenuIdSuffix = "##component_menu";
+
     public override EditorPanelInfo Info => new(
         "inspector",
         "Inspector",
@@ -323,14 +327,22 @@ internal sealed class InspectorPanel : EditorPanel
         string title = GetComponentTitle(primary);
         bool removable = primary.IsManaged
             || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
+        //卡片身份：原生用它 PushID，也是标题右键菜单弹窗 id 的前半段
+        string identity = $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}";
         bool expanded = EditorGUI.BeginCollapsibleComponentBlock(
             title,
             EditorIconCatalog.ForComponent(primary.TypeName, primary.IsManaged),
-            $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}",
+            identity,
             removable,
             out bool removeRequested);
         try
         {
+            //菜单必须画在组件块内：原生是在这一层的 ID 栈上开的弹窗，挪到 EndComponentBlock 之后就换了 ID
+            if (EditorGUI.BeginPopupContextItem(identity + MenuIdSuffix))
+            {
+                try { DrawComponentMenu(selection, components); }
+                finally { EditorGUI.EndPopup(); }
+            }
             if (expanded && !removeRequested)
             {
                 bool rebuild = !componentDocuments.TryGetValue(primary.ObjectId, out ComponentDocument? cached)
@@ -358,6 +370,79 @@ internal sealed class InspectorPanel : EditorPanel
         }
 
         if (removeRequested) RemoveComponentGroup(selection, components, title);
+    }
+
+    //绘制组件卡片标题的右键菜单
+    private void DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
+    {
+        NativeComponentInfo primary = components[0];
+        if (EditorGUI.MenuItem("Copy Component")) EditorComponentClipboard.Capture(primary, asNew: true);
+        if (EditorGUI.MenuItem("Copy Component Values")) EditorComponentClipboard.Capture(primary, asNew: false);
+        if (EditorGUI.MenuItem("Paste Component As New", EditorComponentClipboard.CanPasteAsNew))
+            PasteComponentAsNew(selection);
+        if (EditorGUI.MenuItem("Paste Component Values", EditorComponentClipboard.Matches(primary)))
+            PasteComponentValues(components);
+
+        //Script 的派生类才算脚本：C# 托管宿主与 C++ 脚本都命中，Transform / Camera 这类内建组件不命中
+        if (!EditorNativeComponents.MatchesComponentType(primary.ObjectId, "Script")) return;
+        //托管脚本要程序集里还有这个类型才有文件可去，「Missing Script」置灰；原生组件的类型必然还在
+        bool resolvable = !primary.IsManaged || FindScriptType(primary.TypeName) != null;
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Edit Script", resolvable)
+            && !EditorScriptFiles.Edit(primary.TypeName, primary.IsManaged)) status = ScriptFileMissing(primary.TypeName);
+        if (EditorGUI.MenuItem("Locate Script", resolvable)
+            && !EditorScriptFiles.Locate(primary.TypeName, primary.IsManaged)) status = ScriptFileMissing(primary.TypeName);
+    }
+
+    //脚本在程序集里有，但内容根下找不到对应文件
+    private static string ScriptFileMissing(string scriptType)
+        => $"Script file not found for {scriptType}. Scripts must live under the content root.";
+
+    //按剪贴板里的类型新建组件，再把复制来的字段值一起填进去
+    private void PasteComponentAsNew(IReadOnlyList<EnsId> selection)
+    {
+        ComponentClipboardEntry? entry = EditorComponentClipboard.Entry;
+        if (entry == null || entry.TypeName.Length == 0) return;
+
+        Type? managedType = entry.IsManaged ? FindScriptType(entry.TypeName) : null;
+        if (entry.IsManaged && managedType == null)
+        {
+            status = $"Script type is not available: {entry.TypeName}";
+            return;
+        }
+        string domain = entry.IsManaged ? "[C#]" : "[C++]";
+        AddComponentGroup(selection,
+            new ComponentAddChoice(entry.TypeName, $"{domain} {GetShortTypeName(entry.TypeName)}", entry.IsManaged, managedType),
+            entry.Values);
+    }
+
+    //把剪贴板里的字段值覆盖到每个选中对象上的同类型组件
+    private void PasteComponentValues(IReadOnlyList<NativeComponentInfo> components)
+    {
+        ComponentClipboardEntry? entry = EditorComponentClipboard.Entry;
+        if (entry == null || entry.Values.Count == 0) return;
+
+        //借 PropertyDocument 走完整的校验、回滚与撤销：它只认多目标共有的、类型一致的字段
+        PropertyDocument document = new(components
+            .Select(component => (IPropertyTarget)new NativeComponentPropertyTarget(component, EditorApplication.MarkWorldDirty))
+            .ToList());
+        document.Update();
+        int matched = 0;
+        foreach ((string name, InteropValueKind kind, InteropValue value) in entry.Values)
+        {
+            PropertyValue? property = document.FindProperty(name);
+            if (property == null || property.Kind != kind || !property.IsReadable) continue;
+            property.SetValue(value);
+            ++matched;
+        }
+        if (matched == 0)
+        {
+            status = $"No matching fields to paste for {GetShortTypeName(entry.TypeName)}.";
+            return;
+        }
+        if (!document.ApplyChanges($"Paste {GetShortTypeName(entry.TypeName)} Values"))
+            status = "Paste Component Values failed; changes were rolled back.";
+        TouchWorld();
     }
 
     //生成带语言域标记的组件标题。
@@ -549,7 +634,9 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //原子地为全部选择对象添加同一种组件。
-    private void AddComponentGroup(IReadOnlyList<EnsId> selection, ComponentAddChoice choice)
+    //initialValues 非空时，把这份字段值回填进新建的组件（粘贴用）；只回填到目标类型上，不碰顺带补齐的依赖组件。
+    private void AddComponentGroup(IReadOnlyList<EnsId> selection, ComponentAddChoice choice,
+        IReadOnlyList<(string Name, InteropValueKind Kind, InteropValue Value)>? initialValues = null)
     {
         List<ComponentSnapshot> created = [];
         try
@@ -580,6 +667,10 @@ internal sealed class InspectorPanel : EditorPanel
                     ComponentSnapshot snapshot = CaptureComponent(ens, component);
                     created.Add(snapshot);
                     if (item.IsManaged && item.ManagedType != null) EditorNativeComponents.InitializeManagedFields(ens, objectId, item.ManagedType);
+                    //回填要排在托管字段初始化之后、快照之前：撤销恢复出来的才是粘贴后的值
+                    if (initialValues != null
+                        && item.IsManaged == choice.IsManaged && item.TypeName == choice.TypeName)
+                        ApplyInitialValues(objectId, item, initialValues);
                     snapshot.Xml = EditorNativeComponents.CaptureComponent(objectId);
                 }
             }
@@ -604,6 +695,20 @@ internal sealed class InspectorPanel : EditorPanel
                 RestoreSnapshots(created);
                 TouchWorld();
             });
+    }
+
+    //把复制来的字段值写进刚建好的组件；类型对不上的字段跳过
+    private static void ApplyInitialValues(int objectId, ComponentAddChoice choice,
+        IReadOnlyList<(string Name, InteropValueKind Kind, InteropValue Value)> values)
+    {
+        NativeComponentPropertyTarget target = new(
+            new NativeComponentInfo(objectId, choice.TypeName, choice.IsManaged), EditorApplication.MarkWorldDirty);
+        target.Refresh();
+        foreach ((string name, _, InteropValue value) in values)
+        {
+            if (target.Validate(name, value) != InteropStatus.Ok) continue;
+            target.Set(name, value);
+        }
     }
 
     /// <summary>验证依赖图并生成依赖优先的创建顺序。</summary>

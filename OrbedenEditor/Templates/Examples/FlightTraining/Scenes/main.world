@@ -61,9 +61,9 @@
                 <Field name="color" type="color" value="1 0.959999979 0.860000014 1" />
                 <Field name="intensity" type="float32" value="1.39999998" />
                 <Field name="castShadows" type="bool" value="true" />
-                <Field name="shadowBias" type="float32" value="0.00400000019" />
+                <Field name="shadowBias" type="float32" value="0.0005" />
                 <Field name="shadowStrength" type="float32" value="0.449999988" />
-                <Field name="shadowDistance" type="float32" value="180" />
+                <Field name="shadowDistance" type="float32" value="20000" />
             </Component>
         </Ens>
         <Ens stableId="world://FlightTraining/main/runway" name="Runway" localActive="true">

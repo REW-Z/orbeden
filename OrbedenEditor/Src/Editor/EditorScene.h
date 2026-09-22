@@ -49,11 +49,20 @@ private:
     EnsId cameraEns;
     float32 cameraYaw = 35.0f;
     float32 cameraPitch = -22.0f;
-    float32 cameraMoveSpeed = 5.0f;
+    //相机沿视线前方向到焦点的距离，焦点 = 位置 + 前方向 * 这个距离。
+    //滚轮推近、平移速率与环绕旋转都挂在它上面，它就是「当前聚焦对象」的载体
+    float32 cameraFocusDistance = DefaultEditorCameraFocusDistance;
     bool cameraMouseDragging = false;
     int32 cameraMouseMode = 0;
     double previousMouseX = 0.0;
     double previousMouseY = 0.0;
+    //聚焦动画：固定时长、三次方缓出
+    bool focusAnimating = false;
+    float32 focusAnimationElapsed = 0.0f;
+    vector3 focusAnimationFrom;
+    vector3 focusAnimationTo;
+    float32 focusDistanceFrom = 0.0f;
+    float32 focusDistanceTo = 0.0f;
     bool selectionPressed = false;
     bool selectionDragged = false;
     bool selectionCtrl = false;
@@ -81,6 +90,12 @@ public:
 
     /// <summary>更新编辑器观察相机。</summary>
     void Update(World& world, float32 deltaTime, float32 mouseWheel);
+
+    /// <summary>把编辑器观察相机对准指定 Ens：只挪位置，保持当前朝向。</summary>
+    void FocusEns(World& world, EnsId ens);
+
+    /// <summary>聚焦动画是否还在进行；编辑器据此保持连续重绘。</summary>
+    bool IsAnimatingFocus() const;
 
     /// <summary>按场景视口可见性维护离屏目标并绑定编辑相机。</summary>
     void RefreshSceneViewTarget(World& world);
@@ -181,6 +196,12 @@ public:
 private:
     //创建或修复编辑器观察相机。
     void CreateEditorCamera(World& world);
+
+    //启动一次聚焦动画：位置与聚焦距离一起插值过去。
+    void StartFocusAnimation(const vector3& fromPosition, const vector3& toPosition, float32 toDistance);
+
+    //推进一次聚焦动画；返回本帧是否写出了位置。
+    bool AdvanceFocusAnimation(float32 deltaTime, vector3& position);
 
     //在当前上下文的绘制列表上提交选择轮廓与托管 Handles。
     void DrawSceneOverlay();

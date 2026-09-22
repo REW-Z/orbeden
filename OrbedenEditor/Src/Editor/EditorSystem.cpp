@@ -407,6 +407,8 @@ void EditorSystem::Update(World& world, float deltaTime)
     if (!playMode.IsPlaying())
     {
         editorScene.Update(world, deltaTime, mouseWheel);
+        //空闲编辑器不出帧，聚焦动画得自己把下一帧要过来，否则会卡在半路
+        if (editorScene.IsAnimatingFocus()) RequestRepaint();
     }
 
     //场景改为离屏渲染后主窗口不再被场景填充，需要在渲染前清空
@@ -461,8 +463,15 @@ void EditorSystem::RenderEditorGUI()
     //独立窗口创建或销毁发生在绘制之后，需要唤醒下一轮事件循环
     if (panelManager.TakeRepaintRequest()) RequestRepaint();
 
-    //更新连续重绘状态，独立窗口中的活动控件同样需要连续帧
-    continuousRepaint = ImGui::IsAnyItemActive() || panelManager.IsAnyFloatingItemActive();
+    //更新连续重绘状态。除了活动控件与独立窗口，模态暗化层的淡入淡出也要连续帧：
+    //它每帧才推进一点（涨 6/s、退 10/s），隔帧绘制会一直卡在中间。
+    //判据是「还没走到目标值」而不是「模态开着」——涨满只要 0.17 秒，
+    //按模态开着算会让弹窗停留的整段时间都跑满帧率，白烧渲染。
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    float32 dimTarget = ImGui::GetTopMostPopupModal() != nullptr ? 1.0f : 0.0f;
+    continuousRepaint = ImGui::IsAnyItemActive()
+        || panelManager.IsAnyFloatingItemActive()
+        || (context != nullptr && context->DimBgRatio != dimTarget);
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)
         || ImGui::IsMouseReleased(ImGuiMouseButton_Right)
         || ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
@@ -702,6 +711,13 @@ bool EditorSystem::ReloadProjectContent()
     managedBridge.UnloadGameAssembly();
     editorScene.ClearSceneState();
     app.GetWorld().Clear();
+    //镜像只写磁盘文件，已加载的资源对象仍攥着旧源码与旧 GPU 包装；
+    //不清资源注册表的话，重载世界拿到的还是旧对象，改过的 Shader 不会重新导入。
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        renderSystem->InvalidateResourceCaches();
+    }
+    ResourceManager::Shutdown();
     if (!BuildNativeGameModule(false)) return false;
     if (!project.IsWorldLoaded() && !project.ReloadWorld())
     {

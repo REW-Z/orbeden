@@ -182,11 +182,15 @@ internal static unsafe class NativeEditorGUI
     //结束滚动区域
     internal static void EndChild() => api.EndChild();
 
-    //绘制目录节点并返回展开与点击状态
-    internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false)
+    //绘制目录节点。返回值：1 展开、2 点击、4 Ctrl、8 双击
+    internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false, bool forceOpen = false)
     {
         byte[] bytes = Encode(label);
-        fixed (byte* pointer = bytes) return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0) | (defaultOpen ? 4 : 0)));
+        fixed (byte* pointer = bytes)
+        {
+            return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
+                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0)));
+        }
     }
 
     //结束目录节点
@@ -288,7 +292,7 @@ internal static unsafe class NativeEditorGUI
         }
     }
 
-    //绘制对象引用框并返回操作：0 无 1 点击 2 清空 3 选择器
+    //绘制对象引用框并返回操作：0 无 1 点击 2 清空 3 选择器 4 双击
     internal static int ReferenceField(string? icon, string? text, string? id)
     {
         if (!initialized || api.ReferenceField == null) return 0;

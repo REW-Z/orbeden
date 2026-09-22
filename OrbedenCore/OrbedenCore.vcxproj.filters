@@ -183,6 +183,12 @@
     <ClInclude Include="Src\Rendering\GpuResourceManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Rendering\CascadedShadowMap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Rendering\ForwardPipeline.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -357,6 +363,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp">

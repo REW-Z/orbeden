@@ -56,10 +56,7 @@ internal static class EditorDialog
         open = NativeEditorGUI.BeginDialog(label, width);
         if (!open) return;
 
-        //弹窗开着就保持出帧。ImGui 的模态暗化层是按 6/s 淡入的动画，而编辑器空闲时不出帧，
-        //暗化层会卡在几乎看不见的状态，深色的弹窗贴在深色界面上跟没弹出来一样
-        EditorApplication.RequestRepaint();
-
+        //不必在这里请求重绘：模态暗化层是逐帧淡入的，出帧由 EditorSystem 的「模态框保持连续帧」统一保证
         try { DrawBody(); }
         finally { EditorGUI.EndPopup(); }
     }

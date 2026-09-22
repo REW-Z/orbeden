@@ -40,7 +40,7 @@ namespace
     constexpr float32 AxisThickness = 2.5f;
     constexpr float32 HotThickness = 3.5f;
 
-    //三轴配色沿用 Unity 习惯，占用中统一转琥珀色
+    //三轴沿用业界通行的红绿蓝色序，命中或拖拽中统一转琥珀色
     constexpr EditorGizmoColor AxisColors[3] =
     {
         { 0.88f, 0.24f, 0.24f, 0.93f },
@@ -354,7 +354,7 @@ bool EditorGizmoHandles::BuildContext(World& world, const EditorGizmoView& view,
 
     context.pivot = hasBounds ? merged.center : ScaleVector(positionSum, 1.0f / static_cast<float32>(aliveCount));
 
-    //局部轴取主选中对象的世界旋转，与 Unity 的 active transform 语义一致
+    //局部坐标系取主选中对象的世界旋转：多选时以活动对象为准，而不是取各自朝向的平均
     EnsId activeEns = scene.GetSelectedEns();
     Transform* activeTransform = activeEns.IsNull() ? nullptr : world.GetTransform(activeEns);
     context.pivotRotation = (orientation == EditorGizmoOrientation::Local && activeTransform)

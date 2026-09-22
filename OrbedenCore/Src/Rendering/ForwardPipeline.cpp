@@ -100,30 +100,6 @@ namespace
         return result;
     }
 
-    //计算向量和
-    vector3 Add(const vector3& a, const vector3& b)
-    {
-        return { a.x + b.x, a.y + b.y, a.z + b.z };
-    }
-
-    //计算向量差
-    vector3 Sub(const vector3& a, const vector3& b)
-    {
-        return { a.x - b.x, a.y - b.y, a.z - b.z };
-    }
-
-    //缩放向量
-    vector3 Scale(const vector3& value, float32 scale)
-    {
-        return { value.x * scale, value.y * scale, value.z * scale };
-    }
-
-    //判断向量是否接近零
-    bool IsZero(const vector3& value)
-    {
-        return RenderMath::Dot(value, value) <= 0.000001f;
-    }
-
     //转换 Pass 三态开关
     bool ConvertPassToggleToBool(ShaderPassToggle value, bool baseline)
     {
@@ -167,67 +143,11 @@ namespace
     }
 }
 
-//计算场景包围盒中心
-vector3 ForwardPipeline::CalculateSceneCenter(const RenderScene& scene) const
-{
-    bool hasBounds = false;
-    vector3 minValue;
-    vector3 maxValue;
-
-    //合并渲染器包围盒
-    for (StaticMeshRenderer* renderer : scene.renderers)
-    {
-        if (!renderer || !renderer->IsRenderSceneEligible()) continue;
-
-        const StaticMeshRendererRenderState& state = renderer->renderState;
-        if (!state.worldBounds.valid) continue;
-
-        vector3 itemMin = Sub(state.worldBounds.center, state.worldBounds.extents);
-        vector3 itemMax = Add(state.worldBounds.center, state.worldBounds.extents);
-        if (!hasBounds)
-        {
-            minValue = itemMin;
-            maxValue = itemMax;
-            hasBounds = true;
-            continue;
-        }
-
-        minValue.x = std::min(minValue.x, itemMin.x);
-        minValue.y = std::min(minValue.y, itemMin.y);
-        minValue.z = std::min(minValue.z, itemMin.z);
-        maxValue.x = std::max(maxValue.x, itemMax.x);
-        maxValue.y = std::max(maxValue.y, itemMax.y);
-        maxValue.z = std::max(maxValue.z, itemMax.z);
-    }
-
-    //返回场景中心
-    return hasBounds ? Scale(Add(minValue, maxValue), 0.5f) : vector3();
-}
-
-//计算阴影视图投影矩阵
-matrix4x4 ForwardPipeline::CalculateLightViewProjection(const RenderScene& scene, const RenderDirectionalLight& light) const
-{
-    //计算光源观察参数
-    vector3 center = scene.cameras.empty() ? CalculateSceneCenter(scene) : scene.cameras.front().position;
-    vector3 direction = RenderMath::Normalize(light.direction);
-    if (IsZero(direction)) direction = RenderMath::Normalize({ -0.35f, -1.0f, -0.45f });
-
-    //计算阴影覆盖范围
-    float32 distance = std::max(light.shadowDistance, 4.0f);
-    float32 halfSize = std::max(distance * 0.5f, 8.0f);
-    vector3 eye = Sub(center, Scale(direction, distance));
-    vector3 up = std::abs(RenderMath::Dot(direction, { 0.0f, 1.0f, 0.0f })) > 0.9f ? vector3{ 0.0f, 0.0f, 1.0f } : vector3{ 0.0f, 1.0f, 0.0f };
-
-    //构造正交光源矩阵
-    matrix4x4 view = RenderMath::LookAt(eye, center, up);
-    matrix4x4 projection = RenderMath::Orthographic(-halfSize, halfSize, -halfSize, halfSize, 0.1f, distance * 2.5f);
-    return RenderMath::Mul(projection, view);
-}
-
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
 {
     //绑定渲染后端
     backend = renderBackend;
+    shadows.Initialize(backend);
     builtinShadersInvalidated = true;
 }
 
@@ -236,18 +156,14 @@ void ForwardPipeline::InvalidateResourceCaches()
     //释放管线 GPU 资源
     if (backend)
     {
-        backend->DeleteRenderTarget(shadowRenderTarget);
-        backend->DeleteDepthTexture(shadowDepthTexture);
+        shadows.Shutdown();
+        shadows.Initialize(backend);
         DeleteGpuMesh(backend, skyboxMesh);
     }
 
     //重置管线资源状态
-    shadowRenderTarget = GpuRenderTargetID();
-    shadowDepthTexture = GpuDepthTextureID();
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
-    lightViewProjection = matrix4x4();
-    shadowReady = false;
     builtinShadersInvalidated = true;
     //内容根可能已经换了，内置 Shader 的解析结果作废。
     GetBuiltinShaderKeys() = BuiltinShaderKeys();
@@ -256,26 +172,16 @@ void ForwardPipeline::InvalidateResourceCaches()
 void ForwardPipeline::Shutdown()
 {
     InvalidateResourceCaches();
+    shadows.Shutdown();
     backend = nullptr;
 }
 
 void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& gpuResourceManager)
 {
-    //重置阴影帧状态
-    shadowReady = false;
-    lightViewProjection = matrix4x4();
     if (!backend) return;
-
-    //加载内置 Shader
     LoadBuiltinShaders();
-
-    //选择阴影方向光
-    const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
-    if (!shadowLight) return;
-
-    //渲染阴影贴图
-    lightViewProjection = CalculateLightViewProjection(scene, *shadowLight);
-    shadowReady = RenderShadowPass(scene, *shadowLight, lightViewProjection, gpuResourceManager);
+    shadows.BeginFrame(scene);
+    (void)gpuResourceManager;
 }
 
 void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager)
@@ -286,6 +192,14 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     const RenderCamera& camera = visibleSet.camera;
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
     const RenderDirectionalLight* mainLight = shadowLight ? shadowLight : FindMainLight(scene);
+
+    //生成当前相机的级联阴影
+    if (shadowLight)
+    {
+        Shader* depthShader = GetOrLoadBuiltinShader(shadowDepthShader,
+            ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
+        shadows.Render(scene, camera, *shadowLight, depthShader, gpuResourceManager);
+    }
 
     //开始相机主 Pass
     RenderPassDesc passDesc;
@@ -339,6 +253,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     backend->EndPass();
+    if (cameraTexturesReady) shadows.CaptureDepth(camera);
 }
 
 //绘制指定队列的可见项
@@ -388,7 +303,7 @@ void ForwardPipeline::RenderQueueItems(
             {
                 //绑定全局渲染参数
                 backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-                backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
+                shadows.BindUniforms(camera);
                 backend->SetUniformVector3("u_CameraPosition", camera.position);
                 backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
                 backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
@@ -400,15 +315,13 @@ void ForwardPipeline::RenderQueueItems(
                     backend->SetUniformVector3("u_LightDirection", mainLight->direction);
                     backend->SetUniformColor("u_LightColor", mainLight->color);
                     backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
-                    backend->SetUniformFloat("u_ShadowBias", mainLight->shadowBias);
-                    backend->SetUniformFloat("u_ShadowStrength", mainLight->shadowStrength);
+                    backend->SetUniformFloat("u_ShadowStrength", std::clamp(mainLight->shadowStrength, 0.0f, 1.0f));
                 }
                 else
                 {
                     backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
                     backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
                     backend->SetUniformFloat("u_LightIntensity", 0.0f);
-                    backend->SetUniformFloat("u_ShadowBias", 0.004f);
                     backend->SetUniformFloat("u_ShadowStrength", 0.0f);
                 }
             }
@@ -433,9 +346,7 @@ void ForwardPipeline::RenderQueueItems(
 
             //绑定内置渲染纹理
             uint32 shadowTextureSlot = static_cast<uint32>(material->textureBindings.size());
-            backend->SetUniformInt("u_ShadowMap", static_cast<int32>(shadowTextureSlot));
-            backend->SetUniformInt("u_UseShadowMap", shadowReady ? 1 : 0);
-            backend->BindDepthTexture(shadowTextureSlot, shadowReady ? shadowDepthTexture : GpuDepthTextureID());
+            shadows.BindTexture(shadowTextureSlot);
             backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
 
             if (drawQueue == DrawQueue::Refraction)
@@ -477,43 +388,6 @@ void ForwardPipeline::LoadBuiltinShaders()
     {
         Log::Error("ForwardPipeline: skybox.orbshader was not found in the content root.");
     }
-}
-
-bool ForwardPipeline::PrepareShadowResources()
-{
-    if (!backend) return false;
-
-    //复用阴影资源
-    if (shadowDepthTexture.IsValid() && shadowRenderTarget.IsValid()) return true;
-
-    //创建阴影深度纹理
-    GpuDepthTextureDesc depthDesc;
-    depthDesc.width = shadowMapSize;
-    depthDesc.height = shadowMapSize;
-    shadowDepthTexture = backend->CreateDepthTexture(depthDesc);
-    if (!shadowDepthTexture.IsValid())
-    {
-        Log::Error("ForwardPipeline shadow setup failed: depth texture creation failed.");
-        return false;
-    }
-
-    //创建阴影渲染目标
-    GpuRenderTargetDesc targetDesc;
-    targetDesc.width = shadowMapSize;
-    targetDesc.height = shadowMapSize;
-    targetDesc.depthTexture = shadowDepthTexture;
-    targetDesc.depthOnly = true;
-    shadowRenderTarget = backend->CreateRenderTarget(targetDesc);
-    if (!shadowRenderTarget.IsValid())
-    {
-        Log::Error("ForwardPipeline shadow setup failed: render target creation failed.");
-        backend->DeleteDepthTexture(shadowDepthTexture);
-        shadowDepthTexture = GpuDepthTextureID();
-        return false;
-    }
-
-    //完成阴影资源创建
-    return true;
 }
 
 bool ForwardPipeline::PrepareSkyboxMesh()
@@ -584,68 +458,6 @@ bool ForwardPipeline::PrepareSkyboxMesh()
         return false;
     }
 
-    return true;
-}
-
-bool ForwardPipeline::RenderShadowPass(const RenderScene& scene, const RenderDirectionalLight& light, const matrix4x4& lightViewProjection, GpuResourceManager& gpuResourceManager)
-{
-    //准备阴影 Shader 和渲染目标
-    Shader* sourceShader = GetOrLoadBuiltinShader(shadowDepthShader,
-        ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
-    if (!PrepareShadowResources() || !sourceShader) return false;
-
-    //上传阴影 Shader
-    const GpuShader* shader = gpuResourceManager.GetShader(sourceShader);
-    if (!shader) return false;
-
-    //开始阴影 Pass
-    RenderPassDesc passDesc;
-    passDesc.width = shadowMapSize;
-    passDesc.height = shadowMapSize;
-    passDesc.renderTarget = shadowRenderTarget;
-    passDesc.clearMode = ClearMode::DepthOnly;
-    backend->BeginPass(passDesc);
-    backend->SetDepthTest(true);
-    backend->SetDepthWrite(true);
-    backend->SetBlend(false);
-    const GpuShaderPass& shaderPass = shader->passes[0];
-    backend->BindShaderProgram(shaderPass.shaderProgram);
-    backend->SetUniformMatrix4("u_LightViewProjection", lightViewProjection);
-
-    //筛选阴影投射物
-    frustum lightFrustum = RenderMath::BuildFrustum(lightViewProjection);
-    for (StaticMeshRenderer* renderer : scene.renderers)
-    {
-        if (!renderer || !renderer->IsRenderSceneEligible() || renderer->drawQueue != DrawQueue::Opaque) continue;
-
-        const StaticMeshRendererRenderState& state = renderer->renderState;
-        Mesh* sourceMesh = state.mesh;
-        if (!renderer->castShadows || !sourceMesh) continue;
-        if (!RenderMath::Intersects(lightFrustum, state.worldBounds)) continue;
-
-        //绘制阴影投射物
-        const GpuMesh* mesh = gpuResourceManager.GetMesh(sourceMesh);
-        if (!mesh) continue;
-
-        backend->SetUniformMatrix4("u_Model", state.localToWorld);
-        backend->BindVertexInput(mesh->vertexInput);
-        for (usize index = 0; index < sourceMesh->subMeshes.size(); ++index)
-        {
-            const SubMesh& subMesh = sourceMesh->subMeshes[index];
-            usize start = static_cast<usize>(subMesh.indexStart);
-            usize count = static_cast<usize>(subMesh.indexCount);
-            if (index >= renderer->materials.size() || !renderer->materials[index].Get() || count == 0 ||
-                start > sourceMesh->indices.size() || count > sourceMesh->indices.size() - start) continue;
-
-            backend->DrawIndexed(subMesh.indexStart, subMesh.indexCount);
-        }
-    }
-
-    //结束阴影 Pass
-    backend->BindVertexInput(GpuVertexInputID());
-    backend->BindShaderProgram(GpuShaderProgramID());
-    backend->EndPass();
-    (void)light;
     return true;
 }
 

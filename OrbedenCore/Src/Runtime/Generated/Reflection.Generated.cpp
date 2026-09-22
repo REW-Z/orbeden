@@ -1414,6 +1414,209 @@ public:
         return Reflection::SetFromValue(instance->shadowDistance, value);
     }
 
+    //读取 DirectionalLight.shadowCascadeCount 字段
+    static std::string Get_DirectionalLight_shadowCascadeCount(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowCascadeCount);
+    }
+
+    //直接读取 DirectionalLight.shadowCascadeCount 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowCascadeCount(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowCascadeCount) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowCascadeCount 字段
+    static bool Set_DirectionalLight_shadowCascadeCount(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowCascadeCount, value);
+    }
+
+    //直接写入 DirectionalLight.shadowCascadeCount 字段
+    static bool SetValue_DirectionalLight_shadowCascadeCount(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowCascadeCount, value);
+    }
+
+    //读取 DirectionalLight.shadowMapResolution 字段
+    static std::string Get_DirectionalLight_shadowMapResolution(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowMapResolution);
+    }
+
+    //直接读取 DirectionalLight.shadowMapResolution 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowMapResolution(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowMapResolution) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowMapResolution 字段
+    static bool Set_DirectionalLight_shadowMapResolution(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowMapResolution, value);
+    }
+
+    //直接写入 DirectionalLight.shadowMapResolution 字段
+    static bool SetValue_DirectionalLight_shadowMapResolution(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowMapResolution, value);
+    }
+
+    //读取 DirectionalLight.shadowSplitLambda 字段
+    static std::string Get_DirectionalLight_shadowSplitLambda(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowSplitLambda);
+    }
+
+    //直接读取 DirectionalLight.shadowSplitLambda 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowSplitLambda(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowSplitLambda) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowSplitLambda 字段
+    static bool Set_DirectionalLight_shadowSplitLambda(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowSplitLambda, value);
+    }
+
+    //直接写入 DirectionalLight.shadowSplitLambda 字段
+    static bool SetValue_DirectionalLight_shadowSplitLambda(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowSplitLambda, value);
+    }
+
+    //读取 DirectionalLight.shadowAdaptive 字段
+    static std::string Get_DirectionalLight_shadowAdaptive(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowAdaptive);
+    }
+
+    //直接读取 DirectionalLight.shadowAdaptive 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowAdaptive(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowAdaptive) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowAdaptive 字段
+    static bool Set_DirectionalLight_shadowAdaptive(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowAdaptive, value);
+    }
+
+    //直接写入 DirectionalLight.shadowAdaptive 字段
+    static bool SetValue_DirectionalLight_shadowAdaptive(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowAdaptive, value);
+    }
+
+    //读取 DirectionalLight.shadowNormalBias 字段
+    static std::string Get_DirectionalLight_shadowNormalBias(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowNormalBias);
+    }
+
+    //直接读取 DirectionalLight.shadowNormalBias 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowNormalBias(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowNormalBias) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowNormalBias 字段
+    static bool Set_DirectionalLight_shadowNormalBias(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowNormalBias, value);
+    }
+
+    //直接写入 DirectionalLight.shadowNormalBias 字段
+    static bool SetValue_DirectionalLight_shadowNormalBias(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowNormalBias, value);
+    }
+
+    //读取 DirectionalLight.shadowBlendRatio 字段
+    static std::string Get_DirectionalLight_shadowBlendRatio(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowBlendRatio);
+    }
+
+    //直接读取 DirectionalLight.shadowBlendRatio 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowBlendRatio(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowBlendRatio) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowBlendRatio 字段
+    static bool Set_DirectionalLight_shadowBlendRatio(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowBlendRatio, value);
+    }
+
+    //直接写入 DirectionalLight.shadowBlendRatio 字段
+    static bool SetValue_DirectionalLight_shadowBlendRatio(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowBlendRatio, value);
+    }
+
+    //读取 DirectionalLight.shadowDebugView 字段
+    static std::string Get_DirectionalLight_shadowDebugView(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::ToXmlValue(instance->shadowDebugView);
+    }
+
+    //直接读取 DirectionalLight.shadowDebugView 字段
+    static Reflection::Value GetValue_DirectionalLight_shadowDebugView(Object* object)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return instance ? Reflection::ToValue(instance->shadowDebugView) : Reflection::Value();
+    }
+
+    //写入 DirectionalLight.shadowDebugView 字段
+    static bool Set_DirectionalLight_shadowDebugView(Object* object, const std::string& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return Reflection::SetFromXmlValue(instance->shadowDebugView, value);
+    }
+
+    //直接写入 DirectionalLight.shadowDebugView 字段
+    static bool SetValue_DirectionalLight_shadowDebugView(Object* object, const Reflection::Value& value)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->shadowDebugView, value);
+    }
+
     //调用 DirectionalLight.GetEnabled 方法
     static Reflection::Value Invoke_DirectionalLight_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3893,6 +4096,42 @@ public:
         return Reflection::SetFromValue(instance->format, value);
     }
 
+    //调用 Texture2D.IsDirty 方法
+    static Reflection::Value Invoke_Texture2D_IsDirty_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsDirty();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Texture2D.MarkDirty 方法
+    static Reflection::Value Invoke_Texture2D_MarkDirty_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->MarkDirty();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Texture2D.ClearDirty 方法
+    static Reflection::Value Invoke_Texture2D_ClearDirty_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->ClearDirty();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Transform.localPosition 字段
     static std::string Get_Transform_localPosition(Object* object)
     {
@@ -4753,6 +4992,13 @@ namespace Reflection
                 FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBias),
                 FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowStrength),
                 FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDistance),
+                FieldInfo("shadowCascadeCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::Set_DirectionalLight_shadowCascadeCount, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowCascadeCount),
+                FieldInfo("shadowMapResolution", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::Set_DirectionalLight_shadowMapResolution, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowMapResolution),
+                FieldInfo("shadowSplitLambda", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::Set_DirectionalLight_shadowSplitLambda, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowSplitLambda),
+                FieldInfo("shadowAdaptive", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::Set_DirectionalLight_shadowAdaptive, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowAdaptive),
+                FieldInfo("shadowNormalBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowNormalBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowNormalBias),
+                FieldInfo("shadowBlendRatio", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBlendRatio, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBlendRatio),
+                FieldInfo("shadowDebugView", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDebugView, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDebugView, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDebugView, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDebugView),
             });
 
         RegisterTypeMethods(DirectionalLight::StaticType(),
@@ -4969,6 +5215,7 @@ namespace Reflection
             {
                 FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_name, ReflectionGeneratedAccess::SetValue_Texture2D_name),
                 FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_width, ReflectionGeneratedAccess::SetValue_Texture2D_width),
                 FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_height, ReflectionGeneratedAccess::SetValue_Texture2D_height),
@@ -4979,6 +5226,9 @@ namespace Reflection
 
         RegisterTypeMethods(Texture2D::StaticType(),
             {
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsDirty_0),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_MarkDirty_1),
+                MethodInfo("ClearDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_ClearDirty_2),
             });
 
         RegisterTypeFields(Transform::StaticType(),

@@ -13,6 +13,10 @@ internal sealed class EnsPanel : EditorPanel
     private string renameBuffer = string.Empty;
     private bool renameFocusRequested;
     private bool panelFocused;
+    //待消费的定位请求，以及本次绘制要强制展开、要滚过去的节点
+    private static string pingKey = string.Empty;
+    private readonly HashSet<string> revealKeys = [];
+    private string scrollKey = string.Empty;
 
     private sealed record Position(string Parent, string Before, vector3 Translation, quaternion Rotation, vector3 Scale);
 
@@ -20,6 +24,14 @@ internal sealed class EnsPanel : EditorPanel
 
     public override EditorPanelInfo Info => new("ens_view", "EnsView", true,
         new vector2(320, 420), PanelDockPlacement.Left, 0.22f, 200);
+
+    //请求在层级里定位一个 Ens：选中它，展开它的祖先，并滚动到看得见。
+    //请求只在这里挂起，等本面板下一次绘制再消费——面板隐藏时一帧都不画。
+    internal static void Ping(string resourceKey)
+    {
+        pingKey = resourceKey;
+        EditorApplication.RequestRepaint();
+    }
 
     /// <summary>绘制层级并在遍历结束后提交投放。</summary>
     protected override void DrawContent(EditorPanelContext context)
@@ -29,6 +41,7 @@ internal sealed class EnsPanel : EditorPanel
         selectedEns = context.SelectedEns;
         EditorSelection.Report(Info.Id, panelFocused, !selectedEns.IsNull);
         if (EditorApplication.IsPlaying) EndRename();
+        RevealRequestedEns();
 
         children.Clear();
         pendingDrop = null;
@@ -60,6 +73,30 @@ internal sealed class EnsPanel : EditorPanel
         action?.Invoke();
     }
 
+    //消费一次定位请求：选中目标，并把目标与它所有祖先标记为要强制展开
+    private void RevealRequestedEns()
+    {
+        revealKeys.Clear();
+        scrollKey = string.Empty;
+        if (pingKey.Length == 0) return;
+
+        string key = pingKey;
+        pingKey = string.Empty;
+        Ens target = Ens.Find(key);
+        if (!target.IsValid) return;
+
+        EditorNativeComponents.SelectEns(target.Id);
+        scrollKey = target.ResourceKey;
+        //折叠节点的子孙根本不会被提交，所以要让目标可见必须逐级打开它和它的祖先
+        for (EnsId ancestor = target.Transform.GetParent(); !ancestor.IsNull;)
+        {
+            Ens value = Ens.FromId(ancestor);
+            if (!value.IsValid) break;
+            revealKeys.Add(value.ResourceKey);
+            ancestor = value.Transform.GetParent();
+        }
+    }
+
     //绘制节点并记录选择或投放操作
     private void DrawNode(Ens ens, EditorPanelContext context)
     {
@@ -67,13 +104,20 @@ internal sealed class EnsPanel : EditorPanel
         bool renaming = renamingEns.Equals(ens.Id);
         //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + ens.ResourceKey,
-            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true);
+            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, revealKeys.Contains(ens.ResourceKey));
+        //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
+        if (ens.ResourceKey == scrollKey)
+        {
+            scrollKey = string.Empty;
+            NativeEditorGUI.SetScrollHereY(0.5f);
+        }
         if (renaming)
         {
             EditorGUI.SameLine();
             DrawRenameInput(ens);
         }
         if ((state & 2) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
+        if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
         NativeEditorGUI.DragSource(1, ens.ResourceKey);
         if (EditorGUI.BeginPopupContextItem("##ens_menu_" + ens.ResourceKey))

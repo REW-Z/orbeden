@@ -102,6 +102,7 @@ namespace
     bool IsBuiltinMaterialUniform(const std::string& uniformName)
     {
         return IsBuiltinTextureUniform(uniformName)
+            || StartsWith(uniformName, "u_Shadow")
             || uniformName == "u_Model"
             || uniformName == "u_ViewProjection"
             || uniformName == "u_LightViewProjection"

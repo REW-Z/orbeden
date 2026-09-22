@@ -24,9 +24,8 @@ flowchart TD
     C --> D["Prepare Camera Render Data\nRenderTarget + Viewport"]
     D --> E{"有相机?"}
     E -- 否 --> F["默认窗口清黑"]
-    E -- 是 --> G["共享 Shadow Pass\n每帧一次"]
-    G --> H["按 Camera.depth 遍历"]
-    H --> I["Cull StaticMeshRenderer\n→ 展开 RenderItem → Sort\n→ Main Pass / Refraction"]
+    E -- 是 --> H["按 Camera.depth 遍历"]
+    H --> I["Cull StaticMeshRenderer\n→ 展开 RenderItem → Sort\n→ 每相机 CSM → Main Pass / Refraction → 提交深度统计"]
     I --> J{"还有相机?"}
     J -- 是 --> H
     J -- 否 --> K["ImGui / Overlay"]
@@ -63,21 +62,18 @@ Camera 使用归一化 Viewport，默认 `(0, 0, 1, 1)`。RenderSystem 根据窗
 - `CameraDepthTexture`：在相同时间点复制的 Depth24 深度；普通透明物体默认不写深度。
 - 快照始终生成，不需要相机开关，也不提供 CPU 回读。
 
-### 3. 共享阴影 Pass
+### 3. 每相机级联阴影
 
-Forward Pipeline 选择第一个开启阴影的方向光，每帧生成一次共享阴影图：
+ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 在当前相机主 pass 前绘制 1..6 级稳定 CSM。两列 D32F atlas 按顺序相机复用；各相机的 SDSM 历史按 EnsId 独立保存。
 
-```mermaid
-flowchart LR
-    A["场景 Bounds 中心"] --> B["方向光 View"]
-    B --> C["正交 Projection"]
-    C --> D["1024×1024 深度 FBO"]
-    D --> E["筛选 castShadows"]
-    E --> F["光源视锥裁剪"]
-    F --> G["Depth Shader DrawIndexed"]
-```
+- 包围球稳定投影、世界纹素网格对齐、级联过渡、4×4 tent PCF 和接收面深度修正。
+- 投射物从完整场景收集，遵守 layer mask、castShadows 与 Opaque 队列，包含相机外上游遮挡物。
+- shadowBias 使用世界单位，shadowNormalBias 使用本级纹素倍数。实际接收范围不超过相机 farPlane。
+- shadowAdaptive=false 使用固定 CSM 分区；true 使用冻结相机深度的 64 桶对数直方图调整内部边界。
+- OpenGL compute 在主绘制后提交，fence 零超时轮询；没有有效统计时仍保持完整 CSM 覆盖，不等待 GPU。
+- 任意材质 alpha discard、顶点位移没有自动的 ShadowCaster Pass，当前只保证不透明几何轮廓一致性。
 
-阴影 Pass 只绘制 `DrawQueue::Opaque && castShadows`，只写深度且不创建颜色附件；生成的阴影图供所有相机共享。
+配置、算法、Shader ABI、验证清单见 [SDSM / CSM 详细方案](CascadedShadows.md)。
 
 ### 4. 每相机裁剪与排序
 
@@ -169,8 +165,8 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 ## 当前边界
 
 - 当前只有 OpenGL Backend。
-- 实际只使用一个主方向光和一张共享阴影图。
-- 阴影图固定为 `1024 × 1024`，尚未实现 CSM。
+- 实际只使用一个主方向光；各相机顺序重绘并复用级联 atlas。
+- CSM 每级默认 2048²、4 级，可选择固定分区或异步 SDSM；VSM、云阴影和屏幕空间接触阴影尚未实现。
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
 - 每个可见 SubMesh 对应一次 `DrawIndexed`，尚未实现 Instancing/Indirect Draw。
 - RenderScene 在同一线程增量更新并立即消费。

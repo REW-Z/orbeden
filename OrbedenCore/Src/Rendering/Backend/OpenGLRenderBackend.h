@@ -11,6 +11,14 @@ class OpenGLRenderBackend : public RenderBackend
 {
 private:
     OpenGLContext context;
+    struct DepthDistributionState
+    {
+        void* fence = nullptr;
+        float32 nearPlane = 0.1f;
+        float32 farPlane = 1000.0f;
+    };
+    GpuShaderProgramID depthDistributionShader;
+    std::unordered_map<uint32, DepthDistributionState> depthDistributions;
     GpuShaderProgramID debugLineShader;
     uint32 debugLineVertexArray = 0;
     uint32 debugLineVertexBuffer = 0;
@@ -49,6 +57,15 @@ public:
     void DeleteTexture(GpuTextureID id) override;
     GpuDepthTextureID CreateDepthTexture(const GpuDepthTextureDesc& desc) override;
     void DeleteDepthTexture(GpuDepthTextureID id) override;
+    //创建异步深度统计资源
+    GpuDepthDistributionID CreateDepthDistribution() override;
+    //释放异步深度统计资源
+    void DeleteDepthDistribution(GpuDepthDistributionID id) override;
+    //提交冻结相机深度的对数直方图
+    bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
+        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane) override;
+    //读取已完成直方图，不等待 GPU
+    bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) override;
     GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) override;
     void DeleteCubeTexture(GpuCubeTextureID id) override;
     GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) override;

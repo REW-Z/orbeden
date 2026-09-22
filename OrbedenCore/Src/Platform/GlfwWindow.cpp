@@ -193,6 +193,7 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
     desc = newDesc;
     glfwDefaultWindowHints();
     glfwWindowHint(GLFW_RESIZABLE, desc.resizable ? GLFW_TRUE : GLFW_FALSE);
+    glfwWindowHint(GLFW_VISIBLE, desc.visible ? GLFW_TRUE : GLFW_FALSE);
 
     if (desc.graphicsApi == WindowGraphicsApi::None || desc.graphicsApi == WindowGraphicsApi::Vulkan)
     {

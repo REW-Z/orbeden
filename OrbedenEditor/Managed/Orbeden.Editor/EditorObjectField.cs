@@ -123,12 +123,14 @@ internal static class EditorObjectField
             EditorIconCatalog.ForReference(declaredType),
             name + " (" + shortType + ")",
             label);
-        if (action == 1 && key.Length != 0)
+        //双击才定位：场景里的引用回到它所属的 Ens，资源引用跳到资源文件
+        if (action == 4 && key.Length != 0)
         {
             if (key.StartsWith("world://", StringComparison.Ordinal))
             {
                 Choice? target = CollectChoices(declaredType, ensHandle, allowScene).FirstOrDefault(choice => choice.Key == currentKey);
-                if (target != null && !target.Owner.IsNull) EditorNativeComponents.SelectEns(target.Owner);
+                Ens owner = target == null ? Ens.Null : Ens.FromId(target.Owner);
+                if (owner.IsValid) EnsPanel.Ping(owner.ResourceKey);
             }
             else ProjectPanel.Ping(key);
         }

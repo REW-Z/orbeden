@@ -315,6 +315,9 @@ namespace
                 layout.editorCamera.position.z = GetFloatAttribute(cameraToken, "z", layout.editorCamera.position.z);
                 layout.editorCamera.yaw = GetFloatAttribute(cameraToken, "yaw", layout.editorCamera.yaw);
                 layout.editorCamera.pitch = GetFloatAttribute(cameraToken, "pitch", layout.editorCamera.pitch);
+                //focus 是后加的属性，旧项目里没有，走结构体默认值
+                layout.editorCamera.focusDistance = GetFloatAttribute(cameraToken, "focus",
+                    layout.editorCamera.focusDistance);
             }
         }
     }
@@ -398,6 +401,7 @@ namespace
                 << "\" z=\"" << ToFloatText(layout.editorCamera.position.z)
                 << "\" yaw=\"" << ToFloatText(layout.editorCamera.yaw)
                 << "\" pitch=\"" << ToFloatText(layout.editorCamera.pitch)
+                << "\" focus=\"" << ToFloatText(layout.editorCamera.focusDistance)
                 << "\" />\n";
         }
 

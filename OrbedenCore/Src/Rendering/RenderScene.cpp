@@ -168,6 +168,13 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         renderLight.shadowBias = light->shadowBias;
         renderLight.shadowStrength = light->shadowStrength;
         renderLight.shadowDistance = light->shadowDistance;
+        renderLight.shadowCascadeCount = light->shadowCascadeCount;
+        renderLight.shadowMapResolution = light->shadowMapResolution;
+        renderLight.shadowSplitLambda = light->shadowSplitLambda;
+        renderLight.shadowAdaptive = light->shadowAdaptive;
+        renderLight.shadowNormalBias = light->shadowNormalBias;
+        renderLight.shadowBlendRatio = light->shadowBlendRatio;
+        renderLight.shadowDebugView = light->shadowDebugView;
         directionalLights.push_back(renderLight);
     }
 }

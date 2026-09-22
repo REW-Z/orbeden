@@ -2,7 +2,7 @@
 
 编辑器是事件驱动的：没有输入、没有请求时它完全不出帧，CPU 占用为 0。这份文档说明这套调度由哪几层构成、每一轮循环在等什么，以及写面板与弹窗时必须遵守的约束。
 
-这是用复杂度换来的性能：省下的是空闲 CPU，付出的是两件事——屏幕上那幅画面在空闲时是「死」的（不重画就不响应任何东西），以及**任何需要连续几帧的表现必须自己主动要帧**。
+这是用复杂度换来的性能：省下的是空闲 CPU，付出的是两件事——屏幕上那幅画面在空闲时是「死」的（不重画就不响应任何东西），以及**任何需要连续几帧的表现都得有人主动要帧**：自己写的动画要在推进时每帧请求（见「写代码时的规则」第 1 条），框架自带的那几处（模态暗化层、Play）由 `continuousRepaint` 统一认领。
 
 ---
 
@@ -50,8 +50,8 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 | 理由 | 来源 |
 | --- | --- |
 | 有输入事件 | 键鼠、窗口消息 |
-| 有人请求重绘 | 面板自己（每秒刷新的 Profiler）、日志写入、弹窗淡入期间 |
-| 连续重绘中 | 有控件处于活动或拖拽中、浮动窗口在交互、Play 中且未暂停 |
+| 有人请求重绘 | 面板自己（每秒刷新的 Profiler）、日志写入、自走的动画（聚焦飞行） |
+| 连续重绘中 | 有控件处于活动或拖拽中、浮动窗口在交互、模态暗化层正在淡入淡出、Play 中且未暂停 |
 | 到点了 | 宽限期内的 1 秒超时；连续重绘时按目标帧率节流 |
 
 排查「某个表现卡住不动」时，起点就是这张表：**这段时间里有没有人在要帧。**
@@ -61,9 +61,11 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 | 标志 | 语义 | 谁置位 |
 | --- | --- | --- |
 | `repaintRequested` | **一次性**：每轮开头取走并清零。取到就保证这一轮画一帧、且不阻塞等待 | `EditorSystem::RequestRepaint()`；托管侧入口是 `EditorApplication.RequestRepaint()`，面板基类的 `RequestPeriodicRepaint` 也用它 |
-| `continuousRepaint` | **持续性**：`NeedsContinuousRepaint()`——有控件处于活动或拖拽中、有浮动窗口在交互、Play 中且未暂停 | `ImGui::IsAnyItemActive()`、`PanelManager::IsAnyFloatingItemActive()`、Play 状态 |
+| `continuousRepaint` | **持续性**：`NeedsContinuousRepaint()`——有控件处于活动或拖拽中、有浮动窗口在交互、模态暗化层正在淡入淡出、Play 中且未暂停 | `ImGui::IsAnyItemActive()`、`PanelManager::IsAnyFloatingItemActive()`、`ImGuiContext::DimBgRatio` 未达目标值、Play 状态 |
 
 `continuousRepaint` 成立时每轮都 `PollEvents` 并按目标帧率节流——这是「拖手柄时画面跟手、松手后回到休眠」的来源。
+
+模态暗化层是其中判据最讲究的一条。`DimBgRatio` 每帧才推进一点（涨 6/s、退 10/s），隔帧绘制会让它卡在几乎看不见的位置，所以**淡入淡出期间**必须连续出帧。但判据是「**还没走到目标值**」而不是「模态开着」：涨满只要 0.17 秒，按模态开着算会让弹窗停留的整段时间都跑满帧率，而新建/载入项目这类弹窗可能开着好几分钟。关窗那一帧模态已经不在栈里，判据改为「该退到 0 却还没退净」，所以淡出也接得上，不依赖任何输入事件。
 
 ## 三条唤醒路径
 
@@ -83,7 +85,8 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 
 ## 写代码时的规则
 
-1. **要连续几帧才完成的表现，必须自己每帧请求重绘**——动画、进度、需要连续刷新的自绘都算。模态弹窗就是这么做的：ImGui 的暗化层是 `DimBgRatio += DeltaTime * 6.0` 的淡入动画（`imgui.cpp` 的 `NewFrame`），需要十几个连续帧；弹窗当帧就画好了，但没有暗化层时深色弹窗贴在深色界面上看不出弹出来，一动鼠标来了一串帧才淡入，而空闲唤醒那一帧的 `DeltaTime` 是真实的约 1 秒，`1.0 * 6.0` 一步顶满，表现为「等一秒才突然出现」。
+1. **要连续几帧才完成的表现，必须自己每帧请求重绘**——动画、进度、需要连续刷新的自绘都算。相机聚焦动画就是这么做的：`EditorScene::Update` 每帧推进曲线的同时由 `IsAnimatingFocus()` 让 `EditorSystem::Update` 请求重绘，0.4 秒走完自然停下，不需要收尾逻辑。
+   这条代价很实在：缺少请求时表现不会报错，只会「等一秒突然到位」——空闲唤醒那一帧的 `DeltaTime` 是真实的约 1 秒，靠逐帧累积的动画一步就顶满了。（模态暗化层同样需要连续帧，但它已经归入框架的 `continuousRepaint`，见上文，弹窗自己不必再请求。）
 2. **不要无事每帧请求重绘**，那会把空闲 CPU 从 0 拉起来。只请求需要的次数：一次性的刷新请求一次，周期性的用 `EditorPanel.RequestPeriodicRepaint`。
 3. **不要把时间推进放在空闲帧上**。空闲唤醒帧的模拟 delta 是 0，靠帧数量累积的逻辑（计时、动画曲线）在空闲时会停住。
 
@@ -97,4 +100,5 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 | `OrbedenCore/Src/Application.cpp` | `WaitForNextFrame` 与 `WaitUntilFrameTime`：限帧、容差与自旋窗口 |
 | `OrbedenEditor/Managed/Orbeden.Editor/EditorApplication.cs` | 托管侧 `RequestRepaint()` |
 | `OrbedenEditor/Managed/Orbeden.Editor/Panels/EditorPanel.cs` | `RequestPeriodicRepaint` |
-| `OrbedenEditor/Managed/Orbeden.Editor/EditorDialog.cs` | 弹窗打开期间保持出帧的示例 |
+| `OrbedenEditor/Src/Editor/EditorScene.cpp` | 相机聚焦动画：自行请求连续帧的示例（`IsAnimatingFocus`） |
+| `OrbedenEditor/Managed/Orbeden.Editor/EditorDialog.cs` | 统一的模态确认弹窗；出帧由上面的暗化层规则统一负责 |

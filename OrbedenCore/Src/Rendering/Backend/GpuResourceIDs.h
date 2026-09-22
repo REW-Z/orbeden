@@ -2,6 +2,13 @@
 
 #include "Defines/types.h"
 
+//异步深度分布统计对象
+struct GpuDepthDistributionID
+{
+    uint32 id = 0;
+    bool IsValid() const { return id != 0; }
+};
+
 //GPU 顶点缓冲对象，在 OpenGL 后端对应 VBO。
 struct GpuVertexBufferID
 {

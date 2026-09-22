@@ -207,6 +207,32 @@ namespace
         return RenderMath::Normalize(RenderMath::Cross(GetRight(yawDegrees), GetForward(yawDegrees, pitchDegrees)));
     }
 
+    //读取编辑器相机的半竖直视场角（弧度）；组件缺失时按 60 度算。平移按焦点平面换算像素尺寸要用它
+    float32 GetHalfVerticalFov(World& world, EnsId cameraEns)
+    {
+        Ens* ens = world.GetEns(cameraEns);
+        Camera* camera = ens ? ens->GetComponent<Camera>() : nullptr;
+        return (camera ? std::clamp(camera->fieldOfView, 1.0f, 179.0f) : 60.0f) * Pi / 360.0f;
+    }
+
+    //滚轮推近的聚焦距离下限，免得把相机推到焦点上
+    constexpr float32 MinimumFocusDistance = 0.05f;
+
+    //滚轮每格改变聚焦距离的比例，是缩放手感的唯一旋钮：调小则贴近时更精细、拉远更慢，调大反之。
+    //这里坚持全程等比，不加最小步长——一旦给每格兜底一个固定世界距离，近处就会一跳穿进模型、
+    //远处又会慢得挪不动，等比曲线白设了。
+    constexpr float32 ZoomStep = 0.1f;
+
+    //聚焦动画的时长与缓动。双击是「带我过去」：起步要立刻响应，所以用缓出而不是缓入；
+    //落位又要稳，所以靠三次方的尾巴把速度收干净。
+    constexpr float32 FocusAnimationSeconds = 0.4f;
+
+    float32 EaseOutCubic(float32 progress)
+    {
+        float32 remaining = 1.0f - progress;
+        return 1.0f - remaining * remaining * remaining;
+    }
+
     //相加两个三维向量。
     vector3 Add(const vector3& a, const vector3& b)
     {
@@ -217,6 +243,15 @@ namespace
     vector3 Scale(const vector3& value, float32 scale)
     {
         return { value.x * scale, value.y * scale, value.z * scale };
+    }
+
+    //按比例插值两个三维向量。
+    vector3 Lerp(const vector3& from, const vector3& to, float32 amount)
+    {
+        return {
+            from.x + (to.x - from.x) * amount,
+            from.y + (to.y - from.y) * amount,
+            from.z + (to.z - from.z) * amount };
     }
 
     //获取编辑器 GLFW 窗口。
@@ -256,6 +291,65 @@ namespace
         return selectionType == ExplicitSelection
             ? color { 1.0f, 0.525f, 0.094f, 1.0f }
             : color { 0.227f, 0.569f, 1.0f, 1.0f };
+    }
+
+    //合并两个已有效的世界包围盒。
+    bounds3 UnionBounds(const bounds3& a, const bounds3& b)
+    {
+        bounds3 result;
+        const float32 aMin[3] = { a.center.x - a.extents.x, a.center.y - a.extents.y, a.center.z - a.extents.z };
+        const float32 aMax[3] = { a.center.x + a.extents.x, a.center.y + a.extents.y, a.center.z + a.extents.z };
+        const float32 bMin[3] = { b.center.x - b.extents.x, b.center.y - b.extents.y, b.center.z - b.extents.z };
+        const float32 bMax[3] = { b.center.x + b.extents.x, b.center.y + b.extents.y, b.center.z + b.extents.z };
+        float32* center = &result.center.x;
+        float32* extents = &result.extents.x;
+        for (int32 axis = 0; axis < 3; ++axis)
+        {
+            float32 minimum = std::min(aMin[axis], bMin[axis]);
+            float32 maximum = std::max(aMax[axis], bMax[axis]);
+            center[axis] = (minimum + maximum) * 0.5f;
+            extents[axis] = (maximum - minimum) * 0.5f;
+        }
+        result.valid = true;
+        return result;
+    }
+
+    //把 Ens 及其后代里所有网格的包围盒合并成世界包围盒；子树内没有网格时返回 false。
+    //这里是聚焦用的：只吃已经装载的网格，不管渲染剔除与可见性。
+    bool MergeSubtreeBounds(World& world, EnsId root, bounds3& merged)
+    {
+        bool hasBounds = false;
+        List<EnsId> pending;
+        pending.push_back(root);
+        while (!pending.empty())
+        {
+            EnsId current = pending.back();
+            pending.pop_back();
+            Ens* ens = world.GetEns(current);
+            Transform* transform = world.GetTransform(current);
+            if (!ens || !transform) continue;
+
+            StaticMeshRenderer* renderer = ens->GetComponent<StaticMeshRenderer>();
+            Mesh* mesh = renderer ? renderer->GetRenderMesh() : nullptr;
+            const bounds3* localBounds = mesh ? &mesh->GetLocalBounds() : nullptr;
+            if (localBounds && localBounds->valid)
+            {
+                bounds3 worldBounds = RenderMath::TransformBounds(transform->worldMatrix, *localBounds);
+                if (worldBounds.valid)
+                {
+                    merged = hasBounds ? UnionBounds(merged, worldBounds) : worldBounds;
+                    hasBounds = true;
+                }
+            }
+
+            for (EnsId child = transform->firstChild; !child.IsNull();)
+            {
+                pending.push_back(child);
+                Transform* childTransform = world.GetTransform(child);
+                child = childTransform ? childTransform->next : EnsId();
+            }
+        }
+        return hasBounds;
     }
 
     //把线性颜色转换为 ImGui 颜色。
@@ -478,12 +572,15 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
 {
     //编辑器相机是临时对象，每帧都在写它，不能因此把场景标成有改动
     World::DirtySuppressionScope suppression(world);
-    (void)deltaTime;
     CreateEditorCamera(world);
 
     Transform* transform = world.GetTransform(cameraEns);
     GLFWwindow* window = GetGlfwWindow(app);
     if (!transform || !window) return;
+
+    //聚焦动画先走一步；下面任何手动操控都会把它打断
+    vector3 animatedPosition {};
+    if (AdvanceFocusAnimation(deltaTime, animatedPosition)) transform->SetLocalPosition(animatedPosition);
 
     bool cameraOwnsMouse = cameraMouseDragging || IsMouseOverSceneView();
     if (cameraOwnsMouse)
@@ -501,28 +598,38 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
         glfwGetCursorPos(window, &mouseX, &mouseY);
         if (mode != 0)
         {
+            //手一动就接管，免得动画和鼠标抢着写位置
+            focusAnimating = false;
             if (cameraMouseDragging && cameraMouseMode == mode)
             {
                 float32 deltaX = static_cast<float32>(mouseX - previousMouseX);
                 float32 deltaY = static_cast<float32>(mouseY - previousMouseY);
+                float32 halfFov = GetHalfVerticalFov(world, cameraEns);
                 if (mode == 1)
                 {
+                    //原地转头：按右键拖拽，位置不动
                     cameraYaw -= deltaX * 0.12f;
                     cameraPitch = std::clamp(cameraPitch - deltaY * 0.12f, -82.0f, 82.0f);
                 }
                 else if (mode == 2)
                 {
-                    constexpr float32 PanScale = 0.01f;
+                    //平移：一个像素在焦点平面上对应多少世界单位，速度就跟着聚焦距离走
+                    float32 worldPerPixel = 2.0f * cameraFocusDistance * std::tan(halfFov)
+                        / std::max(sceneView.renderSize.y, 1.0f);
                     vector3 pan = Add(
-                        Scale(GetRight(cameraYaw), -deltaX * PanScale),
-                        Scale(GetUp(cameraYaw, cameraPitch), deltaY * PanScale));
+                        Scale(GetRight(cameraYaw), -deltaX * worldPerPixel),
+                        Scale(GetUp(cameraYaw, cameraPitch), deltaY * worldPerPixel));
                     transform->SetLocalPosition(Add(transform->GetLocalPosition(), pan));
                 }
                 else
                 {
-                    vector3 forward = GetForward(cameraYaw, cameraPitch);
-                    transform->SetLocalPosition(Add(transform->GetLocalPosition(),
-                        Scale(forward, -deltaY * cameraMoveSpeed * 0.01f)));
+                    //环绕旋转：焦点钉在世界里，相机绕着它摆。转完再滚轮，推近的仍是同一个物体
+                    vector3 focus = Add(transform->GetLocalPosition(),
+                        Scale(GetForward(cameraYaw, cameraPitch), cameraFocusDistance));
+                    cameraYaw -= deltaX * 0.12f;
+                    cameraPitch = std::clamp(cameraPitch - deltaY * 0.12f, -82.0f, 82.0f);
+                    transform->SetLocalPosition(Add(focus,
+                        Scale(GetForward(cameraYaw, cameraPitch), -cameraFocusDistance)));
                 }
             }
 
@@ -537,12 +644,18 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
             cameraMouseMode = 0;
         }
 
-        //移动场景相机
+        //滚轮推近：每格按当前聚焦距离成比例地改，焦点保持不动、相机沿视线挪过去。
+        //等比才是「越近越慢」的来源——贴近物体时每格只挪一点点，拉远时每格挪得多，不至于滚半天。
         if (mouseWheel != 0.0f)
         {
-            vector3 forward = GetForward(cameraYaw, cameraPitch);
+            focusAnimating = false;
+            //单次事件可能包含好几格（快速拨轮、触摸板），限幅免得一格冲到模型里面
+            float32 scale = std::clamp(1.0f - mouseWheel * ZoomStep, 0.5f, 2.0f);
+            float32 targetDistance = std::max(cameraFocusDistance * scale, MinimumFocusDistance);
+            float32 advance = cameraFocusDistance - targetDistance;
+            cameraFocusDistance = targetDistance;
             transform->SetLocalPosition(Add(transform->GetLocalPosition(),
-                Scale(forward, mouseWheel * cameraMoveSpeed * 0.5f)));
+                Scale(GetForward(cameraYaw, cameraPitch), advance)));
         }
     }
     else
@@ -556,6 +669,96 @@ void EditorScene::Update(World& world, float32 deltaTime, float32 mouseWheel)
     cameraState.position = transform->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
+    //聚焦距离随布局一起存盘：它决定平移与缩放的速率，重开项目时不能退回默认值
+    cameraState.focusDistance = cameraFocusDistance;
+}
+
+//把编辑器观察相机对准指定 Ens：只挪位置，保持当前朝向。
+void EditorScene::FocusEns(World& world, EnsId ens)
+{
+    //Play 中编辑器相机已被摘除，临时对象也不该成为聚焦目标
+    Ens* target = world.GetEns(ens);
+    if (!target || !target->Transform() || IsTemporaryEns(ens)) return;
+
+    Ens* editorCamera = world.GetEns(cameraEns);
+    if (!editorCamera) editorCamera = world.FindEns(StringId(EditorCameraId));
+    Transform* cameraTransform = editorCamera ? editorCamera->Transform() : nullptr;
+    if (!cameraTransform) return;
+
+    //聚焦点取子树包围盒中心，子树内没有网格时退化为对象自身位置
+    vector3 focus = target->Transform()->GetWorldPosition();
+    float32 radius = 0.0f;
+    bounds3 bounds {};
+    if (MergeSubtreeBounds(world, ens, bounds))
+    {
+        focus = bounds.center;
+        radius = std::sqrt(bounds.extents.x * bounds.extents.x
+            + bounds.extents.y * bounds.extents.y + bounds.extents.z * bounds.extents.z);
+    }
+
+    //包围球要在竖直与水平两个方向都装得下：竖屏时横向视场更窄，取两者中较小的那个
+    float32 halfFov = GetHalfVerticalFov(world, editorCamera->GetId());
+    if (sceneView.renderSize.x > 0.0f && sceneView.renderSize.y > 0.0f)
+    {
+        float32 halfFovX = std::atan(std::tan(halfFov) * sceneView.renderSize.x / sceneView.renderSize.y);
+        halfFov = std::min(halfFov, halfFovX);
+    }
+    halfFov = std::max(halfFov, 0.0001f);
+
+    //空对象聚焦后不该贴到镜头上，留一个最小距离
+    constexpr float32 MinimumFramingDistance = 1.0f;
+    constexpr float32 BoundsMargin = 1.35f;
+    float32 distance = std::max(radius * BoundsMargin / std::tan(halfFov), MinimumFramingDistance);
+
+    //这里只排一次动画，真正的写入在 Update 里（它带着自己的脏标记抑制），所以不必再开一层作用域
+    vector3 forward = GetForward(cameraYaw, cameraPitch);
+    StartFocusAnimation(cameraTransform->GetLocalPosition(),
+        { focus.x - forward.x * distance, focus.y - forward.y * distance, focus.z - forward.z * distance },
+        distance);
+}
+
+//启动一次聚焦动画：位置与聚焦距离共用一条缓动曲线。
+void EditorScene::StartFocusAnimation(const vector3& fromPosition, const vector3& toPosition, float32 toDistance)
+{
+    focusAnimationFrom = fromPosition;
+    focusAnimationTo = toPosition;
+    focusDistanceFrom = cameraFocusDistance;
+    focusDistanceTo = toDistance;
+
+    //起止几乎没差别就不值得动半秒，直接落位
+    float32 deltaX = toPosition.x - fromPosition.x;
+    float32 deltaY = toPosition.y - fromPosition.y;
+    float32 deltaZ = toPosition.z - fromPosition.z;
+    if (deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ < 0.000001f
+        && std::abs(toDistance - cameraFocusDistance) < 0.000001f)
+    {
+        focusAnimating = false;
+        return;
+    }
+
+    focusAnimationElapsed = 0.0f;
+    focusAnimating = true;
+}
+
+//推进一次聚焦动画；返回本帧是否写出了位置。
+bool EditorScene::AdvanceFocusAnimation(float32 deltaTime, vector3& position)
+{
+    if (!focusAnimating) return false;
+
+    focusAnimationElapsed += deltaTime;
+    float32 progress = std::min(focusAnimationElapsed / FocusAnimationSeconds, 1.0f);
+    float32 eased = EaseOutCubic(progress);
+    position = Lerp(focusAnimationFrom, focusAnimationTo, eased);
+    cameraFocusDistance = std::max(
+        focusDistanceFrom + (focusDistanceTo - focusDistanceFrom) * eased, MinimumFocusDistance);
+    focusAnimating = progress < 1.0f;
+    return true;
+}
+
+//聚焦动画是否还在进行。
+bool EditorScene::IsAnimatingFocus() const
+{
+    return focusAnimating;
 }
 
 //判断鼠标是否位于场景视口矩形内。
@@ -716,6 +919,8 @@ void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
     cameraYaw = cameraState.yaw;
     cameraPitch = cameraState.pitch;
     cameraEns = EnsId();
+    //换项目时相机位置由布局说了算，飞在半路的聚焦动画必须让位，否则下一帧把相机拽回旧目标
+    focusAnimating = false;
     CreateEditorCamera(world);
 
     if (!cameraState.hasValue) return;
@@ -741,6 +946,7 @@ void EditorScene::RestoreCamera(World& world)
 {
     //恢复编辑器相机同样不改变场景内容
     World::DirtySuppressionScope suppression(world);
+    focusAnimating = false;
     CreateEditorCamera(world);
     if (!cameraState.hasValue) return;
 
@@ -826,6 +1032,8 @@ void EditorScene::CreateEditorCamera(World& world)
     {
         cameraYaw = cameraState.yaw;
         cameraPitch = cameraState.pitch;
+        //聚焦距离要跟着恢复：平移与缩放的速率都按它算，给错值手感会明显失真
+        cameraFocusDistance = std::max(cameraState.focusDistance, MinimumFocusDistance);
     }
     if (Transform* transform = editorCamera->Transform())
     {
@@ -856,6 +1064,7 @@ void EditorScene::CaptureCameraState(World& world)
     cameraState.position = transform->GetLocalPosition();
     cameraState.yaw = cameraYaw;
     cameraState.pitch = cameraPitch;
+    cameraState.focusDistance = cameraFocusDistance;
 }
 
 //移除当前编辑器观察相机。
@@ -868,6 +1077,8 @@ void EditorScene::RemoveCamera(World& world)
     if (editorCamera) editorCamera->Destroy();
 
     cameraEns = EnsId();
+    //相机没了，动画不能一直挂着——否则会一直请求重绘空转
+    focusAnimating = false;
     CancelInteraction();
 }
 

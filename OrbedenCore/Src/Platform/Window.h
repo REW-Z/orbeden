@@ -18,6 +18,7 @@ struct WindowDesc
     std::string title = "Orbeden";
     WindowGraphicsApi graphicsApi = WindowGraphicsApi::None;
     bool resizable = true;
+    bool visible = true;
     bool vsync = false;
 };
 

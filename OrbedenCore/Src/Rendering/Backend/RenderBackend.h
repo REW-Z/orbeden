@@ -37,6 +37,16 @@ struct GpuDepthTextureDesc
 public:
     int32 width = 0;
     int32 height = 0;
+    bool floatingPoint = false;
+};
+
+//对数视深度分布，元数据对应提交统计时的相机
+struct GpuDepthDistribution
+{
+    static constexpr int32 BinCount = 64;
+    uint32 bins[BinCount] = {};
+    float32 nearPlane = 0.1f;
+    float32 farPlane = 1000.0f;
 };
 
 //GPU 立方体纹理创建描述，按 +X/-X/+Y/-Y/+Z/-Z 提供六面像素。
@@ -116,6 +126,15 @@ public:
     virtual void DeleteTexture(GpuTextureID id) = 0;
     virtual GpuDepthTextureID CreateDepthTexture(const GpuDepthTextureDesc& desc) = 0;
     virtual void DeleteDepthTexture(GpuDepthTextureID id) = 0;
+    //创建异步深度统计资源
+    virtual GpuDepthDistributionID CreateDepthDistribution() = 0;
+    //释放异步深度统计资源
+    virtual void DeleteDepthDistribution(GpuDepthDistributionID id) = 0;
+    //提交冻结深度统计，在途任务未完成时不覆盖
+    virtual bool SubmitDepthDistribution(GpuDepthDistributionID id, GpuDepthTextureID depth,
+        const matrix4x4& inverseProjection, float32 nearPlane, float32 farPlane) = 0;
+    //零超时读取已完成统计
+    virtual bool TryReadDepthDistribution(GpuDepthDistributionID id, GpuDepthDistribution& distribution) = 0;
     virtual GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) = 0;
     virtual void DeleteCubeTexture(GpuCubeTextureID id) = 0;
     virtual GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) = 0;

@@ -124,7 +124,12 @@ internal sealed class ProjectPanel : EditorPanel
     private bool gridView => tileSize > TileSizeMin;
 
     //请求在项目列表中定位引用资源
-    internal static void Ping(string key) => pingKey = key.Split("//", 2, StringSplitOptions.None)[0];
+    internal static void Ping(string key)
+    {
+        pingKey = key.Split("//", 2, StringSplitOptions.None)[0];
+        //请求要等本面板下一次绘制才被消费，而空闲编辑器不出帧，得自己催一帧
+        EditorApplication.RequestRepaint();
+    }
 
     public override EditorPanelInfo Info => new(
         "project",

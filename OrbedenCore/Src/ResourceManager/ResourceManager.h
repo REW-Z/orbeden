@@ -43,6 +43,9 @@ public:
     //释放指定资源
     static bool Unload(const std::string& key);
 
+    //强制重新导入已加载资源；key 为空时覆盖全部，prefix 为真时连带子路径
+    static uint32 Reimport(const std::string& key, bool prefix);
+
     //把已加载资源的 Key 迁移到新路径，对象身份保持不变，返回迁移的记录数
     static uint32 RemapKeys(const std::string& oldKey, const std::string& newKey, bool prefix);
 

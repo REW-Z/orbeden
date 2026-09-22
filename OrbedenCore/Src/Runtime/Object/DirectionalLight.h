@@ -20,9 +20,17 @@ public:
     color color = { 1.0f, 0.96f, 0.86f, 1.0f };
     float32 intensity = 1.2f;
     bool castShadows = true;
-    float32 shadowBias = 0.004f;
+    //世界单位的深度偏移
+    float32 shadowBias = 0.0005f;
     float32 shadowStrength = 0.45f;
-    float32 shadowDistance = 24.0f;
+    float32 shadowDistance = 20000.0f;
+    int32 shadowCascadeCount = 4;
+    int32 shadowMapResolution = 2048;
+    float32 shadowSplitLambda = 1.0f;
+    bool shadowAdaptive = true;
+    float32 shadowNormalBias = 0.25f;
+    float32 shadowBlendRatio = 0.1f;
+    int32 shadowDebugView = 0;
 
     //获取启用状态
     bool GetEnabled() const;

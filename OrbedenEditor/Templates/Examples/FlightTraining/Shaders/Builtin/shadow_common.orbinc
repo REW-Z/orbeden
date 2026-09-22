@@ -1,30 +1,112 @@
---------vert
-out vec4 v_LightSpacePosition;
-
 --------frag
-in vec4 v_LightSpacePosition;
-
 uniform sampler2D u_ShadowMap;
 uniform bool u_UseShadowMap;
 uniform bool u_ReceiveShadows;
+uniform int u_ShadowCascadeCount;
+uniform mat4 u_ShadowView;
+uniform mat4 u_ShadowMatrices[6];
+uniform vec4 u_ShadowRects[6];
+uniform vec4 u_ShadowParams[6];
 uniform float u_ShadowBias;
+uniform float u_ShadowNormalBias;
 uniform float u_ShadowStrength;
+uniform int u_ShadowDebugView;
 
-float SampleShadow()
+//选择视深度对应级联
+int FindShadowCascade(float viewDepth)
 {
-    if (!u_UseShadowMap || !u_ReceiveShadows)
-    {
-        return 0.0;
-    }
+    for (int index = 0; index < u_ShadowCascadeCount; ++index)
+        if (viewDepth <= u_ShadowParams[index].x) return index;
+    return -1;
+}
 
-    vec3 projected = v_LightSpacePosition.xyz / v_LightSpacePosition.w;
-    projected = projected * 0.5 + 0.5;
-    if (projected.x < 0.0 || projected.x > 1.0 || projected.y < 0.0 || projected.y > 1.0 || projected.z > 1.0)
-    {
-        return 0.0;
-    }
+//过滤当前级联并修正接收面斜率
+float SampleShadowCascade(int index, vec3 position, vec3 normal, vec3 worldDx, vec3 worldDy)
+{
+    vec4 parameters = u_ShadowParams[index];
+    vec3 light = normalize(-u_LightDirection);
+    float slope = sqrt(max(0.0, 1.0 - pow(clamp(dot(normal, light), 0.0, 1.0), 2.0)));
+    vec3 offsetPosition = position + normal * (u_ShadowNormalBias * parameters.z * slope);
+    vec3 projected = (u_ShadowMatrices[index] * vec4(offsetPosition, 1.0)).xyz * 0.5 + 0.5;
+    if (any(lessThan(projected, vec3(0.0))) || any(greaterThan(projected, vec3(1.0)))) return 0.0;
 
-    float closestDepth = texture(u_ShadowMap, projected.xy).r;
-    float currentDepth = projected.z;
-    return currentDepth - u_ShadowBias > closestDepth ? u_ShadowStrength : 0.0;
+    //将世界位置导数转换为 atlas 深度梯度
+    vec4 rect = u_ShadowRects[index];
+    vec3 dx = (u_ShadowMatrices[index] * vec4(worldDx, 0.0)).xyz * 0.5;
+    vec3 dy = (u_ShadowMatrices[index] * vec4(worldDy, 0.0)).xyz * 0.5;
+    dx.xy *= rect.xy;
+    dy.xy *= rect.xy;
+    float determinant = dx.x * dy.y - dx.y * dy.x;
+    vec2 gradient = vec2(0.0);
+    if (abs(determinant) > 1e-12)
+        gradient = vec2(dy.y * dx.z - dx.y * dy.z, dx.x * dy.z - dy.x * dx.z) / determinant;
+    if (any(isnan(gradient)) || any(isinf(gradient))) gradient = vec2(0.0);
+
+    //在单格 atlas 内进行连续 tent PCF
+    ivec2 atlasSize = textureSize(u_ShadowMap, 0);
+    vec2 uv = projected.xy * rect.xy + rect.zw;
+    vec2 pixel = uv * vec2(atlasSize) - 0.5;
+    ivec2 base = ivec2(floor(pixel));
+    vec2 fraction = fract(pixel);
+    ivec2 minimum = ivec2(round(rect.zw * vec2(atlasSize)));
+    ivec2 maximum = minimum + ivec2(round(rect.xy * vec2(atlasSize))) - 1;
+    float bias = u_ShadowBias / max(parameters.w, 1e-6);
+    float result = 0.0;
+    float weightSum = 0.0;
+    for (int y = -1; y <= 2; ++y)
+    {
+        for (int x = -1; x <= 2; ++x)
+        {
+            vec2 weight = max(vec2(0.0), 2.0 - abs(vec2(x, y) - fraction));
+            float tapWeight = weight.x * weight.y;
+            ivec2 tap = clamp(base + ivec2(x, y), minimum, maximum);
+            vec2 tapUv = (vec2(tap) + 0.5) / vec2(atlasSize);
+            float receiverDepth = projected.z + dot(gradient, tapUv - uv) - bias;
+            result += (receiverDepth > texelFetch(u_ShadowMap, tap, 0).r ? 1.0 : 0.0) * tapWeight;
+            weightSum += tapWeight;
+        }
+    }
+    return result / max(weightSum, 1e-6);
+}
+
+//计算太阳遮挡与级联过渡
+float SampleShadow(vec3 worldPosition, vec3 surfaceNormal)
+{
+    //在分支前读取片元导数
+    vec3 worldDx = dFdx(worldPosition);
+    vec3 worldDy = dFdy(worldPosition);
+    vec3 crossed = cross(worldDx, worldDy);
+    float normalLength = length(crossed);
+    vec3 normal = normalLength > 1e-10 ? crossed / normalLength : normalize(surfaceNormal);
+    if (dot(normal, surfaceNormal) < 0.0) normal = -normal;
+    if (!u_UseShadowMap || !u_ReceiveShadows || u_ShadowCascadeCount == 0) return 0.0;
+    float viewDepth = -(u_ShadowView * vec4(worldPosition, 1.0)).z;
+    int index = FindShadowCascade(viewDepth);
+    if (index < 0 || viewDepth < 0.0) return 0.0;
+    float shadow = SampleShadowCascade(index, worldPosition, normal, worldDx, worldDy);
+    vec4 parameters = u_ShadowParams[index];
+    if (viewDepth > parameters.y && parameters.x > parameters.y)
+    {
+        float nextShadow = index + 1 < u_ShadowCascadeCount
+            ? SampleShadowCascade(index + 1, worldPosition, normal, worldDx, worldDy) : 0.0;
+        float blend = smoothstep(parameters.y, parameters.x, viewDepth);
+        shadow = mix(shadow, nextShadow, blend);
+    }
+    return shadow * clamp(u_ShadowStrength, 0.0, 1.0);
+}
+
+//显示级联范围或世界纹素尺寸
+vec3 GetShadowDebugColor(vec3 worldPosition, vec3 shadedColor)
+{
+    if (u_ShadowDebugView == 0 || !u_UseShadowMap) return shadedColor;
+    int index = FindShadowCascade(-(u_ShadowView * vec4(worldPosition, 1.0)).z);
+    if (index < 0) return vec3(0.1);
+    if (u_ShadowDebugView == 2)
+    {
+        float value = clamp((log2(max(u_ShadowParams[index].z, 1e-6)) + 12.0) / 16.0, 0.0, 1.0);
+        return vec3(value, 1.0-value, 0.0);
+    }
+    const vec3 colors[6] = vec3[6](vec3(1,0.2,0.2),vec3(0.2,1,0.2),vec3(0.2,0.4,1),
+        vec3(1,1,0.2),vec3(1,0.2,1),vec3(0.2,1,1));
+    return mix(shadedColor, colors[index], 0.65);
 }

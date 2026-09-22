@@ -1,17 +1,15 @@
 # 构建和打包  
 
+暂无
 
 # Editor  
 
-定位器，选中脚本Component，在ProjectPanel种定位该文件。
-选中。
-
-
-Components可修改字段太少了。    
+暂无
 
 # Core  
 
 阴影质量问题。  
+改用CSM/SDSM级联阴影。
 
 着色器生成器。  
 

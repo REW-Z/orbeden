@@ -219,14 +219,19 @@ namespace
     void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
 
     //绘制目录节点并返回展开与点击状态
+    //options：1 选中、2 叶子、4 默认展开、8 强制展开；返回值：1 展开、2 点击、4 Ctrl、8 双击
     int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options)
     {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if (options & 1) flags |= ImGuiTreeNodeFlags_Selected;
         if (options & 2) flags |= ImGuiTreeNodeFlags_Leaf;
         if (options & 4) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+        //DefaultOpen 只是存储里还没记录时的初值，已折叠过的节点要靠这一句才打得开
+        if (options & 8) ImGui::SetNextItemOpen(true, ImGuiCond_Always);
         bool expanded = ImGui::TreeNodeEx(ReadUtf8Text(label, length).c_str(), flags);
-        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0) | (ImGui::GetIO().KeyCtrl ? 4 : 0);
+        bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0)
+            | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0);
     }
 
     //结束目录节点
@@ -349,6 +354,11 @@ namespace
         bool expanded = removable != 0
             ? ImGui::CollapsingHeader(value.c_str(), &visible, flags)
             : ImGui::CollapsingHeader(value.c_str(), flags);
+        //标题右键菜单。菜单内容由托管侧绘制：它必须在同一个子窗、同一个 ID 栈深度上
+        //用同样的字符串开弹窗（InspectorPanel 的组件菜单 id 就是 identity + "##component_menu"），
+        //两边算出的 popup ID 才一致。Separator 会顶掉 LastItemData，所以这句必须排在它前面。
+        if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+            ImGui::OpenPopup((identity + "##component_menu").c_str());
         if (removeRequested && !visible) *removeRequested = 1;
         if (expanded) ImGui::Separator();
         return expanded ? 1 : 0;
@@ -434,7 +444,7 @@ namespace
         return changed ? static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer))) : -1;
     }
 
-    //绘制对象引用框并返回操作：0 无 1 点击引用框 2 清空 3 打开选择器
+    //绘制对象引用框并返回操作：0 无 1 点击引用框 2 清空 3 打开选择器 4 双击引用框
     int32 ORBEDEN_NATIVE_CALL EditorGuiReferenceField(const uint8* icon, int32 iconLength,
         const uint8* text, int32 textLength, const uint8* id, int32 idLength)
     {
@@ -485,7 +495,11 @@ namespace
             ImGui::GetColorU32(ImGuiCol_Text), label.c_str());
         drawList->PopClipRect();
 
-        if (clicked) action = 1;
+        //单击与双击分开上报：双击才定位，单击不把人从当前对象上带走。
+        //双击必须在第二次「按下」那一帧判定——MouseClickedCount 每帧开头就被清零，
+        //而 InvisibleButton 的 clicked 到「松开」才为真，那时计数已经归零了，两者凑不到一帧。
+        if (hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) action = 4;
+        else if (clicked) action = 1;
         ImGui::PopID();
         return action;
     }

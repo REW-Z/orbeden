@@ -733,6 +733,8 @@ namespace
         texture->format = 4;
         texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
         stbi_image_free(pixels);
+        //重新导入会复用同一对象，得让 GPU 纹理重新上传
+        texture->MarkDirty();
 
         collection.AddObject(textureKey, texture, true);
         return texture;
@@ -847,6 +849,8 @@ namespace
         texture->format = 4;
         texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
         stbi_image_free(pixels);
+        //重新导入会复用同一对象，得让 GPU 纹理重新上传
+        texture->MarkDirty();
 
         collection.AddObject(textureKey, texture);
         return texture;

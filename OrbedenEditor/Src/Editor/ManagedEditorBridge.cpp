@@ -134,6 +134,7 @@ namespace
         void* getReferenceObjects = nullptr;
         void* getReferenceLabel = nullptr;
         void* moveEns = nullptr;
+        void* focusEns = nullptr;
     };
 
     //传给 Editor C# 的应用函数表。
@@ -197,19 +198,19 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 15);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 23);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 137);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 138);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 71);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 81);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 84);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 86);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 101);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 124);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 129);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 125);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 130);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1070,6 +1071,16 @@ namespace
         }
     }
 
+    //把编辑器相机聚焦到指定 Ens
+    void ORBEDEN_NATIVE_CALL FocusManagedEns(void* context, EnsId ens)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->GetWorld().IsAlive(ens)) return;
+        editor->GetEditorScene().FocusEns(editor->GetWorld(), ens);
+        //相机在面板绘制阶段才被改，当帧已经渲染完，必须自己催下一帧
+        editor->RequestRepaint();
+    }
+
     //移动节点并按需保持世界变换
     uint8 ORBEDEN_NATIVE_CALL MoveManagedEns(void* context, EnsId child, EnsId parent, EnsId before, uint8 preserveWorld)
     {
@@ -1441,6 +1452,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.matchComponentType = reinterpret_cast<void*>(&MatchManagedComponentType);
     editorApi.components.getReferenceObjects = reinterpret_cast<void*>(&GetManagedReferenceObjects);
     editorApi.components.getReferenceLabel = reinterpret_cast<void*>(&GetManagedReferenceLabel);
+    editorApi.components.focusEns = reinterpret_cast<void*>(&FocusManagedEns);
     editorApi.log.getRange = reinterpret_cast<void*>(&EditorLogGetRange);
     editorApi.log.copyEntry = reinterpret_cast<void*>(&EditorLogCopyEntry);
     editorApi.log.getCounts = reinterpret_cast<void*>(&EditorLogGetCounts);

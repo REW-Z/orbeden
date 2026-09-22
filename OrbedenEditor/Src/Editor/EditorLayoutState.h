@@ -34,6 +34,10 @@ public:
     std::string activePanel;
 };
 
+//编辑器观察相机的默认聚焦距离。滚轮推近与平移速率都以它为基准，
+//默认值取默认相机位置到原点的距离，开局的手感才和取景对得上。
+constexpr float32 DefaultEditorCameraFocusDistance = 9.2f;
+
 //编辑器观察相机布局状态。
 struct EditorCameraState
 {
@@ -42,6 +46,8 @@ public:
     vector3 position = { 5.0f, 3.2f, 7.0f };
     float32 yaw = 35.0f;
     float32 pitch = -22.0f;
+    //相机到焦点的距离，缺失时用默认值：旧项目没有这个属性，读了也不会跑偏
+    float32 focusDistance = DefaultEditorCameraFocusDistance;
 };
 
 //编辑器项目布局状态。

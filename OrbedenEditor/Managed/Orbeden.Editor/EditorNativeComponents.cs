@@ -31,6 +31,7 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceObjects;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceLabel;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, EnsId, EnsId, byte, byte> MoveEns;
+    public delegate* unmanaged[Cdecl]<IntPtr, EnsId, void> FocusEns;
 }
 #pragma warning restore CS0649
 
@@ -326,6 +327,12 @@ internal static unsafe class EditorNativeComponents
 
     //定位场景引用所属 Ens
     internal static void SelectEns(EnsId ens, bool toggle = false) => api.SelectEns(api.Context, ens, toggle ? (byte)1 : (byte)0);
+
+    //把场景相机聚焦到指定 Ens
+    internal static void FocusEns(EnsId ens)
+    {
+        if (api.FocusEns != null) api.FocusEns(api.Context, ens);
+    }
 
     //移动层级节点并设置变换保持规则
     internal static bool MoveEns(EnsId child, EnsId parent, EnsId before, bool preserveWorld)

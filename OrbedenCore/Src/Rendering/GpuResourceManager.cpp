@@ -325,7 +325,10 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     if (!backend || !texture) return GpuTextureID();
 
     //读取 Texture2D GPU 缓存
-    if (texture->gpuTexture.IsValid()) return texture->gpuTexture;
+    if (texture->gpuTexture.IsValid() && !texture->IsDirty()) return texture->gpuTexture;
+
+    //重新导入过的纹理要先摘掉旧句柄，否则会重复登记进追踪表
+    if (texture->gpuTexture.IsValid()) QueueTextureRelease(texture);
 
     GpuTextureDesc textureDesc;
     textureDesc.width = texture->width;
@@ -344,6 +347,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     texture->gpuTexture = textureID;
     texture->gpuTextureStorageIndex = static_cast<int32>(textures.size());
     textures.push_back(texture);
+    texture->ClearDirty();
     return textureID;
 }
 

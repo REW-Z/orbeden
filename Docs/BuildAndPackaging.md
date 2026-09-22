@@ -506,6 +506,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 9 | 太阳阴影替换为每相机 CSM / 异步 SDSM，新增 DirectionalLight 级联配置，更新 SDK 并重建游戏模块和发布包。shadowBias 改为世界单位，旧值不再解释为归一化深度；按实际场景重新校准，默认 0.0005。自定义接收阴影 Shader 必须迁移到级联查询 ABI，升级器保留用户 Content，不自动覆盖 Shader。迁移步骤见 [级联阴影方案](CascadedShadows.md)。 |
 | 7 | Player 改为自包含发布目录：`Build Player` 把内容根内可导入的资源经 AssetPipeline 导入后序列化为 `.orbo` 二进制（先落 `ResourceCache/`，再同步进包内 `Content/`），`.world` 原样复制，`.oeproj` 复制到包根。Player 以**可执行文件所在目录**为内容根，不再依赖编译期的 `ORBEDEN_PROJECT_DIR`。`.orbo` 为位置式二进制，改动资源字段即需重新打包。项目文件本身无需迁移，但**必须重新执行 `Build Player`**，旧发布目录不能继续使用。 |
 | 6 | Ens 改为独立 Object，拥有自身稳定 ID，Transform 保留独立组件身份。升级项目时更新原生 Ens 头文件路径；读取旧 World/Prefab 时拆分共用身份并按字段类型重映射引用。更新 SDK、绑定和原生模块。 |
 | 5 | 新增同步／异步 World 加载操作和预制体序列化接口；更新运行时函数表，需重建托管及原生游戏模块。 |
