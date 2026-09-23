@@ -210,15 +210,15 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 141);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 142);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 71);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 81);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 84);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 86);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 104);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 128);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 133);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 72);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 82);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 85);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 87);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 105);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 129);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 134);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -591,6 +591,11 @@ namespace
         if (code || relative.empty() || relative.is_absolute()) return 0;
         for (const auto& part : relative) if (part == "..") return 0;
         std::string key = ReadUtf8(keyText, keyLength);
+        std::string filename = Utf8Path::ToUtf8(canonical.filename());
+        std::string blobName = CookedAssetSerializer::GetBlobFileName(key);
+        if (!filename.ends_with(blobName) || filename.size() <= blobName.size()) return 0;
+        std::string prefix = filename.substr(0, filename.size() - blobName.size());
+        if (prefix.back() != '.') return 0;
         if (Object* loaded = ResourceManager::FindLoaded(key)) return loaded->GetObjectId();
         List<std::string> pending{ key };
         List<std::string> visited;
@@ -600,10 +605,10 @@ namespace
             std::string current = pending[index];
             if (ResourceManager::FindLoaded(current) || std::find(visited.begin(), visited.end(), current) != visited.end()) continue;
             visited.push_back(current);
-            auto file = canonical.parent_path() / CookedAssetSerializer::GetBlobFileName(current);
+            auto file = canonical.parent_path() / Utf8Path::FromUtf8(prefix + CookedAssetSerializer::GetBlobFileName(current));
             List<std::string> references;
             std::string error;
-            if (!CookedAssetSerializer::Read(Utf8Path::ToUtf8(file), references, error))
+            if (!CookedAssetSerializer::Read(Utf8Path::ToUtf8(file), references, error, prefix))
             {
                 Log::Error(error.c_str());
                 for (const std::string& loadedKey : created) ResourceManager::Unload(loadedKey);

@@ -14,8 +14,8 @@ public:
     //设置图标目录，首次取图标时才真正读取文件
     static void SetDirectory(const std::filesystem::path& directory);
 
-    //按图标名取纹理，目录里没有同名 PNG 时返回 0
-    static ImTextureID Get(const std::string& name);
+    //按显示尺寸和屏幕像素密度选择 32 或 256 档纹理，缺失时返回 0
+    static ImTextureID Get(const std::string& name, float32 displaySize);
 
     //释放全部图标纹理
     static void Shutdown();

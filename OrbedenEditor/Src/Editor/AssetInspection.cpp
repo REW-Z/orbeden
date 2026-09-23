@@ -28,6 +28,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
     if (relative.is_absolute() || relative.has_root_name() || key.find(":") != std::string::npos
         || key.find("//") != std::string::npos) return result;
     for (const auto& part : relative) if (part == "..") return result;
+    std::string blobPrefix = Utf8Path::ToUtf8(relative.filename()) + ".";
     std::string fullPath = PathDefines::GetContentFilePath(key);
     sourceFiles.push_back(fullPath);
     std::error_code errorCode;
@@ -106,9 +107,10 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
             const auto* record = ResourceManager::FindRecord(objectKey);
             List<std::string> dependencies = record ? record->dependencies : List<std::string>();
             std::string error;
-            std::string blob = Utf8Path::ToUtf8(Utf8Path::FromUtf8(outputDirectory) / CookedAssetSerializer::GetBlobFileName(objectKey));
+            std::string blob = Utf8Path::ToUtf8(Utf8Path::FromUtf8(outputDirectory) / Utf8Path::FromUtf8(blobPrefix + CookedAssetSerializer::GetBlobFileName(objectKey)));
             if (!CookedAssetSerializer::Write(blob, object, ResourceManager::GetSourceKey(objectKey), dependencies, error))
                 result += std::string("error") + '\0' + error + '\0' + '\0' + '\0';
+            else result += std::string("blob") + '\0' + blobPrefix + CookedAssetSerializer::GetBlobFileName(objectKey) + '\0' + '\0' + '\0';
             for (const std::string& dependency : dependencies)
             {
                 Object* dependent = ResourceManager::FindLoaded(dependency);
@@ -120,10 +122,13 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
         }
     }
     for (const std::string& source : sourceFiles)
-        result += std::string("dependency") + '\0' + source + '\0' + '\0' + '\0';
+    {
+        auto dependency = Utf8Path::FromUtf8(source).lexically_relative(Utf8Path::FromUtf8(PathDefines::GetContentRoot()));
+        result += std::string("dependency") + '\0' + Utf8Path::ToUtf8(dependency) + '\0' + '\0' + '\0';
+    }
     for (Object* object : objects)
     {
-        result += std::string("object") + '\0' + CookedAssetSerializer::GetBlobFileName(object->GetInstanceId().GetPath()) + '\0'
+        result += std::string("object") + '\0' + blobPrefix + CookedAssetSerializer::GetBlobFileName(object->GetInstanceId().GetPath()) + '\0'
             + object->GetInstanceId().GetPath() + '\0' + object->GetType()->GetName() + '\0';
         List<const Reflection::FieldInfo*> fields;
         Reflection::CollectFields(object->GetType(), fields);

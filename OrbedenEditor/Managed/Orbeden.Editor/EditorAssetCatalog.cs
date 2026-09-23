@@ -63,6 +63,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         {
             if (EditorAssetInspection.CanInspect(file)) EditorAssetCache.Queue(file);
         }
+        EditorAssetCache.EndScan();
 
     }
 
@@ -96,6 +97,20 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             }
         }
     }
+
+    /// <summary>识别不展开内部对象的 Shader 与脚本代码文件。</summary>
+    public static bool IsCodeFile(string path) => Path.GetExtension(path).ToLowerInvariant() is
+        ".orbshader" or ".glsl" or ".vert" or ".frag" or ".cs"
+        or ".cpp" or ".cc" or ".cxx" or ".c" or ".h" or ".hpp" or ".inl";
+
+    /// <summary>识别使用文本文档图标的配置与纯文本文件。</summary>
+    public static bool IsTextFile(string path) => Path.GetExtension(path).ToLowerInvariant() is
+        ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".tsv" or ".log"
+        or ".ini" or ".cfg" or ".conf" or ".toml" or ".yaml" or ".yml" or ".layers";
+
+    /// <summary>仅为可承载导入对象的原始文件提供展开入口。</summary>
+    public static bool CanExpandSource(string path) => !IsCodeFile(path) && !IsTextFile(path)
+        && !Path.GetExtension(path).Equals(".world", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>返回资源文件在 ProjectPanel 中显示的类型。</summary>
     public string GetSourceType(string path)

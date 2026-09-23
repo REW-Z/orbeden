@@ -67,7 +67,7 @@ namespace
     //在名称前绘制图标并停在同一行，没有图标时不占位
     void DrawInlineIcon(const std::string& name, float32 size)
     {
-        ImTextureID texture = EditorIcons::Get(name);
+        ImTextureID texture = EditorIcons::Get(name, size);
         if (texture == 0) return;
 
         ImGui::Image(texture, ImVec2(size, size));
@@ -219,8 +219,9 @@ namespace
     void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
 
     //绘制目录节点并返回展开与点击状态
-    //options：1 选中、2 叶子、4 默认展开、8 强制展开；返回值：1 展开、2 点击、4 Ctrl、8 双击
-    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options)
+    //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠
+    //返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
+    int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options, const uint8* icon, int32 iconLength)
     {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if (options & 1) flags |= ImGuiTreeNodeFlags_Selected;
@@ -228,10 +229,30 @@ namespace
         if (options & 4) flags |= ImGuiTreeNodeFlags_DefaultOpen;
         //DefaultOpen 只是存储里还没记录时的初值，已折叠过的节点要靠这一句才打得开
         if (options & 8) ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-        bool expanded = ImGui::TreeNodeEx(ReadUtf8Text(label, length).c_str(), flags);
+        //强制折叠同理：递归折叠时父节点一合上，子树这一帧就不会被提交，只能等它各自被画到时再压回去
+        if (options & 16) ImGui::SetNextItemOpen(false, ImGuiCond_Always);
+        std::string identity = ReadUtf8Text(label, length);
+        ImTextureID texture = EditorIcons::Get(ReadUtf8Text(icon, iconLength), ImGui::GetFontSize());
+        ImVec2 iconPosition = ImGui::GetCursorScreenPos();
+        iconPosition.x += ImGui::GetTreeNodeToLabelSpacing();
+        iconPosition.y += ImGui::GetStyle().FramePadding.y;
+        float32 iconSize = ImGui::GetFontSize();
+        bool expanded;
+        if (texture != 0)
+        {
+            std::string text = identity.substr(0, identity.find("##"));
+            usize padding = static_cast<usize>((iconSize + ImGui::GetStyle().ItemInnerSpacing.x) / ImGui::CalcTextSize(" ").x) + 1;
+            text.insert(0, padding, ' ');
+            expanded = ImGui::TreeNodeEx(identity.c_str(), flags, "%s", text.c_str());
+            ImGui::GetWindowDrawList()->AddImage(texture, iconPosition,
+                ImVec2(iconPosition.x + iconSize, iconPosition.y + iconSize));
+        }
+        else expanded = ImGui::TreeNodeEx(identity.c_str(), flags);
+        bool toggled = ImGui::IsItemToggledOpen();
         bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() ? 2 : 0)
-            | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0);
+        return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled ? 2 : 0)
+            | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0)
+            | (ImGui::GetIO().KeyAlt ? 16 : 0) | (toggled ? 32 : 0);
     }
 
     //结束目录节点
@@ -285,6 +306,15 @@ namespace
     {
         std::string value = ReadUtf8Text(text, length);
         return ImGui::Button(value.c_str()) ? 1 : 0;
+    }
+
+    //量出按钮将要占用的宽度：与 EditorGuiButton 同一套文本测量与内边距，
+    //供工具条在绘制前排版（## 之后的 ID 部分不计入宽度）
+    float32 ORBEDEN_NATIVE_CALL EditorGuiCalcButtonWidth(const uint8* text, int32 length)
+    {
+        std::string value = ReadUtf8Text(text, length);
+        return ImGui::CalcTextSize(value.c_str(), nullptr, true).x
+            + ImGui::GetStyle().FramePadding.x * 2.0f;
     }
 
     //开始组件块
@@ -433,13 +463,14 @@ namespace
         return changed ? 1 : 0;
     }
 
-    //绘制字符串输入框
-    int32 ORBEDEN_NATIVE_CALL EditorGuiInputText(const uint8* label, int32 length, uint8* buffer, int32 bufferSize)
+    //绘制字符串输入框；width <= 0 时用 ImGui 默认宽度
+    int32 ORBEDEN_NATIVE_CALL EditorGuiInputText(const uint8* label, int32 length, uint8* buffer, int32 bufferSize, float32 width)
     {
         if (!buffer || bufferSize <= 0) return -1;
 
         std::string text = ReadUtf8Text(label, length);
         buffer[bufferSize - 1] = 0;
+        if (width > 0.0f) ImGui::SetNextItemWidth(width);
         bool changed = ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize));
         return changed ? static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer))) : -1;
     }
@@ -483,7 +514,7 @@ namespace
         //图标与文本都按行高居中，文本超出引用框时只画放得下的部分
         float32 lineHeight = ImGui::GetTextLineHeight();
         float32 textLeft = min.x + style.FramePadding.x;
-        ImTextureID texture = EditorIcons::Get(iconName);
+        ImTextureID texture = EditorIcons::Get(iconName, lineHeight);
         if (texture != 0)
         {
             float32 iconTop = min.y + (height - lineHeight) * 0.5f;
@@ -516,7 +547,7 @@ namespace
         if (selected)
             drawList->AddRect(min, max, ImGui::GetColorU32(ImGuiCol_ButtonActive), style.FrameRounding);
 
-        ImTextureID texture = EditorIcons::Get(iconName);
+        ImTextureID texture = EditorIcons::Get(iconName, iconSize);
         if (texture != 0)
         {
             float32 iconLeft = min.x + (max.x - min.x - iconSize) * 0.5f;
@@ -594,10 +625,10 @@ namespace
         return result;
     }
 
-    //绘制资源瓦片并返回点击状态：图标在上、名称在下，整块作为一个条目
+    //绘制资源瓦片：options 为 1 选中、2 可展开、4 已展开；返回 1 点击、2 切换展开、4 箭头悬停
     uint8 ORBEDEN_NATIVE_CALL EditorGuiAssetTile(const uint8* icon, int32 iconLength,
         const uint8* label, int32 labelLength, const uint8* id, int32 idLength,
-        float32 width, uint8 selected)
+        float32 width, uint8 options)
     {
         std::string iconName = ReadUtf8Text(icon, iconLength);
         std::string text = ReadUtf8Text(label, labelLength);
@@ -611,7 +642,7 @@ namespace
         ImVec2 max { min.x + width, min.y + height };
         bool hovered = false, held = false;
         bool clicked = SubmitTileHit(min, max, hovered, held);
-        DrawTileSurface(iconName, min, max, selected != 0, hovered, held, iconSize);
+        DrawTileSurface(iconName, min, max, (options & 1) != 0, hovered, held, iconSize);
 
         //名称居中，放不下的名字截断补省略号，悬停时用提示给出全名
         ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -625,8 +656,26 @@ namespace
         drawList->PopClipRect();
         if (hovered && display != text) ImGui::SetTooltip("%s", text.c_str());
 
+        //绘制文件展开箭头并在同一瓦片命中区内区分点击
+        bool arrowHovered = false;
+        if (options & 2)
+        {
+            float32 side = ImGui::GetFrameHeight();
+            ImVec2 arrowMin(min.x, min.y);
+            ImVec2 arrowMax(min.x + side, min.y + side);
+            arrowHovered = hovered && ImGui::IsMouseHoveringRect(arrowMin, arrowMax);
+            ImVec2 center(min.x + side * 0.5f, min.y + side * 0.5f);
+            float32 radius = ImGui::GetFontSize() * 0.22f;
+            ImU32 color = ImGui::GetColorU32(arrowHovered ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+            if (options & 4)
+                drawList->AddTriangleFilled(ImVec2(center.x - radius, center.y - radius * 0.5f),
+                    ImVec2(center.x + radius, center.y - radius * 0.5f), ImVec2(center.x, center.y + radius), color);
+            else
+                drawList->AddTriangleFilled(ImVec2(center.x - radius * 0.5f, center.y - radius),
+                    ImVec2(center.x - radius * 0.5f, center.y + radius), ImVec2(center.x + radius, center.y), color);
+        }
         ImGui::PopID();
-        return clicked ? 1 : 0;
+        return (clicked && !arrowHovered ? 1 : 0) | (clicked && arrowHovered ? 2 : 0) | (arrowHovered ? 4 : 0);
     }
 
     //绘制视图切换按钮：按钮上是当前模式的图标，点击切到另一种
@@ -1395,6 +1444,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.beginDialog = reinterpret_cast<void*>(&EditorGuiBeginDialog);
     api.assetRenameTile = reinterpret_cast<void*>(&EditorGuiAssetRenameTile);
     api.sliderFloat = reinterpret_cast<void*>(&EditorGuiSliderFloat);
+    api.calcButtonWidth = reinterpret_cast<void*>(&EditorGuiCalcButtonWidth);
     return api;
 }
 

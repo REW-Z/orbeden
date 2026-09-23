@@ -41,22 +41,9 @@ internal static class EditorIconCatalog
         };
     }
 
-    /// <summary>按资源路径取图标名，目录用文件夹图标，文件按扩展名。</summary>
+    /// <summary>目录使用文件夹图标，原始文件交给独立的源文件图标映射。</summary>
     public static string ForResource(string path, bool isDirectory)
-    {
-        if (isDirectory) return "Folder";
-        return Path.GetExtension(path).ToLowerInvariant() switch
-        {
-            ".obj" or ".gltf" or ".glb" => "MeshFile",
-            ".mtl" => "Material",
-            ".orbshader" or ".vert" or ".frag" or ".glsl" => "ShaderFile",
-            ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => "TextureFile",
-            ".cs" => "CSharpScript",
-            ".cpp" or ".cc" or ".cxx" or ".c" or ".h" or ".hpp" or ".inl" => "CppScript",
-            ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".log" or ".ini" or ".yaml" or ".yml" => "TextFile",
-            _ => Fallback,
-        };
-    }
+        => isDirectory ? "Folder" : EditorSourceIconCatalog.ForFile(path);
 
     //取类型名去掉命名空间后的短名
     private static string ShortName(string typeName)

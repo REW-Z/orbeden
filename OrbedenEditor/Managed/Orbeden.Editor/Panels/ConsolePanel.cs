@@ -12,20 +12,31 @@ internal sealed class ConsolePanel : EditorPanel
     //本地镜像上限，与原生保留窗口容量一致
     private const int MirrorCapacity = 512;
 
+    //工具条按钮：前半是显示文字，## 之后是稳定 ID，量宽与绘制共用同一份字符串
+    private const string InfoLabel = "Info##console_info";
+    private const string WarningLabel = "Warn##console_warning";
+    private const string ErrorLabel = "Err##console_error";
+    private const string CollapseLabel = "Collapse##console_collapse";
+    private const string FollowLabel = "Follow##console_follow";
+    private const string ClearLabel = "Clear##console_clear";
+
+    //右侧按钮组，量总宽时按这个顺序累加，与绘制顺序一致
+    private static readonly string[] ToolbarButtons =
+        { InfoLabel, WarningLabel, ErrorLabel, CollapseLabel, FollowLabel, ClearLabel };
+
+    //搜索框最小宽度：面板窄到放不下按钮组时让按钮组被右缘裁掉，不做重叠
+    private const float MinSearchWidth = 60.0f;
+
     private readonly List<ConsoleEntry> entries = new();
     private readonly List<ConsoleRow> rows = new();
     private readonly EditorRectPrimitive[] rects = new EditorRectPrimitive[1024];
     private readonly bool[] levelVisible = { true, true, true };
-    private readonly int[] levelCounts = new int[3];
     private string search = string.Empty;
     private bool collapseDuplicates = true;
     private bool followTail = true;
     private long cursor;
     private long selectedRevision = -1;
     private float rowPitch;
-
-    //Clear 按钮宽度：首帧按估值摆，量到实际宽度后贴右就准了
-    private float clearButtonWidth = 52.0f;
 
     public override EditorPanelInfo Info => new("console", "Console", true,
         new vector2(760, 220), PanelDockPlacement.Bottom, 0.25f, 130);
@@ -90,49 +101,42 @@ internal sealed class ConsolePanel : EditorPanel
         return ingested;
     }
 
-    //绘制工具条：搜索框在最左，开关按钮居中，Clear 贴右
+    //绘制工具条：搜索框填满左侧，级别开关、折叠与跟随开关连同 Clear 成组贴在右端
     private void DrawToolbar()
     {
-        NativeEditorLog.GetCounts(levelCounts);
         vector2 available = NativeEditorGUI.GetContentRegionAvail();
 
+        //先量出按钮组总宽，搜索框宽度就是剩下的左侧空间。
+        //量与画用同一套按钮宽度与间距，按钮组右缘因此正好落在内容区右缘，不用事后测量再催帧修正
+        float groupWidth = EditorTheme.Current.SpacingX * (ToolbarButtons.Length - 1);
+        foreach (string button in ToolbarButtons) groupWidth += EditorGUI.CalcButtonWidth(button);
+
         //搜索框不带标签，文本一变就实时过滤，不需要触发动作
-        EditorGUI.InputText("##console_search", ref search);
+        float searchWidth = Math.Max(available.x - groupWidth - EditorTheme.Current.SpacingX, MinSearchWidth);
+        EditorGUI.InputText("##console_search", ref search, searchWidth);
         if (NativeEditorGUI.IsItemHovered()) EditorGUI.SetTooltip("Filter by substring (live)");
 
+        //搜索框之后一路用自然间距：组内间距与量宽时假设的一致
         EditorGUI.SameLine();
-        if (EditorGUI.ToggleButton($"Info {levelCounts[EditorLogLevel.Info]}##console_info", levelVisible[EditorLogLevel.Info]))
+        if (EditorGUI.ToggleButton(InfoLabel, levelVisible[EditorLogLevel.Info]))
             levelVisible[EditorLogLevel.Info] = !levelVisible[EditorLogLevel.Info];
 
         EditorGUI.SameLine();
-        if (EditorGUI.ToggleButton($"Warn {levelCounts[EditorLogLevel.Warning]}##console_warning", levelVisible[EditorLogLevel.Warning]))
+        if (EditorGUI.ToggleButton(WarningLabel, levelVisible[EditorLogLevel.Warning]))
             levelVisible[EditorLogLevel.Warning] = !levelVisible[EditorLogLevel.Warning];
 
         EditorGUI.SameLine();
-        if (EditorGUI.ToggleButton($"Err {levelCounts[EditorLogLevel.Error]}##console_error", levelVisible[EditorLogLevel.Error]))
+        if (EditorGUI.ToggleButton(ErrorLabel, levelVisible[EditorLogLevel.Error]))
             levelVisible[EditorLogLevel.Error] = !levelVisible[EditorLogLevel.Error];
 
         EditorGUI.SameLine();
-        if (EditorGUI.ToggleButton("Collapse##console_collapse", collapseDuplicates)) collapseDuplicates = !collapseDuplicates;
+        if (EditorGUI.ToggleButton(CollapseLabel, collapseDuplicates)) collapseDuplicates = !collapseDuplicates;
 
         EditorGUI.SameLine();
-        if (EditorGUI.ToggleButton("Follow##console_follow", followTail)) followTail = !followTail;
+        if (EditorGUI.ToggleButton(FollowLabel, followTail)) followTail = !followTail;
 
-        //Clear 贴右；按钮宽度首帧量一次，量到后催一帧让对齐生效
-        float clearOffset = available.x - clearButtonWidth;
-        if (clearOffset > 0.0f) EditorGUI.SameLine(clearOffset);
-        else EditorGUI.SameLine();
-
-        vector2 beforeClear = NativeEditorGUI.GetCursorScreenPos();
-        if (EditorGUI.Button("Clear##console_clear")) ClearEntries();
-        vector2 afterClear = NativeEditorGUI.GetCursorScreenPos();
-
-        float measured = afterClear.x - beforeClear.x - EditorTheme.Current.SpacingX;
-        if (measured > 0.0f && Math.Abs(measured - clearButtonWidth) > 0.5f)
-        {
-            clearButtonWidth = measured;
-            EditorApplication.RequestRepaint();
-        }
+        EditorGUI.SameLine();
+        if (EditorGUI.Button(ClearLabel)) ClearEntries();
     }
 
     //清空原生保留窗口与本地镜像

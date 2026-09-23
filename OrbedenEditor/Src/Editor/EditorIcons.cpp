@@ -10,6 +10,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"
 
+#include <algorithm>
 #include <fstream>
 #include <unordered_map>
 #include <vector>
@@ -18,7 +19,6 @@ namespace
 {
     std::filesystem::path iconDirectory;
     std::unordered_map<std::string, ImTextureID> iconTextures;
-    bool iconsLoaded = false;
 
     //读取整张 PNG 并上传为 RGBA 纹理
     ImTextureID UploadIcon(const std::filesystem::path& path)
@@ -38,49 +38,41 @@ namespace
         GLuint texture = 0;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glGenerateMipmap(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, 0);
         stbi_image_free(pixels);
         return static_cast<ImTextureID>(texture);
     }
 
-    //加载目录内全部 PNG，文件名即图标名
-    void LoadIcons()
-    {
-        iconsLoaded = true;
-        if (iconDirectory.empty() || !std::filesystem::is_directory(iconDirectory))
-        {
-            Log::Warning(("Editor icons directory is missing: " + Utf8Path::ToUtf8(iconDirectory)).c_str());
-            return;
-        }
-
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(iconDirectory))
-        {
-            if (!entry.is_regular_file() || entry.path().extension() != ".png") continue;
-            ImTextureID texture = UploadIcon(entry.path());
-            if (texture != 0) iconTextures.emplace(Utf8Path::ToUtf8(entry.path().stem()), texture);
-        }
-    }
 }
 
 void EditorIcons::SetDirectory(const std::filesystem::path& directory)
 {
+    Shutdown();
     iconDirectory = directory;
-    iconsLoaded = false;
 }
 
-ImTextureID EditorIcons::Get(const std::string& name)
+ImTextureID EditorIcons::Get(const std::string& name, float32 displaySize)
 {
-    if (name.empty()) return 0;
-    if (!iconsLoaded) LoadIcons();
+    if (name.empty() || iconDirectory.empty()) return 0;
+    ImVec2 scale = ImGui::GetIO().DisplayFramebufferScale;
+    float32 pixelSize = displaySize * std::max(scale.x, scale.y);
+    std::string textureName = pixelSize > 32.0f ? "256/" + name : name;
+    auto found = iconTextures.find(textureName);
+    if (found != iconTextures.end()) return found->second;
 
-    auto found = iconTextures.find(name);
-    return found == iconTextures.end() ? 0 : found->second;
+    //按需上传所选尺寸，缓存缺失结果
+    auto path = iconDirectory / Utf8Path::FromUtf8(textureName + ".png");
+    ImTextureID texture = UploadIcon(path);
+    if (texture == 0) Log::Warning(("Editor icon could not be loaded: " + Utf8Path::ToUtf8(path)).c_str());
+    iconTextures.emplace(textureName, texture);
+    return texture;
 }
 
 void EditorIcons::Shutdown()
@@ -91,5 +83,4 @@ void EditorIcons::Shutdown()
         if (texture != 0) glDeleteTextures(1, &texture);
     }
     iconTextures.clear();
-    iconsLoaded = false;
 }

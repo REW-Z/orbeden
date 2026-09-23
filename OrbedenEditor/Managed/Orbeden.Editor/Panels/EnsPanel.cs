@@ -17,6 +17,8 @@ internal sealed class EnsPanel : EditorPanel
     private static string pingKey = string.Empty;
     private readonly HashSet<string> revealKeys = [];
     private string scrollKey = string.Empty;
+    //Alt 折叠的待办：节点一合上，子树这一帧就不再被提交，只能等它们各自被画到时再逐个压回折叠
+    private readonly HashSet<string> collapsedKeys = [];
 
     private sealed record Position(string Parent, string Before, vector3 Translation, quaternion Rotation, vector3 Scale);
 
@@ -97,14 +99,18 @@ internal sealed class EnsPanel : EditorPanel
         }
     }
 
-    //绘制节点并记录选择或投放操作
-    private void DrawNode(Ens ens, EditorPanelContext context)
+    //绘制节点并记录选择或投放操作；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
+    private void DrawNode(Ens ens, EditorPanelContext context, bool forceExpand = false)
     {
         bool hasChildren = children.TryGetValue(ens.Id, out List<Ens>? descendants);
         bool renaming = renamingEns.Equals(ens.Id);
+        bool forceOpen = forceExpand || revealKeys.Contains(ens.ResourceKey);
+        //Alt 折叠的待办在这里被消费一次：本次先把节点压回折叠，之后交回 ImGui 自己记状态。
+        //定位展开是刚发生的指名操作，优先于更早的折叠请求，待办就此作废
+        bool forceCollapse = collapsedKeys.Remove(ens.ResourceKey) && !forceOpen;
         //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + ens.ResourceKey,
-            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, revealKeys.Contains(ens.ResourceKey));
+            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse);
         //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
         if (ens.ResourceKey == scrollKey)
         {
@@ -116,6 +122,11 @@ internal sealed class EnsPanel : EditorPanel
             EditorGUI.SameLine();
             DrawRenameInput(ens);
         }
+        //按住 Alt 点箭头才递归：刚展开的这一帧子树会被提交，展开能顺着递归直接传下去；
+        //刚折叠的这一帧子树一个都不会提交，只能记进待折叠集合
+        bool altToggle = (state & 16) != 0 && (state & 32) != 0;
+        bool expandSubtree = altToggle && (state & 1) != 0;
+        if (altToggle && !expandSubtree) MarkCollapsedSubtree(ens);
         if ((state & 2) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
         if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
@@ -129,9 +140,20 @@ internal sealed class EnsPanel : EditorPanel
         try
         {
             if (descendants != null)
-                foreach (Ens child in descendants) DrawNode(child, context);
+                foreach (Ens child in descendants) DrawNode(child, context, expandSubtree);
         }
         finally { NativeEditorGUI.TreePop(); }
+    }
+
+    //把整棵子树的键记进待折叠集合，等被折叠挡住的那些节点各自被画到时再压回折叠
+    private void MarkCollapsedSubtree(Ens ens)
+    {
+        if (!children.TryGetValue(ens.Id, out List<Ens>? descendants)) return;
+        foreach (Ens child in descendants)
+        {
+            collapsedKeys.Add(child.ResourceKey);
+            MarkCollapsedSubtree(child);
+        }
     }
 
     /// <summary>面板隐藏后不再持有选择。</summary>

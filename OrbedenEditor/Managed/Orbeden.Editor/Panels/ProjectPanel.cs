@@ -104,6 +104,7 @@ internal sealed class ProjectPanel : EditorPanel
     private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
     private string? selectedEntryPath;
+    private string? expandedGridSource;
     private string? selectedPath
     {
         get => selectedEntryPath;
@@ -124,6 +125,8 @@ internal sealed class ProjectPanel : EditorPanel
     private FileSystemWatcher? watcher;
     private int refreshRequested;
     private float directoryWidth = 200;
+    //Alt 折叠的待办：目录一合上，子树这一帧就不再被提交，只能等它们各自被画到时再逐个压回折叠
+    private readonly HashSet<string> collapsedDirectories = [];
     private string startupWorld = string.Empty;
     private float tileSize = TileSizeDefault;
     private static string? pingKey;
@@ -367,22 +370,31 @@ internal sealed class ProjectPanel : EditorPanel
         EditorAssetCatalog.Instance.Refresh();
     }
 
-    //递归绘制展开目录并排除生成目录与目录链接
-    private void DrawDirectory(string path)
+    //递归绘制展开目录并排除生成目录与目录链接；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
+    private void DrawDirectory(string path, bool forceExpand = false)
     {
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
         string name = GetDirectoryName(path);
         bool renaming = string.Equals(renamingEntry, path, StringComparison.OrdinalIgnoreCase) && RenamesInTree(path);
+        //Alt 折叠的待办在这里被消费一次：本次先把目录压回折叠，之后交回 ImGui 自己记状态
+        bool forceCollapse = !forceExpand && collapsedDirectories.Remove(path);
         //没有下级目录的叶子不该显示展开箭头
         //重命名时把名称让给输入框；隐藏标签后节点宽度仍是「箭头+标签」，输入框正好从原名称的位置开始
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : name) + "##directory_" + path,
             string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
-            leaf: !HasSubDirectories(path));
+            leaf: !HasSubDirectories(path),
+            forceOpen: forceExpand,
+            forceCollapse: forceCollapse);
         if (renaming)
         {
             EditorGUI.SameLine();
             DrawRenameInput(path);
         }
+        //按住 Alt 点箭头才递归：刚展开的这一帧子树会被提交，展开能顺着递归直接传下去；
+        //刚折叠的这一帧子树一个都不会提交，只能记进待折叠集合
+        bool altToggle = (state & 16) != 0 && (state & 32) != 0;
+        bool expandSubtree = altToggle && (state & 1) != 0;
+        if (altToggle && !expandSubtree) MarkCollapsedSubtree(path);
         if ((state & 2) != 0)
         {
             currentDirectory = path;
@@ -401,7 +413,7 @@ internal sealed class ProjectPanel : EditorPanel
         {
             foreach (string directory in Directory.EnumerateDirectories(path).Order(StringComparer.OrdinalIgnoreCase))
             {
-                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0) DrawDirectory(directory);
+                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0) DrawDirectory(directory, expandSubtree);
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -409,6 +421,25 @@ internal sealed class ProjectPanel : EditorPanel
             EditorGUI.Label("Directory read failed: " + ex.Message);
         }
         finally { NativeEditorGUI.TreePop(); }
+    }
+
+    //把整棵子目录记进待折叠集合，等被折叠挡住的那些目录各自被画到时再压回折叠。
+    //范围与绘制一致：跳过分隔点与生成目录，否则会留下永远画不到的死键
+    private void MarkCollapsedSubtree(string path)
+    {
+        try
+        {
+            foreach (string directory in Directory.EnumerateDirectories(path))
+            {
+                if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue;
+                if (EditorAssetCatalog.Instance.IsGeneratedPath(directory)) continue;
+                collapsedDirectories.Add(directory);
+                MarkCollapsedSubtree(directory);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     //目录的显示名：内容根统一叫 Content（与目录树、项目模板一致），其余取文件夹名
@@ -481,15 +512,12 @@ internal sealed class ProjectPanel : EditorPanel
         if (gridView)
         {
             DrawAssetGrid(entries, width);
-            if (selectedPath != null && EditorAssetInspection.CanInspect(selectedPath))
+            if (expandedGridSource != null && entries.Contains(expandedGridSource) && File.Exists(expandedGridSource)
+                && EditorAssetCatalog.CanExpandSource(expandedGridSource))
             {
                 EditorGUI.Separator();
-                int state = NativeEditorGUI.TreeNode("Resources in " + Path.GetFileName(selectedPath) + "##grid_resources", false, false);
-                if ((state & 1) != 0)
-                {
-                    try { DrawSubAssets(selectedPath, false); }
-                    finally { NativeEditorGUI.TreePop(); }
-                }
+                EditorGUI.Label("Resources in " + Path.GetFileName(expandedGridSource));
+                DrawSubAssets(expandedGridSource, false);
             }
         }
         else DrawAssetTable(entries);
@@ -691,9 +719,15 @@ internal sealed class ProjectPanel : EditorPanel
                 ref renameBuffer, ref renameFocusRequested, width, selected));
             return;
         }
-        if (EditorGUI.AssetTile(EditorIconCatalog.ForResource(entry, directory), GetDisplayName(entry), entry, width, selected))
+        int state = NativeEditorGUI.AssetTile(EditorIconCatalog.ForResource(entry, directory), GetDisplayName(entry), entry,
+            width, selected, expandable: !directory && EditorAssetCatalog.CanExpandSource(entry), expanded: expandedGridSource == entry);
+        if ((state & 1) != 0) selectedPath = entry;
+        if ((state & 2) != 0)
+        {
             selectedPath = entry;
-        if (EditorGUI.IsItemDoubleClicked()) OpenEntry(entry);
+            expandedGridSource = expandedGridSource == entry ? null : entry;
+        }
+        if ((state & 4) == 0 && EditorGUI.IsItemDoubleClicked()) OpenEntry(entry);
         if (directory) DrawDirectoryDrop(entry);
         NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
         if (EditorGUI.BeginPopupContextItem("##project_tile_menu_" + entry))
@@ -729,11 +763,14 @@ internal sealed class ProjectPanel : EditorPanel
         else
         {
             bool clicked;
-            if (!directory && EditorAssetInspection.CanInspect(entry))
+            if (!directory)
             {
+                bool leaf = !EditorAssetCatalog.CanExpandSource(entry);
                 int state = NativeEditorGUI.TreeNode(name + "##" + entry,
-                    string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase), false);
-                expanded = (state & 1) != 0;
+                    string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase), leaf: leaf,
+                    icon: EditorSourceIconCatalog.ForFile(entry));
+                expanded = !leaf && (state & 1) != 0;
+                if (leaf && (state & 1) != 0) NativeEditorGUI.TreePop();
                 clicked = (state & 2) != 0;
             }
             else clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
@@ -775,13 +812,16 @@ internal sealed class ProjectPanel : EditorPanel
         {
             if (table) { EditorGUI.TableNextRow(); EditorGUI.TableSetColumnIndex(0); }
             string label = asset.Key.Contains("//", StringComparison.Ordinal) ? asset.Key.Split("//", 2)[1] : asset.TypeName;
-            if (EditorGUI.Selectable(label + "##subasset_" + asset.Key,
-                EditorAssetInspection.SourcePath == path && EditorAssetInspection.ObjectKey == asset.Key))
+            int state = NativeEditorGUI.TreeNode(label + "##subasset_" + asset.Key,
+                EditorAssetInspection.SourcePath == path && EditorAssetInspection.ObjectKey == asset.Key,
+                leaf: true, icon: EditorIconCatalog.ForReference(asset.TypeName));
+            if ((state & 2) != 0)
             {
                 selectedEntryPath = path;
                 EditorAssetInspection.Select(path, asset.Key);
             }
             if (!result.IsStale) NativeEditorGUI.DragSource(2, asset.Key);
+            if ((state & 1) != 0) NativeEditorGUI.TreePop();
             if (table) { EditorGUI.TableSetColumnIndex(1); EditorGUI.Label(asset.TypeName); }
         }
         if (result.Objects.Count == 0 || result.Messages.Count != 0)

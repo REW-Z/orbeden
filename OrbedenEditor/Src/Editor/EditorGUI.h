@@ -88,11 +88,12 @@ public:
     void* beginDialog = nullptr;
     void* assetRenameTile = nullptr;
     void* sliderFloat = nullptr;
+    void* calcButtonWidth = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 70);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 71);
 
 //Editor ImGui 绑定层
 class EditorGUI

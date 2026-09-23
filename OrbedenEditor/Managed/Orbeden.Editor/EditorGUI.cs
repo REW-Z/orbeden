@@ -67,7 +67,7 @@ public static class EditorGUI
 
     /// <summary>绘制资源瓦片，整块作为一个条目。</summary>
     public static bool AssetTile(string icon, string label, string id, float width, bool selected = false)
-        => NativeEditorGUI.AssetTile(icon, label, id, width, selected);
+        => (NativeEditorGUI.AssetTile(icon, label, id, width, selected) & 1) != 0;
 
     /// <summary>绘制重命名中的资源瓦片：图标照画，名称那一行是输入框。返回 0 继续编辑、1 回车、2 失焦、3 Esc。</summary>
     public static int AssetRenameTile(string icon, string id, ref string value, ref bool focusRequested, float width, bool selected)
@@ -195,8 +195,12 @@ public static class EditorGUI
     /// <summary>绘制三维向量输入框。</summary>
     public static bool InputVector3(string label, ref vector3 value) => NativeEditorGUI.InputVector3(label, ref value);
 
-    /// <summary>绘制字符串输入框。</summary>
-    public static bool InputText(string label, ref string value) => NativeEditorGUI.InputText(label, ref value);
+    /// <summary>绘制字符串输入框；width 为 0 时用 ImGui 默认宽度。</summary>
+    public static bool InputText(string label, ref string value, float width = 0.0f)
+        => NativeEditorGUI.InputText(label, ref value, width);
+
+    /// <summary>量出按钮将要占用的宽度，供绘制前把一行控件排到指定位置。</summary>
+    public static float CalcButtonWidth(string text) => NativeEditorGUI.CalcButtonWidth(text);
 
     /// <summary>绘制带颜色文本。</summary>
     public static void TextColored(string text, color value) => NativeEditorGUI.TextColored(text, value);

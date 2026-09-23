@@ -117,7 +117,7 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
    - 内容根内每个可导入的源文件经 `AssetPipeline` 导入，产生的**每个资源对象**序列化为一个 `.orbo`（`Orbeden::Object` 二进制），先写入 `{ProjectRoot}/ResourceCache/Player/`，再整体同步到 `{ProjectRoot}/Build/windows-x64/bin/Content/`。
    - `.world` 场景**不 cook**，保持 XML 原样复制，并保留其相对内容根的目录结构。
    - `.oeproj` 复制到包根，供 Player 读取启动场景；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
-   - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物。整个 ResourceCache 可删除重建，源文件旁的 `.resinfo` 元数据必须保留。
+   - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物。整个 ResourceCache（含 `.resinfo`）可删除重建，不纳入版本管理。
 
 > Player 以**可执行文件所在目录**为根解析内容，发布目录整体拷到别的路径或别的机器都能运行。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
@@ -455,7 +455,7 @@ MyGame/
 
 `Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`——位置既然固定，就不该做成可配置属性。
 
-`ResourceCache/` 与 `Content/` 同级。`Imported/` 保存编辑器后台导入的 `.orbo`，Project/Inspector 读取源文件旁合并元数据与子资源清单的 `.resinfo`，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。`.resinfo` 随源文件纳入版本管理，ResourceCache 不纳入。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
+`ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存 `.resinfo` 和带源文件名前缀的 `.orbo`，Project/Inspector 读取缓存清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。`.resinfo` 和导入产物均不纳入版本管理；Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
 
 ### 内容根与资源 Key
 
@@ -506,6 +506,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 11 | 编辑器 Imported 缓存映射 Content 目录；`.resinfo` 移入缓存，源路径和依赖改为相对路径。取消 SourceId、Engine、Generation、旧代次和 `.result` 落盘。重新导入覆盖当前产物；编辑器对象文件增加源文件名前缀，Player 命名不变。升级重建缓存、更新 SDK 与原生模块；旧 Content 伴随 `.resinfo` 不再使用，可自行删除及取消版本跟踪。 |
 | 10 | 资源检查改用后台导入与源文件旁的 `.resinfo`，导入产物进入 `ResourceCache/Imported`，打包暂存改为 `ResourceCache/Player`。新增项目级 Layer 命名和物理碰撞矩阵，配置保存在 Content/ProjectSettings.layers 并随 Player 复制。无配置保持全部层互相碰撞；更新 SDK、重建原生游戏模块并重新打包。现有 drawLayer/collisionLayer 位值和组件 collisionMask 不迁移。 |
 | 9 | 太阳阴影替换为每相机 CSM / 异步 SDSM，新增 DirectionalLight 级联配置，更新 SDK 并重建游戏模块和发布包。shadowBias 改为世界单位，旧值不再解释为归一化深度；按实际场景重新校准，默认 0.0005。自定义接收阴影 Shader 必须迁移到级联查询 ABI，升级器保留用户 Content，不自动覆盖 Shader。迁移步骤见 [级联阴影方案](CascadedShadows.md)。 |
 | 7 | Player 改为自包含发布目录：`Build Player` 把内容根内可导入的资源经 AssetPipeline 导入后序列化为 `.orbo` 二进制（先落 `ResourceCache/`，再同步进包内 `Content/`），`.world` 原样复制，`.oeproj` 复制到包根。Player 以**可执行文件所在目录**为内容根，不再依赖编译期的 `ORBEDEN_PROJECT_DIR`。`.orbo` 为位置式二进制，改动资源字段即需重新打包。项目文件本身无需迁移，但**必须重新执行 `Build Player`**，旧发布目录不能继续使用。 |

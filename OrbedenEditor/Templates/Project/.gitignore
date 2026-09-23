@@ -1,2 +1,4 @@
 Build/
 ResourceCache/
+*.resinfo
+*.resinfo.tmp

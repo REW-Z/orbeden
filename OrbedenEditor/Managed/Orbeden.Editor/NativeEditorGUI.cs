@@ -21,7 +21,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, int*, byte> InputInt;
     public delegate* unmanaged[Cdecl]<byte*, int, float*, byte> InputFloat;
     public delegate* unmanaged[Cdecl]<byte*, int, vector3*, byte> InputVector3;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, int> InputText;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, float, int> InputText;
     public delegate* unmanaged[Cdecl]<void> Separator;
     public delegate* unmanaged[Cdecl]<float, void> SameLine;
     public delegate* unmanaged[Cdecl]<byte*, int, int, byte> BeginTable;
@@ -41,7 +41,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<void> EndDisabled;
     public delegate* unmanaged[Cdecl]<byte*, int, float*, float, byte, byte> BeginChild;
     public delegate* unmanaged[Cdecl]<void> EndChild;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte, int> TreeNode;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte*, int, int> TreeNode;
     public delegate* unmanaged[Cdecl]<void> TreePop;
     public delegate* unmanaged[Cdecl]<byte*, int, void> OpenPopup;
     public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopup;
@@ -79,6 +79,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, float, byte> BeginDialog;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte*, float, byte, int> AssetRenameTile;
     public delegate* unmanaged[Cdecl]<byte*, int, float*, float, float, float, byte> SliderFloat;
+    public delegate* unmanaged[Cdecl]<byte*, int, float> CalcButtonWidth;
 }
 #pragma warning restore CS0649
 
@@ -182,14 +183,17 @@ internal static unsafe class NativeEditorGUI
     //结束滚动区域
     internal static void EndChild() => api.EndChild();
 
-    //绘制目录节点。返回值：1 展开、2 点击、4 Ctrl、8 双击
-    internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false, bool forceOpen = false)
+    //绘制目录节点。返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
+    internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
+        bool forceOpen = false, bool forceCollapse = false, string? icon = null)
     {
         byte[] bytes = Encode(label);
+        byte[] iconBytes = Encode(icon);
+        fixed (byte* iconPointer = iconBytes)
         fixed (byte* pointer = bytes)
         {
             return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
-                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0)));
+                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0)), iconPointer, iconBytes.Length);
         }
     }
 
@@ -305,10 +309,10 @@ internal static unsafe class NativeEditorGUI
             return api.ReferenceField(iconPointer, iconBytes.Length, textPointer, textBytes.Length, idPointer, idBytes.Length);
     }
 
-    //绘制资源瓦片
-    internal static bool AssetTile(string? icon, string? label, string? id, float width, bool selected)
+    //绘制资源瓦片：返回 1 选中、2 切换展开、4 鼠标位于展开箭头
+    internal static int AssetTile(string? icon, string? label, string? id, float width, bool selected, bool expandable = false, bool expanded = false)
     {
-        if (!initialized || api.AssetTile == null) return false;
+        if (!initialized || api.AssetTile == null) return 0;
         byte[] iconBytes = Encode(icon);
         byte[] labelBytes = Encode(label);
         byte[] idBytes = Encode(id);
@@ -316,7 +320,7 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* idPointer = idBytes)
             return api.AssetTile(iconPointer, iconBytes.Length, labelPointer, labelBytes.Length, idPointer, idBytes.Length,
-                width, selected ? (byte)1 : (byte)0) != 0;
+                width, (byte)((selected ? 1 : 0) | (expandable ? 2 : 0) | (expanded ? 4 : 0)));
     }
 
     //绘制重命名中的资源瓦片：图标照画，名称那一行是输入框。返回 0 继续编辑、1 回车、2 失焦、3 Esc
@@ -592,8 +596,8 @@ internal static unsafe class NativeEditorGUI
         }
     }
 
-    //绘制字符串输入框
-    internal static bool InputText(string? label, ref string value)
+    //绘制字符串输入框；width <= 0 时用 ImGui 默认宽度
+    internal static bool InputText(string? label, ref string value, float width = 0.0f)
     {
         if (!initialized || api.InputText == null) return false;
 
@@ -608,13 +612,21 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* valuePointer = valueBytes)
         {
-            int newByteCount = api.InputText(labelPointer, labelBytes.Length, valuePointer, valueBytes.Length);
+            int newByteCount = api.InputText(labelPointer, labelBytes.Length, valuePointer, valueBytes.Length, width);
             if (newByteCount < 0) return false;
 
             newByteCount = Math.Min(newByteCount, maxBytes);
             value = Encoding.UTF8.GetString(valueBytes[..newByteCount]);
             return true;
         }
+    }
+
+    //量出按钮将要占用的宽度，供绘制前排版
+    internal static float CalcButtonWidth(string? text)
+    {
+        if (!initialized || api.CalcButtonWidth == null) return 0.0f;
+        byte[] bytes = Encode(text);
+        fixed (byte* pointer = bytes) return api.CalcButtonWidth(pointer, bytes.Length);
     }
 
     //绘制分隔线

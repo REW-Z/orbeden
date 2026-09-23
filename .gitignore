@@ -14,3 +14,7 @@ OrbedenGame/Build/*
 OrbedenCore/obj/*
 Build/.cache/*
 Tests/*
+
+ResourceCache/
+*.resinfo
+*.resinfo.tmp

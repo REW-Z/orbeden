@@ -563,7 +563,7 @@ bool CookedAssetSerializer::Write(const std::string& blobPath, Object* object, c
 }
 
 //读出资源对象并注册
-bool CookedAssetSerializer::Read(const std::string& blobPath, List<std::string>& externalRefs, std::string& error)
+bool CookedAssetSerializer::Read(const std::string& blobPath, List<std::string>& externalRefs, std::string& error, const std::string& filenamePrefix)
 {
     error.clear();
 
@@ -633,7 +633,7 @@ bool CookedAssetSerializer::Read(const std::string& blobPath, List<std::string>&
     }
 
     //Key 必须与文件名哈希一致，否则说明文件被改名或发生碰撞。
-    if (GetBlobFileName(resourceKey) != Utf8Path::ToUtf8(Utf8Path::FromUtf8(blobPath).filename()))
+    if (filenamePrefix + GetBlobFileName(resourceKey) != Utf8Path::ToUtf8(Utf8Path::FromUtf8(blobPath).filename()))
     {
         error = "Cooked asset key does not match its file name: " + blobPath;
         return false;

@@ -5,7 +5,9 @@
 #include "FileSystem/Utf8Path.h"
 #include "ResourceManager/ResourceManager.h"
 #include <filesystem>
-#include <fstream>
+#include <cstdio>
+#include <fcntl.h>
+#include <io.h>
 #include <string_view>
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
@@ -20,14 +22,20 @@ int wmain(int argc, wchar_t** argv)
     //资源检查工作进程不初始化图形或编辑器，只运行真实导入器并写出轻量快照。
     if (argc == 5 && std::wstring_view(argv[1]) == L"--inspect-asset")
     {
+        //保留结果管道，将导入器控制台日志重定向到标准错误
+        int32 resultDescriptor = _dup(_fileno(stdout));
+        if (resultDescriptor < 0) return 1;
+        FILE* output = _fdopen(resultDescriptor, "wb");
+        if (!output) { _close(resultDescriptor); return 1; }
+        std::fflush(stdout);
+        if (_dup2(_fileno(stderr), _fileno(stdout)) != 0) { std::fclose(output); return 1; }
+        _setmode(_fileno(output), _O_BINARY);
         PathDefines::SetContentRoot(Utf8Path::ToUtf8(std::filesystem::path(argv[2])));
         std::filesystem::path directory(argv[4]);
         std::filesystem::create_directories(directory);
         std::string result = AssetInspection::Inspect(Utf8Path::ToUtf8(std::filesystem::path(argv[3])), Utf8Path::ToUtf8(directory));
-        std::ofstream output(directory / "inspection.result", std::ios::binary | std::ios::trunc);
-        output.write(result.data(), static_cast<std::streamsize>(result.size()));
-        output.flush();
-        bool succeeded = output.good();
+        bool succeeded = std::fwrite(result.data(), 1, result.size(), output) == result.size();
+        if (std::fclose(output) != 0) succeeded = false;
         ResourceManager::Shutdown();
         return succeeded ? 0 : 1;
     }
