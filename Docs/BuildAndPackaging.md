@@ -99,6 +99,14 @@ flowchart LR
 | Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Build/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
 | Player | MSVC Executable（`OrbedenGame.vcxproj`）+ 资源打包 | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/`，自包含发布目录：`OrbedenGame.exe`、`.oeproj`、`Content/` |
 
+### MSBuild 的定位
+
+Editor 与 `Build/` 下的脚本都不写死 Visual Studio 的安装路径。Editor 的查找顺序为：`ORBEDEN_MSBUILD` 环境变量（显式指定，指向不存在的文件时直接报错，不静默改换工具链）→ `vswhere.exe` 查询（固定位于 `%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\`，先只接受装了 x64 C++ 生成工具的实例，查不到再放宽条件）→ PATH 上的 `MSBuild.exe`（从 Developer Command Prompt 启动编辑器时命中）。三者都没有时 `Build Game C++` / `Build Player` 直接报错要求安装带 C++ 工作负载的 Visual Studio，不拼出一条注定失败的命令行。PowerShell 脚本点源 `Build/FindMSBuild.ps1`，走 vswhere → PATH 的顺序。
+
+vswhere 给出实例后还要校验它自带的平台工具集：`Sdk/Native/Orbeden.Native.props` 里声明的 `PlatformToolset`（当前 v145）必须在该实例的 `MSBuild\Microsoft\VC\*\Platforms\x64\PlatformToolsets\` 下存在，缺了就报出实例路径，而不是等到 MSB8020。**工具集号与 VCTargets 目录号不是一回事**：VS 2026 的 v145 工具集位于 `MSBuild\Microsoft\VC\v180` 下，`v170` 下只有 v143。工具集随 VS 版本单调递增，因此最新实例没有目标工具集时，别的实例也不会有。
+
+因此 Visual Studio 可以装在任意盘符，版本与版本号也不必是默认值。
+
 ## 完整打包流程
 
 Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows x64 Release Editor 发起，进入 Player 的 Core/Game C# 使用目标平台 NativeAOT。

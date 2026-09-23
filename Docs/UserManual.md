@@ -7,7 +7,7 @@
 Windows Editor 开发需要：
 
 - .NET 10 SDK，用于编译 C# 脚本。
-- Visual Studio 2022+ 的 MSBuild C++ 工具链，用于编译 C++ 游戏模块（游戏 C++ 代码使用 vcxproj 工程）。
+- Visual Studio 的 MSBuild C++ 工具链，用于编译 C++ 游戏模块（游戏 C++ 代码使用 vcxproj 工程，工具集为 v145）。Editor 自动查找 MSBuild，不要求它装在系统盘或使用默认的版本、版本号。
 - 已构建或正式分发的 Orbeden Editor。源码环境第一次使用时，应先构建 `OrbedenCore.vcxproj`，再构建 `OrbedenEditor.vcxproj`。
 
 ## 2. 创建和打开项目

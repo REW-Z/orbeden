@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -302,17 +303,240 @@ namespace
         return NewProjectGenerator::SyncRuntimeCSharpDll(csproj, runtimeDllPath, outError);
     }
 
-    std::filesystem::path GetVisualStudioRoot()
+    //读取环境变量为文件系统路径：未设置时返回空路径。
+    //Windows 下走宽字符 API，避免经过 ANSI 代码页丢掉非 ASCII 字符。
+    std::filesystem::path GetEnvironmentPath(const char* name)
     {
-        //lexically_normal 不会转换分隔符，统一转成系统首选分隔符后再拼接命令。
-        return std::filesystem::path("C:/Program Files/Microsoft Visual Studio/18/Community").make_preferred();
+#if defined(_WIN32)
+        //变量名是 ASCII，值可能是任意 Unicode，因此按宽字符读取。
+        std::wstring wideName(name, name + std::strlen(name));
+        wchar_t* value = nullptr;
+        std::size_t size = 0;
+        if (_wdupenv_s(&value, &size, wideName.c_str()) != 0 || !value) return std::filesystem::path();
+
+        std::filesystem::path result(value);
+        std::free(value);
+        return result;
+#else
+        const char* value = std::getenv(name);
+        return value ? Utf8Path::FromUtf8(value) : std::filesystem::path();
+#endif
     }
 
-    std::string GetBundledMSBuildPath()
+    //在子进程上执行命令并收集全部标准输出。
+    //二进制模式读取：管道里的字节原样返回，不做换行与代码页转换，vswhere 的 -utf8 输出可以直接当 UTF-8 用。
+    std::string CaptureCommandOutput(const std::string& command)
     {
-        std::filesystem::path path = GetVisualStudioRoot() / "MSBuild/Current/Bin/MSBuild.exe";
-        //ToCleanPath 输出正斜杠的通用格式，cmd 无法执行；可执行文件路径必须使用原生分隔符。
-        return std::filesystem::exists(path) ? path.string() : "msbuild";
+#if defined(_WIN32)
+        FILE* pipe = _popen(command.c_str(), "rb");
+#else
+        FILE* pipe = popen(command.c_str(), "r");
+#endif
+        if (!pipe) return std::string();
+
+        std::string output;
+        std::array<char, 512> buffer {};
+        std::size_t readSize = 0;
+        while ((readSize = std::fread(buffer.data(), 1, buffer.size(), pipe)) > 0)
+        {
+            output.append(buffer.data(), readSize);
+        }
+
+#if defined(_WIN32)
+        _pclose(pipe);
+#else
+        pclose(pipe);
+#endif
+        return output;
+    }
+
+    //取输出的第一行：vswhere 的 -format value 一行一个结果。
+    std::string FirstOutputLine(const std::string& output)
+    {
+        std::size_t begin = output.find_first_not_of("\r\n");
+        if (begin == std::string::npos) return std::string();
+
+        std::size_t end = output.find_first_of("\r\n", begin);
+        return end == std::string::npos ? output.substr(begin) : output.substr(begin, end - begin);
+    }
+
+    //命令行里的可执行文件路径必须使用系统首选分隔符：cmd 不认 Utf8Path::ToUtf8 的正斜杠通用格式。
+    std::string ToNativeUtf8(const std::filesystem::path& path)
+    {
+        std::u8string bytes = path.u8string();
+        return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+    }
+
+    bool IsRegularFile(const std::filesystem::path& path)
+    {
+        std::error_code error;
+        return std::filesystem::is_regular_file(path, error);
+    }
+
+    //按 Visual Studio 的安装布局取某个安装根内的 MSBuild.exe。
+    //Current 是随更新重建的链接名，同级的版本目录是布局变化时的兜底。
+    std::filesystem::path FindMSBuildUnderRoot(const std::filesystem::path& visualStudioRoot)
+    {
+        std::filesystem::path current = visualStudioRoot / "MSBuild/Current/Bin/MSBuild.exe";
+        if (IsRegularFile(current)) return current;
+
+        std::error_code error;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(visualStudioRoot / "MSBuild", error))
+        {
+            std::filesystem::path candidate = entry.path() / "Bin/MSBuild.exe";
+            if (IsRegularFile(candidate)) return candidate;
+        }
+
+        return std::filesystem::path();
+    }
+
+    //PATH 的条目分隔符：Windows 用分号，POSIX 用冒号。
+#if defined(_WIN32)
+    constexpr char PathVariableSeparator = ';';
+#else
+    constexpr char PathVariableSeparator = ':';
+#endif
+
+    //PATH 上的 MSBuild.exe：从 Developer Command Prompt 启动编辑器时直接命中。
+    std::filesystem::path FindMSBuildOnPath()
+    {
+        std::string pathList = Utf8Path::ToUtf8(GetEnvironmentPath("PATH"));
+        std::size_t begin = 0;
+        while (begin < pathList.size())
+        {
+            std::size_t end = pathList.find(PathVariableSeparator, begin);
+            if (end == std::string::npos) end = pathList.size();
+
+            std::string entry = pathList.substr(begin, end - begin);
+            //PATH 允许用引号包住带空格的目录。
+            if (entry.size() >= 2 && entry.front() == '"' && entry.back() == '"')
+            {
+                entry = entry.substr(1, entry.size() - 2);
+            }
+            if (!entry.empty())
+            {
+                std::filesystem::path candidate = Utf8Path::FromUtf8(entry) / "MSBuild.exe";
+                if (IsRegularFile(candidate)) return candidate;
+            }
+
+            begin = end + 1;
+        }
+
+        return std::filesystem::path();
+    }
+
+    //VS 安装器的组件 ID：x64 C++ 生成工具。用它把没装 C++ 工作负载的实例挡在查询之外。
+    constexpr const char* VcToolsComponentId = "Microsoft.VisualStudio.Component.VC.Tools.x86.x64";
+
+    //vswhere.exe 是 VS 2017+ 的官方查询入口，固定装在 Installer 目录，与安装盘符、版本和版本号都无关。
+    std::filesystem::path GetVsWherePath()
+    {
+        std::filesystem::path programFilesX86 = GetEnvironmentPath("ProgramFiles(x86)");
+        if (programFilesX86.empty()) return std::filesystem::path();
+
+        return programFilesX86 / "Microsoft Visual Studio/Installer/vswhere.exe";
+    }
+
+    //vswhere 查询：返回输出的第一行（-format value 一行一个结果）；vswhere 缺失时返回空串。
+    std::string QueryVswhere(const std::string& arguments)
+    {
+        std::filesystem::path vsWhere = GetVsWherePath();
+        if (!IsRegularFile(vsWhere)) return std::string();
+
+        std::string command = Quote(ToNativeUtf8(vsWhere)) + " " + arguments + " -utf8";
+        return FirstOutputLine(CaptureCommandOutput(command));
+    }
+
+    //确认某个 VS 实例带了工程要求的平台工具集。
+    //工具集随 VS 版本单调递增（2022 是 v143、2026 是 v145），最新实例都没有就意味着别的实例也没有。
+    //MSBuild 下的 VC 布局认不出来时（一个工具集目录都没找到）视为通过，避免把未知布局误判成缺工具集。
+    bool HasPlatformToolset(const std::filesystem::path& visualStudioRoot, const std::string& toolset)
+    {
+        if (toolset.empty()) return true;
+
+        std::error_code error;
+        bool sawAnyToolset = false;
+        for (const std::filesystem::directory_entry& targets : std::filesystem::directory_iterator(visualStudioRoot / "MSBuild/Microsoft/VC", error))
+        {
+            for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(targets.path() / "Platforms/x64/PlatformToolsets", error))
+            {
+                sawAnyToolset = true;
+                if (entry.path().filename() == toolset) return true;
+            }
+        }
+
+        return !sawAnyToolset;
+    }
+
+    //从 SDK 的共享属性表里读工程要求的平台工具集；读不到时返回空串，查找时跳过工具集校验。
+    //路径与游戏工程的导入位置一致：Sdk/Native/Orbeden.Native.props。
+    std::string ReadRequiredPlatformToolset(const std::filesystem::path& sdkRoot)
+    {
+        std::filesystem::path props = sdkRoot / "Native/Orbeden.Native.props";
+        if (!IsRegularFile(props)) return std::string();
+
+        return GetXmlTagValue(ReadTextFile(props), "PlatformToolset");
+    }
+
+    //定位 MSBuild.exe；失败时报出可操作的原因——退化成裸名字只会得到 cmd 的“不是内部或外部命令”。
+    //Visual Studio 的安装盘符、版本和版本号都由用户自选，写死安装路径必然在别的机器上失效。
+    bool FindMSBuild(std::string& outPath, std::string& outError, const std::string& requiredToolset)
+    {
+        //1) 显式指定优先：指错了要立刻失败，不要静默换成另一套工具链。
+        std::filesystem::path overridePath = GetEnvironmentPath("ORBEDEN_MSBUILD");
+        if (!overridePath.empty())
+        {
+            if (!IsRegularFile(overridePath))
+            {
+                outError = "ORBEDEN_MSBUILD does not point to an existing file: " + ToNativeUtf8(overridePath);
+                return false;
+            }
+
+            outPath = ToNativeUtf8(overridePath.lexically_normal());
+            return true;
+        }
+
+        //同一次编辑器会话内工具链不会变化，只缓存成功结果：失败后重试仍会重新查找。
+        static std::string cachedPath;
+        if (!cachedPath.empty())
+        {
+            outPath = cachedPath;
+            return true;
+        }
+
+        //2) vswhere 是 VS 2017+ 的官方查询入口。先只接受装了 x64 C++ 生成工具的实例，查不到再放宽条件。
+        std::string installPath = QueryVswhere("-latest -prerelease -products * -requires "
+            + std::string(VcToolsComponentId) + " -property installationPath -format value");
+        if (installPath.empty())
+        {
+            installPath = QueryVswhere("-latest -prerelease -products * -property installationPath -format value");
+        }
+
+        //3) 校验实例自带的工具集：缺 v145 这类目标工具集时立刻说清楚，不必等到 MSB8020。
+        std::filesystem::path visualStudioRoot = Utf8Path::FromUtf8(installPath);
+        bool toolsetMissing = !visualStudioRoot.empty() && !HasPlatformToolset(visualStudioRoot, requiredToolset);
+
+        std::filesystem::path resolved;
+        if (!toolsetMissing) resolved = FindMSBuildUnderRoot(visualStudioRoot);
+
+        //4) PATH 上的 MSBuild.exe：从 Developer Command Prompt 启动编辑器时命中，那里的工具链是用户自己摆好的。
+        if (resolved.empty()) resolved = FindMSBuildOnPath();
+
+        if (resolved.empty())
+        {
+            outError = toolsetMissing
+                ? "The latest Visual Studio instance (" + ToNativeUtf8(visualStudioRoot)
+                    + ") provides no platform toolset '" + requiredToolset
+                    + "'. Install the matching C++ workload, or point ORBEDEN_MSBUILD at a suitable MSBuild.exe."
+                : "MSBuild.exe was not found. Install Visual Studio with the C++ workload, "
+                    "or start the editor from a Developer Command Prompt, then retry.";
+            return false;
+        }
+
+        //路径先归一化再转原生分隔符，随后整个命令按 UTF-8 传给 cmd。
+        cachedPath = ToNativeUtf8(resolved.lexically_normal());
+        outPath = cachedPath;
+        return true;
     }
 
     //判断项目根是否包含游戏 C++ 工程文件。
@@ -816,8 +1040,20 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         return false;
     }
 
-    std::string sdkRoot = ToCleanPath(Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk");
-    std::string buildCommand = Quote(GetBundledMSBuildPath())
+    std::filesystem::path sdkPath = Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk";
+
+    //工具链找不到时直接给出报错，不要拼出一条一定会失败的命令行。
+    std::string msbuildPath;
+    std::string msbuildError;
+    if (!FindMSBuild(msbuildPath, msbuildError, ReadRequiredPlatformToolset(sdkPath)))
+    {
+        projectStatus = "Build Game C++ failed: " + msbuildError;
+        Log::Error(projectStatus.c_str());
+        return false;
+    }
+
+    std::string sdkRoot = ToCleanPath(sdkPath);
+    std::string buildCommand = Quote(msbuildPath)
         + " " + Quote(ToCleanPath(vcxProject))
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
         + " -p:OrbedenSdkRoot=" + Quote(sdkRoot);
@@ -1063,9 +1299,10 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
+    std::filesystem::path sdkPath = Utf8Path::FromUtf8(repoRoot) / "OrbedenEditor/Sdk";
+
     //Player 只链接 SDK 预编译的 Core 静态库；缺失时直接失败，不触发 Core 源码编译。
-    std::filesystem::path coreStaticLibrary = Utf8Path::FromUtf8(repoRoot)
-        / "OrbedenEditor/Sdk/Native/WindowsX64" / BuildConfiguration / "OrbedenCoreStatic.lib";
+    std::filesystem::path coreStaticLibrary = sdkPath / "Native/WindowsX64" / BuildConfiguration / "OrbedenCoreStatic.lib";
     if (!std::filesystem::exists(coreStaticLibrary))
     {
         projectStatus = "Build Player failed: Orbeden Core static library was not found: "
@@ -1074,7 +1311,17 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string buildCommand = Quote(GetBundledMSBuildPath())
+    //工具链找不到时直接给出报错，不要拼出一条一定会失败的命令行。
+    std::string msbuildPath;
+    std::string msbuildError;
+    if (!FindMSBuild(msbuildPath, msbuildError, ReadRequiredPlatformToolset(sdkPath)))
+    {
+        projectStatus = "Build Player failed: " + msbuildError;
+        Log::Error(projectStatus.c_str());
+        return;
+    }
+
+    std::string buildCommand = Quote(msbuildPath)
         + " " + Quote(playerProject)
         + " -p:Configuration=" + BuildConfiguration + " -p:Platform=x64"
         + " -p:OrbedenProjectDir=" + Quote(project.GetProjectRoot())
