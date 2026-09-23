@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using Orbeden;
 
 namespace OrbedenEditor;
@@ -8,9 +6,7 @@ namespace OrbedenEditor;
 /// <summary>索引 ProjectPanel 和 ObjectField 使用的项目资源。</summary>
 internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
 {
-    private readonly Dictionary<Type, List<ObjectFieldOption>> assets = [];
     private string indexedContentRoot = string.Empty;
-    private readonly Dictionary<Type, IReadOnlyList<ObjectFieldOption>> filteredAssets = [];
 
     public static EditorAssetCatalog Instance { get; } = new();
 
@@ -20,7 +16,8 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     /// <summary>判断某个路径是否落在内容根之外。</summary>
     public bool IsGeneratedPath(string fullPath)
     {
-        return !IsInsideContentRoot(fullPath);
+        return !IsInsideContentRoot(fullPath) || fullPath.EndsWith(".resinfo", StringComparison.OrdinalIgnoreCase)
+            || fullPath.EndsWith(".resinfo.tmp", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>判断某个路径是否落在内容根内。</summary>
@@ -37,18 +34,15 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     public IReadOnlyList<ObjectFieldOption> GetAssets(Type objectType)
     {
         EnsureCurrentProject();
-        if (assets.TryGetValue(objectType, out List<ObjectFieldOption>? exact)) return exact;
-        if (filteredAssets.TryGetValue(objectType, out IReadOnlyList<ObjectFieldOption>? cached)) return cached;
-        IReadOnlyList<ObjectFieldOption> result = assets.Where(pair => objectType.IsAssignableFrom(pair.Key)).SelectMany(pair => pair.Value).ToList();
-        if (!objectType.Assembly.IsCollectible) filteredAssets[objectType] = result;
-        return result;
+        EditorAssetCache.Update();
+        return EditorAssetCache.GetOptions(objectType).DistinctBy(option => option.ResourceKey).ToList();
     }
 
     /// <summary>按资源 Key 加载一个强类型资源包装。</summary>
     public Orbeden.Object? Load(Type objectType, string resourceKey)
     {
-        Type actualType = assets.FirstOrDefault(pair => objectType.IsAssignableFrom(pair.Key)
-            && pair.Value.Any(option => option.ResourceKey == resourceKey)).Key ?? objectType;
+        if (EditorAssetCache.TryLoad(resourceKey, objectType, out Orbeden.Object? cached)) return cached;
+        Type actualType = objectType;
         if (!typeof(Orbeden.Object).IsAssignableFrom(actualType) || actualType.IsAbstract) return null;
         return typeof(Resources).GetMethod(nameof(Resources.Load))!.MakeGenericMethod(actualType)
             .Invoke(null, [resourceKey]) as Orbeden.Object;
@@ -57,8 +51,8 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     /// <summary>重新扫描当前项目资源。</summary>
     public void Refresh()
     {
-        assets.Clear();
-        filteredAssets.Clear();
+        EditorAssetInspection.Invalidate();
+        EditorAssetCache.BeginScan();
         indexedContentRoot = PathDefines.ContentRoot;
         if (string.IsNullOrWhiteSpace(indexedContentRoot)) return;
 
@@ -67,13 +61,9 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
 
         foreach (string file in EnumerateSourceFiles(root))
         {
-            AddSourceOptions(file);
+            if (EditorAssetInspection.CanInspect(file)) EditorAssetCache.Queue(file);
         }
 
-        foreach (List<ObjectFieldOption> options in assets.Values)
-        {
-            options.Sort((left, right) => string.Compare(left.ResourceKey, right.ResourceKey, StringComparison.OrdinalIgnoreCase));
-        }
     }
 
     //把资源磁盘路径转换为内容根相对 Key。内容根之外的路径返回空：
@@ -96,7 +86,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             string directory = pending.Pop();
             foreach (string child in Directory.EnumerateDirectories(directory))
             {
-                if (Path.GetFileName(child).StartsWith('.')) continue;
+                if (Path.GetFileName(child).StartsWith('.') || (File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
                 pending.Push(child);
             }
 
@@ -147,175 +137,6 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         {
             Refresh();
         }
-    }
-
-    //按源文件生成 ObjectField 资源选项。
-    private void AddSourceOptions(string file)
-    {
-        string sourceKey = ToResourceKey(file);
-        string extension = Path.GetExtension(file).ToLowerInvariant();
-        if (extension is ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp")
-        {
-            AddOption(typeof(Texture2D), sourceKey, Path.GetFileName(file));
-            return;
-        }
-        if (extension == ".orbshader")
-        {
-            AddOption(typeof(Shader), sourceKey, Path.GetFileName(file));
-            return;
-        }
-
-        if (extension == ".obj")
-        {
-            AddOption(typeof(Mesh), sourceKey + "//Mesh/Main", Path.GetFileName(file) + " / Mesh/Main");
-            AddObjMaterialOptions(file, sourceKey);
-            return;
-        }
-
-        if (extension is ".gltf" or ".glb") AddGltfOptions(file, sourceKey);
-    }
-
-    //读取 OBJ 使用的 MTL 子资源。
-    private void AddObjMaterialOptions(string objPath, string sourceKey)
-    {
-        try
-        {
-            List<string> materialFiles = [];
-            foreach (string line in File.ReadLines(objPath))
-            {
-                string trimmed = line.Trim();
-                if (!trimmed.StartsWith("mtllib ", StringComparison.Ordinal)) continue;
-                foreach (string fileName in trimmed[7..].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    materialFiles.Add(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(objPath)!, fileName)));
-                }
-            }
-
-            string defaultMtl = Path.ChangeExtension(objPath, ".mtl");
-            if (materialFiles.Count == 0 && File.Exists(defaultMtl)) materialFiles.Add(defaultMtl);
-            foreach (string materialFile in materialFiles.Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                if (!File.Exists(materialFile)) continue;
-                foreach (string line in File.ReadLines(materialFile))
-                {
-                    string trimmed = line.Trim();
-                    if (!trimmed.StartsWith("newmtl ", StringComparison.Ordinal)) continue;
-
-                    string name = trimmed[7..];
-                    string keyName = SanitizeKeyName(name, "Material");
-                    AddOption(typeof(Material), sourceKey + "//Material/" + keyName, Path.GetFileName(objPath) + " / " + name);
-                }
-            }
-        }
-        catch
-        {
-            //跳过无效 MTL
-        }
-    }
-
-    //读取 glTF/GLB 的 Mesh 和 Material 子资源表。
-    private void AddGltfOptions(string path, string sourceKey)
-    {
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(ReadGltfJson(path));
-            JsonElement root = document.RootElement;
-            JsonElement meshes = root.TryGetProperty("meshes", out JsonElement meshValues) ? meshValues : default;
-            int meshCount = meshes.ValueKind == JsonValueKind.Array ? meshes.GetArrayLength() : 0;
-            for (int index = 0; index < meshCount; index++)
-            {
-                JsonElement mesh = meshes[index];
-                string fallback = "Mesh_" + index;
-                string name = mesh.TryGetProperty("name", out JsonElement nameValue) ? nameValue.GetString() ?? fallback : fallback;
-                string id = meshCount == 1 ? "Main" : index + "_" + SanitizeKeyName(name, fallback);
-                AddOption(typeof(Mesh), sourceKey + "//Mesh/" + id, Path.GetFileName(path) + " / " + name);
-            }
-
-            JsonElement materials = root.TryGetProperty("materials", out JsonElement materialValues) ? materialValues : default;
-            int materialCount = materials.ValueKind == JsonValueKind.Array ? materials.GetArrayLength() : 0;
-            for (int index = 0; index < materialCount; index++)
-            {
-                JsonElement material = materials[index];
-                string fallback = "Material_" + index;
-                string name = material.TryGetProperty("name", out JsonElement nameValue) ? nameValue.GetString() ?? fallback : fallback;
-                string id = index + "_" + SanitizeKeyName(name, fallback);
-                AddOption(typeof(Material), sourceKey + "//Material/" + id, Path.GetFileName(path) + " / " + name);
-            }
-
-            if (HasUnassignedGltfMaterial(meshes))
-            {
-                AddOption(typeof(Material), sourceKey + "//Material/Default", Path.GetFileName(path) + " / Default");
-            }
-        }
-        catch
-        {
-            //跳过无效 glTF
-        }
-    }
-
-    //读取 glTF 文本或 GLB JSON Chunk。
-    private static byte[] ReadGltfJson(string path)
-    {
-        if (!string.Equals(Path.GetExtension(path), ".glb", StringComparison.OrdinalIgnoreCase))
-        {
-            return File.ReadAllBytes(path);
-        }
-
-        using BinaryReader reader = new(File.OpenRead(path), Encoding.UTF8, leaveOpen: false);
-        if (reader.ReadUInt32() != 0x46546C67) throw new InvalidDataException("Invalid GLB magic.");
-        reader.ReadUInt32();
-        uint totalLength = reader.ReadUInt32();
-        while (reader.BaseStream.Position + 8 <= totalLength)
-        {
-            uint chunkLength = reader.ReadUInt32();
-            uint chunkType = reader.ReadUInt32();
-            byte[] data = reader.ReadBytes(checked((int)chunkLength));
-            if (chunkType == 0x4E4F534A) return data;
-        }
-
-        throw new InvalidDataException("GLB JSON chunk is missing.");
-    }
-
-    //判断 glTF 是否需要默认材质。
-    private static bool HasUnassignedGltfMaterial(JsonElement meshes)
-    {
-        if (meshes.ValueKind != JsonValueKind.Array) return false;
-        foreach (JsonElement mesh in meshes.EnumerateArray())
-        {
-            if (!mesh.TryGetProperty("primitives", out JsonElement primitives) || primitives.ValueKind != JsonValueKind.Array) continue;
-            foreach (JsonElement primitive in primitives.EnumerateArray())
-            {
-                if (!primitive.TryGetProperty("material", out _)) return true;
-            }
-        }
-
-        return false;
-    }
-
-    //添加去重后的资源选择项。
-    private void AddOption(Type type, string key, string displayName)
-    {
-        if (!assets.TryGetValue(type, out List<ObjectFieldOption>? values))
-        {
-            values = [];
-            assets.Add(type, values);
-        }
-
-        if (values.Any(option => string.Equals(option.ResourceKey, key, StringComparison.Ordinal))) return;
-        values.Add(new ObjectFieldOption(key, displayName));
-    }
-
-    //生成与原生导入器一致的子资源 Key 片段。
-    private static string SanitizeKeyName(string text, string fallback)
-    {
-        StringBuilder result = new(text.Length);
-        foreach (char character in text)
-        {
-            if (character <= 127 && (char.IsLetterOrDigit(character) || character is '_' or '-' or '.')) result.Append(character);
-            else if (char.IsWhiteSpace(character) || character is '/' or '\\') result.Append('_');
-        }
-
-        return result.Length == 0 ? fallback : result.ToString();
     }
 
     private static string NormalizeKey(string path)

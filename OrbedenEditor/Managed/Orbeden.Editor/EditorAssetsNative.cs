@@ -26,6 +26,7 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> CreateEns;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, int> ReimportAsset;
     public delegate* unmanaged[Cdecl]<IntPtr, int> ReimportAllAssets;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> LoadCachedAsset;
 }
 #pragma warning restore CS0649
 
@@ -40,6 +41,14 @@ internal static unsafe class EditorAssetsNative
         api = value;
     }
 
+    /// <summary>从导入缓存加载单个对象及其引用依赖。</summary>
+    internal static Orbeden.Object? LoadCachedAsset(string path, string key)
+    {
+        byte[] pathBytes = Encoding.UTF8.GetBytes(path), keyBytes = Encoding.UTF8.GetBytes(key);
+        fixed (byte* source = pathBytes)
+        fixed (byte* identity = keyBytes)
+            return NativeBindingRuntime.Wrap<Orbeden.Object>(api.LoadCachedAsset(api.Context, source, pathBytes.Length, identity, keyBytes.Length));
+    }
     //实例化预制体或恢复子树快照
     internal static Ens InstantiatePrefab(string text, bool snapshot, EnsId parent, EnsId before)
     {

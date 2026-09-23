@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -16,7 +17,7 @@ internal static class ProjectAssetOperations
         message = string.Empty;
         if (!TryValidateSource(source, out string sourcePath, out message)) return false;
         if (!TryValidateDestination(destination, out string destinationPath, out message)) return false;
-        if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+        if (File.Exists(destinationPath) || Directory.Exists(destinationPath) || File.Exists(destinationPath + ".resinfo"))
         {
             message = "Destination already exists.";
             return false;
@@ -39,13 +40,11 @@ internal static class ProjectAssetOperations
 
         try
         {
-            if (directory) Directory.Move(sourcePath, destinationPath);
-            else File.Move(sourcePath, destinationPath);
+            MoveWithMetadata(sourcePath, destinationPath, directory);
 
             if (!plan.Apply(out message))
             {
-                if (directory) Directory.Move(destinationPath, sourcePath);
-                else File.Move(destinationPath, sourcePath);
+                MoveWithMetadata(destinationPath, sourcePath, directory);
                 return false;
             }
 
@@ -53,8 +52,7 @@ internal static class ProjectAssetOperations
             {
                 message = EditorAssetsNative.GetProjectError();
                 plan.Rollback();
-                if (directory) Directory.Move(destinationPath, sourcePath);
-                else File.Move(destinationPath, sourcePath);
+                MoveWithMetadata(destinationPath, sourcePath, directory);
                 return false;
             }
 
@@ -68,6 +66,9 @@ internal static class ProjectAssetOperations
         catch (Exception ex)
         {
             plan.Rollback();
+            if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath)
+                && (File.Exists(destinationPath) || Directory.Exists(destinationPath)))
+                MoveWithMetadata(destinationPath, sourcePath, directory);
             message = "Move failed: " + ex.Message;
             return false;
         }
@@ -103,7 +104,7 @@ internal static class ProjectAssetOperations
             }
             else
             {
-                FileSystem.DeleteFile(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                RecycleWithMetadata(sourcePath);
             }
 
             EditorAssetsNative.RemapWorldKeys(plan.OldResourceKey, string.Empty, plan.Prefix);
@@ -136,7 +137,7 @@ internal static class ProjectAssetOperations
         {
             string suffix = index == 1 ? " Copy" : $" Copy {index}";
             string candidate = Path.Combine(parent, name + suffix + extension);
-            if (File.Exists(candidate) || Directory.Exists(candidate)) continue;
+            if (File.Exists(candidate) || Directory.Exists(candidate) || File.Exists(candidate + ".resinfo")) continue;
             duplicatePath = candidate;
             break;
         }
@@ -150,7 +151,7 @@ internal static class ProjectAssetOperations
         try
         {
             if (Directory.Exists(sourcePath)) CopyDirectory(sourcePath, duplicatePath);
-            else File.Copy(sourcePath, duplicatePath);
+            else CopyWithMetadata(sourcePath, duplicatePath);
             EditorAssetCatalog.Instance.Refresh();
             message = "Duplicated: " + EditorAssetCatalog.Instance.ToResourceKey(duplicatePath);
             return true;
@@ -178,13 +179,13 @@ internal static class ProjectAssetOperations
         {
             Directory.CreateDirectory(destinationPath);
             importedPath = Path.Combine(destinationPath, Path.GetFileName(sourceFile));
-            if (File.Exists(importedPath))
+            if (File.Exists(importedPath) || File.Exists(importedPath + ".resinfo"))
             {
                 message = "An asset with the same name already exists.";
                 return false;
             }
 
-            File.Copy(sourceFile, importedPath);
+            CopyWithMetadata(sourceFile, importedPath, newIdentity: false);
             EditorAssetCatalog.Instance.Refresh();
             message = "Imported: " + EditorAssetCatalog.Instance.ToResourceKey(importedPath);
             return true;
@@ -281,13 +282,56 @@ internal static class ProjectAssetOperations
         return true;
     }
 
+    /// <summary>移动源文件与伴随元数据，第二步失败时恢复源文件。</summary>
+    private static void MoveWithMetadata(string source, string destination, bool directory)
+    {
+        if (directory) { Directory.Move(source, destination); return; }
+        File.Move(source, destination);
+        try { if (File.Exists(source + ".resinfo")) File.Move(source + ".resinfo", destination + ".resinfo"); }
+        catch { File.Move(destination, source); throw; }
+    }
+
+    /// <summary>复制资源和设置，副本不共享源身份；元数据复制失败时撤销文件复制。</summary>
+    private static void CopyWithMetadata(string source, string destination, bool newIdentity = true)
+    {
+        File.Copy(source, destination);
+        try { EditorAssetCache.CopyMetadata(source, destination, newIdentity); }
+        catch { File.Delete(destination); throw; }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct ShellFileOperation
+    {
+        public IntPtr Window;
+        public uint Function;
+        [MarshalAs(UnmanagedType.LPWStr)] public string From;
+        public IntPtr To;
+        public ushort Flags;
+        [MarshalAs(UnmanagedType.Bool)] public bool Aborted;
+        public IntPtr Mappings;
+        public IntPtr ProgressTitle;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHFileOperation(ref ShellFileOperation operation);
+
+    /// <summary>把源文件和元数据作为同一组送入回收站。</summary>
+    private static void RecycleWithMetadata(string source)
+    {
+        string paths = source + '\0';
+        if (File.Exists(source + ".resinfo")) paths += source + ".resinfo\0";
+        ShellFileOperation operation = new() { Function = 3, From = paths + '\0', Flags = 0x0040 | 0x0010 | 0x0004 };
+        int result = SHFileOperation(ref operation);
+        if (result != 0 || operation.Aborted) throw new IOException("Recycle operation failed or was cancelled: " + result);
+    }
     //递归复制目录。
     private static void CopyDirectory(string source, string destination)
     {
         Directory.CreateDirectory(destination);
         foreach (string file in Directory.EnumerateFiles(source))
         {
-            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+            if (file.EndsWith(".resinfo", StringComparison.OrdinalIgnoreCase)) continue;
+            CopyWithMetadata(file, Path.Combine(destination, Path.GetFileName(file)));
         }
         foreach (string directory in Directory.EnumerateDirectories(source))
         {

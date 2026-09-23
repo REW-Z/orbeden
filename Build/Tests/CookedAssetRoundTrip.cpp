@@ -161,7 +161,7 @@ int main() try
     {
         "Examples/FlightTraining/Textures/sky_blue.png",
         "Examples/FlightTraining/Meshes/ground.obj",
-        "Examples/FlightTraining/Shaders/blinn_phong_shadow.orbshader",
+        "Builtin/Shaders/blinn_phong.orbshader",
     };
 
     PathDefines::SetContentRoot(sourceContentRoot);
@@ -240,7 +240,7 @@ int main() try
     ResourceManager::Shutdown();
 
     const std::filesystem::path packageRoot = std::filesystem::absolute("Log/CookedAssetRoundTrip");
-    const std::filesystem::path packageCacheRoot = packageRoot / "ResourceCache";
+    const std::filesystem::path packageCacheRoot = packageRoot / "ResourceCache" / "Player";
     const std::filesystem::path guardedRoot = packageRoot / "NotACache";
     std::filesystem::remove_all(packageCacheRoot);
     std::filesystem::remove_all(guardedRoot);
@@ -289,7 +289,7 @@ int main() try
 
     Require(ResourceManager::Load<Mesh>("Examples/FlightTraining/Meshes/ground.obj//Mesh/Main") != nullptr,
         "Cooked package did not resolve a mesh without any source files");
-    Require(ResourceManager::Load<Shader>("Examples/FlightTraining/Shaders/blinn_phong_shadow.orbshader") != nullptr,
+    Require(ResourceManager::Load<Shader>("Builtin/Shaders/blinn_phong.orbshader") != nullptr,
         "Cooked package did not resolve a shader without any source files");
     Require(ResourceManager::Load<Texture2D>("Examples/FlightTraining/Textures/sky_blue.png") != nullptr,
         "Cooked package did not resolve a texture without any source files");

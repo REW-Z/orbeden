@@ -12,6 +12,8 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/CookedAssetSerializer.h"
+#include "Runtime/CookedAssetSerializer.h"
 #include "Scripting/ScriptInterop.h"
 #include <unordered_map>
 #include <string_view>
@@ -21,6 +23,7 @@
 #include "Runtime/Object/Transform.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Script.h"
+#include "Runtime/Object/Texture2D.h"
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Native/NativeApiAbi.h"
 #include "Runtime/Native/OrbedenEngineNativeApi.h"
@@ -109,6 +112,7 @@ namespace
         void* createEns = nullptr;
         void* reimportAsset = nullptr;
         void* reimportAllAssets = nullptr;
+        void* loadCachedAsset = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -200,21 +204,21 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 17);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 18);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 140);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 141);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 71);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 81);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 84);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 86);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 103);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 127);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 132);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 104);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 128);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 133);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -572,6 +576,45 @@ namespace
         return static_cast<int32>(ResourceManager::Reimport(std::string(), true));
     }
 
+    //读取编辑器已验证的单对象缓存及依赖，不重新解析原始复合资源。
+    int32 ORBEDEN_NATIVE_CALL LoadCachedManagedAsset(void* context, const uint8* pathText, int32 pathLength,
+        const uint8* keyText, int32 keyLength)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->HasProject()) return 0;
+        std::filesystem::path path = Utf8Path::FromUtf8(ReadUtf8(pathText, pathLength));
+        std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot()).parent_path() / "ResourceCache" / "Imported";
+        std::error_code code;
+        auto canonical = std::filesystem::weakly_canonical(path, code);
+        if (code) return 0;
+        auto relative = canonical.lexically_relative(std::filesystem::weakly_canonical(root, code));
+        if (code || relative.empty() || relative.is_absolute()) return 0;
+        for (const auto& part : relative) if (part == "..") return 0;
+        std::string key = ReadUtf8(keyText, keyLength);
+        if (Object* loaded = ResourceManager::FindLoaded(key)) return loaded->GetObjectId();
+        List<std::string> pending{ key };
+        List<std::string> visited;
+        List<std::string> created;
+        for (usize index = 0; index < pending.size(); ++index)
+        {
+            std::string current = pending[index];
+            if (ResourceManager::FindLoaded(current) || std::find(visited.begin(), visited.end(), current) != visited.end()) continue;
+            visited.push_back(current);
+            auto file = canonical.parent_path() / CookedAssetSerializer::GetBlobFileName(current);
+            List<std::string> references;
+            std::string error;
+            if (!CookedAssetSerializer::Read(Utf8Path::ToUtf8(file), references, error))
+            {
+                Log::Error(error.c_str());
+                for (const std::string& loadedKey : created) ResourceManager::Unload(loadedKey);
+                return 0;
+            }
+            created.push_back(current);
+            pending.insert(pending.end(), references.begin(), references.end());
+        }
+        Object* loaded = ResourceManager::FindLoaded(key);
+        return loaded ? loaded->GetObjectId() : 0;
+    }
     //请求原生 Editor 重绘。
     void ORBEDEN_NATIVE_CALL RequestManagedRepaint(void* context)
     {
@@ -1477,6 +1520,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.createEns = reinterpret_cast<void*>(&CreateManagedEns);
     editorApi.assets.reimportAsset = reinterpret_cast<void*>(&ReimportManagedAsset);
     editorApi.assets.reimportAllAssets = reinterpret_cast<void*>(&ReimportAllManagedAssets);
+    editorApi.assets.loadCachedAsset = reinterpret_cast<void*>(&LoadCachedManagedAsset);
     editorApi.components.context = &editor;
     editorApi.components.readComponentSnapshot = reinterpret_cast<void*>(&ReadComponentSnapshot);
     editorApi.components.setComponentProperty = reinterpret_cast<void*>(&SetComponentProperty);

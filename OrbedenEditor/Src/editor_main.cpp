@@ -1,5 +1,12 @@
 #include "Application.h"
 #include "Editor/EditorSystem.h"
+#include "Editor/AssetInspection.h"
+#include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
+#include "ResourceManager/ResourceManager.h"
+#include <filesystem>
+#include <fstream>
+#include <string_view>
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Profiler/Profiler.h"
@@ -8,8 +15,22 @@
 
 #include <chrono>
 
-int main(int argc, char** argv)
+int wmain(int argc, wchar_t** argv)
 {
+    //资源检查工作进程不初始化图形或编辑器，只运行真实导入器并写出轻量快照。
+    if (argc == 5 && std::wstring_view(argv[1]) == L"--inspect-asset")
+    {
+        PathDefines::SetContentRoot(Utf8Path::ToUtf8(std::filesystem::path(argv[2])));
+        std::filesystem::path directory(argv[4]);
+        std::filesystem::create_directories(directory);
+        std::string result = AssetInspection::Inspect(Utf8Path::ToUtf8(std::filesystem::path(argv[3])), Utf8Path::ToUtf8(directory));
+        std::ofstream output(directory / "inspection.result", std::ios::binary | std::ios::trunc);
+        output.write(result.data(), static_cast<std::streamsize>(result.size()));
+        output.flush();
+        bool succeeded = output.good();
+        ResourceManager::Shutdown();
+        return succeeded ? 0 : 1;
+    }
     GlfwWindow window;
     WindowDesc windowDesc;
     windowDesc.title = "Orbeden Editor";
@@ -32,7 +53,8 @@ int main(int argc, char** argv)
     }
 
     {
-        EditorSystem editorSystem(app, argc > 0 ? argv[0] : "");
+        std::string executable = argc > 0 ? Utf8Path::ToUtf8(std::filesystem::path(argv[0])) : "";
+        EditorSystem editorSystem(app, executable.c_str());
 
         using Clock = std::chrono::steady_clock;
         auto previousTime = Clock::now();

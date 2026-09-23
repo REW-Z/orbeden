@@ -13,8 +13,9 @@ namespace ProjectLayout
     //SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path。
     constexpr const char* LibraryFolder = "Lib";
 
-    //资源导入产物缓存，可由 cook 全量重建；Editor 不参与解析，只服务打包。
+    //可重建资源数据库：Imported 保存导入产物与清单，Player 保存打包暂存。
     constexpr const char* ResourceCacheFolder = "ResourceCache";
+    constexpr const char* PlayerResourceCacheFolder = "ResourceCache/Player";
 
     //构建产物根目录，其下全部由构建生成。
     constexpr const char* BuildFolder = "Build";

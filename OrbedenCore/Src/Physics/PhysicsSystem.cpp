@@ -1,4 +1,5 @@
 #include "Physics/PhysicsSystem.h"
+#include "Runtime/LayerSettings.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -563,7 +564,7 @@ public:
         hash = MixFloat(hash, collider.dynamicFriction);
         hash = MixFloat(hash, collider.restitution);
         hash = MixHash(hash, collider.collisionLayer);
-        hash = MixHash(hash, collider.collisionMask);
+        hash = MixHash(hash, (collider.collisionMask & LayerSettings::GetCollisionMask(collider.collisionLayer)));
 
         if (const BoxCollider* box = collider.Cast<BoxCollider>())
         {
@@ -758,7 +759,7 @@ public:
         material->release();
         if (!shape) return nullptr;
 
-        PxFilterData filter(collider.collisionLayer, collider.collisionMask, 0, 0);
+        PxFilterData filter(collider.collisionLayer, collider.collisionMask & LayerSettings::GetCollisionMask(collider.collisionLayer), 0, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
         PxVec3 center(collider.center.x * scale.x, collider.center.y * scale.y, collider.center.z * scale.z);
@@ -898,7 +899,7 @@ public:
         hash = MixFloat(hash, component.flattenMinZ);
         hash = MixFloat(hash, component.flattenMaxZ);
         hash = MixFloat(hash, component.flattenHeight);
-        return MixHash(hash, component.collisionLayer);
+        return MixHash(MixHash(hash, component.collisionLayer), LayerSettings::GetCollisionMask(component.collisionLayer));
     }
 
     //创建 HeightField 静态碰撞体。
@@ -960,7 +961,7 @@ public:
         //PhysX 高度场从角落开始采样，渲染网格以中心为原点。
         shape->setLocalPose(PxTransform(PxVec3(-component.sizeX * 0.5f, 0.0f, -component.sizeZ * 0.5f)));
 
-        PxFilterData filter(component.collisionLayer, 0xFFFFFFFFu, 0, 0);
+        PxFilterData filter(component.collisionLayer, LayerSettings::GetCollisionMask(component.collisionLayer), 0, 0);
         shape->setSimulationFilterData(filter);
         shape->setQueryFilterData(filter);
 
@@ -1168,7 +1169,7 @@ public:
         hash = MixFloat(hash, component.contactOffset);
         hash = MixFloat(hash, component.slopeLimit);
         hash = MixHash(hash, component.collisionLayer);
-        return MixHash(hash, component.collisionMask);
+        return MixHash(hash, (component.collisionMask & LayerSettings::GetCollisionMask(component.collisionLayer)));
     }
 
     std::unique_ptr<ControllerRecord> CreateController(CharacterController& component, Transform& transform, uint64 configurationHash)
@@ -1228,7 +1229,7 @@ public:
         PxShape* controllerShape = nullptr;
         if (actor->getShapes(&controllerShape, 1) == 1 && controllerShape)
         {
-            PxFilterData filter(component.collisionLayer, component.collisionMask, 0, 0);
+            PxFilterData filter(component.collisionLayer, component.collisionMask & LayerSettings::GetCollisionMask(component.collisionLayer), 0, 0);
             controllerShape->setSimulationFilterData(filter);
             controllerShape->setQueryFilterData(filter);
         }
@@ -1491,6 +1492,7 @@ void PhysicsSystem::FixedUpdate(World& world, float fixedDeltaTime)
 {
     PROFILE("Physics/Step");
 
+    LayerSettings::Refresh();
     if (impl && fixedDeltaTime > 0.0f) impl->FixedUpdate(world, fixedDeltaTime);
 }
 
@@ -1561,9 +1563,9 @@ uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, floa
     CharacterController* component = entity ? entity->GetComponent<CharacterController>() : nullptr;
     if (!component) return CharacterCollisionNone;
 
-    LayerQueryFilter callback(component->collisionMask, false, component->collisionLayer);
+    LayerQueryFilter callback(component->collisionMask & LayerSettings::GetCollisionMask(component->collisionLayer), false, component->collisionLayer);
     ControllerPairFilter controllerPairFilter;
-    PxFilterData filterData(component->collisionMask, 0, 0, 0);
+    PxFilterData filterData(component->collisionMask & LayerSettings::GetCollisionMask(component->collisionLayer), 0, 0, 0);
     PxControllerFilters filters(&filterData, &callback, &controllerPairFilter);
     PxControllerCollisionFlags nativeFlags = found->second->controller->move(
         ToPx(displacement), std::max(0.0f, component->minMoveDistance), deltaTime, filters);

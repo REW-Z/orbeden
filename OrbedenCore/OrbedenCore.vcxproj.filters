@@ -402,4 +402,8 @@
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Runtime\LayerSettings.h" />
+    <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+  </ItemGroup>
 </Project>

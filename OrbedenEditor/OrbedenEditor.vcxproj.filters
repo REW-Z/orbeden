@@ -137,4 +137,8 @@
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\AssetInspection.h" />
+    <ClCompile Include="Src\Editor\AssetInspection.cpp" />
+  </ItemGroup>
 </Project>

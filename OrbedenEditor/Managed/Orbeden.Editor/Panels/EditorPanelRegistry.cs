@@ -202,6 +202,7 @@ internal static unsafe class EditorPanelRegistry
     /// <summary>向全部 C# Panel 广播资源引用路径变化。</summary>
     public static void RemapAssetReferences(string oldKey, string newKey, bool prefix)
     {
+        EditorAssetInspection.Remap(oldKey, newKey, prefix);
         foreach (EditorPanel panel in panels)
         {
             try

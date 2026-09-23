@@ -103,7 +103,16 @@ internal sealed class ProjectPanel : EditorPanel
 
     private string contentRoot = string.Empty;
     private string currentDirectory = string.Empty;
-    private string? selectedPath;
+    private string? selectedEntryPath;
+    private string? selectedPath
+    {
+        get => selectedEntryPath;
+        set
+        {
+            selectedEntryPath = value;
+            EditorAssetInspection.Select(value);
+        }
+    }
     private string? renamingEntry;
     private string renameBuffer = string.Empty;
     private bool renameFocusRequested;
@@ -157,6 +166,7 @@ internal sealed class ProjectPanel : EditorPanel
         watcher?.Dispose();
         watcher = null;
         EditorSelection.Clear(Info.Id);
+        EditorAssetInspection.Select(null);
     }
 
     /// <summary>绘制 ProjectPanel。</summary>
@@ -191,6 +201,7 @@ internal sealed class ProjectPanel : EditorPanel
                 search = string.Empty;
             }
         }
+        EditorAssetCache.Update();
         DrawToolbar();
         DrawPendingOperation();
         if (!string.IsNullOrEmpty(status)) EditorGUI.Label(status);
@@ -467,7 +478,20 @@ internal sealed class ProjectPanel : EditorPanel
             return;
         }
 
-        if (gridView) DrawAssetGrid(entries, width);
+        if (gridView)
+        {
+            DrawAssetGrid(entries, width);
+            if (selectedPath != null && EditorAssetInspection.CanInspect(selectedPath))
+            {
+                EditorGUI.Separator();
+                int state = NativeEditorGUI.TreeNode("Resources in " + Path.GetFileName(selectedPath) + "##grid_resources", false, false);
+                if ((state & 1) != 0)
+                {
+                    try { DrawSubAssets(selectedPath, false); }
+                    finally { NativeEditorGUI.TreePop(); }
+                }
+            }
+        }
         else DrawAssetTable(entries);
 
         if (EditorGUI.BeginPopupContextWindow("##project_background_menu"))
@@ -514,6 +538,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void ReimportEntry(string? entry)
     {
         if (string.IsNullOrEmpty(entry)) return;
+        EditorAssetInspection.Invalidate(force: true);
         int count = EditorAssetsNative.ReimportAsset(
             EditorAssetCatalog.Instance.ToResourceKey(entry), Directory.Exists(entry));
         status = count == 0 ? "Nothing to reimport: no loaded asset under this path."
@@ -523,6 +548,7 @@ internal sealed class ProjectPanel : EditorPanel
     //重新导入全部已加载资源
     private void ReimportAll()
     {
+        EditorAssetInspection.Invalidate(force: true);
         int count = EditorAssetsNative.ReimportAllAssets();
         status = count == 0 ? "Nothing to reimport: no loaded assets." : $"Reimported {count} source file(s).";
     }
@@ -691,6 +717,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void DrawAssetRow(string entry)
     {
         bool directory = Directory.Exists(entry);
+        bool expanded = false;
         string name = GetDisplayName(entry);
         EditorGUI.TableNextRow();
         EditorGUI.TableSetColumnIndex(0);
@@ -701,7 +728,15 @@ internal sealed class ProjectPanel : EditorPanel
         }
         else
         {
-            bool clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
+            bool clicked;
+            if (!directory && EditorAssetInspection.CanInspect(entry))
+            {
+                int state = NativeEditorGUI.TreeNode(name + "##" + entry,
+                    string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase), false);
+                expanded = (state & 1) != 0;
+                clicked = (state & 2) != 0;
+            }
+            else clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
                 string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase));
             bool doubleClicked = EditorGUI.IsItemDoubleClicked();
             if (clicked) selectedPath = entry;
@@ -725,8 +760,36 @@ internal sealed class ProjectPanel : EditorPanel
 
         EditorGUI.TableSetColumnIndex(1);
         EditorGUI.Label(EditorAssetCatalog.Instance.GetSourceType(entry));
+        if (expanded)
+        {
+            try { DrawSubAssets(entry, true); }
+            finally { NativeEditorGUI.TreePop(); }
+        }
     }
 
+    /// <summary>列表和网格共用真实子资源条目，拖拽携带完整 Key。</summary>
+    private void DrawSubAssets(string path, bool table)
+    {
+        EditorAssetInspection.Result result = EditorAssetInspection.Get(path);
+        foreach (EditorAssetInspection.Asset asset in result.Objects)
+        {
+            if (table) { EditorGUI.TableNextRow(); EditorGUI.TableSetColumnIndex(0); }
+            string label = asset.Key.Contains("//", StringComparison.Ordinal) ? asset.Key.Split("//", 2)[1] : asset.TypeName;
+            if (EditorGUI.Selectable(label + "##subasset_" + asset.Key,
+                EditorAssetInspection.SourcePath == path && EditorAssetInspection.ObjectKey == asset.Key))
+            {
+                selectedEntryPath = path;
+                EditorAssetInspection.Select(path, asset.Key);
+            }
+            if (!result.IsStale) NativeEditorGUI.DragSource(2, asset.Key);
+            if (table) { EditorGUI.TableSetColumnIndex(1); EditorGUI.Label(asset.TypeName); }
+        }
+        if (result.Objects.Count == 0 || result.Messages.Count != 0)
+        {
+            if (table) { EditorGUI.TableNextRow(); EditorGUI.TableSetColumnIndex(0); }
+            EditorGUI.Label(result.Messages.Count != 0 ? string.Join("; ", result.Messages) : "No resource objects.");
+        }
+    }
     //绘制一个资源条目的右键菜单。
     private void DrawItemContextMenu(string entry, bool directory)
     {

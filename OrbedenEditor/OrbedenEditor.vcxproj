@@ -250,4 +250,8 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\AssetInspection.h" />
+    <ClCompile Include="Src\Editor\AssetInspection.cpp" />
+  </ItemGroup>
 </Project>

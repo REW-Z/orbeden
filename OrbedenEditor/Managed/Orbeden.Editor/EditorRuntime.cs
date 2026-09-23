@@ -36,6 +36,7 @@ public static class EditorRuntime
 
             if (editorApi == IntPtr.Zero)
             {
+                EditorAssetCache.Stop();
                 OrbedenCoreRuntime.InitializeEngineBindings(IntPtr.Zero);
                 NativeEditorGUI.Initialize(default);
                 NativeEditorLog.Initialize(default);
@@ -333,11 +334,11 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 17);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 18);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 140);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 141);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

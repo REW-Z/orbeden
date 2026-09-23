@@ -357,4 +357,8 @@
   </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Runtime\LayerSettings.h" />
+    <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+  </ItemGroup>
 </Project>

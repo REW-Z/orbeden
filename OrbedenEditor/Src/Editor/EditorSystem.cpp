@@ -1122,7 +1122,7 @@ bool EditorSystem::CookPlayerContent(std::string& error)
     ResourceManager::Shutdown();
     PathDefines::SetContentRoot(project.GetContentRootPath());
 
-    std::string cacheRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::ResourceCacheFolder);
+    std::string cacheRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder);
     bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error);
 
     //cook 导入的全部资源都是一次性的，释放后由场景重载重新取用。
@@ -1145,7 +1145,7 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
 {
     error.clear();
 
-    std::filesystem::path cacheRoot = Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::ResourceCacheFolder;
+    std::filesystem::path cacheRoot = Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder;
     std::filesystem::path packageContentRoot = Utf8Path::FromUtf8(packageRoot) / ProjectLayout::ContentFolder;
 
     //先删干净，避免上一次打包残留的产物留在包里。

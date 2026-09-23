@@ -6,6 +6,7 @@
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
+#include "Runtime/LayerSettings.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -53,7 +54,7 @@ namespace
     {
         for (const std::string& key : contentKeys)
         {
-            if (Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).extension()) == WorldExtension)
+            if (key == LayerSettings::FileName || Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).extension()) == WorldExtension)
             {
                 worldKeys.push_back(key);
                 continue;
@@ -132,9 +133,9 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
 
     std::filesystem::path outputRoot = Utf8Path::FromUtf8(cookedOutputRoot);
     //输出目录会被清空重建，只允许指向项目的资源缓存目录。
-    if (outputRoot.filename() != ProjectLayout::ResourceCacheFolder)
+    if (outputRoot.filename() != "Player" || outputRoot.parent_path().filename() != ProjectLayout::ResourceCacheFolder)
     {
-        error = "Cook output must be the project " + std::string(ProjectLayout::ResourceCacheFolder) + " directory: " + cookedOutputRoot;
+        error = "Cook output must be the project " + std::string(ProjectLayout::PlayerResourceCacheFolder) + " directory: " + cookedOutputRoot;
         return false;
     }
 

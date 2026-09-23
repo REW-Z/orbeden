@@ -109,6 +109,14 @@ internal sealed class InspectorPanel : EditorPanel
     /// <summary>绘制当前选择对象及其组件。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
+        if (!context.SelectedEns.IsNull && EditorAssetInspection.SourcePath.Length != 0)
+            EditorAssetInspection.Select(null);
+        if (context.SelectedEns.IsNull && EditorAssetInspection.SourcePath.Length != 0)
+        {
+            ClearPropertyDocuments();
+            EditorAssetInspection.Draw();
+            return;
+        }
         if (context.SelectedEns.IsNull)
         {
             ClearPropertyDocuments();
@@ -472,6 +480,10 @@ internal sealed class InspectorPanel : EditorPanel
                 {
                     continue;
                 }
+            }
+            else if (property.Kind == InteropValueKind.UInt32 && EditorLayerSettings.Handles(nativeType, property.Name))
+            {
+                if (!EditorLayerSettings.Draw(label, property, out value)) continue;
             }
             else if (property.Kind == InteropValueKind.UInt32 && nativeType.Length != 0
                 && property.Name is "drawQueue" or "bodyType" or "shape")
