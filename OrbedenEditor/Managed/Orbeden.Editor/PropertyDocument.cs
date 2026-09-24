@@ -2,7 +2,7 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "");
+internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "", string Label = "");
 
 internal interface IPropertyTarget
 {
@@ -104,18 +104,21 @@ public sealed class PropertyValue
     public string Name { get; }
     public InteropValueKind Kind { get; }
     public string ReferenceType { get; }
+    //行的显示名，空表示直接用 Name；Name 是存取用的标识，可能不适合直接展示
+    public string Label { get; }
     public bool AllowsSceneReferences => document.AllowsSceneReferences;
     public bool HasMultipleDifferentValues { get; internal set; }
     public InteropValue Value => value;
     internal bool Modified { get; private set; }
     internal bool IsReadable { get; set; } = true;
 
-    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType)
+    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label)
     {
         document = owner;
         Name = name;
         Kind = kind;
         ReferenceType = referenceType;
+        Label = label;
     }
 
     public void SetValue(InteropValue newValue)
@@ -162,6 +165,8 @@ public sealed class PropertyDocument
     public IReadOnlyList<PropertyValue> Properties => properties;
     internal bool AllowsSceneReferences => targets.All(target => target.AllowsSceneReferences);
     public bool HasPendingChanges => modified;
+    //列表字段的增删槽位要逐个目标操作：撤销得按组件各记各的槽位内容
+    internal IReadOnlyList<IPropertyTarget> Targets => targets;
 
     /// <summary>批量刷新目标，仅在字段结构变化时重建公共属性。</summary>
     public void Update()
@@ -188,7 +193,7 @@ public sealed class PropertyDocument
                     if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
             }
             foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType));
+                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType, descriptor.Label));
             initialized = true;
             ++structureVersion;
         }
@@ -220,24 +225,43 @@ public sealed class PropertyDocument
         if (sortedVersion == structureVersion && sortedType == nativeType) return drawProperties;
         string[] order = nativeType switch
         {
+            //Ens 头部的激活勾选框排在名称上面
+            "Ens" => ["LocalActive", "Name"],
             "Transform" => ["localPosition", "localRotation", "localScale"],
-            "StaticMeshRenderer" => ["enabled", "mesh", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
-            "RigidBody" => ["enabled", "bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
-            "CharacterController" => ["enabled", "shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
-            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["enabled", "isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
+            //这些类型的 enabled 已经搬到卡片标题行，正文顺序表里不再列它
+            "StaticMeshRenderer" => ["mesh", "materials", "drawQueue", "drawLayer", "castShadows", "receiveShadows"],
+            "RigidBody" => ["bodyType", "mass", "useGravity", "linearDamping", "angularDamping", "linearVelocity", "angularVelocity", "continuousCollisionDetection", "lockFlags"],
+            "CharacterController" => ["shape", "radius", "height", "halfExtents", "stepOffset", "contactOffset", "slopeLimit"],
+            _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
             _ => [],
         };
         drawProperties = properties.OrderBy(property =>
         {
             int index = Array.IndexOf(order, property.Name);
             if (index >= 0) return index * 10;
-            int mesh = Array.IndexOf(order, "mesh");
-            return mesh >= 0 && property.Name.StartsWith("material[", StringComparison.Ordinal) ? mesh * 10 + 5 : int.MaxValue;
-        }).ThenBy(property => property.Name.StartsWith("material[", StringComparison.Ordinal) && property.Name.EndsWith(']')
-            && int.TryParse(property.Name.AsSpan(9, property.Name.Length - 10), out int slot) ? slot : 0).ToArray();
+            //列表元素排在它的容器行之后；容器不在顺序表里时两者一起落到末尾，靠名字顺序保持相邻
+            int owner = Array.IndexOf(order, GetListFieldName(property.Name));
+            return owner >= 0 ? owner * 10 + 5 : int.MaxValue;
+        }).ThenBy(property => GetListElementIndex(property.Name)).ToArray();
         sortedVersion = structureVersion;
         sortedType = nativeType;
         return drawProperties;
+    }
+
+    //"字段名[下标]"取出字段名；不是列表元素时返回原名字
+    private static string GetListFieldName(string name)
+    {
+        if (!name.EndsWith(']')) return name;
+        int open = name.LastIndexOf('[');
+        return open <= 0 ? name : name[..open];
+    }
+
+    //列表元素的下标；按数字排序，否则 [10] 会排在 [2] 前面。非元素条目为 0
+    private static int GetListElementIndex(string name)
+    {
+        int open = name.LastIndexOf('[');
+        if (open < 0 || !name.EndsWith(']')) return 0;
+        return int.TryParse(name.AsSpan(open + 1, name.Length - open - 2), out int index) ? index : 0;
     }
 
     public PropertyValue? FindProperty(string name)

@@ -121,8 +121,10 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         {
             ".obj" => "Mesh Source",
             ".gltf" or ".glb" => "glTF Source",
-            ".mtl" => "Material Source",
+            ".mtl" => "Mesh Material",
+            ".orbmat" => "Material",
             ".orbshader" => "Shader",
+            ".cs" => "Script",
             ".world" => "World",
             ".vert" or ".frag" or ".glsl" => "Shader Source",
             ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => "Texture2D",

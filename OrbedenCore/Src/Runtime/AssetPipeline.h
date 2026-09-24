@@ -4,6 +4,8 @@
 
 #include <string>
 
+class Material;
+
 //一次导入产生的复合资源集合
 class AssetCollection
 {
@@ -41,6 +43,7 @@ enum class AssetImporter
     Gltf,
     OrbShader,
     Glsl,
+    OrbMat,
 };
 
 //资源导入管道，负责把文件输入转换为Object资源
@@ -61,6 +64,12 @@ public:
 
     //导入图片为CPU纹理
     static AssetCollection Import_IMG(std::string path);
+
+    /// <summary>导入独立材质资产（.orbmat）。</summary>
+    static AssetCollection Import_ORBMAT(std::string path);
+
+    /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
+    static bool SaveMaterialAsset(const Material& material, const std::string& path, std::string& error);
 
     //导入OBJ为复合资源
     static AssetCollection Import_OBJ(std::string path);

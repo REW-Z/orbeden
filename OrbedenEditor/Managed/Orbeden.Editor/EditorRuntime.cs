@@ -167,6 +167,30 @@ public static class EditorRuntime
         catch (Exception ex) { Console.Error.WriteLine($"Editor reimport all failed: {ex}"); }
     }
 
+    /// <summary>请求当前聚焦的面板复制选中项。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestCopySelected()
+    {
+        try { EditorSelection.Copy(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor copy dispatch failed: {ex}"); }
+    }
+
+    /// <summary>请求当前聚焦的面板粘贴剪贴板内容。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestPasteSelected()
+    {
+        try { EditorSelection.Paste(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor paste dispatch failed: {ex}"); }
+    }
+
+    /// <summary>请求当前聚焦的面板切换选中项的激活状态。</summary>
+    [UnmanagedCallersOnly]
+    public static void RequestToggleActiveSelected()
+    {
+        try { EditorSelection.ToggleActive(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor toggle active dispatch failed: {ex}"); }
+    }
+
     /// <summary>绘制指定 C# Editor Panel。</summary>
     [UnmanagedCallersOnly]
     public static unsafe void DrawPanel(int handle,
@@ -225,6 +249,20 @@ public static class EditorRuntime
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Editor Scene Handles draw failed: {ex}");
+        }
+    }
+
+    /// <summary>绘制编辑器底部状态栏内容。</summary>
+    [UnmanagedCallersOnly]
+    public static void DrawStatusBar()
+    {
+        try
+        {
+            EditorStatusBar.Draw();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor Status Bar draw failed: {ex}");
         }
     }
 
@@ -330,15 +368,15 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 71);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 73);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 18);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 142);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 145);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

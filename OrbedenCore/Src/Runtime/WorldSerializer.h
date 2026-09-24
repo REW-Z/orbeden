@@ -28,6 +28,9 @@ public:
     //实例化预制体并重映射内部身份
     static Ens* InstantiatePrefab(World& world, const std::string& path, EnsId parent, std::string& error);
 
+    //按快照复制子树：重映射内部身份后再恢复，用于复制仍活着的子树
+    static Ens* CopyEns(World& world, const std::string& snapshot, EnsId parent, std::string& error);
+
     //恢复子树快照并保留稳定身份
     static Ens* RestoreEns(World& world, const std::string& snapshot, EnsId parent, std::string& error);
 
@@ -45,4 +48,11 @@ public:
 
     //将 World 序列化到 XML 文件
     static bool SaveXml(const World& world, const std::string& path);
+
+private:
+    //重映射文档内全部稳定身份后恢复子树。clearExternal 决定是否清掉指向子树之外的引用：
+    //独立预制体要清（资产不该硬链进场景），复制子树要留（复制一个引用别处的节点，引用应当照旧）。
+    //新身份要经 Object 的私有入口生成，所以这里必须是本类的成员（Object 只 friend 了 WorldSerializer 本身）
+    static Ens* RestoreWithNewIdentities(World& world, const WorldDocument& document, EnsId parent,
+        bool clearExternal, std::string& error);
 };

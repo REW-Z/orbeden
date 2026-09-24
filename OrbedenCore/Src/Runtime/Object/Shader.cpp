@@ -222,6 +222,12 @@ namespace
         if (uniformName == "u_DistortionSpeed") return 0.8f;
         if (uniformName == "u_EdgeFade") return 0.12f;
         if (uniformName == "u_Opacity") return 1.0f;
+        if (uniformName == "u_Roughness") return 0.5f;
+        if (uniformName == "u_Occlusion") return 1.0f;
+        if (uniformName == "u_RainAmount") return 0.72f;
+        if (uniformName == "u_TrailStrength") return 0.2f;
+        if (uniformName == "u_TintStrength") return 0.12f;
+        if (uniformName == "u_SoftIntersection") return 0.35f;
         return 0.0f;
     }
 

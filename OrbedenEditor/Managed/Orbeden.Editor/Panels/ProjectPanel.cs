@@ -466,6 +466,51 @@ internal sealed class ProjectPanel : EditorPanel
         return false;
     }
 
+    //绘制 Create... 二级菜单：新建的资源一律落在当前目录，与 Create World 的落点保持一致
+    private void DrawCreateMenu(bool canModify)
+    {
+        if (!EditorGUI.BeginMenu("Create...", canModify)) return;
+        try
+        {
+            if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
+            if (EditorGUI.MenuItem("Create Material", canModify)) CreateMaterial();
+            if (EditorGUI.MenuItem("Create Script", canModify)) CreateScript();
+            if (EditorGUI.MenuItem("Create Shader", canModify)) CreateShader();
+        }
+        finally
+        {
+            EditorGUI.EndMenu();
+        }
+    }
+
+    //按模板新建资源：取不冲突的默认名，建完选中并立刻进入就地重命名
+    private void CreateAssetEntry(string defaultName, string extension, string content)
+    {
+        try
+        {
+            string path = Path.Combine(currentDirectory, defaultName + extension);
+            for (int index = 1; File.Exists(path) || Directory.Exists(path); ++index)
+                path = Path.Combine(currentDirectory, defaultName + " " + index + extension);
+            if (!ProjectAssetOperations.CreateAsset(path, content, out status)) return;
+            selectedPath = path;
+            BeginRename(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            status = "Create asset failed: " + ex.Message;
+        }
+    }
+
+    //新建材质资产：内容由 .orbmat 序列化器读取
+    private void CreateMaterial() => CreateAssetEntry("New Material", ".orbmat", EditorAssetTemplates.Material());
+
+    //新建脚本资产：模板整段注释，命名空间取项目名
+    private void CreateScript() => CreateAssetEntry("New Script", ".cs", EditorAssetTemplates.Script(
+        EditorAssetTemplates.NamespaceFromProject(EditorApplication.GetProjectText(EditorProjectField.Name))));
+
+    //新建着色器资产
+    private void CreateShader() => CreateAssetEntry("New Shader", ".orbshader", EditorAssetTemplates.Shader());
+
     //创建名称不冲突的 World 并请求打开
     private void CreateWorld()
     {
@@ -528,8 +573,9 @@ internal sealed class ProjectPanel : EditorPanel
             {
                 bool canModify = EditorAssetsNative.CanModifyAssets();
                 if (EditorGUI.MenuItem("Create Folder", canModify)) CreateFolder();
-                if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
+                DrawCreateMenu(canModify);
                 if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
+                if (EditorGUI.MenuItem("Paste", canModify && EditorAssetClipboard.HasEntry)) PasteEntry(currentDirectory);
                 if (EditorGUI.MenuItem("Refresh"))
                 {
                     EditorAssetCatalog.Instance.Refresh();
@@ -561,6 +607,44 @@ internal sealed class ProjectPanel : EditorPanel
 
     /// <summary>Reimport 触发：重新导入当前选中的资源。</summary>
     public override void OnReimportRequested() => ReimportEntry(selectedPath);
+
+    /// <summary>Ctrl+C 触发：把当前选中的资源路径放进剪贴板。</summary>
+    public override void OnCopyRequested()
+    {
+        if (selectedPath == null) return;
+        CopyEntry(selectedPath);
+    }
+
+    /// <summary>Ctrl+V 触发：把剪贴板里的资源贴到当前目录。</summary>
+    public override void OnPasteRequested()
+    {
+        if (!EditorAssetClipboard.HasEntry) return;
+        PasteEntry(currentDirectory);
+    }
+
+    //把资源路径放进剪贴板；存绝对路径，粘贴时按内容根重新判定它还合不合法
+    private void CopyEntry(string entry)
+    {
+        EditorAssetClipboard.Capture(Path.GetFullPath(entry));
+        EditorStatusBar.Print("Copied: " + EditorAssetCatalog.Instance.ToResourceKey(entry));
+    }
+
+    //把剪贴板里的资源复制到目标目录，贴完选中副本
+    private void PasteEntry(string destinationDirectory)
+    {
+        //没有项目、正在 Play 或者剪贴板里的路径已经不合法时，Paste 把原因写在 outReason 里
+        if (!ProjectAssetOperations.Paste(EditorAssetClipboard.Entry, destinationDirectory,
+            out string pasted, out string reason))
+        {
+            EditorStatusBar.Print(reason);
+            return;
+        }
+        selectedPath = pasted;
+    }
+
+    //粘贴落点：文件夹贴进它自己，文件贴进它所在的目录
+    private static string PasteDestination(string entry, bool directory)
+        => directory ? entry : Path.GetDirectoryName(entry)!;
 
     //重新导入指定路径的已加载资源；目录连带子路径，两种都报出处理的源文件数
     private void ReimportEntry(string? entry)
@@ -851,6 +935,8 @@ internal sealed class ProjectPanel : EditorPanel
         {
             if (ProjectAssetOperations.Duplicate(entry, out string duplicate, out status)) selectedPath = duplicate;
         }
+        if (EditorGUI.MenuItem("Copy")) CopyEntry(entry);
+        if (EditorGUI.MenuItem("Paste", canModify && EditorAssetClipboard.HasEntry)) PasteEntry(PasteDestination(entry, directory));
         if (EditorGUI.MenuItem("Delete", canModify)) BeginDelete(entry);
         EditorGUI.Separator();
         if (EditorGUI.MenuItem("Reveal in Explorer")) EditorAssetCatalog.Reveal(entry);
@@ -859,7 +945,7 @@ internal sealed class ProjectPanel : EditorPanel
         //创建类操作也放进条目菜单：列表铺满时空白处点不到背景菜单
         EditorGUI.Separator();
         if (EditorGUI.MenuItem("Create Folder", canModify)) CreateFolder();
-        if (EditorGUI.MenuItem("Create World", canModify)) CreateWorld();
+        DrawCreateMenu(canModify);
         if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
         if (EditorGUI.MenuItem("Refresh"))
         {

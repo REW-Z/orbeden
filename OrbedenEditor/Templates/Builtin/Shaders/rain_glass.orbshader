@@ -1,0 +1,121 @@
+--------queue Refraction
+--------pass RainGlass
+DepthTest On
+DepthWrite Off
+Blend On
+Cull None
+
+--------vert
+#version 430 core
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+out vec2 v_TexCoord;
+out vec3 v_WorldPosition;
+out vec3 v_Normal;
+out vec4 v_ClipPosition;
+void main()
+{
+    v_TexCoord = a_TexCoord;
+    v_WorldPosition = (u_Model * vec4(a_Position, 1.0)).xyz;
+    v_Normal = transpose(inverse(mat3(u_Model))) * a_Normal;
+    v_ClipPosition = u_ViewProjection * vec4(v_WorldPosition, 1.0);
+    gl_Position = v_ClipPosition;
+}
+
+--------frag
+#version 430 core
+#include "Builtin/surface_refraction.orbinc"
+#include "Builtin/procedural_noise.orbinc"
+in vec2 v_TexCoord;
+in vec3 v_WorldPosition;
+in vec3 v_Normal;
+in vec4 v_ClipPosition;
+uniform float u_Time;
+uniform vec3 u_CameraPosition;
+uniform vec3 u_LightDirection;
+uniform vec4 u_LightColor;
+uniform float u_LightIntensity;
+uniform float u_DropletScale;
+uniform float u_FlowSpeed;
+uniform float u_RefractionStrength;
+uniform float u_RainAmount;
+uniform float u_TrailStrength;
+uniform float u_Opacity;
+uniform float u_TintStrength;
+uniform vec4 u_TintColor;
+out vec4 FragColor;
+
+//沿负 V 方向平移水滴并累积上方水痕
+float SampleRainLayer(vec2 uv, float time, float seed)
+{
+    vec2 position = uv + vec2(seed, time);
+    vec2 cell = floor(position);
+    float height = 0.0;
+    for (int y = -1; y <= 1; ++y)
+    for (int x = -1; x <= 1; ++x)
+    {
+        vec2 index = cell + vec2(x, y);
+        float randomValue = HashCell(index);
+        float dropletMask = randomValue < clamp(u_RainAmount, 0.0, 1.0) ? 1.0 : 0.0;
+        vec2 center = index + vec2(0.25 + 0.5 * randomValue, 0.2 + 0.6 * HashCell(index + 9.7));
+        vec2 delta = position - center;
+        delta.x += 0.035 * sin(delta.y * 7.0 + randomValue * 20.0);
+        vec2 shape = delta / vec2(0.10 + 0.04 * randomValue, 0.18);
+        float drop = max(1.0 - dot(shape, shape), 0.0);
+        float trail = exp(-delta.x * delta.x * 950.0) * smoothstep(0.0, 0.10, delta.y)
+            * (1.0 - smoothstep(0.15, 0.72, delta.y));
+        height += dropletMask * (drop * drop + trail * clamp(u_TrailStrength, 0.0, 1.0));
+    }
+    return height;
+}
+
+//组合不同尺寸和速度的雨滴层
+float SampleRainHeight(vec2 uv)
+{
+    float scale = max(u_DropletScale, 1.0);
+    float time = u_Time * u_FlowSpeed;
+    return SampleRainLayer(uv * scale * vec2(1.0, 0.65), time, 0.0)
+        + 0.45 * SampleRainLayer(uv * scale * vec2(1.73, 1.19), time * 0.63, 23.7);
+}
+
+void main()
+{
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(0.0);
+        return;
+    }
+
+    //计算水滴曲面的坡度
+    float stepSize = 0.015 / max(u_DropletScale, 1.0);
+    float height = SampleRainHeight(v_TexCoord);
+    vec2 slope = vec2(SampleRainHeight(v_TexCoord + vec2(stepSize, 0.0)) - height,
+        SampleRainHeight(v_TexCoord + vec2(0.0, stepSize)) - height) / 0.015;
+    vec2 offset = ConvertSurfaceOffsetToScreen(v_TexCoord, -slope * max(u_RefractionStrength, 0.0));
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    vec2 refractedUv = RejectForegroundCameraUv(screenUv, ClampCameraScreenUv(screenUv + offset), gl_FragCoord.z);
+    vec3 transmitted = texture(u_CameraColorTexture, refractedUv).rgb;
+    transmitted *= mix(vec3(1.0), u_TintColor.rgb, clamp(u_TintStrength, 0.0, 1.0));
+
+    //叠加玻璃掠射反光和水滴高光
+    vec3 normal = normalize(v_Normal);
+    if (!gl_FrontFacing) normal = -normal;
+    vec3 viewDir = normalize(u_CameraPosition - v_WorldPosition);
+    float fresnel = 0.04 + 0.96 * pow(1.0 - clamp(dot(normal, viewDir), 0.0, 1.0), 5.0);
+    vec2 uvDx = dFdx(v_TexCoord);
+    vec2 uvDy = dFdy(v_TexCoord);
+    float uvSign = uvDx.x * uvDy.y - uvDx.y * uvDy.x < 0.0 ? -1.0 : 1.0;
+    vec3 surfaceX = (dFdx(v_WorldPosition) * uvDy.y - dFdy(v_WorldPosition) * uvDx.y) * uvSign;
+    vec3 surfaceY = (dFdy(v_WorldPosition) * uvDx.x - dFdx(v_WorldPosition) * uvDy.x) * uvSign;
+    surfaceX /= max(length(surfaceX), 0.00001);
+    surfaceY /= max(length(surfaceY), 0.00001);
+    vec3 wetNormal = normalize(normal - surfaceX * slope.x * 0.12 - surfaceY * slope.y * 0.12);
+    vec3 halfVector = viewDir - u_LightDirection;
+    vec3 halfDir = halfVector / max(length(halfVector), 0.0001);
+    float highlight = pow(max(dot(wetNormal, halfDir), 0.0), 160.0) * clamp(height, 0.0, 1.0);
+    vec3 reflection = u_LightColor.rgb * max(u_LightIntensity, 0.0) * (0.025 * fresnel + 0.18 * highlight);
+    FragColor = vec4(transmitted + reflection, clamp(u_Opacity, 0.0, 1.0));
+}

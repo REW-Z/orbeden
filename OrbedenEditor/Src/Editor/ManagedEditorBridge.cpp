@@ -19,7 +19,8 @@
 #include <string_view>
 #include "Runtime/Object/Ens.h"
 #include "Runtime/WorldSerializer.h"
-#include "Runtime/Object/StaticMeshRenderer.h"
+#include "Runtime/AssetPipeline.h"
+#include "Runtime/Object/Material.h"
 #include "Runtime/Object/Transform.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Script.h"
@@ -33,6 +34,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <deque>
 #include <filesystem>
 #include <memory>
 #include <utility>
@@ -64,6 +66,7 @@ namespace
     constexpr const char* EditorLoadGameAssemblyMethod = "LoadGameAssembly";
     constexpr const char* EditorUnloadGameAssemblyMethod = "UnloadGameAssembly";
     constexpr const char* EditorDrawSceneGizmosMethod = "DrawSceneGizmos";
+    constexpr const char* EditorDrawStatusBarMethod = "DrawStatusBar";
     constexpr const char* EditorPublishGameAotMethod = "PublishGameAot";
     constexpr const char* EditorSaveProjectStateMethod = "SaveProjectState";
     constexpr const char* EditorUndoMethod = "Undo";
@@ -72,6 +75,9 @@ namespace
     constexpr const char* EditorRequestDeleteSelectedMethod = "RequestDeleteSelected";
     constexpr const char* EditorRequestReimportSelectedMethod = "RequestReimportSelected";
     constexpr const char* EditorRequestReimportAllMethod = "RequestReimportAll";
+    constexpr const char* EditorRequestCopySelectedMethod = "RequestCopySelected";
+    constexpr const char* EditorRequestPasteSelectedMethod = "RequestPasteSelected";
+    constexpr const char* EditorRequestToggleActiveSelectedMethod = "RequestToggleActiveSelected";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -113,6 +119,7 @@ namespace
         void* reimportAsset = nullptr;
         void* reimportAllAssets = nullptr;
         void* loadCachedAsset = nullptr;
+        void* saveMaterial = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -156,7 +163,7 @@ namespace
         void* requestBuild = nullptr;
         void* getSelectedPlayerTarget = nullptr;
         void* setSelectedPlayerTarget = nullptr;
-        void* mirrorExamples = nullptr;
+        void* mirrorTemplate = nullptr;
         void* isWorldDirty = nullptr;
         void* setWorldDirty = nullptr;
     };
@@ -204,21 +211,21 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 18);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 142);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 145);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 72);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 82);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 85);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 87);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 105);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 129);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 134);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 74);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 84);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 87);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 89);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 108);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 132);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 137);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -366,6 +373,24 @@ namespace
         return saved ? 1 : 0;
     }
 
+    //把材质资产写回它的源文件
+    uint8 ORBEDEN_NATIVE_CALL SaveManagedMaterial(void* context, int32 objectId, const uint8* key, int32 length)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
+        Object* object = Object::FindObjectById(objectId);
+        Material* material = object ? object->Cast<Material>() : nullptr;
+        if (!material) return 0;
+        std::filesystem::path relative = Utf8Path::FromUtf8(ReadUtf8(key, length)).lexically_normal();
+        if (relative.empty() || relative.has_root_path() || *relative.begin() == ".."
+            || relative.extension() != ".orbmat") return 0;
+        std::filesystem::path path = Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative;
+        std::string error;
+        bool saved = AssetPipeline::SaveMaterialAsset(*material, Utf8Path::ToUtf8(path), error);
+        if (!saved) Log::Error(error.c_str());
+        return saved ? 1 : 0;
+    }
+
     //销毁完整子树并清理失效选择
     uint8 ORBEDEN_NATIVE_CALL DestroyManagedEnsTree(void* context, EnsId root)
     {
@@ -394,9 +419,10 @@ namespace
         return CopyUtf8(ens ? WorldSerializer::CaptureEns(*ens) : std::string(), buffer, capacity);
     }
 
-    //实例化资产或恢复快照并设置层级顺序
+    //实例化资产、恢复快照或复制快照并设置层级顺序
+    //kind：0 预制体文件、1 按快照恢复原身份（撤销）、2 按快照复制成新身份（复制粘贴）
     int32 ORBEDEN_NATIVE_CALL InstantiateManagedPrefab(void* context, const uint8* text, int32 length,
-        uint8 snapshot, EnsId parent, EnsId before)
+        uint8 kind, EnsId parent, EnsId before)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
@@ -405,7 +431,8 @@ namespace
             || (!before.IsNull() && (!world.IsAlive(before) || world.GetTransform(before)->parent != parent))) return 0;
         std::string value = ReadUtf8(text, length), error;
         Ens* root = nullptr;
-        if (snapshot) root = WorldSerializer::RestoreEns(world, value, parent, error);
+        if (kind == 1) root = WorldSerializer::RestoreEns(world, value, parent, error);
+        else if (kind == 2) root = WorldSerializer::CopyEns(world, value, parent, error);
         else
         {
             std::filesystem::path relative = Utf8Path::FromUtf8(value).lexically_normal();
@@ -498,8 +525,12 @@ namespace
             editor->SetSelectedPlayerTargetPlatformIndex(index);
     }
 
-    //同步示例目录并返回本次操作报告
-    int32 ORBEDEN_NATIVE_CALL MirrorManagedExamples(void* context, uint8 reset, uint8* buffer, int32 capacity)
+    //镜像的模板内容目录位，与 EditorApplication.cs 的 EditorTemplateFolder 对应
+    constexpr uint8 TemplateFolderExamples = 1;
+    constexpr uint8 TemplateFolderBuiltin = 2;
+
+    //同步选中的模板内容目录并返回本次操作报告
+    int32 ORBEDEN_NATIVE_CALL MirrorManagedTemplate(void* context, uint8 reset, uint8 folders, uint8* buffer, int32 capacity)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         std::string report;
@@ -511,27 +542,28 @@ namespace
             {
                 std::string templates = editor->GetSourceTemplateRoot();
                 std::string content = editor->GetProjectContentRootPath();
-                std::string examples = Utf8Path::ToUtf8(Utf8Path::FromUtf8(content) / NewProjectTemplate::ExamplesFolderName);
-                if (templates.empty() || !std::filesystem::is_directory(Utf8Path::FromUtf8(examples)))
-                    report = "Project examples or source template not found.";
+                if (templates.empty()) report = "The source template was not found.";
                 else if (!editor->SaveCurrentWorld()) report = editor->GetProjectStatusText();
                 else
                 {
-                    //示例引用 Builtin，两个内容目录必须一起迁移，否则材质会指向不存在的默认资源。
+                    //写回方向示例与 Builtin 一起走：示例引用 Builtin，只写回一半会让材质指向不存在的默认资源。
+                    //重置方向按位选择，可以只回退改过的那一侧，不牵动另一侧的项目改动。
                     NewProjectTemplate::MirrorReport changes;
                     std::string error;
                     std::string skipped;
+                    std::string mirroredFolders;
                     bool mirrored = true;
-                    for (const char* folder : { NewProjectTemplate::ExamplesFolderName,
-                        NewProjectTemplate::BuiltinFolderName })
+                    for (const auto& folder : { std::make_pair(TemplateFolderExamples, NewProjectTemplate::ExamplesFolderName),
+                        std::make_pair(TemplateFolderBuiltin, NewProjectTemplate::BuiltinFolderName) })
                     {
-                        std::string source = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? templates : content) / folder);
-                        std::string target = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? content : templates) / folder);
+                        if ((folders & folder.first) == 0) continue;
+                        std::string source = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? templates : content) / folder.second);
+                        std::string target = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? content : templates) / folder.second);
                         //某一侧缺这个目录就跳过（例如 Builtin 之前的旧项目），不让单个目录废掉整次迁移
                         if (!std::filesystem::is_directory(Utf8Path::FromUtf8(source)))
                         {
                             skipped += " ";
-                            skipped += folder;
+                            skipped += folder.second;
                             continue;
                         }
                         NewProjectTemplate::MirrorReport folderChanges;
@@ -543,14 +575,26 @@ namespace
                         changes.added += folderChanges.added;
                         changes.updated += folderChanges.updated;
                         changes.removed += folderChanges.removed;
+                        if (!mirroredFolders.empty()) mirroredFolders += "+";
+                        mirroredFolders += folder.second;
                     }
-                    bool reloaded = !reset || editor->ReloadProjectContent();
-                    report = mirrored ? (reset ? "Restored template content: " : "Wrote back template content: ")
-                        + std::to_string(changes.added) + " added, " + std::to_string(changes.updated)
-                        + " updated, " + std::to_string(changes.removed) + " removed." : error;
-                    if (!skipped.empty()) report += "\nSkipped missing folders:" + skipped;
-                    if (!reloaded) report += "\nContent reload failed: " + editor->GetProjectStatusText();
-                    if (!reset && mirrored) report += "\nReview with: git diff OrbedenEditor/Templates";
+
+                    if (!mirrored) report = error;
+                    else if (mirroredFolders.empty())
+                    {
+                        report = "No template folders to mirror.";
+                        if (!skipped.empty()) report += " Skipped missing folders:" + skipped;
+                    }
+                    else
+                    {
+                        report = std::string(reset ? "Restored template content (" : "Wrote back template content (")
+                            + mirroredFolders + "): " + std::to_string(changes.added) + " added, "
+                            + std::to_string(changes.updated) + " updated, " + std::to_string(changes.removed) + " removed.";
+                        if (!skipped.empty()) report += "\nSkipped missing folders:" + skipped;
+                        if (reset && !editor->ReloadProjectContent())
+                            report += "\nContent reload failed: " + editor->GetProjectStatusText();
+                        if (!reset) report += "\nReview with: git diff OrbedenEditor/Templates";
+                    }
                 }
             }
         }
@@ -713,61 +757,95 @@ namespace
         return editor && component && component->GetWorld() == &editor->GetWorld() ? component : nullptr;
     }
 
-    //收集一个组件从基类到派生类的可见字段。
-    const List<const Reflection::FieldInfo*>& GetEditorComponentFields(Component* component)
+    //一个类型的反射事实：按继承展开并过滤后的可见字段，加上自身与全部基类的名字。
+    //两者都只随类型注册变化，所以共用一份按反射代次失效的缓存
+    struct EditorComponentTypeFacts
+    {
+        List<const Reflection::FieldInfo*> fields;
+        List<std::string> chain;
+    };
+
+    //收集一个类型的反射事实
+    const EditorComponentTypeFacts& GetEditorComponentTypeFacts(Type* type)
     {
         static thread_local uint32 generation = 0;
-        static thread_local std::unordered_map<TypeRuntimeId, List<const Reflection::FieldInfo*>> cache;
-        static const List<const Reflection::FieldInfo*> empty;
+        static thread_local std::unordered_map<TypeRuntimeId, EditorComponentTypeFacts> cache;
+        static const EditorComponentTypeFacts empty;
         if (generation != Reflection::GetRegistryGeneration())
         {
             cache.clear();
             generation = Reflection::GetRegistryGeneration();
         }
-        if (!component) return empty;
-        Type* type = component->GetType();
+        if (!type) return empty;
         auto [entry, added] = cache.try_emplace(type->GetId());
         if (added)
         {
-            Reflection::CollectFields(type, entry->second);
-            std::erase_if(entry->second, [](const Reflection::FieldInfo* field)
+            Reflection::CollectFields(type, entry->second.fields);
+            std::erase_if(entry->second.fields, [](const Reflection::FieldInfo* field)
                 { return !field || !field->name || !field->persistent || !field->getter || !field->setter; });
+            //继承链也一并留下：判"是不是 Script"这类问题要沿链找名字，而链是随类型注册固定的
+            for (Type* current = type; current; current = current->GetBaseType())
+                entry->second.chain.emplace_back(current->GetName());
         }
         return entry->second;
     }
 
-    //渲染器按子网格合成的材质槽数量，其余组件为 0
-    int32 GetComponentMaterialSlotCount(Component* component)
+    //把引用列表字段的 Key 文本切成槽位；空段保留为空槽，便于按下标读改写
+    List<std::string> SplitReferenceKeys(const std::string& text)
     {
-        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
-        Mesh* mesh = renderer ? renderer->mesh.Get() : nullptr;
-        return mesh ? static_cast<int32>(mesh->subMeshes.size()) : 0;
+        List<std::string> keys;
+        usize start = 0;
+        while (true)
+        {
+            usize separator = text.find(Reflection::ReferenceListSeparator, start);
+            usize length = separator == std::string::npos ? std::string::npos : separator - start;
+            keys.push_back(text.substr(start, length));
+            if (separator == std::string::npos) return keys;
+            start = separator + 1;
+        }
     }
 
-    //取渲染器某个材质槽的当前资源 Key
-    std::string GetComponentMaterialSlotKey(Component* component, int32 slot)
+    //读取引用列表的槽位 Key；长度按字段报的真实槽位数对齐，空列表的文本切出来会多一个空段
+    List<std::string> ReadReferenceKeys(const Reflection::FieldInfo* field, Component* component)
     {
-        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
-        if (!renderer || slot < 0 || static_cast<usize>(slot) >= renderer->materials.size()) return std::string();
-        return renderer->materials[static_cast<usize>(slot)].GetInstanceId().GetPath();
+        List<std::string> keys = SplitReferenceKeys(field->GetValueAsString(component));
+        keys.resize(static_cast<usize>(field->GetListSize(component)));
+        return keys;
     }
 
-    //写入渲染器某个材质槽，槽位超出当前数组长度时补齐
-    bool SetComponentMaterialSlotKey(Component* component, int32 slot, const std::string& key)
+    //把槽位 Key 写回引用列表字段，空槽写成空段
+    bool WriteReferenceKeys(const Reflection::FieldInfo* field, Component* component, const List<std::string>& keys)
     {
-        StaticMeshRenderer* renderer = component ? component->Cast<StaticMeshRenderer>() : nullptr;
-        if (!renderer || slot < 0) return false;
-        if (static_cast<usize>(slot) >= renderer->materials.size())
-            renderer->materials.resize(static_cast<usize>(slot) + 1);
-        renderer->materials[static_cast<usize>(slot)].SetInstanceId(StringId(key));
-        return true;
+        std::string text;
+        for (usize index = 0; index < keys.size(); ++index)
+        {
+            if (index > 0) text += Reflection::ReferenceListSeparator;
+            text += keys[index];
+        }
+        return field->SetValueFromString(component, text);
     }
 
-    //材质槽在 Inspector 里的显示名
-    std::string GetComponentMaterialSlotName(int32 slot)
+    //解析"字段名[下标]"形式的属性名
+    bool ParseListElementName(const std::string& name, std::string& outFieldName, int32& outIndex)
     {
-        return "material[" + std::to_string(slot) + "]";
+        usize open = name.rfind('[');
+        if (open == std::string::npos || name.size() < open + 3 || name.back() != ']') return false;
+
+        int64 index = 0;
+        for (usize position = open + 1; position + 1 < name.size(); ++position)
+        {
+            char digit = name[position];
+            if (digit < '0' || digit > '9') return false;
+            index = index * 10 + (digit - '0');
+            //槽位下标给个大而无当的上限：这条路径只服务编辑器 UI，别让畸形名字撑爆内存
+            if (index > 65535) return false;
+        }
+
+        outFieldName = name.substr(0, open);
+        outIndex = static_cast<int32>(index);
+        return !outFieldName.empty();
     }
+
     //把精确 Script 识别为 C# 脚本宿主。
     Script* AsManagedScriptHost(Component* component)
     {
@@ -897,6 +975,8 @@ namespace
         case V::Color: result = Reflection::Value(ReadEditorPayload<color>(input)); return true;
         case V::Quaternion: result = Reflection::Value(ReadEditorPayload<quaternion>(input)); return true;
         case V::EnsId: result = Reflection::Value(ReadEditorPayload<EnsId>(input)); return true;
+        //容器条目写入的是槽位数
+        case V::Array: result = Reflection::Value(ReadEditorPayload<int32>(input)); return true;
         case V::String: case V::StringId:
         {
             EditorTextAbi text = ReadEditorPayload<EditorTextAbi>(input);
@@ -918,14 +998,15 @@ namespace
         Component* component = FindEditorComponent(context, objectId);
         if (!component) return S::NotFound;
         Script* host = AsManagedScriptHost(component);
-        const auto& fields = GetEditorComponentFields(component);
-        int32 slots = GetComponentMaterialSlotCount(component);
-        usize capacity = host ? host->GetManagedFields().size() + 1 : fields.size() + slots;
+        const List<const Reflection::FieldInfo*>& fields = GetEditorComponentTypeFacts(component->GetType()).fields;
+        //预留按字段数估算，引用列表的元素条目会让它按需增长；容量跨帧复用，稳定后不再分配
+        usize capacity = host ? host->GetManagedFields().size() + 1 : fields.size();
         static thread_local List<EditorPropertyAbi> properties;
-        static thread_local List<std::string> strings;
+        //条目文本用 deque：元素条目个数不定，push 时不会搬动已有字符串，借出去的指针一直有效
+        static thread_local std::deque<std::string> texts;
         properties.clear();
         properties.reserve(capacity);
-        strings.resize(capacity * 2);
+        texts.clear();
 
         //生成托管宿主字段快照
         if (host)
@@ -933,28 +1014,29 @@ namespace
             EditorPropertyAbi enabled;
             enabled.name = EditorTextAbi("enabled");
             enabled.declaredKind = Reflection::ValueKind::Bool;
-            EncodeEditorValue(Reflection::Value(host->GetEnabled()), enabled.value, strings[0]);
+            texts.emplace_back();
+            EncodeEditorValue(Reflection::Value(host->GetEnabled()), enabled.value, texts.back());
             properties.push_back(enabled);
             for (const auto& field : host->GetManagedFields())
             {
                 if (!field.inspectorVisible) continue;
                 Reflection::ValueKind kind = GetEditorValueKind(field.kind, true);
                 if (kind == Reflection::ValueKind::Empty) continue;
-                usize index = properties.size();
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field.name);
                 entry.declaredKind = kind;
                 if (field.kind == Reflection::FieldKind::ObjectRef)
                 {
-                    std::string& reference = strings[index * 2 + 1];
-                    reference = field.typeName;
+                    texts.emplace_back(field.typeName);
+                    std::string& reference = texts.back();
                     if (reference.starts_with("Ref<") && reference.ends_with(">")) reference = reference.substr(4, reference.size() - 5);
                     entry.referenceType = EditorTextAbi(reference);
                 }
                 if (field.kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
                 //传递原始文本，由托管快照在文本或声明类型变化时解析
                 entry.value.kind = Reflection::ValueKind::String;
-                EditorTextAbi text(field.value);
+                texts.emplace_back(field.value);
+                EditorTextAbi text(texts.back());
                 std::memcpy(entry.value.payload, &text, sizeof(text));
                 properties.push_back(entry);
             }
@@ -964,9 +1046,37 @@ namespace
             //直接读取原生类型化字段
             for (const auto* field : fields)
             {
+                //引用列表展成一条容器条目加每个槽位一条元素条目。槽位数取字段自己报的真实长度：
+                //列表文本分不出"0 个槽位"与"1 个空槽位"，两者都是空串
+                if (field->kind == Reflection::FieldKind::ObjectRefList)
+                {
+                    int32 slotCount = field->GetListSize(component);
+                    List<std::string> keys = ReadReferenceKeys(field, component);
+
+                    EditorPropertyAbi container;
+                    container.name = EditorTextAbi(field->name);
+                    container.declaredKind = Reflection::ValueKind::Array;
+                    if (field->objectRefTypeName) container.referenceType = EditorTextAbi(field->objectRefTypeName);
+                    WriteEditorPayload<int32>(Reflection::Value(slotCount), container.value);
+                    container.value.kind = Reflection::ValueKind::Array;
+                    properties.push_back(container);
+
+                    for (int32 slot = 0; slot < slotCount; ++slot)
+                    {
+                        EditorPropertyAbi element;
+                        texts.emplace_back(std::string(field->name) + "[" + std::to_string(slot) + "]");
+                        element.name = EditorTextAbi(texts.back());
+                        element.declaredKind = Reflection::ValueKind::StringId;
+                        if (field->objectRefTypeName) element.referenceType = EditorTextAbi(field->objectRefTypeName);
+                        texts.emplace_back();
+                        EncodeEditorValue(Reflection::Value(StringId(keys[static_cast<usize>(slot)])), element.value, texts.back());
+                        properties.push_back(element);
+                    }
+                    continue;
+                }
+
                 Reflection::ValueKind kind = GetEditorValueKind(field->kind);
                 if (kind == Reflection::ValueKind::Empty) continue;
-                usize index = properties.size();
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field->name);
                 entry.declaredKind = kind;
@@ -975,22 +1085,10 @@ namespace
                     entry.referenceType = EditorTextAbi(field->objectRefTypeName);
                 Reflection::Value value = field->kind == Reflection::FieldKind::ObjectRef
                     ? Reflection::Value(field->GetValueAsString(component)) : field->GetValue(component);
-                EncodeEditorValue(value, entry.value, strings[index * 2]);
+                texts.emplace_back();
+                EncodeEditorValue(value, entry.value, texts.back());
                 if (field->kind == Reflection::FieldKind::ObjectRef) entry.value.kind = kind;
                 else if (entry.value.kind != kind) { entry.value.kind = kind; entry.value.status = S::TypeMismatch; }
-                properties.push_back(entry);
-            }
-            //追加动态材质槽
-            for (int32 slot = 0; slot < slots; ++slot)
-            {
-                usize index = properties.size();
-                strings[index * 2 + 1] = GetComponentMaterialSlotName(slot);
-                EditorPropertyAbi entry;
-                entry.name = EditorTextAbi(strings[index * 2 + 1]);
-                entry.declaredKind = Reflection::ValueKind::StringId;
-                entry.referenceType = EditorTextAbi("Material");
-                EncodeEditorValue(Reflection::Value(GetComponentMaterialSlotKey(component, slot)), entry.value, strings[index * 2]);
-                entry.value.kind = Reflection::ValueKind::StringId;
                 properties.push_back(entry);
             }
         }
@@ -1029,19 +1127,41 @@ namespace
             }
             return S::NotFound;
         }
-        for (const auto* field : GetEditorComponentFields(component))
+        //引用列表：整份槽位 Key 文本读改写。"字段名"改槽位数（Array 值就是个数），"字段名[下标]"写单个槽位
+        std::string elementFieldName;
+        int32 elementIndex = -1;
+        bool hasElementName = ParseListElementName(fieldName, elementFieldName, elementIndex);
+        for (const auto* field : GetEditorComponentTypeFacts(component->GetType()).fields)
+        {
+            if (field->kind != Reflection::FieldKind::ObjectRefList) continue;
+
+            bool resize = fieldName == field->name && input->kind == Reflection::ValueKind::Array;
+            bool writeElement = hasElementName && elementFieldName == field->name
+                && input->kind == Reflection::ValueKind::StringId;
+            if (!resize && !writeElement) continue;
+
+            List<std::string> keys = ReadReferenceKeys(field, component);
+            if (resize)
+            {
+                int32 count = 0;
+                if (!value.TryGet(count) || count < 0) return S::TypeMismatch;
+                keys.resize(static_cast<usize>(count));
+            }
+            else
+            {
+                //越界只报找不到：槽位的增加由改长度那条路径负责，这里不偷偷加长
+                if (elementIndex >= static_cast<int32>(keys.size())) return S::NotFound;
+                keys[static_cast<usize>(elementIndex)] = value.ToString();
+            }
+            return WriteReferenceKeys(field, component, keys) ? S::Ok : S::InvocationFailed;
+        }
+        for (const auto* field : GetEditorComponentTypeFacts(component->GetType()).fields)
         {
             if (fieldName != field->name) continue;
             if (GetEditorValueKind(field->kind) != input->kind) return S::TypeMismatch;
             bool written = field->kind == Reflection::FieldKind::ObjectRef
                 ? field->SetValueFromString(component, value.ToString()) : field->SetValue(component, value);
             return written ? S::Ok : S::InvocationFailed;
-        }
-        for (int32 slot = 0; slot < GetComponentMaterialSlotCount(component); ++slot)
-        {
-            if (fieldName != GetComponentMaterialSlotName(slot)) continue;
-            if (input->kind != Reflection::ValueKind::StringId) return S::TypeMismatch;
-            return SetComponentMaterialSlotKey(component, slot, value.ToString()) ? S::Ok : S::InvocationFailed;
         }
         return S::NotFound;
     }
@@ -1191,9 +1311,9 @@ namespace
         Component* component = objectId != 0 ? FindEditorComponent(context, objectId) : nullptr;
         Type* type = objectId == 0 ? Object::FindType(requested) : component ? component->GetType() : nullptr;
         std::string target = objectId == 0 ? "Component" : requested;
-        for (; type; type = type->GetBaseType())
-            if (type->GetName() == target) return 1;
-        return 0;
+        //沿缓存下来的继承链找名字，不再每次去跳一遍 GetBaseType()
+        const List<std::string>& chain = GetEditorComponentTypeFacts(type).chain;
+        return std::find(chain.begin(), chain.end(), target) != chain.end() ? 1 : 0;
     }
 
     //写入托管宿主的序列化字段
@@ -1474,6 +1594,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorLoadGameAssemblyMethod, &LoadGameAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUnloadGameAssemblyMethod, &UnloadGameAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawSceneGizmosMethod, &DrawSceneGizmosFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawStatusBarMethod, &DrawStatusBarFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
@@ -1482,6 +1603,9 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestDeleteSelectedMethod, &RequestDeleteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportSelectedMethod, &RequestReimportSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportAllMethod, &RequestReimportAllFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestCopySelectedMethod, &RequestCopySelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestPasteSelectedMethod, &RequestPasteSelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestToggleActiveSelectedMethod, &RequestToggleActiveSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -1502,7 +1626,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.requestBuild = reinterpret_cast<void*>(&RequestManagedBuild);
     editorApi.application.getSelectedPlayerTarget = reinterpret_cast<void*>(&GetManagedPlayerTarget);
     editorApi.application.setSelectedPlayerTarget = reinterpret_cast<void*>(&SetManagedPlayerTarget);
-    editorApi.application.mirrorExamples = reinterpret_cast<void*>(&MirrorManagedExamples);
+    editorApi.application.mirrorTemplate = reinterpret_cast<void*>(&MirrorManagedTemplate);
     editorApi.application.isWorldDirty = reinterpret_cast<void*>(&IsManagedWorldDirty);
     editorApi.application.setWorldDirty = reinterpret_cast<void*>(&SetManagedWorldDirty);
     editorApi.gizmo = gizmoApi;
@@ -1526,6 +1650,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.reimportAsset = reinterpret_cast<void*>(&ReimportManagedAsset);
     editorApi.assets.reimportAllAssets = reinterpret_cast<void*>(&ReimportAllManagedAssets);
     editorApi.assets.loadCachedAsset = reinterpret_cast<void*>(&LoadCachedManagedAsset);
+    editorApi.assets.saveMaterial = reinterpret_cast<void*>(&SaveManagedMaterial);
     editorApi.components.context = &editor;
     editorApi.components.readComponentSnapshot = reinterpret_cast<void*>(&ReadComponentSnapshot);
     editorApi.components.setComponentProperty = reinterpret_cast<void*>(&SetComponentProperty);
@@ -1585,6 +1710,7 @@ void ManagedEditorBridge::Shutdown()
     DrawPanelFunction = nullptr;
     SetPanelVisibleFunction = nullptr;
     DrawSceneGizmosFunction = nullptr;
+    DrawStatusBarFunction = nullptr;
     LoadGameAssemblyFunction = nullptr;
     UnloadGameAssemblyFunction = nullptr;
     PublishGameAotFunction = nullptr;
@@ -1595,6 +1721,9 @@ void ManagedEditorBridge::Shutdown()
     RequestDeleteSelectedFunction = nullptr;
     RequestReimportSelectedFunction = nullptr;
     RequestReimportAllFunction = nullptr;
+    RequestCopySelectedFunction = nullptr;
+    RequestPasteSelectedFunction = nullptr;
+    RequestToggleActiveSelectedFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -1653,6 +1782,14 @@ void ManagedEditorBridge::DrawSceneGizmos()
     drawSceneGizmos();
 }
 
+void ManagedEditorBridge::DrawStatusBar()
+{
+    if (!initialized || !DrawStatusBarFunction) return;
+
+    ManagedDrawEditorFn drawStatusBar = reinterpret_cast<ManagedDrawEditorFn>(DrawStatusBarFunction);
+    drawStatusBar();
+}
+
 bool ManagedEditorBridge::SaveProjectState()
 {
     if (!initialized || !SaveProjectStateFunction) return true;
@@ -1700,6 +1837,27 @@ void ManagedEditorBridge::RequestReimportAll()
     if (!initialized || !RequestReimportAllFunction) return;
     ManagedDrawEditorFn requestReimportAll = reinterpret_cast<ManagedDrawEditorFn>(RequestReimportAllFunction);
     requestReimportAll();
+}
+
+void ManagedEditorBridge::RequestCopySelected()
+{
+    if (!initialized || !RequestCopySelectedFunction) return;
+    ManagedDrawEditorFn requestCopy = reinterpret_cast<ManagedDrawEditorFn>(RequestCopySelectedFunction);
+    requestCopy();
+}
+
+void ManagedEditorBridge::RequestPasteSelected()
+{
+    if (!initialized || !RequestPasteSelectedFunction) return;
+    ManagedDrawEditorFn requestPaste = reinterpret_cast<ManagedDrawEditorFn>(RequestPasteSelectedFunction);
+    requestPaste();
+}
+
+void ManagedEditorBridge::RequestToggleActiveSelected()
+{
+    if (!initialized || !RequestToggleActiveSelectedFunction) return;
+    ManagedDrawEditorFn requestToggleActive = reinterpret_cast<ManagedDrawEditorFn>(RequestToggleActiveSelectedFunction);
+    requestToggleActive();
 }
 
 bool ManagedEditorBridge::PublishGameAot(const std::string& repositoryRoot,

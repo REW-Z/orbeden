@@ -112,6 +112,10 @@ MyGame/
 
 模型、材质、贴图和 Shader 放在 `Content/` 下（默认分别放 `Meshes/`、`Materials/`、`Textures/`、`Shaders/`），再通过 Project 面板和 Inspector 使用。
 
+绘制队列由 Shader 提供默认值，Material 可覆盖，Renderer 的每个子网格按自身材质分别分类。透明 Shader 在 `.orbshader` 文件开头写 `--------queue Transparent`，折射 Shader 写 `--------queue Refraction`；省略时为 `Opaque`。`.orbmat` 内写 `drawqueue Transparent` 可覆盖，写 `drawqueue Auto` 恢复继承。脚本设置 `material.drawQueue` 后需开启 `material.overrideDrawQueue`；`material.GetDrawQueue()` 返回最终队列。详细规则见 [渲染管线](RenderingPipeline.md)。Builtin 提供雨玻璃、热浪、尾流和 PBS 材质预设，参数与用法见 [Builtin 示例](../OrbedenEditor/Templates/Builtin/README.md)。`.orbmat` 是材质专用内部格式，一个文件对应一个 Material，直接以文件路径加载，并支持 `float uniform名称 数值` 与 `color uniform名称 R G B A` 参数。
+
+从项目版本 12 或更早版本升级时，旧 `StaticMeshRenderer.drawQueue` 不再生效。自有透明、折射资源请迁移到 Shader 或材质配置，并重新 `Build Player`；模板资源已更新。
+
 
 ### Console 面板
 

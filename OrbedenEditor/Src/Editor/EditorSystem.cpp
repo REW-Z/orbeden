@@ -672,6 +672,8 @@ void EditorSystem::RenderEditorGUI()
     UpdateWindowTitle();
     DrawMainMenuBar();
     DrawPlayToolbar();
+    //状态栏必须在面板之前：边栏会收缩视口工作区，停靠宿主随后按收缩后的区域布局
+    DrawStatusBar();
     DrawProjectDialog();
     DrawNewProjectDialog();
     DrawUpgradeProjectDialog();
@@ -808,7 +810,6 @@ bool EditorSystem::RunProjectUpgrade(std::string& outError)
     request.projectRoot = pendingUpgrade.projectRoot;
     request.projectName = pendingUpgrade.projectName;
     request.projectFilePath = pendingUpgrade.projectFilePath;
-    request.startupWorld = pendingUpgrade.startupWorld;
     request.runtimeDllPath = FindRuntimeCSharpDll();
     request.templateRoot = templateRoot;
 
@@ -835,8 +836,8 @@ void EditorSystem::DrawUpgradeProjectDialog()
     ImGui::Text("Project: %s", pendingUpgrade.projectFilePath.c_str());
     ImGui::Text("Project version: %u    Current version: %u", pendingUpgrade.storedVersion, OrbedenProjectVersion);
     ImGui::Spacing();
-    ImGui::TextWrapped("Upgrading refreshes the engine SDK, the build scaffold and the Examples folder. "
-        "Your own assets and scripts are left untouched.");
+    ImGui::TextWrapped("Upgrading rebuilds everything outside Content and refreshes the engine SDK and the build "
+        "scaffold. Content is left untouched.");
     ImGui::Spacing();
 
     if (!upgradeError.empty())
@@ -1836,6 +1837,16 @@ const List<EditorShortcut>& EditorSystem::GetEditorShortcuts()
         { "Edit", "Delete", "Delete", ImGuiKey_Delete, false, false, false, EditorShortcutScope::Global,
             [](EditorSystem& editor) { editor.managedBridge.RequestDeleteSelected(); } },
 
+        //复制同样指名面板，粘贴则发给当前聚焦的面板：粘贴不要求面板已有选中项
+        { "Edit", "Copy", "Ctrl+C", ImGuiKey_C, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestCopySelected(); } },
+        { "Edit", "Paste", "Ctrl+V", ImGuiKey_V, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestPasteSelected(); } },
+
+        //激活状态由 EnsView 处理：切换选中 Ens 的 localActive，层级生效状态随之刷新
+        { "Edit", "Toggle Active", "Alt+Shift+A", ImGuiKey_A, false, true, true, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.managedBridge.RequestToggleActiveSelected(); } },
+
         //重新导入同样由选择系统指名面板；全量版本不依赖选择，直接派发
         { "Project", "Reimport", "Ctrl+R", ImGuiKey_R, true, false, false, EditorShortcutScope::Global,
             [](EditorSystem& editor) { editor.managedBridge.RequestReimportSelected(); } },
@@ -2070,6 +2081,28 @@ void EditorSystem::DrawPlayToolbar()
         {
             ImGui::EndDisabled();
         }
+    }
+
+    ImGui::End();
+}
+
+//绘制底部状态栏。边栏与工作区收缩在这里，栏内显示什么由托管侧决定
+void EditorSystem::DrawStatusBar()
+{
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (!viewport) return;
+
+    constexpr float32 statusBarHeight = 26.0f;
+    constexpr ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove;
+
+    if (ImGui::BeginViewportSideBar("##EditorStatusBar", viewport, ImGuiDir_Down, statusBarHeight, flags))
+    {
+        managedBridge.DrawStatusBar();
     }
 
     ImGui::End();

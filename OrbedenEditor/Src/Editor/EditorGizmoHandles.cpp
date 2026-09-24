@@ -892,9 +892,6 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
         vector2 lineStart = AddVector(start, ScaleVector(unit, AxisGapPixels));
         drawList->AddLine(ToImVec2(lineStart), ToImVec2(end), ToImColor(color, alphaScale), thickness);
 
-        //背对相机的轴不画端帽，避免视觉上喧宾夺主
-        if (alphaScale < 1.0f) return;
-
         vector2 normal = { -unit.y, unit.x };
         if (mode == EditorGizmoMode::Scale)
         {
@@ -903,6 +900,14 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
                 ImVec2(end.x - HalfPixels, end.y - HalfPixels),
                 ImVec2(end.x + HalfPixels, end.y + HalfPixels),
                 ToImColor(color, alphaScale));
+            return;
+        }
+
+        //端帽的形态跟着视角换，而不是按视角决定画不画：圆锥侧面看是三角形，正对相机时它的端面投影成一个圆。
+        //轴被压得比锥体本身还短，就说明已经接近正对相机了，这时画圆；否则轴会退化成一根没有方向的暗线
+        if (length < ArrowPixels)
+        {
+            drawList->AddCircleFilled(ToImVec2(end), ArrowWidthPixels * 0.5f, ToImColor(color, alphaScale));
             return;
         }
 

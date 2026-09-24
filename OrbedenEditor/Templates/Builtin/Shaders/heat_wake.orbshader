@@ -1,0 +1,77 @@
+--------queue Refraction
+--------pass HeatWake
+DepthTest On
+DepthWrite Off
+Blend On
+Cull None
+
+--------vert
+#version 430 core
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+out vec2 v_TexCoord;
+out vec3 v_WorldPosition;
+out vec3 v_Normal;
+out vec4 v_ClipPosition;
+void main()
+{
+    v_TexCoord = a_TexCoord;
+    v_WorldPosition = (u_Model * vec4(a_Position, 1.0)).xyz;
+    v_Normal = transpose(inverse(mat3(u_Model))) * a_Normal;
+    v_ClipPosition = u_ViewProjection * vec4(v_WorldPosition, 1.0);
+    gl_Position = v_ClipPosition;
+}
+
+--------frag
+#version 430 core
+#include "Builtin/surface_refraction.orbinc"
+#include "Builtin/procedural_noise.orbinc"
+in vec2 v_TexCoord;
+in vec3 v_WorldPosition;
+in vec3 v_Normal;
+in vec4 v_ClipPosition;
+uniform float u_Time;
+uniform float u_DistortionStrength;
+uniform float u_NoiseScale;
+uniform float u_DistortionSpeed;
+uniform float u_EdgeFade;
+uniform float u_SoftIntersection;
+uniform float u_WakeShape;
+uniform float u_Opacity;
+out vec4 FragColor;
+void main()
+{
+    if (!u_UseCameraTextures)
+    {
+        FragColor = vec4(0.0);
+        return;
+    }
+
+    //沿正 V 方向推进噪声并扰动流线
+    float time = u_Time * u_DistortionSpeed;
+    vec2 position = v_TexCoord * max(u_NoiseScale, 1.0) * vec2(1.0, 1.6) - vec2(0.0, time);
+    vec2 warp = vec2(SampleFlowNoise(position * 0.45 + vec2(time * 0.13, 0.0)),
+        SampleFlowNoise(position * 0.45 + 31.7)) - 0.5;
+    position += warp * 1.8;
+    vec2 turbulence = vec2(SampleFlowNoise(position), SampleFlowNoise(position + 47.2)) * 2.0 - 1.0;
+
+    //淡出平面边缘或扩散尾流轮廓
+    float edgeDistance = min(min(v_TexCoord.x, 1.0 - v_TexCoord.x), min(v_TexCoord.y, 1.0 - v_TexCoord.y));
+    float edgeMask = smoothstep(0.0, max(u_EdgeFade, 0.001), edgeDistance);
+    float width = mix(0.10, 0.47, clamp(v_TexCoord.y, 0.0, 1.0));
+    float plume = (1.0 - smoothstep(width * 0.35, width, abs(v_TexCoord.x - 0.5)))
+        * (1.0 - smoothstep(0.35, 1.0, v_TexCoord.y));
+    float mask = edgeMask * mix(1.0, plume, clamp(u_WakeShape, 0.0, 1.0));
+
+    //按场景深度柔化相交边界
+    vec2 screenUv = ClampCameraScreenUv(GetCameraScreenUv(v_ClipPosition));
+    float backgroundDepth = LinearizeCameraDepth(texture(u_CameraDepthTexture, screenUv).r);
+    float surfaceDepth = LinearizeCameraDepth(gl_FragCoord.z);
+    mask *= clamp((backgroundDepth - surfaceDepth) / max(u_SoftIntersection, 0.001), 0.0, 1.0);
+    vec2 offset = ConvertSurfaceOffsetToScreen(v_TexCoord, turbulence * max(u_DistortionStrength, 0.0) * mask);
+    vec2 refractedUv = RejectForegroundCameraUv(screenUv, ClampCameraScreenUv(screenUv + offset), gl_FragCoord.z);
+    FragColor = vec4(texture(u_CameraColorTexture, refractedUv).rgb, clamp(u_Opacity, 0.0, 1.0) * mask);
+}

@@ -73,6 +73,13 @@ namespace
     }
 }
 
+DrawQueue Material::GetDrawQueue() const
+{
+    if (overrideDrawQueue) return drawQueue;
+    Shader* currentShader = shader.Get();
+    return currentShader ? currentShader->drawQueue : DrawQueue::Opaque;
+}
+
 void Material::SetShader(Shader* value)
 {
     shader.Set(value);

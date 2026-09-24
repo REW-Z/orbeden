@@ -351,44 +351,54 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
     public void MarkDirty() => dirty();
 }
 
-/// <summary>把一个带业务 setter 的字段接入 PropertyDocument。</summary>
+/// <summary>DelegatedPropertyTarget 上的一个属性：名字、取值类型，加一对读写委托。
+/// ReferenceType 非空时该行走对象引用选择器，值按资源 Key 存取。</summary>
+internal readonly record struct DelegatedProperty(
+    string Name, InteropValueKind Kind, Func<InteropValue> GetValue, Func<InteropValue, InteropStatus> SetValue,
+    string ReferenceType = "", string Label = "");
+
+/// <summary>把一个带业务 setter 的字段接入 PropertyDocument；同一目标可以挂多个属性。</summary>
 internal sealed class DelegatedPropertyTarget : IPropertyTarget
 {
-    private readonly string name;
-    private readonly InteropValueKind kind;
-    private readonly Func<InteropValue> getter;
-    private readonly Func<InteropValue, InteropStatus> setter;
+    private readonly Dictionary<string, DelegatedProperty> properties;
+    private readonly List<PropertyDescriptor> descriptors;
     private readonly Action dirty;
-    private readonly IReadOnlyList<PropertyDescriptor> properties;
 
     internal DelegatedPropertyTarget(string identity, string propertyName, InteropValueKind propertyKind,
         Func<InteropValue> getValue, Func<InteropValue, InteropStatus> setValue, Action markDirty)
+        : this(identity, [new DelegatedProperty(propertyName, propertyKind, getValue, setValue)], markDirty)
+    {
+    }
+
+    internal DelegatedPropertyTarget(string identity, IReadOnlyList<DelegatedProperty> values, Action markDirty)
     {
         Identity = identity;
-        name = propertyName;
-        kind = propertyKind;
-        getter = getValue;
-        setter = setValue;
+        properties = values.ToDictionary(value => value.Name, StringComparer.Ordinal);
+        descriptors = values.Select(value => new PropertyDescriptor(value.Name, value.Kind, value.ReferenceType, value.Label)).ToList();
         dirty = markDirty;
-        properties = [new PropertyDescriptor(name, kind)];
     }
 
     public string Identity { get; }
-    public IReadOnlyList<PropertyDescriptor> Properties => properties;
+    public IReadOnlyList<PropertyDescriptor> Properties => descriptors;
 
     public InteropStatus TryGet(string propertyName, out InteropValue value)
     {
-        if (!string.Equals(propertyName, name, StringComparison.Ordinal)) { value = default; return InteropStatus.NotFound; }
-        value = getter();
-        return value.Kind == kind ? InteropStatus.Ok : InteropStatus.TypeMismatch;
+        if (!properties.TryGetValue(propertyName, out DelegatedProperty property))
+        {
+            value = default;
+            return InteropStatus.NotFound;
+        }
+        value = property.GetValue();
+        return value.Kind == property.Kind ? InteropStatus.Ok : InteropStatus.TypeMismatch;
     }
 
     public InteropStatus Validate(string propertyName, InteropValue value) =>
-        string.Equals(propertyName, name, StringComparison.Ordinal) && value.Kind == kind
+        properties.TryGetValue(propertyName, out DelegatedProperty property) && value.Kind == property.Kind
             ? InteropStatus.Ok : InteropStatus.TypeMismatch;
 
     public InteropStatus Set(string propertyName, InteropValue value) =>
-        Validate(propertyName, value) == InteropStatus.Ok ? setter(value) : InteropStatus.TypeMismatch;
+        Validate(propertyName, value) == InteropStatus.Ok
+            ? properties[propertyName].SetValue(value) : InteropStatus.TypeMismatch;
 
     public void MarkDirty() => dirty();
 }

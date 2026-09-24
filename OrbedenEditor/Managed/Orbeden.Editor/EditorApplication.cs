@@ -15,7 +15,7 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, int, void> RequestBuild;
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetSelectedPlayerTarget;
     public delegate* unmanaged[Cdecl]<IntPtr, int, void> SetSelectedPlayerTarget;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte, byte*, int, int> MirrorExamples;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte, byte, byte*, int, int> MirrorTemplate;
     public delegate* unmanaged[Cdecl]<IntPtr, byte> IsWorldDirty;
     public delegate* unmanaged[Cdecl]<IntPtr, void> SetWorldDirty;
 }
@@ -27,6 +27,9 @@ internal enum EditorProjectField
 }
 
 internal enum EditorBuildKind { Scripts, Native, Player }
+
+/// <summary>模板内容目录位，与 ManagedEditorBridge.cpp 的 TemplateFolder* 常量对应。</summary>
+internal enum EditorTemplateFolder { Examples = 1, Builtin = 2 }
 
 /// <summary>Editor 应用级原生操作入口。</summary>
 public static unsafe class EditorApplication
@@ -68,13 +71,13 @@ public static unsafe class EditorApplication
     //设置当前构建目标
     internal static void SetSelectedPlayerTarget(int index) => api.SetSelectedPlayerTarget(api.Context, index);
 
-    //执行一次示例同步并读取结果
-    internal static string MirrorExamples(bool reset)
+    //执行一次模板内容同步并读取结果，folders 选择参与迁移的目录
+    internal static string MirrorTemplate(bool reset, EditorTemplateFolder folders)
     {
         byte[] bytes = new byte[16384];
         fixed (byte* pointer = bytes)
         {
-            int length = api.MirrorExamples(api.Context, reset ? (byte)1 : (byte)0, pointer, bytes.Length);
+            int length = api.MirrorTemplate(api.Context, reset ? (byte)1 : (byte)0, (byte)folders, pointer, bytes.Length);
             return Encoding.UTF8.GetString(bytes, 0, Math.Clamp(length, 0, bytes.Length));
         }
     }

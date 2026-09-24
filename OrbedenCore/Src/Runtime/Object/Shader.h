@@ -89,6 +89,8 @@ private:
 
 public:
     std::string name;
+    //材质未覆盖时使用的绘制队列
+    DrawQueue drawQueue = DrawQueue::Opaque;
     std::string vertexPath;
     std::string fragmentPath;
     ORBEDEN_BIND_ACCESSORS(Direct, None)

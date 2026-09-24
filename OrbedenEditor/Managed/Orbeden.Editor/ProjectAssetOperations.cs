@@ -132,16 +132,7 @@ internal static class ProjectAssetOperations
         string parent = Path.GetDirectoryName(sourcePath)!;
         string name = Path.GetFileNameWithoutExtension(sourcePath);
         string extension = Directory.Exists(sourcePath) ? string.Empty : Path.GetExtension(sourcePath);
-        for (int index = 1; index < 10000; index++)
-        {
-            string suffix = index == 1 ? " Copy" : $" Copy {index}";
-            string candidate = Path.Combine(parent, name + suffix + extension);
-            if (File.Exists(candidate) || Directory.Exists(candidate)) continue;
-            duplicatePath = candidate;
-            break;
-        }
-
-        if (string.IsNullOrEmpty(duplicatePath))
+        if (!TryAllocateCopyName(parent, name, extension, out duplicatePath))
         {
             message = "Could not allocate a duplicate name.";
             return false;
@@ -158,6 +149,54 @@ internal static class ProjectAssetOperations
         catch (Exception ex)
         {
             message = "Duplicate failed: " + ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>把剪贴板里的资源复制到目标目录；重名时按副本命名，不会覆盖已有资源。</summary>
+    public static bool Paste(string source, string destinationDirectory, out string pastedPath, out string message)
+    {
+        pastedPath = string.Empty;
+        message = string.Empty;
+        if (!TryValidateSource(source, out string sourcePath, out message)) return false;
+        if (!TryValidateDestination(destinationDirectory, out string destinationPath, out message)) return false;
+        if (!Directory.Exists(destinationPath))
+        {
+            message = "Paste destination is not a folder.";
+            return false;
+        }
+
+        bool directory = Directory.Exists(sourcePath);
+        //贴进自身内部会让递归枚举一边读一边写，和移动一样直接挡掉
+        if (directory && IsSameOrChild(destinationPath, sourcePath))
+        {
+            message = "A folder cannot be pasted into itself.";
+            return false;
+        }
+
+        //目标目录里没有同名项就沿用原名，有才让位给副本名
+        pastedPath = Path.Combine(destinationPath, Path.GetFileName(sourcePath));
+        if (File.Exists(pastedPath) || Directory.Exists(pastedPath))
+        {
+            string name = Path.GetFileNameWithoutExtension(sourcePath);
+            if (!TryAllocateCopyName(destinationPath, name, directory ? string.Empty : Path.GetExtension(sourcePath), out pastedPath))
+            {
+                message = "Could not allocate a paste name.";
+                return false;
+            }
+        }
+
+        try
+        {
+            if (directory) CopyDirectory(sourcePath, pastedPath);
+            else File.Copy(sourcePath, pastedPath);
+            EditorAssetCatalog.Instance.Refresh();
+            message = "Pasted: " + EditorAssetCatalog.Instance.ToResourceKey(pastedPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            message = "Paste failed: " + ex.Message;
             return false;
         }
     }
@@ -217,6 +256,31 @@ internal static class ProjectAssetOperations
         catch (Exception ex)
         {
             message = "Create folder failed: " + ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>按模板写入一个新的文本资源文件。</summary>
+    public static bool CreateAsset(string path, string content, out string message)
+    {
+        message = string.Empty;
+        if (!TryValidateDestination(path, out string filePath, out message)) return false;
+        if (File.Exists(filePath) || Directory.Exists(filePath))
+        {
+            message = "A file or folder with the same name already exists.";
+            return false;
+        }
+
+        try
+        {
+            File.WriteAllText(filePath, content);
+            EditorAssetCatalog.Instance.Refresh();
+            message = "Created: " + EditorAssetCatalog.Instance.ToResourceKey(filePath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            message = "Create asset failed: " + ex.Message;
             return false;
         }
     }
@@ -288,6 +352,21 @@ internal static class ProjectAssetOperations
         else File.Move(source, destination);
     }
 
+    /// <summary>在同级目录里找出一个不冲突的「&lt;名称&gt; Copy [N]&lt;扩展名&gt;」。</summary>
+    private static bool TryAllocateCopyName(string parent, string name, string extension, out string path)
+    {
+        path = string.Empty;
+        for (int index = 1; index < 10000; index++)
+        {
+            string suffix = index == 1 ? " Copy" : $" Copy {index}";
+            string candidate = Path.Combine(parent, name + suffix + extension);
+            if (File.Exists(candidate) || Directory.Exists(candidate)) continue;
+            path = candidate;
+            return true;
+        }
+        return false;
+    }
+
     //递归复制目录。
     private static void CopyDirectory(string source, string destination)
     {
@@ -324,6 +403,8 @@ internal sealed class ReferenceRewritePlan
     private static readonly Regex MtlDependencyRegex = new(@"^(?<prefix>\s*(?:map_Kd|map_Bump|bump)\s+)(?<path>\S+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
     private static readonly Regex MtlShaderRegex = new(@"^(?<prefix>\s*shader\s+)(?<path>\S+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
     private static readonly Regex ObjMtlRegex = new(@"^(?<prefix>\s*mtllib\s+)(?<paths>[^#\r\n]+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+    //材质资产的贴图行带槽名：texture <槽名> <Key>，引用是内容根相对的
+    private static readonly Regex OrbMatTextureRegex = new(@"^(?<prefix>\s*texture\s+\S+\s+)(?<path>\S+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
 
     private readonly List<Rewrite> rewrites = [];
     private readonly List<Rewrite> applied = [];
@@ -489,6 +570,12 @@ internal sealed class ReferenceRewritePlan
         }
         if (lowerPath.EndsWith(".obj")) return RewriteObjDependencies(content, oldOwnerKey, newOwnerKey);
         if (lowerPath.EndsWith(".gltf")) return RewriteGltf(content, oldOwnerKey, newOwnerKey);
+        if (lowerPath.EndsWith(".orbmat"))
+        {
+            //与 .mtl 共用 shader 这个关键字，但材质资产的引用一律是内容根相对，不是文件相对
+            string value = RewriteRegexDependency(content, MtlShaderRegex, oldOwnerKey, newOwnerKey, relative: false);
+            return RewriteRegexDependency(value, OrbMatTextureRegex, oldOwnerKey, newOwnerKey, relative: false);
+        }
         return content;
     }
 
@@ -721,6 +808,7 @@ internal sealed class ReferenceRewritePlan
             || lower.EndsWith(".prefab")
             || lower.EndsWith(".orbshader")
             || lower.EndsWith(".mtl")
+            || lower.EndsWith(".orbmat")
             || lower.EndsWith(".obj")
             || lower.EndsWith(".gltf")
             || lower.EndsWith(".glb");

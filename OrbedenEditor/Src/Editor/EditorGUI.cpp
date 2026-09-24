@@ -12,8 +12,10 @@
 
 #include <glad/gl.h>
 #include <imgui_impl_opengl3.h>
+#include <imgui_internal.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cstring>
 #include <string>
 
@@ -40,6 +42,21 @@ namespace
 
     //确认窗的默认宽度：够放下一行完整提示，又不至于横跨整个编辑器
     constexpr float32 DefaultDialogWidth = 420.0f;
+
+    //取浮点值最短又能原样读回的十进制写法，等价于"完整 ToString 再截掉尾零"：
+    //0.5 写成 "0.5"，有效位更多的按实际位数写出来，不补零。
+    //走定点写法而不是科学计数法，坐标这类字段里 "100000" 才是编辑器该显示的东西。
+    std::string FormatFloatText(float32 value)
+    {
+        char buffer[64];
+        std::to_chars_result written = std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::fixed);
+        if (written.ec != std::errc())
+        {
+            //float 定长写法最长约 46 字符（最小次正规数），正常进不来；真写不下就退回短写法
+            written = std::to_chars(buffer, buffer + sizeof(buffer), value);
+        }
+        return std::string(buffer, written.ptr);
+    }
 
     //按可用宽度截断 UTF-8 文本，超宽时在尾部补省略号
     std::string EllipsizeToWidth(const std::string& text, float32 maxWidth)
@@ -219,7 +236,7 @@ namespace
     void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
 
     //绘制目录节点并返回展开与点击状态
-    //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠
+    //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠、32 灰显
     //返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
     int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options, const uint8* icon, int32 iconLength)
     {
@@ -237,6 +254,9 @@ namespace
         iconPosition.x += ImGui::GetTreeNodeToLabelSpacing();
         iconPosition.y += ImGui::GetStyle().FramePadding.y;
         float32 iconSize = ImGui::GetFontSize();
+        //灰显连箭头一起压暗；取色走主题的 TextDisabled，与瓦片箭头、面板标签页一致
+        bool dimmed = (options & 32) != 0;
+        if (dimmed) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         bool expanded;
         if (texture != 0)
         {
@@ -248,6 +268,7 @@ namespace
                 ImVec2(iconPosition.x + iconSize, iconPosition.y + iconSize));
         }
         else expanded = ImGui::TreeNodeEx(identity.c_str(), flags);
+        if (dimmed) ImGui::PopStyleColor();
         bool toggled = ImGui::IsItemToggledOpen();
         bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
         return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled ? 2 : 0)
@@ -350,47 +371,114 @@ namespace
         ImGui::Spacing();
     }
 
-    //开始可折叠组件块
+    //在指定矩形上画一个勾选框并回传新值。
+    //不能走 SetCursorScreenPos + Checkbox：那会置位 DC.IsSetPos，而 ImGui::End 只在标志仍为 true 时才做
+    //ErrorCheckUsingSetCursorPosToExtendParentBoundaries 检查，光标落到已画内容之外就断言。
+    //卡片折叠时正文一个条目都不提交，没人会把标志清掉，必然撞上；所以这里显式传矩形 ItemAdd，
+    //光标一动不动——ImGui 给 CollapsingHeader 画关闭叉用的也是这个路子。
+    //在指定矩形上画一个勾选框：返回是否被点，新值写回 value。
+    //形态照 ImGui::Checkbox(label, bool*) 来，调用方读"是否被点"这个显式信号，
+    //不要靠新值是真是假去反推——那样只有"取消勾选"能被识别，"重新勾上"会丢
+    bool DrawOverlayCheckbox(const char* id, const ImVec2& position, bool* value)
+    {
+        //只用 imgui.h 导出的函数，不碰 imgui_internal.h 里的 inline 助手（GetCurrentWindow 等）：
+        //那些助手直接读 GImGui，而 IMGUI_API 是空宏、ImGui 静态编在 OrbedenCore 里，
+        //GImGui 不导出，一旦引用就是 LNK2001
+        const float32 size = ImGui::GetFrameHeight();
+        const ImRect bounds(position, ImVec2(position.x + size, position.y + size));
+        const ImGuiID itemId = ImGui::GetID(id);
+
+        //卡片窄到把勾选框切出去时它整个不参与：既不该画，也不该还能点到
+        if (!ImGui::ItemAdd(bounds, itemId)) return false;
+        bool hovered = false;
+        bool held = false;
+        const bool pressed = ImGui::ButtonBehavior(bounds, itemId, &hovered, &held);
+        if (pressed) *value = !*value;
+
+        //外观照标准 Checkbox 画：同样的取色与勾形，免得同一个面板里两种勾选框
+        ImGui::RenderNavCursor(bounds, itemId);
+        const ImU32 background = ImGui::GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive
+            : hovered ? ImGuiCol_FrameBgHovered : *value ? ImGuiCol_CheckboxSelectedBg : ImGuiCol_FrameBg);
+        ImGui::RenderFrame(bounds.Min, bounds.Max, background, true, ImGui::GetStyle().FrameRounding);
+        if (*value)
+        {
+            const float32 pad = ImMax(1.0f, static_cast<float32>(static_cast<int32>(size / 6.0f)));
+            ImGui::RenderCheckMark(ImGui::GetWindowDrawList(), ImVec2(bounds.Min.x + pad, bounds.Min.y + pad),
+                ImGui::GetColorU32(ImGuiCol_CheckMark), size - pad * 2.0f);
+        }
+        return pressed;
+    }
+
+    //开始可折叠组件块。
+    //toggleRequested 非空时在标题行右缘画一个激活勾选框，并由它回传是否被点；
+    //enabled 为 0 时整张卡片底色压暗一档。资产检查卡片用空指针调用，不画勾选框也不变暗。
+    //defaultOpen 只管"还没有记住状态"时是展开还是折叠：记住的状态由 ImGui 按 id 存。
     uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginCollapsibleComponentBlock(const uint8* icon,
         int32 iconLength,
         const uint8* title,
         int32 titleLength,
         const uint8* id,
         int32 idLength,
-        uint8 removable,
-        uint8* removeRequested)
+        uint8 enabled,
+        uint8 defaultOpen,
+        uint8* toggleRequested)
     {
         std::string iconName = ReadUtf8Text(icon, iconLength);
         std::string value = ReadUtf8Text(title, titleLength);
         std::string identity = ReadUtf8Text(id, idLength);
         if (value.empty()) value = "Component";
         if (identity.empty()) identity = value;
-        if (removeRequested) *removeRequested = 0;
+        if (toggleRequested) *toggleRequested = 0;
 
         ImGui::Spacing();
         ImGui::PushID(identity.c_str());
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
         //组件块用表面色铺底，不能借用控件填充色，否则块内控件看不出来
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_Header));
+        ImVec4 cardColor = ImGui::GetStyleColorVec4(ImGuiCol_Header);
+        //未激活的卡片在表面色与面板底色之间取中点：暗一档，又还看得出是张卡片。
+        //取中而不是乘系数，换主题时跟着主题自己的两个颜色走，不会偏色
+        if (toggleRequested && enabled == 0)
+        {
+            const ImVec4& background = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+            cardColor.x = (cardColor.x + background.x) * 0.5f;
+            cardColor.y = (cardColor.y + background.y) * 0.5f;
+            cardColor.z = (cardColor.z + background.z) * 0.5f;
+        }
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, cardColor);
         ImGui::BeginChild("##component",
             ImVec2(0.0f, 0.0f),
             ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-        constexpr ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
-        bool visible = true;
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+        if (defaultOpen) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+        //勾选框是压在标题行上的后一个条目，标题必须让出重叠区，
+        //否则一次点击会同时打中标题与勾选框（ImGui 自己画关闭叉时也是这么标记的）
+        if (toggleRequested) flags |= ImGuiTreeNodeFlags_AllowOverlap;
         DrawInlineIcon(iconName, ImGui::GetFrameHeight());
-        bool expanded = removable != 0
-            ? ImGui::CollapsingHeader(value.c_str(), &visible, flags)
-            : ImGui::CollapsingHeader(value.c_str(), flags);
+        bool expanded = ImGui::CollapsingHeader(value.c_str(), flags);
+        //标题行几何要在 LastItemData 还有效时取：勾选框是按这个矩形摆的，而 Separator 会顶掉它
+        const ImVec2 headerMin = ImGui::GetItemRectMin();
+        const ImVec2 headerMax = ImGui::GetItemRectMax();
+        const float32 headerHeight = ImGui::GetItemRectSize().y;
         //标题右键菜单。菜单内容由托管侧绘制：它必须在同一个子窗、同一个 ID 栈深度上
         //用同样的字符串开弹窗（InspectorPanel 的组件菜单 id 就是 identity + "##component_menu"），
         //两边算出的 popup ID 才一致。Separator 会顶掉 LastItemData，所以这句必须排在它前面。
         if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
             ImGui::OpenPopup((identity + "##component_menu").c_str());
-        if (removeRequested && !visible) *removeRequested = 1;
         if (expanded) ImGui::Separator();
+
+        //勾选框贴标题行右缘。标题行已被 SpanAvailWidth 占满，只能按算出的矩形单独画一个
+        if (toggleRequested)
+        {
+            const float32 size = ImGui::GetFrameHeight();
+            const float32 right = headerMax.x - ImGui::GetStyle().FramePadding.x;
+            bool active = enabled != 0;
+            if (DrawOverlayCheckbox("##component_enabled",
+                ImVec2(right - size, headerMin.y + (headerHeight - size) * 0.5f), &active))
+                *toggleRequested = 1;
+        }
         return expanded ? 1 : 0;
     }
 
@@ -438,22 +526,46 @@ namespace
         return ImGui::InputInt(text.c_str(), value) ? 1 : 0;
     }
 
-    //绘制浮点输入框
+    //绘制浮点输入框；ImGui 的 format 对浮点只管显示（解析固定按 %f 走），所以直接把算好的文本交过去
     uint8 ORBEDEN_NATIVE_CALL EditorGuiInputFloat(const uint8* label, int32 length, float32* value)
     {
         if (!value) return 0;
         std::string text = ReadUtf8Text(label, length);
-        return ImGui::InputFloat(text.c_str(), value) ? 1 : 0;
+        std::string display = FormatFloatText(*value);
+        return ImGui::InputFloat(text.c_str(), value, 0.0f, 0.0f, display.c_str()) ? 1 : 0;
     }
 
-    //绘制三维向量输入框
+    //绘制三维向量输入框；三个分量各自取最短写法，所以不能借 ImGui::InputFloat3 那种三格共用的格式
     uint8 ORBEDEN_NATIVE_CALL EditorGuiInputVector3(const uint8* label, int32 length, vector3* value)
     {
         if (!value) return 0;
 
         std::string text = ReadUtf8Text(label, length);
         float32 values[3] = { value->x, value->y, value->z };
-        bool changed = ImGui::InputFloat3(text.c_str(), values);
+        std::string displays[3] = { FormatFloatText(values[0]), FormatFloatText(values[1]), FormatFloatText(values[2]) };
+
+        bool changed = false;
+        ImGui::BeginGroup();
+        ImGui::PushID(text.c_str());
+        ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
+        for (int32 index = 0; index < 3; ++index)
+        {
+            ImGui::PushID(index);
+            if (index > 0) ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            changed |= ImGui::InputFloat("", &values[index], 0.0f, 0.0f, displays[index].c_str()) != 0;
+            ImGui::PopID();
+            ImGui::PopItemWidth();
+        }
+        ImGui::PopID();
+
+        //标签画在三格右侧，与 ImGui::InputFloat3 的排布保持一致
+        const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
+        if (text.c_str() != labelEnd)
+        {
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            ImGui::TextEx(text.c_str(), labelEnd);
+        }
+        ImGui::EndGroup();
         if (changed)
         {
             value->x = values[0];
@@ -464,14 +576,21 @@ namespace
     }
 
     //绘制字符串输入框；width <= 0 时用 ImGui 默认宽度
-    int32 ORBEDEN_NATIVE_CALL EditorGuiInputText(const uint8* label, int32 length, uint8* buffer, int32 bufferSize, float32 width)
+    int32 ORBEDEN_NATIVE_CALL EditorGuiInputText(const uint8* label, int32 length, uint8* buffer, int32 bufferSize,
+        float32 width, uint8 readOnly)
     {
         if (!buffer || bufferSize <= 0) return -1;
 
         std::string text = ReadUtf8Text(label, length);
         buffer[bufferSize - 1] = 0;
         if (width > 0.0f) ImGui::SetNextItemWidth(width);
-        bool changed = ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize));
+        //只读框一律按禁用态压暗（编辑器的禁用控件就是 ImGui 那个 Alpha 乘法），
+        //但走 ReadOnly 标志而不是真禁用：文字仍可选中复制，只是按下不进去
+        const ImGuiInputTextFlags flags = readOnly ? ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_None;
+        const float32 alpha = ImGui::GetStyle().Alpha * ImGui::GetStyle().DisabledAlpha;
+        if (readOnly) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+        bool changed = ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize), flags);
+        if (readOnly) ImGui::PopStyleVar();
         return changed ? static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer))) : -1;
     }
 
@@ -849,6 +968,19 @@ namespace
     {
         std::string value = ReadUtf8Text(label, length);
         return ImGui::MenuItem(value.c_str(), nullptr, false, enabled != 0) ? 1 : 0;
+    }
+
+    //开始子菜单，返回是否展开；展开时调用方必须配对 EndMenu
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginMenu(const uint8* label, int32 length, uint8 enabled)
+    {
+        std::string value = ReadUtf8Text(label, length);
+        return ImGui::BeginMenu(value.c_str(), enabled != 0) ? 1 : 0;
+    }
+
+    //结束子菜单
+    void ORBEDEN_NATIVE_CALL EditorGuiEndMenu()
+    {
+        ImGui::EndMenu();
     }
 
     //写入剪贴板文本
@@ -1445,6 +1577,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.assetRenameTile = reinterpret_cast<void*>(&EditorGuiAssetRenameTile);
     api.sliderFloat = reinterpret_cast<void*>(&EditorGuiSliderFloat);
     api.calcButtonWidth = reinterpret_cast<void*>(&EditorGuiCalcButtonWidth);
+    api.beginMenu = reinterpret_cast<void*>(&EditorGuiBeginMenu);
+    api.endMenu = reinterpret_cast<void*>(&EditorGuiEndMenu);
     return api;
 }
 

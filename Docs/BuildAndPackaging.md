@@ -424,11 +424,12 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 
 ### 模板分区
 
-`OrbedenEditor/Templates/` 下分三部分：
+`OrbedenEditor/Templates/` 下分四部分：
 
 | 目录 | 内容 | 去向 |
 | --- | --- | --- |
 | `Project/` | 工程脚手架：`.oeproj`、`*.csproj`、`*.vcxproj`、`Directory.Build.props`、`Content/Shaders/` 下的内置 Shader | 铺到项目根 |
+| `Builtin/` | 默认着色器、材质与基础网格 | 新建时铺到 `<项目根>/Content/Builtin/`；升级保留，Dev 面板可单独重置 |
 | `Examples/` | 示例内容：场景、资源、脚本与原生组件 | 新建时铺到 `<项目根>/Content/Examples/`；升级保留，Dev 面板可显式重置 |
 | `Shared/` | 共享属性表与固定桥接源码：`Orbeden.Native.props` / `.targets`、`GameModule.cpp`、`GameAotExports.cs` | 由 `PublishNativeGameSdk` 发布到 `Sdk/Native/` 与 `Sdk/Shared/`，不铺进项目 |
 
@@ -494,26 +495,34 @@ MyGame/
 
 「退出」不关闭编辑器，也不改动任何状态，只是中止本次加载。
 
-### 升级：内容之外全部重建
+### 升级：内容根之外全部重建
 
-内容根之外既然都是引擎的地盘，升级就不做增量修补，而是整块重建：
+游戏资产只存在于内容根内，内容根之外既然都是引擎的地盘，升级就不做增量修补，而是整块重建：
 
-1. **内容归位**：按旧布局把内容收进内容根（`Resource/` 这一层去掉，`World/` 改名 `Scenes/`，其余顶层目录整体搬入）。
-2. **清空内容根之外**：`Content/`、`.oeproj` 以及以点开头的条目保留，其余全部删除。
-3. **重铺脚手架**：更新 `Templates/Project/` 中的工程文件，跳过 `.oeproj` 和 `Content/`；不复制 `Templates/Examples/` 与 `Templates/Builtin/`，保留用户对示例与默认资源的修改和删除（`Builtin/` 只在新建项目时铺设）。
-4. **同步 SDK 产物**：Core C# 运行库与绑定目标。
-5. **写根属性**：最后更新版本号，清掉 `name` / `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景映射后仍存在才更新路径；其它配置保留，不用模板覆盖原 `.oeproj`。
+1. **清空内容根之外**：`Content/`、`.oeproj` 以及以点开头的条目保留，其余全部删除——缓存、构建产物、SDK 快照，以及散放在那里的任何资源。
+2. **重铺脚手架**：更新 `Templates/Project/` 中的工程文件，跳过 `.oeproj` 和 `Content/`；不复制 `Templates/Examples/` 与 `Templates/Builtin/`，保留用户对示例与默认资源的修改和删除（`Builtin/` 只在新建项目时铺设，升级后可在 Dev 面板单独重置）。
+3. **同步 SDK 产物**：Core C# 运行库与绑定目标。
+4. **写根属性**：最后更新版本号，清掉 `name` / `resourceRoot` / `scriptRoot` / `managedRoot` / `nativeRoot` 等废弃属性。启动场景属性保持原值；其它配置保留，不用模板覆盖原 `.oeproj`。
+
+**升级不读也不写 `Content/` 内的任何东西**：目录结构、默认子目录与脚本里的旧头文件路径都不再由升级修补，需要时手工改。
 
 **版本号最后写入**，任一步失败即中止且不写版本号，下次打开会重新提示，不会留下"版本号已更新、脚手架还是旧的"这种无法自愈的状态。
 
 这套流程是通用的：**新增版本不需要再写版本特有逻辑**，只有内容布局或 `.oeproj` schema 变化时才需要递增版本号并在这里记录。
 
 > 代价：你在 `Content/` 之外放的东西会被删除。内容根之外是引擎的地盘，笔记、临时脚本请放进 `Content/`。
+> 内容根之前的旧布局（版本号小于 3，含没有 `version` 属性的早期项目）不再迁移：那类项目的内容散在项目根（`Resource/`、`Mesh/`、`World/` 等），升级会连同内容一起清掉，需要先手工移进 `Content/`。
 
 ### 版本记录
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 17 | 修复 Builtin 雨玻璃 Shader 使用 GLSL 保留字导致编译失败的问题。已有项目需将 rain_glass.orbshader 中的变量 active 改为 dropletMask（声明和引用两处），或复制修正版 Shader 后重新导入；升级不会覆盖用户 Content，发布包需重新构建。 |
+| 16 | Builtin 的 9 个材质预设统一为 `.orbmat`，使用文件路径作为对象 Key；移除独立 MTL 导入及 float/color/drawqueue 扩展，MTL 恢复为 OBJ 附属原始文件。旧示例引用需改为 `Builtin/Materials/<名称>.orbmat`，更新 SDK、缓存并重新打包；不改变原有 OBJ 材质子资源 Key。 |
+| 15 | 新增材质资产 `.orbmat`：文件即一个 `Material` 对象，对象 Key 用源 Key 自身（不带 `//` 子键），行式文本格式、可手改，解析与写回都在 `AssetPipeline`（与 `.orbshader` 同处），导入器 `AssetImporter::OrbMat` 接入资源管线；Shader 与贴图按内容根相对 Key 记依赖，移动资源时随引用重写一起改写。材质名取自文件名，格式里不写 `name`。编辑器 Project 面板新增 `Create...` 二级菜单（World / Material / Script / Shader），Inspector 可编辑材质资产并写回源文件。更新 SDK、绑定与原生模块。 |
+| 14 | Builtin 新增雨玻璃、热浪、尾流折射和金属／粗糙度 PBS 示例；示例材质在版本 16 统一为 `.orbmat`。更新 SDK、编辑器和缓存并重新打包；已有项目可将新 Builtin 文件复制到 Content/Builtin，保留同名自定义文件。 |
+| 13 | 绘制队列改为 Shader 默认值、Material 可覆盖；移除 StaticMeshRenderer.drawQueue，主绘制和阴影按子网格材质分类。更新 SDK、绑定、模板与缓存，并重新 Build Player。用户自有 Shader 应在文件开头添加 `--------queue Transparent` 或 `--------queue Refraction`，或在 Material 上启用覆盖；旧场景队列字段不再生效。 |
+| 12 | Ens 激活状态（`localActive` / `worldActive`）全链路生效：物理的刚体、碰撞体、地形与角色控制器不再收集未激活 Ens，与脚本、渲染的既有行为一致——此前只有车轮一处做了判断。编辑器补上入口：EnsView 按层级生效状态灰显未激活节点，Inspector 的 Ens 顶部加 `LocalActive` 勾选框，`Alt+Shift+A` 切换。更新 SDK、绑定和原生模块。 |
 | 11 | 编辑器 Imported 缓存映射 Content 目录；`.resinfo` 移入缓存，源路径和依赖改为相对路径。取消 SourceId、Engine、Generation、旧代次和 `.result` 落盘。重新导入覆盖当前产物；编辑器对象文件增加源文件名前缀，Player 命名不变。升级重建缓存、更新 SDK 与原生模块；旧 Content 伴随 `.resinfo` 不再使用，可自行删除及取消版本跟踪。 |
 | 10 | 资源检查改用后台导入与源文件旁的 `.resinfo`，导入产物进入 `ResourceCache/Imported`，打包暂存改为 `ResourceCache/Player`。新增项目级 Layer 命名和物理碰撞矩阵，配置保存在 Content/ProjectSettings.layers 并随 Player 复制。无配置保持全部层互相碰撞；更新 SDK、重建原生游戏模块并重新打包。现有 drawLayer/collisionLayer 位值和组件 collisionMask 不迁移。 |
 | 9 | 太阳阴影替换为每相机 CSM / 异步 SDSM，新增 DirectionalLight 级联配置，更新 SDK 并重建游戏模块和发布包。shadowBias 改为世界单位，旧值不再解释为归一化深度；按实际场景重新校准，默认 0.0005。自定义接收阴影 Shader 必须迁移到级联查询 ABI，升级器保留用户 Content，不自动覆盖 Shader。迁移步骤见 [级联阴影方案](CascadedShadows.md)。 |

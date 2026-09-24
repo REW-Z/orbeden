@@ -27,8 +27,17 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, int> ReimportAsset;
     public delegate* unmanaged[Cdecl]<IntPtr, int> ReimportAllAssets;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> LoadCachedAsset;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> SaveMaterial;
 }
 #pragma warning restore CS0649
+
+/// <summary>实例化 Ens 的来源：预制体文件、按快照恢复原身份（撤销）、按快照复制成新身份（复制粘贴）。</summary>
+internal enum PrefabSource
+{
+    File = 0,
+    SnapshotIdentity = 1,
+    SnapshotCopy = 2,
+}
 
 /// <summary>Editor 资源操作使用的原生桥。</summary>
 internal static unsafe class EditorAssetsNative
@@ -49,16 +58,22 @@ internal static unsafe class EditorAssetsNative
         fixed (byte* identity = keyBytes)
             return NativeBindingRuntime.Wrap<Orbeden.Object>(api.LoadCachedAsset(api.Context, source, pathBytes.Length, identity, keyBytes.Length));
     }
-    //实例化预制体或恢复子树快照
-    internal static Ens InstantiatePrefab(string text, bool snapshot, EnsId parent, EnsId before)
+    //实例化预制体、恢复子树快照或按快照复制子树
+    internal static Ens InstantiatePrefab(string text, PrefabSource source, EnsId parent, EnsId before)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(text);
         fixed (byte* pointer = bytes)
             return NativeBindingRuntime.Wrap<Ens>(api.InstantiatePrefab(api.Context, pointer, bytes.Length,
-                snapshot ? (byte)1 : (byte)0, parent, before)) ?? Ens.Null;
+                (byte)source, parent, before)) ?? Ens.Null;
     }
 
-    //捕获完整子树及其稳定身份
+    //把材质资产写回它的源文件；失败原因由原生侧写进 Console
+    internal static bool SaveMaterial(int objectId, string key)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        fixed (byte* pointer = bytes) return api.SaveMaterial(api.Context, objectId, pointer, bytes.Length) != 0;
+    }
+
     internal static string CaptureEns(EnsId root)
     {
         int length = api.CaptureEns(api.Context, root, null, 0);

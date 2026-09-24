@@ -108,6 +108,21 @@ flowchart TD
     I --> J["Refraction Pass\nDepthWrite Off\nBlend On"]
 ```
 
+绘制队列由 `Shader.drawQueue` 提供默认值（缺省为 `Opaque`）。`Material.overrideDrawQueue` 默认关闭；开启后采用 `Material.drawQueue`，`Material.GetDrawQueue()` 返回最终队列。未绑定 Shader 且未覆盖时返回 `Opaque`（材质能否实际绘制仍由资源有效性决定）。Renderer 不再保存队列，同一 Renderer 的不同子网格可以分别使用不透明、透明或折射材质；阴影仅绘制最终队列为 `Opaque` 的子网格，并受 Renderer 的 `castShadows` 控制。
+
+OrbShader 在所有 Pass/阶段之前声明一次全局队列，适用于该 Shader 的全部 Pass：
+
+```text
+--------queue Transparent
+
+--------vert
+...
+--------frag
+...
+```
+
+队列支持 `Opaque`、`Transparent`、`Refraction`，不区分大小写；省略声明时使用 `Opaque`，重复声明、未知值或在 Pass/阶段之后声明会导入失败。材质内部格式 `.orbmat` 可用 `drawqueue Transparent` 指定材质覆盖，`drawqueue Auto` 或省略该行表示继承 Shader。运行时也可通过材质的两个字段设置；关闭覆盖后立即恢复当前 Shader 默认值，切换 Shader 不会清除已有材质覆盖。
+
 每个 `RenderItem` 会按 Shader 中的 Pass 声明顺序连续绘制。Pass 可独立配置 `DepthTest`、`DepthWrite`、`Blend` 和 `Cull`；`Auto` 每次从当前 Opaque、Transparent 或 Refraction 队列基线解析，不继承前一个 Pass 的状态。
 
 `ClearMode` 含义：
@@ -131,7 +146,7 @@ u_CameraFarPlane
 u_Time
 ```
 
-新项目包含 `Builtin/camera_texture_common.orbinc`、雨水玻璃和热浪 Shader 范例。使用这些 Shader 的 `StaticMeshRenderer.drawQueue` 必须设置为 `Refraction`。
+新项目包含 `Builtin/camera_texture_common.orbinc`、雨水玻璃和热浪 Shader 范例。这些 Shader 已声明默认 `Refraction` 队列，材质默认继承，无需在 Renderer 上配置。
 
 ### 6. OrbShader 多 Pass
 

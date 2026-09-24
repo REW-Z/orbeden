@@ -70,6 +70,8 @@ internal unsafe struct EditorValueAbi
                 InteropValueKind.EnsId => InteropValue.From(*(EnsId*)pointer),
                 InteropValueKind.String => InteropValue.From(((EditorTextAbi*)pointer)->ToString()),
                 InteropValueKind.StringId => InteropValue.FromStringId(((EditorTextAbi*)pointer)->ToString()),
+                //容器条目：载荷是槽位数
+                InteropValueKind.Array => InteropValue.FromArray(*(int*)pointer),
                 _ => default,
             };
         }

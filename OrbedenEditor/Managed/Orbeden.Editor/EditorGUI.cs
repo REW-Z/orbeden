@@ -38,22 +38,36 @@ public static class EditorGUI
     public static void EndComponentBlock() => NativeEditorGUI.EndComponentBlock();
 
     /// <summary>开始可折叠组件块，未指定图标时使用通用图标。</summary>
-    public static bool BeginCollapsibleComponentBlock(string title,
-        string id,
-        bool removable,
-        out bool removeRequested)
+    public static bool BeginCollapsibleComponentBlock(string title, string id)
     {
-        return NativeEditorGUI.BeginCollapsibleComponentBlock("Other", title, id, removable, out removeRequested);
+        return NativeEditorGUI.BeginCollapsibleComponentBlock("Other", title, id);
     }
 
     /// <summary>开始带图标与显示名称的可折叠组件块。</summary>
+    public static bool BeginCollapsibleComponentBlock(string title, string icon, string id)
+    {
+        return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id);
+    }
+
+    /// <summary>开始带激活勾选框的可折叠组件块；未激活时整张卡片压暗。</summary>
     public static bool BeginCollapsibleComponentBlock(string title,
         string icon,
         string id,
-        bool removable,
-        out bool removeRequested)
+        bool enabled,
+        out bool toggled)
     {
-        return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id, removable, out removeRequested);
+        return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id, enabled, out toggled);
+    }
+
+    /// <summary>开始带激活勾选框的可折叠组件块，并可指定默认是展开还是折叠（没有记住状态时生效）。</summary>
+    public static bool BeginCollapsibleComponentBlock(string title,
+        string icon,
+        string id,
+        bool enabled,
+        bool defaultOpen,
+        out bool toggled)
+    {
+        return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id, enabled, defaultOpen, out toggled);
     }
 
     /// <summary>开始下拉选择框。</summary>
@@ -170,6 +184,12 @@ public static class EditorGUI
     /// <summary>绘制菜单项。</summary>
     public static bool MenuItem(string label, bool enabled = true) => NativeEditorGUI.MenuItem(label, enabled);
 
+    /// <summary>开始子菜单，返回是否展开；展开时必须配对调用 <see cref="EndMenu"/>。</summary>
+    public static bool BeginMenu(string label, bool enabled = true) => NativeEditorGUI.BeginMenu(label, enabled);
+
+    /// <summary>结束子菜单。</summary>
+    public static void EndMenu() => NativeEditorGUI.EndMenu();
+
     /// <summary>写入剪贴板文本。</summary>
     public static void SetClipboardText(string text) => NativeEditorGUI.SetClipboardText(text);
 
@@ -195,9 +215,9 @@ public static class EditorGUI
     /// <summary>绘制三维向量输入框。</summary>
     public static bool InputVector3(string label, ref vector3 value) => NativeEditorGUI.InputVector3(label, ref value);
 
-    /// <summary>绘制字符串输入框；width 为 0 时用 ImGui 默认宽度。</summary>
-    public static bool InputText(string label, ref string value, float width = 0.0f)
-        => NativeEditorGUI.InputText(label, ref value, width);
+    /// <summary>绘制字符串输入框；width 为 0 时用 ImGui 默认宽度；readOnly 为真时按禁用态压暗且不接受输入。</summary>
+    public static bool InputText(string label, ref string value, float width = 0.0f, bool readOnly = false)
+        => NativeEditorGUI.InputText(label, ref value, width, readOnly);
 
     /// <summary>量出按钮将要占用的宽度，供绘制前把一行控件排到指定位置。</summary>
     public static float CalcButtonWidth(string text) => NativeEditorGUI.CalcButtonWidth(text);

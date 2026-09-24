@@ -16,6 +16,7 @@
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Runtime/Reflection.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
@@ -448,10 +449,23 @@ namespace
         return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull";
     }
 
+    /// <summary>解析资源声明的实际绘制队列。</summary>
+    bool ParseDrawQueue(const std::string& text, DrawQueue& value)
+    {
+        std::string normalized = ToLower(Trim(text));
+        if (normalized == "opaque") value = DrawQueue::Opaque;
+        else if (normalized == "transparent") value = DrawQueue::Transparent;
+        else if (normalized == "refraction") value = DrawQueue::Refraction;
+        else return false;
+        return true;
+    }
+
     //解析 OrbShader 单文件为有序 Pass
-    bool ParseOrbShaderSource(const std::string& sourceKey, const std::string& source, AssetCollection& collection, List<ShaderPass>& passes)
+    bool ParseOrbShaderSource(const std::string& sourceKey, const std::string& source, AssetCollection& collection, List<ShaderPass>& passes, DrawQueue& drawQueue)
     {
         passes.clear();
+        drawQueue = DrawQueue::Opaque;
+        bool hasQueue = false;
 
         ShaderPass* currentPass = nullptr;
         std::string* currentSource = nullptr;
@@ -484,6 +498,16 @@ namespace
                 if (directive.empty())
                 {
                     collection.AddError("OrbShader stage header is missing a stage name: " + sourceKey + ":" + std::to_string(lineNumber));
+                    continue;
+                }
+
+                if (directive == "queue")
+                {
+                    if (hasQueue || !passes.empty() || !ParseDrawQueue(argument, drawQueue))
+                    {
+                        collection.AddError("OrbShader queue must be declared once before all passes as Opaque, Transparent or Refraction: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    hasQueue = true;
                     continue;
                 }
 
@@ -1448,6 +1472,151 @@ namespace
             tangent = Normalize(tangent);
         }
     }
+
+    /// <summary>取绘制队列的声明名。</summary>
+    std::string GetDrawQueueName(DrawQueue value)
+    {
+        if (value == DrawQueue::Transparent) return "Transparent";
+        if (value == DrawQueue::Refraction) return "Refraction";
+        return "Opaque";
+    }
+
+    //把从第 begin 个词起的部分重新用空格拼回字符串：数值本身就写成空格分隔的一段
+    std::string JoinWords(const List<std::string>& words, usize begin)
+    {
+        std::string result;
+        for (usize index = begin; index < words.size(); ++index)
+        {
+            if (!result.empty()) result += ' ';
+            result += words[index];
+        }
+        return result;
+    }
+
+    /// <summary>把材质写成 .orbmat 的行式文本。</summary>
+    std::string BuildMaterialAssetText(const Material& material)
+    {
+        std::ostringstream output;
+        output << '#' << material.name << "\n";
+        output << "shader " << material.shader.GetInstanceId().GetPath() << "\n";
+        output << "drawqueue " << (material.overrideDrawQueue ? GetDrawQueueName(material.drawQueue) : "Auto") << "\n";
+        for (const MaterialColorSlot& slot : material.colorSlots)
+        {
+            output << "color " << slot.name << ' ' << Reflection::ToXmlValue(slot.value) << "\n";
+        }
+        for (const MaterialFloatSlot& slot : material.floatSlots)
+        {
+            output << "float " << slot.name << ' ' << Reflection::ToXmlValue(slot.value) << "\n";
+        }
+        for (const MaterialTextureSlot& slot : material.textureSlots)
+        {
+            output << "texture " << slot.name << ' ' << slot.texture.GetInstanceId().GetPath() << "\n";
+        }
+        return output.str();
+    }
+
+    /// <summary>解析 .orbmat 文本到材质对象：先清空再按文件重建，未识别的关键字按行号报错。</summary>
+    bool ParseMaterialAsset(const std::string& text, Material& material, std::string& error)
+    {
+        //重新导入会复用已有对象，先把状态清干净，否则文件里删掉的槽会留在对象上
+        List<std::string> staleTextures;
+        staleTextures.reserve(material.textureSlots.size());
+        for (const MaterialTextureSlot& slot : material.textureSlots) staleTextures.push_back(slot.name);
+        for (const std::string& name : staleTextures) material.ClearTexture(name);
+
+        List<std::string> staleColors;
+        staleColors.reserve(material.colorSlots.size());
+        for (const MaterialColorSlot& slot : material.colorSlots) staleColors.push_back(slot.name);
+        for (const std::string& name : staleColors) material.ClearColor(name);
+
+        List<std::string> staleFloats;
+        staleFloats.reserve(material.floatSlots.size());
+        for (const MaterialFloatSlot& slot : material.floatSlots) staleFloats.push_back(slot.name);
+        for (const std::string& name : staleFloats) material.ClearFloat(name);
+
+        material.SetShader(StringId());
+        material.overrideDrawQueue = false;
+
+        std::istringstream stream(text);
+        std::string line;
+        int32 lineNumber = 0;
+        while (std::getline(stream, line))
+        {
+            ++lineNumber;
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            List<std::string> words = SplitWhitespace(line);
+            if (words.empty() || words[0].starts_with('#')) continue;
+
+            //命令关键字只按小写比对，槽名与 Key 保持原样
+            std::string command = ToLower(words[0]);
+            if (command == "shader")
+            {
+                if (words.size() != 2)
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": shader needs one content-relative key.";
+                    return false;
+                }
+                material.SetShader(StringId(words[1]));
+            }
+            else if (command == "drawqueue")
+            {
+                if (words.size() != 2)
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": drawqueue needs one value.";
+                    return false;
+                }
+                if (ToLower(words[1]) == "auto")
+                {
+                    material.overrideDrawQueue = false;
+                    continue;
+                }
+                if (!ParseDrawQueue(words[1], material.drawQueue))
+                {
+                    error = "Line " + std::to_string(lineNumber)
+                        + ": drawqueue must be Auto, Opaque, Transparent or Refraction.";
+                    return false;
+                }
+                material.overrideDrawQueue = true;
+            }
+            else if (command == "color")
+            {
+                color value;
+                if (words.size() < 3 || !Reflection::SetFromXmlValue(value, JoinWords(words, 2)))
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": color needs a slot name and four numbers.";
+                    return false;
+                }
+                material.SetColor(words[1], value);
+            }
+            else if (command == "float")
+            {
+                float32 value = 0.0f;
+                if (words.size() < 3 || !Reflection::SetFromXmlValue(value, JoinWords(words, 2)))
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": float needs a slot name and a number.";
+                    return false;
+                }
+                material.SetFloat(words[1], value);
+            }
+            else if (command == "texture")
+            {
+                if (words.size() != 3)
+                {
+                    error = "Line " + std::to_string(lineNumber) + ": texture needs a slot name and one content-relative key.";
+                    return false;
+                }
+                material.SetTexture(words[1], StringId(words[2]));
+            }
+            else
+            {
+                error = "Line " + std::to_string(lineNumber) + ": unknown command: " + words[0];
+                return false;
+            }
+        }
+
+        error.clear();
+        return true;
+    }
 }
 
 //判断导入是否成功
@@ -1505,6 +1674,8 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
         return AssetImporter::Image;
     }
 
+    if (extension == ".orbmat") return AssetImporter::OrbMat;
+
     if (extension == ".obj")
     {
         return AssetImporter::Obj;
@@ -1537,6 +1708,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
     {
     case AssetImporter::Image: return Import_IMG(sourceKey);
     case AssetImporter::Obj: return Import_OBJ(sourceKey);
+    case AssetImporter::OrbMat: return Import_ORBMAT(sourceKey);
     case AssetImporter::Gltf: return Import_GLTF(sourceKey);
     case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
     case AssetImporter::Glsl: return Import_GLSL(sourceKey);
@@ -1547,6 +1719,86 @@ AssetCollection AssetPipeline::ImportSource(std::string path)
     collection.sourceKey = sourceKey;
     collection.AddError("Unsupported asset source: " + sourceKey);
     return collection;
+}
+
+/// <summary>导入独立材质资产。文件即对象，对象 Key 用源 Key 本身。</summary>
+AssetCollection AssetPipeline::Import_ORBMAT(std::string path)
+{
+    AssetCollection collection;
+    std::string sourceKey = ResourceManager::ToResourceKey(path);
+    collection.sourceKey = sourceKey;
+
+    std::string source = LoadTextOrError(sourceKey, collection);
+    if (!collection.Succeeded()) return collection;
+
+    Material* material = CreateImportedObject<Material>(sourceKey);
+    if (!material)
+    {
+        collection.AddError("Failed to create Material: " + sourceKey);
+        return collection;
+    }
+
+    //材质名取自文件名，与 .orbshader 一致
+    material->name = Path::GetNameWithOutExtension(sourceKey);
+    std::string error;
+    if (!ParseMaterialAsset(source, *material, error))
+    {
+        collection.AddError(sourceKey + ": " + error);
+        return collection;
+    }
+
+    //引用的 Shader 与贴图要按 Key 先导入在场：Ref<> 只存 Key，但对象在场才有对象可解析、依赖边才有得记
+    std::string shaderKey = material->shader.GetInstanceId().GetPath();
+    if (!shaderKey.empty())
+    {
+        if (!FileSystem::Exist(GetAssetFilePath(shaderKey)))
+        {
+            collection.AddError("Shader does not exist: " + shaderKey);
+            return collection;
+        }
+        ImportSource(shaderKey);
+        ResourceManager::RegisterDependency(sourceKey, shaderKey);
+    }
+
+    for (const MaterialTextureSlot& slot : material->textureSlots)
+    {
+        std::string textureKey = slot.texture.GetInstanceId().GetPath();
+        if (textureKey.empty()) continue;
+
+        if (!FileSystem::Exist(GetAssetFilePath(textureKey)))
+        {
+            collection.AddError("Texture does not exist: " + textureKey);
+            return collection;
+        }
+        //贴图走图片导入器，Key 原样沿用文件里写的那一个
+        if (!ImportImageAsKey(textureKey, textureKey, collection)) return collection;
+        ResourceManager::RegisterDependency(sourceKey, textureKey);
+    }
+
+    collection.AddObject(sourceKey, material, true);
+    return collection;
+}
+
+/// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
+bool AssetPipeline::SaveMaterialAsset(const Material& material, const std::string& path, std::string& error)
+{
+    std::ofstream output(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::trunc);
+    if (!output)
+    {
+        error = "Cannot create material: " + path;
+        return false;
+    }
+
+    output << BuildMaterialAssetText(material);
+    output.flush();
+    if (!output)
+    {
+        error = "Cannot write material: " + path;
+        return false;
+    }
+
+    error.clear();
+    return true;
 }
 
 //导入GLSL着色器源码对
@@ -1588,7 +1840,8 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
     if (!collection.Succeeded()) return collection;
 
     List<ShaderPass> passes;
-    if (!ParseOrbShaderSource(sourceKey, source, collection, passes))
+    DrawQueue drawQueue = DrawQueue::Opaque;
+    if (!ParseOrbShaderSource(sourceKey, source, collection, passes, drawQueue))
     {
         return collection;
     }
@@ -1601,6 +1854,7 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
     }
 
     shader->name = Path::GetNameWithOutExtension(sourceKey);
+    shader->drawQueue = drawQueue;
     shader->vertexPath = sourceKey;
     shader->fragmentPath = sourceKey;
     for (ShaderPass& pass : passes)

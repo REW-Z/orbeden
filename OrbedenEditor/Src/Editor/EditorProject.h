@@ -26,8 +26,6 @@ struct ProjectVersionProbe
     std::string projectFilePath;
     std::string projectRoot;
     std::string projectName;
-    //升级会重铺 .oeproj，启动场景必须在删除前先带出来。
-    std::string startupWorld;
 };
 
 //编辑器当前打开的项目，负责读取 .oeproj 并加载启动 World。

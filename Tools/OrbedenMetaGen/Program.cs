@@ -493,6 +493,27 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             }
             output.AppendLine("    }");
             output.AppendLine();
+
+            //引用列表多两个入口：编辑器要真实槽位数，而列表文本给不出（空串无法区分 0 个槽位与 1 个空槽位）
+            if (field.Kind?.CppName == "Reflection::FieldKind::ObjectRefList")
+            {
+                output.AppendLine($"    //读取 {classInfo.Name}.{field.Name} 槽位数");
+                output.AppendLine($"    static int32 Size_{classInfo.Symbol}_{field.Name}(Object* object)");
+                output.AppendLine("    {");
+                output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
+                output.AppendLine($"        return instance ? static_cast<int32>({getterExpression}.size()) : 0;");
+                output.AppendLine("    }");
+                output.AppendLine();
+                output.AppendLine($"    //改写 {classInfo.Name}.{field.Name} 槽位数");
+                output.AppendLine($"    static bool Resize_{classInfo.Symbol}_{field.Name}(Object* object, int32 count)");
+                output.AppendLine("    {");
+                output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
+                output.AppendLine("        if (!instance || count < 0) return false;");
+                output.AppendLine($"        {getterExpression}.resize(static_cast<usize>(count));");
+                output.AppendLine("        return true;");
+                output.AppendLine("    }");
+                output.AppendLine();
+            }
         }
 
         foreach (var method in classInfo.Methods)
@@ -579,7 +600,10 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             var objectRefTypeName = field.ObjectRefTypeName is null ? "nullptr" : $"\"{field.ObjectRefTypeName}\"";
             var valueGetter = field.Persistent ? $"ReflectionGeneratedAccess::GetValue_{classInfo.Symbol}_{field.Name}" : "nullptr";
             var valueSetter = field.Persistent ? $"ReflectionGeneratedAccess::SetValue_{classInfo.Symbol}_{field.Name}" : "nullptr";
-            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}),");
+            var isList = field.Persistent && kind == "Reflection::FieldKind::ObjectRefList";
+            var listSize = isList ? $"ReflectionGeneratedAccess::Size_{classInfo.Symbol}_{field.Name}" : "nullptr";
+            var listResize = isList ? $"ReflectionGeneratedAccess::Resize_{classInfo.Symbol}_{field.Name}" : "nullptr";
+            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}, {listSize}, {listResize}),");
         }
 
         output.AppendLine("            });");

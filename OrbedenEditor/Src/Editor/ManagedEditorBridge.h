@@ -18,6 +18,7 @@ private:
     void* DrawPanelFunction = nullptr;
     void* SetPanelVisibleFunction = nullptr;
     void* DrawSceneGizmosFunction = nullptr;
+    void* DrawStatusBarFunction = nullptr;
     void* LoadGameAssemblyFunction = nullptr;
     void* UnloadGameAssemblyFunction = nullptr;
     void* PublishGameAotFunction = nullptr;
@@ -28,6 +29,9 @@ private:
     void* RequestDeleteSelectedFunction = nullptr;
     void* RequestReimportSelectedFunction = nullptr;
     void* RequestReimportAllFunction = nullptr;
+    void* RequestCopySelectedFunction = nullptr;
+    void* RequestPasteSelectedFunction = nullptr;
+    void* RequestToggleActiveSelectedFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -62,6 +66,9 @@ public:
     //绘制 C# Scene Handles。
     void DrawSceneGizmos();
 
+    //绘制底部状态栏内容。
+    void DrawStatusBar();
+
     //保存托管 Editor 暂存的项目数据。
     bool SaveProjectState();
 
@@ -82,6 +89,15 @@ public:
 
     //请求重新导入全部已加载资源。
     void RequestReimportAll();
+
+    //请求当前聚焦的面板复制选中项。
+    void RequestCopySelected();
+
+    //请求当前聚焦的面板粘贴剪贴板内容。
+    void RequestPasteSelected();
+
+    //请求当前聚焦的面板切换选中项的激活状态。
+    void RequestToggleActiveSelected();
 
     // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,

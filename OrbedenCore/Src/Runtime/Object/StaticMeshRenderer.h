@@ -44,7 +44,6 @@ public:
     //按子网格槽位给出的材质；槽位为空或超出数组长度的子网格不绘制。
     List<Ref<Material>> materials;
     uint32 drawLayer = 1u;
-    DrawQueue drawQueue = DrawQueue::Opaque;
     bool castShadows = true;
     bool receiveShadows = true;
 

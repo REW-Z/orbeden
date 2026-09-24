@@ -127,6 +127,15 @@ internal abstract class EditorPanel
     /// <summary>Reimport 触发：重新导入选中资源，只有资源面板需要处理。</summary>
     public virtual void OnReimportRequested() { }
 
+    /// <summary>收到复制请求（Ctrl+C 或菜单）时调用；只有选择系统点名的面板会收到。</summary>
+    public virtual void OnCopyRequested() { }
+
+    /// <summary>收到粘贴请求（Ctrl+V 或菜单）时调用；发给当前聚焦的面板，不要求它已有选中项。</summary>
+    public virtual void OnPasteRequested() { }
+
+    /// <summary>收到切换激活请求（Alt+Shift+A 或菜单）时调用；只有选择系统点名的面板会收到。</summary>
+    public virtual void OnToggleActiveRequested() { }
+
     /// <summary>用户游戏程序集加载时调用。</summary>
     public virtual void OnGameAssemblyLoaded(string assemblyPath) { }
 

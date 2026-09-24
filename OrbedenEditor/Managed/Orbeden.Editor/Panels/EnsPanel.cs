@@ -7,7 +7,6 @@ internal sealed class EnsPanel : EditorPanel
 {
     private readonly Dictionary<EnsId, List<Ens>> children = [];
     private Action? pendingDrop;
-    private string status = string.Empty;
     private EnsId selectedEns = EnsId.Null;
     private EnsId renamingEns = EnsId.Null;
     private string renameBuffer = string.Empty;
@@ -59,12 +58,11 @@ internal sealed class EnsPanel : EditorPanel
             foreach (Ens ens in roots) DrawNode(ens, context);
         else EditorGUI.Label("No Ens objects.");
 
-        if (!string.IsNullOrEmpty(status)) EditorGUI.Label(status);
-
         int state = NativeEditorGUI.FillRemainingArea();
         if ((state & 1) != 0 && (state & 2) == 0) EditorNativeComponents.SelectEns(EnsId.Null);
-        //空白处的右键菜单以 World 根为上下文
-        if (EditorGUI.BeginPopupContextWindow("##ens_background_menu"))
+        //空白处的右键菜单以 World 根为上下文，挂在 FillRemainingArea 的隐形按钮上：
+        //这片空白本身就是那个按钮，而窗口版菜单带 NoOpenOverItems，悬停判定会永远命中条目、菜单永远不开
+        if (EditorGUI.BeginPopupContextItem("##ens_background_menu"))
         {
             try { DrawContextMenu(Ens.Null); }
             finally { EditorGUI.EndPopup(); }
@@ -108,9 +106,11 @@ internal sealed class EnsPanel : EditorPanel
         //Alt 折叠的待办在这里被消费一次：本次先把节点压回折叠，之后交回 ImGui 自己记状态。
         //定位展开是刚发生的指名操作，优先于更早的折叠请求，待办就此作废
         bool forceCollapse = collapsedKeys.Remove(ens.ResourceKey) && !forceOpen;
-        //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始
+        //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始。
+        //灰显看层级生效状态：父节点被禁用时整棵子树一起变灰，和运行时的实际行为一致
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + ens.ResourceKey,
-            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse);
+            context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse,
+            dimmed: !ens.WorldActive);
         //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
         if (ens.ResourceKey == scrollKey)
         {
@@ -174,6 +174,27 @@ internal sealed class EnsPanel : EditorPanel
         DeleteEns(Ens.FromId(selectedEns));
     }
 
+    /// <summary>Ctrl+C 触发：把当前选中的 Ens 子树放进剪贴板。</summary>
+    public override void OnCopyRequested()
+    {
+        if (EditorApplication.IsPlaying) return;
+        CopyEns(Ens.FromId(selectedEns));
+    }
+
+    /// <summary>Ctrl+V 触发：把剪贴板里的子树粘到当前选中节点下，没有选择就粘到 World 根。</summary>
+    public override void OnPasteRequested()
+    {
+        if (EditorApplication.IsPlaying) return;
+        PasteEns(Ens.FromId(selectedEns));
+    }
+
+    /// <summary>Alt+Shift+A 触发：切换当前选中 Ens 的激活状态。</summary>
+    public override void OnToggleActiveRequested()
+    {
+        if (EditorApplication.IsPlaying) return;
+        ToggleActive(Ens.FromId(selectedEns));
+    }
+
     //进入就地重命名，输入框落在原来名称的位置
     private void BeginRename(EnsId id)
     {
@@ -203,7 +224,7 @@ internal sealed class EnsPanel : EditorPanel
         string name = renameBuffer.Trim();
         if (!IsValidName(name))
         {
-            status = InvalidNameMessage;
+            EditorConsole.Error(InvalidNameMessage);
             //失焦时人的注意力已经走了，只能放弃；回车则留在原地接着改
             if (result == 2) EndRename();
             else renameFocusRequested = true;
@@ -234,6 +255,28 @@ internal sealed class EnsPanel : EditorPanel
         if (ens.IsValid) ens.Name = name;
     }
 
+    //切换激活状态并记一次撤销事务
+    private void ToggleActive(Ens ens)
+    {
+        if (!ens.IsValid) return;
+
+        string key = ens.ResourceKey;
+        bool previous = ens.LocalActive;
+        ens.LocalActive = !previous;
+        EditorPropertyHistory.PushAction("Toggle Active",
+            () => SetEnsLocalActive(key, previous),
+            () => SetEnsLocalActive(key, !previous));
+        //灰显画在 EnsView、勾选框画在 Inspector，都得有一帧才会刷新，而空闲编辑器不出帧
+        EditorApplication.RequestRepaint();
+    }
+
+    //按稳定 ID 写回激活状态，对象已经不在了就跳过
+    private static void SetEnsLocalActive(string key, bool active)
+    {
+        Ens ens = Ens.Find(key);
+        if (ens.IsValid) ens.LocalActive = active;
+    }
+
     //名称会作为属性写进 world XML，空白名与不可见字符读回来会被规范化，直接拒绝
     private static bool IsValidName(string name)
     {
@@ -251,9 +294,13 @@ internal sealed class EnsPanel : EditorPanel
         if (EditorGUI.MenuItem(label, canModify)) CreateEmptyEns(target);
         if (EditorGUI.MenuItem("Rename", canModify && target.IsValid)) BeginRename(target.Id);
         if (EditorGUI.MenuItem("Duplicate", canModify && target.IsValid)) DuplicateEns(target);
+        if (EditorGUI.MenuItem("Copy", canModify && target.IsValid)) CopyEns(target);
+        if (EditorGUI.MenuItem(target.IsValid ? $"Paste under {target.Name}" : "Paste",
+            canModify && EditorEnsClipboard.HasEntry)) PasteEns(target);
+        if (EditorGUI.MenuItem("Toggle Active", canModify && target.IsValid)) ToggleActive(target);
         if (EditorGUI.MenuItem("Delete", canModify && target.IsValid)) DeleteEns(target);
         EnsContextMenuRegistry.Draw(new EnsContext(target.Id, target.IsValid ? target.ResourceKey : string.Empty,
-            target.IsValid ? target.Name : string.Empty, target.IsValid), value => status = value);
+            target.IsValid ? target.Name : string.Empty, target.IsValid), EditorConsole.Error);
     }
 
     //在目标节点下创建空 Ens，撤销删除、重做按快照恢复
@@ -287,7 +334,7 @@ internal sealed class EnsPanel : EditorPanel
         string snapshot = EditorAssetsNative.CaptureEns(source.Id);
         if (snapshot.Length == 0) return;
         EnsId parent = source.Transform.GetParent();
-        Ens copy = EditorAssetsNative.InstantiatePrefab(snapshot, true, parent, source.Id);
+        Ens copy = EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotCopy, parent, source.Id);
         if (!copy.IsValid) return;
         string key = copy.ResourceKey;
         string parentKey = parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey;
@@ -298,6 +345,43 @@ internal sealed class EnsPanel : EditorPanel
                 if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
             },
             () => RestoreSnapshot(snapshot, parentKey));
+    }
+
+    //把子树快照放进剪贴板，等粘贴时按快照重建。成功不留任何回执：对着树按 Ctrl+C 的人不需要
+    private void CopyEns(Ens source)
+    {
+        if (!source.IsValid) return;
+        string snapshot = EditorAssetsNative.CaptureEns(source.Id);
+        if (snapshot.Length == 0)
+        {
+            EditorStatusBar.Print("Copy failed: cannot capture Ens subtree.");
+            return;
+        }
+
+        EditorEnsClipboard.Capture(snapshot);
+    }
+
+    //在目标节点下按剪贴板快照重建子树，撤销删除副本、重做按快照恢复
+    private void PasteEns(Ens parent)
+    {
+        string snapshot = EditorEnsClipboard.Entry;
+        if (snapshot.Length == 0) return;
+        //副本可能来自已经关掉的节点甚至别的 World，落点只认当前这个还活着的父节点，否则落在 World 根
+        Ens target = parent.IsValid ? parent : Ens.Null;
+        Ens copy = EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotCopy, target.Id, EnsId.Null);
+        if (!copy.IsValid) return;
+
+        string key = copy.ResourceKey;
+        string parentKey = target.IsValid ? target.ResourceKey : string.Empty;
+        EditorPropertyHistory.PushAction("Paste Ens",
+            () =>
+            {
+                Ens value = Ens.Find(key);
+                if (value.IsValid) EditorAssetsNative.DestroyEnsTree(value.Id);
+            },
+            () => RestoreSnapshot(snapshot, parentKey));
+        //粘完就选中副本，接着能直接拖或者改名。失败原因由原生 Log::Error 报进 Console，面板不再挂一行回执
+        EditorNativeComponents.SelectEns(copy.Id);
     }
 
     //删除子树，撤销按快照放回原父节点
@@ -324,7 +408,7 @@ internal sealed class EnsPanel : EditorPanel
         Ens parent = parentKey.Length == 0 ? Ens.Null : Ens.Find(parentKey);
         if (parentKey.Length != 0 && !parent.IsValid)
             throw new InvalidOperationException("Ens hierarchy target no longer exists.");
-        if (!EditorAssetsNative.InstantiatePrefab(snapshot, true, parent.Id, EnsId.Null).IsValid)
+        if (!EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotIdentity, parent.Id, EnsId.Null).IsValid)
             throw new InvalidOperationException("Cannot restore Ens subtree.");
     }
 

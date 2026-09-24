@@ -1,0 +1,15 @@
+--------frag
+#include "Builtin/camera_texture_common.orbinc"
+
+//按表面 UV 方向将偏移转换到屏幕空间
+vec2 ConvertSurfaceOffsetToScreen(vec2 uv, vec2 offset)
+{
+    vec2 dx = dFdx(uv);
+    vec2 dy = dFdy(uv);
+    float determinant = dx.x * dy.y - dx.y * dy.x;
+    if (abs(determinant) < 1e-12) return vec2(0.0);
+    vec2 pixels = vec2(dy.y * offset.x - dy.x * offset.y,
+        dx.x * offset.y - dx.y * offset.x) / determinant;
+    vec2 screenOffset = pixels / vec2(textureSize(u_CameraColorTexture, 0));
+    return screenOffset * min(1.0, 0.04 / max(length(screenOffset), 0.00001));
+}

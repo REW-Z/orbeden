@@ -1066,7 +1066,8 @@ public:
         {
             Transform* transform = ens.Transform();
             RigidBody* body = ens.GetComponent<RigidBody>();
-            if (!transform || (body && !body->enabled)) return;
+            //未激活的 Ens 不建体：key 不进 seen，紧随其后的剪枝会把已有体一起销毁
+            if (!transform || !ens.GetWorldActive() || (body && !body->enabled)) return;
 
             //HeightField 地形使用独立静态体，与普通 collider body 分开管理。
             HeightField* heightField = ens.GetComponent<HeightField>();
@@ -1254,7 +1255,8 @@ public:
         {
             if (!component || !component->enabled) return;
             Ens* ens = component->GetEns();
-            Transform* transform = ens ? ens->Transform() : nullptr;
+            if (!ens || !ens->GetWorldActive()) return;
+            Transform* transform = ens->Transform();
             if (!transform) return;
 
             uint64 key = EnsKey(component->GetEnsId());

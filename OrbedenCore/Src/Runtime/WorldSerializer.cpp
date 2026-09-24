@@ -1023,6 +1023,20 @@ bool WorldSerializer::SavePrefab(Ens& ens, const std::string& path, std::string&
     return true;
 }
 
+//重映射文档内全部稳定身份后恢复子树。
+//复制必须换身份：源子树还活着，沿用旧 id 会被 RestoreEns 的身份冲突检查挡下
+Ens* WorldSerializer::RestoreWithNewIdentities(World& world, const WorldDocument& document, EnsId parent,
+    bool clearExternal, std::string& error)
+{
+    std::unordered_map<std::string, std::string> paths;
+    for (const XmlToken& token : document.tokens)
+    {
+        const std::string& id = GetAttribute(token, "stableId");
+        if (!id.empty() && !paths.contains(id)) paths.emplace(id, "world://ens/" + Object::GenerateUuidText());
+    }
+    return RestoreEns(world, WriteDocument(document, paths, clearExternal), parent, error);
+}
+
 //实例化预制体并映射子树身份
 Ens* WorldSerializer::InstantiatePrefab(World& world, const std::string& path, EnsId parent, std::string& error)
 {
@@ -1031,14 +1045,17 @@ Ens* WorldSerializer::InstantiatePrefab(World& world, const std::string& path, E
     { if (error.empty()) error = "Expected Prefab document."; return nullptr; }
     if (!parent.IsNull() && !world.IsAlive(parent))
     { error = "Prefab parent no longer exists."; return nullptr; }
-    std::unordered_map<std::string, std::string> paths;
-    for (const XmlToken& token : document->tokens)
-    {
-        const std::string& id = GetAttribute(token, "stableId");
-        if (!id.empty() && !paths.contains(id)) paths.emplace(id, "world://ens/" + Object::GenerateUuidText());
-    }
-    std::string xml = WriteDocument(*document, paths, true);
-    return RestoreEns(world, xml, parent, error);
+    return RestoreWithNewIdentities(world, *document, parent, true, error);
+}
+
+//按快照复制子树：身份重映射后再恢复，用于复制仍然活着的子树。
+//指向子树之外的引用要原样保留：复制的是场景里的节点，不是独立资产
+Ens* WorldSerializer::CopyEns(World& world, const std::string& snapshot, EnsId parent, std::string& error)
+{
+    auto document = ParseDocument(snapshot, error);
+    if (!document || document->tokens.front().name != "Prefab")
+    { if (error.empty()) error = "Expected Prefab snapshot."; return nullptr; }
+    return RestoreWithNewIdentities(world, *document, parent, false, error);
 }
 
 //恢复完整子树快照并在失败时清理新增对象

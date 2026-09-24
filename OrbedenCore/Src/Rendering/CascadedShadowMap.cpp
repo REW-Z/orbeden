@@ -176,8 +176,20 @@ void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& cam
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || !renderer->castShadows ||
-            renderer->drawQueue != DrawQueue::Opaque || !(renderer->drawLayer & camera.drawLayerMask) ||
+            !(renderer->drawLayer & camera.drawLayerMask) ||
             !renderer->renderState.mesh) continue;
+        //筛选包含不透明子网格材质的投影对象
+        bool hasOpaqueMaterial = false;
+        for (usize subIndex = 0; subIndex < renderer->renderState.mesh->subMeshes.size() && subIndex < renderer->materials.size(); ++subIndex)
+        {
+            Material* material = renderer->materials[subIndex].Get();
+            if (material && material->GetDrawQueue() == DrawQueue::Opaque)
+            {
+                hasOpaqueMaterial = true;
+                break;
+            }
+        }
+        if (!hasOpaqueMaterial) continue;
         casters.push_back(renderer);
         bounds.push_back(renderer->renderState.worldBounds);
     }
@@ -216,7 +228,8 @@ void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& cam
             for (usize subIndex = 0; subIndex < state.mesh->subMeshes.size(); ++subIndex)
             {
                 const SubMesh& sub = state.mesh->subMeshes[subIndex];
-                if (subIndex >= renderer->materials.size() || !renderer->materials[subIndex].Get() ||
+                Material* material = subIndex < renderer->materials.size() ? renderer->materials[subIndex].Get() : nullptr;
+                if (!material || material->GetDrawQueue() != DrawQueue::Opaque ||
                     sub.indexCount == 0 || sub.indexStart > state.mesh->indices.size() ||
                     sub.indexCount > state.mesh->indices.size()-sub.indexStart) continue;
                 backend->DrawIndexed(sub.indexStart, sub.indexCount);

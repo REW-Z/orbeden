@@ -390,9 +390,26 @@ namespace Reflection
     }
 
     //创建字段元数据
-    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue)
-        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue)
+    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue, FieldListSizeGetter getListSize, FieldListResizer resizeList)
+        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue), listSizeGetter(getListSize), listResizer(resizeList)
     {
+    }
+
+    //读取引用列表槽位数
+    int32 FieldInfo::GetListSize(Object* object) const
+    {
+        return object && listSizeGetter ? listSizeGetter(object) : 0;
+    }
+
+    //改写引用列表槽位数
+    bool FieldInfo::ResizeList(Object* object, int32 count) const
+    {
+        if (!object || !listResizer || count < 0) return false;
+        if (!listResizer(object, count)) return false;
+
+        //字段属于哪个 World 就标脏哪个 World，与 SetValueFromString 一致
+        if (World* world = object->GetWorld()) world->SetDirty();
+        return true;
     }
 
     //读取字段值

@@ -19,7 +19,8 @@ internal static class EditorIconCatalog
             case "DirectionalLight":
             case "HeightField": return Fallback;
         }
-        //引擎自带组件只有上面这些，其余非托管组件都是 C++ 脚本
+        //这里的名单只管选图标。判断某组件是不是用户脚本要看它是否继承 Script，
+        //不要拿这份名单当判据：新增内建组件时它会漏，见 InspectorPanel.GetComponentTitle
         return typeName.Contains("Collider", StringComparison.Ordinal) ? "Collider" : "CppScript";
     }
 

@@ -233,6 +233,8 @@ namespace
     bool WriteMaterial(BlobWriter& writer, Material* material)
     {
         writer.WriteText(material->name);
+        writer.WriteValue(static_cast<uint32>(material->overrideDrawQueue));
+        writer.WriteValue(static_cast<uint32>(material->drawQueue));
         writer.WriteValue(static_cast<uint32>(material->textureSlots.size()));
         for (const MaterialTextureSlot& slot : material->textureSlots)
         {
@@ -262,6 +264,12 @@ namespace
     bool ReadMaterial(BlobReader& reader, Material* material, List<std::string>& externalRefs)
     {
         if (!reader.ReadText(material->name)) return false;
+        uint32 overrideDrawQueue = 0;
+        uint32 drawQueue = 0;
+        if (!reader.ReadValue(overrideDrawQueue) || overrideDrawQueue > 1) return false;
+        if (!reader.ReadValue(drawQueue) || drawQueue > static_cast<uint32>(DrawQueue::Refraction)) return false;
+        material->overrideDrawQueue = overrideDrawQueue != 0;
+        material->drawQueue = static_cast<DrawQueue>(drawQueue);
 
         uint32 textureSlotCount = 0;
         if (!reader.ReadValue(textureSlotCount)) return false;
@@ -310,6 +318,7 @@ namespace
     bool WriteShader(BlobWriter& writer, Shader* shader)
     {
         writer.WriteText(shader->name);
+        writer.WriteValue(static_cast<uint32>(shader->drawQueue));
         writer.WriteText(shader->vertexPath);
         writer.WriteText(shader->fragmentPath);
         writer.WriteValue(static_cast<uint32>(shader->passes.size()));
@@ -331,6 +340,9 @@ namespace
     bool ReadShader(BlobReader& reader, Shader* shader)
     {
         if (!reader.ReadText(shader->name)) return false;
+        uint32 drawQueue = 0;
+        if (!reader.ReadValue(drawQueue) || drawQueue > static_cast<uint32>(DrawQueue::Refraction)) return false;
+        shader->drawQueue = static_cast<DrawQueue>(drawQueue);
         if (!reader.ReadText(shader->vertexPath)) return false;
         if (!reader.ReadText(shader->fragmentPath)) return false;
 

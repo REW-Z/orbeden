@@ -9,6 +9,7 @@ internal static class EditorSourceIconCatalog
         ".orbshader" or ".glsl" or ".vert" or ".frag" => "SourceFiles/ShaderFile",
         ".cs" => "SourceFiles/CSharpScript",
         ".world" => "SourceFiles/World",
+        ".orbmat" => "Material",
         _ => EditorAssetCatalog.IsCodeFile(path) ? "SourceFiles/CppScript"
             : EditorAssetCatalog.IsTextFile(path) ? "SourceFiles/TextFile" : "SourceFiles/Fallback",
     };

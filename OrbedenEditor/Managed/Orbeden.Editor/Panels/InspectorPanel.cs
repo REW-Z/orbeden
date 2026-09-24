@@ -58,6 +58,17 @@ internal sealed class InspectorPanel : EditorPanel
         internal PropertyDocument Document = null!;
     }
 
+    //材质资产面板的缓存：加载到的对象、它绑定的 Shader Key，以及对应的属性文档
+    private sealed class MaterialDocument
+    {
+        internal string Key = string.Empty;
+        internal Material? Asset;
+        internal string ShaderKey = string.Empty;
+        internal PropertyDocument? Document;
+    }
+
+    private readonly MaterialDocument materialDocument = new();
+    private bool materialAssetDirty;
     private readonly Dictionary<int, ComponentDocument> componentDocuments = [];
     private readonly List<int> staleDocuments = [];
     private EnsId[] cachedSelection = [];
@@ -76,6 +87,12 @@ internal sealed class InspectorPanel : EditorPanel
     //组件卡片右键菜单的弹窗 id 后缀。原生 EditorGuiBeginCollapsibleComponentBlock 用同一个后缀开弹窗，
     //两边算出的 ID 必须一致，改这里就要同步改那边。
     private const string MenuIdSuffix = "##component_menu";
+
+    //组件的启用字段名。有它的组件把勾选框搬到卡片标题行上，正文里不再重复画
+    private const string EnabledProperty = "enabled";
+
+    //Ens 卡片的激活字段名。勾选框同样搬到标题行上，正文里不再重复画
+    private const string LocalActiveProperty = "LocalActive";
 
     public override EditorPanelInfo Info => new(
         "inspector",
@@ -114,7 +131,11 @@ internal sealed class InspectorPanel : EditorPanel
         if (context.SelectedEns.IsNull && EditorAssetInspection.SourcePath.Length != 0)
         {
             ClearPropertyDocuments();
-            EditorAssetInspection.Draw();
+            //材质资产可以改，其余资产仍然只读
+            if (Path.GetExtension(EditorAssetInspection.SourcePath).Equals(".orbmat", StringComparison.OrdinalIgnoreCase))
+                DrawMaterialAsset();
+            else
+                EditorAssetInspection.Draw();
             return;
         }
         if (context.SelectedEns.IsNull)
@@ -234,41 +255,215 @@ internal sealed class InspectorPanel : EditorPanel
         return result;
     }
 
-    //绘制对象名称与运行时身份。
-    private void DrawObjectHeader(Ens active, IReadOnlyList<EnsId> selection, string stableId)
+    //绘制材质资产：Shader 引用、绘制队列，加上 Shader 声明的每个槽位一行。
+    //槽位表跟着绑定的 Shader 走，所以换 Shader 时属性文档要重建，行数与名字才会跟着变
+    private void DrawMaterialAsset()
     {
-        EditorGUI.BeginComponentBlock("Selected Ens");
+        EditorGUI.Label(Path.GetFileName(EditorAssetInspection.SourcePath));
+        string key = EditorAssetCatalog.Instance.ToResourceKey(EditorAssetInspection.SourcePath);
+        if (key.Length == 0) return;
+
+        //换了资源才重新加载对象与文档，之后每帧复用
+        if (!string.Equals(materialDocument.Key, key, StringComparison.Ordinal))
+        {
+            materialDocument.Key = key;
+            materialDocument.Asset = EditorAssetCatalog.Instance.Load(typeof(Material), key) as Material;
+            materialDocument.ShaderKey = string.Empty;
+            materialDocument.Document = null;
+        }
+
+        Material? material = materialDocument.Asset;
+        if (material == null)
+        {
+            EditorGUI.Label("Material is not imported yet.");
+            return;
+        }
+
+        string shaderKey = material.shader?.GetInstanceId() ?? string.Empty;
+        if (materialDocument.Document == null
+            || !string.Equals(materialDocument.ShaderKey, shaderKey, StringComparison.Ordinal))
+        {
+            materialDocument.ShaderKey = shaderKey;
+            materialDocument.Document = new PropertyDocument([BuildMaterialTarget(material, key)]);
+        }
+
+        //Play 中不写资源文件，与其它资源操作一致；只读展示仍然保留
+        EditorGUI.BeginDisabled(!EditorAssetsNative.CanModifyAssets());
         try
         {
-            if (headerDocument == null)
+            DrawPropertyDocument(materialDocument.Document, "Material", "Material");
+        }
+        finally
+        {
+            EditorGUI.EndDisabled();
+        }
+
+        if (!string.IsNullOrEmpty(propertyError)) EditorGUI.Label(propertyError);
+        //写回放在属性文档提交之后：MarkDirty 只在一次成功提交里被调一次
+        if (materialAssetDirty)
+        {
+            materialAssetDirty = false;
+            SaveMaterialAsset(material, key);
+        }
+    }
+
+    //把改过的材质写回源文件，再让导入缓存按新源重建（重建会复用同一个材质对象）
+    private void SaveMaterialAsset(Material material, string key)
+    {
+        if (!EditorAssetsNative.SaveMaterial(material.GetObjectId(), key))
+        {
+            propertyError = "Failed to save material; see Console for the reason.";
+            return;
+        }
+        propertyError = string.Empty;
+        EditorAssetInspection.Invalidate(force: true);
+    }
+
+    //按材质与它绑定的 Shader 生成属性行：Shader 引用、绘制队列，加 Shader 声明的每个槽位
+    private IPropertyTarget BuildMaterialTarget(Material material, string key)
+    {
+        List<DelegatedProperty> properties =
+        [
+            new DelegatedProperty("shader", InteropValueKind.StringId,
+                () => InteropValue.FromStringId(material.shader?.GetInstanceId() ?? string.Empty),
+                updated =>
+                {
+                    if (!updated.TryGet(out string value)) return InteropStatus.TypeMismatch;
+                    material.SetShader(value);
+                    return InteropStatus.Ok;
+                },
+                "Orbeden.Shader"),
+            new DelegatedProperty("overrideDrawQueue", InteropValueKind.Bool,
+                () => InteropValue.From(material.overrideDrawQueue),
+                updated =>
+                {
+                    if (!updated.TryGet(out bool value)) return InteropStatus.TypeMismatch;
+                    material.overrideDrawQueue = value;
+                    return InteropStatus.Ok;
+                }),
+            new DelegatedProperty("drawQueue", InteropValueKind.UInt32,
+                () => InteropValue.From((uint)material.drawQueue),
+                updated =>
+                {
+                    if (!updated.TryGet(out uint value)) return InteropStatus.TypeMismatch;
+                    material.drawQueue = (DrawQueue)value;
+                    return InteropStatus.Ok;
+                }),
+        ];
+
+        Shader? shader = material.shader;
+        if (shader != null)
+        {
+            //槽位按 Shader 的声明列出，材质没设过的槽回落到 Shader 的默认值；
+            //标识用 uniform 名（唯一），显示名另走 Label——displayName 会剥掉 Color/Texture 后缀，颜色槽与贴图槽本来就同名
+            foreach (ShaderColorSlot slot in shader.colorSlots)
             {
-                List<IPropertyTarget> targets = selection
-                    .Select(Ens.FromId)
-                    .Where(value => value.IsValid)
-                    .Select(value => (IPropertyTarget)new DelegatedPropertyTarget(
-                        $"ens:{value.Id.id}:{value.Id.version}",
-                        "Name",
-                        InteropValueKind.String,
-                        () => InteropValue.From(value.Name),
-                        updated =>
-                        {
-                            if (!updated.TryGet(out string name)) return InteropStatus.TypeMismatch;
-                            value.Name = name;
-                            return InteropStatus.Ok;
-                        },
-                        EditorApplication.MarkWorldDirty))
-                    .ToList();
-                headerDocument = new PropertyDocument(targets);
+                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.Color,
+                    () => InteropValue.From(material.GetColor(slot.name, slot.defaultValue)),
+                    updated =>
+                    {
+                        if (!updated.TryGet(out color value)) return InteropStatus.TypeMismatch;
+                        material.SetColor(slot.name, value);
+                        return InteropStatus.Ok;
+                    },
+                    Label: slot.displayName));
             }
-            DrawPropertyDocument(headerDocument, "Ens");
-            EditorGUI.Label($"Runtime Id: {active.Id.id}:{active.Id.version}");
-            if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
-            EditorGUI.Label(string.IsNullOrEmpty(stableId) ? "Stable Id: <none>" : $"Stable Id: {stableId}");
+            foreach (ShaderFloatSlot slot in shader.floatSlots)
+            {
+                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.Float32,
+                    () => InteropValue.From(material.GetFloat(slot.name, slot.defaultValue)),
+                    updated =>
+                    {
+                        if (!updated.TryGet(out float value)) return InteropStatus.TypeMismatch;
+                        material.SetFloat(slot.name, value);
+                        return InteropStatus.Ok;
+                    },
+                    Label: slot.displayName));
+            }
+            foreach (ShaderTextureSlot slot in shader.textureSlots)
+            {
+                properties.Add(new DelegatedProperty(slot.name, InteropValueKind.StringId,
+                    () => InteropValue.FromStringId(material.GetTexture(slot.name)?.GetInstanceId() ?? string.Empty),
+                    updated =>
+                    {
+                        if (!updated.TryGet(out string value)) return InteropStatus.TypeMismatch;
+                        material.SetTexture(slot.name, value);
+                        return InteropStatus.Ok;
+                    },
+                    "Orbeden.Texture2D", slot.displayName));
+            }
+        }
+
+        return new DelegatedPropertyTarget($"material:{key}", properties, () => materialAssetDirty = true);
+    }
+
+    //绘制对象名称与运行时身份。卡片默认折叠：平时只是确认选中的是谁，读 Id 细节时才展开。
+    private void DrawObjectHeader(Ens active, IReadOnlyList<EnsId> selection, string stableId)
+    {
+        if (headerDocument == null)
+        {
+            List<IPropertyTarget> targets = selection
+                .Select(Ens.FromId)
+                .Where(value => value.IsValid)
+                .Select(value => (IPropertyTarget)new DelegatedPropertyTarget(
+                    $"ens:{value.Id.id}:{value.Id.version}",
+                    [
+                        new DelegatedProperty("Name", InteropValueKind.String,
+                            () => InteropValue.From(value.Name),
+                            updated =>
+                            {
+                                if (!updated.TryGet(out string name)) return InteropStatus.TypeMismatch;
+                                value.Name = name;
+                                return InteropStatus.Ok;
+                            }),
+                        //勾选框读写自身标记，EnsView 的灰显看的是层级生效后的 worldActive
+                        new DelegatedProperty(LocalActiveProperty, InteropValueKind.Bool,
+                            () => InteropValue.From(value.LocalActive),
+                            updated =>
+                            {
+                                if (!updated.TryGet(out bool active)) return InteropStatus.TypeMismatch;
+                                value.LocalActive = active;
+                                return InteropStatus.Ok;
+                            }),
+                    ],
+                    EditorApplication.MarkWorldDirty))
+                .ToList();
+            headerDocument = new PropertyDocument(targets);
+        }
+
+        //标题行的勾选框要先拿到当前值，所以文档在标题之前刷新一次：折叠着的卡片也得跟上撤销与重做
+        headerDocument.Update();
+        PropertyValue? localActiveProperty = headerDocument.FindProperty(LocalActiveProperty);
+        //LocalActive 读不出来时不画勾选框，免得给不存在的状态留个能点的空壳
+        bool hasLocalActive = localActiveProperty is { IsReadable: true, Kind: InteropValueKind.Bool };
+        bool localActive = true;
+        if (hasLocalActive) localActiveProperty!.Value.TryGet(out localActive);
+
+        bool toggled = false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Selected Ens", "Other", "ens_header",
+            localActive, false, out toggled);
+        try
+        {
+            if (expanded)
+            {
+                DrawPropertyDocument(headerDocument, "Ens", "",
+                    hasLocalActive ? LocalActiveProperty : string.Empty);
+                //Id 用只读输入框显示：与上面的字段同一套行布局，读数比裸标签整齐
+                string runtimeId = $"{active.Id.id}:{active.Id.version}";
+                EditorGUI.InputText("Runtime Id", ref runtimeId, readOnly: true);
+                if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
+                string stable = string.IsNullOrEmpty(stableId) ? "<none>" : stableId;
+                EditorGUI.InputText("Stable Id", ref stable, readOnly: true);
+            }
         }
         finally
         {
             EditorGUI.EndComponentBlock();
         }
+
+        //勾选框在标题之后才画出来，改动只能等卡片画完再提交
+        if (toggled && hasLocalActive)
+            ApplyPropertyToggle(headerDocument, LocalActiveProperty, "Selected Ens", !localActive);
     }
 
     //按活动对象挂载顺序绘制所有选择对象共同拥有的组件。
@@ -333,43 +528,37 @@ internal sealed class InspectorPanel : EditorPanel
     {
         NativeComponentInfo primary = components[0];
         string title = GetComponentTitle(primary);
-        bool removable = primary.IsManaged
-            || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         //卡片身份：原生用它 PushID，也是标题右键菜单弹窗 id 的前半段
         string identity = $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}";
-        bool expanded = EditorGUI.BeginCollapsibleComponentBlock(
-            title,
-            EditorIconCatalog.ForComponent(primary.TypeName, primary.IsManaged),
-            identity,
-            removable,
-            out bool removeRequested);
+
+        //标题行上的勾选框要先拿到当前值，所以文档在标题之前就建好并刷新一次：折叠着的卡片也得跟上撤销与重做
+        ComponentDocument document = EnsureComponentDocument(components, primary);
+        document.Document.Update();
+        PropertyValue? enabledProperty = document.Document.FindProperty(EnabledProperty);
+        //没有 enabled 字段的组件（Transform）连勾选框都不画，免得给不存在的状态留个能点的空壳
+        bool hasEnabled = enabledProperty is { IsReadable: true, Kind: InteropValueKind.Bool };
+        bool enabled = true;
+        if (hasEnabled) enabledProperty!.Value.TryGet(out enabled);
+
+        string icon = EditorIconCatalog.ForComponent(primary.TypeName, primary.IsManaged);
+        bool toggled = false;
+        //有 enabled 字段才画标题行的勾选框；Transform 没有，走不带勾选框的那个重载
+        bool expanded = hasEnabled
+            ? EditorGUI.BeginCollapsibleComponentBlock(title, icon, identity, enabled, out toggled)
+            : EditorGUI.BeginCollapsibleComponentBlock(title, icon, identity);
+        bool removeRequested = false;
         try
         {
             //菜单必须画在组件块内：原生是在这一层的 ID 栈上开的弹窗，挪到 EndComponentBlock 之后就换了 ID
             if (EditorGUI.BeginPopupContextItem(identity + MenuIdSuffix))
             {
-                try { DrawComponentMenu(selection, components); }
+                try { removeRequested = DrawComponentMenu(selection, components); }
                 finally { EditorGUI.EndPopup(); }
             }
-            if (expanded && !removeRequested)
+            if (expanded)
             {
-                bool rebuild = !componentDocuments.TryGetValue(primary.ObjectId, out ComponentDocument? cached)
-                    || cached.ObjectIds.Length != components.Count;
-                for (int index = 0; !rebuild && index < components.Count; ++index)
-                    rebuild = cached!.ObjectIds[index] != components[index].ObjectId;
-                if (rebuild)
-                {
-                    List<IPropertyTarget> targets = components
-                        .Select(component => (IPropertyTarget)new NativeComponentPropertyTarget(component, EditorApplication.MarkWorldDirty))
-                        .ToList();
-                    cached = new ComponentDocument
-                    {
-                        ObjectIds = components.Select(component => component.ObjectId).ToArray(),
-                        Document = new PropertyDocument(targets),
-                    };
-                    componentDocuments[primary.ObjectId] = cached;
-                }
-                DrawPropertyDocument(cached!.Document, title, primary.IsManaged ? "" : primary.TypeName);
+                DrawPropertyDocument(document.Document, title, primary.IsManaged ? "" : primary.TypeName,
+                    hasEnabled ? EnabledProperty : string.Empty);
             }
         }
         finally
@@ -377,12 +566,50 @@ internal sealed class InspectorPanel : EditorPanel
             EditorGUI.EndComponentBlock();
         }
 
+        //勾选框在标题之后才画出来，改动只能等卡片画完再提交
+        if (toggled && hasEnabled) ApplyPropertyToggle(document.Document, EnabledProperty, title, !enabled);
+        //删组件同理：菜单是在画这张卡片的过程中打开的，必须等卡片画完再销毁它自己
         if (removeRequested) RemoveComponentGroup(selection, components, title);
     }
 
-    //绘制组件卡片标题的右键菜单
-    private void DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
+    //取出或重建这一组同类型组件的属性文档。标题行的勾选框也读它，所以不分展开与否
+    private ComponentDocument EnsureComponentDocument(IReadOnlyList<NativeComponentInfo> components,
+        NativeComponentInfo primary)
     {
+        bool rebuild = !componentDocuments.TryGetValue(primary.ObjectId, out ComponentDocument? cached)
+            || cached.ObjectIds.Length != components.Count;
+        for (int index = 0; !rebuild && index < components.Count; ++index)
+            rebuild = cached!.ObjectIds[index] != components[index].ObjectId;
+        if (!rebuild) return cached!;
+
+        List<IPropertyTarget> targets = components
+            .Select(component => (IPropertyTarget)new NativeComponentPropertyTarget(component, EditorApplication.MarkWorldDirty))
+            .ToList();
+        cached = new ComponentDocument
+        {
+            ObjectIds = components.Select(component => component.ObjectId).ToArray(),
+            Document = new PropertyDocument(targets),
+        };
+        componentDocuments[primary.ObjectId] = cached;
+        return cached;
+    }
+
+    //把标题勾选框的改动交给属性文档提交：写入、失败回滚、撤销事务与多选一次改完都由它负责
+    private static void ApplyPropertyToggle(PropertyDocument document, string propertyName, string title, bool value)
+    {
+        PropertyValue? property = document.FindProperty(propertyName);
+        if (property == null) return;
+
+        property.SetValue(InteropValue.From(value));
+        if (!document.ApplyChanges($"Edit {title}")) propertyError = $"Failed to apply {title}; changes were rolled back.";
+        EditorApplication.RequestRepaint();
+    }
+
+    //绘制组件卡片标题的右键菜单。返回是否请求删除本组件：菜单是在画卡片的过程中打开的，
+    //删除必须由调用方等卡片画完之后再做
+    private bool DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
+    {
+        bool removeRequested = false;
         NativeComponentInfo primary = components[0];
         if (EditorGUI.MenuItem("Copy Component")) EditorComponentClipboard.Capture(primary, asNew: true);
         if (EditorGUI.MenuItem("Copy Component Values")) EditorComponentClipboard.Capture(primary, asNew: false);
@@ -390,9 +617,13 @@ internal sealed class InspectorPanel : EditorPanel
             PasteComponentAsNew(selection);
         if (EditorGUI.MenuItem("Paste Component Values", EditorComponentClipboard.Matches(primary)))
             PasteComponentValues(components);
+        //Transform 是每个 Ens 的骨架，删掉它没有意义，置灰；托管脚本与其余内建组件都可删
+        bool removable = primary.IsManaged
+            || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
+        if (EditorGUI.MenuItem("Remove Component", removable)) removeRequested = true;
 
         //Script 的派生类才算脚本：C# 托管宿主与 C++ 脚本都命中，Transform / Camera 这类内建组件不命中
-        if (!EditorNativeComponents.MatchesComponentType(primary.ObjectId, "Script")) return;
+        if (!EditorNativeComponents.MatchesComponentType(primary.ObjectId, "Script")) return removeRequested;
         //托管脚本要程序集里还有这个类型才有文件可去，「Missing Script」置灰；原生组件的类型必然还在
         bool resolvable = !primary.IsManaged || FindScriptType(primary.TypeName) != null;
         EditorGUI.Separator();
@@ -400,6 +631,7 @@ internal sealed class InspectorPanel : EditorPanel
             && !EditorScriptFiles.Edit(primary.TypeName, primary.IsManaged)) status = ScriptFileMissing(primary.TypeName);
         if (EditorGUI.MenuItem("Locate Script", resolvable)
             && !EditorScriptFiles.Locate(primary.TypeName, primary.IsManaged)) status = ScriptFileMissing(primary.TypeName);
+        return removeRequested;
     }
 
     //脚本在程序集里有，但内容根下找不到对应文件
@@ -415,7 +647,7 @@ internal sealed class InspectorPanel : EditorPanel
         Type? managedType = entry.IsManaged ? FindScriptType(entry.TypeName) : null;
         if (entry.IsManaged && managedType == null)
         {
-            status = $"Script type is not available: {entry.TypeName}";
+            EditorStatusBar.Print($"Script type is not available: {entry.TypeName}");
             return;
         }
         string domain = entry.IsManaged ? "[C#]" : "[C++]";
@@ -445,35 +677,45 @@ internal sealed class InspectorPanel : EditorPanel
         }
         if (matched == 0)
         {
-            status = $"No matching fields to paste for {GetShortTypeName(entry.TypeName)}.";
+            EditorStatusBar.Print($"No matching fields to paste for {GetShortTypeName(entry.TypeName)}.");
             return;
         }
         if (!document.ApplyChanges($"Paste {GetShortTypeName(entry.TypeName)} Values"))
-            status = "Paste Component Values failed; changes were rolled back.";
+            EditorStatusBar.Print("Paste Component Values failed; changes were rolled back.");
         TouchWorld();
     }
 
     //生成带语言域标记的组件标题。
     private string GetComponentTitle(NativeComponentInfo component)
     {
-        if (!component.IsManaged) return $"[C++] {GetShortTypeName(component.TypeName)}";
-        bool missing = FindScriptType(component.TypeName) == null;
-        return missing
-            ? $"[C#] Missing Script ({GetShortTypeName(component.TypeName)})"
-            : $"[C#] {GetShortTypeName(component.TypeName)}";
+        string name = GetShortTypeName(component.TypeName);
+        //标不标语言只看"是不是脚本"：内建组件（Transform / Camera 这些）不继承 Script，不标；
+        //用户写的 C++ 与 C# 脚本都继承 Script，各自标出来
+        if (!EditorNativeComponents.MatchesComponentType(component.ObjectId, "Script")) return name;
+        if (!component.IsManaged) return $"[C++] {name}";
+        return FindScriptType(component.TypeName) == null ? $"[C#] Missing Script ({name})" : $"[C#] {name}";
     }
 
     //绘制 PropertyDocument 支持的全部基础值。
-    private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "")
+    private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "",
+        string skipProperty = "")
     {
         document.Update();
         foreach (PropertyValue property in document.GetDrawProperties(nativeType))
         {
             if (!property.IsReadable) continue;
-            string label = property.HasMultipleDifferentValues
-                ? $"{property.Name} (Mixed)"
-                : property.Name;
+            //挪到卡片标题行上的字段不在正文里再画一遍
+            if (skipProperty.Length != 0 && string.Equals(property.Name, skipProperty, StringComparison.Ordinal)) continue;
+            //显示名优先用 Label：槽位的标识是 uniform 名，直接展示太生硬
+            string title = property.Label.Length != 0 ? property.Label : property.Name;
+            string label = property.HasMultipleDifferentValues ? $"{title} (Mixed)" : title;
             InteropValue value;
+            //容器字段：只画一行槽位头（名字、当前槽位数、增删按钮），元素行由各自的对象框跟在后面
+            if (property.Kind == InteropValueKind.Array)
+            {
+                DrawListSlots(document, property, label);
+                continue;
+            }
             if (property.ReferenceType.Length != 0)
             {
                 if (!EditorObjectField.Draw(label, property, out value))
@@ -508,6 +750,76 @@ internal sealed class InspectorPanel : EditorPanel
         if (document.HasPendingChanges)
             propertyError = document.ApplyChanges($"Edit {undoPrefix}") ? string.Empty
                 : $"Failed to apply {undoPrefix}; changes were rolled back.";
+    }
+
+    //绘制列表字段的槽位头：显示名与当前槽位数，后面跟增删两个按钮
+    private static void DrawListSlots(PropertyDocument document, PropertyValue property, string label)
+    {
+        property.Value.TryGet(out int count);
+        //多选且槽位数不同时 label 已经带 (Mixed)，不再叠一个数
+        bool mixed = property.HasMultipleDifferentValues;
+        EditorGUI.Label(mixed || count == 0 ? label : $"{label} ({count})");
+
+        bool canModify = !EditorApplication.IsPlaying;
+        EditorGUI.SameLine();
+        EditorGUI.BeginDisabled(!canModify);
+        try
+        {
+            if (EditorGUI.Button("+")) ResizeListSlots(document, property.Name, 1);
+        }
+        finally { EditorGUI.EndDisabled(); }
+        EditorGUI.SameLine();
+        EditorGUI.BeginDisabled(!canModify || count == 0);
+        try
+        {
+            if (EditorGUI.Button("-")) ResizeListSlots(document, property.Name, -1);
+        }
+        finally { EditorGUI.EndDisabled(); }
+    }
+
+    //增删列表槽位。改长度是复合操作：先按组件逐个抓住整份槽位内容，撤销时把内容一起写回，
+    //否则"减少槽位"的撤销只会恢复个数，被截掉的槽位值就丢了
+    private static void ResizeListSlots(PropertyDocument document, string fieldName, int delta)
+    {
+        List<(IPropertyTarget Target, string[] Keys)> captured = [];
+        List<int> applied = [];
+        foreach (IPropertyTarget target in document.Targets)
+        {
+            if (target.TryGet(fieldName, out InteropValue value) != InteropStatus.Ok || !value.TryGet(out int count)) return;
+            string[] keys = new string[count];
+            for (int index = 0; index < count; ++index)
+                if (target.TryGet($"{fieldName}[{index}]", out InteropValue element) == InteropStatus.Ok)
+                    element.TryGet(out keys[index]);
+            captured.Add((target, keys));
+            applied.Add(Math.Max(0, count + delta));
+        }
+
+        for (int index = 0; index < applied.Count; ++index)
+        {
+            if (captured[index].Target.Set(fieldName, InteropValue.FromArray(applied[index])) == InteropStatus.Ok) continue;
+            //失败就把已经改过的写回去，不留半改状态
+            for (int rollback = index - 1; rollback >= 0; --rollback)
+                captured[rollback].Target.Set(fieldName, InteropValue.FromArray(captured[rollback].Keys.Length));
+            return;
+        }
+
+        EditorPropertyHistory.PushAction($"Resize {fieldName}",
+            () =>
+            {
+                //先补长度再逐个填槽：元素写入不加长列表，槽位得先存在
+                foreach ((IPropertyTarget target, string[] keys) in captured)
+                {
+                    target.Set(fieldName, InteropValue.FromArray(keys.Length));
+                    for (int index = 0; index < keys.Length; ++index)
+                        target.Set($"{fieldName}[{index}]", InteropValue.FromStringId(keys[index]));
+                }
+            },
+            () =>
+            {
+                for (int index = 0; index < applied.Count; ++index)
+                    captured[index].Target.Set(fieldName, InteropValue.FromArray(applied[index]));
+            });
+        EditorApplication.RequestRepaint();
     }
 
     //绘制单个属性并返回用户提交的新值。

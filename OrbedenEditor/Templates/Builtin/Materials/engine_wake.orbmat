@@ -1,0 +1,10 @@
+# engine_wake
+drawqueue Auto
+shader Builtin/Shaders/heat_wake.orbshader
+float u_DistortionStrength 0.035
+float u_NoiseScale 5
+float u_DistortionSpeed 4
+float u_EdgeFade 0.08
+float u_SoftIntersection 0.5
+float u_WakeShape 1
+float u_Opacity 1

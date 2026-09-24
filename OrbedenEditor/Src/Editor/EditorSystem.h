@@ -282,6 +282,9 @@ private:
     //绘制顶部播放工具栏
     void DrawPlayToolbar();
 
+    //绘制底部状态栏
+    void DrawStatusBar();
+
     //绘制项目文件夹选择弹窗
     void DrawProjectDialog();
 

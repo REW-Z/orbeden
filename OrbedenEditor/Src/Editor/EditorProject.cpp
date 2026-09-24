@@ -519,7 +519,6 @@ bool EditorProject::ProbeProjectFile(const std::string& projectFile, ProjectVers
     outProbe.storedVersion = static_cast<uint32>(GetIntAttribute(rootTag, "version", 0));
     outProbe.projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     outProbe.projectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
-    outProbe.startupWorld = GetAttribute(rootTag, "startupWorld");
     outProbe.projectName = DeriveProjectName(filePath, rootTag);
     if (outProbe.storedVersion == OrbedenProjectVersion)
     {

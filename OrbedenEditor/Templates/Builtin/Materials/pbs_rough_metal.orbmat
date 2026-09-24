@@ -1,0 +1,7 @@
+# pbs_rough_metal
+drawqueue Auto
+shader Builtin/Shaders/pbs_metallic.orbshader
+color u_DiffuseColor 0.56 0.57 0.58 1
+float u_Metallic 1
+float u_Roughness 0.55
+float u_Occlusion 1

@@ -39,6 +39,8 @@ public enum InteropValueKind : uint
     Quaternion,
     EnsId,
     Object,
+    //容器条目：值是元素个数，元素本身各自成条（与 Reflection::ValueKind 逐值对应）
+    Array,
 }
 
 internal enum ComponentDomain : uint
@@ -125,6 +127,7 @@ public readonly struct InteropValue : IEquatable<InteropValue>
     public static InteropValue From(EnsId value) => new(InteropValueKind.EnsId, value);
     public static InteropValue FromObject(Object? value) => new(InteropValueKind.Object, value?.InstanceId ?? 0);
     public static InteropValue FromObjectId(int value) => new(InteropValueKind.Object, value);
+    public static InteropValue FromArray(int count) => new(InteropValueKind.Array, count);
 
     public bool TryGet<T>(out T value)
     {

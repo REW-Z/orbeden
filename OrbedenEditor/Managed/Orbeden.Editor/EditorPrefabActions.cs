@@ -13,7 +13,7 @@ internal static class EditorPrefabActions
         {
             string parentKey = parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey;
             string beforeKey = before.IsNull ? string.Empty : Ens.FromId(before).ResourceKey;
-            root = EditorAssetsNative.InstantiatePrefab(assetKey, false, parent, before);
+            root = EditorAssetsNative.InstantiatePrefab(assetKey, PrefabSource.File, parent, before);
             if (!root.IsValid) return;
             //场景投放只调整根节点的局部位置
             if (placeAtPosition) root.Transform.SetLocalPosition(position);
@@ -34,7 +34,8 @@ internal static class EditorPrefabActions
                     if ((parentKey.Length != 0 && !restoredParent.IsValid)
                         || (beforeKey.Length != 0 && !restoredBefore.IsValid))
                         throw new InvalidOperationException("Prefab hierarchy target no longer exists.");
-                    if (!EditorAssetsNative.InstantiatePrefab(snapshot, true, restoredParent.Id, restoredBefore.Id).IsValid)
+                    if (!EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotIdentity,
+                        restoredParent.Id, restoredBefore.Id).IsValid)
                         throw new InvalidOperationException("Cannot restore prefab instance.");
                 });
         }

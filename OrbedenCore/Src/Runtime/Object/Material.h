@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/RenderTypes.h"
 #include "Runtime/EngineTypes.h"
 #include "Runtime/Object/Object.h"
 
@@ -51,6 +52,8 @@ private:
 
 public:
     std::string name;
+    bool overrideDrawQueue = false;
+    DrawQueue drawQueue = DrawQueue::Opaque;
     ORBEDEN_BIND_ACCESSORS(Direct, None)
     List<MaterialTextureSlot> textureSlots;
     ORBEDEN_BIND_ACCESSORS(Direct, None)
@@ -59,6 +62,9 @@ public:
     List<MaterialFloatSlot> floatSlots;
     ORBEDEN_BIND_ACCESSORS(Direct, SetShader)
     Ref<Shader> shader;
+
+    /// <summary>获取材质覆盖或 Shader 默认的绘制队列；未绑定 Shader 时使用不透明队列。</summary>
+    DrawQueue GetDrawQueue() const;
 
     //设置材质使用的 Shader
     void SetShader(Shader* value);

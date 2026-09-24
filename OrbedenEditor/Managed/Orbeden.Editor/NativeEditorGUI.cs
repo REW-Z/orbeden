@@ -13,7 +13,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte> Button;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, void> BeginComponentBlock;
     public delegate* unmanaged[Cdecl]<void> EndComponentBlock;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte, byte*, byte> BeginCollapsibleComponentBlock;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte, byte, byte*, byte> BeginCollapsibleComponentBlock;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> BeginCombo;
     public delegate* unmanaged[Cdecl]<void> EndCombo;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> Selectable;
@@ -21,7 +21,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, int*, byte> InputInt;
     public delegate* unmanaged[Cdecl]<byte*, int, float*, byte> InputFloat;
     public delegate* unmanaged[Cdecl]<byte*, int, vector3*, byte> InputVector3;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, float, int> InputText;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, float, byte, int> InputText;
     public delegate* unmanaged[Cdecl]<void> Separator;
     public delegate* unmanaged[Cdecl]<float, void> SameLine;
     public delegate* unmanaged[Cdecl]<byte*, int, int, byte> BeginTable;
@@ -80,6 +80,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte*, float, byte, int> AssetRenameTile;
     public delegate* unmanaged[Cdecl]<byte*, int, float*, float, float, float, byte> SliderFloat;
     public delegate* unmanaged[Cdecl]<byte*, int, float> CalcButtonWidth;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> BeginMenu;
+    public delegate* unmanaged[Cdecl]<void> EndMenu;
 }
 #pragma warning restore CS0649
 
@@ -185,7 +187,7 @@ internal static unsafe class NativeEditorGUI
 
     //绘制目录节点。返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
     internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
-        bool forceOpen = false, bool forceCollapse = false, string? icon = null)
+        bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false)
     {
         byte[] bytes = Encode(label);
         byte[] iconBytes = Encode(icon);
@@ -193,7 +195,8 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* pointer = bytes)
         {
             return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
-                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0)), iconPointer, iconBytes.Length);
+                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0) | (dimmed ? 32 : 0)),
+                iconPointer, iconBytes.Length);
         }
     }
 
@@ -264,20 +267,49 @@ internal static unsafe class NativeEditorGUI
         if (initialized && api.EndComponentBlock != null) api.EndComponentBlock();
     }
 
-    //开始可折叠组件块
+    //开始可折叠组件块，不带激活勾选框
+    internal static bool BeginCollapsibleComponentBlock(string? icon, string? title, string? id)
+    {
+        return BeginCollapsibleComponentBlock(icon, title, id, true, true, false, out bool _);
+    }
+
+    //开始带激活勾选框的可折叠组件块；enabled 决定卡片是否压暗，toggled 回传勾选框是否被点
     internal static bool BeginCollapsibleComponentBlock(string? icon,
         string? title,
         string? id,
-        bool removable,
-        out bool removeRequested)
+        bool enabled,
+        out bool toggled)
     {
-        removeRequested = false;
+        return BeginCollapsibleComponentBlock(icon, title, id, enabled, true, true, out toggled);
+    }
+
+    //开始带激活勾选框、默认折叠的可折叠组件块
+    internal static bool BeginCollapsibleComponentBlock(string? icon,
+        string? title,
+        string? id,
+        bool enabled,
+        bool defaultOpen,
+        out bool toggled)
+    {
+        return BeginCollapsibleComponentBlock(icon, title, id, enabled, defaultOpen, true, out toggled);
+    }
+
+    //上层各入口共用的实现；showToggle 为假时勾选框完全不参与
+    private static bool BeginCollapsibleComponentBlock(string? icon,
+        string? title,
+        string? id,
+        bool enabled,
+        bool defaultOpen,
+        bool showToggle,
+        out bool toggled)
+    {
+        toggled = false;
         if (!initialized || api.BeginCollapsibleComponentBlock == null) return false;
 
         byte[] iconBytes = Encode(icon);
         byte[] titleBytes = Encode(title);
         byte[] idBytes = Encode(id);
-        byte nativeRemoveRequested = 0;
+        byte nativeToggled = 0;
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* titlePointer = titleBytes)
         fixed (byte* idPointer = idBytes)
@@ -289,9 +321,10 @@ internal static unsafe class NativeEditorGUI
                 titleBytes.Length,
                 idPointer,
                 idBytes.Length,
-                removable ? (byte)1 : (byte)0,
-                &nativeRemoveRequested) != 0;
-            removeRequested = nativeRemoveRequested != 0;
+                enabled ? (byte)1 : (byte)0,
+                defaultOpen ? (byte)1 : (byte)0,
+                showToggle ? &nativeToggled : null) != 0;
+            toggled = nativeToggled != 0;
             return expanded;
         }
     }
@@ -596,8 +629,8 @@ internal static unsafe class NativeEditorGUI
         }
     }
 
-    //绘制字符串输入框；width <= 0 时用 ImGui 默认宽度
-    internal static bool InputText(string? label, ref string value, float width = 0.0f)
+    //绘制字符串输入框；width <= 0 时用 ImGui 默认宽度；readOnly 为真时按禁用态压暗且不接受输入
+    internal static bool InputText(string? label, ref string value, float width = 0.0f, bool readOnly = false)
     {
         if (!initialized || api.InputText == null) return false;
 
@@ -612,7 +645,8 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* valuePointer = valueBytes)
         {
-            int newByteCount = api.InputText(labelPointer, labelBytes.Length, valuePointer, valueBytes.Length, width);
+            int newByteCount = api.InputText(labelPointer, labelBytes.Length, valuePointer, valueBytes.Length, width,
+                readOnly ? (byte)1 : (byte)0);
             if (newByteCount < 0) return false;
 
             newByteCount = Math.Min(newByteCount, maxBytes);
@@ -746,6 +780,20 @@ internal static unsafe class NativeEditorGUI
         if (!initialized || api.MenuItem == null) return false;
         byte[] bytes = Encode(label);
         fixed (byte* pointer = bytes) return api.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
+    }
+
+    //开始子菜单，返回是否展开；展开时调用方必须配对 EndMenu
+    internal static bool BeginMenu(string? label, bool enabled)
+    {
+        if (!initialized || api.BeginMenu == null) return false;
+        byte[] bytes = Encode(label);
+        fixed (byte* pointer = bytes) return api.BeginMenu(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
+    }
+
+    //结束子菜单
+    internal static void EndMenu()
+    {
+        if (initialized && api.EndMenu != null) api.EndMenu();
     }
 
     //写入剪贴板文本

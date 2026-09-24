@@ -302,7 +302,7 @@ void RenderScene::BuildRenderItems(VisibleSet& visibleSet) const
             item.indexStart = subMesh.indexStart;
             item.indexCount = subMesh.indexCount;
             item.drawLayer = renderer->drawLayer;
-            item.drawQueue = renderer->drawQueue;
+            item.drawQueue = material->GetDrawQueue();
             item.cameraDistance = visible.cameraDistance;
             item.localToWorld = state.localToWorld;
             item.localBounds = state.localBounds;

@@ -27,6 +27,8 @@ namespace Reflection
         Quaternion,
         EnsId,
         Object,
+        //容器条目：payload 是元素个数，元素本身各自成条（编辑器属性快照用）
+        Array,
     };
 
     //可序列化字段的类型分类
@@ -255,6 +257,10 @@ namespace Reflection
     typedef bool (*FieldSetter)(Object* object, const std::string& value);
     typedef Value (*FieldValueGetter)(Object* object);
     typedef bool (*FieldValueSetter)(Object* object, const Value& value);
+    //引用列表的槽位数与改长度。列表文本分不出"0 个槽位"与"1 个空槽位"（两种都是空串），
+    //而空槽是这个列表的合法状态，所以编辑器要真实长度只能另开销位数入口。
+    typedef int32 (*FieldListSizeGetter)(Object* object);
+    typedef bool (*FieldListResizer)(Object* object, int32 count);
 
     //反射方法参数元数据
     struct ParameterInfo
@@ -286,11 +292,19 @@ namespace Reflection
         FieldSetter setter = nullptr;
         FieldValueGetter valueGetter = nullptr;
         FieldValueSetter valueSetter = nullptr;
+        FieldListSizeGetter listSizeGetter = nullptr;
+        FieldListResizer listResizer = nullptr;
 
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr);
+
+        //读取引用列表槽位数；不是引用列表字段时返回 0
+        int32 GetListSize(Object* object) const;
+
+        //改写引用列表槽位数：变长补空槽，变短截断
+        bool ResizeList(Object* object, int32 count) const;
 
         //读取字段值
         Value GetValue(Object* object) const;

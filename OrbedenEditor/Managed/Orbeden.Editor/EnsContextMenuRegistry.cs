@@ -42,7 +42,7 @@ public static class EnsContextMenuRegistry
     }
 
     //绘制所有扩展菜单项。
-    internal static void Draw(EnsContext context, Action<string> setStatus)
+    internal static void Draw(EnsContext context, Action<string> report)
     {
         if (Items.Count == 0) return;
         EditorGUI.Separator();
@@ -56,7 +56,7 @@ public static class EnsContextMenuRegistry
             }
             catch (Exception ex)
             {
-                setStatus($"{item.Label} failed: {ex.Message}");
+                report($"{item.Label} failed: {ex.Message}");
             }
         }
     }

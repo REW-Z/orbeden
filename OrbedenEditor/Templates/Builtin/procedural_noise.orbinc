@@ -1,0 +1,33 @@
+--------frag
+//生成二维格点随机值
+float HashCell(vec2 cell)
+{
+    vec3 value = fract(vec3(cell.xyx) * 0.1031);
+    value += dot(value, value.yzx + 33.33);
+    return fract((value.x + value.y) * value.z);
+}
+
+//插值连续噪声
+float SampleValueNoise(vec2 position)
+{
+    vec2 cell = floor(position);
+    vec2 blend = fract(position);
+    blend = blend * blend * (3.0 - 2.0 * blend);
+    return mix(mix(HashCell(cell), HashCell(cell + vec2(1.0, 0.0)), blend.x),
+        mix(HashCell(cell + vec2(0.0, 1.0)), HashCell(cell + vec2(1.0)), blend.x), blend.y);
+}
+
+//叠加三个尺度的湍流
+float SampleFlowNoise(vec2 position)
+{
+    float result = 0.0;
+    float amplitude = 0.5714286;
+    mat2 rotation = mat2(0.8, 0.6, -0.6, 0.8);
+    for (int octave = 0; octave < 3; ++octave)
+    {
+        result += SampleValueNoise(position) * amplitude;
+        position = rotation * position * 2.03 + vec2(17.1, 9.2);
+        amplitude *= 0.5;
+    }
+    return result;
+}
