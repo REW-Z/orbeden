@@ -72,6 +72,31 @@ internal sealed class InspectorPanel : EditorPanel
         internal PropertyDocument? Document;
     }
 
+    /// <summary>
+    /// Inspector 的绘制路径。**只有这三套**：概念可以有很多（组件、材质资产、图片、模型、
+    /// 引擎自有格式……），绘制方式不能跟着概念长。
+    ///
+    /// 新增一种可检视对象时：
+    /// - 先归入已有路径。外部原始资源与引擎自有格式的导入产物共用 <see cref="ImportedAsset"/>，
+    ///   它们之间的差别（导入设置开不开放）由 EditorAssetInspection 按扩展名决定，不在这里分叉。
+    /// - 确实需要新的绘制方式时才加一项，并同步更新 Docs/AssetInspectorDesign.md 的用途对照表。
+    ///
+    /// 对照 [资源 Inspector 设计](../../../Docs/AssetInspectorDesign.md) 的三种检视用途：
+    /// 场景对象、引擎内部资源、外部原始资源。其中后两者的绘制路径是同一条，
+    /// 唯一例外是 .orbmat——它是唯一可编辑的资源资产，走 <see cref="EditableAsset"/>。
+    /// </summary>
+    private enum InspectorView
+    {
+        /// <summary>没有选中任何可检视目标。</summary>
+        None,
+        /// <summary>场景对象：Ens 名称、全部组件、Add Component。走 PropertyDocument，可多选与撤销。</summary>
+        Ens,
+        /// <summary>可编辑的资源资产：目前只有 .orbmat，按绑定的 Shader 展开槽位并写回文本源。</summary>
+        EditableAsset,
+        /// <summary>导入产物：只读对象清单；导入设置是否开放由 EditorAssetInspection 按扩展名决定。</summary>
+        ImportedAsset,
+    }
+
     private readonly MaterialDocument materialDocument = new();
     private bool materialAssetDirty;
     private readonly Dictionary<int, ComponentDocument> componentDocuments = [];
@@ -141,28 +166,49 @@ internal sealed class InspectorPanel : EditorPanel
     /// <summary>Inspector 不再保存独立脚本文件。</summary>
     public override bool SavePendingChanges() => true;
 
-    /// <summary>绘制当前选择对象及其组件。</summary>
+    /// <summary>绘制当前选择。选择先归入三条绘制路径之一，再由这里分派。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
+        //Ens 优先于资源：两者同时被选中时清掉资源选择，回到组件检查
         if (!context.SelectedEns.IsNull && EditorAssetInspection.SourcePath.Length != 0)
             EditorAssetInspection.Select(null);
-        if (context.SelectedEns.IsNull && EditorAssetInspection.SourcePath.Length != 0)
+
+        switch (ClassifySelection(context))
         {
+        case InspectorView.Ens:
+            DrawEnsSelection(context);
+            break;
+        case InspectorView.EditableAsset:
             ClearPropertyDocuments();
-            //材质资产可以改，其余资产仍然只读
-            if (Path.GetExtension(EditorAssetInspection.SourcePath).Equals(".orbmat", StringComparison.OrdinalIgnoreCase))
-                DrawMaterialAsset();
-            else
-                EditorAssetInspection.Draw();
-            return;
-        }
-        if (context.SelectedEns.IsNull)
-        {
+            DrawMaterialAsset();
+            break;
+        case InspectorView.ImportedAsset:
+            ClearPropertyDocuments();
+            EditorAssetInspection.Draw();
+            break;
+        default:
             ClearPropertyDocuments();
             EditorGUI.Label("No Ens selected.");
-            return;
+            break;
         }
+    }
 
+    //把当前选择归入绘制路径。只做归类，不改动选择状态。
+    private static InspectorView ClassifySelection(EditorPanelContext context)
+    {
+        if (!context.SelectedEns.IsNull) return InspectorView.Ens;
+        if (EditorAssetInspection.SourcePath.Length == 0) return InspectorView.None;
+        return IsEditableAsset(EditorAssetInspection.SourcePath) ? InspectorView.EditableAsset : InspectorView.ImportedAsset;
+    }
+
+    //可编辑的资源资产。目前只有 .orbmat：它按绑定的 Shader 展开槽位，改完写回文本源。
+    //新增时先确认它确实需要一套独立绘制方式，而不是能并进导入清单那条路径。
+    private static bool IsEditableAsset(string path)
+        => Path.GetExtension(path).Equals(".orbmat", StringComparison.OrdinalIgnoreCase);
+
+    //场景对象：名称、组件卡片、Add Component
+    private void DrawEnsSelection(EditorPanelContext context)
+    {
         List<EnsId> selection = GetValidSelection(context.SelectedEns, context.SelectedEnsList);
         if (selection.Count == 0)
         {

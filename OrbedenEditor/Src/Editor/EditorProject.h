@@ -35,8 +35,12 @@ private:
     Application& app;
     std::string projectRoot;
     std::string projectName;
+    //打包后 Player 启动时装载的场景。编辑器不关心它，PIE 用的也是当前打开的场景。
     std::string startupWorld;
-    //当前正在编辑的场景，相对内容根。打开项目时等于 startupWorld，之后可以切换到别的场景。
+    //开发者最后编辑过的场景，随切换持久化。重新打开项目时回到它，让工作现场不被启动场景冲掉。
+    //引用的场景已不存在时退回 startupWorld。
+    std::string lastWorld;
+    //当前正在编辑的场景，相对内容根。打开项目时取自 lastWorld，之后可以切换到别的场景。
     std::string currentWorld;
     std::string projectFilePath;
     EditorLayoutState editorLayout;

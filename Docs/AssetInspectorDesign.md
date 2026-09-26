@@ -79,6 +79,22 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 
 ## Inspector 展示
 
+Inspector 承担三种检视用途，由**选择来源**决定走哪一支：
+
+| 用途 | 选择来源 | 数据来源 | 可编辑 |
+| --- | --- | --- | --- |
+| Ens 及其 Components | 场景视图、EnsView | 原生组件快照 | 是，走 PropertyDocument，带多选与 Undo/Redo |
+| 引擎内部资源 | Project 选 `.orbmat` | 内存中的 Material 对象 | 是，写回 `.orbmat` 文本源 |
+| | Project 选 `.orbo` / `.orbshader` / `.glsl` | 后台导入清单 | 只读 |
+| 外部原始资源 | Project 选 `.png` / `.jpg` / `.obj` / `.gltf` 等 | 后台导入清单 | 导入设置可编辑，对象清单只读 |
+
+**Ens 优先于资源**：两者同时有选择时清掉资源选择，回到组件检查。选择与焦点所有权的规则见 [Project 选择、展开与引用](#project-选择展开与引用)。
+
+两处与直觉不符、实现上是刻意的：
+
+- **`.world` 没有导入清单**。它是场景而不是导入资源：双击或 Open 由编辑器自己装载（`EditorWorldActions.RequestOpen`），Ens 与组件通过场景视图和 EnsView 编辑。选中它时 Inspector 给出的是**世界级设置**——启动场景标记，以及环境设置（天空盒、环境光）。后者挂在 World 上而不是任何 Ens 上，EnsView 够不着，因此与 RenderingPanel **共用同一份编辑实现**（`EditorEnvironmentSettings`），两处都能改。环境设置只有当前打开的世界能改：编辑器操作的是内存里的 World 对象，改不了磁盘上别的场景文件；启动场景标记则任何世界都能设，它记在 `.oeproj` 上。
+- **`.orbmat` 不走资源清单那一条路**，而是独立的材质编辑器：它按绑定的 Shader 展开颜色槽、浮点槽、纹理槽，改完写回文本源再用 `ResourceManager::Reimport` 就地更新对象。其余内部资源与外部原始资源共用同一条只读清单路径。
+
 资源卡片按完整 Key 分配独立 UI 身份，可折叠，显示类型、Key 与反射值。对于没有通用反射 getter 的已知资源容器，补充专用只读摘要：
 
 - Mesh：顶点、UV、法线、切线、索引数量，以及子网格名称和区间。
@@ -90,21 +106,36 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 
 ### 导入设置编辑
 
-支持导入设置的类型，在只读资源列表**上方**多出一节可编辑的 **Import Settings**：
+源文件 Inspector 分两节，用可折叠小标题（`TreeNode`，与 Project Settings 面板同一做法）：
 
-| 类型 | 设置 | 说明 |
+```
+brick.png                    ← 文件名
+▼ Import Settings            ← 有设置时才有这一节
+    Color Space  [Auto ▾]
+    [Apply] [Revert]
+▼ Objects                    ← 导入产出的内部对象清单，只读
+    ▸ Texture2D
+```
+
+| 源类型 | 设置 | 取值 |
 | --- | --- | --- |
 | 图片（png/jpg/jpeg/tga/bmp） | Color Space | `Auto (by usage)` / `sRGB (color)` / `Linear (data)` |
+| 模型（obj/gltf/glb） | Scale | 正浮点，默认 1 |
+| | Up Axis | `Y-up (engine native)` / `Z-up -> Y-up` |
 
-改动流程：写回伴生文件的 `Settings` → 让缓存失效 → 进程内 Reimport 让运行时对象立刻与新设置一致 → 后台工作进程重新生成清单与产物。因此 Inspector 里的值、运行时对象、磁盘产物三者同步更新。
+**Scale 与 Up Axis** 在网格成形之后统一施加于该源产出的全部网格：缩放是统一倍率，因此不改变法线方向；Z-up 转换是纯旋转 `(x,y,z) → (x,z,-y)`，法线同样变换。引擎是 Y-up（XZ 为地面平面），Blender 与多数 CAD 导出是 Z-up，勾选后即可直接对齐。
 
-`Auto` 是**删除该键**而不是写入一个特殊值：缺键即"按语义推断"，这样新增设置项不需要迁移老文件。
+**改动流程**：草稿累积 → Apply → 写回伴生文件的 `Settings` → 让缓存失效 → 进程内 Reimport 让运行时对象立刻与新设置一致 → 后台工作进程重新生成清单与产物。Inspector 里的值、运行时对象、磁盘产物三者同步更新。
 
-设置目前只对图片源开放：图片一个文件对应一个 `Texture2D`，语义明确。复合资源（glTF/OBJ）的子贴图各有用途，没有独立的设置文件，因此按语义推断。
+数值控件拖动期间会连续返回值，因此设置走**草稿 + Apply** 而不是即时生效，避免每帧触发一次模型重新导入。
+
+`Auto` / 空值 是**删除该键**而不是写入一个特殊值：缺键即"按文件原样 / 按语义推断"，这样新增设置项不需要迁移老文件。
+
+设置按**源文件**生效。复合资源里的子贴图不受源级设置影响——一个 `.gltf` 里的多张贴图各有用途，文件级的单个 `colorSpace` 键表达不了，它们仍按语义推断。
 
 播放中禁止编辑（与资源重命名、保存材质同一条件）。
 
-设置写入不会误标记 World dirty，也不进入组件 Undo；Ens 和组件仍通过原有 PropertyDocument 编辑。清单部分仍然只读。
+设置写入不会误标记 World dirty，也不进入组件 Undo；Ens 和组件仍通过原有 PropertyDocument 编辑。对象清单部分仍然只读。
 
 ## Project 选择、展开与引用
 

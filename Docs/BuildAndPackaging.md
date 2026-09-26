@@ -462,7 +462,16 @@ MyGame/
                             **/*.world（保持原目录结构）
 ```
 
-`Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`——位置既然固定，就不该做成可配置属性。
+`Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`、`lastWorld`——位置既然固定，就不该做成可配置属性。
+
+两个场景 Key 各服务一端，不要混：
+
+| 属性 | 服务对象 | 说明 |
+| --- | --- | --- |
+| `startupWorld` | 打包后的 Player | 启动时装载哪个场景。编辑器只在 `lastWorld` 缺失或失效时回退到它 |
+| `lastWorld` | 编辑器 | 开发者最后编辑的场景，切换场景时写入；重新打开项目回到它 |
+
+两者都相对内容根。`lastWorld` 引用的场景被删或被改名时（改名会随引用重写一起更新），打开项目退回 `startupWorld`。PIE 用的是**当前打开的场景**，与这两个属性都无关。
 
 `ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存带源文件名前缀的 `.orbo` 产物，Project/Inspector 读取伴生文件的清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。产物**不纳入版本管理**，Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
 
@@ -526,6 +535,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 22 | `.oeproj` 新增 `lastWorld` 属性，记录开发者最后编辑的场景，重新打开项目时回到它——此前编辑器固定落在 `startupWorld` 上，切过场景的工作现场会被冲掉。`startupWorld` 语义收窄为**只服务打包后的 Player**；编辑器打开项目不再读它（仅当 `lastWorld` 为空或引用的场景已不存在时回退）。PIE 从当前打开的场景开始，与 `startupWorld` 无关（行为本来如此，这次只是明确）。**老项目无需迁移**：缺少 `lastWorld` 时回退到 `startupWorld`，首次切换场景后自动写入。World 资源 Inspector 现在能设置启动场景，不必再翻 Project 右键菜单。 |
 | 21 | `.resinfo` 从 `ResourceCache/Imported/` 移到**源文件旁的伴生文件**并纳入版本管理，分「导入设置」与「内部隐含资源清单」两部分；导入设置由用户编辑，重新导入时保留，清单每次重新生成。对象产物 `.orbo` 仍在 `ResourceCache/Imported/`，继续不进版本管理。升级会剔除项目 `.gitignore` 里的 `*.resinfo` 规则（`ResourceCache/` 与 `*.resinfo.tmp` 保留），旧位置的清单随整个 ResourceCache 一起删除、由下一次导入在原位重建，不需要手工搬移。首次升级后重新导入一次即可让所有伴生文件就位。Inspector 现在能编辑图片资源的颜色空间；约定见 [颜色管线](ColorPipeline.md)。 |
 | 20 | 颜色空间统一为线性工作空间：场景缓冲改为 RGBA16F 线性 HDR，纹理按语义用 sRGB 内部格式解码，显示输出由管线末端的输出 Pass 统一完成（曝光 → AgX 色调映射 → sRGB 编码）。**必须重新执行 `Build Player`**：`.orbo` 格式 tag 升到 2，旧产物需重新 cook。材质颜色、环境光、清屏色、光源色、描边与调试线颜色的语义统一为「面板与资产填 sRGB，渲染用线性」。新增项目级设置文件 `ProjectSettings.display`（曝光默认值，随 Player 复制）；相机可用 `Camera.overrideExposure` 单独覆盖。**内置 Shader 不会被升级覆盖**：老项目 `Content/Builtin/Shaders/pbs_metallic.orbshader` 仍带着手写的 sRGB 编码，与新管线叠加会造成双重编码，画面明显过亮发灰；需手工同步 `Content/Builtin/Shaders/` 与 `Content/Builtin/shadow_common.orbinc`，或使用 Dev 面板的 `Reset Builtin`。管线约定见 [颜色管线](ColorPipeline.md)。 |
 | 19 | 增加组件 Gizmos 与 CustomEditor SDK。内容根内 `Editor` 目录中的 C# 源码改为编译到独立 `.Editor.dll`，Player/AOT 排除这些文件；升级后刷新 SDK、重编译游戏与编辑器扩展。原生物理 SDK 增加凸包线框读取接口。 |

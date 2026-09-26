@@ -645,6 +645,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     std::string rootTag = content.substr(tagStart, tagEnd - tagStart + 1);
     std::string parsedName = DeriveProjectName(filePath, rootTag);
     std::string parsedStartupWorld = GetAttribute(rootTag, "startupWorld");
+    std::string parsedLastWorld = GetAttribute(rootTag, "lastWorld");
     EditorLayoutState parsedLayout;
     ReadEditorLayout(content, parsedLayout);
     if (parsedStartupWorld.empty())
@@ -656,8 +657,15 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
 
     std::string parsedProjectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
     std::filesystem::path contentRoot = Utf8Path::FromUtf8(parsedProjectRoot) / ProjectLayout::ContentFolder;
-    //startupWorld 相对内容根，场景放在内容根内任何目录都能加载。
-    std::string worldPath = ToCleanPath(contentRoot / Utf8Path::FromUtf8(parsedStartupWorld));
+    //两个 Key 都相对内容根，场景放在内容根内任何目录都能加载。
+    //编辑器回到上次编辑的场景；它已经被删或被改名时退回启动场景，
+    //老项目没有 lastWorld 属性，同样走这条回退。
+    std::string openedWorld = parsedStartupWorld;
+    if (!parsedLastWorld.empty() && std::filesystem::is_regular_file(contentRoot / Utf8Path::FromUtf8(parsedLastWorld)))
+    {
+        openedWorld = parsedLastWorld;
+    }
+    std::string worldPath = ToCleanPath(contentRoot / Utf8Path::FromUtf8(openedWorld));
     RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
     if (renderSystem)
     {
@@ -673,8 +681,9 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     projectRoot = parsedProjectRoot;
     projectName = parsedName;
     startupWorld = parsedStartupWorld;
-    //打开项目先落在 .oeproj 声明的启动场景上，之后可以切换到内容根内任意场景。
-    currentWorld = parsedStartupWorld;
+    //lastWorld 保留文件里记的原值；currentWorld 是本次实际打开的场景，两者在回退时不同。
+    lastWorld = parsedLastWorld;
+    currentWorld = openedWorld;
     projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     editorLayout = parsedLayout;
     lastError.clear();
@@ -799,6 +808,23 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
     currentWorld = ToCleanPath(Utf8Path::FromUtf8(relativePath));
     worldLoaded = true;
     lastError.clear();
+
+    //记下最后编辑的场景，下次打开项目回到它。写不进去不算切换失败——
+    //场景已经加载好了，只是下次不会回到这里。
+    if (currentWorld != lastWorld)
+    {
+        if (UpdateProjectRootAttributes(projectFilePath, { { "lastWorld", currentWorld } }, {}, lastError))
+        {
+            lastWorld = currentWorld;
+            lastError.clear();
+        }
+        else
+        {
+            Log::Warning(lastError.c_str());
+            lastError.clear();
+        }
+    }
+
     Log::Info(("World opened: " + worldPath).c_str());
     return true;
 }
@@ -840,9 +866,23 @@ bool EditorProject::RemapWorldKeys(const std::string& oldKey, const std::string&
         lastError = "Select another startup World before deleting this asset.";
         return false;
     }
-    if (startup != startupWorld
-        && !UpdateProjectRootAttributes(projectFilePath, { { "startupWorld", startup } }, {}, lastError)) return false;
+    std::string last = mapKey(lastWorld);
+
+    List<std::pair<std::string, std::string>> attributes;
+    List<std::string> removed;
+    if (startup != startupWorld) attributes.emplace_back("startupWorld", startup);
+    //上次编辑的场景跟着一起改；被删掉时直接去掉这个属性，下次打开退回启动场景
+    if (last != lastWorld)
+    {
+        if (last.empty()) removed.emplace_back("lastWorld");
+        else attributes.emplace_back("lastWorld", last);
+    }
+
+    if ((!attributes.empty() || !removed.empty())
+        && !UpdateProjectRootAttributes(projectFilePath, attributes, removed, lastError)) return false;
+
     startupWorld = startup;
+    lastWorld = last;
     currentWorld = mapKey(currentWorld);
     if (currentWorld.empty()) worldLoaded = false;
     lastError.clear();

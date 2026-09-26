@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -84,6 +85,23 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
             else if (value == "Linear") { settings.hasTextureColorSpace = true; settings.textureColorSpace = TextureColorSpace::Linear; }
             else Log::Warning(("Unknown import setting value for colorSpace: " + value).c_str());
         }
+        else if (name == "scale")
+        {
+            float32 parsed = 1.0f;
+            auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+            if (result.ec == std::errc() && result.ptr == value.data() + value.size() && std::isfinite(parsed) && parsed > 0.0f)
+            {
+                settings.hasMeshScale = true;
+                settings.meshScale = parsed;
+            }
+            else Log::Warning(("Unknown import setting value for scale: " + value).c_str());
+        }
+        else if (name == "upAxis")
+        {
+            if (value == "Y") { settings.hasMeshUpAxis = true; settings.meshUpAxis = MeshUpAxis::Y; }
+            else if (value == "Z") { settings.hasMeshUpAxis = true; settings.meshUpAxis = MeshUpAxis::Z; }
+            else Log::Warning(("Unknown import setting value for upAxis: " + value).c_str());
+        }
         //不认识的设置名直接跳过：表由编辑器写，多出来的项属于更高版本的编辑器
 
         if (end == table.size()) break;
@@ -106,6 +124,42 @@ namespace
     {
         if (slotName == MaterialNormalTextureSlot) return TextureColorSpace::Linear;
         return TextureColorSpace::SRGB;
+    }
+
+    //按导入设置调整集合里的全部网格：缩放倍率与源坐标系上轴。
+    //两者都在网格成形之后统一施加，与文件里自带的节点变换是叠加关系。
+    void ApplyMeshImportSettings(AssetCollection& collection, const AssetImportSettings& settings)
+    {
+        if (!settings.hasMeshScale && !settings.hasMeshUpAxis) return;
+        const bool convertUpAxis = settings.hasMeshUpAxis && settings.meshUpAxis == MeshUpAxis::Z;
+
+        for (Object* object : collection.objects)
+        {
+            Mesh* mesh = object ? object->Cast<Mesh>() : nullptr;
+            if (!mesh || mesh->vertices.empty()) continue;
+
+            for (usize index = 0; index < mesh->vertices.size(); ++index)
+            {
+                vector3 position = mesh->vertices[index];
+                //Z-up 源：源 +Z 指向引擎 +Y，源 +Y 指向引擎 -Z。这是纯旋转，法线同样变换。
+                if (convertUpAxis) position = { position.x, position.z, -position.y };
+                if (settings.hasMeshScale)
+                {
+                    position.x *= settings.meshScale;
+                    position.y *= settings.meshScale;
+                    position.z *= settings.meshScale;
+                }
+                mesh->vertices[index] = position;
+
+                if (index >= mesh->normals.size()) continue;
+                vector3 normal = mesh->normals[index];
+                //统一缩放不改变法线方向，只有坐标轴转换需要施加在法线上
+                if (convertUpAxis) normal = { normal.x, normal.z, -normal.y };
+                mesh->normals[index] = normal;
+            }
+
+            mesh->MarkDirty();
+        }
     }
 
     struct VertexKey
@@ -1780,13 +1834,14 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
 {
     std::string sourceKey = ResourceManager::GetSourceKey(path);
 
-    //设置目前只作用于图片源：复合资源（glTF/OBJ）的子贴图各有语义，没有独立的设置文件。
+    //设置按源文件生效：图片源看 colorSpace，模型源看网格缩放与坐标轴。
+    //复合资源里的子贴图不受源级设置影响——它们各有语义，一个文件级的键表达不了。
     switch (SelectImporter(sourceKey))
     {
     case AssetImporter::Image: return Import_IMG(sourceKey, settings);
-    case AssetImporter::Obj: return Import_OBJ(sourceKey);
+    case AssetImporter::Obj: return Import_OBJ(sourceKey, settings);
     case AssetImporter::OrbMat: return Import_ORBMAT(sourceKey);
-    case AssetImporter::Gltf: return Import_GLTF(sourceKey);
+    case AssetImporter::Gltf: return Import_GLTF(sourceKey, settings);
     case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
     case AssetImporter::Glsl: return Import_GLSL(sourceKey);
     case AssetImporter::None: break;
@@ -1976,7 +2031,7 @@ AssetCollection AssetPipeline::Import_IMG(std::string path, const AssetImportSet
 }
 
 //导入glTF或GLB为复合资源
-AssetCollection AssetPipeline::Import_GLTF(std::string path)
+AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSettings& settings)
 {
     AssetCollection collection;
     std::string sourceKey = ResourceManager::ToResourceKey(path);
@@ -2115,11 +2170,12 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path)
         collection.AddWarning("glTF contains no meshes: " + sourceKey);
     }
 
+    ApplyMeshImportSettings(collection, settings);
     return collection;
 }
 
 //导入OBJ为复合资源
-AssetCollection AssetPipeline::Import_OBJ(std::string path)
+AssetCollection AssetPipeline::Import_OBJ(std::string path, const AssetImportSettings& settings)
 {
     AssetCollection collection;
     std::string sourceKey = ResourceManager::ToResourceKey(path);
@@ -2295,6 +2351,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path)
 
     mesh->MarkDirty();
     collection.AddObject(meshKey, mesh, true);
+    ApplyMeshImportSettings(collection, settings);
     return collection;
 }
 

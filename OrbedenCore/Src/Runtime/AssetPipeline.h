@@ -7,8 +7,17 @@
 
 class Material;
 
+//模型源文件的坐标系上轴。引擎是 Y-up（XZ 为地面平面）。
+enum class MeshUpAxis : uint32
+{
+    //引擎原生轴向，不做转换
+    Y = 0,
+    //Z-up 源（Blender、CAD 等），导入时整体转到 Y-up
+    Z = 1,
+};
+
 //单次导入的选项，来自资源旁 .resinfo 的设置段。
-//每个键都带"是否指定"的语义：未指定时导入器按语义自动推断，指定时以用户值为准。
+//每个键都带"是否指定"的语义：未指定时按文件原样或按语义推断，指定时以用户值为准。
 struct AssetImportSettings
 {
 public:
@@ -19,6 +28,14 @@ public:
     //纹理颜色空间；未指定时按语义推断（基础色 sRGB、法线等数据贴图线性）
     bool hasTextureColorSpace = false;
     TextureColorSpace textureColorSpace = TextureColorSpace::SRGB;
+
+    //网格缩放倍率；未指定时按文件原样。统一缩放不改变法线方向。
+    bool hasMeshScale = false;
+    float32 meshScale = 1.0f;
+
+    //源坐标系上轴；未指定时按 Y-up 原样
+    bool hasMeshUpAxis = false;
+    MeshUpAxis meshUpAxis = MeshUpAxis::Y;
 
     //从设置表里取出指定源文件的设置；首行是可选的版本头
     static AssetImportSettings Lookup(const std::string& table, const std::string& sourceKey);
@@ -89,11 +106,11 @@ public:
     /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
     static bool SaveMaterialAsset(const Material& material, const std::string& path, std::string& error);
 
-    //导入OBJ为复合资源
-    static AssetCollection Import_OBJ(std::string path);
+    //导入OBJ为复合资源；settings 里的网格缩放与坐标轴作用于产出的全部网格
+    static AssetCollection Import_OBJ(std::string path, const AssetImportSettings& settings = {});
 
-    //导入glTF或GLB为复合资源
-    static AssetCollection Import_GLTF(std::string path);
+    //导入glTF或GLB为复合资源；settings 里的网格缩放与坐标轴作用于产出的全部网格
+    static AssetCollection Import_GLTF(std::string path, const AssetImportSettings& settings = {});
 
     //导入OBJ为非索引Mesh
     static AssetCollection Import_AsIndexlessMesh_OBJ(std::string path);
