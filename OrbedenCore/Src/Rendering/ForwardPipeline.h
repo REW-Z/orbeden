@@ -40,6 +40,9 @@ public:
     //按照既定 pass 顺序渲染指定相机的可见集合。
     void Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager);
 
+    //阴影调试视图是否生效，供输出 Pass 决定要不要跳过色调映射。
+    bool IsShadowDebugViewActive() const { return shadows.IsDebugViewActive(); }
+
 private:
     //从当前内容根目录加载管线内置 shader。
     void LoadBuiltinShaders();

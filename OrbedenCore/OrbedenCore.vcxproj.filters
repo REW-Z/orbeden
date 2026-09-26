@@ -405,5 +405,7 @@
   <ItemGroup>
     <ClInclude Include="Src\Runtime\LayerSettings.h" />
     <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+    <ClInclude Include="Src\Runtime\DisplaySettings.h" />
+    <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
   </ItemGroup>
 </Project>

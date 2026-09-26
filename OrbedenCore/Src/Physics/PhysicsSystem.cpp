@@ -1674,3 +1674,29 @@ vector3 PhysicsSystem::GetGravity() const
 {
     return impl && impl->scene ? FromPx(impl->scene->getGravity()) : vector3{ 0.0f, -9.81f, 0.0f };
 }
+
+/// <summary>复用 PhysX 烘焙凸包，按多边形边界输出不重复的线段。</summary>
+bool PhysicsSystem::GetConvexWireframe(Mesh& mesh, List<vector3>& lines)
+{
+    lines.clear();
+    if (!IsInitialized()) return false;
+    if (mesh.IsDirty(MeshDirtyFlags::Physics)) impl->InvalidateCookedMeshes(mesh);
+    PxConvexMesh* convex = impl->GetConvexMesh(mesh);
+    if (!convex) return false;
+    const PxVec3* vertices = convex->getVertices();
+    const PxU8* indices = convex->getIndexBuffer();
+    for (PxU32 face = 0; face < convex->getNbPolygons(); ++face)
+    {
+        PxHullPolygon polygon;
+        if (!convex->getPolygonData(face, polygon)) continue;
+        for (PxU32 edge = 0; edge < polygon.mNbVerts; ++edge)
+        {
+            PxU8 a = indices[polygon.mIndexBase + edge];
+            PxU8 b = indices[polygon.mIndexBase + (edge + 1) % polygon.mNbVerts];
+            if (a >= b) continue;
+            lines.push_back(FromPx(vertices[a]));
+            lines.push_back(FromPx(vertices[b]));
+        }
+    }
+    return true;
+}

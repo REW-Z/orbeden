@@ -69,6 +69,24 @@ namespace
         return GL_RGBA;
     }
 
+    //sRGB 只定义了 3 与 4 通道变体，单通道没有对应格式，只能保持线性。
+    GLenum ToSrgbTextureFormat(int32 channels)
+    {
+        if (channels == 3) return GL_SRGB8;
+        if (channels == 4) return GL_SRGB8_ALPHA8;
+        return ToTextureFormat(channels);
+    }
+
+    GLenum ToRenderTargetFormat(GpuRenderTargetFormat format)
+    {
+        return format == GpuRenderTargetFormat::RGBA16F ? GL_RGBA16F : GL_RGBA8;
+    }
+
+    GLenum ToRenderTargetSourceType(GpuRenderTargetFormat format)
+    {
+        return format == GpuRenderTargetFormat::RGBA16F ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE;
+    }
+
     std::string GetShaderLog(uint32 shader)
     {
         GLint length = 0;
@@ -306,6 +324,8 @@ GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     if (desc.width <= 0 || desc.height <= 0 || !desc.pixels) return GpuTextureID();
 
     GLenum format = ToTextureFormat(desc.channels);
+    //像素字节保持不变，sRGB 内部格式让采样阶段由硬件解码到线性。
+    GLenum internalFormat = desc.srgb ? ToSrgbTextureFormat(desc.channels) : format;
     GLuint id = 0;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
@@ -313,7 +333,7 @@ GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexImage2D(GL_TEXTURE_2D, 0, format, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.pixels);
     glBindTexture(GL_TEXTURE_2D, 0);
     boundTexture2Ds[currentTextureSlot] = 0;
     return { id };
@@ -366,6 +386,7 @@ GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc
     if (desc.width <= 0 || desc.height <= 0) return GpuCubeTextureID();
 
     GLenum format = ToTextureFormat(desc.channels);
+    GLenum internalFormat = desc.srgb ? ToSrgbTextureFormat(desc.channels) : format;
     GLuint id = 0;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
@@ -385,7 +406,7 @@ GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc
             return GpuCubeTextureID();
         }
 
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, format, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.faces[face]);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, internalFormat, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.faces[face]);
     }
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
@@ -420,7 +441,7 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, colorFilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, desc.width, desc.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, ToRenderTargetFormat(desc.format), desc.width, desc.height, 0, GL_RGBA, ToRenderTargetSourceType(desc.format), nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
         boundTexture2Ds[currentTextureSlot] = 0;
     }
@@ -452,6 +473,7 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     }
 
     renderTargetColorAttachments[id] = colorTexture;
+    renderTargetFormats[id] = desc.format;
     return { id };
 }
 
@@ -473,6 +495,8 @@ void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
         }
         renderTargetColorAttachments.erase(it);
     }
+
+    renderTargetFormats.erase(id.id);
 }
 
 GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID id) const
@@ -484,7 +508,7 @@ GpuTextureID OpenGLRenderBackend::GetRenderTargetColorTexture(GpuRenderTargetID 
 }
 
 //复制渲染目标颜色和深度
-bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc)
+bool OpenGLRenderBackend::CopyRenderTarget(const GpuRenderTargetCopyDesc& desc)
 {
     if (!desc.destinationRenderTarget.IsValid() || desc.width <= 0 || desc.height <= 0) return false;
 
@@ -495,6 +519,20 @@ bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCop
     {
         auto source = renderTargetColorAttachments.find(desc.sourceRenderTarget.id);
         if (source == renderTargetColorAttachments.end() || source->second == 0) return false;
+
+        //相机快照必须同级格式，否则 blit 会静默把 HDR 高光钳到 [0,1]。
+        //colorOnly 用于把显示目标搬进场景缓冲，此时由窄到宽是有意为之。
+        if (!desc.colorOnly)
+        {
+            auto sourceFormat = renderTargetFormats.find(desc.sourceRenderTarget.id);
+            auto destinationFormat = renderTargetFormats.find(desc.destinationRenderTarget.id);
+            if (sourceFormat != renderTargetFormats.end() && destinationFormat != renderTargetFormats.end() &&
+                sourceFormat->second != destinationFormat->second)
+            {
+                Log::Error("OpenGL render target copy skipped: source and destination formats differ.");
+                return false;
+            }
+        }
     }
 
     //拷贝颜色和深度附件
@@ -502,6 +540,8 @@ bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCop
     glReadBuffer(desc.sourceRenderTarget.IsValid() ? GL_COLOR_ATTACHMENT0 : GL_BACK);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, desc.destinationRenderTarget.id);
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    GLbitfield blitMask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
+    if (desc.colorOnly) blitMask = GL_COLOR_BUFFER_BIT;
     glBlitFramebuffer(
         desc.sourceX,
         desc.sourceY,
@@ -511,7 +551,7 @@ bool OpenGLRenderBackend::CopyRenderTargetColorAndDepth(const GpuRenderTargetCop
         0,
         desc.width,
         desc.height,
-        GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT,
+        blitMask,
         GL_NEAREST);
 
     GLenum error = glGetError();

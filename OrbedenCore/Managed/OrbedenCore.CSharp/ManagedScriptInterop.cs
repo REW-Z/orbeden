@@ -70,6 +70,8 @@ internal static partial class ManagedTypeMetadataCache
         else if (valueType == typeof(quaternion)) kind = InteropValueKind.Quaternion;
         else if (valueType == typeof(EnsId)) kind = InteropValueKind.EnsId;
         else if (typeof(Object).IsAssignableFrom(valueType)) kind = InteropValueKind.Object;
+        else if (GetCollectionElementType(valueType) is Type element && TryGetKind(element, out var elementKind)
+            && elementKind != InteropValueKind.Array) kind = InteropValueKind.Array;
         else
         {
             kind = InteropValueKind.Empty;
@@ -85,6 +87,9 @@ internal static partial class ManagedTypeMetadataCache
             value = default;
             return false;
         }
+
+        //集合由宿主持久化入口处理，不能装成只携带单个标量的代理值。
+        if (kind == InteropValueKind.Array) { value = default; return false; }
 
         if (input == null)
         {
@@ -210,7 +215,7 @@ internal static partial class ManagedTypeMetadataCache
             for (int index = 0; index < parameters.Length; ++index)
             {
                 parameterTypes[index] = parameters[index].ParameterType;
-                if (!TryGetKind(parameterTypes[index], out kinds[index]))
+                if (!TryGetKind(parameterTypes[index], out kinds[index]) || kinds[index] == InteropValueKind.Array)
                 {
                     supported = false;
                     break;
@@ -235,7 +240,7 @@ internal static partial class ManagedTypeMetadataCache
             kind = InteropValueKind.Empty;
             return true;
         }
-        return TryGetKind(type, out kind);
+        return TryGetKind(type, out kind) && kind != InteropValueKind.Array;
     }
 
     private static bool TryParseSerialized(InteropValueKind kind, string text, out InteropValue value)

@@ -19,7 +19,8 @@
 namespace
 {
     constexpr char BlobMagic[4] = { 'O', 'R', 'B', 'O' };
-    constexpr uint32 BlobFormatTag = 1;
+    //2：Texture2D 载荷增加 colorSpace 字段，位置式布局随之改变，旧产物必须失效。
+    constexpr uint32 BlobFormatTag = 2;
 
     //解析源文件磁盘路径，与 AssetPipeline 的 Key 解析保持一致
     std::string GetSourceFilePath(const std::string& sourceKey)
@@ -156,6 +157,7 @@ namespace
         writer.WriteValue(static_cast<int32>(texture->height));
         writer.WriteValue(static_cast<int32>(texture->channels));
         writer.WriteValue(static_cast<int32>(texture->format));
+        writer.WriteValue(static_cast<uint32>(texture->colorSpace));
         writer.WriteArray(texture->pixels);
         return true;
     }
@@ -163,12 +165,20 @@ namespace
     //读取纹理载荷
     bool ReadTexture2D(BlobReader& reader, Texture2D* texture)
     {
-        return reader.ReadText(texture->name)
-            && reader.ReadValue(texture->width)
-            && reader.ReadValue(texture->height)
-            && reader.ReadValue(texture->channels)
-            && reader.ReadValue(texture->format)
-            && reader.ReadArray(texture->pixels);
+        uint32 colorSpace = static_cast<uint32>(TextureColorSpace::SRGB);
+        if (!reader.ReadText(texture->name)
+            || !reader.ReadValue(texture->width)
+            || !reader.ReadValue(texture->height)
+            || !reader.ReadValue(texture->channels)
+            || !reader.ReadValue(texture->format)
+            || !reader.ReadValue(colorSpace)
+            || !reader.ReadArray(texture->pixels))
+        {
+            return false;
+        }
+
+        texture->colorSpace = static_cast<TextureColorSpace>(colorSpace);
+        return true;
     }
 
     //写入网格载荷

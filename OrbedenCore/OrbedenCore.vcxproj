@@ -173,9 +173,12 @@
     <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />
     <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h" />
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
+    <ClInclude Include="Src\Rendering\ColorSpace.h" />
     <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
+    <ClInclude Include="Src\Rendering\FullscreenQuad.h" />
     <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
     <ClInclude Include="Src\Rendering\ImGuiLayer.h" />
+    <ClInclude Include="Src\Rendering\OutputPass.h" />
     <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
     <ClInclude Include="Src\Rendering\RenderMath.h" />
     <ClInclude Include="Src\Rendering\RenderScene.h" />
@@ -252,8 +255,10 @@
     <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
+    <ClCompile Include="Src\Rendering\FullscreenQuad.cpp" />
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
     <ClCompile Include="Src\Rendering\ImGuiLayer.cpp" />
+    <ClCompile Include="Src\Rendering\OutputPass.cpp" />
     <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
     <ClCompile Include="Src\Rendering\RenderMath.cpp" />
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
@@ -334,6 +339,7 @@
     <Copy SourceFiles="$(OrbedenSharedBuildDir)GameModule.cpp" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(OrbedenSharedBuildDir)GameAotExports.cs" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.EditorExtensions.csproj" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
           DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
@@ -360,5 +366,7 @@
   <ItemGroup>
     <ClInclude Include="Src\Runtime\LayerSettings.h" />
     <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+    <ClInclude Include="Src\Runtime\DisplaySettings.h" />
+    <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
   </ItemGroup>
 </Project>

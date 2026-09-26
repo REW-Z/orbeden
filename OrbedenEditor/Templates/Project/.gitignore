@@ -1,4 +1,5 @@
 Build/
+#资源产物可全量重建，不进版本管理
 ResourceCache/
-*.resinfo
+#伴生文件承载导入设置，必须进版本管理；只忽略原子写入过程中的临时文件
 *.resinfo.tmp

@@ -7,6 +7,12 @@ namespace OrbedenEditor;
 /// <summary>Editor Immediate GUI API。</summary>
 public static class EditorGUI
 {
+    /// <summary>建立局部控件 ID 空间，须在 finally 中配对 PopId。</summary>
+    public static void PushId(string id) => NativeEditorGUI.PushId(id);
+
+    /// <summary>结束局部控件 ID 空间。</summary>
+    public static void PopId() => NativeEditorGUI.PopId();
+
     private static IObjectFieldAssetProvider? objectFieldAssetProvider;
 
     /// <summary>设置资源字段数据源。</summary>
@@ -147,7 +153,7 @@ public static class EditorGUI
         => NativeEditorGUI.RenameInput(id, ref value, ref focusRequested, width);
 
     /// <summary>开始表格。</summary>
-    public static bool BeginTable(string id, int columns) => NativeEditorGUI.BeginTable(id, columns);
+    public static bool BeginTable(string id, int columns, bool scroll = true) => NativeEditorGUI.BeginTable(id, columns, scroll);
 
     /// <summary>结束表格。</summary>
     public static void EndTable() => NativeEditorGUI.EndTable();

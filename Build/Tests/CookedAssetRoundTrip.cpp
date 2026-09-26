@@ -51,7 +51,8 @@ std::string DescribeTexture(Texture2D* texture)
 {
     std::ostringstream stream;
     stream << "Texture2D|" << texture->name << '|' << texture->width << '|' << texture->height
-        << '|' << texture->channels << '|' << texture->format << '|' << texture->pixels.size();
+        << '|' << texture->channels << '|' << texture->format
+        << '|' << static_cast<uint32>(texture->colorSpace) << '|' << texture->pixels.size();
 
     uint64 pixelsHash = 14695981039346656037ull;
     FoldArray(pixelsHash, texture->pixels);

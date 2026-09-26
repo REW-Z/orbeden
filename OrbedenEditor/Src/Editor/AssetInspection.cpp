@@ -15,7 +15,8 @@
 #include <cctype>
 #include <filesystem>
 #include <string_view>
-std::string AssetInspection::Inspect(const std::string& sourceKey, const std::string& outputDirectory)
+std::string AssetInspection::Inspect(const std::string& sourceKey, const std::string& outputDirectory,
+    const std::string& settingsTable)
 {
     std::string result;
     List<std::string> sourceFiles;
@@ -79,7 +80,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
         }
         else if (AssetPipeline::SelectImporter(key) != AssetImporter::None)
         {
-            AssetCollection collection = AssetPipeline::ImportSource(key);
+            AssetCollection collection = AssetPipeline::ImportSource(key, AssetImportSettings::Lookup(settingsTable, key));
             sourceFiles.insert(sourceFiles.end(), collection.sourceFiles.begin(), collection.sourceFiles.end());
             objects.clear();
             for (Object* object : collection.objects)
@@ -170,7 +171,14 @@ bool AssetInspection::TryGetFieldSummary(Object* object, const char* fieldName, 
         }
     }
     if (Texture2D* texture = object->Cast<Texture2D>())
+    {
         if (name == "pixels") { result = std::to_string(texture->pixels.size()) + " bytes"; return true; }
+        if (name == "colorSpace")
+        {
+            result = texture->colorSpace == TextureColorSpace::SRGB ? "sRGB" : "Linear";
+            return true;
+        }
+    }
     if (Material* material = object->Cast<Material>())
     {
         if (name == "textureSlots")

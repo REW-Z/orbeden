@@ -464,7 +464,16 @@ MyGame/
 
 `Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`——位置既然固定，就不该做成可配置属性。
 
-`ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存 `.resinfo` 和带源文件名前缀的 `.orbo`，Project/Inspector 读取缓存清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。`.resinfo` 和导入产物均不纳入版本管理；Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
+`ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存带源文件名前缀的 `.orbo` 产物，Project/Inspector 读取伴生文件的清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。产物**不纳入版本管理**，Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
+
+**每个源文件有一个伴生 `.resinfo`**：与源文件同址同名、只多一个后缀，分两部分——
+
+| 部分 | 归属 | 生命周期 |
+| --- | --- | --- |
+| 导入设置 | 用户数据，Inspector 可编辑 | **重新导入时保留**，随资源进版本管理 |
+| 内部隐含资源清单 | 重新生成 | 每次导入重建（对象 Key、类型、依赖、反射摘要） |
+
+伴生文件必须进版本管理：它是导入设置的唯一载体，丢了设置就没了。产物 `.orbo` 与 `ResourceCache/` 都可以全量重建，因此不进版本管理。`*.resinfo.tmp` 是原子写入的中间文件，仍被忽略。
 
 ### 内容根与资源 Key
 
@@ -517,6 +526,10 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 21 | `.resinfo` 从 `ResourceCache/Imported/` 移到**源文件旁的伴生文件**并纳入版本管理，分「导入设置」与「内部隐含资源清单」两部分；导入设置由用户编辑，重新导入时保留，清单每次重新生成。对象产物 `.orbo` 仍在 `ResourceCache/Imported/`，继续不进版本管理。升级会剔除项目 `.gitignore` 里的 `*.resinfo` 规则（`ResourceCache/` 与 `*.resinfo.tmp` 保留），旧位置的清单随整个 ResourceCache 一起删除、由下一次导入在原位重建，不需要手工搬移。首次升级后重新导入一次即可让所有伴生文件就位。Inspector 现在能编辑图片资源的颜色空间；约定见 [颜色管线](ColorPipeline.md)。 |
+| 20 | 颜色空间统一为线性工作空间：场景缓冲改为 RGBA16F 线性 HDR，纹理按语义用 sRGB 内部格式解码，显示输出由管线末端的输出 Pass 统一完成（曝光 → AgX 色调映射 → sRGB 编码）。**必须重新执行 `Build Player`**：`.orbo` 格式 tag 升到 2，旧产物需重新 cook。材质颜色、环境光、清屏色、光源色、描边与调试线颜色的语义统一为「面板与资产填 sRGB，渲染用线性」。新增项目级设置文件 `ProjectSettings.display`（曝光默认值，随 Player 复制）；相机可用 `Camera.overrideExposure` 单独覆盖。**内置 Shader 不会被升级覆盖**：老项目 `Content/Builtin/Shaders/pbs_metallic.orbshader` 仍带着手写的 sRGB 编码，与新管线叠加会造成双重编码，画面明显过亮发灰；需手工同步 `Content/Builtin/Shaders/` 与 `Content/Builtin/shadow_common.orbinc`，或使用 Dev 面板的 `Reset Builtin`。管线约定见 [颜色管线](ColorPipeline.md)。 |
+| 19 | 增加组件 Gizmos 与 CustomEditor SDK。内容根内 `Editor` 目录中的 C# 源码改为编译到独立 `.Editor.dll`，Player/AOT 排除这些文件；升级后刷新 SDK、重编译游戏与编辑器扩展。原生物理 SDK 增加凸包线框读取接口。 |
+| 18 | 统一 C++ / C# 数组与列表的 Inspector 编辑，增加容器反射元数据及托管脚本集合持久化。引用列表改用显式长度编码，保留单个空槽，仍可读取旧场景的分隔符格式。升级后重新生成原生绑定、编译用户模块和脚本，并重新 Build Player；C++ 固定数组保留编译期长度。 |
 | 17 | 修复 Builtin 雨玻璃 Shader 使用 GLSL 保留字导致编译失败的问题。已有项目需将 rain_glass.orbshader 中的变量 active 改为 dropletMask（声明和引用两处），或复制修正版 Shader 后重新导入；升级不会覆盖用户 Content，发布包需重新构建。 |
 | 16 | Builtin 的 9 个材质预设统一为 `.orbmat`，使用文件路径作为对象 Key；移除独立 MTL 导入及 float/color/drawqueue 扩展，MTL 恢复为 OBJ 附属原始文件。旧示例引用需改为 `Builtin/Materials/<名称>.orbmat`，更新 SDK、缓存并重新打包；不改变原有 OBJ 材质子资源 Key。 |
 | 15 | 新增材质资产 `.orbmat`：文件即一个 `Material` 对象，对象 Key 用源 Key 自身（不带 `//` 子键），行式文本格式、可手改，解析与写回都在 `AssetPipeline`（与 `.orbshader` 同处），导入器 `AssetImporter::OrbMat` 接入资源管线；Shader 与贴图按内容根相对 Key 记依赖，移动资源时随引用重写一起改写。材质名取自文件名，格式里不写 `name`。编辑器 Project 面板新增 `Create...` 二级菜单（World / Material / Script / Shader），Inspector 可编辑材质资产并写回源文件。更新 SDK、绑定与原生模块。 |

@@ -30,10 +30,12 @@ internal sealed class BindingTypes(BindingModel model)
             return Remember(new(type == "bool" ? "bool" : "scalar", type, type == "bool" ? "bool" : scalar.Cs, scalar.Cpp, scalar.Cs));
         if (Builtins.Contains(type)) return Remember(new("builtin", type, "global::Orbeden." + type, type, "global::Orbeden." + type));
         if (type is "std::string" or "StringId") return Remember(new("string", type, "string", "NativeBindingSlice", "NativeBindingSlice"));
-        foreach (string prefix in new[] { "List<", "std::vector<" })
+        foreach (string prefix in new[] { "List<", "std::vector<", "std::array<" })
         {
             if (!type.StartsWith(prefix, StringComparison.Ordinal) || !type.EndsWith('>')) continue;
-            BindingValue element = Resolve(type[prefix.Length..^1], owner);
+            string elementType = type[prefix.Length..^1];
+            if (prefix == "std::array<") elementType = elementType[..elementType.LastIndexOf(',')];
+            BindingValue element = Resolve(elementType, owner);
             return Remember(new("array", type, element.Managed + "[]", "NativeBindingSlice", "NativeBindingSlice", Element: element));
         }
         bool reference = type.StartsWith("Ref<", StringComparison.Ordinal) && type.EndsWith('>');
@@ -62,8 +64,6 @@ internal sealed class BindingTypes(BindingModel model)
         BindingValue record = Remember(new("record", key, model.ManagedName(declaration), "NativeBindingSlice", "NativeBindingSlice", declaration));
         foreach (CppMember field in model.ExportedMembers(declaration).Where(member => !member.IsMethod && !member.IsStatic))
         {
-            if (field.FixedArray)
-                throw new InvalidDataException($"{declaration.File}:{field.Line}: {declaration.QualifiedName}.{field.Name}: fixed C arrays are not supported; use List<> or exclude with ORBEDEN_BIND_IGNORE");
             Resolve(field.Type, declaration);
         }
         return record;

@@ -6,6 +6,8 @@
 #include "ResourceManager/ResourceManager.h"
 #include <filesystem>
 #include <cstdio>
+#include <fstream>
+#include <iterator>
 #include <fcntl.h>
 #include <io.h>
 #include <string_view>
@@ -20,7 +22,8 @@
 int wmain(int argc, wchar_t** argv)
 {
     //资源检查工作进程不初始化图形或编辑器，只运行真实导入器并写出轻量快照。
-    if (argc == 5 && std::wstring_view(argv[1]) == L"--inspect-asset")
+    //第 5 个参数可选，是本次导入的设置文件（"键\t值" 行格式，由编辑器从资源旁 .resinfo 写出）。
+    if ((argc == 5 || argc == 6) && std::wstring_view(argv[1]) == L"--inspect-asset")
     {
         //保留结果管道，将导入器控制台日志重定向到标准错误
         int32 resultDescriptor = _dup(_fileno(stdout));
@@ -31,9 +34,20 @@ int wmain(int argc, wchar_t** argv)
         if (_dup2(_fileno(stderr), _fileno(stdout)) != 0) { std::fclose(output); return 1; }
         _setmode(_fileno(output), _O_BINARY);
         PathDefines::SetContentRoot(Utf8Path::ToUtf8(std::filesystem::path(argv[2])));
+
+        std::string settingsTable;
+        if (argc == 6)
+        {
+            std::ifstream settingsFile(Utf8Path::FromUtf8(Utf8Path::ToUtf8(std::filesystem::path(argv[5]))));
+            if (settingsFile)
+            {
+                settingsTable.assign(std::istreambuf_iterator<char>(settingsFile), std::istreambuf_iterator<char>());
+            }
+        }
+
         std::filesystem::path directory(argv[4]);
         std::filesystem::create_directories(directory);
-        std::string result = AssetInspection::Inspect(Utf8Path::ToUtf8(std::filesystem::path(argv[3])), Utf8Path::ToUtf8(directory));
+        std::string result = AssetInspection::Inspect(Utf8Path::ToUtf8(std::filesystem::path(argv[3])), Utf8Path::ToUtf8(directory), settingsTable);
         bool succeeded = std::fwrite(result.data(), 1, result.size(), output) == result.size();
         if (std::fclose(output) != 0) succeeded = false;
         ResourceManager::Shutdown();

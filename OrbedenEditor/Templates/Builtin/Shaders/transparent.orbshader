@@ -48,7 +48,10 @@ out vec4 FragColor;
 
 void main()
 {
-    vec3 albedo = u_DiffuseColor.rgb;
+    const float Pi = 3.14159265359;
+
+    //着色器工作在线性空间：采样已由 sRGB 纹理格式解码，材质颜色已由绑定层转成线性。
+    vec3 albedo = max(u_DiffuseColor.rgb, vec3(0.0));
     //不透明度与贴图 alpha 相乘，便于直接拿贴图当遮罩
     float alpha = clamp(u_Opacity, 0.0, 1.0);
     if (u_HasDiffuseTexture)
@@ -63,13 +66,25 @@ void main()
     vec3 viewDir = normalize(u_CameraPosition - v_WorldPosition);
     vec3 halfDir = normalize(lightDir + viewDir);
 
-    float diffuseTerm = max(dot(normal, lightDir), 0.0);
-    float specularPower = max(u_Shininess, 1.0);
-    float specularTerm = pow(max(dot(normal, halfDir), 0.0), specularPower);
+    float nDotL = max(dot(normal, lightDir), 0.0);
+    float nDotH = max(dot(normal, halfDir), 0.0);
+    float vDotH = max(dot(viewDir, halfDir), 0.0);
     float shadow = SampleShadow(v_WorldPosition, normal);
 
+    //u_SpecularColor 直接作为垂直入射反射率，黑色即无高光，与旧行为一致
+    vec3 fresnel = u_SpecularColor.rgb + (1.0 - u_SpecularColor.rgb) * pow(1.0 - vDotH, 5.0);
+
+    //Blinn-Phong 的幂次会随粗糙度放大高光能量，乘归一化因子抵消
+    float specularPower = max(u_Shininess, 1.0);
+    float specularNorm = (specularPower + 8.0) / (8.0 * Pi);
+    vec3 specular = fresnel * pow(nDotH, specularPower) * specularNorm;
+
+    //漫反射除以 Pi；镜面按菲涅耳分走的那部分能量从漫反射中扣除，避免凭空多出能量
+    vec3 diffuse = albedo / Pi * (1.0 - fresnel);
+
     vec3 ambient = u_AmbientColor.rgb * albedo;
-    vec3 direct = (diffuseTerm * albedo + specularTerm * u_SpecularColor.rgb) * u_LightColor.rgb * u_LightIntensity;
+    vec3 direct = (diffuse + specular) * nDotL * u_LightColor.rgb * max(u_LightIntensity, 0.0);
     vec3 color = ambient + direct * (1.0 - shadow);
+    //输出线性值，显示转换统一在输出 Pass 完成
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, color), alpha);
 }

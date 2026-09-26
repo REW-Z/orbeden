@@ -19,4 +19,7 @@
   <ItemGroup>
     <Compile Remove="..\..\Templates\**\*.cs" />
   </ItemGroup>
+  <Target Name="PublishCustomEditorSdk" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildThisFileDirectory)..\..\Sdk\Managed\Orbeden.Editor\" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

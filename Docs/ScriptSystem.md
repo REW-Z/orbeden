@@ -198,7 +198,13 @@ Object 引用保存资源 Key、Ens 或组件的独立稳定路径，不保存�
 
 Inspector 按原生挂载顺序显示 `[C++] Type` 或 `[C#] Type`，每个 C# 宿主只显示一个卡片。找不到类型时显示 `Missing Script`，允许查看保存字段、删除和撤销恢复；重新加载有效程序集后可重新建立 Wrapper。
 
-Transform、Renderer、RigidBody、Collider、CharacterController 使用相应字段顺序、资源选择和枚举控件。所有写入经过 `PropertyDocument`：读取多目标快照、显示 Mixed、验证、提交；失败时回滚并显示错误。
+Transform、Renderer、RigidBody、Collider、CharacterController 使用相应字段顺序、资源选择和枚举控件。标量写入经过 `PropertyDocument`：读取多目标快照、显示 Mixed、验证、提交；失败时回滚并显示错误。
+
+集合字段共用可折叠列表控件，标题栏以只读输入框显示当前数量，并提供增删按钮，元素行支持选择与拖拽排序。支持 C# 一维 `T[]` / `List<T>` 和 C++ `T[N]` / `std::array<T, N>` / `List<T>` / `std::vector<T>`，元素使用 Inspector 已支持的基础值或对象引用类型；C++ 固定数组只能编辑和排序，长度只读。结构操作为各目标保存完整元素快照，刷新字段结构后恢复元素，支持撤销、重做和失败回滚。多选长度不同时只显示共有下标，数量显示 Mixed，可分别追加元素。
+
+Transform 的 localRotation 在 Inspector 中显示为 XYZ 欧拉角（度），按 Z-X-Y 顺序编辑，内部和场景文件仍保存四元数。编辑期间保留用户输入的等价角度分支，撤销或外部旋转变化后重新同步显示。
+
+集合持久化采用元素个数和每项 UTF-8 字节长度编码，保留空槽及字符串中的分隔符。原生对象引用列表继续读取旧场景的 `|` 分隔格式，保存时使用显式长度；场景对象引用在保存、重载和复制时按稳定身份处理。
 
 属性历史以组件稳定身份定位目标，因此“编辑字段 → 删除组件 → Undo 删除 → Undo 字段编辑”不依赖已过期的 ObjectId。完整组件 XML 快照包含隐藏字段。Undo/Redo 失败不应提前弹出历史记录。
 
@@ -240,7 +246,9 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 105 个；Editor 组件表为 26 个，完整 Editor 表为 132 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 105 个；Editor GUI 表为 78 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，应用表为 11 个，完整 Editor 表为 153 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+
+组件自定义 Inspector、Scene GUI 和 Gizmos 的注册方式、程序集隔离与示例见 [CustomEditor](CustomEditors.md)。
 
 `EditorGuiNativeApi` 是本仓库唯一带绘制原语的表：彩色文本、批量矩形、坐标读取与命中测试都在这里。批量矩形用 `EditorRectPrimitive`（9 个 float32，Pack=4）而不是嵌套 `vector2`/`color`，避免两端 pack 不一致导致的静默错位。
 

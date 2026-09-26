@@ -201,10 +201,11 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         shadows.Render(scene, camera, *shadowLight, depthShader, gpuResourceManager);
     }
 
-    //开始相机主 Pass
+    //开始相机主 Pass。
+    //目标是引擎分配的场景缓冲，尺寸就等于视口且原点在 0，视口原点只属于最终输出目标。
     RenderPassDesc passDesc;
-    passDesc.x = camera.viewportX;
-    passDesc.y = camera.viewportY;
+    passDesc.x = 0;
+    passDesc.y = 0;
     passDesc.width = camera.viewportWidth;
     passDesc.height = camera.viewportHeight;
     passDesc.renderTarget = camera.renderTarget;
@@ -235,11 +236,12 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         GpuRenderTargetCopyDesc copyDesc;
         copyDesc.sourceRenderTarget = camera.renderTarget;
         copyDesc.destinationRenderTarget = camera.cameraTextureTarget;
-        copyDesc.sourceX = camera.viewportX;
-        copyDesc.sourceY = camera.viewportY;
+        //源与目标都是视口尺寸、原点为 0 的场景缓冲
+        copyDesc.sourceX = 0;
+        copyDesc.sourceY = 0;
         copyDesc.width = camera.viewportWidth;
         copyDesc.height = camera.viewportHeight;
-        cameraTexturesReady = backend->CopyRenderTargetColorAndDepth(copyDesc);
+        cameraTexturesReady = backend->CopyRenderTarget(copyDesc);
     }
 
     //绘制 [折射队列]

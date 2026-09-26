@@ -2,6 +2,7 @@
 
 #include "Editor/EditorGizmoAbi.h"
 #include "Editor/EditorGizmoHandles.h"
+#include "Editor/EditorSceneGizmos.h"
 #include "Editor/EditorLayoutState.h"
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderScene.h"
@@ -70,6 +71,7 @@ private:
     matrix4x4 gizmoViewProjection;
     //手柄与托管 Gizmo 共用的相机数据，取自渲染这张离屏图的 RenderCamera
     EditorGizmoHandles gizmoHandles;
+    EditorSceneGizmos componentGizmos;
     bool gizmoViewValid = false;
     bool gizmoToolbarHovered = false;
     vector3 gizmoCameraRight = { 1.0f, 0.0f, 0.0f };
@@ -171,6 +173,9 @@ public:
 
     /// <summary>获取当前 Handles 视图投影矩阵。</summary>
     const matrix4x4& GetGizmoViewProjection() const;
+
+    /// <summary>查询组件 Gizmos 总开关，不影响选择手柄。</summary>
+    bool GetGizmosVisible() const { return componentGizmos.enabled; }
 
     /// <summary>取出一条待提交的手柄编辑，没有时返回 false。</summary>
     bool TakeGizmoEdit(EditorGizmoEdit& edit);

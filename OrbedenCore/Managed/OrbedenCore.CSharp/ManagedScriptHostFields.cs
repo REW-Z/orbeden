@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Collections;
+using System.Text;
 
 namespace Orbeden;
 
@@ -39,6 +41,24 @@ internal static partial class ManagedTypeMetadataCache
     internal static bool WriteHostField(Script script, IntPtr host, ManagedFieldMetadata field)
     {
         if (field.Name == "enabled") return true;
+        if (field.Kind == InteropValueKind.Array)
+        {
+            Type element = GetCollectionElementType(field.FieldType)!;
+            TryGetKind(element, out var elementKind);
+            List<string> values = [];
+            if (field.Getter(script) is IEnumerable collection)
+                foreach (object? item in collection)
+                {
+                    if (elementKind == InteropValueKind.Object) values.Add((item as Object)?.ResourceKey ?? string.Empty);
+                    else if (elementKind == InteropValueKind.EnsId && item is EnsId id)
+                        values.Add(id.IsNull ? string.Empty : Ens.FromId(id).ResourceKey ?? string.Empty);
+                    else if (TryToInterop(item, element, out var encoded)) values.Add(FormatSerialized(encoded));
+                    else return false;
+                }
+            StringBuilder text = new(values.Count.ToString(CultureInfo.InvariantCulture) + ":");
+            foreach (string itemText in values) text.Append(Encoding.UTF8.GetByteCount(itemText)).Append(':').Append(itemText);
+            return Script.WriteHostField(host, field.Name, GetSerializedTypeName(field.FieldType, field.Kind), text.ToString(), field.InspectorVisible);
+        }
         if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
         {
             string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).ResourceKey ?? string.Empty;
@@ -73,6 +93,7 @@ internal static partial class ManagedTypeMetadataCache
         InteropValueKind.Quaternion => "quaternion",
         InteropValueKind.EnsId => "EnsId",
         InteropValueKind.Object => $"Ref<{type.FullName}>",
+        InteropValueKind.Array => $"{(type.IsArray ? "Array" : "List")}<{GetCollectionSerializedElementType(type)}>",
         _ => string.Empty,
     };
 
@@ -114,6 +135,36 @@ internal static partial class ManagedTypeMetadataCache
     /// <summary>区分持久化引用和只用于互操作的运行时 ObjectId。</summary>
     private static bool TryReadHostValue(ManagedFieldMetadata field, ManagedHostField stored, out object? result)
     {
+        if (field.Kind == InteropValueKind.Array)
+        {
+            result = null;
+            Type element = GetCollectionElementType(field.FieldType)!;
+            TryGetKind(element, out var kind);
+            byte[] bytes = Encoding.UTF8.GetBytes(stored.Value);
+            int position = 0;
+            if (!ReadCollectionLength(bytes, ref position, out int count) || count > (bytes.Length - position) / 2) return false;
+            Array array = Array.CreateInstance(element, count);
+            for (int index = 0; index < count; ++index)
+            {
+                if (!ReadCollectionLength(bytes, ref position, out int length) || length > bytes.Length - position) return false;
+                string text = Encoding.UTF8.GetString(bytes, position, length);
+                position += length;
+                object? itemValue;
+                if (kind == InteropValueKind.Object) itemValue = Script.ResolveReference(text, element);
+                else if (kind == InteropValueKind.EnsId) itemValue = text.Length == 0 ? EnsId.Null : Ens.Find(text).Id;
+                else if (!TryParseSerialized(kind, text, out var encoded) || !TryFromInterop(encoded, element, out itemValue)) return false;
+                array.SetValue(itemValue, index);
+            }
+            if (position != bytes.Length) return false;
+            if (field.FieldType.IsArray) result = array;
+            else
+            {
+                IList list = (IList)Activator.CreateInstance(field.FieldType)!;
+                foreach (object? itemValue in array) list.Add(itemValue);
+                result = list;
+            }
+            return true;
+        }
         if (field.Kind == InteropValueKind.EnsId)
         {
             result = string.IsNullOrEmpty(stored.Value) ? EnsId.Null : Ens.Find(stored.Value).Id;
@@ -127,5 +178,32 @@ internal static partial class ManagedTypeMetadataCache
         result = null;
         return TryParseSerialized(field.Kind, stored.Value, out InteropValue value)
             && TryFromInterop(value, field.FieldType, out result);
+    }
+
+    /// <summary>识别一维数组和标准 List 的元素类型。</summary>
+    private static Type? GetCollectionElementType(Type type) => type.IsArray && type.GetArrayRank() == 1
+        ? type.GetElementType() : type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)
+            ? type.GetGenericArguments()[0] : null;
+
+    /// <summary>生成与原生元素分类一致的持久化类型名。</summary>
+    private static string GetCollectionSerializedElementType(Type type)
+    {
+        Type element = GetCollectionElementType(type)!;
+        TryGetKind(element, out var kind);
+        return GetSerializedTypeName(element, kind);
+    }
+
+    /// <summary>读取非负十进制长度，拒绝溢出与不完整输入。</summary>
+    private static bool ReadCollectionLength(byte[] bytes, ref int position, out int length)
+    {
+        length = 0;
+        int begin = position;
+        while (position < bytes.Length && bytes[position] != (byte)':')
+        {
+            int digit = bytes[position++] - (byte)'0';
+            if (digit < 0 || digit > 9 || length > (int.MaxValue - digit) / 10) return false;
+            length = length * 10 + digit;
+        }
+        return position > begin && position < bytes.Length && bytes[position++] == (byte)':';
     }
 }

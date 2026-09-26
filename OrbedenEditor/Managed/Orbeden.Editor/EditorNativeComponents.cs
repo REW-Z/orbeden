@@ -184,6 +184,7 @@ internal static unsafe class EditorNativeComponents
             ref EditorPropertyAbi source = ref snapshot.Properties[index];
             PropertySnapshot field = destination.Fields[index];
             changed = field.Descriptor.Kind != source.DeclaredKind
+                || field.Descriptor.IsFixedSize != ((source.Reserved & 1) != 0)
                 || !source.Name.Bytes.SequenceEqual(field.Name)
                 || !source.ReferenceType.Bytes.SequenceEqual(field.ReferenceType);
         }
@@ -198,7 +199,7 @@ internal static unsafe class EditorNativeComponents
                 ref EditorPropertyAbi source = ref snapshot.Properties[index];
                 PropertySnapshot field = new()
                 {
-                    Descriptor = new(source.Name.ToString(), source.DeclaredKind, source.ReferenceType.ToString()),
+                    Descriptor = new(source.Name.ToString(), source.DeclaredKind, source.ReferenceType.ToString(), IsFixedSize: (source.Reserved & 1) != 0),
                     Name = source.Name.Bytes.ToArray(),
                     ReferenceType = source.ReferenceType.Bytes.ToArray(),
                 };
@@ -276,7 +277,8 @@ internal static unsafe class EditorNativeComponents
             switch (value.Kind)
             {
                 case InteropValueKind.Bool: value.TryGet(out bool boolean); *pointer = boolean ? (byte)1 : (byte)0; break;
-                case InteropValueKind.Int32: value.TryGet(out int integer); *(int*)pointer = integer; break;
+                case InteropValueKind.Int32: case InteropValueKind.Array:
+                    value.TryGet(out int integer); *(int*)pointer = integer; break;
                 case InteropValueKind.UInt32: value.TryGet(out uint unsigned); *(uint*)pointer = unsigned; break;
                 case InteropValueKind.UInt64: value.TryGet(out ulong wide); *(ulong*)pointer = wide; break;
                 case InteropValueKind.Float32: value.TryGet(out float number); *(float*)pointer = number; break;

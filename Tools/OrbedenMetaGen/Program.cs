@@ -61,7 +61,7 @@ foreach (var classInfo in classes)
         field.Persistent = IsPersistentField(classInfo.Name, field.Name)
             && (!gameModule || field.Access == "public" || field.ExplicitPersistent);
         field.ObjectRefTypeName = GetObjectRefTypeName(field.Type);
-        field.Kind = field.FixedArray ? null : GetFieldKind(field.Type);
+        field.Kind = GetFieldKind(field.Type);
 
         if (field.Persistent && field.Kind is null)
         {
@@ -261,7 +261,7 @@ static bool IsPersistentField(string className, string fieldName)
 
     if (className == "Texture2D")
     {
-        return fieldName is "name" or "width" or "height" or "channels" or "format";
+        return fieldName is "name" or "width" or "height" or "channels" or "format" or "colorSpace";
     }
 
     if (className == "Skybox")
@@ -301,6 +301,10 @@ static bool IsPersistentField(string className, string fieldName)
 //映射字段类型到 C++ FieldKind
 static FieldKindInfo? GetFieldKind(string type)
 {
+    string? element = GetArrayElementType(type);
+    if (element != null && !IsReferenceListType(NormalizeValueType(type)))
+        return GetFieldKind(element) is { CppName: not "Reflection::FieldKind::Array" and not "Reflection::FieldKind::ObjectRefList" }
+            ? new FieldKindInfo("Reflection::FieldKind::Array") : null;
     string normalizedType = NormalizeValueType(type);
     if (IsReferenceListType(normalizedType))
     {
@@ -328,8 +332,25 @@ static FieldKindInfo? GetFieldKind(string type)
         "EnsId" => new FieldKindInfo("Reflection::FieldKind::EnsId"),
         "ClearMode" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         "DrawQueue" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
+        "TextureColorSpace" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         _ => null,
     };
+}
+
+/// <summary>读取 List、vector 和固定数组的元素类型。</summary>
+static string? GetArrayElementType(string type)
+{
+    string value = NormalizeValueType(type);
+    if (!(value.StartsWith("List<") || value.StartsWith("std::vector<") || value.StartsWith("std::array<")) || !value.EndsWith('>')) return null;
+    string inner = value[(value.IndexOf('<') + 1)..^1];
+    int depth = 0;
+    for (int index = 0; index < inner.Length; ++index)
+    {
+        if (inner[index] == '<') ++depth;
+        else if (inner[index] == '>') --depth;
+        else if (inner[index] == ',' && depth == 0) return inner[..index];
+    }
+    return inner;
 }
 
 //判断字段类型是否为对象引用列表
@@ -341,6 +362,8 @@ static bool IsReferenceListType(string normalizedType)
 //读取 Ref<T> 与 List<Ref<T>> 的目标类型名
 static string? GetObjectRefTypeName(string type)
 {
+    string? element = GetArrayElementType(type);
+    if (element != null) return GetObjectRefTypeName(element);
     var normalized = NormalizeValueType(type);
     var match = FieldTypePatterns.ReferenceList.Match(normalized);
     if (match.Success) return match.Groups["target"].Value;
@@ -411,6 +434,9 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
         //生成字段 getter/setter 和方法 invoker
         foreach (var field in classInfo.Fields.Where(field => field.Persistent))
         {
+            bool array = field.Kind?.CppName == "Reflection::FieldKind::Array";
+            string xmlRead = array ? "ArrayToXmlValue" : "ToXmlValue";
+            string xmlWrite = array ? "SetArrayFromXmlValue" : "SetFromXmlValue";
             var setterBacked = classInfo.Name == "Transform"
                 || (field.Name == "enabled" && classInfo.Name is "Camera" or "DirectionalLight" or "StaticMeshRenderer");
             var marksDirty = classInfo.Name == "Material" && field.Name == "shader";
@@ -422,14 +448,16 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine($"    static std::string Get_{classInfo.Symbol}_{field.Name}(Object* object)");
             output.AppendLine("    {");
             output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
-            output.AppendLine($"        return Reflection::ToXmlValue({getterExpression});");
+            output.AppendLine($"        return Reflection::{xmlRead}({getterExpression});");
             output.AppendLine("    }");
             output.AppendLine();
             output.AppendLine($"    //直接读取 {classInfo.Name}.{field.Name} 字段");
             output.AppendLine($"    static Reflection::Value GetValue_{classInfo.Symbol}_{field.Name}(Object* object)");
             output.AppendLine("    {");
             output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
-            output.AppendLine($"        return instance ? Reflection::ToValue({getterExpression}) : Reflection::Value();");
+            output.AppendLine(array
+                ? $"        return instance ? Reflection::Value(Reflection::ArrayToXmlValue({getterExpression})) : Reflection::Value();"
+                : $"        return instance ? Reflection::ToValue({getterExpression}) : Reflection::Value();");
             output.AppendLine("    }");
             output.AppendLine();
             output.AppendLine($"    //写入 {classInfo.Name}.{field.Name} 字段");
@@ -440,25 +468,25 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             {
                 var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
                 output.AppendLine($"        {field.Type} parsedValue{{}};");
-                output.AppendLine("        if (!Reflection::SetFromXmlValue(parsedValue, value)) return false;");
+                output.AppendLine($"        if (!Reflection::{xmlWrite}(parsedValue, value)) return false;");
                 output.AppendLine($"        instance->{setterName}(parsedValue);");
                 output.AppendLine("        return true;");
             }
             else if (marksDirty)
             {
-                output.AppendLine($"        if (!Reflection::SetFromXmlValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine($"        if (!Reflection::{xmlWrite}(instance->{field.Name}, value)) return false;");
                 output.AppendLine("        instance->MarkDirty();");
                 output.AppendLine("        return true;");
             }
             else if (regenerateOnSet)
             {
-                output.AppendLine($"        if (!Reflection::SetFromXmlValue(instance->{field.Name}, value)) return false;");
+                output.AppendLine($"        if (!Reflection::{xmlWrite}(instance->{field.Name}, value)) return false;");
                 output.AppendLine($"        instance->{field.Changed}();");
                 output.AppendLine("        return true;");
             }
             else
             {
-                output.AppendLine($"        return Reflection::SetFromXmlValue(instance->{field.Name}, value);");
+                output.AppendLine($"        return Reflection::{xmlWrite}(instance->{field.Name}, value);");
             }
             output.AppendLine("    }");
             output.AppendLine();
@@ -467,7 +495,11 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine("    {");
             output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
             output.AppendLine("        if (!instance) return false;");
-            if (setterBacked)
+            if (array)
+            {
+                output.AppendLine($"        return Set_{classInfo.Symbol}_{field.Name}(object, value.ToString());");
+            }
+            else if (setterBacked)
             {
                 var setterName = $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}";
                 output.AppendLine($"        {field.Type} parsedValue{{}};");
@@ -495,13 +527,13 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine();
 
             //引用列表多两个入口：编辑器要真实槽位数，而列表文本给不出（空串无法区分 0 个槽位与 1 个空槽位）
-            if (field.Kind?.CppName == "Reflection::FieldKind::ObjectRefList")
+            if (array || field.Kind?.CppName == "Reflection::FieldKind::ObjectRefList")
             {
                 output.AppendLine($"    //读取 {classInfo.Name}.{field.Name} 槽位数");
                 output.AppendLine($"    static int32 Size_{classInfo.Symbol}_{field.Name}(Object* object)");
                 output.AppendLine("    {");
                 output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
-                output.AppendLine($"        return instance ? static_cast<int32>({getterExpression}.size()) : 0;");
+                output.AppendLine($"        return instance ? static_cast<int32>(std::size({getterExpression})) : 0;");
                 output.AppendLine("    }");
                 output.AppendLine();
                 output.AppendLine($"    //改写 {classInfo.Name}.{field.Name} 槽位数");
@@ -509,7 +541,9 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
                 output.AppendLine("    {");
                 output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
                 output.AppendLine("        if (!instance || count < 0) return false;");
-                output.AppendLine($"        {getterExpression}.resize(static_cast<usize>(count));");
+                output.AppendLine($"        if (!Reflection::ResizeArray({getterExpression}, count)) return false;");
+                if (regenerateOnSet) output.AppendLine($"        instance->{field.Changed}();");
+                if (marksDirty) output.AppendLine("        instance->MarkDirty();");
                 output.AppendLine("        return true;");
                 output.AppendLine("    }");
                 output.AppendLine();
@@ -600,10 +634,13 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             var objectRefTypeName = field.ObjectRefTypeName is null ? "nullptr" : $"\"{field.ObjectRefTypeName}\"";
             var valueGetter = field.Persistent ? $"ReflectionGeneratedAccess::GetValue_{classInfo.Symbol}_{field.Name}" : "nullptr";
             var valueSetter = field.Persistent ? $"ReflectionGeneratedAccess::SetValue_{classInfo.Symbol}_{field.Name}" : "nullptr";
-            var isList = field.Persistent && kind == "Reflection::FieldKind::ObjectRefList";
+            var isList = field.Persistent && kind is "Reflection::FieldKind::ObjectRefList" or "Reflection::FieldKind::Array";
             var listSize = isList ? $"ReflectionGeneratedAccess::Size_{classInfo.Symbol}_{field.Name}" : "nullptr";
             var listResize = isList ? $"ReflectionGeneratedAccess::Resize_{classInfo.Symbol}_{field.Name}" : "nullptr";
-            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}, {listSize}, {listResize}),");
+            string elementKind = isList && GetArrayElementType(field.Type) is string elementType
+                ? GetFieldKind(elementType)?.CppName ?? "Reflection::FieldKind::Unsupported" : "Reflection::FieldKind::Unsupported";
+            string fixedSize = field.FixedArray || NormalizeValueType(field.Type).StartsWith("std::array<") ? "true" : "false";
+            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}, {listSize}, {listResize}, {elementKind}, {fixedSize}),");
         }
 
         output.AppendLine("            });");

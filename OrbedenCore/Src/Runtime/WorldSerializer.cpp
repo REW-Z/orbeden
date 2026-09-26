@@ -338,6 +338,21 @@ namespace
             if (!field || !field->persistent || !field->getter) continue;
 
             std::string fieldValue = field->getter(component);
+            if (field->kind == Reflection::FieldKind::Array && field->elementKind == Reflection::FieldKind::EnsId)
+            {
+                List<std::string> elements;
+                if (Reflection::ParseArrayValues(fieldValue, elements))
+                {
+                    for (std::string& element : elements)
+                    {
+                        EnsId id;
+                        if (!Reflection::SetFromXmlValue(id, element)) continue;
+                        Ens* target = component->GetWorld()->GetEns(id);
+                        element = target ? target->GetInstanceId().GetPath() : "";
+                    }
+                    fieldValue = Reflection::FormatArrayValues(elements);
+                }
+            }
             if (field->kind == Reflection::FieldKind::EnsId)
             {
                 EnsId id;
@@ -428,6 +443,7 @@ namespace
         if (field && field->persistent && field->setter)
         {
             if (field->kind == Reflection::FieldKind::EnsId && (value.empty() || IsWorldObjectRef(value))) return true;
+            if (field->kind == Reflection::FieldKind::Array && field->elementKind == Reflection::FieldKind::EnsId) return true;
             return field->setter(component, value);
         }
         if (!script || !script->IsManagedHost()) return true;
@@ -636,6 +652,20 @@ namespace
         {
             for (const ManagedScriptField& field : host->GetManagedFields())
             {
+                if (field.kind == Reflection::FieldKind::Array)
+                {
+                    std::string elementType = field.typeName.substr(field.typeName.find('<') + 1);
+                    elementType.pop_back();
+                    if (!elementType.starts_with("Ref<")) continue;
+                    std::string name = elementType.substr(4, elementType.size() - 5);
+                    if (name.starts_with("Orbeden.")) name.erase(0, 8);
+                    Type* type = Object::FindType(name);
+                    List<std::string> keys;
+                    if (!Reflection::ParseArrayValues(field.value, keys)) return false;
+                    for (const auto& key : keys)
+                        if (!key.empty() && !IsWorldObjectRef(key) && (!type || !ResourceManager::Load(type, key))) return false;
+                    continue;
+                }
                 if (field.kind != Reflection::FieldKind::ObjectRef || field.value.empty()
                     || IsWorldObjectRef(field.value) || !field.typeName.starts_with("Ref<")) continue;
                 std::string name = field.typeName.substr(4, field.typeName.size() - 5);
@@ -651,12 +681,17 @@ namespace
         for (const Reflection::FieldInfo& field : typeInfo->fields)
         {
             bool isList = field.kind == Reflection::FieldKind::ObjectRefList;
-            if ((!isList && field.kind != Reflection::FieldKind::ObjectRef) || !field.objectRefTypeName || !field.getter) continue;
+            bool isArray = field.kind == Reflection::FieldKind::Array && field.elementKind == Reflection::FieldKind::ObjectRef;
+            if ((!isList && !isArray && field.kind != Reflection::FieldKind::ObjectRef) || !field.objectRefTypeName || !field.getter) continue;
 
             //引用列表逐条预加载，空槽跳过
             std::vector<std::string> keys;
             std::string value = field.GetValueAsString(object);
-            if (!isList)
+            if (isArray || (isList && Reflection::ParseArrayValues(value, keys)))
+            {
+                if (!Reflection::ParseArrayValues(value, keys)) return false;
+            }
+            else if (!isList)
             {
                 keys.push_back(value);
             }
@@ -733,8 +768,22 @@ Component* WorldSerializer::RestoreComponent(Ens& ens, const std::string& snapsh
     XmlToken reference;
     while (referenceReader.Next(reference))
     {
-        if (reference.name != "Field" || GetAttribute(reference, "type") != "EnsId") continue;
+        if (reference.name != "Field") continue;
         const Reflection::FieldInfo* field = Reflection::FindField(component->GetType(), GetAttribute(reference, "name"));
+        if (field && field->setter && field->kind == Reflection::FieldKind::Array && field->elementKind == Reflection::FieldKind::EnsId)
+        {
+            List<std::string> elements;
+            if (!Reflection::ParseArrayValues(GetAttribute(reference, "value"), elements))
+            { ens.RemoveComponent(component); return nullptr; }
+            for (std::string& element : elements)
+            {
+                Ens* target = ens.GetWorld()->FindEns(StringId(element));
+                element = Reflection::ToXmlValue(target ? target->GetId() : EnsId());
+            }
+            if (!field->setter(component, Reflection::FormatArrayValues(elements)))
+            { ens.RemoveComponent(component); return nullptr; }
+            continue;
+        }
         if (!field || !field->setter || field->kind != Reflection::FieldKind::EnsId) continue;
         const std::string& path = GetAttribute(reference, "value");
         if (!path.empty() && !IsWorldObjectRef(path)) continue;
@@ -886,6 +935,38 @@ namespace
             for (const auto& attribute : token.attributes)
             {
                 std::string value = attribute.second;
+                const std::string& fieldType = GetAttribute(token, "type");
+                bool arrayReference = token.name == "Field" && attribute.first == "value"
+                    && (fieldType.find("<Ref<") != std::string::npos || fieldType.find("<EnsId") != std::string::npos);
+                if (arrayReference)
+                {
+                    List<std::string> elements;
+                    bool encoded = Reflection::ParseArrayValues(value, elements);
+                    if (!encoded)
+                    {
+                        usize begin = 0;
+                        do
+                        {
+                            usize end = value.find(Reflection::ReferenceListSeparator, begin);
+                            elements.push_back(value.substr(begin, end == std::string::npos ? end : end - begin));
+                            if (end == std::string::npos) break;
+                            begin = end + 1;
+                        } while (begin <= value.size());
+                    }
+                    for (std::string& element : elements)
+                    {
+                        auto found = paths.find(element);
+                        if (found != paths.end()) element = found->second;
+                        else if (clearExternal && IsWorldObjectRef(element)) element.clear();
+                    }
+                    if (encoded) value = Reflection::FormatArrayValues(elements);
+                    else
+                    {
+                        value.clear();
+                        for (usize index = 0; index < elements.size(); ++index)
+                        { if (index != 0) value += Reflection::ReferenceListSeparator; value += elements[index]; }
+                    }
+                }
                 bool reference = token.name == "Field" && attribute.first == "value"
                     && (GetAttribute(token, "type").starts_with("Ref<")
                         || GetAttribute(token, "type") == "EnsId");
@@ -921,7 +1002,24 @@ namespace
                     component = object ? object->Cast<Component>() : nullptr;
                 }
             }
-            if (!component || token.name != "Field" || GetAttribute(token, "type") != "EnsId") continue;
+            if (!component || token.name != "Field") continue;
+            const Reflection::FieldInfo* arrayField = Reflection::FindField(component->GetType(), GetAttribute(token, "name"));
+            if (arrayField && arrayField->setter && arrayField->kind == Reflection::FieldKind::Array
+                && arrayField->elementKind == Reflection::FieldKind::EnsId)
+            {
+                List<std::string> elements;
+                if (!Reflection::ParseArrayValues(GetAttribute(token, "value"), elements)) return false;
+                for (std::string& element : elements)
+                {
+                    auto found = paths.find(element);
+                    if (found != paths.end()) element = found->second;
+                    Ens* target = world.FindEns(StringId(element));
+                    element = Reflection::ToXmlValue(target ? target->GetId() : EnsId());
+                }
+                if (!arrayField->setter(component, Reflection::FormatArrayValues(elements))) return false;
+                continue;
+            }
+            if (GetAttribute(token, "type") != "EnsId") continue;
             std::string path = GetAttribute(token, "value");
             if (!path.empty() && !IsWorldObjectRef(path)) continue;
             auto found = paths.find(path);

@@ -624,6 +624,30 @@ void EditorSystem::Update(World& world, float deltaTime)
 {
     PROFILE("Editor/Update");
 
+    if (!pendingProjectFile.empty())
+    {
+        std::string path = std::exchange(pendingProjectFile, std::string());
+        ProjectVersionProbe probe;
+        std::string error;
+        if (!EditorProject::ProbeProjectFile(path, probe, error)) projectStatus = error;
+        else if (probe.status == ProjectVersionStatus::Newer)
+            projectStatus = "This project requires a newer version of Orbeden.";
+        else if (probe.status == ProjectVersionStatus::Outdated)
+        {
+            pendingUpgrade = probe;
+            upgradeError.clear();
+            upgradeProjectDialog = true;
+        }
+        else
+        {
+            RequestStop();
+            SaveEditorLayout();
+            if (project.LoadProjectFile(path)) FinishProjectLoad("Loaded", "opened");
+            else projectStatus = project.GetLastError();
+        }
+        RequestRepaint();
+    }
+
     //Play 期间的改动不落盘，脏标记跟随 Play 状态；每帧赋值，异常路径也能自愈
     world.SetDirtyTrackingEnabled(!playMode.IsPlaying());
 
@@ -671,7 +695,7 @@ void EditorSystem::RenderEditorGUI()
     ProcessEditorShortcuts();
     UpdateWindowTitle();
     DrawMainMenuBar();
-    DrawPlayToolbar();
+    if (project.HasProject()) DrawPlayToolbar();
     //状态栏必须在面板之前：边栏会收缩视口工作区，停靠宿主随后按收缩后的区域布局
     DrawStatusBar();
     DrawProjectDialog();
@@ -680,7 +704,8 @@ void EditorSystem::RenderEditorGUI()
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     {
         PROFILE("Editor/Panels");
-        panelManager.DrawPanels();
+        if (project.HasProject()) panelManager.DrawPanels();
+        else panelManager.DrawStandalonePanel("welcome");
     }
 
     //场景视口由 Scene 面板在自身内容区内绘制，Play 期间取消鼠标交互
@@ -711,6 +736,15 @@ void EditorSystem::RenderEditorGUI()
 void EditorSystem::RequestOpenProjectDialog()
 {
     OpenProjectDialog();
+    RequestRepaint();
+}
+
+/// <summary>排队打开最近项目，加载与版本升级沿用编辑器现有流程。</summary>
+void EditorSystem::RequestOpenProjectFile(const std::string& path)
+{
+    if (path.empty()) return;
+    pendingProjectFile = path;
+    projectStatus.clear();
     RequestRepaint();
 }
 

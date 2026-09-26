@@ -14,6 +14,8 @@ namespace physx
     struct PxCookingParams;
 }
 
+class Mesh;
+
 //PhysX 5 CPU-only 原生物理系统
 class PhysicsSystem final : public IEngineSystem
 {
@@ -95,4 +97,7 @@ public:
 
     //查找实体对应的原生角色控制器
     physx::PxController* GetController(EnsId ens) const;
+
+    /// <summary>读取与碰撞形状一致的凸包边线，输出为成对的局部坐标端点。</summary>
+    bool GetConvexWireframe(Mesh& mesh, List<vector3>& lines);
 };

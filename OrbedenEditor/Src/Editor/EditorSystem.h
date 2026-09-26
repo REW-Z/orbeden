@@ -49,6 +49,7 @@ private:
     std::string dialogDirectory;
     std::string dialogError;
     std::string projectStatus;
+    std::string pendingProjectFile;
     std::string upgradeError;
     char pathBuffer[1024] = {};
     char newProjectNameBuffer[128] = {};
@@ -91,6 +92,9 @@ public:
 
     //请求打开项目选择弹窗
     void RequestOpenProjectDialog();
+
+    /// <summary>延迟到帧更新阶段打开指定项目文件，避免在托管面板绘制中切换程序集。</summary>
+    void RequestOpenProjectFile(const std::string& path);
 
     //请求打开新建项目弹窗
     void RequestNewProjectDialog();

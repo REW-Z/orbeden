@@ -261,6 +261,12 @@ void CascadedShadowMap::BindUniforms(const RenderCamera& camera)
     }
 }
 
+//阴影调试视图是否真正生效（与 u_ShadowDebugView 的取值一致）
+bool CascadedShadowMap::IsDebugViewActive() const
+{
+    return ready && settings.debugView != 0;
+}
+
 void CascadedShadowMap::BindTexture(uint32 slot)
 {
     backend->SetUniformInt("u_ShadowMap", static_cast<int32>(slot));

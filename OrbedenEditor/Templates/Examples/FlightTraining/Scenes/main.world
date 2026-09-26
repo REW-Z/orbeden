@@ -16,7 +16,7 @@
             <Component type="StaticMeshRenderer" stableId="world://preparing/8033961a-61f5-40fb-8082-6a8c876a83fb/StaticMeshRenderer/c0795d56-61e2-4607-8785-f7fec6ea9b25">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="world://runtime/Material/9e271b46-de94-48ce-8e5e-1dacea7eb18b" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="world://runtime/Material/ac6055da-41bb-49e4-a8e3-0dd5255376d3" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="false" />
                 <Field name="receiveShadows" type="bool" value="true" />
@@ -520,21 +520,6 @@
                 <Field name="viewportWidth" type="float32" value="1" />
                 <Field name="viewportHeight" type="float32" value="1" />
             </Component>
-            <Ens stableId="world://ens/6c12c287-0ab7-451d-a0b1-4be6787818c9" name="RainScreen" localActive="true">
-                <Component type="Transform" stableId="world://ens/6c12c287-0ab7-451d-a0b1-4be6787818c9/Transform/4a56547f-56a1-4346-874a-ea31f016ebf7">
-                    <Field name="localPosition" type="vector3" value="0 0.132205963 -4.91048431" />
-                    <Field name="localRotation" type="quaternion" value="0.130506262 0 0 0.991447508" />
-                    <Field name="localScale" type="vector3" value="20 20 20" />
-                </Component>
-                <Component type="StaticMeshRenderer" stableId="world://ens/6c12c287-0ab7-451d-a0b1-4be6787818c9/StaticMeshRenderer/95f5884d-722a-42ff-af5c-8418e8163b31">
-                    <Field name="enabled" type="bool" value="true" />
-                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Builtin/Meshes/quad.obj//Mesh/Main" />
-                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="Examples/FlightTraining/Materials/rain.orbmat" />
-                    <Field name="drawLayer" type="uint32" value="1" />
-                    <Field name="castShadows" type="bool" value="true" />
-                    <Field name="receiveShadows" type="bool" value="true" />
-                </Component>
-            </Ens>
         </Ens>
     </Ens>
 </World>

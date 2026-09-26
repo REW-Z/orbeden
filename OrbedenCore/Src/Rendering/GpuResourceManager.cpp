@@ -1,6 +1,7 @@
 #include "Rendering/GpuResourceManager.h"
 
 #include "Log/Log.h"
+#include "Rendering/ColorSpace.h"
 
 #include <cassert>
 #include <utility>
@@ -335,6 +336,7 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     textureDesc.height = texture->height;
     textureDesc.channels = texture->channels;
     textureDesc.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
+    textureDesc.srgb = texture->colorSpace == TextureColorSpace::SRGB;
 
     GpuTextureID textureID = backend->CreateTexture(textureDesc);
     if (!textureID.IsValid())
@@ -379,12 +381,20 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
     desc.width = firstFace->width;
     desc.height = firstFace->height;
     desc.channels = firstFace->channels;
+    desc.srgb = firstFace->colorSpace == TextureColorSpace::SRGB;
     for (uint32 face = 0; face < 6; ++face)
     {
         Texture2D* texture = faces[face];
         if (!texture || texture->width != desc.width || texture->height != desc.height || texture->channels != desc.channels || texture->pixels.empty())
         {
             Log::Error("GpuResourceManager skybox upload failed: faces must share size and format.");
+            return GpuCubeTextureID();
+        }
+
+        //六个面共用一张 cube 纹理，颜色空间不一致就无法用一个内部格式表达。
+        if ((texture->colorSpace == TextureColorSpace::SRGB) != desc.srgb)
+        {
+            Log::Error("GpuResourceManager skybox upload failed: faces must share color space.");
             return GpuCubeTextureID();
         }
 
@@ -504,7 +514,9 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
     {
         GpuMaterialColorBinding binding;
         binding.uniformName = slot.name;
-        binding.value = material->GetColor(slot.name, slot.defaultValue);
+        //材质与 .orbmat 里的颜色是 sRGB 语义（和检视面板一致），送 GPU 前转到线性。
+        //这是材质颜色的唯一转换点，着色器不再做任何颜色空间处理。
+        binding.value = ColorSpace::SrgbToLinear(material->GetColor(slot.name, slot.defaultValue));
         uploaded.colorBindings.push_back(binding);
     }
 

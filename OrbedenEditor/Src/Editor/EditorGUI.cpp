@@ -135,6 +135,8 @@ namespace
             Object* source = Object::FindObjectById(dragPayload.sourceObjectId);
             return source && source->GetWorld() == &app->GetWorld() && source->GetInstanceId().GetPath() == dragPayload.key;
         }
+        //列表内部排序由托管控件校验文档身份和下标，不对应资源路径。
+        if (dragPayload.kind == 3) return true;
         std::error_code error;
         return std::filesystem::exists(Utf8Path::FromUtf8(dragPayload.contentRoot) / Utf8Path::FromUtf8(dragPayload.key), error);
     }
@@ -873,17 +875,142 @@ namespace
         return pressed ? 1 : 0;
     }
 
+    struct InspectorListLayout
+    {
+        ImVec2 start;
+        float32 width;
+        bool expanded;
+        bool table;
+        int32 action;
+    };
+    thread_local List<InspectorListLayout> inspectorLists;
+
+    /// <summary>绘制列表标题、数量和增删按钮，展开时建立元素区域。</summary>
+    int32 ORBEDEN_NATIVE_CALL EditorGuiBeginList(const uint8* label, int32 length, int32* count, int32 flags)
+    {
+        std::string text = ReadUtf8Text(label, length);
+        ImGui::PushID(text.c_str());
+        ImGui::BeginGroup();
+        ImVec2 start = ImGui::GetCursorScreenPos();
+        float32 width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+        float32 height = ImGui::GetFrameHeight() + 6.0f;
+        float32 button = ImGui::GetFrameHeight();
+        float32 actionsWidth = button * 2.0f + 8.0f;
+        float32 sizeWidth = std::min(width * 0.3f, ImGui::GetFontSize() * 3.5f);
+        ImGuiID openId = ImGui::GetID("open");
+        bool expanded = ImGui::GetStateStorage()->GetBool(openId, true);
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        draw->AddRectFilled(start, ImVec2(start.x + width, start.y + height), ImGui::GetColorU32(ImGuiCol_FrameBg), 3.0f);
+        if (ImGui::InvisibleButton("header", ImVec2(std::max(1.0f, width - sizeWidth - actionsWidth - 12.0f), height)))
+        {
+            expanded = !expanded;
+            ImGui::GetStateStorage()->SetBool(openId, expanded);
+        }
+        ImGui::RenderArrow(draw, ImVec2(start.x + 7.0f, start.y + (height - ImGui::GetFontSize()) * 0.5f),
+            ImGui::GetColorU32(ImGuiCol_TextDisabled), expanded ? ImGuiDir_Down : ImGuiDir_Right, 0.8f);
+        ImGui::RenderTextClipped(ImVec2(start.x + 24.0f, start.y), ImVec2(start.x + width - sizeWidth - actionsWidth - 14.0f, start.y + height),
+            text.c_str(), ImGui::FindRenderedTextEnd(text.c_str()), nullptr, ImVec2(0.0f, 0.5f));
+        ImGui::SetCursorScreenPos(ImVec2(start.x + width - sizeWidth - actionsWidth - 6.0f, start.y + 3.0f));
+        ImGui::SetNextItemWidth(sizeWidth);
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+        ImGui::PushItemFlag(ImGuiItemFlags_MixedValue, (flags & 2) != 0);
+        ImGui::InputInt("##size", count, 0, 0, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemFlag();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Size (read only)");
+        int32 action = 0;
+        ImGui::SameLine(0.0f, 4.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
+        ImGui::BeginDisabled((flags & 1) == 0);
+        if (ImGui::Button("+", ImVec2(button, button))) action = 1;
+        ImGui::EndDisabled();
+        ImGui::SameLine(0.0f, 4.0f);
+        ImGui::BeginDisabled((flags & 4) == 0);
+        if (ImGui::Button("-", ImVec2(button, button))) action = 2;
+        ImGui::EndDisabled();
+        ImGui::PopStyleVar();
+        ImGui::SetCursorScreenPos(ImVec2(start.x, start.y + height));
+        bool table = false;
+        if (expanded)
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(6.0f, 4.0f));
+            table = ImGui::BeginTable("elements", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings, ImVec2(width, 0.0f));
+            if (table)
+            {
+                ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 3.2f);
+                ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+                if (*count == 0)
+                {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_WindowBg));
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TextDisabled("List is empty");
+                }
+            }
+        }
+        inspectorLists.push_back({start, width, expanded, table, action});
+        return table ? 1 : 0;
+    }
+
+    /// <summary>绘制紧凑拖动柄和索引，整行使用一致底色。</summary>
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiListElement(int32 index, uint8 selected)
+    {
+        ImGui::TableNextRow();
+        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(selected ? ImGuiCol_Header : ImGuiCol_WindowBg));
+        ImGui::TableSetColumnIndex(0);
+        ImGui::PushID(index);
+        ImVec2 start = ImGui::GetCursorScreenPos();
+        bool clicked = ImGui::Selectable("##handle", selected != 0, 0, ImVec2(0.0f, ImGui::GetFrameHeight()));
+        float32 center = start.y + ImGui::GetFrameHeight() * 0.5f;
+        ImU32 ink = ImGui::GetColorU32(ImGuiCol_TextDisabled);
+        for (int32 row = -1; row <= 1; ++row)
+            for (int32 column = 0; column < 2; ++column)
+                ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(start.x + 3.0f + column * 4.0f, center + row * 4.0f), 1.0f, ink);
+        std::string number = std::to_string(index);
+        ImGui::GetWindowDrawList()->AddText(ImVec2(start.x + 16.0f, center - ImGui::GetFontSize() * 0.5f), ink, number.c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Element %d - drag to reorder", index);
+        ImGui::PopID();
+        return clicked ? 1 : 0;
+    }
+
+    /// <summary>收拢列表边框，释放绘制状态并返回标题栏操作。</summary>
+    int32 ORBEDEN_NATIVE_CALL EditorGuiEndList()
+    {
+        InspectorListLayout layout = inspectorLists.back();
+        inspectorLists.pop_back();
+        if (layout.table) ImGui::EndTable();
+        if (layout.expanded) ImGui::PopStyleVar();
+        if (layout.table)
+        {
+            ImGui::SetCursorScreenPos(ImVec2(layout.start.x, ImGui::GetItemRectMax().y));
+        }
+        ImGui::GetWindowDrawList()->AddRect(layout.start, ImVec2(layout.start.x + layout.width, ImGui::GetCursorScreenPos().y),
+            ImGui::GetColorU32(ImGuiCol_Border), 3.0f);
+        ImGui::Dummy(ImVec2(layout.width, 4.0f));
+        ImGui::EndGroup();
+        ImGui::PopID();
+        return layout.action;
+    }
+
+    /// <summary>为自定义编辑器控件建立独立身份空间。</summary>
+    void ORBEDEN_NATIVE_CALL EditorGuiPushId(const uint8* text, int32 length) { ImGui::PushID(ReadUtf8Text(text, length).c_str()); }
+
+    /// <summary>结束控件身份空间。</summary>
+    void ORBEDEN_NATIVE_CALL EditorGuiPopId() { ImGui::PopID(); }
+
     //开始表格
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginTable(const uint8* id, int32 length, int32 columns)
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginTable(const uint8* id, int32 length, int32 columns, uint8 scroll)
     {
         if (columns <= 0) return 0;
 
         std::string value = ReadUtf8Text(id, length);
-        constexpr ImGuiTableFlags flags = ImGuiTableFlags_BordersInnerV
+        ImGuiTableFlags flags = ImGuiTableFlags_BordersInnerV
             | ImGuiTableFlags_RowBg
             | ImGuiTableFlags_Resizable
-            | ImGuiTableFlags_SizingStretchProp
-            | ImGuiTableFlags_ScrollY;
+            | ImGuiTableFlags_SizingStretchProp;
+        if (scroll) flags |= ImGuiTableFlags_ScrollY;
         return ImGui::BeginTable(value.empty() ? "##editor_table" : value.c_str(),
             columns,
             flags,
@@ -1097,7 +1224,7 @@ namespace
 
     //在指定位置绘制被裁剪的文本
     void ORBEDEN_NATIVE_CALL EditorGuiDrawTextClipped(const vector2* clipMin, const vector2* clipMax,
-        const vector2* position, const color* value, const uint8* text, int32 length)
+        const vector2* position, const color* value, const uint8* text, int32 length, float32 fontSize)
     {
         if (!clipMin || !clipMax || !position) return;
 
@@ -1105,7 +1232,7 @@ namespace
         ImU32 textColor = value ? ImGui::GetColorU32(ToImVec4(*value)) : ImGui::GetColorU32(ImGuiCol_Text);
 
         ImGui::PushClipRect(ImVec2(clipMin->x, clipMin->y), ImVec2(clipMax->x, clipMax->y), true);
-        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(),
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), fontSize > 0.0f ? fontSize : ImGui::GetFontSize(),
             ImVec2(position->x, position->y), textColor, body.c_str());
         ImGui::PopClipRect();
     }
@@ -1579,6 +1706,11 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.calcButtonWidth = reinterpret_cast<void*>(&EditorGuiCalcButtonWidth);
     api.beginMenu = reinterpret_cast<void*>(&EditorGuiBeginMenu);
     api.endMenu = reinterpret_cast<void*>(&EditorGuiEndMenu);
+    api.beginList = reinterpret_cast<void*>(&EditorGuiBeginList);
+    api.listElement = reinterpret_cast<void*>(&EditorGuiListElement);
+    api.endList = reinterpret_cast<void*>(&EditorGuiEndList);
+    api.pushId = reinterpret_cast<void*>(&EditorGuiPushId);
+    api.popId = reinterpret_cast<void*>(&EditorGuiPopId);
     return api;
 }
 

@@ -2,8 +2,11 @@
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
+#include "Rendering/ColorSpace.h"
 #include "Rendering/RenderMath.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Runtime/DisplaySettings.h"
+#include "Runtime/Object/Camera.h"
 
 #include <algorithm>
 #include <cmath>
@@ -173,6 +176,8 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
 
     gpuResourceManager.Initialize(&backend);
     forwardPipeline.Initialize(&backend);
+    outputPass.Initialize(&backend);
+    outlineQuad.Initialize(&backend);
     elapsedTime = 0.0f;
 
     //初始化 ImGui 覆盖层
@@ -197,6 +202,8 @@ void RenderSystem::Shutdown()
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
     forwardPipeline.Shutdown();
+    //输出 Pass 必须在后端关闭之前释放它持有的 shader 与顶点缓冲
+    outputPass.Shutdown();
     gpuResourceManager.Shutdown();
     backend.Shutdown();
     initialized = false;
@@ -395,6 +402,21 @@ void RenderSystem::Render(World& world, float deltaTime)
     {
         if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) continue;
 
+        //DepthOnly/None 的语义是保留显示目标已有的颜色。场景缓冲是每相机独立的，
+        //首帧没有旧内容，必须先把显示目标当前内容搬进来，否则会画出未初始化的内存。
+        if (camera.clearMode != ClearMode::SolidColor)
+        {
+            GpuRenderTargetCopyDesc seedDesc;
+            seedDesc.sourceRenderTarget = camera.finalRenderTarget;
+            seedDesc.destinationRenderTarget = camera.renderTarget;
+            seedDesc.sourceX = camera.viewportX;
+            seedDesc.sourceY = camera.viewportY;
+            seedDesc.width = camera.viewportWidth;
+            seedDesc.height = camera.viewportHeight;
+            seedDesc.colorOnly = true;
+            backend.CopyRenderTarget(seedDesc);
+        }
+
         {
             PROFILE("Render/Cull");
             culler.Cull(scene, camera, visibleSet); //剔除
@@ -411,9 +433,10 @@ void RenderSystem::Render(World& world, float deltaTime)
         if (debugLineWorld == &world && !debugLines.empty())
         {
             RenderPassDesc pass;
+            //场景缓冲是视口尺寸且原点为 0，视口原点只在外层目标上才有意义
             pass.renderTarget = camera.renderTarget;
-            pass.x = camera.viewportX;
-            pass.y = camera.viewportY;
+            pass.x = 0;
+            pass.y = 0;
             pass.width = camera.viewportWidth;
             pass.height = camera.viewportHeight;
             pass.clearMode = ClearMode::None;
@@ -421,6 +444,9 @@ void RenderSystem::Render(World& world, float deltaTime)
             backend.DrawLines(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
             backend.EndPass();
         }
+
+        //输出 Pass 必须排在描边与调试线之后：那些内容也写进场景缓冲，要一起转换到显示空间
+        RenderOutputPass(camera);
     }
 
     //结束渲染帧
@@ -477,6 +503,8 @@ void RenderSystem::ReleaseCameraFrameTextures()
 {
     for (ManagedCameraFrameTextures& textures : cameraFrameTextures)
     {
+        backend.DeleteRenderTarget(textures.sceneRenderTarget);
+        backend.DeleteDepthTexture(textures.sceneDepthTexture);
         backend.DeleteRenderTarget(textures.renderTarget);
         backend.DeleteDepthTexture(textures.depthTexture);
     }
@@ -506,28 +534,39 @@ void RenderSystem::PrepareCameraRenderData()
     {
         camera.elapsedTime = elapsedTime;
 
-        //编辑态只渲染带离屏目标的相机，直接画主 framebuffer 的游戏相机不参与
-        if (!mainFramebufferRendering && !camera.renderTargetId.IsValid())
-        {
-            camera.viewportWidth = 0;
-            camera.viewportHeight = 0;
-            continue;
-        }
+        //下面任一分支提前退出时都不能留下悬空句柄，输出 Pass 会直接读 finalRenderTarget。
+        camera.renderTarget = GpuRenderTargetID();
+        camera.sceneColorTexture = GpuTextureID();
+        camera.sceneDepthTexture = GpuDepthTextureID();
+        camera.finalRenderTarget = GpuRenderTargetID();
+        camera.cameraTextureTarget = GpuRenderTargetID();
+        camera.cameraColorTexture = GpuTextureID();
+        camera.cameraDepthTexture = GpuDepthTextureID();
 
-        //解析相机离屏 RenderTarget
+        //解析相机声明的最终输出目标，0 表示默认窗口帧缓冲
         const ManagedRenderTarget* target = FindRenderTarget(camera.renderTargetId);
-        if (camera.renderTargetId.IsValid() && !target)
+        const bool rendersToMainFramebuffer = !camera.renderTargetId.IsValid();
+        if (!rendersToMainFramebuffer && !target)
         {
-            camera.renderTarget = GpuRenderTargetID();
             camera.viewportWidth = 0;
             camera.viewportHeight = 0;
             continue;
         }
 
-        //获取相机渲染目标尺寸
+        //编辑态只渲染带离屏目标的相机，直接画主 framebuffer 的游戏相机不参与。
+        //这条判定必须在分配内部缓冲之前，否则会为每个游戏相机白建一份场景缓冲。
+        if (!mainFramebufferRendering && rendersToMainFramebuffer)
+        {
+            camera.viewportWidth = 0;
+            camera.viewportHeight = 0;
+            continue;
+        }
+
+        camera.finalRenderTarget = rendersToMainFramebuffer ? GpuRenderTargetID() : target->renderTarget;
+
+        //视口仍然相对最终输出目标解析
         int32 targetWidth = target ? target->width : framebufferWidth;
         int32 targetHeight = target ? target->height : framebufferHeight;
-        camera.renderTarget = target ? target->renderTarget : GpuRenderTargetID();
 
         //计算相机视口
         CalculateViewportAxis(camera.normalizedViewportX, camera.normalizedViewportWidth, targetWidth, camera.viewportX, camera.viewportWidth);
@@ -539,6 +578,11 @@ void RenderSystem::PrepareCameraRenderData()
         camera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView, aspect, camera.nearPlane, camera.farPlane);
         camera.viewProjectionMatrix = RenderMath::Mul(camera.projectionMatrix, camera.viewMatrix);
         camera.viewFrustum = RenderMath::BuildFrustum(camera.viewProjectionMatrix);
+
+        //曝光：项目级默认值，相机可单独覆盖
+        camera.exposure = (camera.camera && camera.camera->overrideExposure)
+            ? camera.camera->exposure
+            : DisplaySettings::GetExposure();
 
         //准备相机纹理资源
         ManagedCameraFrameTextures* textures = FindCameraFrameTextures(camera.ens);
@@ -552,12 +596,26 @@ void RenderSystem::PrepareCameraRenderData()
         textures->active = true;
 
         if (textures->width != camera.viewportWidth || textures->height != camera.viewportHeight ||
+            !textures->sceneRenderTarget.IsValid() || !textures->sceneDepthTexture.IsValid() ||
             !textures->depthTexture.IsValid() || !textures->renderTarget.IsValid())
         {
             GpuDepthTextureDesc depthDesc;
             depthDesc.width = camera.viewportWidth;
             depthDesc.height = camera.viewportHeight;
+            GpuDepthTextureID newSceneDepthTexture = backend.CreateDepthTexture(depthDesc);
             GpuDepthTextureID newDepthTexture = backend.CreateDepthTexture(depthDesc);
+
+            //场景缓冲承载线性 HDR；折射快照必须同级格式，否则 blit 会把高光钳到 [0,1]
+            GpuRenderTargetID newSceneRenderTarget;
+            if (newSceneDepthTexture.IsValid())
+            {
+                GpuRenderTargetDesc sceneDesc;
+                sceneDesc.width = camera.viewportWidth;
+                sceneDesc.height = camera.viewportHeight;
+                sceneDesc.depthTexture = newSceneDepthTexture;
+                sceneDesc.format = GpuRenderTargetFormat::RGBA16F;
+                newSceneRenderTarget = backend.CreateRenderTarget(sceneDesc);
+            }
 
             GpuRenderTargetID newRenderTarget;
             if (newDepthTexture.IsValid())
@@ -567,21 +625,29 @@ void RenderSystem::PrepareCameraRenderData()
                 targetDesc.height = camera.viewportHeight;
                 targetDesc.depthTexture = newDepthTexture;
                 targetDesc.linearColorFilter = true;
+                targetDesc.format = GpuRenderTargetFormat::RGBA16F;
                 newRenderTarget = backend.CreateRenderTarget(targetDesc);
             }
 
-            if (newDepthTexture.IsValid() && newRenderTarget.IsValid())
+            if (newSceneRenderTarget.IsValid() && newRenderTarget.IsValid())
             {
                 //替换相机纹理资源
+                backend.DeleteRenderTarget(textures->sceneRenderTarget);
+                backend.DeleteDepthTexture(textures->sceneDepthTexture);
                 backend.DeleteRenderTarget(textures->renderTarget);
                 backend.DeleteDepthTexture(textures->depthTexture);
-                textures->depthTexture = newDepthTexture;
+                textures->sceneRenderTarget = newSceneRenderTarget;
+                textures->sceneDepthTexture = newSceneDepthTexture;
+                textures->sceneColorTexture = backend.GetRenderTargetColorTexture(newSceneRenderTarget);
                 textures->renderTarget = newRenderTarget;
+                textures->depthTexture = newDepthTexture;
                 textures->width = camera.viewportWidth;
                 textures->height = camera.viewportHeight;
             }
             else
             {
+                backend.DeleteRenderTarget(newSceneRenderTarget);
+                backend.DeleteDepthTexture(newSceneDepthTexture);
                 backend.DeleteRenderTarget(newRenderTarget);
                 backend.DeleteDepthTexture(newDepthTexture);
                 Log::Error("RenderSystem camera texture setup failed: GPU resource creation failed.");
@@ -590,8 +656,12 @@ void RenderSystem::PrepareCameraRenderData()
 
         //绑定相机纹理资源
         if (textures->width == camera.viewportWidth && textures->height == camera.viewportHeight &&
+            textures->sceneRenderTarget.IsValid() && textures->sceneDepthTexture.IsValid() &&
             textures->depthTexture.IsValid() && textures->renderTarget.IsValid())
         {
+            camera.renderTarget = textures->sceneRenderTarget;
+            camera.sceneColorTexture = textures->sceneColorTexture;
+            camera.sceneDepthTexture = textures->sceneDepthTexture;
             camera.cameraTextureTarget = textures->renderTarget;
             camera.cameraColorTexture = backend.GetRenderTargetColorTexture(textures->renderTarget);
             camera.cameraDepthTexture = textures->depthTexture;
@@ -608,6 +678,8 @@ void RenderSystem::PrepareCameraRenderData()
             continue;
         }
 
+        backend.DeleteRenderTarget(textures->sceneRenderTarget);
+        backend.DeleteDepthTexture(textures->sceneDepthTexture);
         backend.DeleteRenderTarget(textures->renderTarget);
         backend.DeleteDepthTexture(textures->depthTexture);
         textures = cameraFrameTextures.erase(textures);
@@ -659,13 +731,19 @@ void RenderSystem::DrawLine(World& world, const vector3& start, const vector3& e
         debugLineWorld = &world;
     }
     if (debugLines.size() >= 4096) return;
-    debugLines.push_back({ start, end, tint, depthTest, drawLayer });
+    //脚本传入的是显示色，写进线性场景缓冲前先转线性；之后会被输出 Pass 一起色调映射。
+    debugLines.push_back({ start, end, ColorSpace::SrgbToLinear(tint), depthTest, drawLayer });
 }
 
 /// <summary>提交本帧需要描边的物体。</summary>
 void RenderSystem::SetSelectionHighlights(const List<SelectionHighlight>& highlights)
 {
+    //描边色同样来自编辑器界面，语义是显示色
     selectionHighlights = highlights;
+    for (SelectionHighlight& highlight : selectionHighlights)
+    {
+        highlight.tint = ColorSpace::SrgbToLinear(highlight.tint);
+    }
 }
 
 /// <summary>获取离屏目标的深度纹理。</summary>
@@ -704,41 +782,8 @@ bool RenderSystem::PrepareOutlineResources()
         outlineCompositeProgram = backend.CreateShaderProgram(compositeDesc);
     }
 
-    if (!outlineQuadInput.IsValid())
-    {
-        //后端固定按 位置/法线/uv/切线 取顶点，四边形要按同样步长补齐到 11 个 float
-        constexpr int32 VertexFloatCount = 11;
-        constexpr float32 Corners[4][2] = { { -1.0f, -1.0f }, { 1.0f, -1.0f }, { 1.0f, 1.0f }, { -1.0f, 1.0f } };
-        constexpr uint32 Indices[6] = { 0, 1, 2, 0, 2, 3 };
-
-        float32 vertexData[4 * VertexFloatCount] = {};
-        for (int32 index = 0; index < 4; ++index)
-        {
-            vertexData[index * VertexFloatCount + 0] = Corners[index][0];
-            vertexData[index * VertexFloatCount + 1] = Corners[index][1];
-        }
-
-        GpuBufferDesc vertexBufferDesc;
-        vertexBufferDesc.data = vertexData;
-        vertexBufferDesc.size = sizeof(vertexData);
-        outlineQuadVertexBuffer = backend.CreateVertexBuffer(vertexBufferDesc);
-
-        GpuBufferDesc indexBufferDesc;
-        indexBufferDesc.data = Indices;
-        indexBufferDesc.size = sizeof(Indices);
-        outlineQuadIndexBuffer = backend.CreateIndexBuffer(indexBufferDesc);
-
-        if (outlineQuadVertexBuffer.IsValid() && outlineQuadIndexBuffer.IsValid())
-        {
-            GpuVertexInputDesc inputDesc;
-            inputDesc.vertexBuffer = outlineQuadVertexBuffer;
-            inputDesc.indexBuffer = outlineQuadIndexBuffer;
-            inputDesc.stride = sizeof(float32) * VertexFloatCount;
-            outlineQuadInput = backend.CreateVertexInput(inputDesc);
-        }
-    }
-
-    const bool ready = outlineMaskProgram.IsValid() && outlineCompositeProgram.IsValid() && outlineQuadInput.IsValid();
+    //全屏四边形与输出 Pass 共用同一份实现
+    const bool ready = outlineMaskProgram.IsValid() && outlineCompositeProgram.IsValid() && outlineQuad.EnsureReady();
     if (!ready && !outlineWarned)
     {
         Log::Error("RenderSystem selection outline setup failed: builtin outline resources are unavailable.");
@@ -750,16 +795,11 @@ bool RenderSystem::PrepareOutlineResources()
 //释放选择描边持有的后端资源
 void RenderSystem::ReleaseOutlineResources()
 {
-    if (outlineQuadInput.IsValid()) backend.DeleteVertexInput(outlineQuadInput);
-    if (outlineQuadVertexBuffer.IsValid()) backend.DeleteVertexBuffer(outlineQuadVertexBuffer);
-    if (outlineQuadIndexBuffer.IsValid()) backend.DeleteIndexBuffer(outlineQuadIndexBuffer);
+    outlineQuad.Shutdown();
     if (outlineMaskTarget.IsValid()) backend.DeleteRenderTarget(outlineMaskTarget);
     if (outlineMaskProgram.IsValid()) backend.DeleteShaderProgram(outlineMaskProgram);
     if (outlineCompositeProgram.IsValid()) backend.DeleteShaderProgram(outlineCompositeProgram);
 
-    outlineQuadInput = GpuVertexInputID();
-    outlineQuadVertexBuffer = GpuVertexBufferID();
-    outlineQuadIndexBuffer = GpuIndexBufferID();
     outlineMaskTarget = GpuRenderTargetID();
     outlineMaskTexture = GpuTextureID();
     outlineMaskProgram = GpuShaderProgramID();
@@ -772,14 +812,15 @@ void RenderSystem::ReleaseOutlineResources()
 //为指定相机绘制选择描边：先写遮罩，再合成到相机颜色目标
 void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const VisibleSet& visibleSet)
 {
-    if (selectionHighlights.empty() || !camera.renderTarget.IsValid()) return;
+    if (selectionHighlights.empty()) return;
 
     const int32 viewportWidth = camera.viewportWidth;
     const int32 viewportHeight = camera.viewportHeight;
     if (viewportWidth <= 0 || viewportHeight <= 0) return;
     if (!PrepareOutlineResources()) return;
 
-    //遮罩目标与相机视口同尺寸，并共享相机的深度纹理：描边因此会被前景遮挡
+    //遮罩目标与相机视口同尺寸，并共享相机场景缓冲的深度纹理：描边因此会被前景遮挡。
+    //深度必须取场景缓冲的，renderTargetId 现在指向显示目标，那份深度从未被写入。
     if (!outlineMaskTarget.IsValid() || outlineMaskWidth != viewportWidth || outlineMaskHeight != viewportHeight)
     {
         if (outlineMaskTarget.IsValid()) backend.DeleteRenderTarget(outlineMaskTarget);
@@ -791,7 +832,7 @@ void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const Visi
         GpuRenderTargetDesc maskDesc;
         maskDesc.width = viewportWidth;
         maskDesc.height = viewportHeight;
-        maskDesc.depthTexture = GetRenderTargetDepthTexture(camera.renderTargetId);
+        maskDesc.depthTexture = camera.sceneDepthTexture;
         outlineMaskTarget = backend.CreateRenderTarget(maskDesc);
         if (!outlineMaskTarget.IsValid()) return;
 
@@ -813,8 +854,9 @@ void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const Visi
     //第一遍：把选中几何按描边色平涂进遮罩，只测深度不写深度
     //深度偏移把遮罩几何朝观察者推一点，抵消两次 pass 之间浮点误差造成的深度抖动
     RenderPassDesc maskPass;
-    maskPass.x = camera.viewportX;
-    maskPass.y = camera.viewportY;
+    //遮罩目标本身就是视口尺寸、原点为 0，不能再用相机视口原点
+    maskPass.x = 0;
+    maskPass.y = 0;
     maskPass.width = viewportWidth;
     maskPass.height = viewportHeight;
     maskPass.renderTarget = outlineMaskTarget;
@@ -851,10 +893,11 @@ void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const Visi
     backend.SetDepthWrite(true);
     if (!drewAny) return;
 
-    //第二遍：把遮罩轮廓按覆盖度混合到相机颜色目标，物体自身保持原色
+    //第二遍：把遮罩轮廓按覆盖度混合到场景缓冲，物体自身保持原色
     RenderPassDesc compositePass;
-    compositePass.x = camera.viewportX;
-    compositePass.y = camera.viewportY;
+    //场景缓冲同样是视口尺寸、原点为 0
+    compositePass.x = 0;
+    compositePass.y = 0;
     compositePass.width = viewportWidth;
     compositePass.height = viewportHeight;
     compositePass.renderTarget = camera.renderTarget;
@@ -874,7 +917,7 @@ void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const Visi
     backend.SetUniformFloat("u_CoreRadius", OutlineCoreRadius);
     backend.SetUniformFloat("u_GlowRadius", OutlineGlowRadius);
     backend.SetUniformFloat("u_GlowAlpha", OutlineGlowAlpha);
-    backend.BindVertexInput(outlineQuadInput);
+    backend.BindVertexInput(outlineQuad.GetVertexInput());
     backend.DrawIndexed(0, 6);
     backend.EndPass();
 
@@ -882,4 +925,25 @@ void RenderSystem::RenderSelectionOutline(const RenderCamera& camera, const Visi
     backend.SetDepthTest(true);
     backend.SetBlend(false);
     backend.SetCullMode(CullMode::Back);
+}
+
+//把相机的线性场景缓冲转换到它的最终输出目标，必须在描边与调试线之后调用
+void RenderSystem::RenderOutputPass(const RenderCamera& camera)
+{
+    if (!camera.sceneColorTexture.IsValid()) return;
+    if (camera.viewportWidth <= 0 || camera.viewportHeight <= 0) return;
+
+    OutputPass::Parameters parameters;
+    parameters.sourceTexture = camera.sceneColorTexture;
+    parameters.destinationRenderTarget = camera.finalRenderTarget;
+    //目标是显示目标或默认帧缓冲，视口原点在这一层才有意义
+    parameters.x = camera.viewportX;
+    parameters.y = camera.viewportY;
+    parameters.width = camera.viewportWidth;
+    parameters.height = camera.viewportHeight;
+    parameters.exposure = camera.exposure;
+
+    //阴影调试视图写出的是显示色，色调映射会改变调色板，只能原样复制
+    parameters.mode = forwardPipeline.IsShadowDebugViewActive() ? OutputPass::Mode::Copy : OutputPass::Mode::Display;
+    outputPass.Render(parameters);
 }

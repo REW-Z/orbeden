@@ -2,7 +2,7 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "", string Label = "");
+internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "", string Label = "", bool IsFixedSize = false);
 
 internal interface IPropertyTarget
 {
@@ -106,19 +106,21 @@ public sealed class PropertyValue
     public string ReferenceType { get; }
     //行的显示名，空表示直接用 Name；Name 是存取用的标识，可能不适合直接展示
     public string Label { get; }
+    public bool IsFixedSize { get; }
     public bool AllowsSceneReferences => document.AllowsSceneReferences;
     public bool HasMultipleDifferentValues { get; internal set; }
     public InteropValue Value => value;
     internal bool Modified { get; private set; }
     internal bool IsReadable { get; set; } = true;
 
-    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label)
+    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label, bool isFixedSize = false)
     {
         document = owner;
         Name = name;
         Kind = kind;
         ReferenceType = referenceType;
         Label = label;
+        IsFixedSize = isFixedSize;
     }
 
     public void SetValue(InteropValue newValue)
@@ -193,7 +195,7 @@ public sealed class PropertyDocument
                     if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
             }
             foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType, descriptor.Label));
+                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType, descriptor.Label, descriptor.IsFixedSize));
             initialized = true;
             ++structureVersion;
         }

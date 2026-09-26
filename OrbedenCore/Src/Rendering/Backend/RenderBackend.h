@@ -4,6 +4,13 @@
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderTypes.h"
 
+//渲染目标颜色格式。管线约定场景在 RGBA16F 线性空间计算，只有显示目标用 RGBA8。
+enum class GpuRenderTargetFormat
+{
+    RGBA8 = 0,
+    RGBA16F = 1,
+};
+
 //GPU 缓冲创建描述，用于顶点缓冲和索引缓冲。
 struct GpuBufferDesc
 {
@@ -29,6 +36,9 @@ public:
     int32 height = 0;
     int32 channels = 0;
     const uint8* pixels = nullptr;
+    //颜色贴图的像素是 sRGB 编码，用 sRGB 内部格式让采样自动解码；
+    //数据贴图（法线、粗糙度、遮罩）保持线性，必须为 false。
+    bool srgb = false;
 };
 
 //GPU 深度纹理创建描述，描述阴影图等深度贴图尺寸。
@@ -57,6 +67,8 @@ public:
     int32 height = 0;
     int32 channels = 0;
     const uint8* faces[6] = {};
+    //天空盒是颜色数据，通常为 true，采样时由硬件解码。
+    bool srgb = false;
 };
 
 //GPU 渲染目标创建描述，可创建颜色+深度或纯深度目标。
@@ -68,9 +80,13 @@ public:
     GpuDepthTextureID depthTexture;
     bool depthOnly = false;
     bool linearColorFilter = false;
+    //默认 RGBA8：显示目标与掩码目标都在这个格式下工作，
+    //只有场景缓冲需要显式声明 RGBA16F 承载线性 HDR。
+    GpuRenderTargetFormat format = GpuRenderTargetFormat::RGBA8;
 };
 
 //GPU 渲染目标拷贝描述，将源 viewport 的颜色和深度复制到目标起点。
+//源为 0 时表示默认窗口帧缓冲。
 struct GpuRenderTargetCopyDesc
 {
 public:
@@ -80,6 +96,9 @@ public:
     int32 sourceY = 0;
     int32 width = 0;
     int32 height = 0;
+    //只复制颜色。相机用 DepthOnly/None 清屏模式时用它把显示目标已有内容
+    //搬进内部场景缓冲，此时不能覆盖深度。
+    bool colorOnly = false;
 };
 
 //GPU shader 程序创建描述，描述顶点和片元 shader 源码。
@@ -140,7 +159,7 @@ public:
     virtual GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) = 0;
     virtual void DeleteRenderTarget(GpuRenderTargetID id) = 0;
     virtual GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const = 0;
-    virtual bool CopyRenderTargetColorAndDepth(const GpuRenderTargetCopyDesc& desc) = 0;
+    virtual bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) = 0;
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;
 

@@ -57,10 +57,80 @@ internal static class EditorAssetInspection
         return EditorAssetCache.Get(path);
     }
 
+    /// <summary>该源文件是否支持导入设置。目前只有图片：它一个文件对应一个 Texture2D。</summary>
+    internal static bool HasImportSettings(string path) => Path.GetExtension(path).ToLowerInvariant() is
+        ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp";
+
+    /// <summary>颜色空间的当前取值；null 表示未指定，由导入器按用途推断。</summary>
+    internal static string? GetColorSpaceSetting()
+    {
+        Dictionary<string, string> settings = EditorAssetCache.ReadSettings(SourcePath);
+        return settings.TryGetValue("colorSpace", out string? value) ? value : null;
+    }
+
+    /// <summary>写入颜色空间设置并立即重新导入，让运行时对象与新设置一致。</summary>
+    internal static void ApplyColorSpaceSetting(string? value)
+    {
+        Dictionary<string, string> settings = EditorAssetCache.ReadSettings(SourcePath);
+        if (value == null) settings.Remove("colorSpace");
+        else settings["colorSpace"] = value;
+
+        if (!EditorAssetCache.SaveSettings(SourcePath, settings, out string error))
+        {
+            status = error;
+            return;
+        }
+
+        status = string.Empty;
+        //缓存已失效，但进程内的对象还要靠这次重导更新；设置表按源文件 Key 取用
+        EditorAssetsNative.ReimportAsset(EditorAssetCatalog.Instance.ToResourceKey(SourcePath), false,
+            EditorAssetCache.EncodeSettingsTable(SourcePath, settings));
+    }
+
+    private static string status = string.Empty;
+
+    /// <summary>绘制导入设置。改动会写回伴生文件并触发重新导入。</summary>
+    private static void DrawImportSettings()
+    {
+        Dictionary<string, string> settings = EditorAssetCache.ReadSettings(SourcePath);
+        settings.TryGetValue("colorSpace", out string? colorSpace);
+        string preview = colorSpace switch
+        {
+            "SRGB" => "sRGB (color)",
+            "Linear" => "Linear (data)",
+            _ => "Auto (by usage)",
+        };
+
+        EditorGUI.Label("Import Settings");
+        EditorGUI.BeginDisabled(!EditorAssetsNative.CanModifyAssets());
+        try
+        {
+            if (EditorGUI.BeginCombo("Color Space", preview))
+            {
+                try
+                {
+                    if (EditorGUI.Selectable("Auto (by usage)", colorSpace == null)) ApplyColorSpaceSetting(null);
+                    if (EditorGUI.Selectable("sRGB (color)", colorSpace == "SRGB")) ApplyColorSpaceSetting("SRGB");
+                    if (EditorGUI.Selectable("Linear (data)", colorSpace == "Linear")) ApplyColorSpaceSetting("Linear");
+                }
+                finally { EditorGUI.EndCombo(); }
+            }
+            EditorGUI.Label("Auto picks sRGB for color maps. Changing this reimports the asset.");
+            if (status.Length != 0) EditorGUI.Label(status);
+        }
+        finally { EditorGUI.EndDisabled(); }
+    }
+
     /// <summary>显示导入时的反射摘要，不为浏览而加载网格和纹理对象。</summary>
     internal static void Draw()
     {
         EditorGUI.Label(Path.GetFileName(SourcePath));
+        if (HasImportSettings(SourcePath))
+        {
+            DrawImportSettings();
+            EditorGUI.Separator();
+        }
+
         EditorGUI.Label("Imported / cooked resource (read only)");
         Result result = Get(SourcePath);
         foreach (string message in result.Messages) EditorGUI.Label(message);

@@ -32,6 +32,11 @@ public:
     //0 表示绘制到默认窗口帧缓冲；离屏目标由 RenderSystem 在运行时分配
     uint32 renderTargetId = 0;
 
+    //曝光描述的是观察方式，与场景里的灯光强度互不影响。
+    //不覆盖时使用项目级默认值（ProjectSettings.display）。
+    bool overrideExposure = false;
+    float32 exposure = 1.0f;
+
     //获取启用状态
     bool GetEnabled() const;
 

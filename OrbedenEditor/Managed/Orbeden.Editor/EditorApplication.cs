@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using System.Text;
 using System.Runtime.InteropServices;
 
@@ -18,12 +19,30 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte, byte, byte*, int, int> MirrorTemplate;
     public delegate* unmanaged[Cdecl]<IntPtr, byte> IsWorldDirty;
     public delegate* unmanaged[Cdecl]<IntPtr, void> SetWorldDirty;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, void> RequestProjectAction;
+    public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, byte> GetWorldRenderSettings;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, float*, void> SetWorldRenderSettings;
 }
 #pragma warning restore CS0649
 
+/// <summary>世界级渲染设置的读写载荷，布局与 ManagedEditorBridge.cpp 的 EditorWorldRenderSettingsAbi 一致。</summary>
+[StructLayout(LayoutKind.Sequential)]
+internal struct EditorWorldRenderSettingsAbi
+{
+    public IntPtr SkyboxKey;
+    public int SkyboxKeyLength;
+    public int SkyboxKeyReserved;
+    public uint SkyboxEnabled;
+    public uint Reserved;
+    public float AmbientR;
+    public float AmbientG;
+    public float AmbientB;
+    public float AmbientA;
+}
+
 internal enum EditorProjectField
 {
-    Name, Root, Content, World, Managed, Native, Repository, SourceTemplate, Status, PlayerTargets
+    Name, Root, Content, World, Managed, Native, Repository, SourceTemplate, Status, PlayerTargets, ProjectFile
 }
 
 internal enum EditorBuildKind { Scripts, Native, Player }
@@ -34,10 +53,49 @@ internal enum EditorTemplateFolder { Examples = 1, Builtin = 2 }
 /// <summary>Editor 应用级原生操作入口。</summary>
 public static unsafe class EditorApplication
 {
+    /// <summary>请求打开项目文件或项目选择、新建对话框。</summary>
+    internal static void RequestProjectAction(int action, string path = "")
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(path);
+        fixed (byte* pointer = bytes) api.RequestProjectAction(api.Context, action, pointer, bytes.Length);
+    }
+
     private static EditorApplicationNativeApi api;
 
     /// <summary>当前编辑 World 是否相对磁盘文件有未保存改动，真相源在原生 World。</summary>
     public static bool WorldDirty => api.IsWorldDirty != null && api.IsWorldDirty(api.Context) != 0;
+
+    /// <summary>读取当前 World 的渲染设置。环境光是 sRGB 语义，与世界文件里存的一致。</summary>
+    internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor)
+    {
+        skyboxKey = string.Empty;
+        skyboxEnabled = false;
+        ambientColor = new Vector4(0.08f, 0.09f, 0.1f, 1.0f);
+        if (api.GetWorldRenderSettings == null) return false;
+
+        EditorWorldRenderSettingsAbi settings;
+        if (api.GetWorldRenderSettings(api.Context, &settings) == 0) return false;
+
+        skyboxKey = settings.SkyboxKeyLength > 0 && settings.SkyboxKey != IntPtr.Zero
+            ? Encoding.UTF8.GetString((byte*)settings.SkyboxKey, settings.SkyboxKeyLength)
+            : string.Empty;
+        skyboxEnabled = settings.SkyboxEnabled != 0;
+        ambientColor = new Vector4(settings.AmbientR, settings.AmbientG, settings.AmbientB, settings.AmbientA);
+        return true;
+    }
+
+    /// <summary>写入当前 World 的渲染设置。播放中由原生侧拒绝。</summary>
+    internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor)
+    {
+        if (api.SetWorldRenderSettings == null) return;
+
+        byte[] bytes = Encoding.UTF8.GetBytes(skyboxKey ?? string.Empty);
+        fixed (byte* keyPointer = bytes)
+        {
+            float* ambient = stackalloc float[4] { ambientColor.X, ambientColor.Y, ambientColor.Z, ambientColor.W };
+            api.SetWorldRenderSettings(api.Context, keyPointer, bytes.Length, (byte)(skyboxEnabled ? 1 : 0), ambient);
+        }
+    }
 
     public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 

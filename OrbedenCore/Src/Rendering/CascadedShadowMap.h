@@ -40,6 +40,10 @@ public:
         Shader* depthShader, GpuResourceManager& resources);
     //绑定当前相机阴影查询参数
     void BindUniforms(const RenderCamera& camera);
+
+    //阴影调试视图是否真正生效（与 u_ShadowDebugView 的取值一致）。
+    //输出 Pass 据此跳过色调映射：调试色板写的是显示色，再映射一次就不是原样了。
+    bool IsDebugViewActive() const;
     //绑定阴影 atlas
     void BindTexture(uint32 slot);
     //提交冻结相机深度统计

@@ -18,6 +18,7 @@
     <ClCompile Include="Src\editor_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EditorSceneGizmos.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="Src\Editor\NewProjectTemplate.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -68,6 +69,7 @@
     <ClInclude Include="Src\Editor\NewProjectTemplate.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorSceneGizmos.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="Src\Editor\EditorProject.h">
       <Filter>头文件</Filter>
     </ClInclude>

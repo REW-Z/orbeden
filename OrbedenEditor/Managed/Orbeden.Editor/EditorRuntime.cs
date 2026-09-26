@@ -239,12 +239,13 @@ public static class EditorRuntime
 
     /// <summary>绘制 C# Scene Handles，并提交原生手柄产生的编辑。</summary>
     [UnmanagedCallersOnly]
-    public static void DrawSceneGizmos()
+    public static void DrawSceneGizmos(byte commitOnly)
     {
         try
         {
             //原生侧每帧调用一次，正好用来轮询已松手的手柄拖拽
             while (Gizmos.TakeEdit(out EditorGizmoEdit edit)) CommitGizmoEdit(edit);
+            if (commitOnly == 0) CustomEditorRegistry.DrawScene();
         }
         catch (Exception ex)
         {
@@ -259,6 +260,7 @@ public static class EditorRuntime
         try
         {
             EditorStatusBar.Draw();
+            EditorRecentProjects.TrackCurrentProject();
         }
         catch (Exception ex)
         {
@@ -368,15 +370,15 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 73);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 10);
-        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 3);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 78);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 11);
+        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 5);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 145);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 153);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

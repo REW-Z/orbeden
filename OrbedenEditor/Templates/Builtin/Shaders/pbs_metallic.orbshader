@@ -40,6 +40,7 @@ uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
 #include "Builtin/shadow_common.orbinc"
 out vec4 FragColor;
+
 void main()
 {
     const float Pi = 3.14159265359;
@@ -74,5 +75,7 @@ void main()
     vec3 direct = (diffuse + specular) * nDotL * u_LightColor.rgb * max(u_LightIntensity, 0.0) * (1.0 - shadow);
     vec3 ambient = u_AmbientColor.rgb * albedo * (1.0 - metallic) * clamp(u_Occlusion, 0.0, 1.0);
     vec3 result = direct + ambient + max(u_EmissionColor.rgb, vec3(0.0));
+    //输出线性值。曝光、色调映射与 sRGB 编码统一由管线末端的输出 Pass 完成，
+    //本 Shader 不做任何颜色空间转换。
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, result), 1.0);
 }

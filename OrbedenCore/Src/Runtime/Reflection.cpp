@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <charconv>
 #include <iomanip>
 #include <sstream>
 #include <unordered_map>
@@ -344,6 +345,13 @@ namespace Reflection
             value = Value(StringId(text));
             return true;
         }
+        case FieldKind::Array:
+        {
+            List<std::string> elements;
+            if (!ParseArrayValues(text, elements)) return false;
+            value = Value(text);
+            return true;
+        }
         case FieldKind::ObjectRefList:
         {
             //引用列表整体以 '|' 连接的 Key 文本传递
@@ -390,9 +398,46 @@ namespace Reflection
     }
 
     //创建字段元数据
-    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue, FieldListSizeGetter getListSize, FieldListResizer resizeList)
-        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue), listSizeGetter(getListSize), listResizer(resizeList)
+    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue, FieldListSizeGetter getListSize, FieldListResizer resizeList, FieldKind arrayElementKind, bool isFixedSize)
+        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue), listSizeGetter(getListSize), listResizer(resizeList), elementKind(arrayElementKind), fixedSize(isFixedSize)
     {
+    }
+
+    /// <summary>用元素个数及每项字节长度编码容器。</summary>
+    std::string FormatArrayValues(const List<std::string>& values)
+    {
+        std::string text = std::to_string(values.size()) + ":";
+        for (const auto& value : values) text += std::to_string(value.size()) + ":" + value;
+        return text;
+    }
+
+    /// <summary>检查长度和完整消费，拒绝截断或尾随数据。</summary>
+    bool ParseArrayValues(const std::string& text, List<std::string>& values)
+    {
+        usize position = 0;
+        auto readLength = [&](usize& length)
+        {
+            usize end = text.find(':', position);
+            if (end == std::string::npos || end == position) return false;
+            auto result = std::from_chars(text.data() + position, text.data() + end, length);
+            if (result.ec != std::errc() || result.ptr != text.data() + end) return false;
+            position = end + 1;
+            return true;
+        };
+        usize count = 0;
+        if (!readLength(count) || count > (text.size() - position) / 2) return false;
+        List<std::string> parsed;
+        parsed.reserve(count);
+        for (usize index = 0; index < count; ++index)
+        {
+            usize length = 0;
+            if (!readLength(length) || length > text.size() - position) return false;
+            parsed.push_back(text.substr(position, length));
+            position += length;
+        }
+        if (position != text.size()) return false;
+        values = std::move(parsed);
+        return true;
     }
 
     //读取引用列表槽位数

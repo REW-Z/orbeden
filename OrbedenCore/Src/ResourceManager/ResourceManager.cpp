@@ -244,7 +244,7 @@ bool ResourceManager::Unload(const std::string& key)
 }
 
 //强制重新导入已加载资源，导入器复用原对象，因此对象身份与引用都不变
-uint32 ResourceManager::Reimport(const std::string& key, bool prefix)
+uint32 ResourceManager::Reimport(const std::string& key, bool prefix, const std::string& settingsTable)
 {
     const std::string target = key.empty() ? std::string() : GetSourceKey(ToResourceKey(key));
 
@@ -260,10 +260,11 @@ uint32 ResourceManager::Reimport(const std::string& key, bool prefix)
         if (matched && std::find(sources.begin(), sources.end(), source) == sources.end()) sources.push_back(source);
     }
 
-    //重新导入读源文件并原地写入原对象，各资源按自身脏标记重建 GPU 资源
+    //重新导入读源文件并原地写入原对象，各资源按自身脏标记重建 GPU 资源。
+    //设置表按源文件 Key 逐个取用，因此整目录重导也能各自带上自己的导入设置。
     for (const std::string& source : sources)
     {
-        AssetCollection collection = AssetPipeline::ImportSource(source);
+        AssetCollection collection = AssetPipeline::ImportSource(source, AssetImportSettings::Lookup(settingsTable, source));
         (void)collection;
     }
     return static_cast<uint32>(sources.size());

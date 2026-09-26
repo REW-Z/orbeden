@@ -8,9 +8,9 @@
 - 选择 Project 子资源：Inspector 只展示该对象；子项可拖入类型匹配的 ObjectField。
 - 选择内部 `.orbo`：展示其中的单个对象。
 - 现有 Ens、组件、多选属性事务和 Undo/Redo 保持原流程。
-- **子资源清单和导入依赖写入 `ResourceCache/Imported` 中的 `.resinfo`**，与 `.orbo` 一起作为可重建缓存，不纳入版本管理。
+- **每个源文件有一个伴生 `.resinfo`**（与源文件同址，进版本管理），分两部分：**导入设置**（用户可编辑，重新导入时保留）与**内部隐含资源清单**（每次导入重新生成）。对象产物 `.orbo` 仍在 `ResourceCache/Imported`，可重建、不进版本管理。
 - 扩展名只用于识别导入器。资源数量、Key、类型和字段来自原生 AssetPipeline 实际导入结果，不在 C# 重复解析 OBJ/glTF 猜测。
-- 资源检查只读。当前没有独立资源编辑/导入覆盖保存协议，不提供重新导入后丢失的假保存。
+- **导入设置可编辑**：Inspector 改设置 → 写回伴生文件 → 重新导入 → 运行时对象与清单一并更新。设置是持久用户数据，不会因重新导入丢失。清单部分仍然只读。
 
 ## 文件布局与职责
 
@@ -18,15 +18,16 @@
 Project/
   Content/
     Models/robot.gltf
+    Models/robot.gltf.resinfo             伴生文件：导入设置 + 内部资源清单（进版本管理）
     Textures/brick.png
+    Textures/brick.png.resinfo            同上
     ProjectSettings.layers
   ResourceCache/
     Imported/
       Models/
-        robot.gltf.resinfo
-        robot.gltf.<对象Key哈希>.orbo
+        robot.gltf.<对象Key哈希>.orbo      对象产物（可重建，不进版本管理）
+        robot.gltf.import.settings         交给导入工作进程的设置表（临时）
       Textures/
-        brick.png.resinfo
         brick.png.<对象Key哈希>.orbo
     Player/
       <对象Key哈希>.orbo
@@ -36,24 +37,33 @@ Project/
 
 Imported 目录结构与 Content 对应；不再使用源 Key 哈希目录、GUID 生成代次或历史版本。每个源文件的对象及可达依赖都带该源文件的完整文件名前缀，包括原始扩展名，同目录不同资源独立管理。
 
-Reimport 先删除该源文件的 `.resinfo` 和旧 `.orbo`，再在原位置生成当前结果；成功校验后写入 `.resinfo`，失败不恢复旧清单。对象删除后不遗留上一轮对象文件。`.resinfo.tmp` 仅用于写入完成后的文件替换，不是缓存历史代次。
+伴生文件与源文件**同址同名**，只多一个 `.resinfo` 后缀，因此随资源一起被复制、移动、删除和版本管理；源文件消失后由目录扫描清理。
 
-工作进程通过标准输出管道传递导入结果，日志重定向到标准错误；不生成 `.result` 文件。主进程异步收取结果并写入 `.resinfo`。整个 ResourceCache 可删除重建，不纳入版本管理。Player cook 只清理 `ResourceCache/Player`，不清理 Imported。
+Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留**；清单部分连同产物一起重新生成，成功校验后整体写回，失败不恢复旧清单。对象删除后不遗留上一轮对象文件。`.resinfo.tmp` 仅用于写入完成后的文件替换，不是缓存历史代次。
+
+工作进程通过标准输出管道传递导入结果，日志重定向到标准错误；不生成 `.result` 文件。主进程异步收取结果并写入伴生文件。**产物与 ResourceCache 可删除重建，不纳入版本管理**；伴生文件里的导入设置是用户数据，必须进版本管理。Player cook 只清理 `ResourceCache/Player`，不清理 Imported。
 
 ### `.resinfo` 的数据分区
 
-采用 UTF-8 JSON，当前 Version=2，全部字段均为生成数据。
+采用 UTF-8 JSON，当前 Version=3。字段分两类：**Settings 是用户数据，其余全部是生成数据**。
 
-| 字段 | 职责 |
-| --- | --- |
-| Version | 清单与导入协议版本；不兼容变动时递增并重建 |
-| Source | 相对 Content 的源文件路径，使用 `/` 分隔 |
-| Dependencies | 相对 Content 的依赖路径、文件长度与 UTC 修改时间 |
-| Blobs | 本次生成的全部对象文件名，包括可达依赖 |
-| Data.Objects | 完整资源 Key、原生类型、BlobName、反射摘要 |
-| Data.Messages | 导入器警告 |
+| 字段 | 类别 | 职责 |
+| --- | --- | --- |
+| Version | — | 清单与导入协议版本；不兼容变动时递增并重建 |
+| Source | 生成 | 相对 Content 的源文件路径，使用 `/` 分隔 |
+| **Settings** | **用户** | **导入设置，稀疏字典：只存用户显式改过的键，缺键表示按语义自动推断** |
+| Dependencies | 生成 | 相对 Content 的依赖路径、文件长度与 UTC 修改时间 |
+| Blobs | 生成 | 本次生成的全部对象文件名，包括可达依赖 |
+| Data.Objects | 生成 | 完整资源 Key、原生类型、BlobName、反射摘要 |
+| Data.Messages | 生成 | 导入器警告 |
 
-移除 SourceId、ImportSettings、未知扩展字段保留、Engine 构建时间戳和 Generation。当前没有用户导入设置编辑器；`.resinfo` 不承担持久用户配置。源路径及依赖路径不记录本机绝对路径；依赖校验仍使用源文件自身的长度和修改时间，不使用本机引擎安装路径或构建文件时间戳。更换路径后按新 Content 根解释相对路径。跨 Content 的依赖以相对路径表示，无法相对表示的路径拒绝提交。
+**重新导入只重建生成部分，`Settings` 原样保留**——这是伴生文件与纯缓存的根本区别。
+
+`Settings` 可以缺席：没有伴生文件、或伴生文件由更早版本写下时都按空处理，行为与"全部自动推断"一致，因此老项目升级后画面不变。
+
+移除 SourceId、未知扩展字段保留、Engine 构建时间戳和 Generation。源路径及依赖路径不记录本机绝对路径；依赖校验仍使用源文件自身的长度和修改时间，不使用本机引擎安装路径或构建文件时间戳。更换路径后按新 Content 根解释相对路径。跨 Content 的依赖以相对路径表示，无法相对表示的路径拒绝提交。
+
+**原生侧不解析 JSON。** 编辑器把 `Settings` 导出成 `源Key\t设置名\t值` 行表，通过两条通道交给原生：后台工作进程走命令行指向的设置文件，进程内 Reimport 走桥参数。原生用一个共用解析器按源文件 Key 逐行取用，因此整目录重导也能各自带上自己的设置。
 
 资源身份仍使用既有 `sourceKey//Type/SubId`，没有引入 GUID 引用协议。清单损坏、版本不符、源文件/依赖变化、任一对象缓存缺失时重新导入。修改导入格式或规则时需递增 Version；普通引擎重新编译不再仅凭产物时间戳触发全量重新导入，也可显式 Reimport。
 
@@ -78,7 +88,23 @@ Reimport 先删除该源文件的 `.resinfo` 和旧 `.orbo`，再在原位置生
 
 长文本截断到有限长度并标记，避免直接展示整块几何或像素数据。Inspector 使用导入快照，不为浏览清单而把这些对象加载到主进程。导入错误、源文件消失、空资源文件及已删除子资源都有显式状态；导入中或失败时不展示旧对象，禁止拖拽未完成的产物。
 
-资源修改不会误标记 World dirty，也不会进入组件 Undo；Ens 和组件仍通过原有 PropertyDocument 编辑。
+### 导入设置编辑
+
+支持导入设置的类型，在只读资源列表**上方**多出一节可编辑的 **Import Settings**：
+
+| 类型 | 设置 | 说明 |
+| --- | --- | --- |
+| 图片（png/jpg/jpeg/tga/bmp） | Color Space | `Auto (by usage)` / `sRGB (color)` / `Linear (data)` |
+
+改动流程：写回伴生文件的 `Settings` → 让缓存失效 → 进程内 Reimport 让运行时对象立刻与新设置一致 → 后台工作进程重新生成清单与产物。因此 Inspector 里的值、运行时对象、磁盘产物三者同步更新。
+
+`Auto` 是**删除该键**而不是写入一个特殊值：缺键即"按语义推断"，这样新增设置项不需要迁移老文件。
+
+设置目前只对图片源开放：图片一个文件对应一个 `Texture2D`，语义明确。复合资源（glTF/OBJ）的子贴图各有用途，没有独立的设置文件，因此按语义推断。
+
+播放中禁止编辑（与资源重命名、保存材质同一条件）。
+
+设置写入不会误标记 World dirty，也不进入组件 Undo；Ens 和组件仍通过原有 PropertyDocument 编辑。清单部分仍然只读。
 
 ## Project 选择、展开与引用
 
@@ -94,12 +120,12 @@ Reimport 先删除该源文件的 `.resinfo` 和旧 `.orbo`，再在原位置生
 
 ## 源文件与缓存操作
 
-- Content 中只维护源文件，不再生成或联动伴随 `.resinfo`。
-- 重命名/移动继续维护既有路径引用；扫描清除旧位置的缓存清单与对象，在新位置重新导入。
-- Duplicate、外部 Import 只复制源文件，不复制缓存身份、清单或历史结果。
-- 删除仍将源文件送入回收站；对应缓存由扫描清理。
-- Project 面板不展示 ResourceCache。旧 Content 伴随文件不再读取；升级后可移除旧 `.resinfo`，不迁移其内容。
-- 项目 `.gitignore` 排除 ResourceCache 与 `.resinfo`；已被版本控制跟踪的历史文件需要从版本库中另行移除。
+- Content 中维护源文件与它们的**伴生 `.resinfo`**；后者承载导入设置，随资源一起进版本管理。
+- 重命名/移动继续维护既有路径引用；伴生文件与源文件同址，随源文件一起移动，扫描清除旧位置的对象产物。
+- Duplicate、外部 Import 复制源文件与伴生文件，但**不复制对象产物**——产物由新位置重新导入生成。
+- 删除仍将源文件送入回收站；伴生文件与对象产物由扫描清理。
+- 伴生文件与源文件同处 `Content/`，但**不参与 Project 面板的列表与操作**：`IsGeneratedPath` 把它们连同 `ResourceCache` 一起排除，文件监听、目录枚举、拖拽与引用重写都跳过。
+- 项目 `.gitignore` 排除 ResourceCache 与 `*.resinfo.tmp`；**`*.resinfo` 必须纳入版本管理**。
 
 ## Project Settings 与 Layer 控件
 

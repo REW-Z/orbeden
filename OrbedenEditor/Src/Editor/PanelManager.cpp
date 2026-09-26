@@ -84,6 +84,7 @@ void PanelManager::DrawViewsMenu()
 
     for (PanelEntry& entry : panels)
     {
+        if (entry.info.fixedWorkspace) continue;
         bool visible = entry.visible;
         if (ImGui::Checkbox(entry.info.title.c_str(), &visible))
         {
@@ -111,6 +112,11 @@ void PanelManager::DrawViewsMenu()
 //绘制所有可见面板
 void PanelManager::DrawPanels()
 {
+    if (!standalonePanel.empty())
+    {
+        if (PanelEntry* previous = FindPanel(standalonePanel.c_str())) previous->panel->OnPanelHidden();
+        standalonePanel.clear();
+    }
     if (defaultLayoutPending)
     {
         BuildDefaultDockLayout();
@@ -151,6 +157,30 @@ void PanelManager::DrawPanels()
         draggedPanel.clear();
     }
     ApplyPendingCommands();
+}
+
+/// <summary>为欢迎页等独占面板提供宿主，项目布局保留到重新进入工作区。</summary>
+void PanelManager::DrawStandalonePanel(const char* id)
+{
+    PanelEntry* entry = FindPanel(id);
+    if (!entry || !entry->panel) return;
+    if (standalonePanel != id)
+    {
+        if (PanelEntry* previous = FindPanel(standalonePanel.c_str())) previous->panel->OnPanelHidden();
+        standalonePanel = id;
+        entry->panel->OnPanelShown();
+    }
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    bool visible = ImGui::Begin("##standalone_workspace", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
+    ImGui::PopStyleVar(3);
+    if (visible) entry->panel->DrawPanel();
+    ImGui::End();
 }
 
 //恢复内置默认停靠布局

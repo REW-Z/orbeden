@@ -113,9 +113,14 @@ void main()
     surfaceX /= max(length(surfaceX), 0.00001);
     surfaceY /= max(length(surfaceY), 0.00001);
     vec3 wetNormal = normalize(normal - surfaceX * slope.x * 0.12 - surfaceY * slope.y * 0.12);
-    vec3 halfVector = viewDir - u_LightDirection;
+    vec3 lightDir = normalize(-u_LightDirection);
+    vec3 halfVector = viewDir + lightDir;
     vec3 halfDir = halfVector / max(length(halfVector), 0.0001);
-    float highlight = pow(max(dot(wetNormal, halfDir), 0.0), 160.0) * clamp(height, 0.0, 1.0);
+
+    //透射与反光都在线性空间合成：相机颜色纹理已经是线性值。
+    //掠射反光代表环境反射，不随主光方向变化；水滴高光来自主光，因此带上 nDotL。
+    float nDotL = max(dot(wetNormal, lightDir), 0.0);
+    float highlight = pow(max(dot(wetNormal, halfDir), 0.0), 160.0) * clamp(height, 0.0, 1.0) * nDotL;
     vec3 reflection = u_LightColor.rgb * max(u_LightIntensity, 0.0) * (0.025 * fresnel + 0.18 * highlight);
     FragColor = vec4(transmitted + reflection, clamp(u_Opacity, 0.0, 1.0));
 }

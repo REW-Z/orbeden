@@ -50,15 +50,17 @@ flowchart TD
 
 Camera 使用归一化 Viewport，默认 `(0, 0, 1, 1)`。RenderSystem 根据窗口或离屏目标尺寸换算为像素区域，并重新计算相机宽高比和视锥。
 
-- `renderTargetId = 0`：绘制到窗口。
-- 有效非零 ID：绘制到离屏 FBO。
+- `renderTargetId = 0`：最终输出到窗口。
+- 有效非零 ID：最终输出到离屏 FBO。
 - 无效 ID 或零尺寸 Viewport：跳过该相机。
+
+**`renderTargetId` 描述的是最终输出目标，不是几何的绘制目标。** 每个有效相机都会由 RenderSystem 自动分配一块与 Viewport 同尺寸的 `RGBA16F` 场景缓冲，几何、光照、描边与调试线都画在它上面，再由输出 Pass 转换到最终目标（见 [颜色管线](ColorPipeline.md)）。编辑器视口的离屏目标是显示目标，保持 `RGBA8`。
 
 普通 RenderTarget 由颜色纹理、深度纹理和 FBO 组成；创建、Resize、项目 Reload 和 Shutdown 都由 RenderSystem 统一管理。
 
 每个有效相机还会自动持有一组与 Viewport 同尺寸的 GPU 快照：
 
-- `CameraColorTexture`：包含 Skybox、Opaque 和普通 Transparent 的 RGBA8 颜色。
+- `CameraColorTexture`：场景缓冲在透明队列之后的线性 HDR 副本，供折射队列采样。
 - `CameraDepthTexture`：在相同时间点复制的 Depth24 深度；普通透明物体默认不写深度。
 - 快照始终生成，不需要相机开关，也不提供 CPU 回读。
 
@@ -96,7 +98,7 @@ ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 
 
 ```mermaid
 flowchart TD
-    A["绑定 Camera FBO / Viewport"] --> B["按 ClearMode 局部清屏"]
+    A["绑定相机场景缓冲 / Viewport\n（RGBA16F，原点 0，视口尺寸）"] --> B["按 ClearMode 局部清屏"]
     B --> C{"SolidColor 且启用 Skybox?"}
     C -- 是 --> D["绘制 Skybox"]
     C -- 否 --> E["Opaque Pass"]
@@ -106,7 +108,14 @@ flowchart TD
     G --> H["DepthTest On\nDepthWrite Off\nBlend On"]
     H --> I["Copy Camera Color + Depth\n一次 GPU Blit"]
     I --> J["Refraction Pass\nDepthWrite Off\nBlend On"]
+    J --> K["选择描边合成"]
+    K --> L["世界空间调试线"]
+    L --> M["输出 Pass\n曝光 → AgX → sRGB 编码\n写 finalRenderTarget"]
 ```
+
+相机主 Pass 的目标是引擎分配的场景缓冲，所以它的原点恒为 `0`；`viewportX/Y` 只在输出 Pass 写到最终目标时才有意义。
+
+输出 Pass 必须排在描边与调试线之后：那些内容也写进场景缓冲，要一起转换到显示空间。它是全引擎唯一的显示编码点，细节见 [颜色管线](ColorPipeline.md)。
 
 绘制队列由 `Shader.drawQueue` 提供默认值（缺省为 `Opaque`）。`Material.overrideDrawQueue` 默认关闭；开启后采用 `Material.drawQueue`，`Material.GetDrawQueue()` 返回最终队列。未绑定 Shader 且未覆盖时返回 `Opaque`（材质能否实际绘制仍由资源有效性决定）。Renderer 不再保存队列，同一 Renderer 的不同子网格可以分别使用不透明、透明或折射材质；阴影仅绘制最终队列为 `Opaque` 的子网格，并受 Renderer 的 `castShadows` 控制。
 
@@ -128,10 +137,10 @@ OrbShader 在所有 Pass/阶段之前声明一次全局队列，适用于该 Sha
 `ClearMode` 含义：
 
 - `SolidColor`：清颜色和深度，并允许绘制天空盒。
-- `DepthOnly`：只清深度，保留前一相机颜色。
-- `None`：完全保留目标内容。
+- `DepthOnly`：只清深度，保留最终目标已有的颜色。
+- `None`：完全保留最终目标内容。
 
-清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
+场景缓冲是每相机独立的，首帧没有可保留的内容，所以 `DepthOnly` 与 `None` 会先把最终目标的当前内容复制进场景缓冲。深度不做这种保留：最终目标（尤其编辑器显示目标）的深度从未被写入，复制它没有意义。清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
 
 绘制时，同一 Shader Program 的相机/灯光 Uniform 每个相机只设置一次。Material 参数会对每个 Pass Program 分别写入。
 

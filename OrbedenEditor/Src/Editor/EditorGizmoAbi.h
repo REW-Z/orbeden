@@ -79,7 +79,9 @@ public:
     void* Line3D = nullptr;
     void* Label3D = nullptr;
     void* TakeEdit = nullptr;              //取出一次待提交的手柄编辑，没有时返回 0
+    void* IsSelected = nullptr;
+    void* IsVisible = nullptr;
 };
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 3);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 5);

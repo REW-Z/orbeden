@@ -325,6 +325,8 @@ void HeightField::RebuildNoiseTexture()
     noiseTexture->width = size;
     noiseTexture->height = size;
     noiseTexture->channels = 4;
+    //像素由检视面板的颜色插值而来，和面板其他颜色一样是 sRGB 语义。
+    noiseTexture->colorSpace = TextureColorSpace::SRGB;
     noiseTexture->pixels.resize(static_cast<size_t>(size) * size * 4);
 
     for (int32 y = 0; y < size; y++)

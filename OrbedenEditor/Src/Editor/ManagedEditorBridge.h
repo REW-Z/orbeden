@@ -64,7 +64,7 @@ public:
     void UnloadGameAssembly();
 
     //绘制 C# Scene Handles。
-    void DrawSceneGizmos();
+    void DrawSceneGizmos(bool commitOnly = false);
 
     //绘制底部状态栏内容。
     void DrawStatusBar();

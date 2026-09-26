@@ -91,11 +91,16 @@ public:
     void* calcButtonWidth = nullptr;
     void* beginMenu = nullptr;
     void* endMenu = nullptr;
+    void* beginList = nullptr;
+    void* listElement = nullptr;
+    void* endList = nullptr;
+    void* pushId = nullptr;
+    void* popId = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 73);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 78);
 
 //Editor ImGui 绑定层
 class EditorGUI

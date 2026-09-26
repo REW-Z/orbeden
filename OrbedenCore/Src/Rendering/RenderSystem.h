@@ -3,7 +3,9 @@
 #include "Application.h"
 #include "Rendering/Backend/OpenGLRenderBackend.h"
 #include "Rendering/ForwardPipeline.h"
+#include "Rendering/FullscreenQuad.h"
 #include "Rendering/ImGuiLayer.h"
+#include "Rendering/OutputPass.h"
 #include "Rendering/RenderItemSorter.h"
 #include "Rendering/SceneCuller.h"
 #include "Rendering/TransformCache.h"
@@ -42,11 +44,21 @@ private:
         int32 height = 0;
     };
 
+    //每相机一块引擎管理的场景缓冲，外加折射用的颜色与深度快照。
+    //两者尺寸都跟随相机视口，视口变化时整体重建。
     struct ManagedCameraFrameTextures
     {
         EnsId cameraEns;
+
+        //场景缓冲：几何与光照的绘制目标，RGBA16F 线性 HDR。
+        GpuRenderTargetID sceneRenderTarget;
+        GpuDepthTextureID sceneDepthTexture;
+        GpuTextureID sceneColorTexture;
+
+        //折射快照：透明队列之后从场景缓冲复制而来。
         GpuDepthTextureID depthTexture;
         GpuRenderTargetID renderTarget;
+
         int32 width = 0;
         int32 height = 0;
         bool active = false;
@@ -64,6 +76,8 @@ private:
 
     //Forward 管线
     ForwardPipeline forwardPipeline;
+    //输出 Pass：把线性场景缓冲转换到显示目标，管线的末端
+    OutputPass outputPass;
     //ImGui 覆盖层
     ImGuiLayer imguiLayer;
 
@@ -95,9 +109,7 @@ private:
     GpuShaderProgramID outlineCompositeProgram;
     GpuRenderTargetID outlineMaskTarget;
     GpuTextureID outlineMaskTexture;
-    GpuVertexInputID outlineQuadInput;
-    GpuVertexBufferID outlineQuadVertexBuffer;
-    GpuIndexBufferID outlineQuadIndexBuffer;
+    FullscreenQuad outlineQuad;
     int32 outlineMaskWidth = 0;
     int32 outlineMaskHeight = 0;
     bool outlineWarned = false;
@@ -140,6 +152,9 @@ private:
 
     //为指定相机绘制选择描边：先把选中几何写成遮罩，再合成到相机颜色目标
     void RenderSelectionOutline(const RenderCamera& camera, const VisibleSet& visibleSet);
+
+    //把相机的线性场景缓冲转换到它的最终输出目标，必须在描边与调试线之后调用
+    void RenderOutputPass(const RenderCamera& camera);
 
     //查找本帧提交的描边颜色，未选中时 alpha 为 0
     color FindHighlightTint(EnsId ens) const;

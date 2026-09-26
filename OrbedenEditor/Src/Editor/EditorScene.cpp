@@ -362,6 +362,19 @@ namespace
             std::clamp(color.a, 0.0f, 1.0f)));
     }
 
+    /// <summary>读取当前场景选择，供 CustomEditor 派发选中回调。</summary>
+    uint8 ORBEDEN_NATIVE_CALL IsGizmoEnsSelected(EnsId ens)
+    {
+        EditorScene* scene = EditorScene::GetActiveScene();
+        return scene && scene->IsSelected(ens) ? 1 : 0;
+    }
+
+    /// <summary>读取组件 Gizmos 总开关。</summary>
+    uint8 ORBEDEN_NATIVE_CALL AreGizmosVisible()
+    {
+        return CurrentGizmoScene && CurrentGizmoScene->GetGizmosVisible() ? 1 : 0;
+    }
+
     //把三维点投影到屏幕坐标，与手柄共用同一套投影约定。
     bool ProjectGizmoPoint(const EditorGizmoVector3& point, ImVec2& screen)
     {
@@ -560,10 +573,12 @@ void EditorScene::DrawSceneOverlay()
     //手柄与托管 Gizmo 共用渲染这张离屏图用的相机矩阵；手柄的写入必须早于拾取
     PrepareGizmoView(scene);
     DrawGizmoToolbar();
+    DrawManagedGizmos();
     UpdateGizmoHandles(world);
+    managedBridge.DrawSceneGizmos(true);
     HandleSelection(scene);
     SubmitSelectionHighlight(world);
-    DrawManagedGizmos();
+    componentGizmos.Draw(world, *this, gizmoView);
     DrawGizmoHandles();
 }
 
@@ -982,6 +997,8 @@ EditorGizmoApi EditorScene::GetGizmoApi()
     EditorGizmoApi api;
     api.Line3D = reinterpret_cast<void*>(&DrawGizmoLine);
     api.Label3D = reinterpret_cast<void*>(&DrawGizmoLabel);
+    api.IsSelected = reinterpret_cast<void*>(&IsGizmoEnsSelected);
+    api.IsVisible = reinterpret_cast<void*>(&AreGizmosVisible);
     api.TakeEdit = reinterpret_cast<void*>(&TakeGizmoEditNative);
     return api;
 }
@@ -1094,6 +1111,7 @@ void EditorScene::HandleSelection(const RenderScene& scene)
             && !io.KeyAlt
             && !cameraMouseDragging
             && !HasBlockingImGuiActiveItem()
+            && !gizmoToolbarHovered
             && !gizmoHandles.OwnsMouse();
         selectionDragged = false;
         selectionCtrl = io.KeyCtrl;
@@ -1383,9 +1401,22 @@ void EditorScene::DrawManagedGizmos()
 {
     if (!gizmoViewValid) return;
 
+    ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
+    ImVec2 savedCursor = ImGui::GetCursorScreenPos();
+    ImVec2 savedMax = window->DC.CursorMaxPos;
+    ImGui::PushClipRect(ImVec2(sceneView.renderPosition.x, sceneView.renderPosition.y),
+        ImVec2(sceneView.renderPosition.x + sceneView.renderSize.x, sceneView.renderPosition.y + sceneView.renderSize.y), true);
+    ImGui::SetCursorScreenPos(ImVec2(sceneView.renderPosition.x + 8, sceneView.renderPosition.y + 40));
+    ImGui::BeginGroup();
     CurrentGizmoScene = this;
     managedBridge.DrawSceneGizmos();
     if (CurrentGizmoScene == this) CurrentGizmoScene = nullptr;
+    ImGui::EndGroup();
+    gizmoToolbarHovered |= ImGui::IsItemHovered();
+    ImGui::PopClipRect();
+    ImGui::SetCursorScreenPos(savedCursor);
+    window->DC.CursorMaxPos = savedMax;
+    window->DC.IsSetPos = false;
 }
 
 //准备本帧手柄与托管 Gizmo 共用的视图投影。
@@ -1475,6 +1506,23 @@ void EditorScene::DrawGizmoToolbar()
     if (localMode) ImGui::PopStyleColor();
 
     overToolbar |= ImGui::IsItemHovered();
+    if (sceneView.renderSize.x >= 300.0f)
+    {
+        ImGui::SameLine(0.0f, 8.0f);
+        if (ImGui::Button(componentGizmos.enabled ? "Gizmos##component_gizmos" : "Gizmos Off##component_gizmos", ImVec2(0,22)))
+            ImGui::OpenPopup("component_gizmos_options");
+        overToolbar |= ImGui::IsItemHovered();
+        if (ImGui::BeginPopup("component_gizmos_options"))
+        {
+            ImGui::Checkbox("Show Gizmos", &componentGizmos.enabled);
+            ImGui::Separator();
+            ImGui::Checkbox("Directional Lights", &componentGizmos.lights);
+            ImGui::Checkbox("Colliders", &componentGizmos.colliders);
+            ImGui::Checkbox("All Colliders", &componentGizmos.allColliders);
+            ImGui::EndPopup();
+            overToolbar = true;
+        }
+    }
     ImGui::SetCursorScreenPos(savedCursor);
     window->DC.CursorMaxPos = savedMax;
     window->DC.IsSetPos = false;

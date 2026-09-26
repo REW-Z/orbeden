@@ -35,9 +35,18 @@ public:
     uint32 drawLayerMask = 0xFFFFFFFFu;
     ClearMode clearMode = ClearMode::SolidColor;
     color clearColor = { 0.1f, 0.12f, 0.16f, 1.0f };
+    //线性曝光倍数，由 DisplaySettings 提供默认值，相机可覆盖。
+    float32 exposure = 1.0f;
 
+    //相机声明的最终输出目标，0 表示默认窗口帧缓冲。
     RenderTargetID renderTargetId;
+    GpuRenderTargetID finalRenderTarget;
+    //引擎分配的场景缓冲（RGBA16F 线性 HDR），始终是几何与光照的绘制目标。
+    //输出 Pass 负责把它转换到 finalRenderTarget。
     GpuRenderTargetID renderTarget;
+    GpuTextureID sceneColorTexture;
+    GpuDepthTextureID sceneDepthTexture;
+    //折射队列用的场景颜色与深度快照，在透明队列之后复制。
     GpuRenderTargetID cameraTextureTarget;
     GpuTextureID cameraColorTexture;
     GpuDepthTextureID cameraDepthTexture;

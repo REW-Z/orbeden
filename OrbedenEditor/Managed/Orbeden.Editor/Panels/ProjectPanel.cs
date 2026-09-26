@@ -646,13 +646,14 @@ internal sealed class ProjectPanel : EditorPanel
     private static string PasteDestination(string entry, bool directory)
         => directory ? entry : Path.GetDirectoryName(entry)!;
 
-    //重新导入指定路径的已加载资源；目录连带子路径，两种都报出处理的源文件数
+    //重新导入指定路径的已加载资源；目录连带子路径，两种都报出处理的源文件数。
+    //带上导入设置表：原生按源文件 Key 逐行取用，不在范围内的条目会被忽略。
     private void ReimportEntry(string? entry)
     {
         if (string.IsNullOrEmpty(entry)) return;
         EditorAssetInspection.Invalidate(force: true);
         int count = EditorAssetsNative.ReimportAsset(
-            EditorAssetCatalog.Instance.ToResourceKey(entry), Directory.Exists(entry));
+            EditorAssetCatalog.Instance.ToResourceKey(entry), Directory.Exists(entry), EditorAssetCache.EncodeAllSettings());
         status = count == 0 ? "Nothing to reimport: no loaded asset under this path."
             : $"Reimported {count} source file(s).";
     }
@@ -661,7 +662,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void ReimportAll()
     {
         EditorAssetInspection.Invalidate(force: true);
-        int count = EditorAssetsNative.ReimportAllAssets();
+        int count = EditorAssetsNative.ReimportAllAssets(EditorAssetCache.EncodeAllSettings());
         status = count == 0 ? "Nothing to reimport: no loaded assets." : $"Reimported {count} source file(s).";
     }
 

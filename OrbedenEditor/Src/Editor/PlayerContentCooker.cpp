@@ -6,6 +6,7 @@
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
+#include "Runtime/DisplaySettings.h"
 #include "Runtime/LayerSettings.h"
 
 #include <algorithm>
@@ -54,7 +55,9 @@ namespace
     {
         for (const std::string& key : contentKeys)
         {
-            if (key == LayerSettings::FileName || Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).extension()) == WorldExtension)
+            //项目级设置文件按原样复制，不参与 cook
+            if (key == LayerSettings::FileName || key == DisplaySettings::FileName
+                || Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).extension()) == WorldExtension)
             {
                 worldKeys.push_back(key);
                 continue;

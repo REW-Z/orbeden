@@ -44,6 +44,53 @@ public:
     }
 };
 
+//从 "<源Key>\t<设置名>\t<值>" 设置表里取出指定源文件的设置。
+AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const std::string& sourceKey)
+{
+    AssetImportSettings settings;
+    if (sourceKey.empty()) return settings;
+
+    usize cursor = 0;
+    bool first = true;
+    while (cursor <= table.size())
+    {
+        usize end = table.find('\n', cursor);
+        if (end == std::string::npos) end = table.size();
+        std::string line = table.substr(cursor, end - cursor);
+        cursor = end + 1;
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty()) continue;
+
+        //版本头只认第一行，认不出就当作普通行继续解析
+        if (first)
+        {
+            first = false;
+            if (line == TableHeader) continue;
+        }
+
+        //三段：源Key、设置名、值。段数不对说明这行不是给本解析器的，跳过。
+        usize sourceEnd = line.find('\t');
+        if (sourceEnd == std::string::npos) continue;
+        usize nameEnd = line.find('\t', sourceEnd + 1);
+        if (nameEnd == std::string::npos) continue;
+        if (line.compare(0, sourceEnd, sourceKey) != 0) continue;
+
+        std::string_view name(line.data() + sourceEnd + 1, nameEnd - sourceEnd - 1);
+        std::string value = line.substr(nameEnd + 1);
+
+        if (name == "colorSpace")
+        {
+            if (value == "SRGB") { settings.hasTextureColorSpace = true; settings.textureColorSpace = TextureColorSpace::SRGB; }
+            else if (value == "Linear") { settings.hasTextureColorSpace = true; settings.textureColorSpace = TextureColorSpace::Linear; }
+            else Log::Warning(("Unknown import setting value for colorSpace: " + value).c_str());
+        }
+        //不认识的设置名直接跳过：表由编辑器写，多出来的项属于更高版本的编辑器
+
+        if (end == table.size()) break;
+    }
+    return settings;
+}
+
 namespace
 {
     constexpr const char* MaterialDiffuseTextureSlot = "u_DiffuseTexture";
@@ -52,6 +99,14 @@ namespace
     constexpr const char* MaterialSpecularColorSlot = "u_SpecularColor";
     constexpr const char* MaterialEmissionColorSlot = "u_EmissionColor";
     constexpr const char* MaterialShininessSlot = "u_Shininess";
+
+    //按材质槽名判断贴图的颜色语义。法线是数据，其余槽按颜色处理；
+    //自定义着色器里的数据贴图槽沿用内置命名约定才能被正确识别。
+    TextureColorSpace GetMaterialTextureSlotColorSpace(const std::string& slotName)
+    {
+        if (slotName == MaterialNormalTextureSlot) return TextureColorSpace::Linear;
+        return TextureColorSpace::SRGB;
+    }
 
     struct VertexKey
     {
@@ -726,8 +781,9 @@ namespace
         return object;
     }
 
-    //导入图片到指定ObjectKey
-    Texture2D* ImportImageAsKey(const std::string& filePath, const std::string& objectKey, AssetCollection& collection)
+    //导入图片到指定ObjectKey。inferredColorSpace 是按语义推断的值，用户设置优先于它。
+    Texture2D* ImportImageAsKey(const std::string& filePath, const std::string& objectKey, AssetCollection& collection,
+        TextureColorSpace inferredColorSpace, const AssetImportSettings& settings)
     {
         std::string imageFilePath = GetAssetFilePath(filePath);
         std::string textureKey = ResourceManager::ToResourceKey(objectKey);
@@ -755,6 +811,7 @@ namespace
         texture->height = height;
         texture->channels = 4;
         texture->format = 4;
+        texture->colorSpace = settings.hasTextureColorSpace ? settings.textureColorSpace : inferredColorSpace;
         texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
         stbi_image_free(pixels);
         //重新导入会复用同一对象，得让 GPU 纹理重新上传
@@ -839,8 +896,9 @@ namespace
         return !bytes.empty();
     }
 
-    //从内存图片创建Texture2D资源
-    Texture2D* ImportImageMemoryAsKey(const uint8* data, usize size, const std::string& imageName, const std::string& objectKey, AssetCollection& collection)
+    //从内存图片创建Texture2D资源。inferredColorSpace 是按语义推断的值，用户设置优先于它。
+    Texture2D* ImportImageMemoryAsKey(const uint8* data, usize size, const std::string& imageName, const std::string& objectKey, AssetCollection& collection,
+        TextureColorSpace inferredColorSpace, const AssetImportSettings& settings)
     {
         std::string textureKey = ResourceManager::ToResourceKey(objectKey);
         if (!data || size == 0 || size > static_cast<usize>(std::numeric_limits<int>::max()))
@@ -871,6 +929,7 @@ namespace
         texture->height = height;
         texture->channels = 4;
         texture->format = 4;
+        texture->colorSpace = settings.hasTextureColorSpace ? settings.textureColorSpace : inferredColorSpace;
         texture->pixels.assign(pixels, pixels + static_cast<usize>(width) * static_cast<usize>(height) * 4);
         stbi_image_free(pixels);
         //重新导入会复用同一对象，得让 GPU 纹理重新上传
@@ -887,7 +946,8 @@ namespace
         const std::string& sourceKey,
         const std::string& sourcePath,
         AssetCollection& collection,
-        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures)
+        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures,
+        TextureColorSpace inferredColorSpace, const AssetImportSettings& settings)
     {
         if (!view.texture) return {};
 
@@ -905,8 +965,20 @@ namespace
             return {};
         }
 
+        //用户设置优先于本调用点的语义推断
+        const TextureColorSpace colorSpace = settings.hasTextureColorSpace ? settings.textureColorSpace : inferredColorSpace;
+
+        //同一张图被不同语义引用时颜色空间会冲突（例如既当基础色又当法线）。
+        //标记是纹理级属性，无法同时满足两种用途，必须让作者拆开这两张图。
         auto found = importedTextures.find(image);
-        if (found != importedTextures.end()) return found->second;
+        if (found != importedTextures.end())
+        {
+            if (found->second.texture && found->second.texture->colorSpace != colorSpace)
+            {
+                collection.AddError("glTF image is used with conflicting color spaces: " + found->second.key);
+            }
+            return found->second;
+        }
 
         usize imageIndex = static_cast<usize>(cgltf_image_index(data, image));
         std::string fallbackName = "Texture_" + std::to_string(imageIndex);
@@ -917,7 +989,7 @@ namespace
         if (image->buffer_view)
         {
             const uint8* imageData = cgltf_buffer_view_data(image->buffer_view);
-            texture = ImportImageMemoryAsKey(imageData, static_cast<usize>(image->buffer_view->size), imageName, textureKey, collection);
+            texture = ImportImageMemoryAsKey(imageData, static_cast<usize>(image->buffer_view->size), imageName, textureKey, collection, colorSpace, settings);
         }
         else if (image->uri && StartsWith(image->uri, "data:"))
         {
@@ -928,7 +1000,7 @@ namespace
             }
             else
             {
-                texture = ImportImageMemoryAsKey(imageBytes.data(), imageBytes.size(), imageName, textureKey, collection);
+                texture = ImportImageMemoryAsKey(imageBytes.data(), imageBytes.size(), imageName, textureKey, collection, colorSpace, settings);
             }
         }
         else
@@ -940,7 +1012,7 @@ namespace
             }
             else
             {
-                texture = ImportImageAsKey(imagePath, textureKey, collection);
+                texture = ImportImageAsKey(imagePath, textureKey, collection, colorSpace, settings);
                 if (texture) texture->name = imageName;
             }
         }
@@ -1074,7 +1146,10 @@ namespace
                     std::filesystem::path texturePath = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(textureFile);
                     std::string textureSuffix = command == "map_Kd" ? "_Diffuse" : "_Bump";
                     std::string textureKey = sourceKey + "//Texture/" + SanitizeKeyName(currentMaterialName + textureSuffix, "Texture");
-                    Texture2D* texture = ImportImageAsKey(Utf8Path::ToUtf8(texturePath), textureKey, collection);
+                    //漫反射贴图是颜色，凹凸贴图是数据。
+                    const TextureColorSpace textureColorSpace = command == "map_Kd" ? TextureColorSpace::SRGB : TextureColorSpace::Linear;
+                    //OBJ 的子贴图没有独立的设置文件，按语义推断
+                    Texture2D* texture = ImportImageAsKey(Utf8Path::ToUtf8(texturePath), textureKey, collection, textureColorSpace, {});
                     if (!texture) continue;
 
                     if (command == "map_Kd")
@@ -1207,7 +1282,8 @@ namespace
 
         if (diffuseTexture)
         {
-            GltfTextureImportInfo texture = GetOrImportGltfTexture(data, *diffuseTexture, sourceKey, sourcePath, collection, importedTextures);
+            //glTF 的子贴图没有独立的设置文件，按语义推断
+            GltfTextureImportInfo texture = GetOrImportGltfTexture(data, *diffuseTexture, sourceKey, sourcePath, collection, importedTextures, TextureColorSpace::SRGB, {});
             if (texture.texture)
             {
                 material->SetTexture(MaterialDiffuseTextureSlot, texture.texture);
@@ -1215,7 +1291,7 @@ namespace
             }
         }
 
-        GltfTextureImportInfo normalTexture = GetOrImportGltfTexture(data, sourceMaterial->normal_texture, sourceKey, sourcePath, collection, importedTextures);
+        GltfTextureImportInfo normalTexture = GetOrImportGltfTexture(data, sourceMaterial->normal_texture, sourceKey, sourcePath, collection, importedTextures, TextureColorSpace::Linear, {});
         if (normalTexture.texture)
         {
             material->SetTexture(MaterialNormalTextureSlot, normalTexture.texture);
@@ -1700,13 +1776,14 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
 }
 
 //按主文件路径选择导入器
-AssetCollection AssetPipeline::ImportSource(std::string path)
+AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportSettings& settings)
 {
     std::string sourceKey = ResourceManager::GetSourceKey(path);
 
+    //设置目前只作用于图片源：复合资源（glTF/OBJ）的子贴图各有语义，没有独立的设置文件。
     switch (SelectImporter(sourceKey))
     {
-    case AssetImporter::Image: return Import_IMG(sourceKey);
+    case AssetImporter::Image: return Import_IMG(sourceKey, settings);
     case AssetImporter::Obj: return Import_OBJ(sourceKey);
     case AssetImporter::OrbMat: return Import_ORBMAT(sourceKey);
     case AssetImporter::Gltf: return Import_GLTF(sourceKey);
@@ -1771,7 +1848,7 @@ AssetCollection AssetPipeline::Import_ORBMAT(std::string path)
             return collection;
         }
         //贴图走图片导入器，Key 原样沿用文件里写的那一个
-        if (!ImportImageAsKey(textureKey, textureKey, collection)) return collection;
+        if (!ImportImageAsKey(textureKey, textureKey, collection, GetMaterialTextureSlotColorSpace(slot.name), {})) return collection;
         ResourceManager::RegisterDependency(sourceKey, textureKey);
     }
 
@@ -1887,12 +1964,14 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
 }
 
 //导入图片为CPU纹理
-AssetCollection AssetPipeline::Import_IMG(std::string path)
+AssetCollection AssetPipeline::Import_IMG(std::string path, const AssetImportSettings& settings)
 {
     AssetCollection collection;
     std::string sourceKey = ResourceManager::ToResourceKey(path);
     collection.sourceKey = sourceKey;
-    ImportImageAsKey(sourceKey, sourceKey, collection);
+    //独立导入的图片无从判断用途，默认按最常见的颜色贴图处理；
+    //资源旁的 .resinfo 里指定了 colorSpace 时以用户设置为准。
+    ImportImageAsKey(sourceKey, sourceKey, collection, TextureColorSpace::SRGB, settings);
     return collection;
 }
 

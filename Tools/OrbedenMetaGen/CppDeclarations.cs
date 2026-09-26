@@ -273,14 +273,19 @@ internal static class CppDeclarations
             var signature = initializer < 0 ? declaration : declaration[..initializer];
             int subscript = signature.FindIndex(value => value.Text == "[");
             member.FixedArray = subscript >= 0;
+            string arrayLength = string.Empty;
             if (member.FixedArray)
             {
                 if (subscript <= 0) return null;
+                int close = signature.FindIndex(subscript + 1, token => token.Text == "]");
+                if (close < 0 || close != signature.Count - 1) throw new InvalidDataException("Only one-dimensional fixed arrays are supported.");
+                arrayLength = Join(signature.GetRange(subscript + 1, close - subscript - 1));
                 signature = signature[..subscript];
             }
             if (signature.Count < 2) return null;
             member.Name = signature[^1].Text;
             member.Type = Join(signature.Take(signature.Count - 1).Where(value => value.Text is not ("static" or "mutable" or "constexpr" or "inline")).ToList());
+            if (member.FixedArray) member.Type = $"std::array<{member.Type},{arrayLength}>";
         }
         member.IsStatic = declaration.Any(value => value.Text == "static");
         return member;

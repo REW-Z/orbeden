@@ -12,6 +12,7 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/RenderSettings.h"
 #include "Runtime/CookedAssetSerializer.h"
 #include "Runtime/CookedAssetSerializer.h"
 #include "Scripting/ScriptInterop.h"
@@ -47,6 +48,7 @@ namespace
         int32, uint32, uint32, const EnsId*, int32, const uint8*, int32, const uint8*, int32);
     using ManagedSetPanelVisibleFn = void(CORECLR_DELEGATE_CALLTYPE*)(int32, uint8);
     using ManagedDrawEditorFn = void(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedDrawSceneGizmosFn = void(CORECLR_DELEGATE_CALLTYPE*)(uint8);
     using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedCommandFn = uint8(CORECLR_DELEGATE_CALLTYPE*)();
@@ -166,6 +168,9 @@ namespace
         void* mirrorTemplate = nullptr;
         void* isWorldDirty = nullptr;
         void* setWorldDirty = nullptr;
+        void* requestProjectAction = nullptr;
+        void* getWorldRenderSettings = nullptr;
+        void* setWorldRenderSettings = nullptr;
     };
 
     //传给 Editor C# 的日志函数表。
@@ -212,20 +217,21 @@ namespace
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 10);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 13);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 145);
+    //application 表扩容后，排在它后面的每张表偏移也都跟着后移
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 155);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 74);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 84);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 87);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 89);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 108);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 132);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 137);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 79);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 92);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 97);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 99);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 118);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 142);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 147);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -488,6 +494,7 @@ namespace
         case 6: text = editor->GetRepositoryRoot(); break;
         case 7: text = editor->GetSourceTemplateRoot(); break;
         case 8: text = editor->GetProjectStatusText(); break;
+        case 10: text = editor->GetProject().GetProjectFilePath(); break;
         case 9:
             for (int32 index = 0; index < editor->GetPlayerTargetPlatformCount(); ++index)
             {
@@ -499,6 +506,16 @@ namespace
             break;
         }
         return CopyUtf8(text, buffer, capacity);
+    }
+
+    /// <summary>接收欢迎页操作；项目加载排队执行，对话框保持现有流程。</summary>
+    void ORBEDEN_NATIVE_CALL RequestManagedProjectAction(void* context, int32 action, const uint8* path, int32 length)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor) return;
+        if (action == 0) editor->RequestOpenProjectFile(ReadUtf8(path, length));
+        else if (action == 1) editor->RequestOpenProjectDialog();
+        else if (action == 2) editor->RequestNewProjectDialog();
     }
 
     //请求现有原生构建流程
@@ -604,20 +621,23 @@ namespace
         return count;
     }
 
-    //强制重新导入指定资源，返回处理的源文件数
-    int32 ORBEDEN_NATIVE_CALL ReimportManagedAsset(void* context, uint8* key, int32 length, uint8 prefix)
+    //强制重新导入指定资源，返回处理的源文件数。
+    //settings 是 "源Key\t设置名\t值" 行表，由编辑器从资源旁 .resinfo 导出；可为空。
+    int32 ORBEDEN_NATIVE_CALL ReimportManagedAsset(void* context, uint8* key, int32 length, uint8 prefix,
+        const uint8* settingsText, int32 settingsLength)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || !editor->HasProject() || editor->IsPlaying()) return 0;
-        return static_cast<int32>(ResourceManager::Reimport(ReadUtf8(key, length), prefix != 0));
+        return static_cast<int32>(ResourceManager::Reimport(ReadUtf8(key, length), prefix != 0,
+            ReadUtf8(settingsText, settingsLength)));
     }
 
     //强制重新导入全部已加载资源，返回处理的源文件数
-    int32 ORBEDEN_NATIVE_CALL ReimportAllManagedAssets(void* context)
+    int32 ORBEDEN_NATIVE_CALL ReimportAllManagedAssets(void* context, const uint8* settingsText, int32 settingsLength)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || !editor->HasProject() || editor->IsPlaying()) return 0;
-        return static_cast<int32>(ResourceManager::Reimport(std::string(), true));
+        return static_cast<int32>(ResourceManager::Reimport(std::string(), true, ReadUtf8(settingsText, settingsLength)));
     }
 
     //读取编辑器已验证的单对象缓存及依赖，不重新解析原始复合资源。
@@ -691,6 +711,7 @@ namespace
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (editor && !editor->IsPlaying()) editor->GetWorld().SetDirty();
     }
+
 
     //重映射原生对象资源引用
     int32 ORBEDEN_NATIVE_CALL RemapManagedLiveReferences(void* context,
@@ -794,6 +815,7 @@ namespace
     List<std::string> SplitReferenceKeys(const std::string& text)
     {
         List<std::string> keys;
+        if (Reflection::ParseArrayValues(text, keys)) return keys;
         usize start = 0;
         while (true)
         {
@@ -816,13 +838,7 @@ namespace
     //把槽位 Key 写回引用列表字段，空槽写成空段
     bool WriteReferenceKeys(const Reflection::FieldInfo* field, Component* component, const List<std::string>& keys)
     {
-        std::string text;
-        for (usize index = 0; index < keys.size(); ++index)
-        {
-            if (index > 0) text += Reflection::ReferenceListSeparator;
-            text += keys[index];
-        }
-        return field->SetValueFromString(component, text);
+        return field->SetValueFromString(component, Reflection::FormatArrayValues(keys));
     }
 
     //解析"字段名[下标]"形式的属性名
@@ -863,6 +879,54 @@ namespace
         EditorTextAbi() = default;
         explicit EditorTextAbi(std::string_view text) : data(text.data()), length(static_cast<int32>(text.size())) {}
     };
+
+    //世界级渲染设置的读写载荷。skyboxKey 仅在当前同步调用期间借用。
+    struct EditorWorldRenderSettingsAbi
+    {
+        EditorTextAbi skyboxKey;
+        uint32 skyboxEnabled = 0;
+        uint32 reserved = 0;
+        float32 ambientColor[4] = {};
+    };
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 40);
+
+    //读取世界级渲染设置。Key 借用 World 里的字符串，只在本次调用期间有效。
+    uint8 ORBEDEN_NATIVE_CALL GetManagedWorldRenderSettings(void* context, EditorWorldRenderSettingsAbi* settings)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !settings) return 0;
+
+        const RenderSettings& source = editor->GetWorld().renderSettings;
+        settings->skyboxKey = EditorTextAbi(source.skybox.GetInstanceId().GetPath());
+        settings->skyboxEnabled = source.skyboxEnabled ? 1u : 0u;
+        settings->ambientColor[0] = source.ambientColor.r;
+        settings->ambientColor[1] = source.ambientColor.g;
+        settings->ambientColor[2] = source.ambientColor.b;
+        settings->ambientColor[3] = source.ambientColor.a;
+        return 1;
+    }
+
+    //写入世界级渲染设置
+    void ORBEDEN_NATIVE_CALL SetManagedWorldRenderSettings(void* context, const char* skyboxKey, int32 skyboxKeyLength,
+        uint8 skyboxEnabled, const float32* ambientColor)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !ambientColor) return;
+
+        RenderSettings& target = editor->GetWorld().renderSettings;
+        if (skyboxKey && skyboxKeyLength > 0)
+        {
+            target.skybox.SetInstanceId(StringId(std::string(skyboxKey, static_cast<usize>(skyboxKeyLength))));
+        }
+        else
+        {
+            target.skybox.SetInstanceId(StringId());
+        }
+
+        target.skyboxEnabled = skyboxEnabled != 0;
+        target.ambientColor = color { ambientColor[0], ambientColor[1], ambientColor[2], ambientColor[3] };
+        editor->GetWorld().SetDirty();
+    }
 
     struct EditorValueAbi
     {
@@ -929,6 +993,7 @@ namespace
         case F::Color: return V::Color;
         case F::Quaternion: return V::Quaternion;
         case F::EnsId: return managed ? V::StringId : V::EnsId;
+        case F::Array: return V::Array;
         default: return V::Empty;
         }
     }
@@ -1008,6 +1073,39 @@ namespace
         properties.reserve(capacity);
         texts.clear();
 
+        //普通容器按元素类型展开；保留原始文本，托管端用声明类型解析数值。
+        auto appendArray = [&](const std::string& name, Reflection::FieldKind elementKind,
+            const std::string& referenceType, const std::string& value, bool fixedSize, bool managed)
+        {
+            List<std::string> elements;
+            if (!Reflection::ParseArrayValues(value, elements)) return;
+            EditorPropertyAbi container;
+            texts.push_back(name);
+            container.name = EditorTextAbi(texts.back());
+            container.declaredKind = Reflection::ValueKind::Array;
+            container.reserved = fixedSize ? 1u : 0u;
+            WriteEditorPayload<int32>(Reflection::Value(static_cast<int32>(elements.size())), container.value);
+            container.value.kind = Reflection::ValueKind::Array;
+            properties.push_back(container);
+            for (usize index = 0; index < elements.size(); ++index)
+            {
+                EditorPropertyAbi entry;
+                texts.push_back(name + "[" + std::to_string(index) + "]");
+                entry.name = EditorTextAbi(texts.back());
+                entry.declaredKind = GetEditorValueKind(elementKind, managed);
+                if (!referenceType.empty())
+                {
+                    texts.push_back(referenceType);
+                    entry.referenceType = EditorTextAbi(texts.back());
+                }
+                texts.push_back(elements[index]);
+                entry.value.kind = Reflection::ValueKind::String;
+                EditorTextAbi text(texts.back());
+                std::memcpy(entry.value.payload, &text, sizeof(text));
+                properties.push_back(entry);
+            }
+        };
+
         //生成托管宿主字段快照
         if (host)
         {
@@ -1020,6 +1118,16 @@ namespace
             for (const auto& field : host->GetManagedFields())
             {
                 if (!field.inspectorVisible) continue;
+                if (field.kind == Reflection::FieldKind::Array)
+                {
+                    std::string elementType = field.typeName.substr(field.typeName.find('<') + 1);
+                    elementType.pop_back();
+                    auto elementKind = Script::GetManagedFieldKind(elementType);
+                    std::string reference = elementKind == Reflection::FieldKind::ObjectRef
+                        ? elementType.substr(4, elementType.size() - 5) : elementType == "EnsId" ? "EnsId" : "";
+                    appendArray(field.name, elementKind, reference, field.value, false, true);
+                    continue;
+                }
                 Reflection::ValueKind kind = GetEditorValueKind(field.kind, true);
                 if (kind == Reflection::ValueKind::Empty) continue;
                 EditorPropertyAbi entry;
@@ -1046,6 +1154,13 @@ namespace
             //直接读取原生类型化字段
             for (const auto* field : fields)
             {
+                if (field->kind == Reflection::FieldKind::Array)
+                {
+                    appendArray(field->name, field->elementKind, field->elementKind == Reflection::FieldKind::EnsId
+                        ? "EnsId" : field->objectRefTypeName ? field->objectRefTypeName : "",
+                        field->GetValueAsString(component), field->fixedSize, false);
+                    continue;
+                }
                 //引用列表展成一条容器条目加每个槽位一条元素条目。槽位数取字段自己报的真实长度：
                 //列表文本分不出"0 个槽位"与"1 个空槽位"，两者都是空串
                 if (field->kind == Reflection::FieldKind::ObjectRefList)
@@ -1110,6 +1225,37 @@ namespace
         Reflection::Value value;
         if (!DecodeEditorValue(*input, value)) return S::TypeMismatch;
         std::string fieldName = ReadUtf8(name, length);
+        std::string arrayName;
+        int32 arrayIndex = -1;
+        bool arrayElement = ParseListElementName(fieldName, arrayName, arrayIndex);
+        //数组的结构编辑与元素编辑共用一次文本提交，业务通知只在成功后执行。
+        auto editArray = [&](List<std::string>& elements, Reflection::FieldKind elementKind, bool fixedSize, bool managed)
+        {
+            if (!arrayElement)
+            {
+                int32 count = 0;
+                if (input->kind != Reflection::ValueKind::Array || !value.TryGet(count) || count < 0
+                    || (fixedSize && static_cast<usize>(count) != elements.size())) return false;
+                std::string initial;
+                using F = Reflection::FieldKind;
+                switch (elementKind)
+                {
+                case F::Bool: initial = "false"; break;
+                case F::Int32: case F::UInt32: case F::UInt64: case F::Float32: initial = "0"; break;
+                case F::Vector3: initial = "0 0 0"; break;
+                case F::Color: initial = "0 0 0 0"; break;
+                case F::Quaternion: initial = "0 0 0 1"; break;
+                case F::EnsId: initial = managed ? "" : "0:0"; break;
+                default: break;
+                }
+                elements.resize(static_cast<usize>(count), initial);
+                return true;
+            }
+            if (arrayIndex < 0 || static_cast<usize>(arrayIndex) >= elements.size()
+                || input->kind != GetEditorValueKind(elementKind, managed)) return false;
+            elements[static_cast<usize>(arrayIndex)] = value.ToString();
+            return true;
+        };
         if (Script* host = AsManagedScriptHost(component))
         {
             if (fieldName == "enabled")
@@ -1121,6 +1267,15 @@ namespace
             }
             for (const auto& field : host->GetManagedFields())
             {
+                if (field.kind == Reflection::FieldKind::Array && (arrayElement ? arrayName : fieldName) == field.name && field.inspectorVisible)
+                {
+                    std::string elementType = field.typeName.substr(field.typeName.find('<') + 1);
+                    elementType.pop_back();
+                    List<std::string> elements;
+                    if (!Reflection::ParseArrayValues(field.value, elements)
+                        || !editArray(elements, Script::GetManagedFieldKind(elementType), false, true)) return S::TypeMismatch;
+                    return host->SetManagedFieldValue(field.name, Reflection::FormatArrayValues(elements)) ? S::Ok : S::InvocationFailed;
+                }
                 if (field.name != fieldName || !field.inspectorVisible) continue;
                 if (GetEditorValueKind(field.kind, true) != input->kind) return S::TypeMismatch;
                 return host->SetManagedFieldValue(fieldName, value.ToString()) ? S::Ok : S::InvocationFailed;
@@ -1133,6 +1288,13 @@ namespace
         bool hasElementName = ParseListElementName(fieldName, elementFieldName, elementIndex);
         for (const auto* field : GetEditorComponentTypeFacts(component->GetType()).fields)
         {
+            if (field->kind == Reflection::FieldKind::Array && (arrayElement ? arrayName : fieldName) == field->name)
+            {
+                List<std::string> elements;
+                if (!Reflection::ParseArrayValues(field->GetValueAsString(component), elements)
+                    || !editArray(elements, field->elementKind, field->fixedSize, false)) return S::TypeMismatch;
+                return field->SetValueFromString(component, Reflection::FormatArrayValues(elements)) ? S::Ok : S::InvocationFailed;
+            }
             if (field->kind != Reflection::FieldKind::ObjectRefList) continue;
 
             bool resize = fieldName == field->name && input->kind == Reflection::ValueKind::Array;
@@ -1629,6 +1791,9 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.mirrorTemplate = reinterpret_cast<void*>(&MirrorManagedTemplate);
     editorApi.application.isWorldDirty = reinterpret_cast<void*>(&IsManagedWorldDirty);
     editorApi.application.setWorldDirty = reinterpret_cast<void*>(&SetManagedWorldDirty);
+    editorApi.application.requestProjectAction = reinterpret_cast<void*>(&RequestManagedProjectAction);
+    editorApi.application.getWorldRenderSettings = reinterpret_cast<void*>(&GetManagedWorldRenderSettings);
+    editorApi.application.setWorldRenderSettings = reinterpret_cast<void*>(&SetManagedWorldRenderSettings);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
@@ -1774,12 +1939,12 @@ void ManagedEditorBridge::UnloadGameAssembly()
     unloadGameAssembly();
 }
 
-void ManagedEditorBridge::DrawSceneGizmos()
+void ManagedEditorBridge::DrawSceneGizmos(bool commitOnly)
 {
     if (!initialized || !DrawSceneGizmosFunction) return;
 
-    ManagedDrawEditorFn drawSceneGizmos = reinterpret_cast<ManagedDrawEditorFn>(DrawSceneGizmosFunction);
-    drawSceneGizmos();
+    ManagedDrawSceneGizmosFn drawSceneGizmos = reinterpret_cast<ManagedDrawSceneGizmosFn>(DrawSceneGizmosFunction);
+    drawSceneGizmos(commitOnly ? 1 : 0);
 }
 
 void ManagedEditorBridge::DrawStatusBar()

@@ -244,6 +244,8 @@ bool Script::SetManagedFieldValue(const std::string& name, const std::string& va
 
 Reflection::FieldKind Script::GetManagedFieldKind(const std::string& typeName)
 {
+    if ((typeName.starts_with("Array<") || typeName.starts_with("List<")) && typeName.ends_with('>'))
+        return Reflection::FieldKind::Array;
     if (typeName == "bool") return Reflection::FieldKind::Bool;
     if (typeName == "int" || typeName == "int32") return Reflection::FieldKind::Int32;
     if (typeName == "uint" || typeName == "uint32") return Reflection::FieldKind::UInt32;

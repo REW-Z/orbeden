@@ -24,8 +24,8 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte*, int, int> CaptureEns;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, byte> DestroyEnsTree;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> CreateEns;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, int> ReimportAsset;
-    public delegate* unmanaged[Cdecl]<IntPtr, int> ReimportAllAssets;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, byte*, int, int> ReimportAsset;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> ReimportAllAssets;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> LoadCachedAsset;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> SaveMaterial;
 }
@@ -93,16 +93,25 @@ internal static unsafe class EditorAssetsNative
             return NativeBindingRuntime.Wrap<Ens>(api.CreateEns(api.Context, pointer, bytes.Length)) ?? Ens.Null;
     }
 
-    //强制重新导入指定资源，返回处理的源文件数；目录要带 prefix 才会覆盖子路径
-    internal static int ReimportAsset(string resourceKey, bool prefix)
+    //强制重新导入指定资源，返回处理的源文件数；目录要带 prefix 才会覆盖子路径。
+    //settings 是 "源Key\t设置名\t值" 行表，取自资源旁 .resinfo；为空表示全部按语义推断。
+    internal static int ReimportAsset(string resourceKey, bool prefix, string settings = "")
     {
         byte[] bytes = Encoding.UTF8.GetBytes(resourceKey);
+        byte[] settingsBytes = Encoding.UTF8.GetBytes(settings ?? string.Empty);
         fixed (byte* pointer = bytes)
-            return api.ReimportAsset(api.Context, pointer, bytes.Length, prefix ? (byte)1 : (byte)0);
+        fixed (byte* settingsPointer = settingsBytes)
+            return api.ReimportAsset(api.Context, pointer, bytes.Length, prefix ? (byte)1 : (byte)0,
+                settingsPointer, settingsBytes.Length);
     }
 
     //强制重新导入全部已加载资源，返回处理的源文件数
-    internal static int ReimportAllAssets() => api.ReimportAllAssets(api.Context);
+    internal static int ReimportAllAssets(string settings = "")
+    {
+        byte[] settingsBytes = Encoding.UTF8.GetBytes(settings ?? string.Empty);
+        fixed (byte* settingsPointer = settingsBytes)
+            return api.ReimportAllAssets(api.Context, settingsPointer, settingsBytes.Length);
+    }
 
     //保存 Ens 子树为独立预制体
     internal static bool SavePrefab(string source, string key)

@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Runtime.CompilerServices;
 using Orbeden;
+using NumericsQuaternion = System.Numerics.Quaternion;
 
 namespace OrbedenEditor;
 
@@ -34,6 +36,9 @@ internal sealed class InspectorPanel : EditorPanel
         {
             Assembly runtimeAssembly = typeof(Script).Assembly;
             if (assemblyName.Name == runtimeAssembly.GetName().Name) return runtimeAssembly;
+            if (assemblyName.Name == typeof(ComponentEditor).Assembly.GetName().Name) return typeof(ComponentEditor).Assembly;
+            Assembly? loaded = Assemblies.FirstOrDefault(value => value.GetName().Name == assemblyName.Name);
+            if (loaded != null) return loaded;
             string? path = resolver.ResolveAssemblyToPath(assemblyName);
             return path != null ? LoadAssemblyFile(path) : null;
         }
@@ -83,6 +88,19 @@ internal sealed class InspectorPanel : EditorPanel
     private string componentSearch = string.Empty;
     private string status = "Game assembly is not loaded.";
     private static string propertyError = string.Empty;
+    private sealed class ListState
+    {
+        internal readonly string DragId = Guid.NewGuid().ToString("N");
+        internal int Selected = -1;
+    }
+    private static readonly ConditionalWeakTable<PropertyDocument, Dictionary<string, ListState>> listStates = new();
+    private sealed class EulerRotationState
+    {
+        internal bool Initialized;
+        internal NumericsQuaternion Rotation;
+        internal vector3 Degrees;
+    }
+    private static readonly ConditionalWeakTable<PropertyValue, EulerRotationState> eulerRotations = new();
 
     //组件卡片右键菜单的弹窗 id 后缀。原生 EditorGuiBeginCollapsibleComponentBlock 用同一个后缀开弹窗，
     //两边算出的 ID 必须一致，改这里就要同步改那边。
@@ -182,6 +200,9 @@ internal sealed class InspectorPanel : EditorPanel
         {
             gameContext = new GameAssemblyLoadContext(assemblyPath);
             gameAssembly = gameContext.LoadAssemblyFile(Path.GetFullPath(assemblyPath));
+            CustomEditorRegistry.Register(gameAssembly);
+            string editorPath = Path.Combine(Path.GetDirectoryName(assemblyPath)!, Path.GetFileNameWithoutExtension(assemblyPath) + ".Editor.dll");
+            if (File.Exists(editorPath)) CustomEditorRegistry.Register(gameContext.LoadAssemblyFile(editorPath));
             foreach (Type type in GetLoadableTypes(gameAssembly))
             {
                 if (type.IsAbstract || !NativeBindingRuntime.IsManagedScript(type)) continue;
@@ -214,6 +235,7 @@ internal sealed class InspectorPanel : EditorPanel
     //卸载仅供 Inspector 反射的可收集程序集上下文。
     private void UnloadReflectionAssembly()
     {
+        CustomEditorRegistry.Clear();
         ClearPropertyDocuments();
         addChoices.Clear();
         addChoicesDirty = true;
@@ -557,8 +579,11 @@ internal sealed class InspectorPanel : EditorPanel
             }
             if (expanded)
             {
-                DrawPropertyDocument(document.Document, title, primary.IsManaged ? "" : primary.TypeName,
-                    hasEnabled ? EnabledProperty : string.Empty);
+                void DrawDefault() => DrawPropertyDocument(document.Document, title, primary.IsManaged ? "" : primary.TypeName,
+                    hasEnabled ? EnabledProperty : string.Empty, refresh: false);
+                ComponentEditorTarget[] targets = components.Select((component, index) => new ComponentEditorTarget(
+                    component.ObjectId, selection[index], component.TypeName, component.IsManaged)).ToArray();
+                if (!CustomEditorRegistry.DrawInspector(targets, document.Document, DrawDefault)) DrawDefault();
             }
         }
         finally
@@ -698,19 +723,23 @@ internal sealed class InspectorPanel : EditorPanel
 
     //绘制 PropertyDocument 支持的全部基础值。
     private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "",
-        string skipProperty = "")
+        string skipProperty = "", bool refresh = true)
     {
-        document.Update();
+        if (refresh) document.Update();
         foreach (PropertyValue property in document.GetDrawProperties(nativeType))
         {
             if (!property.IsReadable) continue;
+            //元素由所属列表统一绘制，折叠时不在外部重复出现。
+            int bracket = property.Name.LastIndexOf('[');
+            if (bracket > 0 && property.Name.EndsWith(']')
+                && document.FindProperty(property.Name[..bracket])?.Kind == InteropValueKind.Array) continue;
             //挪到卡片标题行上的字段不在正文里再画一遍
             if (skipProperty.Length != 0 && string.Equals(property.Name, skipProperty, StringComparison.Ordinal)) continue;
             //显示名优先用 Label：槽位的标识是 uniform 名，直接展示太生硬
             string title = property.Label.Length != 0 ? property.Label : property.Name;
             string label = property.HasMultipleDifferentValues ? $"{title} (Mixed)" : title;
             InteropValue value;
-            //容器字段：只画一行槽位头（名字、当前槽位数、增删按钮），元素行由各自的对象框跟在后面
+            //容器字段统一绘制折叠头、元素和结构编辑按钮。
             if (property.Kind == InteropValueKind.Array)
             {
                 DrawListSlots(document, property, label);
@@ -722,6 +751,10 @@ internal sealed class InspectorPanel : EditorPanel
                 {
                     continue;
                 }
+            }
+            else if (nativeType == "Transform" && property.Name == "localRotation" && property.Kind == InteropValueKind.Quaternion)
+            {
+                if (!TryDrawEulerRotation(label, property, out value)) continue;
             }
             else if (property.Kind == InteropValueKind.UInt32 && EditorLayerSettings.Handles(nativeType, property.Name))
             {
@@ -752,74 +785,211 @@ internal sealed class InspectorPanel : EditorPanel
                 : $"Failed to apply {undoPrefix}; changes were rolled back.";
     }
 
-    //绘制列表字段的槽位头：显示名与当前槽位数，后面跟增删两个按钮
+    /// <summary>供 CustomEditor 复用单个默认字段控件。</summary>
+    internal static void DrawCustomProperty(PropertyDocument document, string name)
+    {
+        PropertyValue? property = document.FindProperty(name);
+        if (property == null || !property.IsReadable) return;
+        string label = property.HasMultipleDifferentValues ? name + " (Mixed)" : name;
+        if (property.Kind == InteropValueKind.Array) { DrawListSlots(document, property, label); return; }
+        bool changed = property.ReferenceType.Length != 0 ? EditorObjectField.Draw(label, property, out InteropValue value)
+            : TryDrawProperty(label, property, out value);
+        if (changed) property.SetValue(value);
+    }
+
+    /// <summary>绘制含增删按钮的列表标题与元素。</summary>
     private static void DrawListSlots(PropertyDocument document, PropertyValue property, string label)
     {
         property.Value.TryGet(out int count);
-        //多选且槽位数不同时 label 已经带 (Mixed)，不再叠一个数
-        bool mixed = property.HasMultipleDifferentValues;
-        EditorGUI.Label(mixed || count == 0 ? label : $"{label} ({count})");
-
+        Dictionary<string, ListState> states = listStates.GetOrCreateValue(document);
+        if (!states.TryGetValue(property.Name, out ListState? state)) states[property.Name] = state = new();
+        if (state.Selected >= count) state.Selected = count - 1;
         bool canModify = !EditorApplication.IsPlaying;
-        EditorGUI.SameLine();
-        EditorGUI.BeginDisabled(!canModify);
+        bool canResize = canModify && !property.IsFixedSize;
+        int size = count;
+        int layout = NativeEditorGUI.BeginList($"{label}###{property.Name}_list", ref size, canResize, property.HasMultipleDifferentValues,
+            canResize && count > 0 && !property.HasMultipleDifferentValues);
+        int action = 0, moveFrom = -1, moveTo = -1;
         try
         {
-            if (EditorGUI.Button("+")) ResizeListSlots(document, property.Name, 1);
+            if ((layout & 1) != 0)
+            {
+                for (int index = 0; index < count; ++index)
+                {
+                    PropertyValue? element = document.FindProperty($"{property.Name}[{index}]");
+                    if (element == null) break;
+                    if (NativeEditorGUI.ListElement(index, state.Selected == index)) state.Selected = index;
+                    if (canModify)
+                    {
+                        NativeEditorGUI.DragSource(3, $"{state.DragId}:{index}");
+                        string dragged = NativeEditorGUI.ReadDrag(out int kind);
+                        if (kind == 3 && dragged.StartsWith(state.DragId + ":", StringComparison.Ordinal)
+                            && int.TryParse(dragged.AsSpan(state.DragId.Length + 1), out int source)
+                            && source >= 0 && document.FindProperty($"{property.Name}[{source}]") != null)
+                        {
+                            int placement = NativeEditorGUI.GetDropPlacement() < 0 ? -1 : 1;
+                            int destination = index + (placement > 0 ? 1 : 0);
+                            if (source < destination) --destination;
+                            if (NativeEditorGUI.AcceptDrag(source != destination, placement))
+                            { moveFrom = source; moveTo = destination; }
+                        }
+                    }
+                    EditorGUI.TableSetColumnIndex(1);
+                    string elementLabel = element.HasMultipleDifferentValues ? $"Mixed##value_{index}" : $"##value_{index}";
+                    bool changed = element.ReferenceType.Length != 0
+                        ? EditorObjectField.Draw(elementLabel, element, out InteropValue updated)
+                        : TryDrawProperty(elementLabel, element, out updated);
+                    if (changed) { element.SetValue(updated); state.Selected = index; }
+                }
+            }
         }
-        finally { EditorGUI.EndDisabled(); }
-        EditorGUI.SameLine();
-        EditorGUI.BeginDisabled(!canModify || count == 0);
-        try
+        finally
         {
-            if (EditorGUI.Button("-")) ResizeListSlots(document, property.Name, -1);
+            action = NativeEditorGUI.EndList();
         }
-        finally { EditorGUI.EndDisabled(); }
+        if (action == 1 && EditListSlots(document, property.Name, values => values.Add(InteropValue.Empty))) state.Selected = count;
+        else if (action == 2)
+        {
+            int remove = state.Selected < 0 ? count - 1 : state.Selected;
+            if (EditListSlots(document, property.Name, values => values.RemoveAt(remove))) state.Selected = Math.Min(remove, count - 2);
+        }
+        else if (moveFrom >= 0 && EditListSlots(document, property.Name, values =>
+        {
+            InteropValue moved = values[moveFrom];
+            values.RemoveAt(moveFrom);
+            values.Insert(moveTo, moved);
+        })) state.Selected = moveTo;
     }
 
-    //增删列表槽位。改长度是复合操作：先按组件逐个抓住整份槽位内容，撤销时把内容一起写回，
-    //否则"减少槽位"的撤销只会恢复个数，被截掉的槽位值就丢了
-    private static void ResizeListSlots(PropertyDocument document, string fieldName, int delta)
+    /// <summary>读取元素原始类型和值，撤销时保留空引用和普通数值。</summary>
+    private static InteropValue[] ReadListSlots(IPropertyTarget target, string name)
     {
-        List<(IPropertyTarget Target, string[] Keys)> captured = [];
-        List<int> applied = [];
-        foreach (IPropertyTarget target in document.Targets)
-        {
-            if (target.TryGet(fieldName, out InteropValue value) != InteropStatus.Ok || !value.TryGet(out int count)) return;
-            string[] keys = new string[count];
-            for (int index = 0; index < count; ++index)
-                if (target.TryGet($"{fieldName}[{index}]", out InteropValue element) == InteropStatus.Ok)
-                    element.TryGet(out keys[index]);
-            captured.Add((target, keys));
-            applied.Add(Math.Max(0, count + delta));
-        }
+        target.Refresh();
+        if (target.TryGet(name, out var value) != InteropStatus.Ok || !value.TryGet(out int count))
+            throw new InvalidOperationException("Cannot read list size.");
+        InteropValue[] result = new InteropValue[count];
+        for (int index = 0; index < count; ++index)
+            if (target.TryGet($"{name}[{index}]", out result[index]) != InteropStatus.Ok)
+                throw new InvalidOperationException($"Cannot read element {index}.");
+        return result;
+    }
 
-        for (int index = 0; index < applied.Count; ++index)
-        {
-            if (captured[index].Target.Set(fieldName, InteropValue.FromArray(applied[index])) == InteropStatus.Ok) continue;
-            //失败就把已经改过的写回去，不留半改状态
-            for (int rollback = index - 1; rollback >= 0; --rollback)
-                captured[rollback].Target.Set(fieldName, InteropValue.FromArray(captured[rollback].Keys.Length));
-            return;
-        }
+    /// <summary>先恢复长度并刷新字段结构，再恢复元素；空标记保留新槽默认值。</summary>
+    private static void WriteListSlots(IPropertyTarget target, string name, InteropValue[] values)
+    {
+        target.Refresh();
+        if (target.Set(name, InteropValue.FromArray(values.Length)) != InteropStatus.Ok)
+            throw new InvalidOperationException("Cannot write list size.");
+        target.Refresh();
+        for (int index = 0; index < values.Length; ++index)
+            if (values[index].Kind != InteropValueKind.Empty && target.Set($"{name}[{index}]", values[index]) != InteropStatus.Ok)
+                throw new InvalidOperationException($"Cannot write element {index}.");
+        target.Refresh();
+    }
 
-        EditorPropertyHistory.PushAction($"Resize {fieldName}",
-            () =>
+    /// <summary>批量应用快照，失败时恢复所有已经写入的目标。</summary>
+    private static void ApplyListSlots(IReadOnlyList<IPropertyTarget> targets, string name, IReadOnlyList<InteropValue[]> values)
+    {
+        InteropValue[][] before = targets.Select(target => ReadListSlots(target, name)).ToArray();
+        for (int index = 0; index < targets.Count; ++index)
+        {
+            try { WriteListSlots(targets[index], name, values[index]); }
+            catch (Exception failure)
             {
-                //先补长度再逐个填槽：元素写入不加长列表，槽位得先存在
-                foreach ((IPropertyTarget target, string[] keys) in captured)
+                List<Exception> failures = [failure];
+                for (int rollback = index; rollback >= 0; --rollback)
                 {
-                    target.Set(fieldName, InteropValue.FromArray(keys.Length));
-                    for (int index = 0; index < keys.Length; ++index)
-                        target.Set($"{fieldName}[{index}]", InteropValue.FromStringId(keys[index]));
+                    try { WriteListSlots(targets[rollback], name, before[rollback]); }
+                    catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
                 }
-            },
-            () =>
+                throw new AggregateException("List edit failed.", failures);
+            }
+        }
+        foreach (var target in targets) target.MarkDirty();
+    }
+
+    /// <summary>提交一次可回滚、可撤销的增删或排序操作。</summary>
+    private static bool EditListSlots(PropertyDocument document, string fieldName, Action<List<InteropValue>> edit)
+    {
+        if (document.HasPendingChanges && !document.ApplyChanges($"Edit {fieldName}"))
+        { propertyError = $"Failed to apply {fieldName}."; return false; }
+        try
+        {
+            var targets = document.Targets;
+            InteropValue[][] before = targets.Select(target => ReadListSlots(target, fieldName)).ToArray();
+            InteropValue[][] after = before.Select(values =>
             {
-                for (int index = 0; index < applied.Count; ++index)
-                    captured[index].Target.Set(fieldName, InteropValue.FromArray(applied[index]));
-            });
-        EditorApplication.RequestRepaint();
+                List<InteropValue> updated = values.ToList();
+                edit(updated);
+                return updated.ToArray();
+            }).ToArray();
+            if (before.Zip(after).All(pair => pair.First.SequenceEqual(pair.Second))) return true;
+            ApplyListSlots(targets, fieldName, after);
+            //读回新槽默认值，Redo 恢复确切内容。
+            after = targets.Select(target => ReadListSlots(target, fieldName)).ToArray();
+            EditorPropertyHistory.PushAction($"Edit {fieldName}",
+                () => ApplyListSlots(targets, fieldName, before),
+                () => ApplyListSlots(targets, fieldName, after));
+            propertyError = string.Empty;
+            EditorApplication.RequestRepaint();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            propertyError = $"Failed to edit {fieldName}: {exception.Message}";
+            return false;
+        }
+    }
+
+    /// <summary>以角度显示 Transform 旋转，按 Z-X-Y 顺序转换并保留用户输入的欧拉角分支。</summary>
+    private static bool TryDrawEulerRotation(string label, PropertyValue property, out InteropValue value)
+    {
+        value = property.Value;
+        if (!value.TryGet(out quaternion current)) return false;
+        NumericsQuaternion rotation = new(current.x, current.y, current.z, current.w);
+        float length = rotation.LengthSquared();
+        rotation = float.IsFinite(length) && length > 0.000000000001f
+            ? NumericsQuaternion.Normalize(rotation) : NumericsQuaternion.Identity;
+        EulerRotationState state = eulerRotations.GetOrCreateValue(property);
+        const float degreesPerRadian = 180.0f / MathF.PI;
+
+        //只在外部旋转变化时重新分解，避免输入超过 90/180 度时跳到另一组等价角度。
+        if (!state.Initialized || ((rotation - state.Rotation).LengthSquared() > 0.000000000001f
+            && (rotation + state.Rotation).LengthSquared() > 0.000000000001f))
+        {
+            float x = rotation.X, y = rotation.Y, z = rotation.Z, w = rotation.W;
+            float sinX = Math.Clamp(2.0f * (w * x - y * z), -1.0f, 1.0f);
+            float sinRoll = 2.0f * (x * y + w * z);
+            float cosRoll = 1.0f - 2.0f * (x * x + z * z);
+            float cosX = MathF.Sqrt(sinRoll * sinRoll + cosRoll * cosRoll);
+            float pitch = MathF.Atan2(sinX, cosX);
+            float yaw, roll;
+            if (cosX > 0.000001f)
+            {
+                yaw = MathF.Atan2(2.0f * (x * z + w * y), 1.0f - 2.0f * (x * x + y * y));
+                roll = MathF.Atan2(sinRoll, cosRoll);
+            }
+            else
+            {
+                //俯仰接近直角时固定 Z，保留可确定的 Y 旋转。
+                yaw = MathF.Atan2(2.0f * (w * y - x * z), 1.0f - 2.0f * (y * y + z * z));
+                roll = 0.0f;
+            }
+            state.Degrees = new(pitch * degreesPerRadian, yaw * degreesPerRadian, roll * degreesPerRadian);
+            state.Rotation = rotation;
+            state.Initialized = true;
+        }
+
+        vector3 degrees = state.Degrees;
+        if (!EditorGUI.InputVector3(label + " (deg)", ref degrees)
+            || !float.IsFinite(degrees.x) || !float.IsFinite(degrees.y) || !float.IsFinite(degrees.z)) return false;
+        //与原生场景相机保持一致：Y 为 yaw、X 为 pitch，Z 为 roll；内部仍保存四元数。
+        rotation = NumericsQuaternion.Normalize(NumericsQuaternion.CreateFromYawPitchRoll(
+            (degrees.y % 360.0f) / degreesPerRadian, (degrees.x % 360.0f) / degreesPerRadian, (degrees.z % 360.0f) / degreesPerRadian));
+        state.Degrees = degrees;
+        state.Rotation = rotation;
+        value = InteropValue.From(new quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W));
+        return true;
     }
 
     //绘制单个属性并返回用户提交的新值。

@@ -24,7 +24,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, float, byte, int> InputText;
     public delegate* unmanaged[Cdecl]<void> Separator;
     public delegate* unmanaged[Cdecl]<float, void> SameLine;
-    public delegate* unmanaged[Cdecl]<byte*, int, int, byte> BeginTable;
+    public delegate* unmanaged[Cdecl]<byte*, int, int, byte, byte> BeginTable;
     public delegate* unmanaged[Cdecl]<void> EndTable;
     public delegate* unmanaged[Cdecl]<byte*, int, float, byte, void> TableSetupColumn;
     public delegate* unmanaged[Cdecl]<void> TableHeadersRow;
@@ -65,7 +65,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<vector2*, void> GetContentRegionAvail;
     public delegate* unmanaged[Cdecl]<vector2*, void> GetCursorScreenPos;
     public delegate* unmanaged[Cdecl]<EditorRectPrimitive*, int, void> DrawRects;
-    public delegate* unmanaged[Cdecl]<vector2*, vector2*, vector2*, color*, byte*, int, void> DrawTextClipped;
+    public delegate* unmanaged[Cdecl]<vector2*, vector2*, vector2*, color*, byte*, int, float, void> DrawTextClipped;
     public delegate* unmanaged[Cdecl]<byte*, int, vector2*, byte> InvisibleButton;
     public delegate* unmanaged[Cdecl]<byte> IsItemHovered;
     public delegate* unmanaged[Cdecl]<byte> IsItemClicked;
@@ -82,6 +82,11 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, float> CalcButtonWidth;
     public delegate* unmanaged[Cdecl]<byte*, int, byte, byte> BeginMenu;
     public delegate* unmanaged[Cdecl]<void> EndMenu;
+    public delegate* unmanaged[Cdecl]<byte*, int, int*, int, int> BeginList;
+    public delegate* unmanaged[Cdecl]<int, byte, byte> ListElement;
+    public delegate* unmanaged[Cdecl]<int> EndList;
+    public delegate* unmanaged[Cdecl]<byte*, int, void> PushId;
+    public delegate* unmanaged[Cdecl]<void> PopId;
 }
 #pragma warning restore CS0649
 
@@ -96,6 +101,29 @@ internal struct EditorRectPrimitive
 
 internal static unsafe class NativeEditorGUI
 {
+    /// <summary>建立自定义控件身份空间。</summary>
+    internal static void PushId(string id)
+    {
+        byte[] bytes = Encode(id);
+        fixed (byte* pointer = bytes) api.PushId(pointer, bytes.Length);
+    }
+
+    /// <summary>结束自定义控件身份空间。</summary>
+    internal static void PopId() => api.PopId();
+
+    /// <summary>开始带只读数量框的紧凑列表，返回展开标记；始终配对 EndList。</summary>
+    internal static int BeginList(string label, ref int count, bool editable, bool mixed, bool canRemove)
+    {
+        byte[] bytes = Encode(label);
+        fixed (byte* text = bytes)
+        fixed (int* size = &count) return api.BeginList(text, bytes.Length, size, (editable ? 1 : 0) | (mixed ? 2 : 0) | (canRemove ? 4 : 0));
+    }
+
+    /// <summary>绘制列表行的拖动柄与下标，并保持它作为当前拖放目标。</summary>
+    internal static bool ListElement(int index, bool selected) => api.ListElement(index, selected ? (byte)1 : (byte)0) != 0;
+
+    /// <summary>结束列表，返回标题栏的增加或删除标记。</summary>
+    internal static int EndList() => api.EndList();
     private static EditorGuiNativeApi api;
     private static bool initialized;
 
@@ -437,12 +465,12 @@ internal static unsafe class NativeEditorGUI
     }
 
     //在指定位置绘制被裁剪的文本
-    internal static void DrawTextClipped(vector2 clipMin, vector2 clipMax, vector2 position, color value, string? text)
+    internal static void DrawTextClipped(vector2 clipMin, vector2 clipMax, vector2 position, color value, string? text, float fontSize = 0)
     {
         if (!initialized || api.DrawTextClipped == null) return;
         byte[] bytes = Encode(text);
         fixed (byte* pointer = bytes)
-            api.DrawTextClipped(&clipMin, &clipMax, &position, &value, pointer, bytes.Length);
+            api.DrawTextClipped(&clipMin, &clipMax, &position, &value, pointer, bytes.Length, fontSize);
     }
 
     //预留一块可交互空白区域
@@ -690,11 +718,11 @@ internal static unsafe class NativeEditorGUI
     }
 
     //开始表格
-    internal static bool BeginTable(string? id, int columns)
+    internal static bool BeginTable(string? id, int columns, bool scroll = true)
     {
         if (!initialized || api.BeginTable == null) return false;
         byte[] bytes = Encode(id);
-        fixed (byte* pointer = bytes) return api.BeginTable(pointer, bytes.Length, columns) != 0;
+        fixed (byte* pointer = bytes) return api.BeginTable(pointer, bytes.Length, columns, scroll ? (byte)1 : (byte)0) != 0;
     }
 
     //结束表格

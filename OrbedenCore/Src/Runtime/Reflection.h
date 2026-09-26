@@ -1,6 +1,8 @@
 #pragma once
 
 #include <span>
+#include <array>
+#include <iterator>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -48,6 +50,7 @@ namespace Reflection
         Color,
         Quaternion,
         EnsId,
+        Array,
     };
 
     //反射调用使用的轻量值容器
@@ -148,8 +151,14 @@ namespace Reflection
         static bool FromString(FieldKind kind, const std::string& text, Value& value);
     };
 
-    //对象引用列表用 '|' 分隔：Windows 文件名不允许 '|'，可以安全当分隔符
+    //旧对象引用列表的分隔符，读取已有场景时仍然识别。
     constexpr char ReferenceListSeparator = '|';
+
+    /// <summary>按 UTF-8 字节长度编码数组元素，保留空值、分隔符和 Unicode。</summary>
+    std::string FormatArrayValues(const List<std::string>& values);
+
+    /// <summary>完整解析数组文本，格式错误时不修改输出。</summary>
+    bool ParseArrayValues(const std::string& text, List<std::string>& values);
 
     //把引用列表文本切成 Key，空段保留为空槽以维持槽位对齐
     template<typename T>
@@ -157,6 +166,17 @@ namespace Reflection
     {
         static_assert(std::is_base_of_v<Object, T>);
         target.clear();
+        List<std::string> elements;
+        if (ParseArrayValues(text, elements))
+        {
+            for (const auto& key : elements)
+            {
+                Ref<T> element;
+                element.SetInstanceId(StringId(key));
+                target.push_back(std::move(element));
+            }
+            return;
+        }
         if (text.empty()) return;
 
         usize start = 0;
@@ -172,18 +192,14 @@ namespace Reflection
         }
     }
 
-    //把引用列表写成 '|' 连接的 Key 文本，空槽写成空段
+    //显式保存槽位数，区分空列表与包含一个空槽的列表。
     template<typename T>
     std::string FormatReferenceList(const List<Ref<T>>& value)
     {
         static_assert(std::is_base_of_v<Object, T>);
-        std::string text;
-        for (usize index = 0; index < value.size(); ++index)
-        {
-            if (index > 0) text += ReferenceListSeparator;
-            text += value[index].GetInstanceId().GetPath();
-        }
-        return text;
+        List<std::string> elements;
+        for (const auto& element : value) elements.push_back(element.GetInstanceId().GetPath());
+        return FormatArrayValues(elements);
     }
 
     //把受支持的 C++ 字段值直接装入类型化反射值。
@@ -294,11 +310,13 @@ namespace Reflection
         FieldValueSetter valueSetter = nullptr;
         FieldListSizeGetter listSizeGetter = nullptr;
         FieldListResizer listResizer = nullptr;
+        FieldKind elementKind = FieldKind::Unsupported;
+        bool fixedSize = false;
 
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr, FieldKind arrayElementKind = FieldKind::Unsupported, bool isFixedSize = false);
 
         //读取引用列表槽位数；不是引用列表字段时返回 0
         int32 GetListSize(Object* object) const;
@@ -500,4 +518,51 @@ namespace Reflection
 
     //从 XML 文本读取 EnsId
     bool SetFromXmlValue(EnsId& target, const std::string& value);
+
+    /// <summary>在编译期取得容器元素类型。</summary>
+    template<typename T> typename T::value_type ArrayElementType(const T&);
+    /// <summary>在编译期取得原生固定数组元素类型。</summary>
+    template<typename T, usize N> T ArrayElementType(const T(&)[N]);
+
+    /// <summary>把原生数组或列表的各元素写成持久化文本。</summary>
+    template<typename T>
+    std::string ArrayToXmlValue(const T& values)
+    {
+        List<std::string> texts;
+        texts.reserve(std::size(values));
+        for (const auto& value : values) texts.push_back(ToXmlValue(static_cast<decltype(ArrayElementType(values))>(value)));
+        return FormatArrayValues(texts);
+    }
+
+    /// <summary>验证所有元素后再写入容器，固定数组要求长度一致。</summary>
+    template<typename T>
+    bool SetArrayFromXmlValue(T& target, const std::string& text)
+    {
+        List<std::string> texts;
+        if (!ParseArrayValues(text, texts)) return false;
+        if constexpr (!requires { target.resize(texts.size()); })
+            if (texts.size() != std::size(target)) return false;
+        using Element = decltype(ArrayElementType(target));
+        List<Element> parsed;
+        parsed.reserve(texts.size());
+        for (const auto& item : texts)
+        {
+            Element value{};
+            if (!SetFromXmlValue(value, item)) return false;
+            parsed.push_back(std::move(value));
+        }
+        if constexpr (requires { target.resize(texts.size()); }) target.resize(texts.size());
+        for (usize index = 0; index < texts.size(); ++index) target[index] = parsed[index];
+        return true;
+    }
+
+    /// <summary>调整动态容器长度，固定数组只接受原有长度。</summary>
+    template<typename T>
+    bool ResizeArray(T& target, int32 count)
+    {
+        if (count < 0) return false;
+        if constexpr (requires { target.resize(static_cast<usize>(count)); }) target.resize(static_cast<usize>(count));
+        else if (std::size(target) != static_cast<usize>(count)) return false;
+        return true;
+    }
 }
