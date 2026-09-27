@@ -116,6 +116,14 @@ public:
 
 };
 
+//环境反射的非拥有型 GPU 采样数据，与全局环境或局部探针的来源无关
+struct GpuEnvironmentReflection
+{
+    GpuCubeTextureID texture;
+    float32 maxLod = 0.0f;
+    float32 intensity = 0.0f;
+};
+
 //CPU 资源到 GPU 资源的上传缓存，CPU 对象通过稳定指针或轻量 ID 直接关联 GPU 状态。
 class GpuResourceManager : private IObjectDestroyListener
 {
@@ -187,6 +195,9 @@ public:
 
     //获取缓存中的天空盒立方体纹理；缺少时执行上传。
     GpuCubeTextureID GetSkybox(Skybox* skybox);
+
+    //获取环境反射采样数据，复用立方体纹理缓存
+    GpuEnvironmentReflection GetEnvironmentReflection(Skybox* environment, float32 intensity);
 
     //获取缓存中的 shader；缺少或标记为脏时执行上传。
     const GpuShader* GetShader(Shader* shader);

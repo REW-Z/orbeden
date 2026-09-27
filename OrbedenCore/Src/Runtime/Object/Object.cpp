@@ -1159,6 +1159,7 @@ uint32 Object::UnloadUnusedObjects(const int32* managedRootIds, int32 count)
     if (World* world = World::CurrentWorld())
     {
         ResourceManager::MarkObjectGraph(world->renderSettings.skybox.Get(), marked);
+        ResourceManager::MarkObjectGraph(world->renderSettings.reflectionEnvironment.Get(), marked);
         world->ForEachComponent<StaticMeshRenderer>([&](StaticMeshRenderer* renderer)
         {
             if (renderer) ResourceManager::MarkObjectGraph(renderer->mesh.Get(), marked);

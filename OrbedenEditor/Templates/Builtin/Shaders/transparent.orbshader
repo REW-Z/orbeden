@@ -43,6 +43,7 @@ uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
 uniform float u_Opacity;
 #include "Builtin/shadow_common.orbinc"
+#include "Builtin/environment_reflection.orbinc"
 
 out vec4 FragColor;
 
@@ -82,7 +83,9 @@ void main()
 
     vec3 ambient = u_AmbientColor.rgb * albedo;
     vec3 direct = (diffuse + specular) * nDotL * u_LightColor.rgb * max(u_LightIntensity, 0.0);
-    vec3 color = ambient + direct * (1.0 - shadow);
+    float roughness = pow(2.0 / (specularPower + 2.0), 0.25);
+    vec3 reflection = EvaluateEnvironmentReflection(normal, viewDir, u_SpecularColor.rgb, roughness, 1.0);
+    vec3 color = ambient + direct * (1.0 - shadow) + reflection;
     //输出线性值，显示转换统一在输出 Pass 完成
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, color), alpha);
 }

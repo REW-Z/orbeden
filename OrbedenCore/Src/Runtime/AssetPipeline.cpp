@@ -5,6 +5,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <limits>
 #include <memory>
 #include <sstream>
@@ -22,6 +23,7 @@
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Texture2D.h"
+#include "Runtime/Object/Skybox.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"
@@ -1805,6 +1807,7 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
     }
 
     if (extension == ".orbmat") return AssetImporter::OrbMat;
+    if (extension == ".orbsky") return AssetImporter::OrbSky;
 
     if (extension == ".obj")
     {
@@ -1841,6 +1844,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
     case AssetImporter::Image: return Import_IMG(sourceKey, settings);
     case AssetImporter::Obj: return Import_OBJ(sourceKey, settings);
     case AssetImporter::OrbMat: return Import_ORBMAT(sourceKey);
+    case AssetImporter::OrbSky: return Import_ORBSKY(sourceKey);
     case AssetImporter::Gltf: return Import_GLTF(sourceKey, settings);
     case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
     case AssetImporter::Glsl: return Import_GLSL(sourceKey);
@@ -1850,6 +1854,74 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
     AssetCollection collection;
     collection.sourceKey = sourceKey;
     collection.AddError("Unsupported asset source: " + sourceKey);
+    return collection;
+}
+
+//导入六面天空盒资产
+AssetCollection AssetPipeline::Import_ORBSKY(std::string path)
+{
+    AssetCollection collection;
+    collection.sourceKey = ResourceManager::ToResourceKey(path);
+    std::string source = LoadTextOrError(collection.sourceKey, collection);
+    if (!collection.Succeeded()) return collection;
+
+    //读取内容根相对的六面纹理 Key
+    const char* names[] = { "right", "left", "top", "bottom", "front", "back" };
+    std::string keys[6];
+    std::istringstream lines(source);
+    std::string line;
+    while (std::getline(lines, line))
+    {
+        std::istringstream fields(line);
+        std::string name;
+        if (!(fields >> name) || name[0] == '#') continue;
+        int32 face = 0;
+        while (face < 6 && name != names[face]) ++face;
+        std::string key;
+        std::string extra;
+        if (face == 6 || !keys[face].empty() || !(fields >> std::quoted(key)) || key.empty() || (fields >> extra))
+        {
+            collection.AddError("Invalid skybox face: " + collection.sourceKey + ": " + line);
+            return collection;
+        }
+        keys[face] = ResourceManager::ToResourceKey(key);
+    }
+
+    //验证六面尺寸、像素和颜色空间
+    Texture2D* faces[6] = {};
+    for (int32 face = 0; face < 6; ++face)
+    {
+        if (keys[face].empty() || SelectImporter(keys[face]) != AssetImporter::Image)
+        {
+            collection.AddError("Skybox face must reference an image source: " + collection.sourceKey + ": " + names[face]);
+            return collection;
+        }
+        faces[face] = ResourceManager::Load<Texture2D>(keys[face]);
+        Texture2D* texture = faces[face];
+        if (!texture || texture->width <= 0 || texture->width != texture->height || texture->channels < 3 || texture->channels > 4
+            || texture->pixels.size() != static_cast<usize>(texture->width) * texture->height * texture->channels
+            || (face > 0 && (texture->width != faces[0]->width || texture->channels != faces[0]->channels || texture->colorSpace != faces[0]->colorSpace)))
+        {
+            collection.AddError("Skybox faces must be complete square RGB/RGBA textures with matching size and color space: " + collection.sourceKey);
+            return collection;
+        }
+        collection.AddSourceFile(ResourceManager::GetSourceKey(keys[face]));
+    }
+
+    //创建天空盒主对象并登记纹理依赖
+    Skybox* skybox = CreateImportedObject<Skybox>(collection.sourceKey);
+    if (!skybox)
+    {
+        collection.AddError("Failed to create Skybox: " + collection.sourceKey);
+        return collection;
+    }
+    Ref<Texture2D>* targets[] = { &skybox->right, &skybox->left, &skybox->top, &skybox->bottom, &skybox->front, &skybox->back };
+    for (int32 face = 0; face < 6; ++face)
+    {
+        targets[face]->Set(faces[face]);
+        ResourceManager::RegisterDependency(collection.sourceKey, keys[face]);
+    }
+    collection.AddObject(collection.sourceKey, skybox, true);
     return collection;
 }
 

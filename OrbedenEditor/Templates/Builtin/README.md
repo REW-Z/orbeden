@@ -75,7 +75,17 @@ rain.SetFloat("u_RainAmount", 0.9f);
 
 同族的 `blinn_phong` 与 `transparent` 也按线性重写了数学：漫反射除以 π，镜面按菲涅耳从漫反射里扣除能量。`u_SpecularColor` 直接作为垂直入射反射率，默认的黑色即无高光，与旧行为一致。
 
-目前没有 IBL／环境镜面反射或法线贴图；金属在没有主光高光的方向仍会较暗，属于缺少环境镜面光照的限制。雨玻璃的掠射亮光也是近似值，并非场景反射。已有游戏项目需同步 `Content/Builtin/` 下的 Shader 与 include 并重新导入，仅修改编辑器模板不会自动覆盖项目内容；旧版 `pbs_metallic.orbshader` 带着手写的 sRGB 编码，必须一并替换。
+PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 Cubemap mip 近似粗糙反射；目前没有 GGX 预过滤、反射探针、场景捕获或法线贴图。雨玻璃的掠射亮光仍是独立近似值，并非场景反射。
+
+## 天空盒与环境反射
+
+Rendering 面板的 Skybox 可选择 `Builtin/Skyboxes/soft_daylight.orbsky`，勾选 Skybox Enabled 显示背景。此资源由六张 128×128 的 sRGB PNG 组成，包含柔和天空、云层与地面反照，没有太阳圆盘；可运行 `Build/GenerateBuiltinSky.ps1` 确定性重新生成。
+
+Reflection Environment 留空时使用同一天空盒，也可以指定另一个 `.orbsky`。Reflection Intensity 默认为 `1`，设为 `0` 关闭反射；关闭天空背景不会关闭反射。PBS 用 Roughness 控制反射模糊程度，Blinn-Phong 和普通透明材质从 Shininess 估算粗糙度。
+
+`.orbsky` 每行格式为 `面名 "内容根相对图片Key"`，必须包含 right、left、top、bottom、front、back 六面，依次对应 +X、-X、+Y、-Y、+Z、-Z。这些是 Cubemap 的历史字段名，front 不代表引擎的 Transform 前向。图片必须是相同尺寸、格式与颜色空间的正方形；以 `#` 开头的行作为注释。
+
+反射采样共用 `Builtin/environment_reflection.orbinc`，在场景线性 HDR 缓冲中合成，统一经过曝光与输出转换。新建项目会包含这些 Builtin 资源；已有内容根需要同步天空盒、六面 PNG、上述 include 以及对应 Shader。
 
 ## 自定义 orbmat 参数
 

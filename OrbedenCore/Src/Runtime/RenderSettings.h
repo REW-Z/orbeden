@@ -13,5 +13,9 @@ public:
     color ambientColor = { 0.34f, 0.37f, 0.42f, 1.0f };
     //线性美术强度，与方向光一致：0 关闭，1 使用基准亮度，允许大于 1
     float32 ambientIntensity = 1.0f;
+    //独立反射环境；未指定时使用 skybox，不受背景显示开关影响
+    Ref<Skybox> reflectionEnvironment;
+    //环境镜面反射的线性强度，0 关闭，1 使用环境原始亮度
+    float32 reflectionIntensity = 1.0f;
 };
 

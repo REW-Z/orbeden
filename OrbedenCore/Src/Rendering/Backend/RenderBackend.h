@@ -67,6 +67,7 @@ public:
     int32 height = 0;
     int32 channels = 0;
     const uint8* faces[6] = {};
+    bool generateMipmaps = false;
     //天空盒是颜色数据，通常为 true，采样时由硬件解码。
     bool srgb = false;
 };

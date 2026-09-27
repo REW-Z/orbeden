@@ -164,6 +164,7 @@ void ForwardPipeline::InvalidateResourceCaches()
     //重置管线资源状态
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
+    environmentReflection = {};
     builtinShadersInvalidated = true;
     //内容根可能已经换了，内置 Shader 的解析结果作废。
     GetBuiltinShaderKeys() = BuiltinShaderKeys();
@@ -181,7 +182,11 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
     if (!backend) return;
     LoadBuiltinShaders();
     shadows.BeginFrame(scene);
-    (void)gpuResourceManager;
+    //选择全局反射来源并准备本帧采样数据
+    const RenderSettings& settings = scene.renderSettings;
+    Skybox* source = settings.reflectionEnvironment.GetInstanceId().IsValid()
+        ? settings.reflectionEnvironment.Get() : settings.skybox.Get();
+    environmentReflection = gpuResourceManager.GetEnvironmentReflection(source, settings.reflectionIntensity);
 }
 
 void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager)
@@ -312,6 +317,8 @@ void ForwardPipeline::RenderQueueItems(
                 backend->SetUniformFloat("u_Time", camera.elapsedTime);
                 backend->SetUniformInt("u_UseCameraTextures", drawQueue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
                 backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
+                backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
+                backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
                 if (mainLight)
                 {
                     backend->SetUniformVector3("u_LightDirection", mainLight->direction);
@@ -350,6 +357,9 @@ void ForwardPipeline::RenderQueueItems(
             uint32 shadowTextureSlot = static_cast<uint32>(material->textureBindings.size());
             shadows.BindTexture(shadowTextureSlot);
             backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
+            uint32 environmentSlot = shadowTextureSlot + 3;
+            backend->SetUniformInt("u_EnvironmentTexture", static_cast<int32>(environmentSlot));
+            backend->BindCubeTexture(environmentSlot, environmentReflection.texture);
 
             if (drawQueue == DrawQueue::Refraction)
             {

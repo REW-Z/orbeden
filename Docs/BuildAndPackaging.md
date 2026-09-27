@@ -535,6 +535,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 25 | 新增 `.orbsky` 六面天空盒导入与 Builtin 柔和日光环境；PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射。世界保存独立反射环境与线性强度，编辑器 Rendering 面板提供设置入口。同步当前 Builtin 天空盒、六面图片、Shader 和 `environment_reflection.orbinc`，重新构建编辑器与 Player。 |
 | 24 | 光照统一为线性美术强度，方向光默认 `1.0`，CPU 原样传入 Shader；直接漫反射采用单位响应，镜面配套归一化。环境光新增独立的 `ambientIntensity`，默认 `1.0`，与颜色分别编辑并保存到 `.world`。重新构建引擎、编辑器与 Player，并使用当前内置 Shader；不提供旧光照刻度兼容。 |
 | 23 | `DirectionalLight` 的方向改取所属 Ens 的 Transform 前向，`direction` 字段移除；光照强度明确为辐亮度。**升级后有三步手工迁移**：老场景的光照 Ens 都是单位旋转，太阳会变成水平照射，需用旋转手柄转回去；当时建议将 `.world` 的 `intensity` 乘 π 左右作为重新调光的起点，并非公式单位的精确换算；直接升级到版本 24 时不再执行此步骤；`<RenderSettings>` 的 `ambientColor` 同理，旧值转线性后暗了约 12 倍，需重新标定（默认值已改为 `0.34 0.37 0.42`）。取值约定见 [颜色管线](ColorPipeline.md) 的「光照强度」。 |
 | 22 | `.oeproj` 新增 `lastWorld` 属性，记录开发者最后编辑的场景，重新打开项目时回到它——此前编辑器固定落在 `startupWorld` 上，切过场景的工作现场会被冲掉。`startupWorld` 语义收窄为**只服务打包后的 Player**；编辑器打开项目不再读它（仅当 `lastWorld` 为空或引用的场景已不存在时回退）。PIE 从当前打开的场景开始，与 `startupWorld` 无关（行为本来如此，这次只是明确）。**老项目无需迁移**：缺少 `lastWorld` 时回退到 `startupWorld`，首次切换场景后自动写入。World 资源 Inspector 现在能设置启动场景，不必再翻 Project 右键菜单。 |

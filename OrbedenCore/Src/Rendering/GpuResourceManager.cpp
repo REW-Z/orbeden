@@ -382,6 +382,7 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
     desc.height = firstFace->height;
     desc.channels = firstFace->channels;
     desc.srgb = firstFace->colorSpace == TextureColorSpace::SRGB;
+    desc.generateMipmaps = true;
     for (uint32 face = 0; face < 6; ++face)
     {
         Texture2D* texture = faces[face];
@@ -413,6 +414,18 @@ GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
     skybox->gpuSkyboxStorageIndex = static_cast<int32>(skyboxes.size());
     skyboxes.push_back(skybox);
     return cubeTexture;
+}
+
+//获取环境反射采样数据
+GpuEnvironmentReflection GpuResourceManager::GetEnvironmentReflection(Skybox* environment, float32 intensity)
+{
+    GpuEnvironmentReflection reflection;
+    if (!environment || !(intensity > 0.0f)) return reflection;
+    reflection.texture = GetSkybox(environment);
+    if (!reflection.texture.IsValid()) return reflection;
+    for (int32 size = environment->right.Get()->width; size > 1; size /= 2) reflection.maxLod += 1.0f;
+    reflection.intensity = intensity;
+    return reflection;
 }
 
 const GpuShader* GpuResourceManager::GetShader(Shader* shader)

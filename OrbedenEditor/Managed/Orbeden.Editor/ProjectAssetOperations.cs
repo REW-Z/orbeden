@@ -405,6 +405,9 @@ internal sealed class ReferenceRewritePlan
     private static readonly Regex ObjMtlRegex = new(@"^(?<prefix>\s*mtllib\s+)(?<paths>[^#\r\n]+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
     //材质资产的贴图行带槽名：texture <槽名> <Key>，引用是内容根相对的
     private static readonly Regex OrbMatTextureRegex = new(@"^(?<prefix>\s*texture\s+\S+\s+)(?<path>\S+)(?<suffix>.*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+    private static readonly Regex OrbSkyTextureRegex = new(@"^(?<prefix>\s*(?:right|left|top|bottom|front|back)\s+""?)(?<path>[^""\r\n]+?)(?<suffix>""?\s*)$", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.CultureInvariant);
+    private static readonly Regex RenderSettingsTagRegex = new(@"<RenderSettings\b[^>]*>", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex EnvironmentReferenceRegex = new(@"(?<prefix>\b(?:skybox|reflectionEnvironment)\s*=\s*"")(?<value>[^""]*)(?<suffix>"")", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly List<Rewrite> rewrites = [];
     private readonly List<Rewrite> applied = [];
@@ -563,6 +566,7 @@ internal sealed class ReferenceRewritePlan
         string lowerPath = path.ToLowerInvariant();
         if (lowerPath.EndsWith(".world") || lowerPath.EndsWith(".prefab")) return RewriteWorld(content);
         if (lowerPath.EndsWith(".orbshader")) return RewriteRegexDependency(content, IncludeRegex, oldOwnerKey, newOwnerKey, relative: true);
+        if (lowerPath.EndsWith(".orbsky")) return RewriteRegexDependency(content, OrbSkyTextureRegex, oldOwnerKey, newOwnerKey, relative: false);
         if (lowerPath.EndsWith(".mtl"))
         {
             string value = RewriteRegexDependency(content, MtlDependencyRegex, oldOwnerKey, newOwnerKey, relative: true);
@@ -582,6 +586,13 @@ internal sealed class ReferenceRewritePlan
     //更新 world 中的 Ref<> value 属性。
     private string RewriteWorld(string content)
     {
+        content = RenderSettingsTagRegex.Replace(content, tag => EnvironmentReferenceRegex.Replace(tag.Value, reference =>
+        {
+            string value = WebUtility.HtmlDecode(reference.Groups["value"].Value);
+            if (!TryMapSoftReference(value, out string mapped)) return reference.Value;
+            ChangedReferenceCount++;
+            return reference.Groups["prefix"].Value + (SecurityElement.Escape(mapped) ?? string.Empty) + reference.Groups["suffix"].Value;
+        }));
         return FieldTagRegex.Replace(content, match =>
         {
             string tag = match.Value;
@@ -809,6 +820,7 @@ internal sealed class ReferenceRewritePlan
             || lower.EndsWith(".orbshader")
             || lower.EndsWith(".mtl")
             || lower.EndsWith(".orbmat")
+            || lower.EndsWith(".orbsky")
             || lower.EndsWith(".obj")
             || lower.EndsWith(".gltf")
             || lower.EndsWith(".glb");

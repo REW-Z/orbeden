@@ -144,6 +144,7 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     Log::Info(rendererInfo.c_str());
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
     glEnable(GL_BLEND);
@@ -383,31 +384,29 @@ void OpenGLRenderBackend::DeleteDepthTexture(GpuDepthTextureID id)
 
 GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc& desc)
 {
-    if (desc.width <= 0 || desc.height <= 0) return GpuCubeTextureID();
+    if (desc.width <= 0 || desc.height != desc.width || desc.channels < 1 || desc.channels > 4) return GpuCubeTextureID();
+    for (const uint8* face : desc.faces) if (!face) return GpuCubeTextureID();
 
     GLenum format = ToTextureFormat(desc.channels);
     GLenum internalFormat = desc.srgb ? ToSrgbTextureFormat(desc.channels) : format;
     GLuint id = 0;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, desc.generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+    GLint unpackAlignment = 4;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     for (uint32 face = 0; face < 6; ++face)
     {
-        if (!desc.faces[face])
-        {
-            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-            boundCubeTextures[currentTextureSlot] = 0;
-            glDeleteTextures(1, &id);
-            return GpuCubeTextureID();
-        }
-
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, internalFormat, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.faces[face]);
     }
+    glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
+    if (desc.generateMipmaps) glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     boundCubeTextures[currentTextureSlot] = 0;

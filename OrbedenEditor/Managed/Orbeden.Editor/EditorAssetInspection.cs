@@ -48,7 +48,7 @@ internal static class EditorAssetInspection
 
     /// <summary>扩展名只用于选择导入器，不推断子资源。</summary>
     internal static bool CanInspect(string path) => Path.GetExtension(path).ToLowerInvariant() is
-        ".obj" or ".orbmat" or ".gltf" or ".glb" or ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp"
+        ".obj" or ".orbmat" or ".orbsky" or ".gltf" or ".glb" or ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp"
         or ".orbshader" or ".glsl" or ".orbo";
 
     /// <summary>读取轻量清单；大文件导入由独立进程完成。</summary>

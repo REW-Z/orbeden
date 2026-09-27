@@ -94,6 +94,7 @@ namespace
     {
         return uniformName == "u_ShadowMap"
             || uniformName == "u_SkyboxTexture"
+            || uniformName == "u_EnvironmentTexture"
             || uniformName == "u_CameraColorTexture"
             || uniformName == "u_CameraDepthTexture";
     }
@@ -108,6 +109,8 @@ namespace
             || uniformName == "u_LightViewProjection"
             || uniformName == "u_CameraPosition"
             || uniformName == "u_AmbientColor"
+            || uniformName == "u_EnvironmentIntensity"
+            || uniformName == "u_EnvironmentMaxLod"
             || uniformName == "u_LightDirection"
             || uniformName == "u_LightColor"
             || uniformName == "u_LightIntensity"

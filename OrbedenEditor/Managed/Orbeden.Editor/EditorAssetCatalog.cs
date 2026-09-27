@@ -123,6 +123,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             ".gltf" or ".glb" => "glTF Source",
             ".mtl" => "Mesh Material",
             ".orbmat" => "Material",
+            ".orbsky" => "Skybox",
             ".orbshader" => "Shader",
             ".cs" => "Script",
             ".world" => "World",

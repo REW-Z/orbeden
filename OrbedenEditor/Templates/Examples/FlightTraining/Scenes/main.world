@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <World>
-    <RenderSettings skybox="" skyboxEnabled="false" ambientColor="0.340000004 0.370000005 0.419999987 1" />
+    <RenderSettings skybox="" skyboxEnabled="false" ambientColor="0.340000004 0.370000005 0.419999987 1" ambientIntensity="1" />
     <Ens stableId="world://FlightTraining/main/root" name="FreeFlight" localActive="true">
         <Component type="Transform" stableId="world://FlightTraining/main/root/Transform/3a639e9e-57f0-4557-b9b6-dbc1327fd307">
             <Field name="localPosition" type="vector3" value="0 0 0" />
@@ -16,7 +16,7 @@
             <Component type="StaticMeshRenderer" stableId="world://preparing/8033961a-61f5-40fb-8082-6a8c876a83fb/StaticMeshRenderer/c0795d56-61e2-4607-8785-f7fec6ea9b25">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:61:world://runtime/Material/56d1c577-dde0-45f7-9624-642ba45ade70" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:61:world://runtime/Material/6757c13b-1854-446b-9ea1-ab836c4f96aa" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="false" />
                 <Field name="receiveShadows" type="bool" value="true" />
@@ -57,7 +57,7 @@
             <Component type="DirectionalLight" stableId="world://preparing/f8cff43a-22b9-4f44-a899-3484a73669ba/DirectionalLight/650fb571-58fd-49c8-a23d-5fcb122d573a">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="color" type="color" value="1 0.959999979 0.860000014 1" />
-                <Field name="intensity" type="float32" value="1" />
+                <Field name="intensity" type="float32" value="1.5" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="shadowBias" type="float32" value="0.000500000024" />
                 <Field name="shadowStrength" type="float32" value="0.449999988" />

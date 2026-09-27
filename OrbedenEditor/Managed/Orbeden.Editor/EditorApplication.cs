@@ -21,7 +21,7 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, void> SetWorldDirty;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, void> RequestProjectAction;
     public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, byte> GetWorldRenderSettings;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, float*, float, void> SetWorldRenderSettings;
+    public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, void> SetWorldRenderSettings;
 }
 #pragma warning restore CS0649
 
@@ -39,6 +39,10 @@ internal struct EditorWorldRenderSettingsAbi
     public float AmbientB;
     public float AmbientA;
     public float AmbientIntensity;
+    public float ReflectionIntensity;
+    public IntPtr ReflectionEnvironmentKey;
+    public int ReflectionEnvironmentKeyLength;
+    public int ReflectionEnvironmentKeyReserved;
 }
 
 internal enum EditorProjectField
@@ -67,13 +71,16 @@ public static unsafe class EditorApplication
     public static bool WorldDirty => api.IsWorldDirty != null && api.IsWorldDirty(api.Context) != 0;
 
     /// <summary>读取当前 World 的渲染设置。环境光是 sRGB 语义，与世界文件里存的一致。</summary>
-    internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor, out float ambientIntensity)
+    internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor,
+        out float ambientIntensity, out string reflectionEnvironmentKey, out float reflectionIntensity)
     {
         skyboxKey = string.Empty;
         skyboxEnabled = false;
         //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
         ambientColor = new Vector4(0.34f, 0.37f, 0.42f, 1.0f);
         ambientIntensity = 1.0f;
+        reflectionEnvironmentKey = string.Empty;
+        reflectionIntensity = 1.0f;
         if (api.GetWorldRenderSettings == null) return false;
 
         EditorWorldRenderSettingsAbi settings;
@@ -85,19 +92,33 @@ public static unsafe class EditorApplication
         skyboxEnabled = settings.SkyboxEnabled != 0;
         ambientColor = new Vector4(settings.AmbientR, settings.AmbientG, settings.AmbientB, settings.AmbientA);
         ambientIntensity = settings.AmbientIntensity;
+        reflectionIntensity = settings.ReflectionIntensity;
+        reflectionEnvironmentKey = settings.ReflectionEnvironmentKeyLength > 0 && settings.ReflectionEnvironmentKey != IntPtr.Zero
+            ? Encoding.UTF8.GetString((byte*)settings.ReflectionEnvironmentKey, settings.ReflectionEnvironmentKeyLength)
+            : string.Empty;
         return true;
     }
 
     /// <summary>写入当前 World 的渲染设置。播放中由原生侧拒绝。</summary>
-    internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor, float ambientIntensity)
+    internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor,
+        float ambientIntensity, string reflectionEnvironmentKey, float reflectionIntensity)
     {
         if (api.SetWorldRenderSettings == null) return;
 
         byte[] bytes = Encoding.UTF8.GetBytes(skyboxKey ?? string.Empty);
+        byte[] reflectionBytes = Encoding.UTF8.GetBytes(reflectionEnvironmentKey ?? string.Empty);
         fixed (byte* keyPointer = bytes)
+        fixed (byte* reflectionPointer = reflectionBytes)
         {
-            float* ambient = stackalloc float[4] { ambientColor.X, ambientColor.Y, ambientColor.Z, ambientColor.W };
-            api.SetWorldRenderSettings(api.Context, keyPointer, bytes.Length, (byte)(skyboxEnabled ? 1 : 0), ambient, ambientIntensity);
+            EditorWorldRenderSettingsAbi settings = new()
+            {
+                SkyboxKey = (IntPtr)keyPointer, SkyboxKeyLength = bytes.Length,
+                SkyboxEnabled = skyboxEnabled ? 1u : 0u,
+                AmbientR = ambientColor.X, AmbientG = ambientColor.Y, AmbientB = ambientColor.Z, AmbientA = ambientColor.W,
+                AmbientIntensity = ambientIntensity, ReflectionIntensity = reflectionIntensity,
+                ReflectionEnvironmentKey = (IntPtr)reflectionPointer, ReflectionEnvironmentKeyLength = reflectionBytes.Length,
+            };
+            api.SetWorldRenderSettings(api.Context, &settings);
         }
     }
 

@@ -888,8 +888,10 @@ namespace
         uint32 reserved = 0;
         float32 ambientColor[4] = {};
         float32 ambientIntensity = 1.0f;
+        float32 reflectionIntensity = 1.0f;
+        EditorTextAbi reflectionEnvironmentKey;
     };
-    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 48);
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 64);
 
     //读取世界级渲染设置。Key 借用 World 里的字符串，只在本次调用期间有效。
     uint8 ORBEDEN_NATIVE_CALL GetManagedWorldRenderSettings(void* context, EditorWorldRenderSettingsAbi* settings)
@@ -905,29 +907,33 @@ namespace
         settings->ambientColor[2] = source.ambientColor.b;
         settings->ambientColor[3] = source.ambientColor.a;
         settings->ambientIntensity = source.ambientIntensity;
+        settings->reflectionIntensity = source.reflectionIntensity;
+        settings->reflectionEnvironmentKey = EditorTextAbi(source.reflectionEnvironment.GetInstanceId().GetPath());
         return 1;
     }
 
     //写入世界级渲染设置
-    void ORBEDEN_NATIVE_CALL SetManagedWorldRenderSettings(void* context, const char* skyboxKey, int32 skyboxKeyLength,
-        uint8 skyboxEnabled, const float32* ambientColor, float32 ambientIntensity)
+    void ORBEDEN_NATIVE_CALL SetManagedWorldRenderSettings(void* context, const EditorWorldRenderSettingsAbi* settings)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
-        if (!editor || editor->IsPlaying() || !ambientColor) return;
+        if (!editor || editor->IsPlaying() || !settings) return;
 
         RenderSettings& target = editor->GetWorld().renderSettings;
-        if (skyboxKey && skyboxKeyLength > 0)
+        if (settings->skyboxKey.data && settings->skyboxKey.length > 0)
         {
-            target.skybox.SetInstanceId(StringId(std::string(skyboxKey, static_cast<usize>(skyboxKeyLength))));
+            target.skybox.SetInstanceId(StringId(std::string(settings->skyboxKey.data, static_cast<usize>(settings->skyboxKey.length))));
         }
         else
         {
             target.skybox.SetInstanceId(StringId());
         }
 
-        target.skyboxEnabled = skyboxEnabled != 0;
-        target.ambientColor = color { ambientColor[0], ambientColor[1], ambientColor[2], ambientColor[3] };
-        target.ambientIntensity = ambientIntensity;
+        target.reflectionEnvironment.SetInstanceId(settings->reflectionEnvironmentKey.data && settings->reflectionEnvironmentKey.length > 0
+            ? StringId(std::string(settings->reflectionEnvironmentKey.data, static_cast<usize>(settings->reflectionEnvironmentKey.length))) : StringId());
+        target.skyboxEnabled = settings->skyboxEnabled != 0;
+        target.ambientColor = color { settings->ambientColor[0], settings->ambientColor[1], settings->ambientColor[2], settings->ambientColor[3] };
+        target.ambientIntensity = settings->ambientIntensity;
+        target.reflectionIntensity = settings->reflectionIntensity;
         editor->GetWorld().SetDirty();
     }
 

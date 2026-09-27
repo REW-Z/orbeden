@@ -22,6 +22,8 @@ internal static class EditorEnvironmentSettings
     private static vector3 ambientRgb;
     private static float ambientAlpha = 1.0f;
     private static float ambientIntensity = 1.0f;
+    private static Skybox? reflectionEnvironment;
+    private static float reflectionIntensity = 1.0f;
 
     /// <summary>读出当前世界的设置，丢弃未提交的草稿。</summary>
     internal static void Reload()
@@ -30,9 +32,11 @@ internal static class EditorEnvironmentSettings
         dirty = false;
         status = string.Empty;
 
-        if (!EditorApplication.TryGetWorldRenderSettings(out string key, out bool enabled, out Vector4 ambient, out ambientIntensity))
+        if (!EditorApplication.TryGetWorldRenderSettings(out string key, out bool enabled, out Vector4 ambient,
+            out ambientIntensity, out string reflectionKey, out reflectionIntensity))
         {
             skybox = null;
+            reflectionEnvironment = null;
             skyboxEnabled = false;
             //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
             ambientRgb = new vector3(0.34f, 0.37f, 0.42f);
@@ -43,6 +47,7 @@ internal static class EditorEnvironmentSettings
 
         skybox = string.IsNullOrEmpty(key) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), key) as Skybox;
         skyboxEnabled = enabled;
+        reflectionEnvironment = string.IsNullOrEmpty(reflectionKey) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), reflectionKey) as Skybox;
         ambientRgb = new vector3(ambient.X, ambient.Y, ambient.Z);
         ambientAlpha = ambient.W;
     }
@@ -79,7 +84,8 @@ internal static class EditorEnvironmentSettings
         EditorApplication.SetWorldRenderSettings(
             skybox?.GetInstanceId() ?? string.Empty,
             skyboxEnabled,
-            new Vector4(ambientRgb.x, ambientRgb.y, ambientRgb.z, ambientAlpha), ambientIntensity);
+            new Vector4(ambientRgb.x, ambientRgb.y, ambientRgb.z, ambientAlpha), ambientIntensity,
+            reflectionEnvironment?.GetInstanceId() ?? string.Empty, reflectionIntensity);
         dirty = false;
         status = string.Empty;
         return true;
@@ -106,6 +112,20 @@ internal static class EditorEnvironmentSettings
                     dirty = true;
                 }
                 EditorGUI.Label("Color sets the tint; intensity scales brightness linearly (0 = off, 1 = baseline).");
+
+                EditorGUI.Separator();
+                Skybox? selectedReflection = reflectionEnvironment;
+                if (EditorGUI.ObjectField<Skybox>("Reflection Environment", ref selectedReflection))
+                {
+                    reflectionEnvironment = selectedReflection;
+                    dirty = true;
+                }
+                if (EditorGUI.InputFloat("Reflection Intensity", ref reflectionIntensity))
+                {
+                    reflectionIntensity = Math.Max(0.0f, reflectionIntensity);
+                    dirty = true;
+                }
+                EditorGUI.Label("Empty uses the skybox, even when its background is hidden. Intensity 0 disables reflections.");
 
                 EditorGUI.Separator();
                 if (EditorGUI.Button(dirty ? "Apply *" : "Apply")) Apply();

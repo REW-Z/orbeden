@@ -72,6 +72,14 @@ direct = albedo · nDotL · lightColor · intensity
 
 环境漫反射使用 `SrgbToLinear(ambientColor) · ambientIntensity · albedo`。这里已采用积分后的近似环境光形式，不需要再乘 π。方向光和环境光都不对强度做 sRGB 解码，强度减半都会让各自贡献的线性光照减半；二者的颜色仍统一按 sRGB 解码。
 
+## 环境镜面反射
+
+`RenderSettings.reflectionEnvironment` 指定全局反射环境；为空时使用 `skybox`。`reflectionIntensity` 是默认 `1` 的线性倍率，`0` 关闭反射，不受 `skyboxEnabled` 和环境漫反射强度影响。颜色 Cubemap 由 sRGB 格式硬件解码，mip 采样和反射合成在线性空间进行，不对反射强度乘 π 或做 sRGB 解码。
+
+第一版使用普通 Cubemap mip 近似粗糙度模糊，叠加带粗糙度修正的 Schlick 环境菲涅耳；PBS 使用金属度混合后的 F0 与材质遮蔽，Blinn-Phong 和普通透明材质使用镜面颜色并从光泽指数估算粗糙度。环境反射不乘方向光的 NdotL、强度或阴影。
+
+这不是完整的预过滤 IBL：没有 GGX 卷积、BRDF LUT、天空辐照度卷积和局部场景反射，最高 mip 仍可能存在面间差异。环境图片目前是 LDR 输入，场景合成仍为 HDR。内置资源与设置方法见 [Builtin 说明](../OrbedenEditor/Templates/Builtin/README.md)。
+
 ## 曝光
 
 曝光描述的是**观察方式**，与描述场景光照的灯光强度互不影响，因此两者分开：

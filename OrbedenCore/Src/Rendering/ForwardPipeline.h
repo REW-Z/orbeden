@@ -17,6 +17,7 @@ private:
     Ref<Shader> skyboxShader;
 
     CascadedShadowMap shadows;
+    GpuEnvironmentReflection environmentReflection;
 
     //内置天空盒立方体网格。
     GpuMesh skyboxMesh;

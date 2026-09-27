@@ -11,11 +11,17 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | `RenderScene` | 持久维护 Camera、DirectionalLight、StaticMeshRenderer 指针注册 |
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | Opaque、Transparent、Refraction 队列排序 |
-| `ForwardPipeline` | 阴影、天空盒、Forward Main Pass 与原生 Refraction Pass |
+| `ForwardPipeline` | 阴影、天空盒、环境反射绑定、Forward Main Pass 与原生 Refraction Pass |
 | `GpuResourceManager` | GPU 资源按需上传、缓存和释放 |
 | `OpenGLRenderBackend` | OpenGL Pass、状态、Uniform 和 Draw 调用 |
 
 ## 单帧总流程
+
+全局环境反射在 `ForwardPipeline::PrepareFrame` 选择来源，由 `GpuResourceManager::GetEnvironmentReflection` 返回非拥有型 `GpuEnvironmentReflection`（Cubemap、最大 LOD、线性强度）。Cubemap 的缓存与释放仍归资源管理器，每帧刷新采样数据；切换内容根或清理缓存会清空管线引用。
+
+材质通过统一的 `u_EnvironmentTexture`、`u_EnvironmentMaxLod`、`u_EnvironmentIntensity` 与 `environment_reflection.orbinc` 采样，不直接查询天空盒。纹理槽放在材质纹理、阴影和两张相机纹理之后，避免覆盖已有绑定。没有有效资源或强度为零时返回零贡献。
+
+后续局部探针可在绘制物体前按位置选择采样数据；GGX 预过滤可替换生成 Cubemap 的路径与 LOD 映射。这些接入点尚不包含探针捕获、混合、视差校正或屏幕空间反射，不提前建立空实现。
 
 ```mermaid
 flowchart TD

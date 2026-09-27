@@ -623,6 +623,9 @@ namespace
                 if (!ambient.empty() && !Reflection::SetFromXmlValue(world.renderSettings.ambientColor, ambient)) return false;
                 const std::string& ambientIntensity = GetAttribute(token, "ambientIntensity");
                 if (!ambientIntensity.empty() && !Reflection::SetFromXmlValue(world.renderSettings.ambientIntensity, ambientIntensity)) return false;
+                world.renderSettings.reflectionEnvironment.SetInstanceId(StringId(GetAttribute(token, "reflectionEnvironment")));
+                const std::string& reflectionIntensity = GetAttribute(token, "reflectionIntensity");
+                if (!reflectionIntensity.empty() && !Reflection::SetFromXmlValue(world.renderSettings.reflectionIntensity, reflectionIntensity)) return false;
                 if (!token.emptyElement && !reader.SkipElement(token.name)) return false;
                 continue;
             }
@@ -732,6 +735,8 @@ namespace
         bool success = true;
         const std::string& skybox = world.renderSettings.skybox.GetInstanceId().GetPath();
         if (!skybox.empty() && !ResourceManager::Load<Skybox>(skybox)) success = false;
+        const std::string& reflection = world.renderSettings.reflectionEnvironment.GetInstanceId().GetPath();
+        if (!reflection.empty() && !ResourceManager::Load<Skybox>(reflection)) success = false;
         world.ForEachEns([&world, &success](Ens& ens)
             {
                 for (Component* component : ens.GetComponents())
@@ -852,7 +857,9 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     output << "    <RenderSettings skybox=\"" << EscapeXml(world.renderSettings.skybox.GetInstanceId().GetPath())
         << "\" skyboxEnabled=\"" << (world.renderSettings.skyboxEnabled ? "true" : "false")
         << "\" ambientColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientColor))
-        << "\" ambientIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientIntensity)) << "\" />\n";
+        << "\" ambientIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientIntensity))
+        << "\" reflectionEnvironment=\"" << EscapeXml(world.renderSettings.reflectionEnvironment.GetInstanceId().GetPath())
+        << "\" reflectionIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.reflectionIntensity)) << "\" />\n";
     world.ForEachEns([&output](Ens& ens)
         {
             if (ens.GetParent()) return;
