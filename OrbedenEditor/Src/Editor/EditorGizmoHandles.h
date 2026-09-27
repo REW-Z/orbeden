@@ -89,6 +89,10 @@ public:
         const vector2& renderSize, const vector2& screenPosition, vector3& origin, vector3& direction,
         float32& distance);
 
+    //在场景视口右上角绘制世界轴罗盘。轴色与手柄同源，因此红/绿/蓝在全视口只有一套含义。
+    //它是视口部件而非组件 Gizmo，不受 Gizmos 开关影响。
+    static void DrawAxisCompass(const EditorGizmoView& view);
+
 private:
     //一次拖拽中单个目标的起始状态
     struct Target

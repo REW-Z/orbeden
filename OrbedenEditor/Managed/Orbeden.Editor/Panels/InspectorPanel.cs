@@ -987,7 +987,9 @@ internal sealed class InspectorPanel : EditorPanel
         }
     }
 
-    /// <summary>以角度显示 Transform 旋转，按 Z-X-Y 顺序转换并保留用户输入的欧拉角分支。</summary>
+    /// <summary>以角度显示 Transform 旋转，保留用户输入的欧拉角分支。
+    /// 次序是内禀 YXZ（等价于外禀 ZXY，即 R = Ry·Rx·Rz），与 Unity 一致；
+    /// 完整说明见 Docs/ProjectConventions.md 的「旋转次序」。</summary>
     private static bool TryDrawEulerRotation(string label, PropertyValue property, out InteropValue value)
     {
         value = property.Value;

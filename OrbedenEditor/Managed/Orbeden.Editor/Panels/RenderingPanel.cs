@@ -14,13 +14,19 @@ internal sealed class RenderingPanel : EditorPanel
     public override EditorPanelInfo Info => new("rendering", "Rendering", false,
         new vector2(520, 460), PanelDockPlacement.Floating, 0.35f, 140);
 
-    /// <summary>关闭项目时把两节的未提交改动都落盘。</summary>
+    /// <summary>关闭项目时把两节的未提交改动都落盘。
+    /// 没打开过这个面板、也没有草稿时必须直接成功——这个检查会被保存项目、Build Game、
+    /// Reset Builtin 等流程调用，返回 false 会让它们全部中止。</summary>
     public override bool SavePendingChanges()
     {
+        bool pending = dirty || EditorEnvironmentSettings.HasPendingChanges;
+        if (!pending) return true;
+
+        //走到这里说明确实有草稿：它属于当初绘制时的那个项目，换了项目就不能写进现在的项目
         if (root != PathDefines.ContentRoot) return false;
         if (!EditorEnvironmentSettings.Apply()) return false;
-        if (!dirty) return true;
-        if (!ApplyDisplay()) return false;
+        if (dirty && !ApplyDisplay()) return false;
+
         status = "Rendering settings saved.";
         return true;
     }

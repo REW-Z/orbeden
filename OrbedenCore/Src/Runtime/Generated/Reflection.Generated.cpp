@@ -1269,35 +1269,6 @@ public:
         return true;
     }
 
-    //读取 DirectionalLight.direction 字段
-    static std::string Get_DirectionalLight_direction(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::ToXmlValue(instance->direction);
-    }
-
-    //直接读取 DirectionalLight.direction 字段
-    static Reflection::Value GetValue_DirectionalLight_direction(Object* object)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return instance ? Reflection::ToValue(instance->direction) : Reflection::Value();
-    }
-
-    //写入 DirectionalLight.direction 字段
-    static bool Set_DirectionalLight_direction(Object* object, const std::string& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        return Reflection::SetFromXmlValue(instance->direction, value);
-    }
-
-    //直接写入 DirectionalLight.direction 字段
-    static bool SetValue_DirectionalLight_direction(Object* object, const Reflection::Value& value)
-    {
-        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
-        if (!instance) return false;
-        return Reflection::SetFromValue(instance->direction, value);
-    }
-
     //读取 DirectionalLight.color 字段
     static std::string Get_DirectionalLight_color(Object* object)
     {
@@ -5065,7 +5036,6 @@ namespace Reflection
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_enabled, ReflectionGeneratedAccess::SetValue_DirectionalLight_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("direction", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_DirectionalLight_direction, ReflectionGeneratedAccess::Set_DirectionalLight_direction, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_direction, ReflectionGeneratedAccess::SetValue_DirectionalLight_direction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_color, ReflectionGeneratedAccess::SetValue_DirectionalLight_color, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_intensity, ReflectionGeneratedAccess::SetValue_DirectionalLight_intensity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_castShadows, ReflectionGeneratedAccess::SetValue_DirectionalLight_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),

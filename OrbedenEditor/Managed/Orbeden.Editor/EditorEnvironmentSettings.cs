@@ -33,7 +33,8 @@ internal static class EditorEnvironmentSettings
         {
             skybox = null;
             skyboxEnabled = false;
-            ambientRgb = new vector3(0.08f, 0.09f, 0.1f);
+            //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
+            ambientRgb = new vector3(0.34f, 0.37f, 0.42f);
             ambientAlpha = 1.0f;
             status = "World render settings are unavailable.";
             return;
@@ -45,16 +46,24 @@ internal static class EditorEnvironmentSettings
         ambientAlpha = ambient.W;
     }
 
-    /// <summary>切项目后丢弃草稿，下次绘制重新读取。</summary>
-    internal static void Invalidate() => loadedRoot = "\0";
+    /// <summary>切项目后丢弃草稿，下次绘制重新读取。
+    /// 必须连未提交改动一起丢掉：草稿属于上一个项目的世界，没有地方可以落盘，
+    /// 留着只会让宿主的保存检查一直以为有待写数据。</summary>
+    internal static void Invalidate()
+    {
+        loadedRoot = "\0";
+        dirty = false;
+        status = string.Empty;
+    }
 
     private static void EnsureLoaded()
     {
         if (loadedRoot != PathDefines.ContentRoot) Reload();
     }
 
-    /// <summary>是否有未提交的改动，供宿主面板的关项目检查使用。</summary>
-    internal static bool HasPendingChanges => dirty;
+    /// <summary>是否有属于**当前项目**的未提交改动。
+    /// 草稿属于别的项目时不算数：它没有地方可以落盘，也不该挡住别人的保存流程。</summary>
+    internal static bool HasPendingChanges => dirty && loadedRoot == PathDefines.ContentRoot;
 
     /// <summary>提交草稿。宿主面板关闭项目前也会调用。</summary>
     internal static bool Apply()

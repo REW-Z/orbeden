@@ -70,7 +70,8 @@ public static unsafe class EditorApplication
     {
         skyboxKey = string.Empty;
         skyboxEnabled = false;
-        ambientColor = new Vector4(0.08f, 0.09f, 0.1f, 1.0f);
+        //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
+        ambientColor = new Vector4(0.34f, 0.37f, 0.42f, 1.0f);
         if (api.GetWorldRenderSettings == null) return false;
 
         EditorWorldRenderSettingsAbi settings;

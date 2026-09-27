@@ -589,7 +589,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Camera), "Camera", 1701664351275001347UL, (ens, pointer) => new global::Orbeden.Camera(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.CharacterController), "CharacterController", 5570124596910826920UL, (ens, pointer) => new global::Orbeden.CharacterController(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Collider), "Collider", 6347564027816963522UL, null);
-        NativeBindingRuntime.Register(typeof(global::Orbeden.DirectionalLight), "DirectionalLight", 2080651617008479338UL, (ens, pointer) => new global::Orbeden.DirectionalLight(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.DirectionalLight), "DirectionalLight", 8098784669294264934UL, (ens, pointer) => new global::Orbeden.DirectionalLight(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.HeightField), "HeightField", 12049277348369327740UL, (ens, pointer) => new global::Orbeden.HeightField(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4334917007709764458UL, null);
@@ -2756,33 +2756,18 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public global::Orbeden.vector3 @direction
-    {
-        get
-        {
-        global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 7, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (global::Orbeden.vector3)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 8, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public float @intensity
     {
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 9, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 7, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 10, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 8, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -2791,17 +2776,32 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 11, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 9, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 12, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 10, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
     public float @shadowBias
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @shadowBlendRatio
     {
         get
         {
@@ -2816,22 +2816,22 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @shadowBlendRatio
+    public int @shadowCascadeCount
     {
         get
         {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 15, this);
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 15, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
+        return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 16, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 16, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public int @shadowCascadeCount
+    public int @shadowDebugView
     {
         get
         {
@@ -2846,33 +2846,18 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public int @shadowDebugView
-    {
-        get
-        {
-        int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 19, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (int)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 20, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
     public float @shadowDistance
     {
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 21, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 19, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 22, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 20, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -2881,17 +2866,32 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 23, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 21, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 24, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 22, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public float @shadowNormalBias
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 23, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 24, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @shadowSplitLambda
     {
         get
         {
@@ -2906,7 +2906,7 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
-    public float @shadowSplitLambda
+    public float @shadowStrength
     {
         get
         {
@@ -2918,21 +2918,6 @@ public unsafe partial class DirectionalLight : global::Orbeden.Component
         set
         {
         var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 28, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
-    public float @shadowStrength
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 29, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.DirectionalLight), 30, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }

@@ -25,6 +25,15 @@ namespace
     constexpr float32 OuterRingPixels = 92.0f;
     constexpr int32 RingSegments = 64;
 
+    //右上角罗盘的尺寸与留白，全部用像素，不随视口缩放
+    constexpr float32 CompassMarginPixels = 40.0f;
+    constexpr float32 CompassRadiusPixels = 26.0f;
+    constexpr float32 CompassCapPixels = 3.2f;
+    constexpr float32 CompassThicknessPixels = 2.0f;
+    //轴臂在屏幕上的投影短于此像素数就只留圆点。不能用深度正负来判定：
+    //相机正对某轴时深度恰好是 0，按符号判定会把这个完全可见的情形判反
+    constexpr float32 CompassMinArmPixels = 1.5f;
+
     //命中容差与最小可交互面积
     constexpr float32 AxisPickPixels = 8.0f;
     constexpr float32 RingPickPixels = 9.0f;
@@ -40,7 +49,10 @@ namespace
     constexpr float32 AxisThickness = 2.5f;
     constexpr float32 HotThickness = 3.5f;
 
-    //三轴沿用业界通行的红绿蓝色序，命中或拖拽中统一转琥珀色
+    //三轴沿用业界通行的红绿蓝色序，命中或拖拽中统一转琥珀色。
+    //颜色按**轴**分配，不按方向：本引擎是右手系 Right-Up-Backward，
+    //蓝轴是 +Z 即 Backward，Forward 是它的反方向（见 ProjectConventions.md 的坐标约定）。
+    //不要把蓝轴翻成 -Z 去迁就"蓝=前"的直觉，那会让手柄和 Inspector 的 Z 字段对不上。
     constexpr EditorGizmoColor AxisColors[3] =
     {
         { 0.88f, 0.24f, 0.24f, 0.93f },
@@ -1029,4 +1041,63 @@ void EditorGizmoHandles::Draw(World& world, const EditorGizmoView& view) const
                 ToImColor(CenterColor, 0.5f));
         }
     }
+}
+
+//在场景视口右上角绘制世界轴罗盘：三个轴臂按相机朝向实时旋转。
+//轴色与手柄同源（红=+X/Right、绿=+Y/Up、蓝=+Z/Backward），全视口只有一套颜色语义。
+//Forward 是 -Z，即蓝臂的反方向，这一点由 ProjectConventions.md 的坐标约定承担说明，
+//不靠把蓝臂翻过来表达——那会和手柄的蓝轴打架。
+void EditorGizmoHandles::DrawAxisCompass(const EditorGizmoView& view)
+{
+    if (!view.valid) return;
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    //裁到场景视口内，罗盘靠近面板边缘，不得越界画到工具栏或相邻面板上
+    drawList->PushClipRect(ImVec2(view.renderPosition.x, view.renderPosition.y),
+        ImVec2(view.renderPosition.x + view.renderSize.x, view.renderPosition.y + view.renderSize.y), true);
+
+    vector2 center = { view.renderPosition.x + view.renderSize.x - CompassMarginPixels,
+        view.renderPosition.y + CompassMarginPixels };
+
+    //相机前向指向屏幕里侧，点积为正说明该轴远离观察者。按深度从远到近画，近的压在远的上面
+    int32 order[3] = { 0, 1, 2 };
+    float32 depth[3];
+    for (int32 index = 0; index < 3; ++index)
+        depth[index] = RenderMath::Dot(BaseAxes[index], view.cameraForward);
+    std::sort(order, order + 3, [&](int32 a, int32 b) { return depth[a] > depth[b]; });
+
+    //轴端在屏幕上的位置：cameraRight/cameraUp 是正交基，两个分量直接构成投影，
+    //模长 sqrt(1 - depth²) 自带透视缩短，正对相机的轴自然收缩到圆心。
+    //ImGui 的屏幕 Y 轴向下，所以 up 分量取反。投影太短的轴不画轴臂，只留端头圆点。
+    vector2 tips[3];
+    bool drawArm[3];
+    for (int32 index = 0; index < 3; ++index)
+    {
+        float32 screenX = RenderMath::Dot(BaseAxes[index], view.cameraRight);
+        float32 screenY = -RenderMath::Dot(BaseAxes[index], view.cameraUp);
+        tips[index] = { center.x + screenX * CompassRadiusPixels, center.y + screenY * CompassRadiusPixels };
+        drawArm[index] = std::sqrt(screenX * screenX + screenY * screenY) * CompassRadiusPixels > CompassMinArmPixels;
+    }
+
+    //先铺一层暗色衬线再上色，保证亮背景上也看得清，做法与线框 Gizmo 一致。
+    //两趟都按远到近的顺序画，近处的轴压住远处的轴。
+    const ImU32 outline = IM_COL32(10, 20, 15, 170);
+    for (int32 pass = 0; pass < 2; ++pass)
+        for (int32 slot = 0; slot < 3; ++slot)
+        {
+            int32 index = order[slot];
+            if (pass == 0)
+            {
+                if (drawArm[index]) drawList->AddLine(ToImVec2(center), ToImVec2(tips[index]), outline, CompassThicknessPixels + 1.6f);
+                drawList->AddCircleFilled(ToImVec2(tips[index]), CompassCapPixels + 1.2f, outline);
+            }
+            else
+            {
+                ImU32 ink = ToImColor(AxisColors[index]);
+                if (drawArm[index]) drawList->AddLine(ToImVec2(center), ToImVec2(tips[index]), ink, CompassThicknessPixels);
+                drawList->AddCircleFilled(ToImVec2(tips[index]), CompassCapPixels, ink);
+            }
+        }
+
+    drawList->PopClipRect();
 }

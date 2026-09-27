@@ -160,7 +160,11 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
         RenderDirectionalLight renderLight;
         renderLight.ens = light->GetEnsId();
         renderLight.light = light;
-        renderLight.direction = RenderMath::Normalize(light->direction);
+        //方向就是太阳的朝向：取所属 Ens 的 Transform 前向，也就是局部 -Z 经世界变换后的结果
+        //（LookAt 把 -forward 写进世界矩阵第三列，两者是同一套约定）。
+        //归一化顺带抹掉缩放；退化到零向量时退回一个朝下的默认方向。
+        renderLight.direction = RenderMath::Normalize(
+            RenderMath::TransformDirection(transformCache.GetWorldMatrix(renderLight.ens), { 0.0f, 0.0f, -1.0f }));
         if (RenderMath::Dot(renderLight.direction, renderLight.direction) <= 0.000001f)
         {
             renderLight.direction = { -0.35f, -1.0f, -0.45f };

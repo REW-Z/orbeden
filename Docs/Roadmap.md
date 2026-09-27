@@ -8,8 +8,6 @@
 
 # Core  
 
-world包含天空盒以及光照设置。    
-
 粒子系统。  
 
 RetainedGUI。  

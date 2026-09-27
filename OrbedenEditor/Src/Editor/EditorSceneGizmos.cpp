@@ -123,7 +123,9 @@ void EditorSceneGizmos::Draw(World& world, const EditorScene& scene, const Edito
                     vector3 radial = Offset(Offset({}, view.cameraRight, std::cos(angle)), view.cameraUp, std::sin(angle));
                     wire.Line(Offset(center, radial, size * 0.72f), Offset(center, radial, size));
                 }
-                vector3 direction = RenderMath::Normalize(light->direction);
+                //方向取自同一个 Ens 的 Transform 前向，与渲染侧生成光照快照的取法一致
+                vector3 direction = RenderMath::Normalize(
+                    RenderMath::TransformDirection(transform->worldMatrix, { 0.0f, 0.0f, -1.0f }));
                 if (RenderMath::Dot(direction, direction) < 0.5f) continue;
                 vector3 side = RenderMath::Normalize(RenderMath::Cross(direction, std::abs(direction.y) < 0.9f ? vector3{0,1,0} : vector3{1,0,0}));
                 for (int32 ray = selected ? -1 : 0; ray <= (selected ? 1 : 0); ++ray)

@@ -1,6 +1,68 @@
 # 项目规范
 
-Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托管层在 `OrbedenCore/Managed/OrbedenCore.CSharp/`，编辑器在 `OrbedenEditor/`，玩家在 `OrbedenGame/`。本规范约束引擎代码的文件组织、命名、include、代码风格与代码生成，新代码按本规范编写，同时作为既有代码整理的依据。
+Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托管层在 `OrbedenCore/Managed/OrbedenCore.CSharp/`，编辑器在 `OrbedenEditor/`，玩家在 `OrbedenGame/`。本规范约束引擎代码的坐标与空间约定、文件组织、命名、include、代码风格与代码生成，新代码按本规范编写，同时作为既有代码整理的依据。
+
+---
+
+# 坐标与空间约定
+
+引擎是**右手坐标系**（Right-Handed），**不采用 Unity 的左手系约定**。世界基轴按作用命名是 **Right-Up-Backward**：
+
+| 作用 | 轴 | 对应字段 |
+|---|---|---|
+| Right（右） | `+X` | `x` |
+| Up（上） | `+Y` | `y` |
+| Backward（后） | `+Z` | `z` |
+| **Forward（前）** | **`-Z`** | `z`（取负） |
+
+**Forward 是局部 `-Z`。** 这是右手系加 OpenGL 投影的必然结果，不是随手挑的。三轴的颜色（红 `+X`、绿 `+Y`、蓝 `+Z`）按**轴**分配而不是按方向，所以蓝轴指的是 Backward，Forward 是它的反方向。不要为了迁就「蓝=前」的直觉把蓝轴翻成 `-Z`，那会让手柄和 Inspector 的 `x/y/z` 字段对不上。
+
+## 判据
+
+改动坐标系相关代码时，以下几项必须同时自洽。只改其中一项会得到「能跑但静默出错」的结果——法线翻转、阴影异常这类问题不会崩溃，只会出现在部分模型上：
+
+| 判据 | 本引擎取值 | 位置 |
+|---|---|---|
+| 相机眼空间朝向 | `-Z` | `EditorScene::GetForward` |
+| 透视投影 `m[11]` | `-1.0f`（即 `w = -z_eye`） | `RenderMath::Perspective` |
+| 近/远平面 → NDC z | `-1 → +1` | 同上 |
+| 正交投影 `m[10]` | `-2 / depth` | `RenderMath::Orthographic` |
+| 正面绕序 | GL 默认 **CCW** | 全仓不调用 `glFrontFace` |
+
+`LookAt` 把 `-forward` 写进视图矩阵第三列，同时 `RenderCamera::viewMatrix = Inverse(worldMatrix)`。这两句是同一件事的两种写法，改一处必须改另一处。
+
+## 旋转次序
+
+欧拉角按 **内禀 YXZ**（intrinsic，绕物体自身的动轴）分解，它等价于 **外禀 ZXY**（extrinsic，绕世界定轴）。两者是同一个矩阵，不是两种做法：
+
+```
+R = Ry(yaw) · Rx(pitch) · Rz(roll)
+```
+
+即先绕物体自身 Y 轴转 yaw，再绕转过去的 X 轴转 pitch，最后绕再转过去的 Z 轴转 roll。
+
+**内禀与外禀必须成对写在这里。** 同一个矩阵两种叫法都成立，只写「ZXY」会让人分不清是按哪套轴——前者读作「先 Y 后 X 再 Z」，后者读作「先 Z 后 X 再 Y」，只看缩写会得到相反的结论。
+
+次序与 Unity 完全相同。Unity 源码的 `MatrixToEuler`（`Runtime/Math/Matrix3x3.cpp`，注明取自 geometrictools 的 EulerAngles 文档）标为 **YXZ order**，而 Unity 的公开文档称 **ZXY**——两者不矛盾，正是上面那对等价关系，Unity 自己的两处说法各取了一种。
+
+**字段映射**与次序名称无关，按轴落位（见 `InspectorPanel.cs` 的 `TryDrawEulerRotation`）：
+
+| Inspector 字段 | 角度 | 绕轴 |
+|---|---|---|
+| X | pitch | X |
+| Y | yaw | Y |
+| Z | roll | Z |
+
+欧拉角只存在于 Inspector 的显示与输入层，`.world` 里存的是 `type="quaternion"`，**不参与序列化**。因此改动次序不影响已有内容，但所有已调好的旋转会在检视面板里显示成另一组数字。
+
+次序只在两个以上角同时非零时才可观察：单轴旋转下所有次序等价，所以这类约定出错，通常只在「同时转了 pitch 与 yaw」的物体上暴露。`cos(pitch) → 0` 时进入万向锁，分解固定 `roll = 0` 并保留仍然可确定的 `yaw`。
+
+## 由此派生的约定
+
+- **`DirectionalLight` 的照射方向**取所属 Ens 的 Transform 前向，即局部 `-Z` 经世界变换。光沿 Forward 传播，与 Unity 语义相同——两边都是「光沿前向走」，只是前向落在不同轴上。
+- **绕 `+Y` 的正向旋转**，从上方俯视为逆时针。Unity 为顺时针，迁移代码时注意 yaw 符号。
+- **不在引擎里迁就外部工具的坐标系**。源格式的差异在导入层解决，见 [资源检视设计](AssetInspectorDesign.md) 的 **Up Axis** 选项（Blender 与 CAD 的 Z-up 转引擎 Y-up）。
+- **引入 Vulkan 后端时**：Vulkan 不强制手性，生态默认与 OpenGL 一致，保持右手系可复用现有矩阵约定。不要为了对齐 NDC z ∈ `[0, 1]` 顺手翻手性，那是两件独立的事。
 
 ---
 

@@ -580,6 +580,8 @@ void EditorScene::DrawSceneOverlay()
     SubmitSelectionHighlight(world);
     componentGizmos.Draw(world, *this, gizmoView);
     DrawGizmoHandles();
+    //罗盘是视口部件而非组件 Gizmo：放在最后画，且不受 Gizmos 开关影响
+    EditorGizmoHandles::DrawAxisCompass(gizmoView);
 }
 
 //更新编辑器观察相机。
