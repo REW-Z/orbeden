@@ -24,7 +24,21 @@ namespace
 //销毁缓存并解除世界监听
 TransformCache::~TransformCache()
 {
-    if (world) world->RemoveTransformListener(this);
+    Reset();
+}
+
+//解除世界监听并清空缓存
+void TransformCache::Reset()
+{
+    if (world)
+    {
+        world->RemoveTransformListener(this);
+        world = nullptr;
+    }
+
+    boundRevision = 0;
+    pendingNodes.clear();
+    changedNodes.clear();
 }
 
 //接收变换失效通知

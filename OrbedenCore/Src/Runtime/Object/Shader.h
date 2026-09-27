@@ -23,6 +23,18 @@ enum class ShaderPassToggle
     Off,
 };
 
+//Shader 几何 ABI 契约，决定一个 Pass 编译哪些几何变体。
+//数值写入 Cooked 载荷，序号固定。
+enum class ShaderGeometryContract : uint32
+{
+    //未声明几何 ABI，只编译 uniform 单绘制
+    Legacy = 0,
+    //接入几何 ABI，编译 uniform 与实例绘制
+    Standard = 1,
+    //粒子用几何 ABI，编译全部四种模式
+    Particle = 2,
+};
+
 //Shader Pass 固定功能状态
 struct ShaderPassState
 {
@@ -39,6 +51,8 @@ struct ShaderPass
 public:
     std::string name = "Default";
     ShaderPassState state;
+    //未声明 Geometry 时保持 Legacy，原 Shader 语法与逐对象绘制行为不变
+    ShaderGeometryContract geometryContract = ShaderGeometryContract::Legacy;
     ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string vertexSource;
     ORBEDEN_BIND_ACCESSORS(Direct, None)

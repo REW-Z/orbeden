@@ -1,7 +1,170 @@
 #include "Rendering/GpuResourceManager.h"
 
+
+#include <cctype>
+
+namespace
+{
+    //UTF-8 BOM 长度
+    constexpr usize BomLength = 3;
+    //#version 关键字的长度
+    constexpr usize VersionKeywordLength = 8;
+
+    //把注释内容替换成空格，长度与换行位置保持不变，
+    //这样在掩码文本上做查找既能跳过注释里的关键字，又能拿到原始偏移。
+    std::string MaskComments(const std::string& source)
+    {
+        std::string masked = source;
+        bool inLineComment = false;
+        bool inBlockComment = false;
+
+        for (usize index = 0; index < masked.size(); ++index)
+        {
+            char ch = masked[index];
+            char next = index + 1 < masked.size() ? masked[index + 1] : '\0';
+
+            if (inLineComment)
+            {
+                if (ch == '\n')
+                {
+                    inLineComment = false;
+                    continue;
+                }
+
+                masked[index] = ' ';
+                continue;
+            }
+
+            if (inBlockComment)
+            {
+                if (ch == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    masked[index] = ' ';
+                    masked[index + 1] = ' ';
+                    ++index;
+                    continue;
+                }
+
+                if (ch != '\n') masked[index] = ' ';
+                continue;
+            }
+
+            if (ch == '/' && next == '/')
+            {
+                inLineComment = true;
+                masked[index] = ' ';
+                masked[index + 1] = ' ';
+                ++index;
+                continue;
+            }
+
+            if (ch == '/' && next == '*')
+            {
+                inBlockComment = true;
+                masked[index] = ' ';
+                masked[index + 1] = ' ';
+                ++index;
+                continue;
+            }
+        }
+
+        return masked;
+    }
+
+    //跳过源开头的 UTF-8 BOM，返回第一条有效字符的位置
+    usize SkipByteOrderMark(const std::string& source)
+    {
+        if (source.size() >= BomLength &&
+            static_cast<uint8>(source[0]) == 0xEF &&
+            static_cast<uint8>(source[1]) == 0xBB &&
+            static_cast<uint8>(source[2]) == 0xBF)
+        {
+            return BomLength;
+        }
+
+        return 0;
+    }
+
+    //定位必须是第一条有效指令的 #version，前面只允许空白
+    usize FindVersionDirective(const std::string& masked, usize start, std::string& error)
+    {
+        for (usize index = start; index < masked.size(); ++index)
+        {
+            if (std::isspace(static_cast<unsigned char>(masked[index]))) continue;
+
+            if (masked.compare(index, VersionKeywordLength, "#version") == 0) return index;
+
+            error = "#version must be the first directive";
+            return std::string::npos;
+        }
+
+        error = "the source does not start with #version";
+        return std::string::npos;
+    }
+
+    //统计指定位置之前出现过的换行数量
+    usize CountLinesBefore(const std::string& source, usize position)
+    {
+        usize lines = 0;
+        for (usize index = 0; index < position; ++index)
+        {
+            if (source[index] == '\n') ++lines;
+        }
+
+        return lines;
+    }
+}
+
+static bool BuildGeometrySource(const std::string& source, GeometryMode mode, std::string& output, std::string& error)
+{
+    output.clear();
+    error.clear();
+
+    std::string masked = MaskComments(source);
+    usize start = SkipByteOrderMark(source);
+    usize versionIndex = FindVersionDirective(masked, start, error);
+    if (versionIndex == std::string::npos) return false;
+
+    //同一份源码只允许一条 #version，后续出现的会与注入内容争夺第一条指令的位置
+    if (masked.find("#version", versionIndex + VersionKeywordLength) != std::string::npos)
+    {
+        error = "the source declares #version more than once";
+        return false;
+    }
+
+    usize versionLineEnd = source.find('\n', versionIndex);
+    usize bodyStart = versionLineEnd == std::string::npos ? source.size() : versionLineEnd + 1;
+    //#version 所在行的行号从 1 起算，恢复行号后紧随其后的仍是原文件的下一行
+    usize nextLineNumber = CountLinesBefore(source, versionIndex) + 2;
+
+    output.reserve(source.size() + 64);
+    if (versionLineEnd == std::string::npos)
+    {
+        //#version 是最后一行，补一个换行让注入的两行各自独立
+        output.append(source, 0, source.size());
+        output += '\n';
+    }
+    else
+    {
+        output.append(source, 0, bodyStart);
+    }
+
+    output += "#define ORBEDEN_GEOMETRY_MODE ";
+    output += std::to_string(static_cast<uint32>(mode));
+    output += '\n';
+    output += "#line ";
+    output += std::to_string(nextLineNumber);
+    output += '\n';
+    output.append(source, bodyStart, std::string::npos);
+    return true;
+}
+
+#include "Rendering/GpuResourceManager.h"
+
 #include "Log/Log.h"
 #include "Rendering/ColorSpace.h"
+
 
 #include <cassert>
 #include <utility>
@@ -33,17 +196,19 @@ namespace
         return "u_Has" + name + "Texture";
     }
 
-    //释放 GPU Mesh 句柄
+    //释放 GPU Mesh 句柄：先释放两份顶点输入，再释放它们引用的缓冲
     void DeleteGpuResource(RenderBackend* backend, GpuMesh& mesh)
     {
         if (backend)
         {
             backend->DeleteVertexInput(mesh.vertexInput);
+            backend->DeleteVertexInput(mesh.instancedVertexInput);
             backend->DeleteVertexBuffer(mesh.vertexBuffer);
             backend->DeleteIndexBuffer(mesh.indexBuffer);
         }
 
         mesh.vertexInput = GpuVertexInputID();
+        mesh.instancedVertexInput = GpuVertexInputID();
         mesh.vertexBuffer = GpuVertexBufferID();
         mesh.indexBuffer = GpuIndexBufferID();
         mesh.indexCount = 0;
@@ -63,7 +228,7 @@ namespace
         skybox = GpuCubeTextureID();
     }
 
-    //释放 GPU Shader 句柄
+    //释放 GPU Shader 句柄，四个几何变体各自持有 program
     void DeleteGpuResource(RenderBackend* backend, GpuShader& shader)
     {
         if (backend)
@@ -71,6 +236,9 @@ namespace
             for (GpuShaderPass& pass : shader.passes)
             {
                 backend->DeleteShaderProgram(pass.shaderProgram);
+                backend->DeleteShaderProgram(pass.instancedProgram);
+                backend->DeleteShaderProgram(pass.expandedProgram);
+                backend->DeleteShaderProgram(pass.trailInstancedProgram);
             }
         }
 
@@ -182,6 +350,9 @@ namespace
         if (uploaded.vertexBuffer.IsValid() && uploaded.indexBuffer.IsValid())
         {
             uploaded.vertexInput = backend->CreateVertexInput(vertexInputDesc);
+            //实例绘制的顶点输入与普通顶点输入共用缓冲，实例属性在提交时补上。
+            vertexInputDesc.layout = GpuVertexLayout::InstancedMesh;
+            uploaded.instancedVertexInput = backend->CreateVertexInput(vertexInputDesc);
         }
 
         if (uploaded.IsValid()) return true;
@@ -191,21 +362,66 @@ namespace
         return false;
     }
 
-    //编译 Shader Pass
+    //编译一个几何变体，源码按模式注入宏后交给后端
+    bool CompileGeometryVariant(RenderBackend* backend, const ShaderPass& sourcePass, const std::string& shaderName,
+        GeometryMode mode, GpuShaderProgramID& program)
+    {
+        std::string vertexSource;
+        std::string fragmentSource;
+        std::string error;
+        if (!BuildGeometrySource(sourcePass.vertexSource, mode, vertexSource, error) ||
+            !BuildGeometrySource(sourcePass.fragmentSource, mode, fragmentSource, error))
+        {
+            Log::Error(("GpuResourceManager shader variant build failed: " + shaderName + " pass " + sourcePass.name +
+                " geometry " + std::to_string(static_cast<uint32>(mode)) + ": " + error).c_str());
+            return false;
+        }
+
+        GpuShaderProgramDesc desc;
+        desc.vertexSource = vertexSource.c_str();
+        desc.fragmentSource = fragmentSource.c_str();
+        program = backend->CreateShaderProgram(desc);
+        if (program.IsValid()) return true;
+
+        Log::Error(("GpuResourceManager shader variant compile failed: " + shaderName + " pass " + sourcePass.name +
+            " geometry " + std::to_string(static_cast<uint32>(mode))).c_str());
+        return false;
+    }
+
+    //编译 Shader Pass。契约声明支持的变体必须全部成功，任一失败让整个 Shader 上传失败。
     bool UploadShader(RenderBackend* backend, Shader* shader, GpuShader& uploaded)
     {
         for (const ShaderPass& sourcePass : shader->passes)
         {
-            GpuShaderProgramDesc shaderProgramDesc;
-            shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
-            shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
-
             GpuShaderPass pass;
             pass.name = sourcePass.name;
             pass.state = sourcePass.state;
-            pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+            pass.geometryContract = sourcePass.geometryContract;
+
+            bool compiled = true;
+            if (sourcePass.geometryContract == ShaderGeometryContract::Legacy)
+            {
+                //Legacy 保持原语法原样编译，不注入几何宏，未升级的自定义 Shader 行为不变
+                GpuShaderProgramDesc shaderProgramDesc;
+                shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
+                shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
+                pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
+                compiled = pass.shaderProgram.IsValid();
+            }
+            else
+            {
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram) &&
+                    CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
+                if (compiled && sourcePass.geometryContract == ShaderGeometryContract::Particle)
+                {
+                    compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Expanded, pass.expandedProgram) &&
+                        CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::TrailInstanced, pass.trailInstancedProgram);
+                }
+            }
+
+            //失败的 Pass 也入列，交给统一的释放路径回收已经编译成功的变体。
             uploaded.passes.push_back(pass);
-            if (!pass.shaderProgram.IsValid()) break;
+            if (!compiled) break;
         }
 
         if (uploaded.IsValid()) return true;
@@ -314,6 +530,7 @@ const GpuMesh* GpuResourceManager::GetMesh(Mesh* mesh)
     }
 
     gpuMesh->vertexInput = uploaded.vertexInput;
+    gpuMesh->instancedVertexInput = uploaded.instancedVertexInput;
     gpuMesh->vertexBuffer = uploaded.vertexBuffer;
     gpuMesh->indexBuffer = uploaded.indexBuffer;
     gpuMesh->indexCount = uploaded.indexCount;

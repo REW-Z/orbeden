@@ -557,7 +557,18 @@ namespace
         if (value.empty() || !extra.empty()) return false;
 
         key = ToLower(key);
-        return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull";
+        return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull" || key == "geometry";
+    }
+
+    //解析几何 ABI 契约声明，大小写不敏感
+    bool ParseShaderGeometryContract(const std::string& text, ShaderGeometryContract& value)
+    {
+        std::string normalized = ToLower(Trim(text));
+        if (normalized == "legacy") value = ShaderGeometryContract::Legacy;
+        else if (normalized == "standard") value = ShaderGeometryContract::Standard;
+        else if (normalized == "particle") value = ShaderGeometryContract::Particle;
+        else return false;
+        return true;
     }
 
     /// <summary>解析资源声明的实际绘制队列。</summary>
@@ -577,6 +588,9 @@ namespace
         passes.clear();
         drawQueue = DrawQueue::Opaque;
         bool hasQueue = false;
+        bool hasTopLevelGeometry = false;
+        //顶层几何声明只服务单 Pass 简写，先记下来等隐式 Pass 建立时再套用
+        ShaderGeometryContract topLevelGeometry = ShaderGeometryContract::Legacy;
 
         ShaderPass* currentPass = nullptr;
         std::string* currentSource = nullptr;
@@ -586,6 +600,7 @@ namespace
         bool stageStarted = false;
         bool hasVertex = false;
         bool hasFragment = false;
+        bool passGeometryDeclared = false;
 
         auto validateCurrentPass = [&]()
         {
@@ -622,6 +637,18 @@ namespace
                     continue;
                 }
 
+                if (directive == "geometry")
+                {
+                    //顶层几何声明只作用于单 Pass 简写，且必须出现在任何 Pass 或 stage 之前。
+                    //显式 Pass 用 Pass 内的 geometry 状态行声明，两处混用会被这条规则挡下。
+                    if (hasTopLevelGeometry || !passes.empty() || !ParseShaderGeometryContract(argument, topLevelGeometry))
+                    {
+                        collection.AddError("OrbShader geometry must be declared once before all passes as Legacy, Standard or Particle: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    hasTopLevelGeometry = true;
+                    continue;
+                }
+
                 if (directive == "pass")
                 {
                     if (legacyPass)
@@ -649,6 +676,7 @@ namespace
                     stageStarted = false;
                     hasVertex = false;
                     hasFragment = false;
+                    passGeometryDeclared = false;
                     continue;
                 }
 
@@ -670,6 +698,8 @@ namespace
                         legacyPass = true;
                         passes.push_back(ShaderPass());
                         currentPass = &passes.back();
+                        //单 Pass 简写的几何契约来自顶层声明，未声明时保持 Legacy
+                        currentPass->geometryContract = topLevelGeometry;
                     }
 
                     stageStarted = true;
@@ -736,6 +766,12 @@ namespace
                 else if (key == "depthwrite") valid &= ParseShaderPassToggle(value, currentPass->state.depthWrite);
                 else if (key == "blend") valid &= ParseShaderPassToggle(value, currentPass->state.blend);
                 else if (key == "cull") valid &= ParseShaderCullMode(value, currentPass->state.cull);
+                else if (key == "geometry")
+                {
+                    //几何契约在每个 Pass 内只能声明一次，与其它状态行同处第一个 stage 之前
+                    valid &= !passGeometryDeclared && ParseShaderGeometryContract(value, currentPass->geometryContract);
+                    passGeometryDeclared = true;
+                }
                 else valid = false;
 
                 if (!valid)

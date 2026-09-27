@@ -146,6 +146,9 @@ public sealed class PropertyValue
 }
 
 /// <summary>统一编辑 Edit/PIE World 中 C++ 与 C# 组件的事务文档。</summary>
+/// <summary>一次属性事务里的单条写入，供自定义编辑器把多个字段合成一条撤销。</summary>
+internal readonly record struct PropertyTargetWrite(IPropertyTarget Target, string Name, InteropValue Value);
+
 public sealed class PropertyDocument
 {
     private readonly IReadOnlyList<IPropertyTarget> targets;
@@ -276,43 +279,61 @@ public sealed class PropertyDocument
         List<PropertyValue> changes = properties.Where(property => property.Modified).ToList();
         if (changes.Count == 0) return true;
 
-        foreach (IPropertyTarget target in targets) target.Refresh();
-        List<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> writes = [];
+        List<PropertyTargetWrite> writes = [];
         foreach (PropertyValue property in changes)
-        {
             foreach (IPropertyTarget target in targets)
-            {
-                if (target.Validate(property.Name, property.Value) != InteropStatus.Ok) return false;
-                if (target.TryGet(property.Name, out InteropValue oldValue) != InteropStatus.Ok) return false;
-                writes.Add((target, property.Name, oldValue, property.Value));
-            }
+                writes.Add(new PropertyTargetWrite(target, property.Name, property.Value));
+
+        //普通字段编辑沿用原有的合并历史行为
+        if (!ApplyTargetChanges(undoLabel, writes, merge: true)) return false;
+
+        foreach (PropertyValue property in changes) property.ClearModified();
+        modified = false;
+        Update();
+        return true;
+    }
+
+    /// <summary>一次撤销历史里的多条字段写入；任一失败时逆序回滚且不记历史。</summary>
+    internal bool ApplyTargetChanges(string undoLabel, IReadOnlyList<PropertyTargetWrite> writes, bool merge = false)
+    {
+        if (writes.Count == 0) return true;
+
+        //只接受属于当前文档的目标，避免跨文档误写
+        foreach (PropertyTargetWrite write in writes)
+            if (!targets.Contains(write.Target)) return false;
+
+        foreach (IPropertyTarget target in targets) target.Refresh();
+
+        List<(IPropertyTarget Target, string Name, InteropValue OldValue, InteropValue NewValue)> resolved = [];
+        foreach (PropertyTargetWrite write in writes)
+        {
+            if (write.Target.Validate(write.Name, write.Value) != InteropStatus.Ok) return false;
+            if (write.Target.TryGet(write.Name, out InteropValue oldValue) != InteropStatus.Ok) return false;
+            resolved.Add((write.Target, write.Name, oldValue, write.Value));
         }
 
+        //先全部写入，失败则逆序回滚已经改掉的部分
         int applied = 0;
-        for (; applied < writes.Count; ++applied)
+        for (; applied < resolved.Count; ++applied)
         {
-            var write = writes[applied];
+            var write = resolved[applied];
             if (write.Target.Set(write.Name, write.NewValue) == InteropStatus.Ok) continue;
             for (int rollback = applied - 1; rollback >= 0; --rollback)
             {
-                var old = writes[rollback];
+                var old = resolved[rollback];
                 old.Target.Set(old.Name, old.OldValue);
             }
             return false;
         }
 
-        foreach (IPropertyTarget target in targets.Distinct()) target.MarkDirty();
-        string mergeKey = string.Join('|', writes.Select(write => $"{write.Target.Identity}:{write.Name}"));
+        foreach (IPropertyTarget target in resolved.Select(write => write.Target).Distinct()) target.MarkDirty();
+        string mergeKey = string.Join('|', resolved.Select(write => $"{write.Target.Identity}:{write.Name}"));
         EditorPropertyHistory.PushAction(
             undoLabel,
-            () => ApplyHistory(writes, useNewValue: false),
-            () => ApplyHistory(writes, useNewValue: true),
+            () => ApplyHistory(resolved, useNewValue: false),
+            () => ApplyHistory(resolved, useNewValue: true),
             mergeKey,
-            merge: true);
-
-        foreach (PropertyValue property in changes) property.ClearModified();
-        modified = false;
-        Update();
+            merge);
         return true;
     }
 

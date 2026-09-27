@@ -98,8 +98,9 @@ bool CascadedShadowMap::CreateAtlas()
     return true;
 }
 
-void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& camera,
-    const RenderDirectionalLight& light, Shader* depthShader, GpuResourceManager& resources)
+void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+    const RenderCamera& camera, const RenderDirectionalLight& light, Shader* depthShader,
+    GpuResourceManager& resources, DrawBatchBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats)
 {
     ready = false;
     if (!backend || !depthShader || !std::isfinite(camera.nearPlane) || !std::isfinite(camera.farPlane) ||
@@ -170,7 +171,7 @@ void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& cam
     history.settings = settings;
     history.initialized = true;
 
-    //收集全场景同层不透明投射物
+    //收集全场景同层不透明投射物，用于分区包围盒与阴影候选
     List<StaticMeshRenderer*> casters;
     List<bounds3> bounds;
     for (StaticMeshRenderer* renderer : scene.renderers)
@@ -202,6 +203,11 @@ void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& cam
         cascades[index] = ShadowCascadeBuilder::BuildCascade(camera.worldMatrix, camera.projectionMatrix,
             light.direction, sliceNear, splits[index], settings, bounds);
         cascades[index].blendStart = splits[index] - (splits[index]-logicalNear) * settings.blendRatio;
+
+        //每级从完整候选独立剔除并独立成批，不复用主相机的可见结果
+        builder.BuildShadowItems(scene, submissions, camera, cascades[index].lightFrustum, shadowItems);
+        builder.BuildShadowBatches(shadowItems, *shader, shadowBatches, stats);
+
         RenderPassDesc pass;
         pass.renderTarget = target;
         pass.x = (index % 2)*settings.resolution;
@@ -213,28 +219,62 @@ void CascadedShadowMap::Render(const RenderScene& scene, const RenderCamera& cam
         backend->SetDepthCompare(DepthCompare::Less);
         backend->SetDepthWrite(true);
         backend->SetBlend(false);
+        //深度 Pass 不使用加法混合，显式回到基线以免上一批留下加法方程
+        backend->SetBlendMode(BlendMode::Alpha);
         backend->SetCullMode(CullMode::None);
         backend->SetPolygonOffset(false, 0.0f, 0.0f);
         backend->BindShaderProgram(shader->passes[0].shaderProgram);
         backend->SetUniformMatrix4("u_LightViewProjection", cascades[index].worldToShadow);
-        for (StaticMeshRenderer* renderer : casters)
+
+        for (const DrawBatch& batch : shadowBatches)
         {
-            const auto& state = renderer->renderState;
-            if (state.worldBounds.valid && !RenderMath::Intersects(cascades[index].lightFrustum, state.worldBounds)) continue;
-            const GpuMesh* mesh = resources.GetMesh(state.mesh);
-            if (!mesh) continue;
-            backend->SetUniformMatrix4("u_Model", state.localToWorld);
-            backend->BindVertexInput(mesh->vertexInput);
-            for (usize subIndex = 0; subIndex < state.mesh->subMeshes.size(); ++subIndex)
+            if (batch.key.mode == GeometryMode::Instanced)
             {
-                const SubMesh& sub = state.mesh->subMeshes[subIndex];
-                Material* material = subIndex < renderer->materials.size() ? renderer->materials[subIndex].Get() : nullptr;
-                if (!material || material->GetDrawQueue() != DrawQueue::Opaque ||
-                    sub.indexCount == 0 || sub.indexStart > state.mesh->indices.size() ||
-                    sub.indexCount > state.mesh->indices.size()-sub.indexStart) continue;
-                backend->DrawIndexed(sub.indexStart, sub.indexCount);
+                //实例化阴影：同一深度程序，实例数据走流式缓冲
+                shadowInstances.clear();
+                shadowInstances.reserve(batch.items.size());
+                for (uint32 itemIndex : batch.items)
+                {
+                    const DrawItem& item = shadowItems[itemIndex];
+                    GpuMeshInstance instance;
+                    if (!BuildGpuMeshInstance(item.model, item.linearTint, item.uvRect, instance)) continue;
+                    shadowInstances.push_back(instance);
+                }
+
+                const DrawItem& first = shadowItems[batch.items[0]];
+                const GpuMesh* mesh = resources.GetMesh(first.mesh);
+                if (shadowInstances.empty() || !mesh || !mesh->instancedVertexInput.IsValid()) continue;
+                if (!stream.UploadMeshInstances(shadowInstances))
+                {
+                    ++stats.failedUploads;
+                    continue;
+                }
+
+                stats.uploadedBytes += static_cast<uint64>(shadowInstances.size()) * sizeof(GpuMeshInstance);
+                stats.submittedInstances += shadowInstances.size();
+                backend->BindVertexInput(mesh->instancedVertexInput);
+                if (!backend->BindInstanceBuffer(stream.GetInstanceBuffer(), 0)) continue;
+                backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount,
+                    static_cast<uint32>(shadowInstances.size()));
+                ++stats.instancedDraws;
+                ++stats.shadowDraws;
+                continue;
+            }
+
+            //Legacy 深度 Shader 没有实例变体，退回逐对象绘制
+            for (uint32 itemIndex : batch.items)
+            {
+                const DrawItem& item = shadowItems[itemIndex];
+                const GpuMesh* mesh = resources.GetMesh(item.mesh);
+                if (!mesh) continue;
+                backend->SetUniformMatrix4("u_Model", item.model);
+                backend->BindVertexInput(mesh->vertexInput);
+                backend->DrawIndexed(item.indexStart, item.indexCount);
+                ++stats.ordinaryDraws;
+                ++stats.shadowDraws;
             }
         }
+
         backend->EndPass();
     }
     backend->BindVertexInput({});

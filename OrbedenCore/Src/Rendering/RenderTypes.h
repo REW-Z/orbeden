@@ -52,6 +52,22 @@ enum class CullMode : uint32
     Back = 3,
 };
 
+//混合模式。数值参与批次键比较，序号固定。
+enum class BlendMode : uint32
+{
+    Alpha = 0,
+    Additive = 1,
+};
+
+//几何提交模式，决定一次绘制走哪条顶点路径。数值参与批次键比较，序号固定。
+enum class GeometryMode : uint32
+{
+    Uniform = 0,
+    Instanced = 1,
+    Expanded = 2,
+    TrailInstanced = 3,
+};
+
 //渲染系统创建的离屏目标句柄，0 表示默认窗口帧缓冲
 struct RenderTargetID
 {
@@ -61,6 +77,28 @@ public:
     bool IsValid() const { return id != 0; }
     bool operator==(const RenderTargetID& other) const { return id == other.id; }
     bool operator!=(const RenderTargetID& other) const { return id != other.id; }
+};
+
+//一帧的渲染批次统计。全部为累计计数，每次 Render 开始清零。
+struct RenderBatchStats
+{
+public:
+    uint64 sourceItems = 0;
+    uint64 visibleItems = 0;
+    uint64 ordinaryDraws = 0;
+    uint64 instancedDraws = 0;
+    uint64 dynamicBatchDraws = 0;
+    uint64 submittedInstances = 0;
+    uint64 expandedVertices = 0;
+    uint64 expandedIndices = 0;
+    uint64 uploadedBytes = 0;
+    uint64 shadowDraws = 0;
+    uint64 invalidTransforms = 0;
+    uint64 invalidResources = 0;
+    uint64 failedUploads = 0;
+    uint64 legacyShaderItems = 0;
+    uint64 multiPassItems = 0;
+    uint64 transparentBatchBreaks = 0;
 };
 
 //轻量矩阵，按 OpenGL 习惯使用列主序

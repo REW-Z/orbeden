@@ -1,3 +1,4 @@
+#include <functional>
 #include "Physics/PhysicsSystem.h"
 #include "Runtime/LayerSettings.h"
 
@@ -202,6 +203,11 @@ namespace
         uint32 layerMask;
         uint32 queryLayer;
         bool returnTouch;
+        //额外的过滤条件：排除指定 Ens 与触发器
+        EnsId ignoredEns;
+        bool includeTriggers = true;
+        //把 Actor 解析回 Ens 的入口，为空时跳过 ignoredEns 判定
+        std::function<EnsId(const PxActor*)> resolveEns;
 
     public:
         LayerQueryFilter(uint32 mask, bool touch, uint32 layer = 0)
@@ -209,9 +215,18 @@ namespace
         {
         }
 
-        PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor*, PxHitFlags&) override
+        LayerQueryFilter(uint32 mask, bool touch, const PhysicsQueryFilter& extra, std::function<EnsId(const PxActor*)> resolver)
+            : layerMask(mask), queryLayer(0), returnTouch(touch), ignoredEns(extra.ignoredEns),
+            includeTriggers(extra.includeTriggers), resolveEns(std::move(resolver))
+        {
+        }
+
+        PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* shape, const PxRigidActor* actor, PxHitFlags&) override
         {
             if (!shape) return PxQueryHitType::eNONE;
+            //触发器默认不参与实体碰撞
+            if (!includeTriggers && (shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE)) return PxQueryHitType::eNONE;
+            if (!ignoredEns.IsNull() && resolveEns && actor && resolveEns(actor) == ignoredEns) return PxQueryHitType::eNONE;
             PxFilterData shapeFilter = shape->getQueryFilterData();
             if ((shapeFilter.word0 & layerMask) == 0) return PxQueryHitType::eNONE;
             if (queryLayer != 0 && (shapeFilter.word1 & queryLayer) == 0) return PxQueryHitType::eNONE;
@@ -1013,9 +1028,19 @@ public:
         if (found->second->actor) found->second->actor->setGlobalPose(pose);
     }
 
-    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform)
+    void SyncBodyPoseAndVelocity(BodyRecord& record, RigidBody* body, Transform& transform, bool queryOnly = false)
     {
         PxTransform pose(ToPx(transform.worldPosition), ToPx(transform.worldRotation));
+        //查询模式只把位姿写进场景，不设 kinematicTarget、不写速度、不施力也不清累积力
+        if (queryOnly)
+        {
+            record.actor->setGlobalPose(pose);
+            record.lastPosition = transform.worldPosition;
+            record.lastRotation = transform.worldRotation;
+            record.lastPoseValid = true;
+            return;
+        }
+
         if (record.bodyType == PhysicsBodyType::Static)
         {
             record.actor->setGlobalPose(pose);
@@ -1057,7 +1082,7 @@ public:
         record.lastPoseValid = true;
     }
 
-    void SyncBodies(World& currentWorld)
+    void SyncBodies(World& currentWorld, bool queryOnly = false)
     {
         std::unordered_set<uint64> seen;
         std::unordered_set<uint64> heightFieldSeen;
@@ -1123,12 +1148,12 @@ public:
                 if (created)
                 {
                     //新建或重建的刚体也必须在本步施加并清空待施加力，避免跨步累积爆发。
-                    SyncBodyPoseAndVelocity(*created, body, *transform);
+                    SyncBodyPoseAndVelocity(*created, body, *transform, queryOnly);
                     bodies.emplace(key, std::move(created));
                 }
                 return;
             }
-            SyncBodyPoseAndVelocity(*found->second, body, *transform);
+            SyncBodyPoseAndVelocity(*found->second, body, *transform, queryOnly);
         });
 
         for (auto it = bodies.begin(); it != bodies.end();)
@@ -1320,6 +1345,18 @@ public:
         }
     }
 
+    //只同步场景查询所需的位姿：不 simulate、不 fetchResults、不写回 Transform 与速度
+    void SynchronizeQueries(World& currentWorld)
+    {
+        if (!Initialize()) return;
+        world = &currentWorld;
+        LayerSettings::Refresh();
+        transformCache.Update(currentWorld);
+        SyncBodies(currentWorld, true);
+        SyncControllers(currentWorld);
+        scene->flushQueryUpdates();
+    }
+
     void FixedUpdate(World& currentWorld, float32 deltaTime)
     {
         if (!Initialize()) return;
@@ -1490,6 +1527,14 @@ void PhysicsSystem::ResetWorld()
 }
 
 //执行固定步长同步和模拟
+void PhysicsSystem::SynchronizeQueries(World& world)
+{
+    PROFILE("Physics/QuerySync");
+
+    //编辑态预览用：只把位姿同步给场景查询，不推进刚体
+    if (impl) impl->SynchronizeQueries(world);
+}
+
 void PhysicsSystem::FixedUpdate(World& world, float fixedDeltaTime)
 {
     PROFILE("Physics/Step");
@@ -1525,6 +1570,31 @@ bool PhysicsSystem::SweepSphere(const vector3& origin, float32 radius, const vec
     PxSphereGeometry geometry(radius);
     if (!impl->scene->sweep(geometry, PxTransform(ToPx(origin)), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
     return impl->FillHit(result.block, result.block.actor, hit);
+}
+
+//带附加过滤条件的球体扫描
+bool PhysicsSystem::SweepSphereFiltered(const vector3& origin, float32 radius, const vector3& direction,
+    float32 distance, PhysicsQueryHit& hit, const PhysicsQueryFilter& queryFilter) const
+{
+    //半径与距离必须有限，且命中结果也要满足同样的有限性检查
+    if (!IsInitialized() || !std::isfinite(radius) || radius <= 0.0f || !std::isfinite(distance) || distance <= 0.0f) return false;
+    PxVec3 unitDirection = ToPx(direction);
+    if (unitDirection.normalize() <= 0.0f) return false;
+
+    LayerQueryFilter callback(queryFilter.layerMask, false, queryFilter,
+        [this](const PxActor* actor) { return impl->FindEns(actor); });
+    PxQueryFilterData filter(PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER);
+    PxSweepBuffer result;
+    PxSphereGeometry geometry(radius);
+    if (!impl->scene->sweep(geometry, PxTransform(ToPx(origin)), unitDirection, distance, result, PxHitFlag::eDEFAULT, filter, &callback) || !result.hasBlock) return false;
+    if (!impl->FillHit(result.block, result.block.actor, hit)) return false;
+
+    //无效命中按未命中处理
+    if (!std::isfinite(hit.distance) || !std::isfinite(hit.position.x) || !std::isfinite(hit.position.y) ||
+        !std::isfinite(hit.position.z) || !std::isfinite(hit.normal.x) || !std::isfinite(hit.normal.y) ||
+        !std::isfinite(hit.normal.z)) return false;
+    float32 normalLength = hit.normal.x * hit.normal.x + hit.normal.y * hit.normal.y + hit.normal.z * hit.normal.z;
+    return normalLength > 1.0e-6f;
 }
 
 //收集与球体重叠的实体

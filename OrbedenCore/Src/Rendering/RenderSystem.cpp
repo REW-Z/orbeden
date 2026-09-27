@@ -14,6 +14,9 @@
 namespace
 {
     RenderSystem* currentRenderSystem = nullptr;
+    //每次 Render 接收的显式实例总量上限。它与 GPU 单批上限是两件事，
+    //超过这个数量的提交整体失败，之后按批切分。
+    constexpr uint64 MaximumSubmittedInstances = 1048576u;
     //计算视口轴像素范围
     void CalculateViewportAxis(float32 normalizedStart, float32 normalizedSize, int32 targetSize, int32& start, int32& size)
     {
@@ -340,7 +343,21 @@ void RenderSystem::Render(World& world, float deltaTime)
 {
     PROFILE("Render/Frame");
 
-    if (!initialized || !window) return;
+    //消费 Submit 快照：先换入 active 再清空 pending，之后的任何早退路径都不会把
+    //实例积压到下一次 Render，也不会带进下一个项目。
+    pendingInstanceSubmissions.swap(activeInstanceSubmissions);
+    pendingInstanceSubmissions.clear();
+    pendingSubmittedInstanceCount = 0;
+    readingDrawSubmissions = true;
+
+    if (!initialized || !window)
+    {
+        FinishDrawSubmissions();
+        return;
+    }
+
+    //本帧批次统计从零开始，无相机与早退路径也会保留清零结果
+    forwardPipeline.ResetBatchStats();
 
     //累加 Shader 时间
     if (std::isfinite(deltaTime) && deltaTime > 0.0f)
@@ -390,11 +407,14 @@ void RenderSystem::Render(World& world, float deltaTime)
         scene.EndRead();
         debugLines.clear();
         debugLineWorld = nullptr;
+        FinishDrawSubmissions();
         return;
     }
 
     //准备共享阴影资源
     warnedMissingCamera = false;
+    forwardPipeline.SetFrameWorld(&world);
+    forwardPipeline.SetDrawSubmissions(&activeInstanceSubmissions);
     forwardPipeline.PrepareFrame(scene, gpuResourceManager);
 
     //绘制活动相机
@@ -455,6 +475,62 @@ void RenderSystem::Render(World& world, float deltaTime)
     scene.EndRead();
     debugLines.clear();
     debugLineWorld = nullptr;
+    FinishDrawSubmissions();
+}
+
+//清空本帧使用的显式提交并解除读取状态
+void RenderSystem::FinishDrawSubmissions()
+{
+    activeInstanceSubmissions.clear();
+    pendingSubmittedInstanceCount = 0;
+    forwardPipeline.SetDrawSubmissions(nullptr);
+    forwardPipeline.SetFrameWorld(nullptr);
+    readingDrawSubmissions = false;
+}
+
+//验证一份显式实例提交是否可以使用
+bool RenderSystem::ValidateInstanceSubmission(Mesh* mesh, Material* material, uint32 subMeshIndex,
+    std::span<const MeshInstanceData> instances) const
+{
+    if (!mesh || !material || instances.empty()) return false;
+    if (subMeshIndex >= mesh->subMeshes.size()) return false;
+
+    const SubMesh& subMesh = mesh->subMeshes[subMeshIndex];
+    usize start = static_cast<usize>(subMesh.indexStart);
+    usize count = static_cast<usize>(subMesh.indexCount);
+    if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) return false;
+
+    //显式实例提交拒绝多 Pass，也拒绝没有几何 ABI 的 Shader，不悄悄改变 Pass 顺序
+    Shader* shader = material->shader.Get();
+    if (!shader || shader->passes.size() != 1) return false;
+    return shader->passes[0].geometryContract != ShaderGeometryContract::Legacy;
+}
+
+//接收一次显式实例提交
+bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
+    Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId)
+{
+    //渲染读取期间、世界准备阶段与不支持实例化的后端都拒绝接收
+    if (readingDrawSubmissions || !initialized || !window) return false;
+    if (world.IsPreparing() || !backend.SupportsInstancing()) return false;
+    //本帧预算按累计量判定，超出时整次提交失败，不接收前半段
+    if (instances.size() > MaximumSubmittedInstances) return false;
+    if (pendingSubmittedInstanceCount + instances.size() > MaximumSubmittedInstances) return false;
+    if (!ValidateInstanceSubmission(mesh, material, subMeshIndex, instances)) return false;
+
+    InstanceSubmission submission;
+    submission.sourceObjectId = sourceObjectId;
+    submission.world = &world;
+    submission.contentRevision = world.GetContentRevision();
+    submission.submissionId = nextInstanceSubmissionId++;
+    submission.options = options;
+    submission.mesh.Set(mesh);
+    submission.material.Set(material);
+    submission.subMeshIndex = subMeshIndex;
+    submission.instances.assign(instances.begin(), instances.end());
+    pendingSubmittedInstanceCount += submission.instances.size();
+    pendingInstanceSubmissions.push_back(std::move(submission));
+    return true;
 }
 
 void RenderSystem::OnWindowResize(int width, int height)

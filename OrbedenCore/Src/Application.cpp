@@ -10,6 +10,8 @@
 #include "Log/Log.h"
 #include "Physics/PhysicsReflection.h"
 #include "Physics/PhysicsSystem.h"
+#include "Runtime/Object/ParticleSystem.h"
+#include "Runtime/Particles/ParticleSimulationSystem.h"
 #include "InputManager/InputManager.h"
 #include "Profiler/Profiler.h"
 #include "Rendering/RenderSystem.h"
@@ -108,15 +110,17 @@ bool Application::Initialize()
     //注册反射信息并绑定当前 World
     Reflection::RegisterGeneratedReflection();
     PhysicsReflection::Register();
+    ParticleSystem::RegisterReflection();
     World::SetCurrentWorld(&world);
     currentApplication = this;
 
-    //创建内置系统
+    //创建内置系统。粒子模拟排在物理之后、渲染之前，但它不依赖渲染系统。
     if (!GetSystem<Profiler>()
         || !GetSystem<FileSystem>()
         || !GetSystem<InputManager>()
         || !GetSystem<ResourceManager>()
         || !GetSystem<PhysicsSystem>()
+        || !GetSystem<ParticleSimulationSystem>()
         || !GetSystem<RenderSystem>()
         || !GetSystem<ScriptSystem>())
     {
@@ -378,6 +382,14 @@ void Application::Tick(float deltaTime)
         for (usize index = 0; index < lateUpdateSystemCount; index++)
         {
             systems[index].system->LateUpdate(world, deltaTime);
+        }
+
+        /// *** Particle Simulation ***
+
+        //放在全部 LateUpdate 之后，保证脚本最后一次写下的发射器位姿已经提交给变换缓存
+        if (ParticleSimulationSystem* particles = GetSystem<ParticleSimulationSystem>())
+        {
+            particles->AdvanceRuntime(world, deltaTime);
         }
     }
     dispatching = false;

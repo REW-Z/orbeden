@@ -117,6 +117,9 @@
     <ClInclude Include="Src\Runtime\Object\Skybox.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\Object\InstanceDrawList.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\ThirdParty\stb\stb_image.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -187,6 +190,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Rendering\DrawBatchBuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\ForwardPipeline.h">
@@ -320,6 +326,9 @@
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Runtime\Object\InstanceDrawList.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Platform\GlfwWindow.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -369,6 +378,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp">

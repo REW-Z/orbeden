@@ -71,6 +71,80 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.EnsId)reader.Scalar<global::Orbeden.EnsId>();
     }
+    internal static void Write_Mesh_(NativeBindingWriter writer, global::Orbeden.Mesh? value)
+    {
+        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
+    }
+    internal static global::Orbeden.Mesh? Read_Mesh_(ref NativeBindingReader reader)
+    {
+        return NativeBindingRuntime.Wrap<global::Orbeden.Mesh>(reader.Scalar<int>());
+    }
+    internal static void Write_Material_(NativeBindingWriter writer, global::Orbeden.Material? value)
+    {
+        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
+    }
+    internal static global::Orbeden.Material? Read_Material_(ref NativeBindingReader reader)
+    {
+        return NativeBindingRuntime.Wrap<global::Orbeden.Material>(reader.Scalar<int>());
+    }
+    internal static void Write_InstanceDrawOptions(NativeBindingWriter writer, global::Orbeden.InstanceDrawOptions value)
+    {
+        Write_uint32(writer, value.@drawLayer);
+        Write_bool(writer, value.@castShadows);
+        Write_bool(writer, value.@receiveShadows);
+        Write_EnsId(writer, value.@camera);
+    }
+    internal static global::Orbeden.InstanceDrawOptions Read_InstanceDrawOptions(ref NativeBindingReader reader)
+    {
+        global::Orbeden.InstanceDrawOptions value = new();
+        value.@drawLayer = Read_uint32(ref reader);
+        value.@castShadows = Read_bool(ref reader);
+        value.@receiveShadows = Read_bool(ref reader);
+        value.@camera = Read_EnsId(ref reader);
+        return value;
+    }
+    internal static void Write_MeshInstanceData(NativeBindingWriter writer, global::Orbeden.MeshInstanceData value)
+    {
+        Write_vector3(writer, value.@position);
+        Write_quaternion(writer, value.@rotation);
+        Write_vector3(writer, value.@scale);
+        Write_color(writer, value.@tint);
+        Write_color(writer, value.@uvRect);
+    }
+    internal static global::Orbeden.MeshInstanceData Read_MeshInstanceData(ref NativeBindingReader reader)
+    {
+        global::Orbeden.MeshInstanceData value = new();
+        value.@position = Read_vector3(ref reader);
+        value.@rotation = Read_quaternion(ref reader);
+        value.@scale = Read_vector3(ref reader);
+        value.@tint = Read_color(ref reader);
+        value.@uvRect = Read_color(ref reader);
+        return value;
+    }
+    internal static void Write_vector3(NativeBindingWriter writer, global::Orbeden.vector3 value)
+    {
+        writer.Scalar((global::Orbeden.vector3)value);
+    }
+    internal static global::Orbeden.vector3 Read_vector3(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.vector3)reader.Scalar<global::Orbeden.vector3>();
+    }
+    internal static void Write_quaternion(NativeBindingWriter writer, global::Orbeden.quaternion value)
+    {
+        writer.Scalar((global::Orbeden.quaternion)value);
+    }
+    internal static global::Orbeden.quaternion Read_quaternion(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.quaternion)reader.Scalar<global::Orbeden.quaternion>();
+    }
+    internal static void Write_color(NativeBindingWriter writer, global::Orbeden.color value)
+    {
+        writer.Scalar((global::Orbeden.color)value);
+    }
+    internal static global::Orbeden.color Read_color(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.color)reader.Scalar<global::Orbeden.color>();
+    }
     internal static void Write_DrawQueue(NativeBindingWriter writer, global::Orbeden.DrawQueue value)
     {
         writer.Scalar((uint)value);
@@ -121,14 +195,6 @@ internal static unsafe class GeneratedBindingCodecs
         value.@name = Read_std__string(ref reader);
         value.@value = Read_color(ref reader);
         return value;
-    }
-    internal static void Write_color(NativeBindingWriter writer, global::Orbeden.color value)
-    {
-        writer.Scalar((global::Orbeden.color)value);
-    }
-    internal static global::Orbeden.color Read_color(ref NativeBindingReader reader)
-    {
-        return (global::Orbeden.color)reader.Scalar<global::Orbeden.color>();
     }
     internal static void Write_List_MaterialColorSlot_(NativeBindingWriter writer, global::Orbeden.MaterialColorSlot[] value)
     {
@@ -195,14 +261,6 @@ internal static unsafe class GeneratedBindingCodecs
     internal static global::Orbeden.Texture2D? Read_Texture2D_(ref NativeBindingReader reader)
     {
         return NativeBindingRuntime.Wrap<global::Orbeden.Texture2D>(reader.Scalar<int>());
-    }
-    internal static void Write_vector3(NativeBindingWriter writer, global::Orbeden.vector3 value)
-    {
-        writer.Scalar((global::Orbeden.vector3)value);
-    }
-    internal static global::Orbeden.vector3 Read_vector3(ref NativeBindingReader reader)
-    {
-        return (global::Orbeden.vector3)reader.Scalar<global::Orbeden.vector3>();
     }
     internal static void Write_List_vector3_(NativeBindingWriter writer, global::Orbeden.vector3[] value)
     {
@@ -296,6 +354,7 @@ internal static unsafe class GeneratedBindingCodecs
     {
         Write_std__string(writer, value.@name);
         Write_ShaderPassState(writer, value.@state);
+        Write_ShaderGeometryContract(writer, value.@geometryContract);
         Write_std__string(writer, value.@vertexSource);
         Write_std__string(writer, value.@fragmentSource);
     }
@@ -304,6 +363,7 @@ internal static unsafe class GeneratedBindingCodecs
         global::Orbeden.ShaderPass value = new();
         value.@name = Read_std__string(ref reader);
         value.@state = Read_ShaderPassState(ref reader);
+        value.@geometryContract = Read_ShaderGeometryContract(ref reader);
         value.@vertexSource = Read_std__string(ref reader);
         value.@fragmentSource = Read_std__string(ref reader);
         return value;
@@ -339,6 +399,14 @@ internal static unsafe class GeneratedBindingCodecs
     internal static global::Orbeden.CullMode Read_CullMode(ref NativeBindingReader reader)
     {
         return (global::Orbeden.CullMode)reader.Scalar<uint>();
+    }
+    internal static void Write_ShaderGeometryContract(NativeBindingWriter writer, global::Orbeden.ShaderGeometryContract value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ShaderGeometryContract Read_ShaderGeometryContract(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ShaderGeometryContract)reader.Scalar<uint>();
     }
     internal static void Write_List_ShaderPass_(NativeBindingWriter writer, global::Orbeden.ShaderPass[] value)
     {
@@ -502,14 +570,6 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return NativeBindingRuntime.Wrap<global::Orbeden.Material>(reader.Scalar<int>());
     }
-    internal static void Write_Material_(NativeBindingWriter writer, global::Orbeden.Material? value)
-    {
-        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
-    }
-    internal static global::Orbeden.Material? Read_Material_(ref NativeBindingReader reader)
-    {
-        return NativeBindingRuntime.Wrap<global::Orbeden.Material>(reader.Scalar<int>());
-    }
     internal static void Write_std__vector_float32_(NativeBindingWriter writer, float[] value)
     {
         ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
@@ -520,6 +580,470 @@ internal static unsafe class GeneratedBindingCodecs
         int length = reader.Count(); var value = new float[length];
         for (int index = 0; index < length; ++index) value[index] = Read_float32(ref reader);
         return value;
+    }
+    internal static void Write_Ref_Mesh_(NativeBindingWriter writer, global::Orbeden.Mesh? value)
+    {
+        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
+    }
+    internal static global::Orbeden.Mesh? Read_Ref_Mesh_(ref NativeBindingReader reader)
+    {
+        return NativeBindingRuntime.Wrap<global::Orbeden.Mesh>(reader.Scalar<int>());
+    }
+    internal static void Write_List_Ref_Material__(NativeBindingWriter writer, global::Orbeden.Material?[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_Ref_Material_(writer, item);
+    }
+    internal static global::Orbeden.Material?[] Read_List_Ref_Material__(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.Material[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_Ref_Material_(ref reader);
+        return value;
+    }
+    internal static void Write_std__array_EnsId_16_(NativeBindingWriter writer, global::Orbeden.EnsId[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_EnsId(writer, item);
+    }
+    internal static global::Orbeden.EnsId[] Read_std__array_EnsId_16_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.EnsId[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_EnsId(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleSettings(NativeBindingWriter writer, global::Orbeden.ParticleSettings value)
+    {
+        Write_ParticleMainSettings(writer, value.@main);
+        Write_ParticleEmissionSettings(writer, value.@emission);
+        Write_ParticleShapeSettings(writer, value.@shape);
+        Write_ParticleMotionSettings(writer, value.@motion);
+        Write_ParticleCollisionSettings(writer, value.@collision);
+        Write_ParticleTrailSettings(writer, value.@trails);
+        Write_ParticleRenderSettings(writer, value.@rendering);
+        Write_List_ParticleSubEmitterRule_(writer, value.@subEmitters);
+    }
+    internal static global::Orbeden.ParticleSettings Read_ParticleSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleSettings value = new();
+        value.@main = Read_ParticleMainSettings(ref reader);
+        value.@emission = Read_ParticleEmissionSettings(ref reader);
+        value.@shape = Read_ParticleShapeSettings(ref reader);
+        value.@motion = Read_ParticleMotionSettings(ref reader);
+        value.@collision = Read_ParticleCollisionSettings(ref reader);
+        value.@trails = Read_ParticleTrailSettings(ref reader);
+        value.@rendering = Read_ParticleRenderSettings(ref reader);
+        value.@subEmitters = Read_List_ParticleSubEmitterRule_(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleMainSettings(NativeBindingWriter writer, global::Orbeden.ParticleMainSettings value)
+    {
+        Write_uint32(writer, value.@maxParticles);
+        Write_float32(writer, value.@duration);
+        Write_bool(writer, value.@looping);
+        Write_bool(writer, value.@playOnAwake);
+        Write_float32(writer, value.@startDelay);
+        Write_ParticleSimulationSpace(writer, value.@simulationSpace);
+        Write_uint32(writer, value.@randomSeed);
+        Write_ParticleFloatRange(writer, value.@startLifetime);
+        Write_ParticleFloatRange(writer, value.@startSpeed);
+        Write_ParticleFloatRange(writer, value.@startSize);
+        Write_ParticleFloatRange(writer, value.@startRotation);
+        Write_color(writer, value.@startColor);
+    }
+    internal static global::Orbeden.ParticleMainSettings Read_ParticleMainSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleMainSettings value = new();
+        value.@maxParticles = Read_uint32(ref reader);
+        value.@duration = Read_float32(ref reader);
+        value.@looping = Read_bool(ref reader);
+        value.@playOnAwake = Read_bool(ref reader);
+        value.@startDelay = Read_float32(ref reader);
+        value.@simulationSpace = Read_ParticleSimulationSpace(ref reader);
+        value.@randomSeed = Read_uint32(ref reader);
+        value.@startLifetime = Read_ParticleFloatRange(ref reader);
+        value.@startSpeed = Read_ParticleFloatRange(ref reader);
+        value.@startSize = Read_ParticleFloatRange(ref reader);
+        value.@startRotation = Read_ParticleFloatRange(ref reader);
+        value.@startColor = Read_color(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleSimulationSpace(NativeBindingWriter writer, global::Orbeden.ParticleSimulationSpace value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleSimulationSpace Read_ParticleSimulationSpace(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleSimulationSpace)reader.Scalar<uint>();
+    }
+    internal static void Write_ParticleFloatRange(NativeBindingWriter writer, global::Orbeden.ParticleFloatRange value)
+    {
+        Write_float32(writer, value.@min);
+        Write_float32(writer, value.@max);
+    }
+    internal static global::Orbeden.ParticleFloatRange Read_ParticleFloatRange(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleFloatRange value = new();
+        value.@min = Read_float32(ref reader);
+        value.@max = Read_float32(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleEmissionSettings(NativeBindingWriter writer, global::Orbeden.ParticleEmissionSettings value)
+    {
+        Write_bool(writer, value.@enabled);
+        Write_float32(writer, value.@rateOverTime);
+        Write_List_ParticleBurst_(writer, value.@bursts);
+    }
+    internal static global::Orbeden.ParticleEmissionSettings Read_ParticleEmissionSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleEmissionSettings value = new();
+        value.@enabled = Read_bool(ref reader);
+        value.@rateOverTime = Read_float32(ref reader);
+        value.@bursts = Read_List_ParticleBurst_(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleBurst(NativeBindingWriter writer, global::Orbeden.ParticleBurst value)
+    {
+        Write_float32(writer, value.@time);
+        Write_uint32(writer, value.@count);
+        Write_uint32(writer, value.@cycles);
+        Write_float32(writer, value.@interval);
+        Write_float32(writer, value.@probability);
+    }
+    internal static global::Orbeden.ParticleBurst Read_ParticleBurst(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleBurst value = new();
+        value.@time = Read_float32(ref reader);
+        value.@count = Read_uint32(ref reader);
+        value.@cycles = Read_uint32(ref reader);
+        value.@interval = Read_float32(ref reader);
+        value.@probability = Read_float32(ref reader);
+        return value;
+    }
+    internal static void Write_List_ParticleBurst_(NativeBindingWriter writer, global::Orbeden.ParticleBurst[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_ParticleBurst(writer, item);
+    }
+    internal static global::Orbeden.ParticleBurst[] Read_List_ParticleBurst_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.ParticleBurst[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_ParticleBurst(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleShapeSettings(NativeBindingWriter writer, global::Orbeden.ParticleShapeSettings value)
+    {
+        Write_ParticleShape(writer, value.@shape);
+        Write_float32(writer, value.@radius);
+        Write_vector3(writer, value.@boxExtents);
+        Write_float32(writer, value.@coneAngle);
+        Write_bool(writer, value.@surfaceOnly);
+    }
+    internal static global::Orbeden.ParticleShapeSettings Read_ParticleShapeSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleShapeSettings value = new();
+        value.@shape = Read_ParticleShape(ref reader);
+        value.@radius = Read_float32(ref reader);
+        value.@boxExtents = Read_vector3(ref reader);
+        value.@coneAngle = Read_float32(ref reader);
+        value.@surfaceOnly = Read_bool(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleShape(NativeBindingWriter writer, global::Orbeden.ParticleShape value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleShape Read_ParticleShape(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleShape)reader.Scalar<uint>();
+    }
+    internal static void Write_ParticleMotionSettings(NativeBindingWriter writer, global::Orbeden.ParticleMotionSettings value)
+    {
+        Write_float32(writer, value.@gravityMultiplier);
+        Write_vector3(writer, value.@acceleration);
+        Write_float32(writer, value.@drag);
+        Write_ParticleCurve(writer, value.@sizeOverLifetime);
+        Write_ParticleCurve(writer, value.@angularVelocityOverLifetime);
+        Write_ParticleGradient(writer, value.@colorOverLifetime);
+    }
+    internal static global::Orbeden.ParticleMotionSettings Read_ParticleMotionSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleMotionSettings value = new();
+        value.@gravityMultiplier = Read_float32(ref reader);
+        value.@acceleration = Read_vector3(ref reader);
+        value.@drag = Read_float32(ref reader);
+        value.@sizeOverLifetime = Read_ParticleCurve(ref reader);
+        value.@angularVelocityOverLifetime = Read_ParticleCurve(ref reader);
+        value.@colorOverLifetime = Read_ParticleGradient(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleCurve(NativeBindingWriter writer, global::Orbeden.ParticleCurve value)
+    {
+        Write_List_ParticleCurveKey_(writer, value.@keys);
+    }
+    internal static global::Orbeden.ParticleCurve Read_ParticleCurve(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleCurve value = new();
+        value.@keys = Read_List_ParticleCurveKey_(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleCurveKey(NativeBindingWriter writer, global::Orbeden.ParticleCurveKey value)
+    {
+        Write_float32(writer, value.@time);
+        Write_float32(writer, value.@value);
+        Write_float32(writer, value.@inTangent);
+        Write_float32(writer, value.@outTangent);
+        Write_ParticleCurveInterpolation(writer, value.@interpolation);
+    }
+    internal static global::Orbeden.ParticleCurveKey Read_ParticleCurveKey(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleCurveKey value = new();
+        value.@time = Read_float32(ref reader);
+        value.@value = Read_float32(ref reader);
+        value.@inTangent = Read_float32(ref reader);
+        value.@outTangent = Read_float32(ref reader);
+        value.@interpolation = Read_ParticleCurveInterpolation(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleCurveInterpolation(NativeBindingWriter writer, global::Orbeden.ParticleCurveInterpolation value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleCurveInterpolation Read_ParticleCurveInterpolation(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleCurveInterpolation)reader.Scalar<uint>();
+    }
+    internal static void Write_List_ParticleCurveKey_(NativeBindingWriter writer, global::Orbeden.ParticleCurveKey[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_ParticleCurveKey(writer, item);
+    }
+    internal static global::Orbeden.ParticleCurveKey[] Read_List_ParticleCurveKey_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.ParticleCurveKey[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_ParticleCurveKey(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleGradient(NativeBindingWriter writer, global::Orbeden.ParticleGradient value)
+    {
+        Write_List_ParticleGradientKey_(writer, value.@keys);
+    }
+    internal static global::Orbeden.ParticleGradient Read_ParticleGradient(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleGradient value = new();
+        value.@keys = Read_List_ParticleGradientKey_(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleGradientKey(NativeBindingWriter writer, global::Orbeden.ParticleGradientKey value)
+    {
+        Write_float32(writer, value.@time);
+        Write_color(writer, value.@value);
+    }
+    internal static global::Orbeden.ParticleGradientKey Read_ParticleGradientKey(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleGradientKey value = new();
+        value.@time = Read_float32(ref reader);
+        value.@value = Read_color(ref reader);
+        return value;
+    }
+    internal static void Write_List_ParticleGradientKey_(NativeBindingWriter writer, global::Orbeden.ParticleGradientKey[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_ParticleGradientKey(writer, item);
+    }
+    internal static global::Orbeden.ParticleGradientKey[] Read_List_ParticleGradientKey_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.ParticleGradientKey[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_ParticleGradientKey(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleCollisionSettings(NativeBindingWriter writer, global::Orbeden.ParticleCollisionSettings value)
+    {
+        Write_bool(writer, value.@enabled);
+        Write_uint32(writer, value.@layerMask);
+        Write_float32(writer, value.@radiusScale);
+        Write_float32(writer, value.@restitution);
+        Write_float32(writer, value.@friction);
+        Write_float32(writer, value.@lifetimeLoss);
+        Write_ParticleCollisionResponse(writer, value.@response);
+    }
+    internal static global::Orbeden.ParticleCollisionSettings Read_ParticleCollisionSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleCollisionSettings value = new();
+        value.@enabled = Read_bool(ref reader);
+        value.@layerMask = Read_uint32(ref reader);
+        value.@radiusScale = Read_float32(ref reader);
+        value.@restitution = Read_float32(ref reader);
+        value.@friction = Read_float32(ref reader);
+        value.@lifetimeLoss = Read_float32(ref reader);
+        value.@response = Read_ParticleCollisionResponse(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleCollisionResponse(NativeBindingWriter writer, global::Orbeden.ParticleCollisionResponse value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleCollisionResponse Read_ParticleCollisionResponse(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleCollisionResponse)reader.Scalar<uint>();
+    }
+    internal static void Write_ParticleTrailSettings(NativeBindingWriter writer, global::Orbeden.ParticleTrailSettings value)
+    {
+        Write_bool(writer, value.@enabled);
+        Write_float32(writer, value.@lifetime);
+        Write_float32(writer, value.@minimumVertexDistance);
+        Write_float32(writer, value.@maximumVertexInterval);
+        Write_uint32(writer, value.@maxPointsPerTrail);
+        Write_uint32(writer, value.@maxTrails);
+        Write_float32(writer, value.@width);
+        Write_ParticleCurve(writer, value.@widthOverLength);
+        Write_ParticleGradient(writer, value.@colorOverLength);
+        Write_bool(writer, value.@dieWithParticle);
+        Write_float32(writer, value.@textureTileLength);
+    }
+    internal static global::Orbeden.ParticleTrailSettings Read_ParticleTrailSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleTrailSettings value = new();
+        value.@enabled = Read_bool(ref reader);
+        value.@lifetime = Read_float32(ref reader);
+        value.@minimumVertexDistance = Read_float32(ref reader);
+        value.@maximumVertexInterval = Read_float32(ref reader);
+        value.@maxPointsPerTrail = Read_uint32(ref reader);
+        value.@maxTrails = Read_uint32(ref reader);
+        value.@width = Read_float32(ref reader);
+        value.@widthOverLength = Read_ParticleCurve(ref reader);
+        value.@colorOverLength = Read_ParticleGradient(ref reader);
+        value.@dieWithParticle = Read_bool(ref reader);
+        value.@textureTileLength = Read_float32(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleRenderSettings(NativeBindingWriter writer, global::Orbeden.ParticleRenderSettings value)
+    {
+        Write_ParticleRenderPath(writer, value.@path);
+        Write_ParticleRenderMode(writer, value.@mode);
+        Write_BlendMode(writer, value.@blendMode);
+        Write_uint32(writer, value.@tilesX);
+        Write_uint32(writer, value.@tilesY);
+        Write_float32(writer, value.@animationCycles);
+        Write_bool(writer, value.@randomStartFrame);
+    }
+    internal static global::Orbeden.ParticleRenderSettings Read_ParticleRenderSettings(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleRenderSettings value = new();
+        value.@path = Read_ParticleRenderPath(ref reader);
+        value.@mode = Read_ParticleRenderMode(ref reader);
+        value.@blendMode = Read_BlendMode(ref reader);
+        value.@tilesX = Read_uint32(ref reader);
+        value.@tilesY = Read_uint32(ref reader);
+        value.@animationCycles = Read_float32(ref reader);
+        value.@randomStartFrame = Read_bool(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleRenderPath(NativeBindingWriter writer, global::Orbeden.ParticleRenderPath value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleRenderPath Read_ParticleRenderPath(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleRenderPath)reader.Scalar<uint>();
+    }
+    internal static void Write_ParticleRenderMode(NativeBindingWriter writer, global::Orbeden.ParticleRenderMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleRenderMode Read_ParticleRenderMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleRenderMode)reader.Scalar<uint>();
+    }
+    internal static void Write_BlendMode(NativeBindingWriter writer, global::Orbeden.BlendMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.BlendMode Read_BlendMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.BlendMode)reader.Scalar<uint>();
+    }
+    internal static void Write_ParticleSubEmitterRule(NativeBindingWriter writer, global::Orbeden.ParticleSubEmitterRule value)
+    {
+        Write_uint32(writer, value.@targetSlot);
+        Write_ParticleSubEmitterEvent(writer, value.@event);
+        Write_uint32(writer, value.@count);
+        Write_float32(writer, value.@probability);
+        Write_bool(writer, value.@inheritVelocity);
+        Write_bool(writer, value.@inheritColor);
+        Write_bool(writer, value.@inheritSize);
+    }
+    internal static global::Orbeden.ParticleSubEmitterRule Read_ParticleSubEmitterRule(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleSubEmitterRule value = new();
+        value.@targetSlot = Read_uint32(ref reader);
+        value.@event = Read_ParticleSubEmitterEvent(ref reader);
+        value.@count = Read_uint32(ref reader);
+        value.@probability = Read_float32(ref reader);
+        value.@inheritVelocity = Read_bool(ref reader);
+        value.@inheritColor = Read_bool(ref reader);
+        value.@inheritSize = Read_bool(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleSubEmitterEvent(NativeBindingWriter writer, global::Orbeden.ParticleSubEmitterEvent value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticleSubEmitterEvent Read_ParticleSubEmitterEvent(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticleSubEmitterEvent)reader.Scalar<uint>();
+    }
+    internal static void Write_List_ParticleSubEmitterRule_(NativeBindingWriter writer, global::Orbeden.ParticleSubEmitterRule[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_ParticleSubEmitterRule(writer, item);
+    }
+    internal static global::Orbeden.ParticleSubEmitterRule[] Read_List_ParticleSubEmitterRule_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new global::Orbeden.ParticleSubEmitterRule[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_ParticleSubEmitterRule(ref reader);
+        return value;
+    }
+    internal static void Write_ParticleSettingsParseResult(NativeBindingWriter writer, global::Orbeden.ParticleSettingsParseResult value)
+    {
+        Write_bool(writer, value.@success);
+        Write_ParticleSettings(writer, value.@settings);
+        Write_std__string(writer, value.@error);
+    }
+    internal static global::Orbeden.ParticleSettingsParseResult Read_ParticleSettingsParseResult(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticleSettingsParseResult value = new();
+        value.@success = Read_bool(ref reader);
+        value.@settings = Read_ParticleSettings(ref reader);
+        value.@error = Read_std__string(ref reader);
+        return value;
+    }
+    internal static void Write_ParticlePlaybackInfo(NativeBindingWriter writer, global::Orbeden.ParticlePlaybackInfo value)
+    {
+        Write_ParticlePlaybackState(writer, value.@state);
+        Write_float32(writer, value.@time);
+        Write_uint32(writer, value.@aliveCount);
+        Write_uint32(writer, value.@trailCount);
+        Write_uint64(writer, value.@emittedCount);
+        Write_uint64(writer, value.@rejectedCount);
+    }
+    internal static global::Orbeden.ParticlePlaybackInfo Read_ParticlePlaybackInfo(ref NativeBindingReader reader)
+    {
+        global::Orbeden.ParticlePlaybackInfo value = new();
+        value.@state = Read_ParticlePlaybackState(ref reader);
+        value.@time = Read_float32(ref reader);
+        value.@aliveCount = Read_uint32(ref reader);
+        value.@trailCount = Read_uint32(ref reader);
+        value.@emittedCount = Read_uint64(ref reader);
+        value.@rejectedCount = Read_uint64(ref reader);
+        return value;
+    }
+    internal static void Write_ParticlePlaybackState(NativeBindingWriter writer, global::Orbeden.ParticlePlaybackState value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.ParticlePlaybackState Read_ParticlePlaybackState(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.ParticlePlaybackState)reader.Scalar<uint>();
     }
     internal static void Write_PhysicsBodyType(NativeBindingWriter writer, global::Orbeden.PhysicsBodyType value)
     {
@@ -545,33 +1069,6 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.Reflection.FieldKind)reader.Scalar<int>();
     }
-    internal static void Write_Ref_Mesh_(NativeBindingWriter writer, global::Orbeden.Mesh? value)
-    {
-        writer.Scalar(NativeBindingRuntime.GetObjectId(value));
-    }
-    internal static global::Orbeden.Mesh? Read_Ref_Mesh_(ref NativeBindingReader reader)
-    {
-        return NativeBindingRuntime.Wrap<global::Orbeden.Mesh>(reader.Scalar<int>());
-    }
-    internal static void Write_List_Ref_Material__(NativeBindingWriter writer, global::Orbeden.Material?[] value)
-    {
-        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
-        foreach (var item in value) Write_Ref_Material_(writer, item);
-    }
-    internal static global::Orbeden.Material?[] Read_List_Ref_Material__(ref NativeBindingReader reader)
-    {
-        int length = reader.Count(); var value = new global::Orbeden.Material[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_Ref_Material_(ref reader);
-        return value;
-    }
-    internal static void Write_quaternion(NativeBindingWriter writer, global::Orbeden.quaternion value)
-    {
-        writer.Scalar((global::Orbeden.quaternion)value);
-    }
-    internal static global::Orbeden.quaternion Read_quaternion(ref NativeBindingReader reader)
-    {
-        return (global::Orbeden.quaternion)reader.Scalar<global::Orbeden.quaternion>();
-    }
 }
 internal static class GeneratedBindingRegistration
 {
@@ -581,9 +1078,10 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 6039789372024472840UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 17629515747893046868UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 4948362420089860798UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 6127609266950937557UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 6914069563843283454UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 4920863515421992412UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Skybox), "Skybox", 5502695681722555340UL, (ens, pointer) => new global::Orbeden.Skybox(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Texture2D), "Texture2D", 14696962119404605806UL, (ens, pointer) => new global::Orbeden.Texture2D(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Camera), "Camera", 1701664351275001347UL, (ens, pointer) => new global::Orbeden.Camera(ens!, pointer));
@@ -591,9 +1089,10 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Collider), "Collider", 6347564027816963522UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.DirectionalLight), "DirectionalLight", 8098784669294264934UL, (ens, pointer) => new global::Orbeden.DirectionalLight(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.HeightField), "HeightField", 12049277348369327740UL, (ens, pointer) => new global::Orbeden.HeightField(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.ParticleSystem), "ParticleSystem", 5956242445408171042UL, (ens, pointer) => new global::Orbeden.ParticleSystem(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4334917007709764458UL, null);
-        NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 17084019573220194954UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 13320516794657574915UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 13157070993901949905UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 13396853297441896464UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.BoxCollider), "BoxCollider", 3698543718541020963UL, (ens, pointer) => new global::Orbeden.BoxCollider(ens!, pointer));
@@ -602,6 +1101,27 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.SphereCollider), "SphereCollider", 13173887832813750021UL, (ens, pointer) => new global::Orbeden.SphereCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.TriangleMeshCollider), "TriangleMeshCollider", 16886362217598776389UL, (ens, pointer) => new global::Orbeden.TriangleMeshCollider(ens!, pointer));
     }
+}
+}
+namespace Orbeden
+{
+public struct InstanceDrawOptions
+{
+    public uint @drawLayer;
+    public bool @castShadows;
+    public bool @receiveShadows;
+    public global::Orbeden.EnsId @camera;
+}
+}
+namespace Orbeden
+{
+public struct MeshInstanceData
+{
+    public global::Orbeden.vector3 @position;
+    public global::Orbeden.quaternion @rotation;
+    public global::Orbeden.vector3 @scale;
+    public global::Orbeden.color @tint;
+    public global::Orbeden.color @uvRect;
 }
 }
 namespace Orbeden
@@ -674,6 +1194,7 @@ public struct ShaderPass
 {
     public string @name;
     public global::Orbeden.ShaderPassState @state;
+    public global::Orbeden.ShaderGeometryContract @geometryContract;
     public string @vertexSource;
     public string @fragmentSource;
 }
@@ -705,6 +1226,15 @@ public enum CullMode : uint
     None = 1,
     Front = 2,
     Back = 3,
+}
+}
+namespace Orbeden
+{
+public enum ShaderGeometryContract : uint
+{
+    Legacy = 0,
+    Standard = 1,
+    Particle = 2,
 }
 }
 namespace Orbeden
@@ -776,6 +1306,277 @@ public enum ColliderGeometryType : uint
     Capsule = 2,
     ConvexMesh = 3,
     TriangleMesh = 4,
+}
+}
+namespace Orbeden
+{
+public struct ParticleSettings
+{
+    public global::Orbeden.ParticleMainSettings @main;
+    public global::Orbeden.ParticleEmissionSettings @emission;
+    public global::Orbeden.ParticleShapeSettings @shape;
+    public global::Orbeden.ParticleMotionSettings @motion;
+    public global::Orbeden.ParticleCollisionSettings @collision;
+    public global::Orbeden.ParticleTrailSettings @trails;
+    public global::Orbeden.ParticleRenderSettings @rendering;
+    public global::Orbeden.ParticleSubEmitterRule[] @subEmitters;
+}
+}
+namespace Orbeden
+{
+public struct ParticleMainSettings
+{
+    public uint @maxParticles;
+    public float @duration;
+    public bool @looping;
+    public bool @playOnAwake;
+    public float @startDelay;
+    public global::Orbeden.ParticleSimulationSpace @simulationSpace;
+    public uint @randomSeed;
+    public global::Orbeden.ParticleFloatRange @startLifetime;
+    public global::Orbeden.ParticleFloatRange @startSpeed;
+    public global::Orbeden.ParticleFloatRange @startSize;
+    public global::Orbeden.ParticleFloatRange @startRotation;
+    public global::Orbeden.color @startColor;
+}
+}
+namespace Orbeden
+{
+public enum ParticleSimulationSpace : uint
+{
+    World = 0,
+    Local = 1,
+}
+}
+namespace Orbeden
+{
+public struct ParticleFloatRange
+{
+    public float @min;
+    public float @max;
+}
+}
+namespace Orbeden
+{
+public struct ParticleEmissionSettings
+{
+    public bool @enabled;
+    public float @rateOverTime;
+    public global::Orbeden.ParticleBurst[] @bursts;
+}
+}
+namespace Orbeden
+{
+public struct ParticleBurst
+{
+    public float @time;
+    public uint @count;
+    public uint @cycles;
+    public float @interval;
+    public float @probability;
+}
+}
+namespace Orbeden
+{
+public struct ParticleShapeSettings
+{
+    public global::Orbeden.ParticleShape @shape;
+    public float @radius;
+    public global::Orbeden.vector3 @boxExtents;
+    public float @coneAngle;
+    public bool @surfaceOnly;
+}
+}
+namespace Orbeden
+{
+public enum ParticleShape : uint
+{
+    Point = 0,
+    Sphere = 1,
+    Cone = 2,
+    Box = 3,
+}
+}
+namespace Orbeden
+{
+public struct ParticleMotionSettings
+{
+    public float @gravityMultiplier;
+    public global::Orbeden.vector3 @acceleration;
+    public float @drag;
+    public global::Orbeden.ParticleCurve @sizeOverLifetime;
+    public global::Orbeden.ParticleCurve @angularVelocityOverLifetime;
+    public global::Orbeden.ParticleGradient @colorOverLifetime;
+}
+}
+namespace Orbeden
+{
+public struct ParticleCurve
+{
+    public global::Orbeden.ParticleCurveKey[] @keys;
+}
+}
+namespace Orbeden
+{
+public struct ParticleCurveKey
+{
+    public float @time;
+    public float @value;
+    public float @inTangent;
+    public float @outTangent;
+    public global::Orbeden.ParticleCurveInterpolation @interpolation;
+}
+}
+namespace Orbeden
+{
+public enum ParticleCurveInterpolation : uint
+{
+    Linear = 0,
+    Cubic = 1,
+    Constant = 2,
+}
+}
+namespace Orbeden
+{
+public struct ParticleGradient
+{
+    public global::Orbeden.ParticleGradientKey[] @keys;
+}
+}
+namespace Orbeden
+{
+public struct ParticleGradientKey
+{
+    public float @time;
+    public global::Orbeden.color @value;
+}
+}
+namespace Orbeden
+{
+public struct ParticleCollisionSettings
+{
+    public bool @enabled;
+    public uint @layerMask;
+    public float @radiusScale;
+    public float @restitution;
+    public float @friction;
+    public float @lifetimeLoss;
+    public global::Orbeden.ParticleCollisionResponse @response;
+}
+}
+namespace Orbeden
+{
+public enum ParticleCollisionResponse : uint
+{
+    Bounce = 0,
+    Kill = 1,
+}
+}
+namespace Orbeden
+{
+public struct ParticleTrailSettings
+{
+    public bool @enabled;
+    public float @lifetime;
+    public float @minimumVertexDistance;
+    public float @maximumVertexInterval;
+    public uint @maxPointsPerTrail;
+    public uint @maxTrails;
+    public float @width;
+    public global::Orbeden.ParticleCurve @widthOverLength;
+    public global::Orbeden.ParticleGradient @colorOverLength;
+    public bool @dieWithParticle;
+    public float @textureTileLength;
+}
+}
+namespace Orbeden
+{
+public struct ParticleRenderSettings
+{
+    public global::Orbeden.ParticleRenderPath @path;
+    public global::Orbeden.ParticleRenderMode @mode;
+    public global::Orbeden.BlendMode @blendMode;
+    public uint @tilesX;
+    public uint @tilesY;
+    public float @animationCycles;
+    public bool @randomStartFrame;
+}
+}
+namespace Orbeden
+{
+public enum ParticleRenderPath : uint
+{
+    DynamicBatch = 0,
+    Instanced = 1,
+}
+}
+namespace Orbeden
+{
+public enum ParticleRenderMode : uint
+{
+    Billboard = 0,
+    Mesh = 1,
+}
+}
+namespace Orbeden
+{
+public enum BlendMode : uint
+{
+    Alpha = 0,
+    Additive = 1,
+}
+}
+namespace Orbeden
+{
+public struct ParticleSubEmitterRule
+{
+    public uint @targetSlot;
+    public global::Orbeden.ParticleSubEmitterEvent @event;
+    public uint @count;
+    public float @probability;
+    public bool @inheritVelocity;
+    public bool @inheritColor;
+    public bool @inheritSize;
+}
+}
+namespace Orbeden
+{
+public enum ParticleSubEmitterEvent : uint
+{
+    Birth = 0,
+    Collision = 1,
+    Death = 2,
+}
+}
+namespace Orbeden
+{
+public struct ParticleSettingsParseResult
+{
+    public bool @success;
+    public global::Orbeden.ParticleSettings @settings;
+    public string @error;
+}
+}
+namespace Orbeden
+{
+public struct ParticlePlaybackInfo
+{
+    public global::Orbeden.ParticlePlaybackState @state;
+    public float @time;
+    public uint @aliveCount;
+    public uint @trailCount;
+    public ulong @emittedCount;
+    public ulong @rejectedCount;
+}
+}
+namespace Orbeden
+{
+public enum ParticlePlaybackState : uint
+{
+    Stopped = 0,
+    Playing = 1,
+    Paused = 2,
+    Draining = 3,
 }
 }
 namespace Orbeden
@@ -942,6 +1743,60 @@ public unsafe partial class Ens
         var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Ens), 0, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.EnsId)result;
+    }
+}
+}
+namespace Orbeden
+{
+[NativeBinding("InstanceDrawList")]
+public unsafe partial class InstanceDrawList : global::Orbeden.Object
+{
+    protected internal InstanceDrawList(IntPtr pointer) : base(pointer) { }
+    public void @Clear()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 0, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public bool @Configure(global::Orbeden.Mesh? @targetMesh, uint @targetSubMeshIndex, global::Orbeden.Material? @targetMaterial, global::Orbeden.InstanceDrawOptions @drawOptions)
+    {
+        var writer_drawOptions = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_InstanceDrawOptions(writer_drawOptions, @drawOptions);
+        byte[] bytes_drawOptions = writer_drawOptions.ToArray();
+        fixed (byte* pointer_drawOptions = bytes_drawOptions)
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int, uint, int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 1, this);
+        NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@targetMesh), @targetSubMeshIndex, NativeBindingRuntime.GetObjectId(@targetMaterial), new NativeBindingSlice(pointer_drawOptions, bytes_drawOptions.Length), &result));
+        return result != 0;
+        }
+    }
+    public int @GetInstanceCount()
+    {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 2, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (int)result;
+    }
+    public bool @SetInstances(ReadOnlySpan<global::Orbeden.MeshInstanceData> @data)
+    {
+        var writer_data = new NativeBindingWriter();
+        writer_data.Scalar(@data.Length);
+        foreach (var item in @data) global::Orbeden.GeneratedBindingCodecs.Write_MeshInstanceData(writer_data, item);
+        byte[] bytes_data = writer_data.ToArray();
+        fixed (byte* pointer_data = bytes_data)
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_data, bytes_data.Length), @data.Length, &result));
+        return result != 0;
+        }
+    }
+    public bool @Submit()
+    {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.InstanceDrawList), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
     }
 }
 }
@@ -3348,6 +4203,288 @@ public sealed unsafe partial class HeightField : global::Orbeden.Component
     }
 }
 }
+namespace Orbeden { [UniqueComponent] public partial class ParticleSystem { } }
+namespace Orbeden
+{
+[NativeBinding("ParticleSystem")]
+public unsafe partial class ParticleSystem : global::Orbeden.Component
+{
+    protected internal ParticleSystem(Ens ens, IntPtr pointer) : base(ens, pointer) { }
+    public void @Clear()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 0, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public uint @Emit(uint @count)
+    {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 1, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @count, &result));
+        return (uint)result;
+    }
+    public static string @FormatSettings(global::Orbeden.ParticleSettings @value)
+    {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_ParticleSettings(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 2);
+        NativeBindingRuntime.Check(callback(0, new NativeBindingSlice(pointer_value, bytes_value.Length), &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+    }
+    public ulong @GetConfigurationRevision()
+    {
+        ulong result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, ulong*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (ulong)result;
+    }
+    public bool @GetEnabled()
+    {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+    }
+    public string @GetLastError()
+    {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+    }
+    public global::Orbeden.ParticlePlaybackInfo @GetPlaybackInfo()
+    {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_ParticlePlaybackInfo(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+    }
+    public global::Orbeden.ParticleSettings @GetSettings()
+    {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 7, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_ParticleSettings(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+    }
+    public void @OnConfigurationChanged()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 8, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public static global::Orbeden.ParticleSettingsParseResult @ParseSettings(string @text)
+    {
+        var writer_text = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_text, @text);
+        byte[] bytes_text = writer_text.ToArray();
+        fixed (byte* pointer_text = bytes_text)
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 9);
+        NativeBindingRuntime.Check(callback(0, new NativeBindingSlice(pointer_text, bytes_text.Length), &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_ParticleSettingsParseResult(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+    }
+    public void @Pause()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 10, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public void @Play()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public void @Play(bool @restart)
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@restart ? 1 : 0)));
+    }
+    public void @SetEnabled(bool @value)
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 13, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+    }
+    public bool @SetSettings(global::Orbeden.ParticleSettings @value)
+    {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_ParticleSettings(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length), &result));
+        return result != 0;
+        }
+    }
+    public void @Stop()
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 15, this);
+        NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public void @Stop(bool @clear)
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 16, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@clear ? 1 : 0)));
+    }
+    public bool @castShadows
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 17, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 18, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
+    public uint @drawLayer
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 19, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (uint)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 20, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.Material?[] @materials
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 21, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_List_Ref_Material__(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_List_Ref_Material__(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 22, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public global::Orbeden.Mesh? @mesh
+    {
+        get
+        {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 23, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return NativeBindingRuntime.Wrap<global::Orbeden.Mesh>(result);
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 24, this);
+        NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
+        }
+    }
+    public bool @receiveShadows
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 25, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 26, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
+    public global::Orbeden.EnsId[] @subEmitterTargets
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 27, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__array_EnsId_16_(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__array_EnsId_16_(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 28, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public global::Orbeden.Material? @trailMaterial
+    {
+        get
+        {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 29, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return NativeBindingRuntime.Wrap<global::Orbeden.Material>(result);
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.ParticleSystem), 30, this);
+        NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
+        }
+    }
+}
+}
 namespace Orbeden { [UniqueComponent] public partial class RigidBody { } }
 namespace Orbeden
 {
@@ -3654,12 +4791,27 @@ public unsafe partial class StaticMeshRenderer : global::Orbeden.Component
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
+    public bool @enableInstancing
+    {
+        get
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 7, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 8, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
+        }
+    }
     public global::Orbeden.Material?[] @materials
     {
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 7, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 9, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -3675,7 +4827,7 @@ public unsafe partial class StaticMeshRenderer : global::Orbeden.Component
         byte[] bytes_value = writer_value.ToArray();
         fixed (byte* pointer_value = bytes_value)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 8, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 10, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
         }
         }
@@ -3685,13 +4837,13 @@ public unsafe partial class StaticMeshRenderer : global::Orbeden.Component
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 9, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 11, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return NativeBindingRuntime.Wrap<global::Orbeden.Mesh>(result);
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 10, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 12, this);
         NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
         }
     }
@@ -3700,13 +4852,13 @@ public unsafe partial class StaticMeshRenderer : global::Orbeden.Component
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 11, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 12, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.StaticMeshRenderer), 14, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }

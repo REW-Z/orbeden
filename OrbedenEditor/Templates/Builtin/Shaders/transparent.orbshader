@@ -1,5 +1,7 @@
 --------queue Transparent
 
+--------geometry Standard
+
 --------vert
 #version 430 core
 
@@ -8,19 +10,23 @@ layout(location = 1) in vec3 a_Normal;
 layout(location = 2) in vec2 a_TexCoord;
 layout(location = 3) in vec3 a_Tangent;
 
-uniform mat4 u_Model;
 uniform mat4 u_ViewProjection;
+#include "Builtin/geometry_input.orbinc"
 
 out vec3 v_WorldPosition;
 out vec3 v_Normal;
 out vec2 v_TexCoord;
+out vec4 v_Tint;
 
 void main()
 {
-    vec4 worldPosition = u_Model * vec4(a_Position, 1.0);
+    mat4 model = OrbedenGetModel();
+    vec4 worldPosition = model * vec4(a_Position, 1.0);
     v_WorldPosition = worldPosition.xyz;
-    v_Normal = mat3(u_Model) * a_Normal;
-    v_TexCoord = a_TexCoord;
+    //法线沿用模型矩阵本身，与旧公式一致，不顺带改变已调好的光照
+    v_Normal = mat3(model) * a_Normal;
+    v_TexCoord = OrbedenGetUv(a_TexCoord);
+    v_Tint = OrbedenGetTint();
     gl_Position = u_ViewProjection * worldPosition;
 }
 
@@ -30,6 +36,7 @@ void main()
 in vec3 v_WorldPosition;
 in vec3 v_Normal;
 in vec2 v_TexCoord;
+in vec4 v_Tint;
 
 uniform vec3 u_CameraPosition;
 uniform vec4 u_AmbientColor;
@@ -86,6 +93,9 @@ void main()
     float roughness = pow(2.0 / (specularPower + 2.0), 0.25);
     vec3 reflection = EvaluateEnvironmentReflection(normal, viewDir, u_SpecularColor.rgb, roughness, 1.0);
     vec3 color = ambient + direct * (1.0 - shadow) + reflection;
+    //每实例 tint 默认白色，Alpha 默认 1，不改变原有画面
+    color *= v_Tint.rgb;
+    alpha *= v_Tint.a;
     //输出线性值，显示转换统一在输出 Pass 完成
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, color), alpha);
 }

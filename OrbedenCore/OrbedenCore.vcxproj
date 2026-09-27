@@ -157,6 +157,8 @@
     <ClInclude Include="Src\Runtime\Object\CharacterController.h" />
     <ClInclude Include="Src\Runtime\Object\Collider.h" />
     <ClInclude Include="Src\Runtime\Object\HeightField.h" />
+    <ClInclude Include="Src\Runtime\Object\InstanceDrawList.h" />
+    <ClInclude Include="Src\Runtime\Object\ParticleSystem.h" />
     <ClInclude Include="Src\Physics\PhysicsReflection.h" />
     <ClInclude Include="Src\Physics\PhysicsSystem.h" />
     <ClInclude Include="Src\Physics\PhysicsTypes.h" />
@@ -174,11 +176,13 @@
     <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h" />
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
     <ClInclude Include="Src\Rendering\ColorSpace.h" />
+    <ClInclude Include="Src\Rendering\DrawBatchBuilder.h" />
     <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
     <ClInclude Include="Src\Rendering\FullscreenQuad.h" />
     <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
     <ClInclude Include="Src\Rendering\ImGuiLayer.h" />
     <ClInclude Include="Src\Rendering\OutputPass.h" />
+    <ClInclude Include="Src\Rendering\ParticleRenderer.h" />
     <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
     <ClInclude Include="Src\Rendering\RenderMath.h" />
     <ClInclude Include="Src\Rendering\RenderScene.h" />
@@ -242,6 +246,8 @@
     <ClCompile Include="Src\Runtime\Object\CharacterController.cpp" />
     <ClCompile Include="Src\Runtime\Object\Collider.cpp" />
     <ClCompile Include="Src\Runtime\Object\HeightField.cpp" />
+    <ClCompile Include="Src\Runtime\Object\InstanceDrawList.cpp" />
+    <ClCompile Include="Src\Runtime\Object\ParticleSystem.cpp" />
     <ClCompile Include="Src\Physics\PhysicsReflection.cpp" />
     <ClCompile Include="Src\Physics\PhysicsSystem.cpp" />
     <ClCompile Include="Src\Runtime\Object\RigidBody.cpp" />
@@ -254,11 +260,13 @@
     <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
     <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
+    <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
     <ClCompile Include="Src\Rendering\FullscreenQuad.cpp" />
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
     <ClCompile Include="Src\Rendering\ImGuiLayer.cpp" />
     <ClCompile Include="Src\Rendering\OutputPass.cpp" />
+    <ClCompile Include="Src\Rendering\ParticleRenderer.cpp" />
     <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
     <ClCompile Include="Src\Rendering\RenderMath.cpp" />
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
@@ -282,6 +290,8 @@
     <ClCompile Include="Src\Runtime\EnsId.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
     <ClCompile Include="Src\Runtime\Generated\Bindings.Generated.cpp" />
+    <ClCompile Include="Src\Runtime\Particles\ParticleSettings.cpp" />
+    <ClCompile Include="Src\Runtime\Particles\ParticleSimulationSystem.cpp" />
     <ClCompile Include="Src\Runtime\Native\NativeBindings.cpp" />
     <ClCompile Include="Src\Runtime\Object\Object.cpp" />
     <ClCompile Include="Src\FileSystem\PathDefines.cpp" />
@@ -366,6 +376,8 @@
   <ItemGroup>
     <ClInclude Include="Src\Runtime\LayerSettings.h" />
     <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+    <ClInclude Include="Src\Runtime\Particles\ParticleSettings.h" />
+    <ClInclude Include="Src\Runtime\Particles\ParticleSimulationSystem.h" />
     <ClInclude Include="Src\Runtime\DisplaySettings.h" />
     <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
   </ItemGroup>

@@ -2,13 +2,16 @@
 
 #include "Log/Log.h"
 #include "FileSystem/PathDefines.h"
+#include "Profiler/Profiler.h"
 #include "FileSystem/Utf8Path.h"
+#include "Rendering/ParticleRenderer.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/CookedAssetSerializer.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
+#include "Runtime/Particles/ParticleSimulationSystem.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -137,10 +140,12 @@ namespace
         if (!backend) return;
 
         backend->DeleteVertexInput(mesh.vertexInput);
+        backend->DeleteVertexInput(mesh.instancedVertexInput);
         backend->DeleteVertexBuffer(mesh.vertexBuffer);
         backend->DeleteIndexBuffer(mesh.indexBuffer);
         mesh = GpuMesh();
     }
+
 }
 
 void ForwardPipeline::Initialize(RenderBackend* renderBackend)
@@ -159,13 +164,21 @@ void ForwardPipeline::InvalidateResourceCaches()
         shadows.Shutdown();
         shadows.Initialize(backend);
         DeleteGpuMesh(backend, skyboxMesh);
+        drawStream.Shutdown();
     }
 
     //重置管线资源状态
+    particleRenderer.Shutdown();
+    particleRendererReady = false;
+    particleSnapshot = ParticleFrameSnapshot();
+    expandedChunks.clear();
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
     environmentReflection = {};
     builtinShadersInvalidated = true;
+    drawStreamReady = false;
+    cameraItems.clear();
+    cameraBatches.clear();
     //内容根可能已经换了，内置 Shader 的解析结果作废。
     GetBuiltinShaderKeys() = BuiltinShaderKeys();
 }
@@ -181,7 +194,18 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
 {
     if (!backend) return;
     LoadBuiltinShaders();
+    if (!particleRendererReady)
+    {
+        particleRenderer.Initialize(backend);
+        particleRendererReady = true;
+    }
+
+    batchBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer);
     shadows.BeginFrame(scene);
+
+    //粒子快照每帧只抓一次，本帧所有相机共用
+    if (frameWorld) CaptureParticleFrame(*frameWorld);
+    else particleSnapshot = ParticleFrameSnapshot();
     //选择全局反射来源并准备本帧采样数据
     const RenderSettings& settings = scene.renderSettings;
     Skybox* source = settings.reflectionEnvironment.GetInstanceId().IsValid()
@@ -201,9 +225,13 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     //生成当前相机的级联阴影
     if (shadowLight)
     {
+        //阴影与主 Pass 共用同一份流式缓冲，必须在阴影之前就绪
+        PrepareDrawStream();
         Shader* depthShader = GetOrLoadBuiltinShader(shadowDepthShader,
             ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
-        shadows.Render(scene, camera, *shadowLight, depthShader, gpuResourceManager);
+        static const List<InstanceSubmission> NoSubmissions;
+        shadows.Render(scene, drawSubmissions ? *drawSubmissions : NoSubmissions, camera, *shadowLight, depthShader,
+            gpuResourceManager, batchBuilder, drawStream, batchStats);
     }
 
     //开始相机主 Pass。
@@ -228,11 +256,14 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         RenderSkybox(scene, camera, gpuResourceManager);
     }
 
+    //合并本相机的可见项为统一绘制项与批次
+    BuildFrameBatches(scene, visibleSet, gpuResourceManager);
+
     //绘制 [不透明队列]
-    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
+    ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
 
     //绘制 [普通透明队列]
-    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
+    ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
 
     //复制相机颜色和深度纹理
     bool cameraTexturesReady = false;
@@ -250,7 +281,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     }
 
     //绘制 [折射队列]
-    RenderQueueItems(scene, visibleSet, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
+    ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
 
     //结束相机主 Pass
     backend->SetBlend(false);
@@ -263,118 +294,400 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     if (cameraTexturesReady) shadows.CaptureDepth(camera);
 }
 
-//绘制指定队列的可见项
-void ForwardPipeline::RenderQueueItems(
-    const RenderScene& scene,
-    const VisibleSet& visibleSet,
-    GpuResourceManager& gpuResourceManager,
-    DrawQueue drawQueue,
-    const RenderDirectionalLight* mainLight,
+//把当前相机的可见项合并为统一的绘制项与批次
+void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleSet& visibleSet, GpuResourceManager& gpuResourceManager)
+{
+    PROFILE("Render/BuildBatches");
+    static const List<InstanceSubmission> EmptySubmissions;
+    batchBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
+        particleSnapshot, cameraItems);
+    batchBuilder.SortItems(cameraItems);
+    batchBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
+    batchBuilder.Clear();
+}
+
+//按指定队列执行已经排好序的批次
+void ForwardPipeline::ExecuteQueueBatches(const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, DrawQueue drawQueue, const RenderDirectionalLight* mainLight,
     bool cameraTexturesReady)
 {
-    const RenderCamera& camera = visibleSet.camera;
-    bool alphaBlended = drawQueue != DrawQueue::Opaque;
-
-    //记录已配置的 Shader Program
+    PROFILE("Render/DrawBatches");
     std::unordered_set<uint32> configuredPrograms;
-    for (const RenderItem& item : visibleSet.renderItems)
+    for (const DrawBatch& batch : cameraBatches)
     {
-        if (item.drawQueue != drawQueue) continue;
+        if (batch.key.queue != drawQueue) continue;
+        ExecuteBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, configuredPrograms);
+    }
+}
 
-        //获取绘制资源
-        const GpuMaterial* material = gpuResourceManager.GetMaterial(item.material);
-        if (!material)
+//执行单个批次，按几何模式分派到实例或普通绘制
+void ForwardPipeline::ExecuteBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    std::unordered_set<uint32>& configuredPrograms)
+{
+    if (batch.items.empty()) return;
+
+    const GpuMaterial* material = gpuResourceManager.GetMaterial(cameraItems[batch.items[0]].material);
+    if (!material || !material->shader || material->shader->passes.empty())
+    {
+        ++batchStats.invalidResources;
+        return;
+    }
+
+    if (batch.key.mode == GeometryMode::Instanced)
+    {
+        ExecuteInstancedBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, *material, configuredPrograms);
+        return;
+    }
+
+    if (batch.key.mode == GeometryMode::Expanded)
+    {
+        ExecuteExpandedBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, *material, configuredPrograms);
+        return;
+    }
+
+    if (batch.key.mode == GeometryMode::TrailInstanced)
+    {
+        ExecuteTrailInstancedBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, *material, configuredPrograms);
+        return;
+    }
+
+    ExecuteUniformBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, *material, configuredPrograms);
+}
+
+//刷新粒子渲染快照
+void ForwardPipeline::CaptureParticleFrame(World& world)
+{
+    particleRenderer.ClearCameraScratch();
+
+    ParticleSimulationSystem* simulation = ParticleSimulationSystem::Current();
+    if (!simulation)
+    {
+        particleSnapshot = ParticleFrameSnapshot();
+        return;
+    }
+
+    //编辑态预览优先：正在播放预览时相机应该看到预览的那一份
+    bool usePreview = simulation->HasRunningPreview();
+    const ParticleSimulationContext& context = simulation->GetRenderContext(usePreview);
+    particleRenderer.CaptureFrame(world, context, simulation->GetTransformCache(), particleSnapshot);
+}
+
+//以展开几何执行批次
+bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms)
+{
+    if (!PrepareDrawStream()) return false;
+
+    const GpuShaderPass& shaderPass = material.shader->passes[0];
+    if (!shaderPass.expandedProgram.IsValid())
+    {
+        ++batchStats.failedUploads;
+        return false;
+    }
+
+    {
+        PROFILE("Render/ExpandParticles");
+        particleRenderer.ExpandBatch(batch, cameraItems, expandedChunks, gpuResourceManager);
+    }
+    if (expandedChunks.empty()) return false;
+
+    BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+        shaderPass.expandedProgram.id, configuredPrograms);
+    backend->BindShaderProgram(shaderPass.expandedProgram);
+    backend->BindVertexInput(drawStream.GetExpandedVertexInput());
+
+    bool drew = false;
+    for (const ExpandedGeometryChunk& chunk : expandedChunks)
+    {
+        if (chunk.vertices.empty() || chunk.indices.empty()) continue;
         {
-            Log::Error("ForwardPipeline draw skipped: material GPU resources are invalid.");
-            continue;
+            PROFILE("Render/UploadInstances");
+            if (!drawStream.UploadExpanded(chunk.vertices, chunk.indices))
+            {
+                ++batchStats.failedUploads;
+                Log::Error("ForwardPipeline expanded draw skipped: the geometry upload was rejected.");
+                continue;
+            }
         }
 
+        batchStats.uploadedBytes += static_cast<uint64>(chunk.vertices.size()) * sizeof(GpuExpandedVertex) +
+            static_cast<uint64>(chunk.indices.size()) * sizeof(uint32);
+        batchStats.expandedVertices += chunk.vertices.size();
+        batchStats.expandedIndices += chunk.indices.size();
+        backend->DrawIndexed(0, static_cast<uint32>(chunk.indices.size()));
+        ++batchStats.dynamicBatchDraws;
+        drew = true;
+    }
+
+    return drew;
+}
+
+//以拖尾实例执行批次
+bool ForwardPipeline::ExecuteTrailInstancedBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms)
+{
+    if (!backend || !backend->SupportsInstancing()) return false;
+    if (!PrepareDrawStream()) return false;
+    //共享四边形只在拖尾路径使用，按需创建
+    if (!particleRenderer.PrepareQuad()) return false;
+
+    const GpuShaderPass& shaderPass = material.shader->passes[0];
+    if (!shaderPass.trailInstancedProgram.IsValid())
+    {
+        ++batchStats.failedUploads;
+        return false;
+    }
+
+    particleRenderer.BuildTrailInstances(batch, cameraItems, trailInstanceScratch);
+    if (trailInstanceScratch.empty()) return false;
+
+    {
+        PROFILE("Render/UploadInstances");
+        if (!drawStream.UploadTrailInstances(trailInstanceScratch))
+        {
+            ++batchStats.failedUploads;
+            Log::Error("ForwardPipeline trail draw skipped: the instance upload was rejected.");
+            return false;
+        }
+    }
+
+    batchStats.uploadedBytes += static_cast<uint64>(trailInstanceScratch.size()) * sizeof(GpuTrailInstance);
+    batchStats.submittedInstances += trailInstanceScratch.size();
+
+    BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+        shaderPass.trailInstancedProgram.id, configuredPrograms);
+    backend->BindShaderProgram(shaderPass.trailInstancedProgram);
+    backend->BindVertexInput(particleRenderer.GetQuadVertexInput(GeometryMode::TrailInstanced));
+    if (!backend->BindInstanceBuffer(drawStream.GetInstanceBuffer(), 0))
+    {
+        ++batchStats.failedUploads;
+        return false;
+    }
+
+    //共享四边形固定六个索引
+    backend->DrawIndexedInstanced(0, 6, static_cast<uint32>(trailInstanceScratch.size()));
+    ++batchStats.instancedDraws;
+    return true;
+}
+
+//以普通单绘制执行批次，多 Pass 来源在这里逐对象跑完全部 Pass
+bool ForwardPipeline::ExecuteUniformBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms)
+{
+    bool drew = false;
+    for (uint32 itemIndex : batch.items)
+    {
+        const DrawItem& item = cameraItems[itemIndex];
         const GpuMesh* mesh = gpuResourceManager.GetMesh(item.mesh);
         if (!mesh)
         {
+            ++batchStats.invalidResources;
             Log::Error("ForwardPipeline draw skipped: mesh GPU resources are invalid.");
             continue;
         }
 
-        for (const GpuShaderPass& shaderPass : material->shader->passes)
+        //同一对象依次完成全部 Pass 再进入下一个对象，保持既有 Pass 顺序语义
+        for (const GpuShaderPass& shaderPass : material.shader->passes)
         {
-            //配置 Shader Pass 状态
-            backend->SetDepthTest(ConvertPassToggleToBool(shaderPass.state.depthTest, true));
-            backend->SetDepthWrite(ConvertPassToggleToBool(shaderPass.state.depthWrite, !alphaBlended));
-            backend->SetBlend(ConvertPassToggleToBool(shaderPass.state.blend, alphaBlended));
-            backend->SetCullMode(ConvertCullModeForBackend(shaderPass.state.cull));
+            if (!shaderPass.shaderProgram.IsValid()) continue;
+
+            BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+                shaderPass.shaderProgram.id, configuredPrograms);
             backend->BindShaderProgram(shaderPass.shaderProgram);
-            backend->SetUniformMatrix4("u_Model", item.localToWorld);
-
-            if (configuredPrograms.insert(shaderPass.shaderProgram.id).second)
-            {
-                //绑定全局渲染参数
-                backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-                shadows.BindUniforms(camera);
-                backend->SetUniformVector3("u_CameraPosition", camera.position);
-                backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
-                backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
-                backend->SetUniformFloat("u_Time", camera.elapsedTime);
-                backend->SetUniformInt("u_UseCameraTextures", drawQueue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
-                backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
-                backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
-                backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
-                if (mainLight)
-                {
-                    backend->SetUniformVector3("u_LightDirection", mainLight->direction);
-                    backend->SetUniformColor("u_LightColor", mainLight->color);
-                    backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
-                    backend->SetUniformFloat("u_ShadowStrength", std::clamp(mainLight->shadowStrength, 0.0f, 1.0f));
-                }
-                else
-                {
-                    backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
-                    backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
-                    backend->SetUniformFloat("u_LightIntensity", 0.0f);
-                    backend->SetUniformFloat("u_ShadowStrength", 0.0f);
-                }
-            }
-
-            //绑定材质参数
-            for (const GpuMaterialColorBinding& binding : material->colorBindings)
-            {
-                backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
-            }
-            for (const GpuMaterialFloatBinding& binding : material->floatBindings)
-            {
-                backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
-            }
-
-            for (uint32 slot = 0; slot < material->textureBindings.size(); ++slot)
-            {
-                const GpuMaterialTextureBinding& binding = material->textureBindings[slot];
-                backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
-                backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
-                backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
-            }
-
-            //绑定内置渲染纹理
-            uint32 shadowTextureSlot = static_cast<uint32>(material->textureBindings.size());
-            shadows.BindTexture(shadowTextureSlot);
-            backend->SetUniformInt("u_ReceiveShadows", item.receiveShadows ? 1 : 0);
-            uint32 environmentSlot = shadowTextureSlot + 3;
-            backend->SetUniformInt("u_EnvironmentTexture", static_cast<int32>(environmentSlot));
-            backend->BindCubeTexture(environmentSlot, environmentReflection.texture);
-
-            if (drawQueue == DrawQueue::Refraction)
-            {
-                uint32 cameraColorSlot = shadowTextureSlot + 1;
-                uint32 cameraDepthSlot = shadowTextureSlot + 2;
-                backend->SetUniformInt("u_CameraColorTexture", static_cast<int32>(cameraColorSlot));
-                backend->SetUniformInt("u_CameraDepthTexture", static_cast<int32>(cameraDepthSlot));
-                backend->BindTexture(cameraColorSlot, cameraTexturesReady ? camera.cameraColorTexture : GpuTextureID());
-                backend->BindDepthTexture(cameraDepthSlot, cameraTexturesReady ? camera.cameraDepthTexture : GpuDepthTextureID());
-            }
-
+            backend->SetUniformMatrix4("u_Model", item.model);
             backend->BindVertexInput(mesh->vertexInput);
             backend->DrawIndexed(item.indexStart, item.indexCount);
+            ++batchStats.ordinaryDraws;
+            drew = true;
         }
     }
+
+    return drew;
+}
+
+//以实例绘制执行批次
+bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
+    const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms)
+{
+    if (!backend || !backend->SupportsInstancing()) return false;
+    if (!PrepareDrawStream()) return false;
+
+    const GpuShaderPass& shaderPass = material.shader->passes[0];
+    if (!shaderPass.instancedProgram.IsValid())
+    {
+        ++batchStats.failedUploads;
+        return false;
+    }
+
+    //四边形来源没有网格，实例顶点输入取自粒子渲染器的共享四边形
+    const DrawItem& first = cameraItems[batch.items[0]];
+    GpuVertexInputID instancedInput;
+    if (first.geometry == DrawGeometry::Mesh)
+    {
+        const GpuMesh* mesh = gpuResourceManager.GetMesh(first.mesh);
+        instancedInput = mesh ? mesh->instancedVertexInput : GpuVertexInputID();
+    }
+    else
+    {
+        particleRenderer.PrepareQuad();
+        instancedInput = particleRenderer.GetQuadVertexInput(GeometryMode::Instanced);
+    }
+
+    if (!instancedInput.IsValid())
+    {
+        ++batchStats.invalidResources;
+        Log::Error("ForwardPipeline instanced draw skipped: the instance vertex input is invalid.");
+        return false;
+    }
+
+    //实例顺序必须与透明排序序列一致
+    instanceScratch.clear();
+    instanceScratch.reserve(batch.items.size());
+    for (uint32 itemIndex : batch.items)
+    {
+        const DrawItem& item = cameraItems[itemIndex];
+        GpuMeshInstance instance;
+        if (!BuildGpuMeshInstance(item.model, item.linearTint, item.uvRect, instance))
+        {
+            ++batchStats.invalidTransforms;
+            continue;
+        }
+
+        instanceScratch.push_back(instance);
+    }
+
+    if (instanceScratch.empty()) return false;
+    {
+        PROFILE("Render/UploadInstances");
+        if (!drawStream.UploadMeshInstances(instanceScratch))
+        {
+            ++batchStats.failedUploads;
+            Log::Error("ForwardPipeline instanced draw skipped: the instance upload was rejected.");
+            return false;
+        }
+    }
+
+    batchStats.uploadedBytes += static_cast<uint64>(instanceScratch.size()) * sizeof(GpuMeshInstance);
+    batchStats.submittedInstances += instanceScratch.size();
+
+    BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+        shaderPass.instancedProgram.id, configuredPrograms);
+    backend->BindShaderProgram(shaderPass.instancedProgram);
+    backend->BindVertexInput(instancedInput);
+    if (!backend->BindInstanceBuffer(drawStream.GetInstanceBuffer(), 0))
+    {
+        ++batchStats.failedUploads;
+        return false;
+    }
+
+    backend->DrawIndexedInstanced(batch.key.indexStart, batch.key.indexCount, static_cast<uint32>(instanceScratch.size()));
+    ++batchStats.instancedDraws;
+    return true;
+}
+
+//绑定一个批次的固定功能状态、公共 uniform 与材质参数
+void ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    const RenderDirectionalLight* mainLight, bool cameraTexturesReady, const GpuMaterial& material, uint32 programId,
+    std::unordered_set<uint32>& configuredPrograms)
+{
+    //uniform 只对当前绑定生效，必须在这一步就把目标 program 绑上
+    backend->BindShaderProgram(GpuShaderProgramID{ programId });
+    backend->SetDepthTest(batch.key.depthTest != 0);
+    backend->SetDepthWrite(batch.key.depthWrite != 0);
+    backend->SetBlend(batch.key.blend != 0);
+    //混合方程由来源与队列共同决定，材质无法覆盖
+    backend->SetBlendMode(batch.key.blendMode);
+    backend->SetCullMode(ConvertCullModeForBackend(static_cast<CullMode>(batch.key.cull)));
+
+    //相机、光照与环境反射对本队列的每个 program 只提交一次
+    if (configuredPrograms.insert(programId).second)
+    {
+        backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        shadows.BindUniforms(camera);
+        backend->SetUniformVector3("u_CameraPosition", camera.position);
+        backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
+        backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
+        backend->SetUniformFloat("u_Time", camera.elapsedTime);
+        backend->SetUniformInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
+        backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
+        backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
+        backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
+        if (mainLight)
+        {
+            backend->SetUniformVector3("u_LightDirection", mainLight->direction);
+            backend->SetUniformColor("u_LightColor", mainLight->color);
+            backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
+            backend->SetUniformFloat("u_ShadowStrength", std::clamp(mainLight->shadowStrength, 0.0f, 1.0f));
+        }
+        else
+        {
+            backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
+            backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
+            backend->SetUniformFloat("u_LightIntensity", 0.0f);
+            backend->SetUniformFloat("u_ShadowStrength", 0.0f);
+        }
+    }
+
+    //以下参数随批次变化，即使 program 已经配置过也必须重设。
+    //实例模式的每实例 tint 与 uv 走顶点属性，这两个 uniform 不会被声明。
+    backend->SetUniformColor("u_InstanceTint", { 1.0f, 1.0f, 1.0f, 1.0f });
+    backend->SetUniformColor("u_InstanceUvRect", { 0.0f, 0.0f, 1.0f, 1.0f });
+
+    for (const GpuMaterialColorBinding& binding : material.colorBindings)
+    {
+        backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
+    }
+    for (const GpuMaterialFloatBinding& binding : material.floatBindings)
+    {
+        backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
+    }
+
+    for (uint32 slot = 0; slot < material.textureBindings.size(); ++slot)
+    {
+        const GpuMaterialTextureBinding& binding = material.textureBindings[slot];
+        backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
+        backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+        backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
+    }
+
+    //绑定内置渲染纹理
+    uint32 shadowTextureSlot = static_cast<uint32>(material.textureBindings.size());
+    shadows.BindTexture(shadowTextureSlot);
+    backend->SetUniformInt("u_ReceiveShadows", batch.key.receiveShadows ? 1 : 0);
+    uint32 environmentSlot = shadowTextureSlot + 3;
+    backend->SetUniformInt("u_EnvironmentTexture", static_cast<int32>(environmentSlot));
+    backend->BindCubeTexture(environmentSlot, environmentReflection.texture);
+
+    if (batch.key.queue == DrawQueue::Refraction)
+    {
+        uint32 cameraColorSlot = shadowTextureSlot + 1;
+        uint32 cameraDepthSlot = shadowTextureSlot + 2;
+        backend->SetUniformInt("u_CameraColorTexture", static_cast<int32>(cameraColorSlot));
+        backend->SetUniformInt("u_CameraDepthTexture", static_cast<int32>(cameraDepthSlot));
+        backend->BindTexture(cameraColorSlot, cameraTexturesReady ? camera.cameraColorTexture : GpuTextureID());
+        backend->BindDepthTexture(cameraDepthSlot, cameraTexturesReady ? camera.cameraDepthTexture : GpuDepthTextureID());
+    }
+}
+
+//按需创建流式绘制缓冲
+bool ForwardPipeline::PrepareDrawStream()
+{
+    if (drawStreamReady) return true;
+    if (!backend || !backend->SupportsInstancing()) return false;
+
+    if (!drawStream.Initialize(backend))
+    {
+        Log::Error("ForwardPipeline draw stream initialization failed.");
+        return false;
+    }
+
+    drawStreamReady = true;
+    return true;
 }
 
 void ForwardPipeline::LoadBuiltinShaders()

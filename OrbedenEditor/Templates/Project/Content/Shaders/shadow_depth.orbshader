@@ -1,16 +1,20 @@
 --------queue Opaque
 
+--------geometry Particle
+
 --------vert
 #version 430 core
 
 layout(location = 0) in vec3 a_Position;
 
-uniform mat4 u_Model;
 uniform mat4 u_LightViewProjection;
+#include "Builtin/geometry_input.orbinc"
 
 void main()
 {
-    gl_Position = u_LightViewProjection * u_Model * vec4(a_Position, 1.0);
+    //展开顶点已是世界空间，实例与拖尾模式由几何 ABI 各自给出世界矩阵，
+    //三种几何模式共用这一条位置公式。
+    gl_Position = u_LightViewProjection * OrbedenGetModel() * vec4(a_Position, 1.0);
 }
 
 --------frag

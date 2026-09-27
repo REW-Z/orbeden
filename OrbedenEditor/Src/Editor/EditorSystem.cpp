@@ -13,6 +13,7 @@
 #include "Platform/ExecutablePath.h"
 #include "Rendering/RenderSystem.h"
 #include "ResourceManager/ResourceManager.h"
+#include "Runtime/Particles/ParticleSimulationSystem.h"
 
 #include <algorithm>
 #include <array>
@@ -657,6 +658,13 @@ void EditorSystem::Update(World& world, float deltaTime)
         editorScene.Update(world, deltaTime, mouseWheel);
         //空闲编辑器不出帧，聚焦动画得自己把下一帧要过来，否则会卡在半路
         if (editorScene.IsAnimatingFocus()) RequestRepaint();
+
+        //编辑态粒子预览只在非 Play 推进；Inspector 关闭或取消选择都不停止已经播放的预览
+        if (ParticleSimulationSystem* particles = app.GetSystem<ParticleSimulationSystem>())
+        {
+            particles->AdvancePreview(world, deltaTime);
+            if (particles->HasRunningPreview()) RequestRepaint();
+        }
     }
 
     //场景改为离屏渲染后主窗口不再被场景填充，需要在渲染前清空
@@ -682,7 +690,11 @@ bool EditorSystem::TakeRepaintRequest()
 //判断编辑器是否需要连续重绘
 bool EditorSystem::NeedsContinuousRepaint() const
 {
-    return continuousRepaint || (playMode.IsPlaying() && !app.IsPaused());
+    if (continuousRepaint || (playMode.IsPlaying() && !app.IsPaused())) return true;
+
+    //正在播放的粒子预览需要连续出帧；暂停的预览不请求额外重绘
+    ParticleSimulationSystem* particles = app.GetSystem<ParticleSimulationSystem>();
+    return particles && particles->HasRunningPreview();
 }
 
 void EditorSystem::RenderEditorGUI()

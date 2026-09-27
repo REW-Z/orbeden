@@ -6,9 +6,12 @@
 #include "Rendering/FullscreenQuad.h"
 #include "Rendering/ImGuiLayer.h"
 #include "Rendering/OutputPass.h"
+#include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderItemSorter.h"
 #include "Rendering/SceneCuller.h"
 #include "Rendering/TransformCache.h"
+
+#include <span>
 
 //渲染覆盖层接口，由渲染系统统一管理 frame 生命周期。
 class IRenderOverlay
@@ -128,6 +131,23 @@ private:
     bool mainFramebufferRendering = true;
     float32 elapsedTime = 0.0f;
 
+    //显式实例提交：Submit 写入 pending，Render 开始时整体换入 active 并清空 pending。
+    //暂停时没有新 Submit 就不会重复上一帧的内容。
+    List<InstanceSubmission> pendingInstanceSubmissions;
+    List<InstanceSubmission> activeInstanceSubmissions;
+    //本帧已经接收的累计实例数量，用于执行每帧总预算
+    uint64 pendingSubmittedInstanceCount = 0;
+    uint64 nextInstanceSubmissionId = 1;
+    //从消费 active 到本帧结束为 true，期间拒绝新的 Submit
+    bool readingDrawSubmissions = false;
+
+    //清空本帧使用的显式提交并解除读取状态
+    void FinishDrawSubmissions();
+
+    //验证一份实例数据是否可以使用，失败时给出诊断
+    bool ValidateInstanceSubmission(Mesh* mesh, Material* material, uint32 subMeshIndex,
+        std::span<const MeshInstanceData> instances) const;
+
     //在主 framebuffer 上绘制运行时 GUI 和调试覆盖层
     void RenderOverlayPass();
 
@@ -210,6 +230,16 @@ public:
     void SetSelectionHighlights(const List<SelectionHighlight>& highlights);
 
     const RenderScene& GetCurrentScene() const;
+
+    /// <summary>读取最近一帧的渲染批次统计，每帧开始时清零。</summary>
+    const RenderBatchStats& GetBatchStats() const { return forwardPipeline.GetBatchStats(); }
+
+    /// <summary>接收一次显式实例提交；复制配置与实例，下一次 Render 绘制。</summary>
+    bool SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
+        Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId = 0);
+
+    /// <summary>读取本次 Render 使用的显式实例提交快照。</summary>
+    const List<InstanceSubmission>& GetActiveInstanceSubmissions() const { return activeInstanceSubmissions; }
 
     //使内容资源相关的 GPU 缓存和管线状态失效
     void InvalidateResourceCaches();

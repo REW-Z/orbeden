@@ -15,10 +15,16 @@ internal static class CustomEditorRegistry
     private static readonly List<Registration> registrations = [];
     private static readonly Dictionary<string, Type> scripts = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Instance> instances = new(StringComparer.Ordinal);
+    //按程序集去重，重复注册同一个程序集不会产生重复项
+    private static readonly HashSet<Assembly> registeredAssemblies = [];
+
+    /// <summary>注册编辑器自带的内置编辑器；没有游戏程序集时也必须可用。</summary>
+    internal static void RegisterBuiltins() => Register(typeof(ParticleSystemEditor).Assembly);
 
     /// <summary>注册程序集中的组件编辑器，拒绝重复和无效声明。</summary>
     internal static void Register(Assembly assembly)
     {
+        if (!registeredAssemblies.Add(assembly)) return;
         Type[] types;
         try { types = assembly.GetTypes(); }
         catch (ReflectionTypeLoadException exception) { types = exception.Types.OfType<Type>().ToArray(); }
@@ -42,6 +48,7 @@ internal static class CustomEditorRegistry
         instances.Clear();
         scripts.Clear();
         registrations.Clear();
+        registeredAssemblies.Clear();
     }
 
     /// <summary>按组件最近的注册基类选择编辑器。</summary>

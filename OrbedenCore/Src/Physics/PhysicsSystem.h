@@ -62,6 +62,13 @@ public:
     //使用球体扫描并返回最近命中
     bool SweepSphere(const vector3& origin, float32 radius, const vector3& direction, float32 distance, PhysicsQueryHit& hit, uint32 layerMask = 0xFFFFFFFFu) const;
 
+    //使用球体扫描并按附加条件过滤，可同时排除指定实体与触发器
+    bool SweepSphereFiltered(const vector3& origin, float32 radius, const vector3& direction, float32 distance,
+        PhysicsQueryHit& hit, const PhysicsQueryFilter& queryFilter) const;
+
+    //只把 World 的变换同步到物理场景并刷新查询，不推进模拟也不消费力
+    void SynchronizeQueries(World& world);
+
     //收集与球体重叠的实体
     uint32 OverlapSphere(const vector3& center, float32 radius, List<PhysicsQueryHit>& hits, uint32 layerMask = 0xFFFFFFFFu) const;
 

@@ -1,7 +1,9 @@
 #pragma once
-#include "Rendering/ShadowCascadeBuilder.h"
-#include "Rendering/RenderScene.h"
+#include "Rendering/DrawBatchBuilder.h"
 #include "Rendering/GpuResourceManager.h"
+#include "Rendering/InstanceDrawData.h"
+#include "Rendering/RenderScene.h"
+#include "Rendering/ShadowCascadeBuilder.h"
 
 //管理每相机级联绘制和异步采样分区
 class CascadedShadowMap
@@ -27,6 +29,10 @@ class CascadedShadowMap
     ShadowCascadeSettings settings;
     ShadowCascade cascades[ShadowCascadeSettings::MaxCascades];
     List<CameraHistory> histories;
+    //阴影候选与批次共用临时容器，稳态只清空不收缩
+    List<DrawItem> shadowItems;
+    List<DrawBatch> shadowBatches;
+    List<GpuMeshInstance> shadowInstances;
 
 public:
     //绑定渲染后端
@@ -35,9 +41,10 @@ public:
     void Shutdown();
     //清理失效相机历史
     void BeginFrame(const RenderScene& scene);
-    //生成当前相机级联阴影
-    void Render(const RenderScene& scene, const RenderCamera& camera, const RenderDirectionalLight& light,
-        Shader* depthShader, GpuResourceManager& resources);
+    //生成当前相机级联阴影。候选来自完整场景与全部显式实例，与主相机可见集合无关。
+    void Render(const RenderScene& scene, const List<InstanceSubmission>& submissions, const RenderCamera& camera,
+        const RenderDirectionalLight& light, Shader* depthShader, GpuResourceManager& resources,
+        DrawBatchBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats);
     //绑定当前相机阴影查询参数
     void BindUniforms(const RenderCamera& camera);
 

@@ -282,6 +282,8 @@ internal sealed class InspectorPanel : EditorPanel
     private void UnloadReflectionAssembly()
     {
         CustomEditorRegistry.Clear();
+        //Clear 之后立刻恢复内置编辑器：没有游戏程序集或游戏脚本编译失败时也要能编辑原生组件
+        CustomEditorRegistry.RegisterBuiltins();
         ClearPropertyDocuments();
         addChoices.Clear();
         addChoicesDirty = true;

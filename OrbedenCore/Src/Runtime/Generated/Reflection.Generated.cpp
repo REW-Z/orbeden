@@ -11,9 +11,11 @@
 #include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/HeightField.h"
+#include "Runtime/Object/InstanceDrawList.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Object.h"
+#include "Runtime/Object/ParticleSystem.h"
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/Script.h"
 #include "Runtime/Object/Shader.h"
@@ -2586,6 +2588,42 @@ public:
         return Reflection::Value();
     }
 
+    //调用 InstanceDrawList.GetInstanceCount 方法
+    static Reflection::Value Invoke_InstanceDrawList_GetInstanceCount_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetInstanceCount();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 InstanceDrawList.Submit 方法
+    static Reflection::Value Invoke_InstanceDrawList_Submit_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->Submit();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 InstanceDrawList.Clear 方法
+    static Reflection::Value Invoke_InstanceDrawList_Clear_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->Clear();
+        success = true;
+        return Reflection::Value();
+    }
+
     //读取 Material.name 字段
     static std::string Get_Material_name(Object* object)
     {
@@ -2947,6 +2985,435 @@ public:
         auto result = instance->RefreshNormals();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //读取 ParticleSystem.mesh 字段
+    static std::string Get_ParticleSystem_mesh(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->mesh);
+    }
+
+    //直接读取 ParticleSystem.mesh 字段
+    static Reflection::Value GetValue_ParticleSystem_mesh(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->mesh) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.mesh 字段
+    static bool Set_ParticleSystem_mesh(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->mesh, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.mesh 字段
+    static bool SetValue_ParticleSystem_mesh(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->mesh, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.materials 字段
+    static std::string Get_ParticleSystem_materials(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->materials);
+    }
+
+    //直接读取 ParticleSystem.materials 字段
+    static Reflection::Value GetValue_ParticleSystem_materials(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->materials) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.materials 字段
+    static bool Set_ParticleSystem_materials(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->materials, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.materials 字段
+    static bool SetValue_ParticleSystem_materials(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->materials, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.materials 槽位数
+    static int32 Size_ParticleSystem_materials(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? static_cast<int32>(std::size(instance->materials)) : 0;
+    }
+
+    //改写 ParticleSystem.materials 槽位数
+    static bool Resize_ParticleSystem_materials(Object* object, int32 count)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || count < 0) return false;
+        if (!Reflection::ResizeArray(instance->materials, count)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.trailMaterial 字段
+    static std::string Get_ParticleSystem_trailMaterial(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->trailMaterial);
+    }
+
+    //直接读取 ParticleSystem.trailMaterial 字段
+    static Reflection::Value GetValue_ParticleSystem_trailMaterial(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->trailMaterial) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.trailMaterial 字段
+    static bool Set_ParticleSystem_trailMaterial(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->trailMaterial, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.trailMaterial 字段
+    static bool SetValue_ParticleSystem_trailMaterial(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->trailMaterial, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.subEmitterTargets 字段
+    static std::string Get_ParticleSystem_subEmitterTargets(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ArrayToXmlValue(instance->subEmitterTargets);
+    }
+
+    //直接读取 ParticleSystem.subEmitterTargets 字段
+    static Reflection::Value GetValue_ParticleSystem_subEmitterTargets(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::Value(Reflection::ArrayToXmlValue(instance->subEmitterTargets)) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.subEmitterTargets 字段
+    static bool Set_ParticleSystem_subEmitterTargets(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetArrayFromXmlValue(instance->subEmitterTargets, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.subEmitterTargets 字段
+    static bool SetValue_ParticleSystem_subEmitterTargets(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        return Set_ParticleSystem_subEmitterTargets(object, value.ToString());
+    }
+
+    //读取 ParticleSystem.subEmitterTargets 槽位数
+    static int32 Size_ParticleSystem_subEmitterTargets(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? static_cast<int32>(std::size(instance->subEmitterTargets)) : 0;
+    }
+
+    //改写 ParticleSystem.subEmitterTargets 槽位数
+    static bool Resize_ParticleSystem_subEmitterTargets(Object* object, int32 count)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || count < 0) return false;
+        if (!Reflection::ResizeArray(instance->subEmitterTargets, count)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.drawLayer 字段
+    static std::string Get_ParticleSystem_drawLayer(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->drawLayer);
+    }
+
+    //直接读取 ParticleSystem.drawLayer 字段
+    static Reflection::Value GetValue_ParticleSystem_drawLayer(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->drawLayer) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.drawLayer 字段
+    static bool Set_ParticleSystem_drawLayer(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->drawLayer, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.drawLayer 字段
+    static bool SetValue_ParticleSystem_drawLayer(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->drawLayer, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.castShadows 字段
+    static std::string Get_ParticleSystem_castShadows(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->castShadows);
+    }
+
+    //直接读取 ParticleSystem.castShadows 字段
+    static Reflection::Value GetValue_ParticleSystem_castShadows(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->castShadows) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.castShadows 字段
+    static bool Set_ParticleSystem_castShadows(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->castShadows, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.castShadows 字段
+    static bool SetValue_ParticleSystem_castShadows(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->castShadows, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //读取 ParticleSystem.receiveShadows 字段
+    static std::string Get_ParticleSystem_receiveShadows(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return Reflection::ToXmlValue(instance->receiveShadows);
+    }
+
+    //直接读取 ParticleSystem.receiveShadows 字段
+    static Reflection::Value GetValue_ParticleSystem_receiveShadows(Object* object)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return instance ? Reflection::ToValue(instance->receiveShadows) : Reflection::Value();
+    }
+
+    //写入 ParticleSystem.receiveShadows 字段
+    static bool Set_ParticleSystem_receiveShadows(Object* object, const std::string& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!Reflection::SetFromXmlValue(instance->receiveShadows, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //直接写入 ParticleSystem.receiveShadows 字段
+    static bool SetValue_ParticleSystem_receiveShadows(Object* object, const Reflection::Value& value)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance) return false;
+        if (!Reflection::SetFromValue(instance->receiveShadows, value)) return false;
+        instance->OnConfigurationChanged();
+        return true;
+    }
+
+    //调用 ParticleSystem.GetEnabled 方法
+    static Reflection::Value Invoke_ParticleSystem_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetEnabled();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 ParticleSystem.SetEnabled 方法
+    static Reflection::Value Invoke_ParticleSystem_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetEnabled(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.GetConfigurationRevision 方法
+    static Reflection::Value Invoke_ParticleSystem_GetConfigurationRevision_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetConfigurationRevision();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 ParticleSystem.OnConfigurationChanged 方法
+    static Reflection::Value Invoke_ParticleSystem_OnConfigurationChanged_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnConfigurationChanged();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.GetLastError 方法
+    static Reflection::Value Invoke_ParticleSystem_GetLastError_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLastError();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 ParticleSystem.Play 方法
+    static Reflection::Value Invoke_ParticleSystem_Play_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->Play(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.Pause 方法
+    static Reflection::Value Invoke_ParticleSystem_Pause_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->Pause();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.Stop 方法
+    static Reflection::Value Invoke_ParticleSystem_Stop_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->Stop(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.Clear 方法
+    static Reflection::Value Invoke_ParticleSystem_Clear_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->Clear();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.Emit 方法
+    static Reflection::Value Invoke_ParticleSystem_Emit_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        uint32 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        auto result = instance->Emit(arg0);
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 ParticleSystem.OnAttach 方法
+    static Reflection::Value Invoke_ParticleSystem_OnAttach_10(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnAttach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.OnDetach 方法
+    static Reflection::Value Invoke_ParticleSystem_OnDetach_11(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->OnDetach();
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 ParticleSystem.OnWorldActiveChanged 方法
+    static Reflection::Value Invoke_ParticleSystem_OnWorldActiveChanged_12(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        bool arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->OnWorldActiveChanged(arg0);
+        success = true;
+        return Reflection::Value();
     }
 
     //读取 RigidBody.enabled 字段
@@ -3889,6 +4356,35 @@ public:
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->receiveShadows, value);
+    }
+
+    //读取 StaticMeshRenderer.enableInstancing 字段
+    static std::string Get_StaticMeshRenderer_enableInstancing(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::ToXmlValue(instance->enableInstancing);
+    }
+
+    //直接读取 StaticMeshRenderer.enableInstancing 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_enableInstancing(Object* object)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return instance ? Reflection::ToValue(instance->enableInstancing) : Reflection::Value();
+    }
+
+    //写入 StaticMeshRenderer.enableInstancing 字段
+    static bool Set_StaticMeshRenderer_enableInstancing(Object* object, const std::string& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return Reflection::SetFromXmlValue(instance->enableInstancing, value);
+    }
+
+    //直接写入 StaticMeshRenderer.enableInstancing 字段
+    static bool SetValue_StaticMeshRenderer_enableInstancing(Object* object, const Reflection::Value& value)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->enableInstancing, value);
     }
 
     //调用 StaticMeshRenderer.GetEnabled 方法
@@ -5114,6 +5610,22 @@ namespace Reflection
                 MethodInfo("SyncPendingGeneration", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_SyncPendingGeneration_5),
             });
 
+        RegisterTypeFields(InstanceDrawList::StaticType(),
+            {
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Material", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("subMeshIndex", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("options", "InstanceDrawOptions", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("instances", "List<MeshInstanceData>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+            });
+
+        RegisterTypeMethods(InstanceDrawList::StaticType(),
+            {
+                MethodInfo("GetInstanceCount", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_GetInstanceCount_0),
+                MethodInfo("Submit", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Submit_1),
+                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Clear_2),
+            });
+
         RegisterTypeFields(Material::StaticType(),
             {
                 FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5174,6 +5686,38 @@ namespace Reflection
 
         RegisterTypeMethods(Orbeden::Object::StaticType(),
             {
+            });
+
+        RegisterTypeFields(ParticleSystem::StaticType(),
+            {
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("settings", "ParticleSettings", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("configurationRevision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("lastError", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_mesh, ReflectionGeneratedAccess::Set_ParticleSystem_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ParticleSystem_mesh, ReflectionGeneratedAccess::SetValue_ParticleSystem_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_ParticleSystem_materials, ReflectionGeneratedAccess::Set_ParticleSystem_materials, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_materials, ReflectionGeneratedAccess::SetValue_ParticleSystem_materials, ReflectionGeneratedAccess::Size_ParticleSystem_materials, ReflectionGeneratedAccess::Resize_ParticleSystem_materials, Reflection::FieldKind::ObjectRef, false),
+                FieldInfo("trailMaterial", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::Set_ParticleSystem_trailMaterial, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::SetValue_ParticleSystem_trailMaterial, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("subEmitterTargets", "std::array<EnsId,16>", Reflection::FieldKind::Array, true, ReflectionGeneratedAccess::Get_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Set_ParticleSystem_subEmitterTargets, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::SetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Size_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Resize_ParticleSystem_subEmitterTargets, Reflection::FieldKind::EnsId, true),
+                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ParticleSystem_drawLayer, ReflectionGeneratedAccess::Set_ParticleSystem_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_drawLayer, ReflectionGeneratedAccess::SetValue_ParticleSystem_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_castShadows, ReflectionGeneratedAccess::Set_ParticleSystem_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_castShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::Set_ParticleSystem_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+            });
+
+        RegisterTypeMethods(ParticleSystem::StaticType(),
+            {
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetEnabled_0),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_SetEnabled_1),
+                MethodInfo("GetConfigurationRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetConfigurationRevision_2),
+                MethodInfo("OnConfigurationChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnConfigurationChanged_3),
+                MethodInfo("GetLastError", "std::string", Reflection::ValueKind::String, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetLastError_4),
+                MethodInfo("Play", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("restart", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Play_5),
+                MethodInfo("Pause", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Pause_6),
+                MethodInfo("Stop", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("clear", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Stop_7),
+                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Clear_8),
+                MethodInfo("Emit", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>{ ParameterInfo("count", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Emit_9),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnAttach_10),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnDetach_11),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_OnWorldActiveChanged_12),
             });
 
         RegisterTypeFields(RigidBody::StaticType(),
@@ -5251,6 +5795,7 @@ namespace Reflection
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enableInstancing", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enableInstancing, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enableInstancing, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enableInstancing, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enableInstancing, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),

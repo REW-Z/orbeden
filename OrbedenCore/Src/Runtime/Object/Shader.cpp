@@ -105,6 +105,8 @@ namespace
         return IsBuiltinTextureUniform(uniformName)
             || StartsWith(uniformName, "u_Shadow")
             || uniformName == "u_Model"
+            || uniformName == "u_InstanceTint"
+            || uniformName == "u_InstanceUvRect"
             || uniformName == "u_ViewProjection"
             || uniformName == "u_LightViewProjection"
             || uniformName == "u_CameraPosition"

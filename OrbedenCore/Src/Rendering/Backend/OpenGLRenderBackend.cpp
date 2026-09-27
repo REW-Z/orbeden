@@ -1,6 +1,7 @@
 #include "Rendering/Backend/OpenGLRenderBackend.h"
 
 #include "Log/Log.h"
+#include "Rendering/DrawBatchBuilder.h"
 #include <glad/gl.h>
 
 #include <string>
@@ -42,14 +43,20 @@ namespace
         return value ? reinterpret_cast<const char*>(value) : "unknown";
     }
 
+    //GLsizei 能表达的最大元素或实例数量上界
+    constexpr uint32 MaxGlSizei = 0x7FFFFFFFu;
+
     uint32 CreateOpenGLBuffer(GLenum target, const GpuBufferDesc& desc)
     {
-        if (!desc.data || desc.size == 0) return 0;
+        if (desc.size == 0) return 0;
+        //静态缓冲必须一次给足数据；流式缓冲允许只按容量分配，之后由流式上传填充。
+        if (!desc.data && desc.usage != GpuBufferUsage::Stream) return 0;
 
         GLuint id = 0;
         glGenBuffers(1, &id);
         glBindBuffer(target, id);
-        glBufferData(target, static_cast<GLsizeiptr>(desc.size), desc.data, GL_STATIC_DRAW);
+        glBufferData(target, static_cast<GLsizeiptr>(desc.size), desc.data,
+            desc.usage == GpuBufferUsage::Stream ? GL_STREAM_DRAW : GL_STATIC_DRAW);
         glBindBuffer(target, 0);
         return id;
     }
@@ -159,9 +166,23 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     depthWriteEnabled = true;
     blendEnabled = true;
     cullMode = CullMode::None;
+    blendMode = BlendMode::Alpha;
+    boundInstanceBuffer = GpuVertexBufferID();
+    boundInstanceOffset = 0;
     boundTexture2Ds.clear();
     boundCubeTextures.clear();
     uniformLocations.clear();
+
+    //实例化能力在此判定一次：网格顶点 4 个属性加实例属性 10 个，共需 14 个 attribute 槽位。
+    instancingSupported = false;
+    GLint maxVertexAttributes = 0;
+    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttributes);
+    instancingSupported = maxVertexAttributes >= 14;
+    if (!instancingSupported)
+    {
+        Log::Warning("OpenGL backend: GL_MAX_VERTEX_ATTRIBS is below 14, instanced drawing is disabled.");
+    }
+
     LogOpenGLError("OpenGLRenderBackend::Initialize");
     return true;
 }
@@ -190,8 +211,11 @@ void OpenGLRenderBackend::Shutdown()
 
     renderTargetColorAttachments.clear();
     indexBufferCounts.clear();
+    vertexBufferCapacities.clear();
+    indexBufferCapacities.clear();
     vertexInputIndexBuffers.clear();
     vertexInputIndexCounts.clear();
+    vertexInputLayouts.clear();
     boundTexture2Ds.clear();
     boundCubeTextures.clear();
     uniformLocations.clear();
@@ -202,10 +226,16 @@ void OpenGLRenderBackend::Shutdown()
     depthWriteEnabled = false;
     blendEnabled = false;
     cullMode = CullMode::None;
+    blendMode = BlendMode::Alpha;
+    boundInstanceBuffer = GpuVertexBufferID();
+    boundInstanceOffset = 0;
+    instancingSupported = false;
 }
 
 void OpenGLRenderBackend::BeginFrame()
 {
+    //每帧基线是普通 Alpha 混合，避免上一帧的加法方程污染天空盒、描边与 GUI。
+    SetBlendMode(BlendMode::Alpha);
 }
 
 void OpenGLRenderBackend::EndFrame()
@@ -251,11 +281,15 @@ void OpenGLRenderBackend::EndPass()
 
 GpuVertexBufferID OpenGLRenderBackend::CreateVertexBuffer(const GpuBufferDesc& desc)
 {
-    return { CreateOpenGLBuffer(GL_ARRAY_BUFFER, desc) };
+    uint32 id = CreateOpenGLBuffer(GL_ARRAY_BUFFER, desc);
+    if (id != 0) vertexBufferCapacities[id] = desc.size;
+    return { id };
 }
 
 void OpenGLRenderBackend::DeleteVertexBuffer(GpuVertexBufferID id)
 {
+    vertexBufferCapacities.erase(id.id);
+    if (boundInstanceBuffer.id == id.id) boundInstanceBuffer = GpuVertexBufferID();
     DeleteOpenGLBuffer(id.id);
 }
 
@@ -265,6 +299,7 @@ GpuIndexBufferID OpenGLRenderBackend::CreateIndexBuffer(const GpuBufferDesc& des
     if (id != 0)
     {
         indexBufferCounts[id] = static_cast<uint32>(desc.size / sizeof(uint32));
+        indexBufferCapacities[id] = desc.size;
     }
     return { id };
 }
@@ -272,6 +307,7 @@ GpuIndexBufferID OpenGLRenderBackend::CreateIndexBuffer(const GpuBufferDesc& des
 void OpenGLRenderBackend::DeleteIndexBuffer(GpuIndexBufferID id)
 {
     indexBufferCounts.erase(id.id);
+    indexBufferCapacities.erase(id.id);
     DeleteOpenGLBuffer(id.id);
 }
 
@@ -282,25 +318,52 @@ GpuVertexInputID OpenGLRenderBackend::CreateVertexInput(const GpuVertexInputDesc
     auto indexCountIt = indexBufferCounts.find(desc.indexBuffer.id);
     if (indexCountIt == indexBufferCounts.end() || indexCountIt->second == 0) return GpuVertexInputID();
 
+    //展开顶点固定 5 个属性，最大的属性在偏移 44、长 16 字节，步长必须容得下整条记录。
+    if (desc.layout == GpuVertexLayout::Expanded && desc.stride < static_cast<uint32>(sizeof(float32) * 15))
+    {
+        Log::Error("OpenGL vertex input creation failed: expanded layout stride is too small.");
+        return GpuVertexInputID();
+    }
+
     GLuint id = 0;
     glGenVertexArrays(1, &id);
     glBindVertexArray(id);
     glBindBuffer(GL_ARRAY_BUFFER, desc.vertexBuffer.id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, desc.indexBuffer.id);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 3));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 6));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 8));
-    glEnableVertexAttribArray(3);
+    if (desc.layout == GpuVertexLayout::Expanded)
+    {
+        //展开顶点已经是世界空间，只读自己的顶点缓冲，不引用实例缓冲。
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(12));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(24));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(32));
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(44));
+        glEnableVertexAttribArray(4);
+    }
+    else
+    {
+        //网格顶点属性。实例布局在这里只建立这一半，实例属性留给 BindInstanceBuffer，
+        //普通 Mesh 布局也不会被 divisor 污染：两种布局使用各自的 VAO。
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 3));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 6));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 8));
+        glEnableVertexAttribArray(3);
+    }
 
     glBindVertexArray(currentVertexInput.id);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     vertexInputIndexBuffers[id] = desc.indexBuffer.id;
     vertexInputIndexCounts[id] = indexCountIt->second;
+    vertexInputLayouts[id] = desc.layout;
     return { id };
 }
 
@@ -312,10 +375,12 @@ void OpenGLRenderBackend::DeleteVertexInput(GpuVertexInputID id)
     {
         glBindVertexArray(0);
         currentVertexInput = GpuVertexInputID();
+        boundInstanceBuffer = GpuVertexBufferID();
     }
 
     vertexInputIndexBuffers.erase(id.id);
     vertexInputIndexCounts.erase(id.id);
+    vertexInputLayouts.erase(id.id);
     GLuint vertexInput = id.id;
     glDeleteVertexArrays(1, &vertexInput);
 }
@@ -633,6 +698,9 @@ void OpenGLRenderBackend::BindVertexInput(GpuVertexInputID id)
     if (currentVertexInput.id == id.id) return;
 
     currentVertexInput = id;
+    //实例 attribute 属于 VAO 自身状态，换 VAO 后原来的实例缓冲只对旧 VAO 有效。
+    boundInstanceBuffer = GpuVertexBufferID();
+    boundInstanceOffset = 0;
     glBindVertexArray(id.id);
 }
 
@@ -757,6 +825,24 @@ void OpenGLRenderBackend::SetBlend(bool enabled)
     blendEnabled = enabled;
 }
 
+//设置混合方程，RGB 与 Alpha 因子分开指定
+void OpenGLRenderBackend::SetBlendMode(BlendMode mode)
+{
+    if (blendMode == mode) return;
+
+    if (mode == BlendMode::Additive)
+    {
+        //加法混合的 Alpha 不累加，目标覆盖率保持不变，否则叠加后会溢出成不透明。
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+    }
+    else
+    {
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    blendMode = mode;
+}
+
 //设置正面、背面或关闭三角形剔除
 void OpenGLRenderBackend::SetCullMode(CullMode mode)
 {
@@ -802,6 +888,281 @@ void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
 
     const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset);
+}
+
+//实例布局的每条实例记录字节数
+uint32 OpenGLRenderBackend::GetInstanceRecordSize(GpuVertexLayout layout)
+{
+    if (layout == GpuVertexLayout::InstancedMesh) return static_cast<uint32>(sizeof(GpuMeshInstance));
+    if (layout == GpuVertexLayout::InstancedTrail) return static_cast<uint32>(sizeof(GpuTrailInstance));
+    return 0;
+}
+
+//实例化绘制的范围校验
+bool OpenGLRenderBackend::ValidateInstancedRange(uint32 indexStart, uint32 indexCount, uint32 instanceCount)
+{
+    if (!currentVertexInput.IsValid())
+    {
+        Log::Error("OpenGL instanced draw skipped: no vertex input is bound.");
+        return false;
+    }
+    if (!currentShaderProgram.IsValid())
+    {
+        Log::Error("OpenGL instanced draw skipped: no shader program is bound.");
+        return false;
+    }
+    //零数量是空操作，不属于错误。
+    if (indexCount == 0 || instanceCount == 0) return false;
+
+    auto countIt = vertexInputIndexCounts.find(currentVertexInput.id);
+    if (countIt != vertexInputIndexCounts.end())
+    {
+        usize start = static_cast<usize>(indexStart);
+        usize count = static_cast<usize>(indexCount);
+        usize available = static_cast<usize>(countIt->second);
+        if (start > available || count > available - start)
+        {
+            Log::Error("OpenGL instanced draw skipped: index range exceeds index buffer.");
+            return false;
+        }
+    }
+
+    //实例属性按整条记录读取，缺最后一条也要拒绝，不能读越界存储。
+    GpuVertexLayout layout = GpuVertexLayout::Mesh;
+    auto layoutIt = vertexInputLayouts.find(currentVertexInput.id);
+    if (layoutIt != vertexInputLayouts.end()) layout = layoutIt->second;
+
+    uint32 recordSize = GetInstanceRecordSize(layout);
+    if (recordSize != 0)
+    {
+        if (!boundInstanceBuffer.IsValid())
+        {
+            Log::Error("OpenGL instanced draw skipped: instance buffer is not bound.");
+            return false;
+        }
+
+        auto capacityIt = vertexBufferCapacities.find(boundInstanceBuffer.id);
+        if (capacityIt == vertexBufferCapacities.end())
+        {
+            Log::Error("OpenGL instanced draw skipped: instance buffer capacity is unknown.");
+            return false;
+        }
+
+        usize required = boundInstanceOffset + static_cast<usize>(instanceCount) * static_cast<usize>(recordSize);
+        if (required > capacityIt->second)
+        {
+            Log::Error("OpenGL instanced draw skipped: instance range exceeds instance buffer.");
+            return false;
+        }
+    }
+
+    if (indexStart > MaxGlSizei || indexCount > MaxGlSizei || instanceCount > MaxGlSizei)
+    {
+        Log::Error("OpenGL instanced draw skipped: count exceeds GLsizei range.");
+        return false;
+    }
+
+    return true;
+}
+
+//实例化索引绘制
+void OpenGLRenderBackend::DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount)
+{
+    if (!ValidateInstancedRange(indexStart, indexCount, instanceCount)) return;
+
+    const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
+    glDrawElementsInstanced(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset,
+        static_cast<GLsizei>(instanceCount));
+}
+
+//实例化能力查询
+bool OpenGLRenderBackend::SupportsInstancing() const
+{
+    return instancingSupported;
+}
+
+//流式更新顶点缓冲
+bool OpenGLRenderBackend::UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity)
+{
+    if (!id.IsValid())
+    {
+        Log::Error("OpenGL vertex buffer upload skipped: buffer id is invalid.");
+        return false;
+    }
+
+    return WriteVertexBuffer(id.id, data, size, capacity);
+}
+
+//流式更新索引缓冲
+bool OpenGLRenderBackend::UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity)
+{
+    if (!id.IsValid())
+    {
+        Log::Error("OpenGL index buffer upload skipped: buffer id is invalid.");
+        return false;
+    }
+
+    return WriteIndexBuffer(id.id, data, count, capacity);
+}
+
+//按容量写入顶点缓冲数据
+bool OpenGLRenderBackend::WriteVertexBuffer(uint32 buffer, const void* data, usize size, usize capacity)
+{
+    if (size > capacity || (size != 0 && !data))
+    {
+        Log::Error("OpenGL vertex buffer upload rejected: size exceeds capacity or the data pointer is null.");
+        return false;
+    }
+
+    auto capacityIt = vertexBufferCapacities.find(buffer);
+    if (capacityIt == vertexBufferCapacities.end())
+    {
+        Log::Error("OpenGL vertex buffer upload rejected: the buffer is not managed by this backend.");
+        return false;
+    }
+
+    GLint previousBuffer = 0;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previousBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    //orphan 之后整块重新分配，驱动不必等待上一批绘制读完旧存储。
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(capacity), nullptr, GL_STREAM_DRAW);
+    if (size != 0) glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(size), data);
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(previousBuffer));
+
+    capacityIt->second = capacity;
+    return true;
+}
+
+//按容量写入索引缓冲数据，并刷新引用它的顶点输入缓存
+bool OpenGLRenderBackend::WriteIndexBuffer(uint32 buffer, const uint32* data, uint32 count, uint32 capacity)
+{
+    if (count > capacity || (count != 0 && !data))
+    {
+        Log::Error("OpenGL index buffer upload rejected: count exceeds capacity or the data pointer is null.");
+        return false;
+    }
+
+    auto capacityIt = indexBufferCapacities.find(buffer);
+    if (capacityIt == indexBufferCapacities.end())
+    {
+        Log::Error("OpenGL index buffer upload rejected: the buffer is not managed by this backend.");
+        return false;
+    }
+
+    //索引缓冲与顶点缓冲共用缓冲对象。这里绑到 GL_ARRAY_BUFFER 覆盖内容，
+    //避免改动当前 VAO 记录的 GL_ELEMENT_ARRAY_BUFFER。
+    usize byteCapacity = static_cast<usize>(capacity) * sizeof(uint32);
+    GLint previousBuffer = 0;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previousBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(byteCapacity), nullptr, GL_STREAM_DRAW);
+    if (count != 0) glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(static_cast<usize>(count) * sizeof(uint32)), data);
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(previousBuffer));
+
+    capacityIt->second = byteCapacity;
+    indexBufferCounts[buffer] = count;
+    //引用同一索引缓冲的顶点输入必须同步索引数量，否则绘制范围校验会用旧值。
+    for (const auto& pair : vertexInputIndexBuffers)
+    {
+        if (pair.second == buffer) vertexInputIndexCounts[pair.first] = count;
+    }
+    return true;
+}
+
+//按当前顶点输入的实例布局绑定实例缓冲
+bool OpenGLRenderBackend::BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset)
+{
+    if (!currentVertexInput.IsValid() || !id.IsValid())
+    {
+        Log::Error("OpenGL instance buffer bind skipped: vertex input or buffer id is invalid.");
+        return false;
+    }
+
+    GpuVertexLayout layout = GpuVertexLayout::Mesh;
+    auto layoutIt = vertexInputLayouts.find(currentVertexInput.id);
+    if (layoutIt != vertexInputLayouts.end()) layout = layoutIt->second;
+
+    uint32 recordSize = GetInstanceRecordSize(layout);
+    if (recordSize == 0)
+    {
+        Log::Error("OpenGL instance buffer bind skipped: the bound vertex input is not an instanced layout.");
+        return false;
+    }
+    if (byteOffset % sizeof(float32) != 0)
+    {
+        Log::Error("OpenGL instance buffer bind skipped: offset is not 4-byte aligned.");
+        return false;
+    }
+
+    auto capacityIt = vertexBufferCapacities.find(id.id);
+    if (capacityIt == vertexBufferCapacities.end() || byteOffset > capacityIt->second)
+    {
+        Log::Error("OpenGL instance buffer bind skipped: the buffer is unknown or the offset exceeds its capacity.");
+        return false;
+    }
+
+    GLint previousBuffer = 0;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previousBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, id.id);
+
+    if (layout == GpuVertexLayout::InstancedMesh)
+    {
+        //模型四列，零平移偏移在 OrbedenGetModel 里由填充列补足。
+        for (uint32 column = 0; column < 4; ++column)
+        {
+            uint32 location = 5 + column;
+            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
+                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + column * 16)));
+            glEnableVertexAttribArray(location);
+            glVertexAttribDivisor(location, 1);
+        }
+        //法线三列，每列补齐到 vec4。
+        for (uint32 column = 0; column < 3; ++column)
+        {
+            uint32 location = 9 + column;
+            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
+                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 64 + column * 16)));
+            glEnableVertexAttribArray(location);
+            glVertexAttribDivisor(location, 1);
+        }
+        glVertexAttribPointer(12, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 112)));
+        glEnableVertexAttribArray(12);
+        glVertexAttribDivisor(12, 1);
+        glVertexAttribPointer(13, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 128)));
+        glEnableVertexAttribArray(13);
+        glVertexAttribDivisor(13, 1);
+    }
+    else
+    {
+        //拖尾：四个角点、两端颜色、uv 区间。
+        for (uint32 corner = 0; corner < 4; ++corner)
+        {
+            uint32 location = 5 + corner;
+            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
+                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + corner * 16)));
+            glEnableVertexAttribArray(location);
+            glVertexAttribDivisor(location, 1);
+        }
+        glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 64)));
+        glEnableVertexAttribArray(9);
+        glVertexAttribDivisor(9, 1);
+        glVertexAttribPointer(10, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 80)));
+        glEnableVertexAttribArray(10);
+        glVertexAttribDivisor(10, 1);
+        glVertexAttribPointer(11, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 96)));
+        glEnableVertexAttribArray(11);
+        glVertexAttribDivisor(11, 1);
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(previousBuffer));
+    boundInstanceBuffer = id;
+    boundInstanceOffset = byteOffset;
+    return true;
 }
 
 void OpenGLRenderBackend::ActivateTextureSlot(uint32 slot)

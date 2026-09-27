@@ -1,0 +1,107 @@
+//几何 ABI 输入。顶点着色器包含本文件后，按 ORBEDEN_GEOMETRY_MODE 选择顶点数据来源。
+//0 = Uniform 单绘制，1 = 实例绘制，2 = 展开顶点，3 = 拖尾实例。
+//宏由着色器导入在 #version 之后注入；单独编译本文件时按单绘制处理。
+#ifndef ORBEDEN_GEOMETRY_MODE
+#define ORBEDEN_GEOMETRY_MODE 0
+#endif
+
+#if ORBEDEN_GEOMETRY_MODE == 0
+uniform mat4 u_Model;
+//管线显式绑定的每批 tint 与图集变换，不依赖 GL 的 uniform 默认值
+uniform vec4 u_InstanceTint;
+uniform vec4 u_InstanceUvRect;
+#elif ORBEDEN_GEOMETRY_MODE == 1
+layout(location = 5) in vec4 a_InstanceModel0;
+layout(location = 6) in vec4 a_InstanceModel1;
+layout(location = 7) in vec4 a_InstanceModel2;
+layout(location = 8) in vec4 a_InstanceModel3;
+layout(location = 9) in vec4 a_InstanceNormal0;
+layout(location = 10) in vec4 a_InstanceNormal1;
+layout(location = 11) in vec4 a_InstanceNormal2;
+layout(location = 12) in vec4 a_InstanceTint;
+layout(location = 13) in vec4 a_InstanceUvRect;
+#elif ORBEDEN_GEOMETRY_MODE == 2
+layout(location = 4) in vec4 a_ExpandedTint;
+#else
+layout(location = 5) in vec4 a_TrailCorner0;
+layout(location = 6) in vec4 a_TrailCorner1;
+layout(location = 7) in vec4 a_TrailCorner2;
+layout(location = 8) in vec4 a_TrailCorner3;
+layout(location = 9) in vec4 a_TrailStartColor;
+layout(location = 10) in vec4 a_TrailEndColor;
+layout(location = 11) in vec4 a_TrailUvRange;
+#endif
+
+//世界矩阵。展开顶点已是世界空间，拖尾实例不用模型矩阵。
+mat4 OrbedenGetModel()
+{
+#if ORBEDEN_GEOMETRY_MODE == 0
+    return u_Model;
+#elif ORBEDEN_GEOMETRY_MODE == 1
+    return mat4(a_InstanceModel0, a_InstanceModel1, a_InstanceModel2, a_InstanceModel3);
+#else
+    return mat4(1.0);
+#endif
+}
+
+//法线矩阵。单绘制由模型矩阵求逆转置，实例绘制读 CPU 求好的三列。
+mat3 OrbedenGetNormalMatrix()
+{
+#if ORBEDEN_GEOMETRY_MODE == 0
+    return transpose(inverse(mat3(u_Model)));
+#elif ORBEDEN_GEOMETRY_MODE == 1
+    return mat3(a_InstanceNormal0.xyz, a_InstanceNormal1.xyz, a_InstanceNormal2.xyz);
+#else
+    return mat3(1.0);
+#endif
+}
+
+//每实例或每粒子的 tint，已经是线性空间
+vec4 OrbedenGetTint()
+{
+#if ORBEDEN_GEOMETRY_MODE == 0
+    return u_InstanceTint;
+#elif ORBEDEN_GEOMETRY_MODE == 1
+    return a_InstanceTint;
+#elif ORBEDEN_GEOMETRY_MODE == 2
+    return a_ExpandedTint;
+#else
+    return vec4(1.0);
+#endif
+}
+
+//图集 UV 变换。展开顶点在 CPU 已经变换完成，这里原样返回。
+vec2 OrbedenGetUv(vec2 uv)
+{
+#if ORBEDEN_GEOMETRY_MODE == 0
+    return uv * u_InstanceUvRect.zw + u_InstanceUvRect.xy;
+#elif ORBEDEN_GEOMETRY_MODE == 1
+    return uv * a_InstanceUvRect.zw + a_InstanceUvRect.xy;
+#else
+    return uv;
+#endif
+}
+
+//拖尾角点位置。非拖尾模式退回普通顶点，保证所有声明变体都能编译。
+vec3 OrbedenGetTrailPosition(vec2 uv)
+{
+#if ORBEDEN_GEOMETRY_MODE == 3
+    vec4 startCorner = mix(a_TrailCorner0, a_TrailCorner1, uv.x);
+    vec4 endCorner = mix(a_TrailCorner3, a_TrailCorner2, uv.x);
+    return mix(startCorner, endCorner, uv.y).xyz;
+#else
+    return (OrbedenGetModel() * vec4(a_Position, 1.0)).xyz;
+#endif
+}
+
+//拖尾颜色，沿长度在两端颜色之间插值
+vec4 OrbedenGetTrailColor(vec2 uv)
+{
+#if ORBEDEN_GEOMETRY_MODE == 3
+    return mix(a_TrailStartColor, a_TrailEndColor, uv.y);
+#elif ORBEDEN_GEOMETRY_MODE == 2
+    return a_ExpandedTint;
+#else
+    return OrbedenGetTint();
+#endif
+}

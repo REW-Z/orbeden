@@ -66,6 +66,8 @@ public static class EditorRuntime
             EditorNativeComponents.Initialize(api.Components);
             EditorAssetCatalog.Instance.Refresh();
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
+            //内置组件编辑器在初始化成功后就可用，不依赖游戏程序集
+            CustomEditorRegistry.RegisterBuiltins();
             return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
         }
         catch (Exception ex)
@@ -370,15 +372,15 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 78);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 13);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 81);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 17);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 5);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 155);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 162);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

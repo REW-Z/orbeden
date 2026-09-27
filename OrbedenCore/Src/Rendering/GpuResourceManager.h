@@ -20,6 +20,9 @@ public:
 
     //顶点输入布局以及顶点/索引缓冲。
     GpuVertexInputID vertexInput;
+    //实例绘制的顶点输入，与普通顶点输入共用同一份顶点/索引缓冲。
+    //实例 attribute 由 BindInstanceBuffer 在绘制前补上，普通 VAO 上不再切换 divisor。
+    GpuVertexInputID instancedVertexInput;
     GpuVertexBufferID vertexBuffer;
     GpuIndexBufferID indexBuffer;
 
@@ -33,13 +36,31 @@ public:
     }
 };
 
-//单个 Shader Pass 上传后的 GPU program 和固定功能状态
+//单个 Shader Pass 上传后的 GPU program 和固定功能状态。
+//每个几何变体各自拥有一个 program，句柄之间不互为别名。
 struct GpuShaderPass
 {
 public:
+    //Uniform 单绘制程序，Legacy/Standard/Particle 都有
     GpuShaderProgramID shaderProgram;
+    //实例绘制程序，Standard 与 Particle 才有
+    GpuShaderProgramID instancedProgram;
+    //展开顶点程序，只有 Particle 才有
+    GpuShaderProgramID expandedProgram;
+    //拖尾实例程序，只有 Particle 才有
+    GpuShaderProgramID trailInstancedProgram;
+    ShaderGeometryContract geometryContract = ShaderGeometryContract::Legacy;
     std::string name;
     ShaderPassState state;
+
+    //按几何模式取对应的 program，不可用时返回无效句柄
+    GpuShaderProgramID GetProgram(GeometryMode mode) const
+    {
+        if (mode == GeometryMode::Instanced) return instancedProgram;
+        if (mode == GeometryMode::Expanded) return expandedProgram;
+        if (mode == GeometryMode::TrailInstanced) return trailInstancedProgram;
+        return shaderProgram;
+    }
 };
 
 //Shader 上传到 GPU 后持有的有序 Pass
@@ -52,13 +73,18 @@ public:
 
     List<GpuShaderPass> passes;
 
-    //检查所有 Pass 的 shader program 是否有效
+    //按契约检查每个 Pass 声明支持的变体是否全部编译成功
     bool IsValid() const
     {
         if (passes.empty()) return false;
         for (const GpuShaderPass& pass : passes)
         {
             if (!pass.shaderProgram.IsValid()) return false;
+            //Legacy 只编译 uniform 单绘制，不要求不存在的变体
+            if (pass.geometryContract == ShaderGeometryContract::Legacy) continue;
+            if (!pass.instancedProgram.IsValid()) return false;
+            if (pass.geometryContract != ShaderGeometryContract::Particle) continue;
+            if (!pass.expandedProgram.IsValid() || !pass.trailInstancedProgram.IsValid()) return false;
         }
         return true;
     }

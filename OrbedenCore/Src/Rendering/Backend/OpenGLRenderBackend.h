@@ -31,11 +31,22 @@ private:
     DepthCompare depthCompare = DepthCompare::Less;
     bool polygonOffsetEnabled = false;
     CullMode cullMode = CullMode::None;
+    //实例化能力，初始化时按 GL_MAX_VERTEX_ATTRIBS 判定一次
+    bool instancingSupported = false;
+    //当前混合方程，BeginFrame 重设为 Alpha 基线
+    BlendMode blendMode = BlendMode::Alpha;
+    //当前顶点输入绑定的实例缓冲及其字节偏移，用于绘制前校验范围
+    GpuVertexBufferID boundInstanceBuffer;
+    usize boundInstanceOffset = 0;
     std::unordered_map<uint32, uint32> renderTargetColorAttachments;
     std::unordered_map<uint32, GpuRenderTargetFormat> renderTargetFormats;
     std::unordered_map<uint32, uint32> indexBufferCounts;
+    //顶点/索引缓冲的容量字节数，流式上传据此拒绝越界请求
+    std::unordered_map<uint32, usize> vertexBufferCapacities;
+    std::unordered_map<uint32, usize> indexBufferCapacities;
     std::unordered_map<uint32, uint32> vertexInputIndexBuffers;
     std::unordered_map<uint32, uint32> vertexInputIndexCounts;
+    std::unordered_map<uint32, GpuVertexLayout> vertexInputLayouts;
     std::unordered_map<uint32, uint32> boundTexture2Ds;
     std::unordered_map<uint32, uint32> boundCubeTextures;
     std::unordered_map<uint32, std::unordered_map<std::string, int32>> uniformLocations;
@@ -91,8 +102,15 @@ public:
     void SetDepthWrite(bool enabled) override;
     void SetPolygonOffset(bool enabled, float32 factor, float32 units) override;
     void SetBlend(bool enabled) override;
+    void SetBlendMode(BlendMode mode) override;
     void SetCullMode(CullMode mode) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
+    void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) override;
+
+    bool SupportsInstancing() const override;
+    bool UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity) override;
+    bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) override;
+    bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) override;
 
     /// <summary>在当前相机目标绘制世界空间调试线。</summary>
     void DrawLines(const List<DebugLine>& lines, const matrix4x4& viewProjection, uint32 layerMask);
@@ -102,4 +120,13 @@ private:
     void BindTexture2D(uint32 slot, uint32 texture);
     void InvalidateTexture2D(uint32 texture);
     int32 GetUniformLocation(const char* name);
+
+    //按容量分配或覆盖顶点缓冲存储
+    bool WriteVertexBuffer(uint32 buffer, const void* data, usize size, usize capacity);
+    //按容量分配或覆盖索引缓冲存储，并刷新引用它的顶点输入缓存
+    bool WriteIndexBuffer(uint32 buffer, const uint32* data, uint32 count, uint32 capacity);
+    //实例布局的每条实例记录字节数，非实例布局返回 0
+    static uint32 GetInstanceRecordSize(GpuVertexLayout layout);
+    //在实例化绘制前校验索引范围、实例缓冲范围和 GL 上界，失败时写入日志
+    bool ValidateInstancedRange(uint32 indexStart, uint32 indexCount, uint32 instanceCount);
 };

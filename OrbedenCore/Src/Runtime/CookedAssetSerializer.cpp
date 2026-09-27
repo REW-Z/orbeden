@@ -19,8 +19,8 @@
 namespace
 {
     constexpr char BlobMagic[4] = { 'O', 'R', 'B', 'O' };
-    //2：Texture2D 载荷增加 colorSpace 字段，位置式布局随之改变，旧产物必须失效。
-    constexpr uint32 BlobFormatTag = 2;
+    //3：Shader Pass 载荷增加 geometryContract 字段，位置式布局随之改变，旧产物必须失效。
+    constexpr uint32 BlobFormatTag = 3;
 
     //解析源文件磁盘路径，与 AssetPipeline 的 Key 解析保持一致
     std::string GetSourceFilePath(const std::string& sourceKey)
@@ -339,6 +339,8 @@ namespace
             writer.WriteValue(static_cast<uint32>(pass.state.depthWrite));
             writer.WriteValue(static_cast<uint32>(pass.state.blend));
             writer.WriteValue(static_cast<uint32>(pass.state.cull));
+            //几何契约紧跟剔除模式之后，位置式布局不能改动顺序
+            writer.WriteValue(static_cast<uint32>(pass.geometryContract));
             writer.WriteText(pass.vertexSource);
             writer.WriteText(pass.fragmentSource);
         }
@@ -368,18 +370,23 @@ namespace
             uint32 depthWrite = 0;
             uint32 blend = 0;
             uint32 cull = 0;
+            uint32 geometryContract = 0;
             if (!reader.ReadText(pass.name)) return false;
             if (!reader.ReadValue(depthTest)) return false;
             if (!reader.ReadValue(depthWrite)) return false;
             if (!reader.ReadValue(blend)) return false;
             if (!reader.ReadValue(cull)) return false;
+            if (!reader.ReadValue(geometryContract)) return false;
             if (!reader.ReadText(pass.vertexSource)) return false;
             if (!reader.ReadText(pass.fragmentSource)) return false;
+
+            if (geometryContract > static_cast<uint32>(ShaderGeometryContract::Particle)) return false;
 
             pass.state.depthTest = static_cast<ShaderPassToggle>(depthTest);
             pass.state.depthWrite = static_cast<ShaderPassToggle>(depthWrite);
             pass.state.blend = static_cast<ShaderPassToggle>(blend);
             pass.state.cull = static_cast<CullMode>(cull);
+            pass.geometryContract = static_cast<ShaderGeometryContract>(geometryContract);
         }
 
         //替换 Passes 会从源码重新反射材质槽位并刷新兼容源码

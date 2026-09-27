@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include "Physics/PhysicsTypes.h"
+#include "Rendering/InstanceDrawData.h"
 #include "Rendering/RenderTypes.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/CharacterController.h"
@@ -11,9 +12,11 @@
 #include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/HeightField.h"
+#include "Runtime/Object/InstanceDrawList.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Object.h"
+#include "Runtime/Object/ParticleSystem.h"
 #include "Runtime/Object/RigidBody.h"
 #include "Runtime/Object/Script.h"
 #include "Runtime/Object/Shader.h"
@@ -22,6 +25,7 @@
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/WheelCollider.h"
+#include "Runtime/Particles/ParticleSettings.h"
 #include "Runtime/Reflection.h"
 namespace
 {
@@ -41,6 +45,20 @@ void Write_uint32(NativeBindingWriter& writer, uint32 const& value);
 uint32 Read_uint32(NativeBindingReader& reader);
 void Write_EnsId(NativeBindingWriter& writer, EnsId const& value);
 EnsId Read_EnsId(NativeBindingReader& reader);
+void Write_Mesh_(NativeBindingWriter& writer, Mesh* const& value);
+Mesh* Read_Mesh_(NativeBindingReader& reader);
+void Write_Material_(NativeBindingWriter& writer, Material* const& value);
+Material* Read_Material_(NativeBindingReader& reader);
+void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions const& value);
+InstanceDrawOptions Read_InstanceDrawOptions(NativeBindingReader& reader);
+void Write_MeshInstanceData(NativeBindingWriter& writer, MeshInstanceData const& value);
+MeshInstanceData Read_MeshInstanceData(NativeBindingReader& reader);
+void Write_vector3(NativeBindingWriter& writer, vector3 const& value);
+vector3 Read_vector3(NativeBindingReader& reader);
+void Write_quaternion(NativeBindingWriter& writer, quaternion const& value);
+quaternion Read_quaternion(NativeBindingReader& reader);
+void Write_color(NativeBindingWriter& writer, color const& value);
+color Read_color(NativeBindingReader& reader);
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value);
 DrawQueue Read_DrawQueue(NativeBindingReader& reader);
 void Write_MaterialTextureSlot(NativeBindingWriter& writer, MaterialTextureSlot const& value);
@@ -51,8 +69,6 @@ void Write_List_MaterialTextureSlot_(NativeBindingWriter& writer, List<MaterialT
 List<MaterialTextureSlot> Read_List_MaterialTextureSlot_(NativeBindingReader& reader);
 void Write_MaterialColorSlot(NativeBindingWriter& writer, MaterialColorSlot const& value);
 MaterialColorSlot Read_MaterialColorSlot(NativeBindingReader& reader);
-void Write_color(NativeBindingWriter& writer, color const& value);
-color Read_color(NativeBindingReader& reader);
 void Write_List_MaterialColorSlot_(NativeBindingWriter& writer, List<MaterialColorSlot> const& value);
 List<MaterialColorSlot> Read_List_MaterialColorSlot_(NativeBindingReader& reader);
 void Write_MaterialFloatSlot(NativeBindingWriter& writer, MaterialFloatSlot const& value);
@@ -67,8 +83,6 @@ void Write_Shader_(NativeBindingWriter& writer, Shader* const& value);
 Shader* Read_Shader_(NativeBindingReader& reader);
 void Write_Texture2D_(NativeBindingWriter& writer, Texture2D* const& value);
 Texture2D* Read_Texture2D_(NativeBindingReader& reader);
-void Write_vector3(NativeBindingWriter& writer, vector3 const& value);
-vector3 Read_vector3(NativeBindingReader& reader);
 void Write_List_vector3_(NativeBindingWriter& writer, List<vector3> const& value);
 List<vector3> Read_List_vector3_(NativeBindingReader& reader);
 void Write_vector2(NativeBindingWriter& writer, vector2 const& value);
@@ -93,6 +107,8 @@ void Write_ShaderPassToggle(NativeBindingWriter& writer, ShaderPassToggle const&
 ShaderPassToggle Read_ShaderPassToggle(NativeBindingReader& reader);
 void Write_CullMode(NativeBindingWriter& writer, CullMode const& value);
 CullMode Read_CullMode(NativeBindingReader& reader);
+void Write_ShaderGeometryContract(NativeBindingWriter& writer, ShaderGeometryContract const& value);
+ShaderGeometryContract Read_ShaderGeometryContract(NativeBindingReader& reader);
 void Write_List_ShaderPass_(NativeBindingWriter& writer, List<ShaderPass> const& value);
 List<ShaderPass> Read_List_ShaderPass_(NativeBindingReader& reader);
 void Write_ShaderTextureSlot(NativeBindingWriter& writer, ShaderTextureSlot const& value);
@@ -124,22 +140,80 @@ void Write_ColliderGeometryType(NativeBindingWriter& writer, ColliderGeometryTyp
 ColliderGeometryType Read_ColliderGeometryType(NativeBindingReader& reader);
 void Write_Ref_Material_(NativeBindingWriter& writer, Ref<Material> const& value);
 Ref<Material> Read_Ref_Material_(NativeBindingReader& reader);
-void Write_Material_(NativeBindingWriter& writer, Material* const& value);
-Material* Read_Material_(NativeBindingReader& reader);
 void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32> const& value);
 std::vector<float32> Read_std__vector_float32_(NativeBindingReader& reader);
+void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value);
+Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader);
+void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value);
+List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader);
+void Write_std__array_EnsId_16_(NativeBindingWriter& writer, std::array<EnsId,16> const& value);
+std::array<EnsId,16> Read_std__array_EnsId_16_(NativeBindingReader& reader);
+void Write_ParticleSettings(NativeBindingWriter& writer, ParticleSettings const& value);
+ParticleSettings Read_ParticleSettings(NativeBindingReader& reader);
+void Write_ParticleMainSettings(NativeBindingWriter& writer, ParticleMainSettings const& value);
+ParticleMainSettings Read_ParticleMainSettings(NativeBindingReader& reader);
+void Write_ParticleSimulationSpace(NativeBindingWriter& writer, ParticleSimulationSpace const& value);
+ParticleSimulationSpace Read_ParticleSimulationSpace(NativeBindingReader& reader);
+void Write_ParticleFloatRange(NativeBindingWriter& writer, ParticleFloatRange const& value);
+ParticleFloatRange Read_ParticleFloatRange(NativeBindingReader& reader);
+void Write_ParticleEmissionSettings(NativeBindingWriter& writer, ParticleEmissionSettings const& value);
+ParticleEmissionSettings Read_ParticleEmissionSettings(NativeBindingReader& reader);
+void Write_ParticleBurst(NativeBindingWriter& writer, ParticleBurst const& value);
+ParticleBurst Read_ParticleBurst(NativeBindingReader& reader);
+void Write_List_ParticleBurst_(NativeBindingWriter& writer, List<ParticleBurst> const& value);
+List<ParticleBurst> Read_List_ParticleBurst_(NativeBindingReader& reader);
+void Write_ParticleShapeSettings(NativeBindingWriter& writer, ParticleShapeSettings const& value);
+ParticleShapeSettings Read_ParticleShapeSettings(NativeBindingReader& reader);
+void Write_ParticleShape(NativeBindingWriter& writer, ParticleShape const& value);
+ParticleShape Read_ParticleShape(NativeBindingReader& reader);
+void Write_ParticleMotionSettings(NativeBindingWriter& writer, ParticleMotionSettings const& value);
+ParticleMotionSettings Read_ParticleMotionSettings(NativeBindingReader& reader);
+void Write_ParticleCurve(NativeBindingWriter& writer, ParticleCurve const& value);
+ParticleCurve Read_ParticleCurve(NativeBindingReader& reader);
+void Write_ParticleCurveKey(NativeBindingWriter& writer, ParticleCurveKey const& value);
+ParticleCurveKey Read_ParticleCurveKey(NativeBindingReader& reader);
+void Write_ParticleCurveInterpolation(NativeBindingWriter& writer, ParticleCurveInterpolation const& value);
+ParticleCurveInterpolation Read_ParticleCurveInterpolation(NativeBindingReader& reader);
+void Write_List_ParticleCurveKey_(NativeBindingWriter& writer, List<ParticleCurveKey> const& value);
+List<ParticleCurveKey> Read_List_ParticleCurveKey_(NativeBindingReader& reader);
+void Write_ParticleGradient(NativeBindingWriter& writer, ParticleGradient const& value);
+ParticleGradient Read_ParticleGradient(NativeBindingReader& reader);
+void Write_ParticleGradientKey(NativeBindingWriter& writer, ParticleGradientKey const& value);
+ParticleGradientKey Read_ParticleGradientKey(NativeBindingReader& reader);
+void Write_List_ParticleGradientKey_(NativeBindingWriter& writer, List<ParticleGradientKey> const& value);
+List<ParticleGradientKey> Read_List_ParticleGradientKey_(NativeBindingReader& reader);
+void Write_ParticleCollisionSettings(NativeBindingWriter& writer, ParticleCollisionSettings const& value);
+ParticleCollisionSettings Read_ParticleCollisionSettings(NativeBindingReader& reader);
+void Write_ParticleCollisionResponse(NativeBindingWriter& writer, ParticleCollisionResponse const& value);
+ParticleCollisionResponse Read_ParticleCollisionResponse(NativeBindingReader& reader);
+void Write_ParticleTrailSettings(NativeBindingWriter& writer, ParticleTrailSettings const& value);
+ParticleTrailSettings Read_ParticleTrailSettings(NativeBindingReader& reader);
+void Write_ParticleRenderSettings(NativeBindingWriter& writer, ParticleRenderSettings const& value);
+ParticleRenderSettings Read_ParticleRenderSettings(NativeBindingReader& reader);
+void Write_ParticleRenderPath(NativeBindingWriter& writer, ParticleRenderPath const& value);
+ParticleRenderPath Read_ParticleRenderPath(NativeBindingReader& reader);
+void Write_ParticleRenderMode(NativeBindingWriter& writer, ParticleRenderMode const& value);
+ParticleRenderMode Read_ParticleRenderMode(NativeBindingReader& reader);
+void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value);
+BlendMode Read_BlendMode(NativeBindingReader& reader);
+void Write_ParticleSubEmitterRule(NativeBindingWriter& writer, ParticleSubEmitterRule const& value);
+ParticleSubEmitterRule Read_ParticleSubEmitterRule(NativeBindingReader& reader);
+void Write_ParticleSubEmitterEvent(NativeBindingWriter& writer, ParticleSubEmitterEvent const& value);
+ParticleSubEmitterEvent Read_ParticleSubEmitterEvent(NativeBindingReader& reader);
+void Write_List_ParticleSubEmitterRule_(NativeBindingWriter& writer, List<ParticleSubEmitterRule> const& value);
+List<ParticleSubEmitterRule> Read_List_ParticleSubEmitterRule_(NativeBindingReader& reader);
+void Write_ParticleSettingsParseResult(NativeBindingWriter& writer, ParticleSettingsParseResult const& value);
+ParticleSettingsParseResult Read_ParticleSettingsParseResult(NativeBindingReader& reader);
+void Write_ParticlePlaybackInfo(NativeBindingWriter& writer, ParticlePlaybackInfo const& value);
+ParticlePlaybackInfo Read_ParticlePlaybackInfo(NativeBindingReader& reader);
+void Write_ParticlePlaybackState(NativeBindingWriter& writer, ParticlePlaybackState const& value);
+ParticlePlaybackState Read_ParticlePlaybackState(NativeBindingReader& reader);
 void Write_PhysicsBodyType(NativeBindingWriter& writer, PhysicsBodyType const& value);
 PhysicsBodyType Read_PhysicsBodyType(NativeBindingReader& reader);
 void Write_ScriptDomain(NativeBindingWriter& writer, ScriptDomain const& value);
 ScriptDomain Read_ScriptDomain(NativeBindingReader& reader);
 void Write_Reflection__FieldKind(NativeBindingWriter& writer, Reflection::FieldKind const& value);
 Reflection::FieldKind Read_Reflection__FieldKind(NativeBindingReader& reader);
-void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value);
-Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader);
-void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value);
-List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader);
-void Write_quaternion(NativeBindingWriter& writer, quaternion const& value);
-quaternion Read_quaternion(NativeBindingReader& reader);
 void Write_StringId(NativeBindingWriter& writer, StringId const& value)
 {
     writer.Text(value.GetPath());
@@ -204,6 +278,80 @@ EnsId Read_EnsId(NativeBindingReader& reader)
 {
     return static_cast<EnsId>(reader.Scalar<EnsId>());
 }
+void Write_Mesh_(NativeBindingWriter& writer, Mesh* const& value)
+{
+    writer.Scalar(NativeBindings::Id(value));
+}
+Mesh* Read_Mesh_(NativeBindingReader& reader)
+{
+    return NativeBindings::Optional<Mesh>(reader.Scalar<int32>());
+}
+void Write_Material_(NativeBindingWriter& writer, Material* const& value)
+{
+    writer.Scalar(NativeBindings::Id(value));
+}
+Material* Read_Material_(NativeBindingReader& reader)
+{
+    return NativeBindings::Optional<Material>(reader.Scalar<int32>());
+}
+void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions const& value)
+{
+    Write_uint32(writer, value.drawLayer);
+    Write_bool(writer, value.castShadows);
+    Write_bool(writer, value.receiveShadows);
+    Write_EnsId(writer, value.camera);
+}
+InstanceDrawOptions Read_InstanceDrawOptions(NativeBindingReader& reader)
+{
+    InstanceDrawOptions value{};
+    value.drawLayer = Read_uint32(reader);
+    value.castShadows = Read_bool(reader);
+    value.receiveShadows = Read_bool(reader);
+    value.camera = Read_EnsId(reader);
+    return value;
+}
+void Write_MeshInstanceData(NativeBindingWriter& writer, MeshInstanceData const& value)
+{
+    Write_vector3(writer, value.position);
+    Write_quaternion(writer, value.rotation);
+    Write_vector3(writer, value.scale);
+    Write_color(writer, value.tint);
+    Write_color(writer, value.uvRect);
+}
+MeshInstanceData Read_MeshInstanceData(NativeBindingReader& reader)
+{
+    MeshInstanceData value{};
+    value.position = Read_vector3(reader);
+    value.rotation = Read_quaternion(reader);
+    value.scale = Read_vector3(reader);
+    value.tint = Read_color(reader);
+    value.uvRect = Read_color(reader);
+    return value;
+}
+void Write_vector3(NativeBindingWriter& writer, vector3 const& value)
+{
+    writer.Scalar(static_cast<vector3>(value));
+}
+vector3 Read_vector3(NativeBindingReader& reader)
+{
+    return static_cast<vector3>(reader.Scalar<vector3>());
+}
+void Write_quaternion(NativeBindingWriter& writer, quaternion const& value)
+{
+    writer.Scalar(static_cast<quaternion>(value));
+}
+quaternion Read_quaternion(NativeBindingReader& reader)
+{
+    return static_cast<quaternion>(reader.Scalar<quaternion>());
+}
+void Write_color(NativeBindingWriter& writer, color const& value)
+{
+    writer.Scalar(static_cast<color>(value));
+}
+color Read_color(NativeBindingReader& reader)
+{
+    return static_cast<color>(reader.Scalar<color>());
+}
 void Write_DrawQueue(NativeBindingWriter& writer, DrawQueue const& value)
 {
     writer.Scalar(static_cast<uint32>(value));
@@ -255,14 +403,6 @@ MaterialColorSlot Read_MaterialColorSlot(NativeBindingReader& reader)
     value.name = Read_std__string(reader);
     value.value = Read_color(reader);
     return value;
-}
-void Write_color(NativeBindingWriter& writer, color const& value)
-{
-    writer.Scalar(static_cast<color>(value));
-}
-color Read_color(NativeBindingReader& reader)
-{
-    return static_cast<color>(reader.Scalar<color>());
 }
 void Write_List_MaterialColorSlot_(NativeBindingWriter& writer, List<MaterialColorSlot> const& value)
 {
@@ -331,14 +471,6 @@ void Write_Texture2D_(NativeBindingWriter& writer, Texture2D* const& value)
 Texture2D* Read_Texture2D_(NativeBindingReader& reader)
 {
     return NativeBindings::Optional<Texture2D>(reader.Scalar<int32>());
-}
-void Write_vector3(NativeBindingWriter& writer, vector3 const& value)
-{
-    writer.Scalar(static_cast<vector3>(value));
-}
-vector3 Read_vector3(NativeBindingReader& reader)
-{
-    return static_cast<vector3>(reader.Scalar<vector3>());
 }
 void Write_List_vector3_(NativeBindingWriter& writer, List<vector3> const& value)
 {
@@ -436,6 +568,7 @@ void Write_ShaderPass(NativeBindingWriter& writer, ShaderPass const& value)
 {
     Write_std__string(writer, value.name);
     Write_ShaderPassState(writer, value.state);
+    Write_ShaderGeometryContract(writer, value.geometryContract);
     Write_std__string(writer, value.vertexSource);
     Write_std__string(writer, value.fragmentSource);
 }
@@ -444,6 +577,7 @@ ShaderPass Read_ShaderPass(NativeBindingReader& reader)
     ShaderPass value{};
     value.name = Read_std__string(reader);
     value.state = Read_ShaderPassState(reader);
+    value.geometryContract = Read_ShaderGeometryContract(reader);
     value.vertexSource = Read_std__string(reader);
     value.fragmentSource = Read_std__string(reader);
     return value;
@@ -479,6 +613,14 @@ void Write_CullMode(NativeBindingWriter& writer, CullMode const& value)
 CullMode Read_CullMode(NativeBindingReader& reader)
 {
     return static_cast<CullMode>(reader.Scalar<uint32>());
+}
+void Write_ShaderGeometryContract(NativeBindingWriter& writer, ShaderGeometryContract const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ShaderGeometryContract Read_ShaderGeometryContract(NativeBindingReader& reader)
+{
+    return static_cast<ShaderGeometryContract>(reader.Scalar<uint32>());
 }
 void Write_List_ShaderPass_(NativeBindingWriter& writer, List<ShaderPass> const& value)
 {
@@ -643,14 +785,6 @@ Ref<Material> Read_Ref_Material_(NativeBindingReader& reader)
 {
     return Ref<Material>(NativeBindings::Optional<Material>(reader.Scalar<int32>()));
 }
-void Write_Material_(NativeBindingWriter& writer, Material* const& value)
-{
-    writer.Scalar(NativeBindings::Id(value));
-}
-Material* Read_Material_(NativeBindingReader& reader)
-{
-    return NativeBindings::Optional<Material>(reader.Scalar<int32>());
-}
 void Write_std__vector_float32_(NativeBindingWriter& writer, std::vector<float32> const& value)
 {
     writer.Scalar(static_cast<int32>(value.size()));
@@ -662,6 +796,477 @@ std::vector<float32> Read_std__vector_float32_(NativeBindingReader& reader)
     std::vector<float32> value; value.reserve(count);
     for (int32 index = 0; index < count; ++index) value.push_back(Read_float32(reader));
     return value;
+}
+void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value)
+{
+    writer.Scalar(NativeBindings::Id(value.Get()));
+}
+Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader)
+{
+    return Ref<Mesh>(NativeBindings::Optional<Mesh>(reader.Scalar<int32>()));
+}
+void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_Ref_Material_(writer, item);
+}
+List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<Ref<Material>> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_Ref_Material_(reader));
+    return value;
+}
+void Write_std__array_EnsId_16_(NativeBindingWriter& writer, std::array<EnsId,16> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_EnsId(writer, item);
+}
+std::array<EnsId,16> Read_std__array_EnsId_16_(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    std::array<EnsId,16> value{};
+    if (count != static_cast<int32>(value.size())) throw NativeBindingError(NativeBindingStatus::InvalidArgument, "Fixed array size mismatch");
+    for (int32 index = 0; index < count; ++index) value[index] = Read_EnsId(reader);
+    return value;
+}
+void Write_ParticleSettings(NativeBindingWriter& writer, ParticleSettings const& value)
+{
+    Write_ParticleMainSettings(writer, value.main);
+    Write_ParticleEmissionSettings(writer, value.emission);
+    Write_ParticleShapeSettings(writer, value.shape);
+    Write_ParticleMotionSettings(writer, value.motion);
+    Write_ParticleCollisionSettings(writer, value.collision);
+    Write_ParticleTrailSettings(writer, value.trails);
+    Write_ParticleRenderSettings(writer, value.rendering);
+    Write_List_ParticleSubEmitterRule_(writer, value.subEmitters);
+}
+ParticleSettings Read_ParticleSettings(NativeBindingReader& reader)
+{
+    ParticleSettings value{};
+    value.main = Read_ParticleMainSettings(reader);
+    value.emission = Read_ParticleEmissionSettings(reader);
+    value.shape = Read_ParticleShapeSettings(reader);
+    value.motion = Read_ParticleMotionSettings(reader);
+    value.collision = Read_ParticleCollisionSettings(reader);
+    value.trails = Read_ParticleTrailSettings(reader);
+    value.rendering = Read_ParticleRenderSettings(reader);
+    value.subEmitters = Read_List_ParticleSubEmitterRule_(reader);
+    return value;
+}
+void Write_ParticleMainSettings(NativeBindingWriter& writer, ParticleMainSettings const& value)
+{
+    Write_uint32(writer, value.maxParticles);
+    Write_float32(writer, value.duration);
+    Write_bool(writer, value.looping);
+    Write_bool(writer, value.playOnAwake);
+    Write_float32(writer, value.startDelay);
+    Write_ParticleSimulationSpace(writer, value.simulationSpace);
+    Write_uint32(writer, value.randomSeed);
+    Write_ParticleFloatRange(writer, value.startLifetime);
+    Write_ParticleFloatRange(writer, value.startSpeed);
+    Write_ParticleFloatRange(writer, value.startSize);
+    Write_ParticleFloatRange(writer, value.startRotation);
+    Write_color(writer, value.startColor);
+}
+ParticleMainSettings Read_ParticleMainSettings(NativeBindingReader& reader)
+{
+    ParticleMainSettings value{};
+    value.maxParticles = Read_uint32(reader);
+    value.duration = Read_float32(reader);
+    value.looping = Read_bool(reader);
+    value.playOnAwake = Read_bool(reader);
+    value.startDelay = Read_float32(reader);
+    value.simulationSpace = Read_ParticleSimulationSpace(reader);
+    value.randomSeed = Read_uint32(reader);
+    value.startLifetime = Read_ParticleFloatRange(reader);
+    value.startSpeed = Read_ParticleFloatRange(reader);
+    value.startSize = Read_ParticleFloatRange(reader);
+    value.startRotation = Read_ParticleFloatRange(reader);
+    value.startColor = Read_color(reader);
+    return value;
+}
+void Write_ParticleSimulationSpace(NativeBindingWriter& writer, ParticleSimulationSpace const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleSimulationSpace Read_ParticleSimulationSpace(NativeBindingReader& reader)
+{
+    return static_cast<ParticleSimulationSpace>(reader.Scalar<uint32>());
+}
+void Write_ParticleFloatRange(NativeBindingWriter& writer, ParticleFloatRange const& value)
+{
+    Write_float32(writer, value.min);
+    Write_float32(writer, value.max);
+}
+ParticleFloatRange Read_ParticleFloatRange(NativeBindingReader& reader)
+{
+    ParticleFloatRange value{};
+    value.min = Read_float32(reader);
+    value.max = Read_float32(reader);
+    return value;
+}
+void Write_ParticleEmissionSettings(NativeBindingWriter& writer, ParticleEmissionSettings const& value)
+{
+    Write_bool(writer, value.enabled);
+    Write_float32(writer, value.rateOverTime);
+    Write_List_ParticleBurst_(writer, value.bursts);
+}
+ParticleEmissionSettings Read_ParticleEmissionSettings(NativeBindingReader& reader)
+{
+    ParticleEmissionSettings value{};
+    value.enabled = Read_bool(reader);
+    value.rateOverTime = Read_float32(reader);
+    value.bursts = Read_List_ParticleBurst_(reader);
+    return value;
+}
+void Write_ParticleBurst(NativeBindingWriter& writer, ParticleBurst const& value)
+{
+    Write_float32(writer, value.time);
+    Write_uint32(writer, value.count);
+    Write_uint32(writer, value.cycles);
+    Write_float32(writer, value.interval);
+    Write_float32(writer, value.probability);
+}
+ParticleBurst Read_ParticleBurst(NativeBindingReader& reader)
+{
+    ParticleBurst value{};
+    value.time = Read_float32(reader);
+    value.count = Read_uint32(reader);
+    value.cycles = Read_uint32(reader);
+    value.interval = Read_float32(reader);
+    value.probability = Read_float32(reader);
+    return value;
+}
+void Write_List_ParticleBurst_(NativeBindingWriter& writer, List<ParticleBurst> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_ParticleBurst(writer, item);
+}
+List<ParticleBurst> Read_List_ParticleBurst_(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<ParticleBurst> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleBurst(reader));
+    return value;
+}
+void Write_ParticleShapeSettings(NativeBindingWriter& writer, ParticleShapeSettings const& value)
+{
+    Write_ParticleShape(writer, value.shape);
+    Write_float32(writer, value.radius);
+    Write_vector3(writer, value.boxExtents);
+    Write_float32(writer, value.coneAngle);
+    Write_bool(writer, value.surfaceOnly);
+}
+ParticleShapeSettings Read_ParticleShapeSettings(NativeBindingReader& reader)
+{
+    ParticleShapeSettings value{};
+    value.shape = Read_ParticleShape(reader);
+    value.radius = Read_float32(reader);
+    value.boxExtents = Read_vector3(reader);
+    value.coneAngle = Read_float32(reader);
+    value.surfaceOnly = Read_bool(reader);
+    return value;
+}
+void Write_ParticleShape(NativeBindingWriter& writer, ParticleShape const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleShape Read_ParticleShape(NativeBindingReader& reader)
+{
+    return static_cast<ParticleShape>(reader.Scalar<uint32>());
+}
+void Write_ParticleMotionSettings(NativeBindingWriter& writer, ParticleMotionSettings const& value)
+{
+    Write_float32(writer, value.gravityMultiplier);
+    Write_vector3(writer, value.acceleration);
+    Write_float32(writer, value.drag);
+    Write_ParticleCurve(writer, value.sizeOverLifetime);
+    Write_ParticleCurve(writer, value.angularVelocityOverLifetime);
+    Write_ParticleGradient(writer, value.colorOverLifetime);
+}
+ParticleMotionSettings Read_ParticleMotionSettings(NativeBindingReader& reader)
+{
+    ParticleMotionSettings value{};
+    value.gravityMultiplier = Read_float32(reader);
+    value.acceleration = Read_vector3(reader);
+    value.drag = Read_float32(reader);
+    value.sizeOverLifetime = Read_ParticleCurve(reader);
+    value.angularVelocityOverLifetime = Read_ParticleCurve(reader);
+    value.colorOverLifetime = Read_ParticleGradient(reader);
+    return value;
+}
+void Write_ParticleCurve(NativeBindingWriter& writer, ParticleCurve const& value)
+{
+    Write_List_ParticleCurveKey_(writer, value.keys);
+}
+ParticleCurve Read_ParticleCurve(NativeBindingReader& reader)
+{
+    ParticleCurve value{};
+    value.keys = Read_List_ParticleCurveKey_(reader);
+    return value;
+}
+void Write_ParticleCurveKey(NativeBindingWriter& writer, ParticleCurveKey const& value)
+{
+    Write_float32(writer, value.time);
+    Write_float32(writer, value.value);
+    Write_float32(writer, value.inTangent);
+    Write_float32(writer, value.outTangent);
+    Write_ParticleCurveInterpolation(writer, value.interpolation);
+}
+ParticleCurveKey Read_ParticleCurveKey(NativeBindingReader& reader)
+{
+    ParticleCurveKey value{};
+    value.time = Read_float32(reader);
+    value.value = Read_float32(reader);
+    value.inTangent = Read_float32(reader);
+    value.outTangent = Read_float32(reader);
+    value.interpolation = Read_ParticleCurveInterpolation(reader);
+    return value;
+}
+void Write_ParticleCurveInterpolation(NativeBindingWriter& writer, ParticleCurveInterpolation const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleCurveInterpolation Read_ParticleCurveInterpolation(NativeBindingReader& reader)
+{
+    return static_cast<ParticleCurveInterpolation>(reader.Scalar<uint32>());
+}
+void Write_List_ParticleCurveKey_(NativeBindingWriter& writer, List<ParticleCurveKey> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_ParticleCurveKey(writer, item);
+}
+List<ParticleCurveKey> Read_List_ParticleCurveKey_(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<ParticleCurveKey> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleCurveKey(reader));
+    return value;
+}
+void Write_ParticleGradient(NativeBindingWriter& writer, ParticleGradient const& value)
+{
+    Write_List_ParticleGradientKey_(writer, value.keys);
+}
+ParticleGradient Read_ParticleGradient(NativeBindingReader& reader)
+{
+    ParticleGradient value{};
+    value.keys = Read_List_ParticleGradientKey_(reader);
+    return value;
+}
+void Write_ParticleGradientKey(NativeBindingWriter& writer, ParticleGradientKey const& value)
+{
+    Write_float32(writer, value.time);
+    Write_color(writer, value.value);
+}
+ParticleGradientKey Read_ParticleGradientKey(NativeBindingReader& reader)
+{
+    ParticleGradientKey value{};
+    value.time = Read_float32(reader);
+    value.value = Read_color(reader);
+    return value;
+}
+void Write_List_ParticleGradientKey_(NativeBindingWriter& writer, List<ParticleGradientKey> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_ParticleGradientKey(writer, item);
+}
+List<ParticleGradientKey> Read_List_ParticleGradientKey_(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<ParticleGradientKey> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleGradientKey(reader));
+    return value;
+}
+void Write_ParticleCollisionSettings(NativeBindingWriter& writer, ParticleCollisionSettings const& value)
+{
+    Write_bool(writer, value.enabled);
+    Write_uint32(writer, value.layerMask);
+    Write_float32(writer, value.radiusScale);
+    Write_float32(writer, value.restitution);
+    Write_float32(writer, value.friction);
+    Write_float32(writer, value.lifetimeLoss);
+    Write_ParticleCollisionResponse(writer, value.response);
+}
+ParticleCollisionSettings Read_ParticleCollisionSettings(NativeBindingReader& reader)
+{
+    ParticleCollisionSettings value{};
+    value.enabled = Read_bool(reader);
+    value.layerMask = Read_uint32(reader);
+    value.radiusScale = Read_float32(reader);
+    value.restitution = Read_float32(reader);
+    value.friction = Read_float32(reader);
+    value.lifetimeLoss = Read_float32(reader);
+    value.response = Read_ParticleCollisionResponse(reader);
+    return value;
+}
+void Write_ParticleCollisionResponse(NativeBindingWriter& writer, ParticleCollisionResponse const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleCollisionResponse Read_ParticleCollisionResponse(NativeBindingReader& reader)
+{
+    return static_cast<ParticleCollisionResponse>(reader.Scalar<uint32>());
+}
+void Write_ParticleTrailSettings(NativeBindingWriter& writer, ParticleTrailSettings const& value)
+{
+    Write_bool(writer, value.enabled);
+    Write_float32(writer, value.lifetime);
+    Write_float32(writer, value.minimumVertexDistance);
+    Write_float32(writer, value.maximumVertexInterval);
+    Write_uint32(writer, value.maxPointsPerTrail);
+    Write_uint32(writer, value.maxTrails);
+    Write_float32(writer, value.width);
+    Write_ParticleCurve(writer, value.widthOverLength);
+    Write_ParticleGradient(writer, value.colorOverLength);
+    Write_bool(writer, value.dieWithParticle);
+    Write_float32(writer, value.textureTileLength);
+}
+ParticleTrailSettings Read_ParticleTrailSettings(NativeBindingReader& reader)
+{
+    ParticleTrailSettings value{};
+    value.enabled = Read_bool(reader);
+    value.lifetime = Read_float32(reader);
+    value.minimumVertexDistance = Read_float32(reader);
+    value.maximumVertexInterval = Read_float32(reader);
+    value.maxPointsPerTrail = Read_uint32(reader);
+    value.maxTrails = Read_uint32(reader);
+    value.width = Read_float32(reader);
+    value.widthOverLength = Read_ParticleCurve(reader);
+    value.colorOverLength = Read_ParticleGradient(reader);
+    value.dieWithParticle = Read_bool(reader);
+    value.textureTileLength = Read_float32(reader);
+    return value;
+}
+void Write_ParticleRenderSettings(NativeBindingWriter& writer, ParticleRenderSettings const& value)
+{
+    Write_ParticleRenderPath(writer, value.path);
+    Write_ParticleRenderMode(writer, value.mode);
+    Write_BlendMode(writer, value.blendMode);
+    Write_uint32(writer, value.tilesX);
+    Write_uint32(writer, value.tilesY);
+    Write_float32(writer, value.animationCycles);
+    Write_bool(writer, value.randomStartFrame);
+}
+ParticleRenderSettings Read_ParticleRenderSettings(NativeBindingReader& reader)
+{
+    ParticleRenderSettings value{};
+    value.path = Read_ParticleRenderPath(reader);
+    value.mode = Read_ParticleRenderMode(reader);
+    value.blendMode = Read_BlendMode(reader);
+    value.tilesX = Read_uint32(reader);
+    value.tilesY = Read_uint32(reader);
+    value.animationCycles = Read_float32(reader);
+    value.randomStartFrame = Read_bool(reader);
+    return value;
+}
+void Write_ParticleRenderPath(NativeBindingWriter& writer, ParticleRenderPath const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleRenderPath Read_ParticleRenderPath(NativeBindingReader& reader)
+{
+    return static_cast<ParticleRenderPath>(reader.Scalar<uint32>());
+}
+void Write_ParticleRenderMode(NativeBindingWriter& writer, ParticleRenderMode const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleRenderMode Read_ParticleRenderMode(NativeBindingReader& reader)
+{
+    return static_cast<ParticleRenderMode>(reader.Scalar<uint32>());
+}
+void Write_BlendMode(NativeBindingWriter& writer, BlendMode const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+BlendMode Read_BlendMode(NativeBindingReader& reader)
+{
+    return static_cast<BlendMode>(reader.Scalar<uint32>());
+}
+void Write_ParticleSubEmitterRule(NativeBindingWriter& writer, ParticleSubEmitterRule const& value)
+{
+    Write_uint32(writer, value.targetSlot);
+    Write_ParticleSubEmitterEvent(writer, value.event);
+    Write_uint32(writer, value.count);
+    Write_float32(writer, value.probability);
+    Write_bool(writer, value.inheritVelocity);
+    Write_bool(writer, value.inheritColor);
+    Write_bool(writer, value.inheritSize);
+}
+ParticleSubEmitterRule Read_ParticleSubEmitterRule(NativeBindingReader& reader)
+{
+    ParticleSubEmitterRule value{};
+    value.targetSlot = Read_uint32(reader);
+    value.event = Read_ParticleSubEmitterEvent(reader);
+    value.count = Read_uint32(reader);
+    value.probability = Read_float32(reader);
+    value.inheritVelocity = Read_bool(reader);
+    value.inheritColor = Read_bool(reader);
+    value.inheritSize = Read_bool(reader);
+    return value;
+}
+void Write_ParticleSubEmitterEvent(NativeBindingWriter& writer, ParticleSubEmitterEvent const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticleSubEmitterEvent Read_ParticleSubEmitterEvent(NativeBindingReader& reader)
+{
+    return static_cast<ParticleSubEmitterEvent>(reader.Scalar<uint32>());
+}
+void Write_List_ParticleSubEmitterRule_(NativeBindingWriter& writer, List<ParticleSubEmitterRule> const& value)
+{
+    writer.Scalar(static_cast<int32>(value.size()));
+    for (const auto& item : value) Write_ParticleSubEmitterRule(writer, item);
+}
+List<ParticleSubEmitterRule> Read_List_ParticleSubEmitterRule_(NativeBindingReader& reader)
+{
+    int32 count = reader.Count();
+    List<ParticleSubEmitterRule> value; value.reserve(count);
+    for (int32 index = 0; index < count; ++index) value.push_back(Read_ParticleSubEmitterRule(reader));
+    return value;
+}
+void Write_ParticleSettingsParseResult(NativeBindingWriter& writer, ParticleSettingsParseResult const& value)
+{
+    Write_bool(writer, value.success);
+    Write_ParticleSettings(writer, value.settings);
+    Write_std__string(writer, value.error);
+}
+ParticleSettingsParseResult Read_ParticleSettingsParseResult(NativeBindingReader& reader)
+{
+    ParticleSettingsParseResult value{};
+    value.success = Read_bool(reader);
+    value.settings = Read_ParticleSettings(reader);
+    value.error = Read_std__string(reader);
+    return value;
+}
+void Write_ParticlePlaybackInfo(NativeBindingWriter& writer, ParticlePlaybackInfo const& value)
+{
+    Write_ParticlePlaybackState(writer, value.state);
+    Write_float32(writer, value.time);
+    Write_uint32(writer, value.aliveCount);
+    Write_uint32(writer, value.trailCount);
+    Write_uint64(writer, value.emittedCount);
+    Write_uint64(writer, value.rejectedCount);
+}
+ParticlePlaybackInfo Read_ParticlePlaybackInfo(NativeBindingReader& reader)
+{
+    ParticlePlaybackInfo value{};
+    value.state = Read_ParticlePlaybackState(reader);
+    value.time = Read_float32(reader);
+    value.aliveCount = Read_uint32(reader);
+    value.trailCount = Read_uint32(reader);
+    value.emittedCount = Read_uint64(reader);
+    value.rejectedCount = Read_uint64(reader);
+    return value;
+}
+void Write_ParticlePlaybackState(NativeBindingWriter& writer, ParticlePlaybackState const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+ParticlePlaybackState Read_ParticlePlaybackState(NativeBindingReader& reader)
+{
+    return static_cast<ParticlePlaybackState>(reader.Scalar<uint32>());
 }
 void Write_PhysicsBodyType(NativeBindingWriter& writer, PhysicsBodyType const& value)
 {
@@ -686,34 +1291,6 @@ void Write_Reflection__FieldKind(NativeBindingWriter& writer, Reflection::FieldK
 Reflection::FieldKind Read_Reflection__FieldKind(NativeBindingReader& reader)
 {
     return static_cast<Reflection::FieldKind>(reader.Scalar<int32>());
-}
-void Write_Ref_Mesh_(NativeBindingWriter& writer, Ref<Mesh> const& value)
-{
-    writer.Scalar(NativeBindings::Id(value.Get()));
-}
-Ref<Mesh> Read_Ref_Mesh_(NativeBindingReader& reader)
-{
-    return Ref<Mesh>(NativeBindings::Optional<Mesh>(reader.Scalar<int32>()));
-}
-void Write_List_Ref_Material__(NativeBindingWriter& writer, List<Ref<Material>> const& value)
-{
-    writer.Scalar(static_cast<int32>(value.size()));
-    for (const auto& item : value) Write_Ref_Material_(writer, item);
-}
-List<Ref<Material>> Read_List_Ref_Material__(NativeBindingReader& reader)
-{
-    int32 count = reader.Count();
-    List<Ref<Material>> value; value.reserve(count);
-    for (int32 index = 0; index < count; ++index) value.push_back(Read_Ref_Material_(reader));
-    return value;
-}
-void Write_quaternion(NativeBindingWriter& writer, quaternion const& value)
-{
-    writer.Scalar(static_cast<quaternion>(value));
-}
-quaternion Read_quaternion(NativeBindingReader& reader)
-{
-    return static_cast<quaternion>(reader.Scalar<quaternion>());
 }
 NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Orbeden_Object_0(int32 objectId, int32 object, uint8* result)
 {
@@ -856,6 +1433,75 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Ens_0(int32 objectId, EnsId* result
         auto* instance = NativeBindings::Require<Ens>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
         *result = static_cast<EnsId>(instance->GetId());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_0(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
+        instance->Clear();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_1(int32 objectId, int32 targetMesh, uint32 targetSubMeshIndex, int32 targetMaterial, NativeBindingSlice drawOptions, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_drawOptions(drawOptions);
+        auto decoded_drawOptions = Read_InstanceDrawOptions(reader_drawOptions);
+        reader_drawOptions.Complete();
+        *result = static_cast<uint8>(instance->Configure(NativeBindings::Optional<Mesh>(targetMesh), targetSubMeshIndex, NativeBindings::Optional<Material>(targetMaterial), decoded_drawOptions));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_2(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<int32>(instance->GetInstanceCount());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_3(int32 objectId, NativeBindingSlice data, int32 count, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_data(data);
+        int32 length_data = reader_data.Count();
+        if (length_data != count) return NativeBindingStatus::InvalidArgument;
+        std::vector<MeshInstanceData> decoded_data;
+        decoded_data.reserve(length_data);
+        for (int32 index = 0; index < length_data; ++index) decoded_data.push_back(Read_MeshInstanceData(reader_data));
+        reader_data.Complete();
+        *result = static_cast<uint8>(instance->SetInstances(decoded_data.data(), count));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_InstanceDrawList_4(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<InstanceDrawList>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->Submit());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -4089,6 +4735,383 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_HeightField_55(int32 objectId, floa
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_0(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Clear();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_1(int32 objectId, uint32 count, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->Emit(count));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_2(int32 objectId, NativeBindingSlice value, NativeBindingBuffer* result)
+{
+    try
+    {
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_ParticleSettings(reader_value);
+        reader_value.Complete();
+        NativeBindingWriter writer; Write_std__string(writer, ParticleSystem::FormatSettings(decoded_value)); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_3(int32 objectId, uint64* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint64>(instance->GetConfigurationRevision());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_4(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->GetEnabled());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_5(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_std__string(writer, instance->GetLastError()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_6(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_ParticlePlaybackInfo(writer, instance->GetPlaybackInfo()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_7(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_ParticleSettings(writer, instance->GetSettings()); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_8(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_9(int32 objectId, NativeBindingSlice text, NativeBindingBuffer* result)
+{
+    try
+    {
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_text(text);
+        auto decoded_text = Read_std__string(reader_text);
+        reader_text.Complete();
+        NativeBindingWriter writer; Write_ParticleSettingsParseResult(writer, ParticleSystem::ParseSettings(decoded_text)); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_10(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Pause();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_11(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Play();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_12(int32 objectId, uint8 restart)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Play(static_cast<bool>(restart));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_13(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->SetEnabled(static_cast<bool>(value));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_14(int32 objectId, NativeBindingSlice value, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_ParticleSettings(reader_value);
+        reader_value.Complete();
+        *result = static_cast<uint8>(instance->SetSettings(decoded_value));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_15(int32 objectId)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Stop();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_16(int32 objectId, uint8 clear)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->Stop(static_cast<bool>(clear));
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_17(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->castShadows);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_18(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->castShadows = static_cast<bool>(value);
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_19(int32 objectId, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->drawLayer);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_20(int32 objectId, uint32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->drawLayer = value;
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_21(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_List_Ref_Material__(writer, instance->materials); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_22(int32 objectId, NativeBindingSlice value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_List_Ref_Material__(reader_value);
+        reader_value.Complete();
+        instance->materials = decoded_value;
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_23(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = NativeBindings::Id((instance->mesh).Get());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_24(int32 objectId, int32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->mesh = Ref<Mesh>(NativeBindings::Optional<Mesh>(value));
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_25(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->receiveShadows);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_26(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->receiveShadows = static_cast<bool>(value);
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_27(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_std__array_EnsId_16_(writer, instance->subEmitterTargets); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_28(int32 objectId, NativeBindingSlice value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_std__array_EnsId_16_(reader_value);
+        reader_value.Complete();
+        instance->subEmitterTargets = decoded_value;
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_29(int32 objectId, int32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = NativeBindings::Id((instance->trailMaterial).Get());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_ParticleSystem_30(int32 objectId, int32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<ParticleSystem>(objectId);
+        instance->trailMaterial = Ref<Material>(NativeBindings::Optional<Material>(value));
+        instance->OnConfigurationChanged();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
 NativeBindingStatus ORBEDEN_NATIVE_CALL Call_RigidBody_0(int32 objectId, vector3 force)
 {
     try
@@ -4510,7 +5533,30 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_6(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_7(int32 objectId, NativeBindingBuffer* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_7(int32 objectId, uint8* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<StaticMeshRenderer>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint8>(instance->enableInstancing);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_8(int32 objectId, uint8 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<StaticMeshRenderer>(objectId);
+        instance->enableInstancing = static_cast<bool>(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId, NativeBindingBuffer* result)
 {
     try
     {
@@ -4522,7 +5568,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_7(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_8(int32 objectId, NativeBindingSlice value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectId, NativeBindingSlice value)
 {
     try
     {
@@ -4536,7 +5582,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_8(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId, int32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectId, int32* result)
 {
     try
     {
@@ -4548,7 +5594,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_9(int32 objectId
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectId, int32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_12(int32 objectId, int32 value)
 {
     try
     {
@@ -4559,7 +5605,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_10(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectId, uint8* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_13(int32 objectId, uint8* result)
 {
     try
     {
@@ -4571,7 +5617,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_11(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_12(int32 objectId, uint8 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_14(int32 objectId, uint8 value)
 {
     try
     {
@@ -5229,12 +6275,14 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Component::StaticType(), 3730866753121215061ULL, { functions_Component, 1 });
     static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0) };
     NativeBindings::Register(Ens::StaticType(), 6039789372024472840ULL, { functions_Ens, 1 });
+    static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4) };
+    NativeBindings::Register(InstanceDrawList::StaticType(), 17629515747893046868ULL, { functions_InstanceDrawList, 5 });
     static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25), reinterpret_cast<void*>(&Call_Material_26), reinterpret_cast<void*>(&Call_Material_27), reinterpret_cast<void*>(&Call_Material_28), reinterpret_cast<void*>(&Call_Material_29), reinterpret_cast<void*>(&Call_Material_30) };
     NativeBindings::Register(Material::StaticType(), 4948362420089860798ULL, { functions_Material, 31 });
     static void* functions_Mesh[] = { reinterpret_cast<void*>(&Call_Mesh_0), reinterpret_cast<void*>(&Call_Mesh_1), reinterpret_cast<void*>(&Call_Mesh_2), reinterpret_cast<void*>(&Call_Mesh_3), reinterpret_cast<void*>(&Call_Mesh_4), reinterpret_cast<void*>(&Call_Mesh_5), reinterpret_cast<void*>(&Call_Mesh_6), reinterpret_cast<void*>(&Call_Mesh_7), reinterpret_cast<void*>(&Call_Mesh_8), reinterpret_cast<void*>(&Call_Mesh_9), reinterpret_cast<void*>(&Call_Mesh_10), reinterpret_cast<void*>(&Call_Mesh_11), reinterpret_cast<void*>(&Call_Mesh_12), reinterpret_cast<void*>(&Call_Mesh_13), reinterpret_cast<void*>(&Call_Mesh_14), reinterpret_cast<void*>(&Call_Mesh_15), reinterpret_cast<void*>(&Call_Mesh_16), reinterpret_cast<void*>(&Call_Mesh_17), reinterpret_cast<void*>(&Call_Mesh_18), reinterpret_cast<void*>(&Call_Mesh_19), reinterpret_cast<void*>(&Call_Mesh_20), reinterpret_cast<void*>(&Call_Mesh_21), reinterpret_cast<void*>(&Call_Mesh_22), reinterpret_cast<void*>(&Call_Mesh_23), reinterpret_cast<void*>(&Call_Mesh_24), reinterpret_cast<void*>(&Call_Mesh_25), reinterpret_cast<void*>(&Call_Mesh_26), reinterpret_cast<void*>(&Call_Mesh_27), reinterpret_cast<void*>(&Call_Mesh_28) };
     NativeBindings::Register(Mesh::StaticType(), 6127609266950937557ULL, { functions_Mesh, 29 });
     static void* functions_Shader[] = { reinterpret_cast<void*>(&Call_Shader_0), reinterpret_cast<void*>(&Call_Shader_1), reinterpret_cast<void*>(&Call_Shader_2), reinterpret_cast<void*>(&Call_Shader_3), reinterpret_cast<void*>(&Call_Shader_4), reinterpret_cast<void*>(&Call_Shader_5), reinterpret_cast<void*>(&Call_Shader_6), reinterpret_cast<void*>(&Call_Shader_7), reinterpret_cast<void*>(&Call_Shader_8), reinterpret_cast<void*>(&Call_Shader_9), reinterpret_cast<void*>(&Call_Shader_10), reinterpret_cast<void*>(&Call_Shader_11), reinterpret_cast<void*>(&Call_Shader_12), reinterpret_cast<void*>(&Call_Shader_13), reinterpret_cast<void*>(&Call_Shader_14), reinterpret_cast<void*>(&Call_Shader_15), reinterpret_cast<void*>(&Call_Shader_16), reinterpret_cast<void*>(&Call_Shader_17), reinterpret_cast<void*>(&Call_Shader_18), reinterpret_cast<void*>(&Call_Shader_19), reinterpret_cast<void*>(&Call_Shader_20), reinterpret_cast<void*>(&Call_Shader_21), reinterpret_cast<void*>(&Call_Shader_22) };
-    NativeBindings::Register(Shader::StaticType(), 6914069563843283454ULL, { functions_Shader, 23 });
+    NativeBindings::Register(Shader::StaticType(), 4920863515421992412ULL, { functions_Shader, 23 });
     static void* functions_Skybox[] = { reinterpret_cast<void*>(&Call_Skybox_0), reinterpret_cast<void*>(&Call_Skybox_1), reinterpret_cast<void*>(&Call_Skybox_2), reinterpret_cast<void*>(&Call_Skybox_3), reinterpret_cast<void*>(&Call_Skybox_4), reinterpret_cast<void*>(&Call_Skybox_5), reinterpret_cast<void*>(&Call_Skybox_6), reinterpret_cast<void*>(&Call_Skybox_7), reinterpret_cast<void*>(&Call_Skybox_8), reinterpret_cast<void*>(&Call_Skybox_9), reinterpret_cast<void*>(&Call_Skybox_10), reinterpret_cast<void*>(&Call_Skybox_11) };
     NativeBindings::Register(Skybox::StaticType(), 5502695681722555340ULL, { functions_Skybox, 12 });
     static void* functions_Texture2D[] = { reinterpret_cast<void*>(&Call_Texture2D_0), reinterpret_cast<void*>(&Call_Texture2D_1), reinterpret_cast<void*>(&Call_Texture2D_2), reinterpret_cast<void*>(&Call_Texture2D_3), reinterpret_cast<void*>(&Call_Texture2D_4), reinterpret_cast<void*>(&Call_Texture2D_5), reinterpret_cast<void*>(&Call_Texture2D_6), reinterpret_cast<void*>(&Call_Texture2D_7), reinterpret_cast<void*>(&Call_Texture2D_8), reinterpret_cast<void*>(&Call_Texture2D_9), reinterpret_cast<void*>(&Call_Texture2D_10), reinterpret_cast<void*>(&Call_Texture2D_11), reinterpret_cast<void*>(&Call_Texture2D_12), reinterpret_cast<void*>(&Call_Texture2D_13), reinterpret_cast<void*>(&Call_Texture2D_14), reinterpret_cast<void*>(&Call_Texture2D_15), reinterpret_cast<void*>(&Call_Texture2D_16) };
@@ -5249,12 +6297,14 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(DirectionalLight::StaticType(), 8098784669294264934ULL, { functions_DirectionalLight, 29 });
     static void* functions_HeightField[] = { reinterpret_cast<void*>(&Call_HeightField_0), reinterpret_cast<void*>(&Call_HeightField_1), reinterpret_cast<void*>(&Call_HeightField_2), reinterpret_cast<void*>(&Call_HeightField_3), reinterpret_cast<void*>(&Call_HeightField_4), reinterpret_cast<void*>(&Call_HeightField_5), reinterpret_cast<void*>(&Call_HeightField_6), reinterpret_cast<void*>(&Call_HeightField_7), reinterpret_cast<void*>(&Call_HeightField_8), reinterpret_cast<void*>(&Call_HeightField_9), reinterpret_cast<void*>(&Call_HeightField_10), reinterpret_cast<void*>(&Call_HeightField_11), reinterpret_cast<void*>(&Call_HeightField_12), reinterpret_cast<void*>(&Call_HeightField_13), reinterpret_cast<void*>(&Call_HeightField_14), reinterpret_cast<void*>(&Call_HeightField_15), reinterpret_cast<void*>(&Call_HeightField_16), reinterpret_cast<void*>(&Call_HeightField_17), reinterpret_cast<void*>(&Call_HeightField_18), reinterpret_cast<void*>(&Call_HeightField_19), reinterpret_cast<void*>(&Call_HeightField_20), reinterpret_cast<void*>(&Call_HeightField_21), reinterpret_cast<void*>(&Call_HeightField_22), reinterpret_cast<void*>(&Call_HeightField_23), reinterpret_cast<void*>(&Call_HeightField_24), reinterpret_cast<void*>(&Call_HeightField_25), reinterpret_cast<void*>(&Call_HeightField_26), reinterpret_cast<void*>(&Call_HeightField_27), reinterpret_cast<void*>(&Call_HeightField_28), reinterpret_cast<void*>(&Call_HeightField_29), reinterpret_cast<void*>(&Call_HeightField_30), reinterpret_cast<void*>(&Call_HeightField_31), reinterpret_cast<void*>(&Call_HeightField_32), reinterpret_cast<void*>(&Call_HeightField_33), reinterpret_cast<void*>(&Call_HeightField_34), reinterpret_cast<void*>(&Call_HeightField_35), reinterpret_cast<void*>(&Call_HeightField_36), reinterpret_cast<void*>(&Call_HeightField_37), reinterpret_cast<void*>(&Call_HeightField_38), reinterpret_cast<void*>(&Call_HeightField_39), reinterpret_cast<void*>(&Call_HeightField_40), reinterpret_cast<void*>(&Call_HeightField_41), reinterpret_cast<void*>(&Call_HeightField_42), reinterpret_cast<void*>(&Call_HeightField_43), reinterpret_cast<void*>(&Call_HeightField_44), reinterpret_cast<void*>(&Call_HeightField_45), reinterpret_cast<void*>(&Call_HeightField_46), reinterpret_cast<void*>(&Call_HeightField_47), reinterpret_cast<void*>(&Call_HeightField_48), reinterpret_cast<void*>(&Call_HeightField_49), reinterpret_cast<void*>(&Call_HeightField_50), reinterpret_cast<void*>(&Call_HeightField_51), reinterpret_cast<void*>(&Call_HeightField_52), reinterpret_cast<void*>(&Call_HeightField_53), reinterpret_cast<void*>(&Call_HeightField_54), reinterpret_cast<void*>(&Call_HeightField_55) };
     NativeBindings::Register(HeightField::StaticType(), 12049277348369327740ULL, { functions_HeightField, 56 });
+    static void* functions_ParticleSystem[] = { reinterpret_cast<void*>(&Call_ParticleSystem_0), reinterpret_cast<void*>(&Call_ParticleSystem_1), reinterpret_cast<void*>(&Call_ParticleSystem_2), reinterpret_cast<void*>(&Call_ParticleSystem_3), reinterpret_cast<void*>(&Call_ParticleSystem_4), reinterpret_cast<void*>(&Call_ParticleSystem_5), reinterpret_cast<void*>(&Call_ParticleSystem_6), reinterpret_cast<void*>(&Call_ParticleSystem_7), reinterpret_cast<void*>(&Call_ParticleSystem_8), reinterpret_cast<void*>(&Call_ParticleSystem_9), reinterpret_cast<void*>(&Call_ParticleSystem_10), reinterpret_cast<void*>(&Call_ParticleSystem_11), reinterpret_cast<void*>(&Call_ParticleSystem_12), reinterpret_cast<void*>(&Call_ParticleSystem_13), reinterpret_cast<void*>(&Call_ParticleSystem_14), reinterpret_cast<void*>(&Call_ParticleSystem_15), reinterpret_cast<void*>(&Call_ParticleSystem_16), reinterpret_cast<void*>(&Call_ParticleSystem_17), reinterpret_cast<void*>(&Call_ParticleSystem_18), reinterpret_cast<void*>(&Call_ParticleSystem_19), reinterpret_cast<void*>(&Call_ParticleSystem_20), reinterpret_cast<void*>(&Call_ParticleSystem_21), reinterpret_cast<void*>(&Call_ParticleSystem_22), reinterpret_cast<void*>(&Call_ParticleSystem_23), reinterpret_cast<void*>(&Call_ParticleSystem_24), reinterpret_cast<void*>(&Call_ParticleSystem_25), reinterpret_cast<void*>(&Call_ParticleSystem_26), reinterpret_cast<void*>(&Call_ParticleSystem_27), reinterpret_cast<void*>(&Call_ParticleSystem_28), reinterpret_cast<void*>(&Call_ParticleSystem_29), reinterpret_cast<void*>(&Call_ParticleSystem_30) };
+    NativeBindings::Register(ParticleSystem::StaticType(), 5956242445408171042ULL, { functions_ParticleSystem, 31 });
     static void* functions_RigidBody[] = { reinterpret_cast<void*>(&Call_RigidBody_0), reinterpret_cast<void*>(&Call_RigidBody_1), reinterpret_cast<void*>(&Call_RigidBody_2), reinterpret_cast<void*>(&Call_RigidBody_3), reinterpret_cast<void*>(&Call_RigidBody_4), reinterpret_cast<void*>(&Call_RigidBody_5), reinterpret_cast<void*>(&Call_RigidBody_6), reinterpret_cast<void*>(&Call_RigidBody_7), reinterpret_cast<void*>(&Call_RigidBody_8), reinterpret_cast<void*>(&Call_RigidBody_9), reinterpret_cast<void*>(&Call_RigidBody_10), reinterpret_cast<void*>(&Call_RigidBody_11), reinterpret_cast<void*>(&Call_RigidBody_12), reinterpret_cast<void*>(&Call_RigidBody_13), reinterpret_cast<void*>(&Call_RigidBody_14), reinterpret_cast<void*>(&Call_RigidBody_15), reinterpret_cast<void*>(&Call_RigidBody_16), reinterpret_cast<void*>(&Call_RigidBody_17), reinterpret_cast<void*>(&Call_RigidBody_18), reinterpret_cast<void*>(&Call_RigidBody_19), reinterpret_cast<void*>(&Call_RigidBody_20), reinterpret_cast<void*>(&Call_RigidBody_21), reinterpret_cast<void*>(&Call_RigidBody_22) };
     NativeBindings::Register(RigidBody::StaticType(), 11999458345191868740ULL, { functions_RigidBody, 23 });
     static void* functions_Script[] = { reinterpret_cast<void*>(&Call_Script_0), reinterpret_cast<void*>(&Call_Script_1), reinterpret_cast<void*>(&Call_Script_2), reinterpret_cast<void*>(&Call_Script_3), reinterpret_cast<void*>(&Call_Script_4) };
     NativeBindings::Register(Script::StaticType(), 4334917007709764458ULL, { functions_Script, 5 });
-    static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12) };
-    NativeBindings::Register(StaticMeshRenderer::StaticType(), 17084019573220194954ULL, { functions_StaticMeshRenderer, 13 });
+    static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12), reinterpret_cast<void*>(&Call_StaticMeshRenderer_13), reinterpret_cast<void*>(&Call_StaticMeshRenderer_14) };
+    NativeBindings::Register(StaticMeshRenderer::StaticType(), 13320516794657574915ULL, { functions_StaticMeshRenderer, 15 });
     static void* functions_Transform[] = { reinterpret_cast<void*>(&Call_Transform_0), reinterpret_cast<void*>(&Call_Transform_1), reinterpret_cast<void*>(&Call_Transform_2), reinterpret_cast<void*>(&Call_Transform_3), reinterpret_cast<void*>(&Call_Transform_4), reinterpret_cast<void*>(&Call_Transform_5), reinterpret_cast<void*>(&Call_Transform_6), reinterpret_cast<void*>(&Call_Transform_7), reinterpret_cast<void*>(&Call_Transform_8), reinterpret_cast<void*>(&Call_Transform_9) };
     NativeBindings::Register(Transform::StaticType(), 13157070993901949905ULL, { functions_Transform, 10 });
     static void* functions_WheelCollider[] = { reinterpret_cast<void*>(&Call_WheelCollider_0), reinterpret_cast<void*>(&Call_WheelCollider_1), reinterpret_cast<void*>(&Call_WheelCollider_2), reinterpret_cast<void*>(&Call_WheelCollider_3), reinterpret_cast<void*>(&Call_WheelCollider_4), reinterpret_cast<void*>(&Call_WheelCollider_5), reinterpret_cast<void*>(&Call_WheelCollider_6), reinterpret_cast<void*>(&Call_WheelCollider_7), reinterpret_cast<void*>(&Call_WheelCollider_8), reinterpret_cast<void*>(&Call_WheelCollider_9), reinterpret_cast<void*>(&Call_WheelCollider_10), reinterpret_cast<void*>(&Call_WheelCollider_11), reinterpret_cast<void*>(&Call_WheelCollider_12), reinterpret_cast<void*>(&Call_WheelCollider_13), reinterpret_cast<void*>(&Call_WheelCollider_14), reinterpret_cast<void*>(&Call_WheelCollider_15), reinterpret_cast<void*>(&Call_WheelCollider_16), reinterpret_cast<void*>(&Call_WheelCollider_17), reinterpret_cast<void*>(&Call_WheelCollider_18), reinterpret_cast<void*>(&Call_WheelCollider_19), reinterpret_cast<void*>(&Call_WheelCollider_20), reinterpret_cast<void*>(&Call_WheelCollider_21), reinterpret_cast<void*>(&Call_WheelCollider_22), reinterpret_cast<void*>(&Call_WheelCollider_23), reinterpret_cast<void*>(&Call_WheelCollider_24), reinterpret_cast<void*>(&Call_WheelCollider_25), reinterpret_cast<void*>(&Call_WheelCollider_26), reinterpret_cast<void*>(&Call_WheelCollider_27) };

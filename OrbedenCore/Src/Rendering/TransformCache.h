@@ -30,6 +30,9 @@ public:
     //处理变更通知并刷新所有受影响节点的世界矩阵
     void Update(World& currentWorld);
 
+    //解除世界监听并清空缓存，世界销毁或关闭前调用
+    void Reset();
+
     //获取实体的缓存世界矩阵
     matrix4x4 GetWorldMatrix(EnsId ens) const;
 

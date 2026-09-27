@@ -11,21 +11,44 @@ enum class GpuRenderTargetFormat
     RGBA16F = 1,
 };
 
-//GPU 缓冲创建描述，用于顶点缓冲和索引缓冲。
+//GPU 顶点布局种类。数值稳定，后端按它选择 attribute 绑定方案。
+enum class GpuVertexLayout : uint32
+{
+    //现有网格顶点布局：位置、法线、uv、切线，步长由网格决定。
+    Mesh = 0,
+    //网格顶点 + 每实例属性 locations 5..13，实例 stride 为 144 字节。
+    InstancedMesh = 1,
+    //展开后的世界空间顶点，5 个属性，stride 为 60 字节。
+    Expanded = 2,
+    //共享四边形网格顶点 + 每实例属性 locations 5..11，实例 stride 为 112 字节。
+    InstancedTrail = 3,
+};
+
+//GPU 缓冲用途。Stream 允许先按容量创建、之后重复流式覆盖。
+enum class GpuBufferUsage : uint32
+{
+    Static = 0,
+    Stream = 1,
+};
+
+//GPU 缓冲创建描述，用于顶点缓冲和索引缓冲。size 表示容量字节数。
 struct GpuBufferDesc
 {
 public:
     const void* data = nullptr;
     usize size = 0;
+    //Stream 用途允许 data 为空、size 非零，表示只按容量分配存储。
+    GpuBufferUsage usage = GpuBufferUsage::Static;
 };
 
-//GPU 顶点输入创建描述，描述顶点/索引缓冲和顶点步长。
+//GPU 顶点输入创建描述，描述顶点/索引缓冲、顶点步长和属性布局。
 struct GpuVertexInputDesc
 {
 public:
     GpuVertexBufferID vertexBuffer;
     GpuIndexBufferID indexBuffer;
     uint32 stride = 0;
+    GpuVertexLayout layout = GpuVertexLayout::Mesh;
 };
 
 //GPU 纹理创建描述，描述纹理尺寸、通道和像素数据。
@@ -180,6 +203,19 @@ public:
     //多边形深度偏移：与已有表面同层绘制时用它压过浮点误差
     virtual void SetPolygonOffset(bool enabled, float32 factor, float32 units) = 0;
     virtual void SetBlend(bool enabled) = 0;
+    //设置混合方程。Alpha 与 Additive 的 RGB/Alpha 因子成对切换，由后端缓存并去重。
+    virtual void SetBlendMode(BlendMode mode) = 0;
     virtual void SetCullMode(CullMode mode) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;
+    //实例化索引绘制，实例数据由 BindInstanceBuffer 提供。
+    virtual void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) = 0;
+
+    //实例化能力在初始化时确定，绘制期间不再查询 GL。
+    virtual bool SupportsInstancing() const = 0;
+    //把数据流式写入已有顶点缓冲，超出容量的请求被拒绝。
+    virtual bool UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity) = 0;
+    //把索引流式写入已有索引缓冲，同时刷新引用它的顶点输入的索引数量缓存。
+    virtual bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) = 0;
+    //按当前顶点输入的实例布局设置实例 attribute 指针与 divisor。
+    virtual bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) = 0;
 };

@@ -1,0 +1,53 @@
+--------queue Transparent
+
+--------geometry Particle
+
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+layout(location = 3) in vec3 a_Tangent;
+
+uniform mat4 u_ViewProjection;
+#include "Builtin/geometry_input.orbinc"
+
+out vec2 v_TexCoord;
+out vec4 v_Tint;
+
+void main()
+{
+    //拖尾的四边形 uv：(0,0) 起点左、(1,0) 起点右、(1,1) 终点右、(0,1) 终点左。
+    //实例路径用 uv.y 选起终点、uv.x 选左右；展开路径在 CPU 已经写好同样的最终 UV。
+    v_TexCoord = OrbedenGetUv(a_TexCoord);
+    v_Tint = OrbedenGetTrailColor(a_TexCoord);
+    gl_Position = u_ViewProjection * vec4(OrbedenGetTrailPosition(a_TexCoord), 1.0);
+}
+
+--------frag
+#version 430 core
+
+in vec2 v_TexCoord;
+in vec4 v_Tint;
+
+uniform bool u_HasDiffuseTexture;
+uniform sampler2D u_DiffuseTexture;
+uniform vec4 u_DiffuseColor;
+uniform float u_Intensity;
+
+out vec4 FragColor;
+
+void main()
+{
+    //两端颜色由顶点属性插值给出，Alpha 已经乘过沿寿命的淡出
+    vec4 sampled = vec4(1.0);
+    if (u_HasDiffuseTexture)
+    {
+        sampled = texture(u_DiffuseTexture, v_TexCoord);
+    }
+
+    vec3 color = sampled.rgb * max(u_DiffuseColor.rgb, vec3(0.0)) * v_Tint.rgb * max(u_Intensity, 0.0);
+    float alpha = sampled.a * u_DiffuseColor.a * v_Tint.a;
+    FragColor = vec4(color, alpha);
+}

@@ -96,11 +96,15 @@ public:
     void* endList = nullptr;
     void* pushId = nullptr;
     void* popId = nullptr;
+    //曲线与渐变编辑器需要的三个入口
+    void* drawPolyline = nullptr;
+    void* isItemActive = nullptr;
+    void* isMouseDown = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 78);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 81);
 
 //Editor ImGui 绑定层
 class EditorGUI

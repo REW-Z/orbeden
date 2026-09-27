@@ -535,6 +535,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 26 | 新增 GPU 实例化与静态自动合批：Shader 增加几何 ABI 契约（`Geometry Legacy/Standard/Particle`），Cooked 载荷新增 `geometryContract` 字段并把格式标签从 2 提升到 3；新增显式实例提交对象 `InstanceDrawList` 与 CPU 粒子系统 `ParticleSystem`。**旧内容里的 `blinn_phong`、`pbs_metallic`、`transparent`、`shadow_depth` 不会被自动覆盖**，升级后仍按 Legacy 逐对象绘制；要启用静态自动合批，需把当前 Builtin Shader 同步进项目，或为自定义 Shader 声明 `Geometry Standard`。粒子需要 `Builtin/geometry_input.orbinc` 与两份粒子 Shader/材质，由 Inspector 的「使用内置粒子材质」按钮补齐缺失文件（已存在的同名文件保留）。**旧 Cooked 产物因格式标签变化全部失效**，需要重新导入并 `Build Player`；升级还会重新生成 SDK 与绑定，因此必须重建编辑器、游戏原生模块与脚本。 |
 | 25 | 新增 `.orbsky` 六面天空盒导入与 Builtin 柔和日光环境；PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射。世界保存独立反射环境与线性强度，编辑器 Rendering 面板提供设置入口。同步当前 Builtin 天空盒、六面图片、Shader 和 `environment_reflection.orbinc`，重新构建编辑器与 Player。 |
 | 24 | 光照统一为线性美术强度，方向光默认 `1.0`，CPU 原样传入 Shader；直接漫反射采用单位响应，镜面配套归一化。环境光新增独立的 `ambientIntensity`，默认 `1.0`，与颜色分别编辑并保存到 `.world`。重新构建引擎、编辑器与 Player，并使用当前内置 Shader；不提供旧光照刻度兼容。 |
 | 23 | `DirectionalLight` 的方向改取所属 Ens 的 Transform 前向，`direction` 字段移除；光照强度明确为辐亮度。**升级后有三步手工迁移**：老场景的光照 Ens 都是单位旋转，太阳会变成水平照射，需用旋转手柄转回去；当时建议将 `.world` 的 `intensity` 乘 π 左右作为重新调光的起点，并非公式单位的精确换算；直接升级到版本 24 时不再执行此步骤；`<RenderSettings>` 的 `ambientColor` 同理，旧值转线性后暗了约 12 倍，需重新标定（默认值已改为 `0.34 0.37 0.42`）。取值约定见 [颜色管线](ColorPipeline.md) 的「光照强度」。 |

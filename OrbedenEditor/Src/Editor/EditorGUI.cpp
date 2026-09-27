@@ -1222,6 +1222,39 @@ namespace
         }
     }
 
+    //绘制一条折线，坐标与裁剪矩形都在屏幕空间
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawPolyline(const vector2* points, int32 count, const color* tint,
+        float32 thickness, const vector2* clipMin, const vector2* clipMax)
+    {
+        if (!points || !tint || count < 2 || count > 4096) return;
+        //厚度与颜色都必须可用，否则整条线不画
+        if (!std::isfinite(thickness) || thickness <= 0.0f) return;
+        if (!std::isfinite(tint->r) || !std::isfinite(tint->g) || !std::isfinite(tint->b) || !std::isfinite(tint->a)) return;
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        bool clipped = clipMin && clipMax && clipMax->x > clipMin->x && clipMax->y > clipMin->y;
+        if (clipped) drawList->PushClipRect(ImVec2(clipMin->x, clipMin->y), ImVec2(clipMax->x, clipMax->y), true);
+
+        //原生不保留指针，所有坐标在本次调用内转换
+        drawList->AddPolyline(reinterpret_cast<const ImVec2*>(points), count,
+            ImGui::GetColorU32(ImVec4(tint->r, tint->g, tint->b, tint->a)), ImDrawFlags_None, thickness);
+
+        if (clipped) drawList->PopClipRect();
+    }
+
+    //当前控件是否正在被拖动
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiIsItemActive()
+    {
+        return ImGui::IsItemActive() ? 1 : 0;
+    }
+
+    //指定鼠标键是否按下，只接受 0..2
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiIsMouseDown(int32 button)
+    {
+        if (button < 0 || button > 2) return 0;
+        return ImGui::IsMouseDown(static_cast<ImGuiMouseButton>(button)) ? 1 : 0;
+    }
+
     //在指定位置绘制被裁剪的文本
     void ORBEDEN_NATIVE_CALL EditorGuiDrawTextClipped(const vector2* clipMin, const vector2* clipMax,
         const vector2* position, const color* value, const uint8* text, int32 length, float32 fontSize)
@@ -1711,6 +1744,9 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.endList = reinterpret_cast<void*>(&EditorGuiEndList);
     api.pushId = reinterpret_cast<void*>(&EditorGuiPushId);
     api.popId = reinterpret_cast<void*>(&EditorGuiPopId);
+    api.drawPolyline = reinterpret_cast<void*>(&EditorGuiDrawPolyline);
+    api.isItemActive = reinterpret_cast<void*>(&EditorGuiIsItemActive);
+    api.isMouseDown = reinterpret_cast<void*>(&EditorGuiIsMouseDown);
     return api;
 }
 

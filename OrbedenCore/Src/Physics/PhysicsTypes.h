@@ -50,6 +50,17 @@ public:
     float32 distance = 0.0f;
 };
 
+//场景查询的附加过滤条件。粒子用它在同一次查询里同时排除自己与触发器。
+struct PhysicsQueryFilter
+{
+public:
+    uint32 layerMask = 0xFFFFFFFFu;
+    //命中这个 Ens 的几何时跳过，用于排除发射器自身
+    EnsId ignoredEns;
+    //默认排除触发器，粒子只与实体几何碰撞
+    bool includeTriggers = false;
+};
+
 //碰撞和触发器事件
 struct PhysicsEvent
 {

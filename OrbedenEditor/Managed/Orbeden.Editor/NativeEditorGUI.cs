@@ -87,6 +87,9 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<int> EndList;
     public delegate* unmanaged[Cdecl]<byte*, int, void> PushId;
     public delegate* unmanaged[Cdecl]<void> PopId;
+    public delegate* unmanaged[Cdecl]<vector2*, int, color*, float, vector2*, vector2*, void> DrawPolyline;
+    public delegate* unmanaged[Cdecl]<byte> IsItemActive;
+    public delegate* unmanaged[Cdecl]<int, byte> IsMouseDown;
 }
 #pragma warning restore CS0649
 
@@ -842,5 +845,31 @@ internal static unsafe class NativeEditorGUI
     internal static void EndDisabled()
     {
         if (initialized && api.EndDisabled != null) api.EndDisabled();
+    }
+
+    //绘制一条屏幕空间折线，可选裁剪矩形；指针只在本次调用内有效
+    internal static void DrawPolyline(ReadOnlySpan<vector2> points, color tint, float thickness,
+        vector2 clipMin, vector2 clipMax)
+    {
+        if (!initialized || api.DrawPolyline == null || points.Length < 2 || points.Length > 4096) return;
+        if (!float.IsFinite(thickness) || thickness <= 0f) return;
+
+        fixed (vector2* pointPointer = points)
+        {
+            api.DrawPolyline(pointPointer, points.Length, &tint, thickness, &clipMin, &clipMax);
+        }
+    }
+
+    //当前控件是否正在被拖动，供曲线画布的 InvisibleButton 捕获拖动
+    internal static bool IsItemActive()
+    {
+        return initialized && api.IsItemActive != null && api.IsItemActive() != 0;
+    }
+
+    //指定鼠标键是否按下，只接受 0..2
+    internal static bool IsMouseDown(int button)
+    {
+        if (!initialized || api.IsMouseDown == null || button < 0 || button > 2) return false;
+        return api.IsMouseDown(button) != 0;
     }
 }
