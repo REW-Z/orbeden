@@ -27,9 +27,9 @@ Orbeden 的颜色空间是**定死**的，不提供用户开关。本文记录�
 | 显示编码 | sRGB（IEC 61966-2-1 分段曲线） | 只有这一种 |
 | 色调映射 | AgX | 在输出 Pass 内，参数固定 |
 | 输出位置 | 输出 Pass 一处 | 全引擎唯一的显示编码点 |
-| 光照强度单位 | 辐亮度 | `intensity = π` 为满日照，不是"亮度倍数" |
+| 光照强度刻度 | 线性美术强度，默认 1.0 | 直接传入 Shader，漫反射单位响应、镜面配套归一化 |
 
-**没有 gamma / sRGB / 线性开关。** 早期讨论过要不要像 Unity 那样提供选择，结论是不提供：那类开关是历史包袱的产物（跨平台硬件能力、免费版分层、存量内容迁移），而本引擎不背这些包袱。详见 [渲染管线](RenderingPipeline.md)。
+**没有 gamma / sRGB / 线性开关。** 引擎统一使用线性工作空间与 sRGB 显示编码。详见 [渲染管线](RenderingPipeline.md)。
 
 ## 各路数据的颜色语义
 
@@ -53,27 +53,24 @@ Orbeden 的颜色空间是**定死**的，不提供用户开关。本文记录�
 
 ## 光照强度
 
-`DirectionalLight.intensity` 的单位是**辐亮度**，不是"亮度倍数"。着色器里漫反射带 Lambert BRDF 的 `1/π`：
+`DirectionalLight.intensity` 使用 **美术强度刻度**，默认 `1.0`，通常从 `0~1` 调节，允许大于 `1`。它是无量纲的亮度倍率，不是 lux。
+
+面板、`.world`、脚本 API、渲染快照和 `u_LightIntensity` 都使用同一刻度，不在 CPU 侧换算。Shader 中直接光漫反射不除 π，镜面采用物理 BRDF 乘 π 的配套归一化；Blinn-Phong 的镜面系数直接约去 π。以理想 Lambert 漫反射为例：
 
 ```
-direct = (albedo/π) · nDotL · lightColor · intensity
+u_LightIntensity = intensity
+direct = albedo · nDotL · lightColor · intensity
 ```
 
-白色表面正对太阳（`nDotL = 1`、光色为白）时结果是 `intensity/π`，所以：
+白色理想漫反射表面正对白光时，`intensity = 1` 得到 1.0 的线性直接光结果。实际 PBS 还包含菲涅耳、金属度和镜面项；最终显示还受环境光、阴影、曝光与 AgX 影响，因此不能把 `1` 当作过曝阈值。
 
-| intensity | 结果 |
-| --- | --- |
-| **π ≈ 3.14** | 1.0 线性亮度，即满日照。这是默认值 |
-| 更大 | 过曝；AgX 会把超过 1 的值压回去，但中间调会整体上移、发灰 |
+该归一化同时作用于漫反射和镜面，保持二者的能量比例。GGX 法线分布函数仍保留自己的数学归一化，不能将 Shader 中所有 π 不加区分地删除。环境反射与特效 Shader 按各自模型使用线性美术强度。
 
-**与 Unity 的换算**：Unity 走的是代数等价的"美术友好"形式——漫反射不除 π、镜面乘 π，光值等于物理值的 `1/π`（Unity 5+ 的 `UnityStandardBRDF.cginc`；更早的 Unity 4 则在引擎侧硬编码 `× 2.0`）。所以 **Unity 里习惯填的 `1.0` 相当于这里的 `π`**。
+## 环境光强度
 
-Orbeden 选物理约定而不是美术约定，理由：
+环境光同样将颜色与强度分开：`RenderSettings.ambientColor` 是 sRGB 颜色，`ambientIntensity` 是线性美术强度，默认 `1`、`0` 关闭、允许大于 `1`。Rendering 面板分别编辑两者，均保存在 `.world` 中。
 
-- 物理约定有锚点——"1.0"有明确含义；美术约定的"1.0"依赖引擎内部常数，Unity 自己就从 `2.0` 变到了 `π`
-- 以后接 IBL、曝光、自动曝光时物理单位才算得通
-
-代价是 intensity 的常用区间从 `0~1` 变成 `0~π`。
+环境漫反射使用 `SrgbToLinear(ambientColor) · ambientIntensity · albedo`。这里已采用积分后的近似环境光形式，不需要再乘 π。方向光和环境光都不对强度做 sRGB 解码，强度减半都会让各自贡献的线性光照减半；二者的颜色仍统一按 sRGB 解码。
 
 ## 曝光
 

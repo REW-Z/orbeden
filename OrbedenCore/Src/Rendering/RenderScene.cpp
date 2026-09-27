@@ -81,6 +81,11 @@ void RenderScene::Update(World& currentWorld, TransformCache& transformCache)
     //世界里的颜色是 sRGB 语义（和检视面板一致），渲染快照统一持有线性值
     renderSettings = currentWorld.renderSettings;
     renderSettings.ambientColor = ColorSpace::SrgbToLinear(renderSettings.ambientColor);
+    //将环境光线性强度合入 RGB，保留 alpha
+    const float32 ambientIntensity = std::max(renderSettings.ambientIntensity, 0.0f);
+    renderSettings.ambientColor.r *= ambientIntensity;
+    renderSettings.ambientColor.g *= ambientIntensity;
+    renderSettings.ambientColor.b *= ambientIntensity;
     transformCache.Update(currentWorld);
 
     //编辑模式也完成资源解析后待生成的地形，无需启动物理模拟。

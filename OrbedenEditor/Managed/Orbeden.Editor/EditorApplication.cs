@@ -21,7 +21,7 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, void> SetWorldDirty;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, void> RequestProjectAction;
     public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, byte> GetWorldRenderSettings;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, float*, void> SetWorldRenderSettings;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte, float*, float, void> SetWorldRenderSettings;
 }
 #pragma warning restore CS0649
 
@@ -38,6 +38,7 @@ internal struct EditorWorldRenderSettingsAbi
     public float AmbientG;
     public float AmbientB;
     public float AmbientA;
+    public float AmbientIntensity;
 }
 
 internal enum EditorProjectField
@@ -66,12 +67,13 @@ public static unsafe class EditorApplication
     public static bool WorldDirty => api.IsWorldDirty != null && api.IsWorldDirty(api.Context) != 0;
 
     /// <summary>读取当前 World 的渲染设置。环境光是 sRGB 语义，与世界文件里存的一致。</summary>
-    internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor)
+    internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor, out float ambientIntensity)
     {
         skyboxKey = string.Empty;
         skyboxEnabled = false;
         //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
         ambientColor = new Vector4(0.34f, 0.37f, 0.42f, 1.0f);
+        ambientIntensity = 1.0f;
         if (api.GetWorldRenderSettings == null) return false;
 
         EditorWorldRenderSettingsAbi settings;
@@ -82,11 +84,12 @@ public static unsafe class EditorApplication
             : string.Empty;
         skyboxEnabled = settings.SkyboxEnabled != 0;
         ambientColor = new Vector4(settings.AmbientR, settings.AmbientG, settings.AmbientB, settings.AmbientA);
+        ambientIntensity = settings.AmbientIntensity;
         return true;
     }
 
     /// <summary>写入当前 World 的渲染设置。播放中由原生侧拒绝。</summary>
-    internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor)
+    internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor, float ambientIntensity)
     {
         if (api.SetWorldRenderSettings == null) return;
 
@@ -94,7 +97,7 @@ public static unsafe class EditorApplication
         fixed (byte* keyPointer = bytes)
         {
             float* ambient = stackalloc float[4] { ambientColor.X, ambientColor.Y, ambientColor.Z, ambientColor.W };
-            api.SetWorldRenderSettings(api.Context, keyPointer, bytes.Length, (byte)(skyboxEnabled ? 1 : 0), ambient);
+            api.SetWorldRenderSettings(api.Context, keyPointer, bytes.Length, (byte)(skyboxEnabled ? 1 : 0), ambient, ambientIntensity);
         }
     }
 

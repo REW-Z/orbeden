@@ -104,6 +104,7 @@ public:
     DirectionalLight* light = nullptr;
     vector3 direction = { -0.35f, -1.0f, -0.45f };
     color color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    //线性美术强度，直接传给 u_LightIntensity
     float32 intensity = 1.0f;
     bool castShadows = true;
     //世界单位的深度偏移

@@ -21,6 +21,7 @@ internal static class EditorEnvironmentSettings
     private static bool skyboxEnabled;
     private static vector3 ambientRgb;
     private static float ambientAlpha = 1.0f;
+    private static float ambientIntensity = 1.0f;
 
     /// <summary>读出当前世界的设置，丢弃未提交的草稿。</summary>
     internal static void Reload()
@@ -29,7 +30,7 @@ internal static class EditorEnvironmentSettings
         dirty = false;
         status = string.Empty;
 
-        if (!EditorApplication.TryGetWorldRenderSettings(out string key, out bool enabled, out Vector4 ambient))
+        if (!EditorApplication.TryGetWorldRenderSettings(out string key, out bool enabled, out Vector4 ambient, out ambientIntensity))
         {
             skybox = null;
             skyboxEnabled = false;
@@ -78,7 +79,7 @@ internal static class EditorEnvironmentSettings
         EditorApplication.SetWorldRenderSettings(
             skybox?.GetInstanceId() ?? string.Empty,
             skyboxEnabled,
-            new Vector4(ambientRgb.x, ambientRgb.y, ambientRgb.z, ambientAlpha));
+            new Vector4(ambientRgb.x, ambientRgb.y, ambientRgb.z, ambientAlpha), ambientIntensity);
         dirty = false;
         status = string.Empty;
         return true;
@@ -99,7 +100,12 @@ internal static class EditorEnvironmentSettings
                 if (EditorGUI.Checkbox("Skybox Enabled", ref skyboxEnabled)) dirty = true;
                 if (EditorGUI.InputVector3("Ambient Color RGB", ref ambientRgb)) dirty = true;
                 if (EditorGUI.InputFloat("Ambient Color Alpha", ref ambientAlpha)) dirty = true;
-                EditorGUI.Label("Colors are sRGB here; the pipeline converts them to linear for lighting.");
+                if (EditorGUI.InputFloat("Ambient Intensity", ref ambientIntensity))
+                {
+                    ambientIntensity = Math.Max(0.0f, ambientIntensity);
+                    dirty = true;
+                }
+                EditorGUI.Label("Color sets the tint; intensity scales brightness linearly (0 = off, 1 = baseline).");
 
                 EditorGUI.Separator();
                 if (EditorGUI.Button(dirty ? "Apply *" : "Apply")) Apply();

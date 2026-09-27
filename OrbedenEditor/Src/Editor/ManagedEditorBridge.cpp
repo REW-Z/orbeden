@@ -887,8 +887,9 @@ namespace
         uint32 skyboxEnabled = 0;
         uint32 reserved = 0;
         float32 ambientColor[4] = {};
+        float32 ambientIntensity = 1.0f;
     };
-    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 40);
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 48);
 
     //读取世界级渲染设置。Key 借用 World 里的字符串，只在本次调用期间有效。
     uint8 ORBEDEN_NATIVE_CALL GetManagedWorldRenderSettings(void* context, EditorWorldRenderSettingsAbi* settings)
@@ -903,12 +904,13 @@ namespace
         settings->ambientColor[1] = source.ambientColor.g;
         settings->ambientColor[2] = source.ambientColor.b;
         settings->ambientColor[3] = source.ambientColor.a;
+        settings->ambientIntensity = source.ambientIntensity;
         return 1;
     }
 
     //写入世界级渲染设置
     void ORBEDEN_NATIVE_CALL SetManagedWorldRenderSettings(void* context, const char* skyboxKey, int32 skyboxKeyLength,
-        uint8 skyboxEnabled, const float32* ambientColor)
+        uint8 skyboxEnabled, const float32* ambientColor, float32 ambientIntensity)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || editor->IsPlaying() || !ambientColor) return;
@@ -925,6 +927,7 @@ namespace
 
         target.skyboxEnabled = skyboxEnabled != 0;
         target.ambientColor = color { ambientColor[0], ambientColor[1], ambientColor[2], ambientColor[3] };
+        target.ambientIntensity = ambientIntensity;
         editor->GetWorld().SetDirty();
     }
 

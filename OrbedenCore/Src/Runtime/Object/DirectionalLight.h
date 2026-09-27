@@ -19,10 +19,9 @@ public:
     //光照方向不在这里：它与太阳的朝向是同一个东西，直接取所属 Ens 的 Transform 前向，
     //用旋转手柄转太阳即可。见 RenderScene 生成方向光快照的地方。
     color color = { 1.0f, 0.96f, 0.86f, 1.0f };
-    //强度的单位是辐亮度，不是"亮度倍数"：白色表面正对太阳、nDotL = 1 时光照结果是
-    //intensity/π，因此 intensity = π 恰好得到 1.0 线性亮度，即满日照。
-    //Unity 那类美术友好的约定习惯填 1.0，换算到这里要乘 π。
-    float32 intensity = 3.14159265f;
+    //使用 美术强度刻度，默认 1，允许大于 1。
+    //原样传入 Shader，漫反射采用单位响应，镜面采用配套归一化。
+    float32 intensity = 1.0f;
     bool castShadows = true;
     //世界单位的深度偏移
     float32 shadowBias = 0.0005f;

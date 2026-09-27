@@ -621,6 +621,8 @@ namespace
                 if (!enabled.empty() && !Reflection::SetFromXmlValue(world.renderSettings.skyboxEnabled, enabled)) return false;
                 const std::string& ambient = GetAttribute(token, "ambientColor");
                 if (!ambient.empty() && !Reflection::SetFromXmlValue(world.renderSettings.ambientColor, ambient)) return false;
+                const std::string& ambientIntensity = GetAttribute(token, "ambientIntensity");
+                if (!ambientIntensity.empty() && !Reflection::SetFromXmlValue(world.renderSettings.ambientIntensity, ambientIntensity)) return false;
                 if (!token.emptyElement && !reader.SkipElement(token.name)) return false;
                 continue;
             }
@@ -849,7 +851,8 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
 
     output << "    <RenderSettings skybox=\"" << EscapeXml(world.renderSettings.skybox.GetInstanceId().GetPath())
         << "\" skyboxEnabled=\"" << (world.renderSettings.skyboxEnabled ? "true" : "false")
-        << "\" ambientColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientColor)) << "\" />\n";
+        << "\" ambientColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientColor))
+        << "\" ambientIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientIntensity)) << "\" />\n";
     world.ForEachEns([&output](Ens& ens)
         {
             if (ens.GetParent()) return;
