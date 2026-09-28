@@ -24,6 +24,7 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Skybox.h"
+#include "Runtime/Object/TextResource.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ThirdParty/stb/stb_image.h"
@@ -557,16 +558,32 @@ namespace
         if (value.empty() || !extra.empty()) return false;
 
         key = ToLower(key);
-        return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull" || key == "geometry";
+        return key == "depthtest" || key == "depthwrite" || key == "blend" || key == "cull" ||
+            key == "geometry" || key == "expandedgeometry";
     }
 
     //解析几何 ABI 契约声明，大小写不敏感
     bool ParseShaderGeometryContract(const std::string& text, ShaderGeometryContract& value)
     {
         std::string normalized = ToLower(Trim(text));
-        if (normalized == "legacy") value = ShaderGeometryContract::Legacy;
-        else if (normalized == "standard") value = ShaderGeometryContract::Standard;
+        if (normalized == "standard") value = ShaderGeometryContract::Standard;
         else if (normalized == "particle") value = ShaderGeometryContract::Particle;
+        else return false;
+        return true;
+    }
+
+    //识别已删除的旧契约关键字，用于给出迁移提示而不是笼统的取值错误
+    bool IsRemovedGeometryContract(const std::string& text)
+    {
+        return ToLower(Trim(text)) == "legacy";
+    }
+
+    //解析展开几何开关，只接受 on 与 off
+    bool ParseExpandedGeometry(const std::string& text, bool& value)
+    {
+        std::string normalized = ToLower(Trim(text));
+        if (normalized == "on") value = true;
+        else if (normalized == "off") value = false;
         else return false;
         return true;
     }
@@ -589,8 +606,10 @@ namespace
         drawQueue = DrawQueue::Opaque;
         bool hasQueue = false;
         bool hasTopLevelGeometry = false;
-        //顶层几何声明只服务单 Pass 简写，先记下来等隐式 Pass 建立时再套用
-        ShaderGeometryContract topLevelGeometry = ShaderGeometryContract::Legacy;
+        bool hasTopLevelExpandedGeometry = false;
+        //顶层声明只服务单 Pass 简写，先记下来等隐式 Pass 建立时再套用
+        ShaderGeometryContract topLevelGeometry = ShaderGeometryContract::Standard;
+        bool topLevelExpandedGeometry = true;
 
         ShaderPass* currentPass = nullptr;
         std::string* currentSource = nullptr;
@@ -601,6 +620,7 @@ namespace
         bool hasVertex = false;
         bool hasFragment = false;
         bool passGeometryDeclared = false;
+        bool passExpandedGeometryDeclared = false;
 
         auto validateCurrentPass = [&]()
         {
@@ -641,11 +661,34 @@ namespace
                 {
                     //顶层几何声明只作用于单 Pass 简写，且必须出现在任何 Pass 或 stage 之前。
                     //显式 Pass 用 Pass 内的 geometry 状态行声明，两处混用会被这条规则挡下。
-                    if (hasTopLevelGeometry || !passes.empty() || !ParseShaderGeometryContract(argument, topLevelGeometry))
+                    if (hasTopLevelGeometry || !passes.empty())
                     {
-                        collection.AddError("OrbShader geometry must be declared once before all passes as Legacy, Standard or Particle: " + sourceKey + ":" + std::to_string(lineNumber));
+                        collection.AddError("OrbShader geometry must be declared once before all passes as Standard or Particle: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    else if (IsRemovedGeometryContract(argument))
+                    {
+                        collection.AddError("OrbShader geometry contract Legacy was removed; declare Standard or Particle and move the vertex stage to the geometry interface: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    else if (!ParseShaderGeometryContract(argument, topLevelGeometry))
+                    {
+                        collection.AddError("OrbShader geometry must be declared once before all passes as Standard or Particle: " + sourceKey + ":" + std::to_string(lineNumber));
                     }
                     hasTopLevelGeometry = true;
+                    continue;
+                }
+
+                if (directive == "expandedgeometry")
+                {
+                    //展开几何开关与几何契约同处顶层，同样只服务单 Pass 简写且只能声明一次
+                    if (hasTopLevelExpandedGeometry || !passes.empty())
+                    {
+                        collection.AddError("OrbShader expandedGeometry must be declared once before all passes as on or off: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    else if (!ParseExpandedGeometry(argument, topLevelExpandedGeometry))
+                    {
+                        collection.AddError("OrbShader expandedGeometry must be declared once before all passes as on or off: " + sourceKey + ":" + std::to_string(lineNumber));
+                    }
+                    hasTopLevelExpandedGeometry = true;
                     continue;
                 }
 
@@ -677,6 +720,7 @@ namespace
                     hasVertex = false;
                     hasFragment = false;
                     passGeometryDeclared = false;
+                    passExpandedGeometryDeclared = false;
                     continue;
                 }
 
@@ -698,8 +742,9 @@ namespace
                         legacyPass = true;
                         passes.push_back(ShaderPass());
                         currentPass = &passes.back();
-                        //单 Pass 简写的几何契约来自顶层声明，未声明时保持 Legacy
+                        //单 Pass 简写的几何契约与展开开关都来自顶层声明，未声明时按 Standard 与开启处理
                         currentPass->geometryContract = topLevelGeometry;
+                        currentPass->supportsExpandedGeometry = topLevelExpandedGeometry;
                     }
 
                     stageStarted = true;
@@ -769,8 +814,20 @@ namespace
                 else if (key == "geometry")
                 {
                     //几何契约在每个 Pass 内只能声明一次，与其它状态行同处第一个 stage 之前
-                    valid &= !passGeometryDeclared && ParseShaderGeometryContract(value, currentPass->geometryContract);
+                    bool removed = IsRemovedGeometryContract(value);
+                    valid &= !passGeometryDeclared && !removed && ParseShaderGeometryContract(value, currentPass->geometryContract);
                     passGeometryDeclared = true;
+                    if (removed)
+                    {
+                        collection.AddError("OrbShader geometry contract Legacy was removed; declare Standard or Particle and move the vertex stage to the geometry interface: " + sourceKey + ":" + std::to_string(lineNumber));
+                        continue;
+                    }
+                }
+                else if (key == "expandedgeometry")
+                {
+                    //展开开关同样只能声明一次，位置与其它状态行一致
+                    valid &= !passExpandedGeometryDeclared && ParseExpandedGeometry(value, currentPass->supportsExpandedGeometry);
+                    passExpandedGeometryDeclared = true;
                 }
                 else valid = false;
 
@@ -1860,6 +1917,13 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
         return AssetImporter::OrbShader;
     }
 
+    //文本资产：内容原样读入，组件按 Key 引用后自己解析
+    if (extension == ".txt" || extension == ".xml" || extension == ".json" || extension == ".csv"
+        || extension == ".yaml" || extension == ".fnt" || extension == ".bytes")
+    {
+        return AssetImporter::Text;
+    }
+
     if (FileSystem::Exist(GetAssetFilePath(sourceKey + ".vert.glsl")) && FileSystem::Exist(GetAssetFilePath(sourceKey + ".frag.glsl")))
     {
         return AssetImporter::Glsl;
@@ -1884,6 +1948,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
     case AssetImporter::Gltf: return Import_GLTF(sourceKey, settings);
     case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
     case AssetImporter::Glsl: return Import_GLSL(sourceKey);
+    case AssetImporter::Text: return Import_TEXT(sourceKey);
     case AssetImporter::None: break;
     }
 
@@ -1894,6 +1959,26 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
 }
 
 //导入六面天空盒资产
+AssetCollection AssetPipeline::Import_TEXT(std::string path)
+{
+    AssetCollection collection;
+    collection.sourceKey = ResourceManager::ToResourceKey(path);
+    std::string source = LoadTextOrError(collection.sourceKey, collection);
+    if (!collection.Succeeded()) return collection;
+
+    //文本资产不解释内容，也不引用别的资源：文件即对象，对象 Key 用源 Key 本身
+    TextResource* resource = CreateImportedObject<TextResource>(collection.sourceKey);
+    if (!resource)
+    {
+        collection.AddError("Failed to create TextResource: " + collection.sourceKey);
+        return collection;
+    }
+
+    resource->text = source;
+    collection.AddObject(collection.sourceKey, resource, true);
+    return collection;
+}
+
 AssetCollection AssetPipeline::Import_ORBSKY(std::string path)
 {
     AssetCollection collection;

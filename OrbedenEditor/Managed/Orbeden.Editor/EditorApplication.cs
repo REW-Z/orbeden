@@ -24,8 +24,6 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, void> SetWorldRenderSettings;
     public delegate* unmanaged[Cdecl]<IntPtr, int, uint, byte> ControlParticlePreview;
     public delegate* unmanaged[Cdecl]<IntPtr, int, ParticlePreviewInfoAbi*, byte> GetParticlePreviewInfo;
-    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte> InstallParticleBuiltins;
-    public delegate* unmanaged[Cdecl]<IntPtr, RenderBatchStatsAbi*, ParticleSimulationStatsAbi*, byte> GetParticleRenderingStats;
 }
 
 /// <summary>编辑态粒子预览快照，布局与 ManagedEditorBridge.cpp 的 ParticlePreviewInfoAbi 一致。</summary>
@@ -40,45 +38,6 @@ internal struct ParticlePreviewInfoAbi
     public ulong RejectedCount;
 }
 
-/// <summary>渲染批次统计，16 项 uint64 按固定顺序排列。</summary>
-[StructLayout(LayoutKind.Sequential, Pack = 8)]
-internal struct RenderBatchStatsAbi
-{
-    public ulong SourceItems;
-    public ulong VisibleItems;
-    public ulong OrdinaryDraws;
-    public ulong InstancedDraws;
-    public ulong DynamicBatchDraws;
-    public ulong SubmittedInstances;
-    public ulong ExpandedVertices;
-    public ulong ExpandedIndices;
-    public ulong UploadedBytes;
-    public ulong ShadowDraws;
-    public ulong InvalidTransforms;
-    public ulong InvalidResources;
-    public ulong FailedUploads;
-    public ulong LegacyShaderItems;
-    public ulong MultiPassItems;
-    public ulong TransparentBatchBreaks;
-}
-
-/// <summary>粒子模拟统计，11 项计数加一个丢弃时长。</summary>
-[StructLayout(LayoutKind.Sequential, Pack = 8)]
-internal struct ParticleSimulationStatsAbi
-{
-    public ulong AliveParticles;
-    public ulong ActiveTrails;
-    public ulong EmittedParticles;
-    public ulong RejectedCapacity;
-    public ulong RejectedTrails;
-    public ulong CollisionQueries;
-    public ulong CollisionHits;
-    public ulong SubEmitterEvents;
-    public ulong DroppedSubEmitterEvents;
-    public ulong InvalidTargets;
-    public ulong InvalidTransforms;
-    public double DroppedSimulationSeconds;
-}
 #pragma warning restore CS0649
 
 /// <summary>世界级渲染设置的读写载荷，布局与 ManagedEditorBridge.cpp 的 EditorWorldRenderSettingsAbi 一致。</summary>
@@ -242,32 +201,4 @@ public static unsafe class EditorApplication
         fixed (ParticlePreviewInfoAbi* pointer = &info) return api.GetParticlePreviewInfo(api.Context, objectId, pointer) != 0;
     }
 
-    /// <summary>把内置粒子资源补齐到当前项目，已存在的文件保留。</summary>
-    internal static bool InstallParticleBuiltins(out string error)
-    {
-        error = string.Empty;
-        if (api.Context == IntPtr.Zero || api.InstallParticleBuiltins == null) return false;
-
-        const int Capacity = 4096;
-        byte[] buffer = new byte[Capacity];
-        byte result;
-        fixed (byte* pointer = buffer) result = api.InstallParticleBuiltins(api.Context, pointer, Capacity);
-        if (result != 0) return true;
-
-        int length = Array.IndexOf(buffer, (byte)0);
-        if (length < 0) length = Capacity;
-        error = Encoding.UTF8.GetString(buffer, 0, length);
-        return false;
-    }
-
-    /// <summary>读取当前渲染与粒子统计，读取过程不推进模拟。</summary>
-    internal static bool TryGetRenderingStats(out RenderBatchStatsAbi render, out ParticleSimulationStatsAbi simulation)
-    {
-        render = default;
-        simulation = default;
-        if (api.Context == IntPtr.Zero || api.GetParticleRenderingStats == null) return false;
-        fixed (RenderBatchStatsAbi* renderPointer = &render)
-        fixed (ParticleSimulationStatsAbi* simulationPointer = &simulation)
-            return api.GetParticleRenderingStats(api.Context, renderPointer, simulationPointer) != 0;
-    }
 }

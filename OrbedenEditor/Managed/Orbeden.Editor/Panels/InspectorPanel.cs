@@ -63,6 +63,10 @@ internal sealed class InspectorPanel : EditorPanel
         internal PropertyDocument Document = null!;
     }
 
+    //已经按当前脚本程序集补过字段的宿主；程序集每重新加载一次，代次 +1
+    private readonly HashSet<(int ObjectId, int Generation)> refreshedManagedHosts = [];
+    private int scriptAssemblyGeneration;
+
     //材质资产面板的缓存：加载到的对象、它绑定的 Shader Key，以及对应的属性文档
     private sealed class MaterialDocument
     {
@@ -136,6 +140,9 @@ internal sealed class InspectorPanel : EditorPanel
 
     //Ens 卡片的激活字段名。勾选框同样搬到标题行上，正文里不再重复画
     private const string LocalActiveProperty = "LocalActive";
+
+    //Ens 的 static 世界变换约束字段名
+    private const string StaticProperty = "Static";
 
     public override EditorPanelInfo Info => new(
         "inspector",
@@ -236,6 +243,9 @@ internal sealed class InspectorPanel : EditorPanel
         UnloadReflectionAssembly();
         scriptTypes.Clear();
         addChoicesDirty = true;
+        //程序集换了，已有宿主的字段表要按新类型重补一次
+        ++scriptAssemblyGeneration;
+        refreshedManagedHosts.Clear();
         if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))
         {
             status = "Game assembly is not loaded.";
@@ -495,6 +505,15 @@ internal sealed class InspectorPanel : EditorPanel
                                 value.LocalActive = active;
                                 return InteropStatus.Ok;
                             }),
+                        //static 由原生侧校验层级，失败时保持原值并让属性文档回滚
+                        new DelegatedProperty(StaticProperty, InteropValueKind.Bool,
+                            () => InteropValue.From(value.Static),
+                            updated =>
+                            {
+                                if (!updated.TryGet(out bool isStatic)) return InteropStatus.TypeMismatch;
+                                return value.Static == isStatic || value.TrySetStatic(isStatic)
+                                    ? InteropStatus.Ok : InteropStatus.InvocationFailed;
+                            }),
                     ],
                     EditorApplication.MarkWorldDirty))
                 .ToList();
@@ -510,6 +529,8 @@ internal sealed class InspectorPanel : EditorPanel
         if (hasLocalActive) localActiveProperty!.Value.TryGet(out localActive);
 
         bool toggled = false;
+        bool toggledStatic = false;
+        bool pendingStatic = false;
         bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Selected Ens", "Other", "ens_header",
             localActive, false, out toggled);
         try
@@ -524,6 +545,25 @@ internal sealed class InspectorPanel : EditorPanel
                 if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
                 string stable = string.IsNullOrEmpty(stableId) ? "<none>" : stableId;
                 EditorGUI.InputText("Stable Id", ref stable, readOnly: true);
+
+                //Play 与暂停期间 static 只读，原生 setter 仍是最终保护
+                bool staticValue = false;
+                bool hasStatic = headerDocument.FindProperty(StaticProperty) is { IsReadable: true, Kind: InteropValueKind.Bool } property
+                    && property.Value.TryGet(out staticValue);
+                if (hasStatic)
+                {
+                    EditorGUI.BeginDisabled(EditorApplication.IsPlaying);
+                    try
+                    {
+                        bool edited = staticValue;
+                        if (EditorGUI.Checkbox("Static", ref edited))
+                        {
+                            toggledStatic = true;
+                            pendingStatic = edited;
+                        }
+                    }
+                    finally { EditorGUI.EndDisabled(); }
+                }
             }
         }
         finally
@@ -534,6 +574,9 @@ internal sealed class InspectorPanel : EditorPanel
         //勾选框在标题之后才画出来，改动只能等卡片画完再提交
         if (toggled && hasLocalActive)
             ApplyPropertyToggle(headerDocument, LocalActiveProperty, "Selected Ens", !localActive);
+        //Static 同理：写进去由原生校验层级，失败会被属性文档回滚
+        if (toggledStatic)
+            ApplyPropertyToggle(headerDocument, StaticProperty, "Selected Ens", pendingStatic);
     }
 
     //按活动对象挂载顺序绘制所有选择对象共同拥有的组件。
@@ -600,6 +643,9 @@ internal sealed class InspectorPanel : EditorPanel
         string title = GetComponentTitle(primary);
         //卡片身份：原生用它 PushID，也是标题右键菜单弹窗 id 的前半段
         string identity = $"component_{primary.IsManaged}_{primary.TypeName}_{occurrence}";
+
+        //补字段必须排在文档之前：文档是从原生宿主的字段表读出来的
+        RefreshManagedHostFields(selection, components);
 
         //标题行上的勾选框要先拿到当前值，所以文档在标题之前就建好并刷新一次：折叠着的卡片也得跟上撤销与重做
         ComponentDocument document = EnsureComponentDocument(components, primary);
@@ -1091,13 +1137,10 @@ internal sealed class InspectorPanel : EditorPanel
             }
             case InteropValueKind.Color:
             {
+                //颜色走共享的颜色字段原语：RGB 与 Alpha 都在拾色器里，粒子那边用的也是这一个
                 property.Value.TryGet(out color color);
-                vector3 rgb = new(color.r, color.g, color.b);
-                float alpha = color.a;
-                bool changed = EditorGUI.InputVector3(label + " RGB", ref rgb);
-                changed |= EditorGUI.InputFloat(label + " Alpha", ref alpha);
-                if (!changed) return false;
-                value = InteropValue.From(new color(rgb.x, rgb.y, rgb.z, alpha));
+                if (!GUI.ColorField(label, ref color)) return false;
+                value = InteropValue.From(color);
                 return true;
             }
             case InteropValueKind.String:
@@ -1175,6 +1218,56 @@ internal sealed class InspectorPanel : EditorPanel
         {
             EditorGUI.EndCombo();
         }
+    }
+
+    //脚本改了字段（比如新增 public 字段）并重新 Build Game C# 之后，已有宿主里还没有这些字段：
+    //宿主的字段表只在"添加组件"和进 Play 时对过账，存档里的旧表会一直是旧形状。
+    //这里按当前类型对一次账——缺失的字段取构造函数里的默认值，类型里已经没有的字段删掉。
+    //每个宿主每代只做一次；删掉的字段进撤销，撤销时按组件重新定位宿主再写回。
+    private void RefreshManagedHostFields(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
+    {
+        for (int index = 0; index < components.Count && index < selection.Count; ++index)
+        {
+            NativeComponentInfo component = components[index];
+            if (!component.IsManaged) continue;
+            if (!refreshedManagedHosts.Add((component.ObjectId, scriptAssemblyGeneration))) continue;
+            Type? type = FindScriptType(component.TypeName);
+            //类型解析不到（Missing Script、程序集加载失败）时什么都不做：字段与值原样保留
+            if (type == null) continue;
+            try
+            {
+                IReadOnlyList<DroppedScriptField> dropped =
+                    EditorNativeComponents.InitializeManagedFields(selection[index], component.ObjectId, type);
+                if (dropped.Count != 0) PushDroppedFieldUndo(component.ObjectId, dropped);
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine($"Inspector: managed field refresh failed for {component.TypeName}: {exception.Message}");
+            }
+        }
+    }
+
+    //被删掉的脚本字段进撤销：撤销写回字段与值，重做再删一次。
+    //宿主在撤销时按 objectId 重新取：这期间组件可能被删掉又恢复成新的实例。
+    private static void PushDroppedFieldUndo(int objectId, IReadOnlyList<DroppedScriptField> dropped)
+    {
+        EditorPropertyHistory.PushAction(
+            "Sync script fields",
+            () =>
+            {
+                IntPtr host = EditorNativeComponents.FindHost(objectId);
+                if (host == IntPtr.Zero) return;
+                foreach (DroppedScriptField field in dropped)
+                    GameScriptRuntime.WriteHostField(host, field.Name, field.TypeName, field.Value);
+                TouchWorld();
+            },
+            () =>
+            {
+                IntPtr host = EditorNativeComponents.FindHost(objectId);
+                if (host == IntPtr.Zero) return;
+                foreach (DroppedScriptField field in dropped) GameScriptRuntime.RemoveHostField(host, field.Name);
+                TouchWorld();
+            });
     }
 
     //原子地为全部选择对象添加同一种组件。

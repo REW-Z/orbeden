@@ -78,8 +78,16 @@ public:
     void* PopClipRect = nullptr;
 };
 
+//曲线画布输入和颜色字段原语。
+struct RuntimeGuiCurveApi
+{
+    void* Canvas = nullptr;
+    void* ColorField = nullptr;
+};
+
 #pragma pack(pop)
 
+ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiCurveApi, 2);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiApi, 11);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiExtensionApi, 4);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(RuntimeGuiAdvancedApi, 17);
@@ -91,6 +99,9 @@ class RuntimeGuiBridge
 public:
     // 获取 Runtime GUI 原生函数表。
     static RuntimeGuiApi GetApi();
+
+    //读取曲线画布原语函数表
+    static RuntimeGuiCurveApi GetCurveApi();
 
     // 获取 Runtime GUI 增量函数表。
     static RuntimeGuiExtensionApi GetExtensionApi();

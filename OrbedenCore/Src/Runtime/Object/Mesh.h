@@ -47,6 +47,8 @@ private:
     //GPU 网格由资源管理器持有。
     GpuMesh* gpuMesh = nullptr;
     mutable uint32 dirtyFlags = static_cast<uint32>(MeshDirtyFlags::All);
+    //顶点或索引内容每次变更都递增，静态几何缓存据此判断要不要重建展开结果
+    uint64 contentVersion = 1;
     mutable bounds3 localBounds;
 
 public:
@@ -69,6 +71,9 @@ public:
 
     //判断指定消费方是否需要刷新
     bool IsDirty(MeshDirtyFlags flags) const;
+
+    //读取内容版本，几何数据变更时递增；静态几何缓存据此判断要不要重建
+    uint64 GetContentVersion() const { return contentVersion; }
 
     //标记指定消费方需要刷新
     void MarkDirty(MeshDirtyFlags flags);

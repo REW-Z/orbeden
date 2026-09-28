@@ -6,6 +6,7 @@
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/PlayerContentCooker.h"
 #include "Editor/ProjectLayout.h"
+#include "Editor/ContentMigration.h"
 #include "Editor/ProjectUpgrader.h"
 #include "InputManager/InputManager.h"
 #include "FileSystem/PathDefines.h"
@@ -852,6 +853,16 @@ bool EditorSystem::RunProjectUpgrade(std::string& outError)
         return false;
     }
 
+    //内容根内的字段与 Shader 迁移先做：失败就不进升级器，项目版本号保持旧值以便重试。
+    //升级器此后只碰内容根之外，两边对 Content/ 的改写权互斥。
+    ContentMigration::MigrationReport report;
+    const std::string contentRoot = pendingUpgrade.projectRoot + "/" + ProjectLayout::ContentFolder;
+    if (!ContentMigration::MigrateForVersion(contentRoot, pendingUpgrade.storedVersion, report, outError)) return false;
+    for (const std::string& key : report.pendingShaderKeys)
+    {
+        Log::Warning(("Shader needs manual migration to the geometry interface: " + key).c_str());
+    }
+
     ProjectUpgrader::UpgradeRequest request;
     request.projectRoot = pendingUpgrade.projectRoot;
     request.projectName = pendingUpgrade.projectName;
@@ -859,7 +870,14 @@ bool EditorSystem::RunProjectUpgrade(std::string& outError)
     request.runtimeDllPath = FindRuntimeCSharpDll();
     request.templateRoot = templateRoot;
 
-    return ProjectUpgrader::UpgradeProject(request, outError);
+    if (!ProjectUpgrader::UpgradeProject(request, outError)) return false;
+    if (report.rewrittenFields != 0)
+    {
+        Log::Info(("Content migration rewrote " + std::to_string(report.rewrittenFields) + " field(s) in " +
+            std::to_string(report.rewrittenFiles) + " scene file(s).").c_str());
+    }
+
+    return true;
 }
 
 //项目升级弹窗：载入时发现版本不一致才出现，只有"升级"和"退出"两个选择。

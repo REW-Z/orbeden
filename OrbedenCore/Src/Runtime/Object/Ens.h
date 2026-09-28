@@ -22,7 +22,10 @@ private:
     bool alive = false;
     bool localActive = true;
     bool worldActive = true;
+    bool isStatic = false;
     std::string name;
+    //最近一次 static 设置的失败原因
+    std::string staticError;
     uint64 componentMask = 0;
     List<TypeRuntimeId> componentTypes;
     List<Component*> componentInstances;
@@ -87,6 +90,18 @@ public:
     //设置自身激活状态
     ORBEDEN_BIND_IGNORE
     void SetLocalActive(bool value);
+
+    //读取 static 世界变换约束
+    ORBEDEN_BIND_IGNORE
+    bool GetStatic() const;
+
+    //设置 static 约束；置真要求祖先全为 static，置假要求没有 static 后代
+    ORBEDEN_BIND_IGNORE
+    bool SetStatic(bool value);
+
+    //读取最近一次 static 设置的失败原因
+    ORBEDEN_BIND_IGNORE
+    const std::string& GetStaticError() const;
 
     //设置父级
     ORBEDEN_BIND_IGNORE

@@ -63,6 +63,45 @@ namespace RenderMath
         return ScaleVector(value, 1.0f / length);
     }
 
+    quaternion Mul(const quaternion& a, const quaternion& b)
+    {
+        quaternion result;
+        result.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
+        result.y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
+        result.z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
+        result.w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
+        return result;
+    }
+
+    quaternion RotationZ(float32 degrees)
+    {
+        float32 half = degrees * 0.01745329251994329577f * 0.5f;
+        quaternion result;
+        result.x = 0.0f;
+        result.y = 0.0f;
+        result.z = std::sin(half);
+        result.w = std::cos(half);
+        return result;
+    }
+
+    float32 GetMaximumBasisLength(const matrix4x4& matrix)
+    {
+        vector3 basis[3] =
+        {
+            { matrix.m[0], matrix.m[1], matrix.m[2] },
+            { matrix.m[4], matrix.m[5], matrix.m[6] },
+            { matrix.m[8], matrix.m[9], matrix.m[10] },
+        };
+        float32 maximum = 0.0f;
+        for (const vector3& axis : basis)
+        {
+            float32 length = std::sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
+            maximum = std::max(maximum, length);
+        }
+
+        return maximum;
+    }
+
     matrix4x4 Mul(const matrix4x4& a, const matrix4x4& b)
     {
         matrix4x4 result;

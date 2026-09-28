@@ -1,6 +1,7 @@
 #include "Rendering/ParticleRenderer.h"
 
 #include "Log/Log.h"
+#include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
@@ -19,28 +20,6 @@ namespace
     //单批展开几何的上限
     constexpr usize MaximumExpandedVertices = 262144u;
     constexpr usize MaximumExpandedIndices = 786432u;
-
-    //绕局部 +Z 的旋转四元数，角度单位是度
-    quaternion CreateZRotation(float32 degrees)
-    {
-        float32 half = degrees * 0.01745329251994329577f * 0.5f;
-        quaternion result;
-        result.x = 0.0f;
-        result.y = 0.0f;
-        result.z = std::sin(half);
-        result.w = std::cos(half);
-        return result;
-    }
-
-    quaternion MultiplyQuaternion(const quaternion& a, const quaternion& b)
-    {
-        quaternion result;
-        result.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
-        result.y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
-        result.z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
-        result.w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
-        return result;
-    }
 
     //从矩阵取旋转部分
     quaternion GetRotation(const matrix4x4& matrix)
@@ -241,13 +220,15 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
         bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
         matrix4x4 emitterWorld = transformCache.GetWorldMatrix(source->GetEnsId());
         quaternion emitterRotation = GetRotation(emitterWorld);
+        //局部空间的尺寸与拖尾宽度都是发射器局部单位，提交渲染前乘发射器世界尺度
+        float32 emitterBasis = local ? RenderMath::GetMaximumBasisLength(emitterWorld) : 1.0f;
 
         for (const ParticleRecord& particle : state.particles)
         {
             float32 normalizedAge = particle.lifetime > 0.0f
                 ? std::clamp(particle.age / particle.lifetime, 0.0f, 1.0f) : 1.0f;
             float32 size = particle.startSize * particle.inheritedSize *
-                std::max(0.0f, EvaluateCurve(settings.motion.sizeOverLifetime, normalizedAge));
+                std::max(0.0f, EvaluateCurve(settings.motion.sizeOverLifetime, normalizedAge)) * emitterBasis;
             //尺寸为 0 仍然模拟，但不提交渲染
             if (!(size > 0.0f)) continue;
 
@@ -266,7 +247,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
             record.birthId = particle.birthId;
             //局部模拟在这里一次换算到世界空间，之后的相机阶段不再读发射器矩阵
             record.worldPosition = local ? RenderMath::TransformPoint(emitterWorld, particle.position) : particle.position;
-            record.worldRotation = local ? MultiplyQuaternion(emitterRotation, particle.rotation) : particle.rotation;
+            record.worldRotation = local ? RenderMath::Mul(emitterRotation, particle.rotation) : particle.rotation;
             record.size = size;
             record.angle = particle.angle;
             record.linearColor = linearColor;
@@ -274,7 +255,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
                 settings.rendering.animationCycles, particle.startFrame, normalizedAge);
             //Mesh 粒子的世界矩阵：angle 初值已经进入 rotation，这里只补上增量旋转
             record.worldModel = RenderMath::TRS(record.worldPosition,
-                MultiplyQuaternion(record.worldRotation, CreateZRotation(particle.angle - particle.startAngle)),
+                RenderMath::Mul(record.worldRotation, RenderMath::RotationZ(particle.angle - particle.startAngle)),
                 { size, size, size });
             record.mesh = source->mesh;
             record.materials = source->materials;
@@ -306,7 +287,7 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
             }
         }
 
-        //拖尾：点已经按弧长与宽度求值，这里只做局部到世界的换算
+        //拖尾：位置换算到世界，长度曲线、颜色渐变与尾部淡出在这里一次求值
         for (const ParticleTrailRecord& trail : state.trails)
         {
             if (trail.count < 2) continue;
@@ -329,9 +310,26 @@ void ParticleRenderer::CaptureFrame(World& world, const ParticleSimulationContex
                 const ParticleTrailPoint& point = state.trailPoints[trail.pointStart + slot];
                 ParticleTrailPointSnapshot& target = record.points[index];
                 target.position = local ? RenderMath::TransformPoint(emitterWorld, point.position) : point.position;
-                target.width = point.width;
+                target.width = point.width * emitterBasis;
                 target.linearColor = point.linearColor;
                 target.length = point.accumulatedLength;
+                //按点年龄淡出；年龄取所属发射器的模拟时间，暂停时不会因别处推进而继续变淡
+                float32 pointAge = static_cast<float32>(std::max(0.0, state.simulationTime - point.time));
+                target.linearColor.a *= std::clamp(1.0f - pointAge / std::max(settings.trails.lifetime, 1.0e-6f), 0.0f, 1.0f);
+            }
+
+            //归一化到本条拖尾的有效弧长上：长度曲线乘宽度，长度渐变成颜色
+            float32 totalLength = record.points.back().length - record.points.front().length;
+            float32 inverseLength = totalLength > 1.0e-6f ? 1.0f / totalLength : 0.0f;
+            for (ParticleTrailPointSnapshot& point : record.points)
+            {
+                float32 along = std::clamp((point.length - record.points.front().length) * inverseLength, 0.0f, 1.0f);
+                point.width = std::max(0.0f, point.width * EvaluateCurve(settings.trails.widthOverLength, along));
+                color tint = EvaluateGradient(settings.trails.colorOverLength, along);
+                point.linearColor.r *= tint.r;
+                point.linearColor.g *= tint.g;
+                point.linearColor.b *= tint.b;
+                point.linearColor.a *= tint.a;
             }
 
             snapshot.trails.push_back(std::move(record));
@@ -384,7 +382,7 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
             item.uvRect = record.uvRect;
             item.castShadows = false;
             item.receiveShadows = record.receiveShadows;
-            item.instancingEnabled = true;
+            item.strategy = DrawStrategy::Auto;
 
             //旋转后的基向量构成 Billboard 的世界矩阵
             float32 angleRadians = record.angle * 0.01745329251994329577f;
@@ -446,7 +444,7 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
             //Billboard 与拖尾不投射阴影，只有 Opaque Mesh 粒子投射
             item.castShadows = record.castShadows;
             item.receiveShadows = record.receiveShadows;
-            item.instancingEnabled = true;
+            item.strategy = DrawStrategy::Auto;
             items.push_back(item);
         }
     }
@@ -533,7 +531,7 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
             item.cameraDistance = RenderMath::Dot(toSegment, toSegment);
             item.castShadows = false;
             item.receiveShadows = false;
-            item.instancingEnabled = true;
+            item.strategy = DrawStrategy::Auto;
             //段几何按 sourceIndex 存进本相机的临时容器
             item.sourceIndex = static_cast<uint32>(trailSegments.size());
             trailSegments.push_back(segment);
@@ -542,18 +540,79 @@ void ParticleRenderer::AppendCameraItems(const ParticleFrameSnapshot& snapshot, 
     }
 }
 
-void ParticleRenderer::BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances)
+void ParticleRenderer::AppendShadowItems(const ParticleFrameSnapshot& snapshot, const RenderCamera& camera,
+    const frustum& lightFrustum, List<DrawItem>& items)
+{
+    //Billboard 与拖尾不投影，只有开启投影的 Opaque Mesh 粒子进阴影候选
+    for (const ParticleRenderRecord& record : snapshot.particles)
+    {
+        if (record.renderMode != ParticleRenderMode::Mesh || !record.castShadows) continue;
+        if ((record.drawLayer & camera.drawLayerMask) == 0) continue;
+        if (!record.worldBounds.valid || !RenderMath::Intersects(lightFrustum, record.worldBounds)) continue;
+
+        Mesh* mesh = record.mesh.Get();
+        if (!mesh) continue;
+        for (usize subIndex = 0; subIndex < mesh->subMeshes.size(); ++subIndex)
+        {
+            Material* material = subIndex < record.materials.size() ? record.materials[subIndex].Get() : nullptr;
+            if (!material || material->GetDrawQueue() != DrawQueue::Opaque) continue;
+
+            const SubMesh& subMesh = mesh->subMeshes[subIndex];
+            usize start = static_cast<usize>(subMesh.indexStart);
+            usize count = static_cast<usize>(subMesh.indexCount);
+            if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) continue;
+
+            DrawItem item;
+            item.source = DrawSource::Particle;
+            item.geometry = DrawGeometry::Mesh;
+            item.owner = record.owner;
+            item.sourceObjectId = record.sourceObjectId;
+            item.elementId = record.birthId;
+            item.subMeshIndex = static_cast<uint32>(subIndex);
+            item.indexStart = subMesh.indexStart;
+            item.indexCount = subMesh.indexCount;
+            item.drawLayer = record.drawLayer;
+            item.mesh = mesh;
+            item.material = material;
+            item.queue = DrawQueue::Opaque;
+            item.mode = record.renderPath == ParticleRenderPath::Instanced ? GeometryMode::Instanced : GeometryMode::Expanded;
+            item.model = record.worldModel;
+            item.worldBounds = record.worldBounds;
+            item.linearTint = record.linearColor;
+            item.uvRect = record.uvRect;
+            item.castShadows = true;
+            item.receiveShadows = false;
+            item.strategy = DrawStrategy::Auto;
+            items.push_back(item);
+        }
+    }
+}
+
+uint32 ParticleRenderer::BuildMeshInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuMeshInstance>& instances)
 {
     instances.clear();
     instances.reserve(batch.items.size());
+    uint32 rejected = 0;
     for (uint32 itemIndex : batch.items)
     {
-        if (itemIndex >= items.size()) continue;
+        if (itemIndex >= items.size())
+        {
+            ++rejected;
+            continue;
+        }
+
         const DrawItem& item = items[itemIndex];
         GpuMeshInstance instance;
-        if (!BuildGpuMeshInstance(item.model, item.linearTint, item.uvRect, instance)) continue;
+        if (!BuildGpuMeshInstance(item.model, item.linearTint, item.uvRect, instance))
+        {
+            ++rejected;
+            continue;
+        }
+
         instances.push_back(instance);
     }
+
+    return rejected;
 }
 
 void ParticleRenderer::BuildTrailInstances(const DrawBatch& batch, const List<DrawItem>& items, List<GpuTrailInstance>& instances)
@@ -699,95 +758,28 @@ void ParticleRenderer::ExpandBatch(const DrawBatch& batch, const List<DrawItem>&
 
         Mesh* mesh = item.mesh;
         if (!mesh) continue;
-        const GpuMesh* gpuMesh = resources.GetMesh(mesh);
-        if (!gpuMesh) continue;
+        if (!resources.GetMesh(mesh)) continue;
 
-        usize start = std::min<usize>(item.indexStart, mesh->indices.size());
-        usize count = std::min<usize>(item.indexCount, mesh->indices.size() - start);
-        //索引指向不存在的顶点时整个子网格不提交
-        bool valid = true;
-        for (usize index = start; index < start + count; ++index)
+        //单个来源自身超过单批上限时不跨块拆分，明确报错跳过，不静默少画
+        uint32 itemVertices = GeometryExpander::CountReferencedVertices(*mesh, item.indexStart, item.indexCount);
+        if (itemVertices > MaximumExpandedVertices || item.indexCount > MaximumExpandedIndices)
         {
-            if (mesh->indices[index] >= mesh->vertices.size())
-            {
-                valid = false;
-                break;
-            }
+            Log::Error("ParticleRenderer mesh geometry skipped: the source submesh exceeds the single-chunk limits.");
+            continue;
         }
-        if (!valid) continue;
 
-        //法线取逆转置，切线先线性变换再与法线正交化
-        for (uint32 element = 0; element < 16; ++element)
+        //先腾出放得下这一项的空间，保证一个来源完整落在同一个 chunk 里
+        if (chunk.vertices.size() + itemVertices > MaximumExpandedVertices ||
+            chunk.indices.size() + item.indexCount > MaximumExpandedIndices)
         {
-            if (!std::isfinite(item.model.m[element])) valid = false;
+            flushChunk();
         }
-        if (!valid) continue;
 
-        vector3 column0 = { item.model.m[0], item.model.m[1], item.model.m[2] };
-        vector3 column1 = { item.model.m[4], item.model.m[5], item.model.m[6] };
-        vector3 column2 = { item.model.m[8], item.model.m[9], item.model.m[10] };
-        float32 determinant = RenderMath::Dot(column0, RenderMath::Cross(column1, column2));
-        if (!std::isfinite(determinant) || std::fabs(determinant) < 1.0e-8f) continue;
-
-        auto evalNormal = [&](usize vertex) -> vector3
+        //Mesh 粒子的展开与普通动态批、静态缓存共用同一份实现，两条路径必须一模一样
+        if (!GeometryExpander::AppendExpandedMesh(*mesh, item.subMeshIndex, item.model, item.linearTint,
+            item.uvRect, chunk.vertices, chunk.indices))
         {
-            vector3 normal = vertex < mesh->normals.size() ? mesh->normals[vertex] : vector3();
-            //逆转置作用在法线上
-            vector3 row0 = { (column1.y * column2.z - column1.z * column2.y), (column2.y * column0.z - column2.z * column0.y),
-                (column0.y * column1.z - column0.z * column1.y) };
-            vector3 row1 = { (column1.z * column2.x - column1.x * column2.z), (column2.z * column0.x - column2.x * column0.z),
-                (column0.z * column1.x - column0.x * column1.z) };
-            vector3 row2 = { (column1.x * column2.y - column1.y * column2.x), (column2.x * column0.y - column2.y * column0.x),
-                (column0.x * column1.y - column0.y * column1.x) };
-            vector3 transformed = { RenderMath::Dot(row0, normal), RenderMath::Dot(row1, normal), RenderMath::Dot(row2, normal) };
-            return RenderMath::Normalize(transformed);
-        };
-
-        for (usize index = start; index + 2 < start + count; index += 3)
-        {
-            GpuExpandedVertex triangle[3];
-            for (uint32 corner = 0; corner < 3; ++corner)
-            {
-                usize vertex = mesh->indices[index + corner];
-                vector3 world = RenderMath::TransformPoint(item.model, mesh->vertices[vertex]);
-                triangle[corner].position[0] = world.x;
-                triangle[corner].position[1] = world.y;
-                triangle[corner].position[2] = world.z;
-
-                vector3 normal = evalNormal(vertex);
-                triangle[corner].normal[0] = normal.x;
-                triangle[corner].normal[1] = normal.y;
-                triangle[corner].normal[2] = normal.z;
-
-                vector2 uv = vertex < mesh->texcoords.size() ? mesh->texcoords[vertex] : vector2();
-                triangle[corner].uv[0] = uv.x * item.uvRect.b + item.uvRect.r;
-                triangle[corner].uv[1] = uv.y * item.uvRect.a + item.uvRect.g;
-
-                //切线线性变换后与法线做 Gram-Schmidt 正交化；零长度保持零向量
-                vector3 tangentSource = vertex < mesh->tangents.size() ? mesh->tangents[vertex] : vector3();
-                vector3 tangent = RenderMath::TransformDirection(item.model, tangentSource);
-                float32 projection = RenderMath::Dot(tangent, normal);
-                tangent = { tangent.x - normal.x * projection, tangent.y - normal.y * projection, tangent.z - normal.z * projection };
-                float32 tangentLength = std::sqrt(RenderMath::Dot(tangent, tangent));
-                if (tangentLength > 1.0e-6f)
-                {
-                    tangent = { tangent.x / tangentLength, tangent.y / tangentLength, tangent.z / tangentLength };
-                }
-                else
-                {
-                    tangent = { 0.0f, 0.0f, 0.0f };
-                }
-                triangle[corner].tangent[0] = tangent.x;
-                triangle[corner].tangent[1] = tangent.y;
-                triangle[corner].tangent[2] = tangent.z;
-
-                triangle[corner].tint[0] = item.linearTint.r;
-                triangle[corner].tint[1] = item.linearTint.g;
-                triangle[corner].tint[2] = item.linearTint.b;
-                triangle[corner].tint[3] = item.linearTint.a;
-            }
-
-            appendTriangle(triangle[0], triangle[1], triangle[2]);
+            continue;
         }
     }
 

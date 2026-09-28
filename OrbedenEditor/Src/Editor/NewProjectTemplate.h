@@ -40,13 +40,6 @@ namespace NewProjectTemplate
         std::string& outError,
         bool preserveProjectContent = false);
 
-    //把内置粒子资源补齐到项目内容根，只复制缺失的文件，已存在的同名文件一律保留。
-    //模板根取 Editor 随包分发的 Templates 目录；已存在的资源 contract 不兼容时返回错误并指出 key。
-    bool InstallParticleBuiltinFiles(const std::string& projectRoot, std::string& outError);
-
-    //按项目内容根与模板根补齐内置粒子资源，供调用方显式指定模板位置
-    bool InstallParticleBuiltinFiles(const std::string& projectRoot, const std::string& templateRoot, std::string& outError);
-
     //把 sourceDirectory 镜像到 targetDirectory：复制有变化的文件，并删除目标里多余的。
     //内容相同的文件不重写，这样"什么都没改"的报告就是 0/0/0。
     //文本文件按行内容比较，忽略 CRLF 与 LF 的差异，免得一次 checkout 就把整棵树报成已改动。

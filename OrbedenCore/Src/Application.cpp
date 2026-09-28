@@ -130,6 +130,8 @@ bool Application::Initialize()
     }
 
     initialized = true;
+    //Player 没有编辑器那步 SetSimulationEnabled，初始化完成即进入运行态
+    world.SetRuntimeActive(simulationEnabled);
     return true;
 }
 
@@ -287,6 +289,8 @@ void Application::ProcessWorldLoad()
     if (restart) scripts->Shutdown();
     if (PhysicsSystem* physics = GetSystem<PhysicsSystem>()) physics->ResetWorld();
     world.CommitReplacement(*prepared);
+    //新世界跟随当前模拟状态：编辑器加载场景时仍在编辑态，Player 则一上来就是运行态
+    world.SetRuntimeActive(simulationEnabled);
     ++worldRevision;
     fixedAccumulator = 0.0f;
     if (restart) scripts->Initialize();
@@ -521,6 +525,9 @@ void Application::SetSimulationEnabled(bool value)
     {
         fixedAccumulator = 0.0f;
     }
+
+    //进入模拟后 static 约束与运行时只读规则生效，退出模拟（回到编辑世界）时解除
+    world.SetRuntimeActive(simulationEnabled);
 }
 
 //获取应用持有的 World

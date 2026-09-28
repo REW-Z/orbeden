@@ -2,9 +2,11 @@
 
 #include "Log/Log.h"
 #include "Rendering/ColorSpace.h"
+#include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/RenderMath.h"
 #include "Rendering/ParticleRenderer.h"
+#include "Rendering/StaticBatchCache.h"
 #include "Rendering/RenderScene.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
@@ -15,8 +17,22 @@
 
 namespace
 {
-    //单次实例上传的实例数量上限
-    constexpr uint32 MaximumBatchInstances = 65536u;
+    //动态批的容量上限：单项引用顶点、整批引用顶点、整批索引
+    constexpr uint32 MaximumDynamicBatchItemVertices = 1024u;
+    constexpr uint32 MaximumDynamicBatchVertices = 4096u;
+    constexpr uint32 MaximumDynamicBatchIndices = 12288u;
+
+    //策略是否允许走实例批与动态批
+    bool AllowsInstancing(DrawStrategy strategy)
+    {
+        return strategy == DrawStrategy::Auto || strategy == DrawStrategy::GpuInstancing;
+    }
+
+    bool AllowsDynamicBatching(DrawStrategy strategy)
+    {
+        return strategy == DrawStrategy::Auto || strategy == DrawStrategy::DynamicBatching;
+    }
+
     //非有限距离排到最后，与既有排序器一致
     constexpr float32 SortableDistanceLimit = std::numeric_limits<float32>::max();
 
@@ -47,12 +63,6 @@ namespace
         return a.subMeshIndex < b.subMeshIndex;
     }
 
-    bool StableKeyEqual(const DrawItem& a, const DrawItem& b)
-    {
-        return a.source == b.source && a.owner.id == b.owner.id && a.owner.version == b.owner.version
-            && a.sourceObjectId == b.sourceObjectId && a.elementId == b.elementId && a.subMeshIndex == b.subMeshIndex;
-    }
-
     //批次内容比较：除几何模式与 program 之外的键字段
     bool SameBatchContent(const DrawItem& a, const DrawItem& b)
     {
@@ -66,13 +76,15 @@ namespace
             && a.subMeshIndex == b.subMeshIndex
             && a.indexStart == b.indexStart
             && a.indexCount == b.indexCount
-            && a.receiveShadows == b.receiveShadows
-            && a.instancingEnabled == b.instancingEnabled;
+            && a.receiveShadows == b.receiveShadows;
     }
 
-    //批次分组用的键内容排序：先按材质与网格身份，再按几何区间
+    //批次分组用的键内容排序：队列、材质、网格与几何区间，再加绘制状态。
+    //不含对象身份——键里带上 owner 或 elementId，分组粒度就退化成一个对象一项，
+    //同键项永远凑不满两项，静态自动合批整个不生效。稳定键只用于同键项之间的排序。
     bool KeyContentLess(const DrawItem& a, const DrawItem& b)
     {
+        if (a.queue != b.queue) return static_cast<uint32>(a.queue) < static_cast<uint32>(b.queue);
         int32 materialA = a.material ? a.material->GetObjectId() : 0;
         int32 materialB = b.material ? b.material->GetObjectId() : 0;
         if (materialA != materialB) return materialA < materialB;
@@ -86,13 +98,74 @@ namespace
         if (a.receiveShadows != b.receiveShadows) return a.receiveShadows < b.receiveShadows;
         if (a.geometry != b.geometry) return static_cast<uint32>(a.geometry) < static_cast<uint32>(b.geometry);
         if (a.mode != b.mode) return static_cast<uint32>(a.mode) < static_cast<uint32>(b.mode);
-        return StableKeyLess(a, b);
+        return false;
     }
 
     //键内容相等：排序后同键项必然相邻，据此切组
     bool KeyContentEqual(const DrawItem& a, const DrawItem& b)
     {
         return !KeyContentLess(a, b) && !KeyContentLess(b, a);
+    }
+
+    //动态批的内容比较：不要求同网格，只要求同材质、队列、几何种类与最终渲染状态
+    bool SameDynamicContent(const DrawItem& a, const DrawItem& b)
+    {
+        return a.queue == b.queue
+            && a.source == b.source
+            && a.geometry == b.geometry
+            && a.blendMode == b.blendMode
+            && a.material == b.material
+            && a.receiveShadows == b.receiveShadows;
+    }
+
+    //一段连续项是否都允许走实例批
+    bool AllAllowInstancing(const List<DrawItem>& items, usize begin, usize end)
+    {
+        for (usize index = begin; index < end; ++index)
+        {
+            if (!AllowsInstancing(items[index].strategy)) return false;
+        }
+
+        return true;
+    }
+
+    //一段连续项是否都允许走动态批
+    bool AllAllowDynamicBatching(const List<DrawItem>& items, usize begin, usize end)
+    {
+        for (usize index = begin; index < end; ++index)
+        {
+            if (!AllowsDynamicBatching(items[index].strategy)) return false;
+        }
+
+        return true;
+    }
+
+    //按预算收编连续的同材质项，返回动态批的结束下标。
+    //单项超预算不参与；整批达到任一上限就结束，由调用方在下一个下标重新开始。
+    usize CollectDynamicBatch(const List<DrawItem>& items, usize begin, bool allowed)
+    {
+        if (!allowed) return begin + 1;
+
+        usize end = begin;
+        uint64 vertices = 0;
+        uint64 indices = 0;
+        while (end < items.size())
+        {
+            const DrawItem& item = items[end];
+            if (item.geometry != DrawGeometry::Mesh || !item.mesh) break;
+            if (end > begin && (!SameDynamicContent(items[begin], item) || !AllowsDynamicBatching(item.strategy))) break;
+
+            uint32 itemVertices = GeometryExpander::CountReferencedVertices(*item.mesh, item.indexStart, item.indexCount);
+            if (itemVertices == 0 || itemVertices > MaximumDynamicBatchItemVertices) break;
+            if (end > begin && (vertices + itemVertices > MaximumDynamicBatchVertices ||
+                indices + item.indexCount > MaximumDynamicBatchIndices)) break;
+
+            vertices += itemVertices;
+            indices += item.indexCount;
+            ++end;
+        }
+
+        return end;
     }
 }
 
@@ -115,11 +188,13 @@ bool DrawBatchKey::operator==(const DrawBatchKey& other) const
         && receiveShadows == other.receiveShadows;
 }
 
-void DrawBatchBuilder::Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles)
+void DrawBatchBuilder::Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles,
+    StaticBatchCache* staticCache)
 {
     gpuResources = resources;
     instancingAvailable = instancing;
     particleRenderer = particles;
+    staticBatches = staticCache;
 }
 
 void DrawBatchBuilder::Clear()
@@ -150,6 +225,8 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             continue;
         }
 
+        if (staticBatches && staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
+
         DrawItem item;
         item.source = DrawSource::StaticMesh;
         item.geometry = DrawGeometry::Mesh;
@@ -170,8 +247,8 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
         item.cameraDistance = source.cameraDistance;
         item.castShadows = source.castShadows;
         item.receiveShadows = source.receiveShadows;
-        //关闭实例化的渲染器始终是屏障项，前后不合并
-        item.instancingEnabled = renderer->enableInstancing;
+        //指定只走单绘制的渲染器始终是屏障项，前后不合并
+        item.strategy = renderer->drawStrategy;
 
         //重排只允许单 Pass Standard、且最终状态为深度测试开、深度写开、混合关的不透明项
         const GpuShaderPass& pass = material->shader->passes[0];
@@ -181,7 +258,7 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             (pass.state.depthWrite == ShaderPassToggle::Auto && !alphaBlended);
         bool resolvedBlend = pass.state.blend == ShaderPassToggle::On ||
             (pass.state.blend == ShaderPassToggle::Auto && alphaBlended);
-        item.reorderable = item.instancingEnabled
+        item.reorderable = item.strategy != DrawStrategy::Individual
             && item.queue == DrawQueue::Opaque
             && material->shader->passes.size() == 1
             && pass.geometryContract == ShaderGeometryContract::Standard
@@ -252,10 +329,13 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
             item.uvRect = instance.uvRect;
             item.castShadows = submission.options.castShadows;
             item.receiveShadows = submission.options.receiveShadows;
-            item.instancingEnabled = true;
+            item.strategy = DrawStrategy::Auto;
             items.push_back(item);
         }
     }
+
+    //持久静态批按本相机的视锥裁剪成员，索引区间直接指向缓存组
+    if (staticBatches) staticBatches->AppendVisibleItems(camera.viewFrustum, camera.drawLayerMask, items);
 
     //粒子与拖尾由渲染器按相机追加，builder 不重复实现 Billboard 与拖尾的几何
     if (particleRenderer && !particles.IsEmpty())
@@ -364,9 +444,10 @@ void DrawBatchBuilder::BuildBatches(const List<DrawItem>& items, List<DrawBatch>
     EmitBatches(items, nullptr, batches, stats);
 }
 
-//从完整场景、全部显式实例收集阴影候选
+//从完整场景、全部显式实例与 Opaque Mesh 粒子收集阴影候选
 void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<InstanceSubmission>& submissions,
-    const RenderCamera& camera, const frustum& lightFrustum, List<DrawItem>& items)
+    const ParticleFrameSnapshot& particles, const RenderCamera& camera, const frustum& lightFrustum,
+    List<DrawItem>& items)
 {
     items.clear();
 
@@ -375,6 +456,8 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || !renderer->castShadows) continue;
         if (!(renderer->drawLayer & camera.drawLayerMask)) continue;
+        //进了持久静态批的渲染器由缓存的投影项提交，这里不再逐对象生成
+        if (staticBatches && staticBatches->ContainsRenderer(renderer->GetObjectId())) continue;
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) continue;
@@ -405,7 +488,7 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
             item.mode = GeometryMode::Uniform;
             item.model = state.localToWorld;
             item.worldBounds = state.worldBounds;
-            item.instancingEnabled = renderer->enableInstancing;
+            item.strategy = renderer->drawStrategy;
             items.push_back(item);
         }
     }
@@ -452,9 +535,18 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
             item.mode = GeometryMode::Instanced;
             item.model = model;
             item.worldBounds = worldBounds;
-            item.instancingEnabled = true;
+            item.strategy = DrawStrategy::GpuInstancing;
             items.push_back(item);
         }
+    }
+
+    //持久静态批按级联视锥单独裁剪，不复用主相机可见范围
+    if (staticBatches) staticBatches->AppendShadowItems(lightFrustum, camera.drawLayerMask, items);
+
+    //粒子的阴影候选由渲染器按快照追加，builder 不重复实现 Mesh 粒子的几何
+    if (particleRenderer && !particles.IsEmpty())
+    {
+        particleRenderer->AppendShadowItems(particles, camera, lightFrustum, items);
     }
 }
 
@@ -479,6 +571,36 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
         while (end < items.size() && SameBatchContent(items[index], items[end])) ++end;
 
         const DrawItem& first = items[index];
+        //持久静态批各自成批：索引区间直接指向缓存组，不参与动态/实例合并
+        if (first.persistentGeometry)
+        {
+            const GpuShaderPass* batchPass = depthShader
+                ? (depthShader->passes.empty() ? nullptr : &depthShader->passes[0])
+                : nullptr;
+            if (!depthShader)
+            {
+                const GpuMaterial* batchMaterial = gpuResources->GetMaterial(first.material);
+                batchPass = (batchMaterial && batchMaterial->shader && !batchMaterial->shader->passes.empty())
+                    ? &batchMaterial->shader->passes[0] : nullptr;
+            }
+
+            DrawBatch batch;
+            batch.key.queue = first.queue;
+            batch.key.mode = GeometryMode::Expanded;
+            batch.key.geometry = first.geometry;
+            batch.key.indexStart = first.indexStart;
+            batch.key.indexCount = first.indexCount;
+            batch.key.materialObjectId = depthShader ? 0 : (first.material ? first.material->GetObjectId() : 0);
+            batch.key.receiveShadows = first.receiveShadows;
+            if (batchPass) batch.key.programId = batchPass->expandedProgram.id;
+            batch.items.push_back(static_cast<uint32>(index));
+            batch.persistentGeometry = true;
+            batch.staticGroup = first.staticGroup;
+            batches.push_back(std::move(batch));
+            index += 1;
+            continue;
+        }
+
         //阴影批次不引用材质，program 与固定状态由深度 Shader 决定
         const GpuMaterial* material = depthShader ? nullptr : gpuResources->GetMaterial(first.material);
         const GpuShaderPass* pass = depthShader
@@ -486,25 +608,41 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
             : ((material && material->shader && !material->shader->passes.empty()) ? &material->shader->passes[0] : nullptr);
         bool singlePass = depthShader ? depthShader->passes.size() == 1
             : (material && material->shader && material->shader->passes.size() == 1);
-        bool standardContract = pass && pass->geometryContract != ShaderGeometryContract::Legacy;
 
-        //自动合批只处理单 Pass 的几何 ABI Shader。其余来源是排序屏障：
-        //多 Pass 必须每个对象依次跑完全部 Pass，Legacy 没有实例变体可编译，
-        //显式关闭实例化的渲染器同样不参与合并。
-        if (!singlePass || !standardContract || !first.instancingEnabled)
+        //合批只处理单 Pass 的 Shader。其余来源是排序屏障：多 Pass 必须每个对象依次跑完全部 Pass。
+        if (!singlePass || !pass)
         {
             end = index + 1;
             if (!depthShader && material && material->shader && material->shader->passes.size() > 1) stats.multiPassItems += 1;
-            if (pass && pass->geometryContract == ShaderGeometryContract::Legacy && !depthShader) stats.legacyShaderItems += 1;
         }
 
-        bool instancedCapable = instancingAvailable && singlePass && standardContract && pass->instancedProgram.IsValid();
+        bool instancedCapable = instancingAvailable && singlePass && pass && pass->instancedProgram.IsValid();
+        bool expandedCapable = singlePass && pass && pass->supportsExpandedGeometry && pass->expandedProgram.IsValid();
 
-        //自动来源同键数量至少两个才做实例绘制；单件仍是普通绘制，画面与旧路径一致
+        //普通来源的绘制策略在这里落地：先试实例批，再试动态批，都不成立就单绘制。
+        //显式实例与粒子已经带好自己的模式，不参与这套选择。
         GeometryMode mode = first.mode;
         if (first.source == DrawSource::StaticMesh)
         {
-            mode = instancedCapable && (end - index) >= 2 ? GeometryMode::Instanced : GeometryMode::Uniform;
+            mode = GeometryMode::Uniform;
+            if (end > index + 1 && AllAllowInstancing(items, index, end) && instancedCapable)
+            {
+                mode = GeometryMode::Instanced;
+            }
+            else
+            {
+                //动态批放宽到同材质与同状态，不要求同网格；按预算收编连续项
+                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && AllAllowDynamicBatching(items, index, end));
+                if (dynamicEnd >= index + 2)
+                {
+                    end = dynamicEnd;
+                    mode = GeometryMode::Expanded;
+                }
+                else
+                {
+                    end = index + 1;
+                }
+            }
         }
 
         //实例上限之外的连续项拆成多个同键批次

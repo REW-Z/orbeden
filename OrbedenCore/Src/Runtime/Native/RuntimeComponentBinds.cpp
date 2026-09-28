@@ -145,6 +145,20 @@ namespace
         if (value) value->SetLocalActive(active != 0);
     }
 
+    //读取 Ens 的 static 约束。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetStatic(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetStatic() ? 1 : 0;
+    }
+
+    //设置 Ens 的 static 约束；失败返回 0，原因由 Ens 自己记录。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsSetStatic(EnsId ens, uint8 value)
+    {
+        Ens* target = GetNativeEns(ens);
+        return target && target->SetStatic(value != 0) ? 1 : 0;
+    }
+
     //读取 Ens 名称到 UTF-8 缓冲区。
     int32 ORBEDEN_NATIVE_CALL NativeEnsGetName(EnsId ens, uint8* buffer, int32 bufferSize)
     {
@@ -194,6 +208,8 @@ EnsBind EnsBind::Create()
     bind.GetName = reinterpret_cast<void*>(&NativeEnsGetName);
     bind.SetName = reinterpret_cast<void*>(&NativeEnsSetName);
     bind.GetObjectId = reinterpret_cast<void*>(&NativeEnsGetObjectId);
+    bind.GetStatic = reinterpret_cast<void*>(&NativeEnsGetStatic);
+    bind.SetStatic = reinterpret_cast<void*>(&NativeEnsSetStatic);
     return bind;
 }
 

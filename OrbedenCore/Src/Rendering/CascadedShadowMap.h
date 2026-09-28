@@ -2,10 +2,13 @@
 #include "Rendering/DrawBatchBuilder.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/InstanceDrawData.h"
+#include "Rendering/ParticleRenderer.h"
 #include "Rendering/RenderScene.h"
 #include "Rendering/ShadowCascadeBuilder.h"
 
 //管理每相机级联绘制和异步采样分区
+class StaticBatchCache;
+
 class CascadedShadowMap
 {
     struct CameraHistory
@@ -33,6 +36,9 @@ class CascadedShadowMap
     List<DrawItem> shadowItems;
     List<DrawBatch> shadowBatches;
     List<GpuMeshInstance> shadowInstances;
+    List<ExpandedGeometryChunk> expandedChunks;
+    //本帧的静态批缓存，非拥有型；为空时静态成员仍逐对象投影
+    StaticBatchCache* staticBatchCache = nullptr;
 
 public:
     //绑定渲染后端
@@ -41,10 +47,12 @@ public:
     void Shutdown();
     //清理失效相机历史
     void BeginFrame(const RenderScene& scene);
-    //生成当前相机级联阴影。候选来自完整场景与全部显式实例，与主相机可见集合无关。
-    void Render(const RenderScene& scene, const List<InstanceSubmission>& submissions, const RenderCamera& camera,
+    //生成当前相机级联阴影。候选来自完整场景、全部显式实例与 Opaque Mesh 粒子，与主相机可见集合无关。
+    void Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+        const ParticleFrameSnapshot& particles, const RenderCamera& camera,
         const RenderDirectionalLight& light, Shader* depthShader, GpuResourceManager& resources,
-        DrawBatchBuilder& builder, GpuDrawStream& stream, RenderBatchStats& stats);
+        ParticleRenderer& particleRenderer, StaticBatchCache* staticBatches, DrawBatchBuilder& builder,
+        GpuDrawStream& stream, RenderBatchStats& stats);
     //绑定当前相机阴影查询参数
     void BindUniforms(const RenderCamera& camera);
 

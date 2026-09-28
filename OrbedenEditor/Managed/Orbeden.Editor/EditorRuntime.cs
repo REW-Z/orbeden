@@ -373,14 +373,14 @@ public static class EditorRuntime
     private static unsafe void ValidateNativeApiLayout()
     {
         ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 81);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 17);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 15);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 5);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 162);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 160);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

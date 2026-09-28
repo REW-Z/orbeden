@@ -22,6 +22,8 @@ SceneView 工具栏的 **Gizmos** 菜单控制总开关、方向光、碰撞体�
 
 `Target` 是编辑目标描述，不是运行中的 C# Script 实例；编辑模式不为了画 Inspector 而构造或启动用户脚本。通过属性文档编辑宿主字段，才能在编辑模式、运行模式和 Missing Script 数据保存流程中使用一致的路径。直接给原生包装属性赋值不会自动产生 CustomEditor 撤销事务。
 
+**界面文本只用 ASCII。** 编辑器用 ImGui 自带的默认字体，字形范围只有 Latin-1（`0x20`–`0xFF`），没有中日韩字形：标签、按钮、状态文本里出现中文，运行时会被逐字渲染成 `?`——不报错，只是文字全变问号。注释仍然按规范写中文，中英混排只发生在代码里，不进 UI 字符串。`×`（U+00D7）在 Latin-1 内，可以照常用的关闭按钮那样使用。
+
 ## 示例：为 C# 脚本自定义三个回调
 
 普通脚本放在 `Content/Scripts/DetectionZone.cs`：
@@ -78,3 +80,14 @@ public sealed class DetectionZoneEditor : ComponentEditor
 可用绘制入口包括 `Gizmos.Line`、`Gizmos.Label`、`Gizmos.WireSphere`、`Gizmos.WireCube`，坐标均为世界空间，尺寸均为世界单位。自定义 GUI 回调各有独立 ID 空间；同一回调内重复绘制同名控件时可用 `EditorGUI.PushId()` / `PopId()` 区分。所有 Begin/End 或 Push/Pop 必须配对，建议用 `try/finally`。
 
 编辑器构造失败或回调抛出异常会输出 Console。失败回调停用到下次程序集重载，Inspector 回退到默认界面，其他组件编辑器继续工作。
+
+
+## 动画曲线与颜色渐变
+
+`GUI.AnimationCurve(label, id, ref ParticleCurve, minimumValue, maximumValue)` 与 `GUI.ColorGradient(label, id, ref ParticleGradient)` 是 Editor / Player 共用的 C# 控件；返回 true 时提交属性事务。
+`id` 在当前 GUI 作用域内唯一，编辑对象可使用 ObjectId 与字段路径组合；时间归一化到 0..1。
+`minimumValue` / `maximumValue` 是这个字段允许的取值区间：视图不越出区间，编辑也夹在里面，数值轴只出现 1 / 2 / 5 × 10^n 的刻度；**Ctrl + 滚轮**以光标所在的值缩放值轴，不按 Ctrl 时滚轮照常滚动面板。
+点击关键帧选中并拖动，双击空白添加；右键关键帧开菜单（Linear / Cubic / Constant、Add Key After、Delete Key），右键空白开视图菜单（Fit View）；Delete 键删除选中帧，Esc 取消。两端关键帧是曲线的结构（时间 0 与 1），不可删除。
+曲线支持数值、Linear/Cubic/Constant 插值和切线斜率；三次插值的关键帧带两条定长的切线手柄，切到三次时按相邻帧自动补切线；拖动与手柄调整只预览，松开提交。
+渐变关键帧通过 Color / Alpha 选择器编辑 RGB 和透明度，棋盘背景显示透明度，加帧与删帧都在色标右键菜单里；`GUI.ColorField` 可独立使用。
+粒子 Size Over Lifetime 是初始尺寸的倍率，Color Over Lifetime 是初始颜色的倍率；Start Color 为白色时可直接观察渐变颜色。

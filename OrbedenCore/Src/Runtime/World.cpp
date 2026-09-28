@@ -461,18 +461,20 @@ bool World::DestroyEns(EnsId ens)
     destroyingEns.push_back(ens);
     SetEnsLocalActive(ens, false);
 
-    //解除子级关系
+    //解除子级关系。内部拆链不走 SetParent，不受 static 移动限制
     EnsId child = transform->firstChild;
     while (!child.IsNull())
     {
         Transform* childTransform = GetTransform(child);
         EnsId nextChild = childTransform ? childTransform->next : EnsId();
-        SetParent(child, EnsId());
+        UnlinkEns(child);
+        NotifyTransformChanged(child);
+        RefreshEnsWorldActive(child);
         child = nextChild;
     }
 
     //解除父级关系
-    SetParent(ens, EnsId());
+    UnlinkEns(ens);
 
     //销毁额外组件实例
     List<int32> componentIds;
@@ -568,6 +570,147 @@ Transform* World::GetTransform(EnsId ens) const
     return component ? component->Cast<Transform>() : nullptr;
 }
 
+//读取 Ens 的 static 约束
+bool World::GetEnsStatic(EnsId ens) const
+{
+    const Ens* value = GetEns(ens);
+    return value && value->isStatic;
+}
+
+//判断世界变换此刻是否允许变化
+bool World::CanChangeTransform(EnsId ens) const
+{
+    //编辑态任意变换；模拟期间只有非 static 的 Ens 能动
+    if (!runtimeActive) return true;
+    const Ens* value = GetEns(ens);
+    return value && !value->isStatic;
+}
+
+//子树里是否存在 static 的 Ens
+bool World::HasStaticDescendant(EnsId ens) const
+{
+    Transform* transform = GetTransform(ens);
+    if (!transform) return false;
+
+    for (EnsId child = transform->firstChild; !child.IsNull();)
+    {
+        const Ens* childEns = GetEns(child);
+        if (childEns && childEns->isStatic) return true;
+
+        Transform* childTransform = GetTransform(child);
+        if (childTransform && HasStaticDescendant(child)) return true;
+        child = childTransform ? childTransform->next : EnsId();
+    }
+
+    return false;
+}
+
+//设置 Ens 的 static 约束
+bool World::SetEnsStatic(EnsId ens, bool value, std::string& outError)
+{
+    outError.clear();
+    Ens* target = GetEns(ens);
+    if (!target)
+    {
+        outError = "The Ens is not valid.";
+        return false;
+    }
+
+    //运行时 static 标记只读，暂停也不解除
+    if (runtimeActive)
+    {
+        outError = "The static flag cannot be changed while the world is simulating.";
+        return false;
+    }
+
+    if (target->isStatic == value) return true;
+
+    //内容准备阶段允许直接恢复序列化数据，层级约束由整棵树读完后的校验统一负责
+    if (preparing)
+    {
+        target->isStatic = value;
+        return true;
+    }
+
+    if (value)
+    {
+        //置真要求所有祖先已经是 static，不隐式修改父级
+        Transform* transform = GetTransform(ens);
+        for (EnsId ancestor = transform ? transform->parent : EnsId(); !ancestor.IsNull();)
+        {
+            Ens* ancestorEns = GetEns(ancestor);
+            if (!ancestorEns || !ancestorEns->isStatic)
+            {
+                outError = "Every ancestor of a static Ens must be static.";
+                return false;
+            }
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+    else if (HasStaticDescendant(ens))
+    {
+        //置假要求没有 static 后代；多选事务由调用方整体预检
+        outError = "A static Ens cannot have static descendants.";
+        return false;
+    }
+
+    target->isStatic = value;
+    SetDirty();
+    return true;
+}
+
+//校验 static 层级与物理约束
+bool World::ValidateStaticConstraints(EnsId& outEns, std::string& outError) const
+{
+    outEns = EnsId();
+    outError.clear();
+
+    for (const Ens* ens : liveEns)
+    {
+        if (!ens || !ens->isStatic) continue;
+
+        //static 的 Ens 必须挂在全 static 的祖先链下
+        Transform* transform = GetTransform(ens->GetId());
+        for (EnsId ancestor = transform ? transform->parent : EnsId(); !ancestor.IsNull();)
+        {
+            const Ens* ancestorEns = GetEns(ancestor);
+            if (!ancestorEns || !ancestorEns->isStatic)
+            {
+                outEns = ens->GetId();
+                outError = "A static Ens is parented under a non-static ancestor.";
+                return false;
+            }
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+
+    return true;
+}
+
+//把 Ens 从当前父级摘下来，只动层级数据
+void World::UnlinkEns(EnsId child)
+{
+    Transform* transform = GetTransform(child);
+    if (!transform) return;
+
+    Transform* oldParent = GetTransform(transform->parent);
+    Transform* previous = GetTransform(transform->prev);
+    Transform* next = GetTransform(transform->next);
+
+    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = transform->next;
+    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = transform->prev;
+    if (previous) previous->next = transform->next;
+    if (next) next->prev = transform->prev;
+
+    transform->parent = EnsId();
+    transform->prev = EnsId();
+    transform->next = EnsId();
+}
+
 //设置父级
 void World::SetParent(EnsId child, EnsId parent)
 {
@@ -586,19 +729,24 @@ void World::SetParent(EnsId child, EnsId parent)
         current = currentTransform ? currentTransform->parent : EnsId();
     }
 
+    //static 子树的重挂约束：模拟期间禁止移动，编辑态只允许挂到祖先全是 static 的位置
+    Ens* childEns = GetEns(child);
+    if (childEns && childEns->isStatic)
+    {
+        if (runtimeActive) return;
+
+        for (EnsId ancestor = parent; !ancestor.IsNull();)
+        {
+            Ens* parentEns = GetEns(ancestor);
+            if (!parentEns || !parentEns->isStatic) return;
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+
     //从旧父级摘除
-    Transform* oldParent = GetTransform(transform->parent);
-    Transform* previous = GetTransform(transform->prev);
-    Transform* next = GetTransform(transform->next);
-
-    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = transform->next;
-    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = transform->prev;
-    if (previous) previous->next = transform->next;
-    if (next) next->prev = transform->prev;
-
-    transform->parent = EnsId();
-    transform->prev = EnsId();
-    transform->next = EnsId();
+    UnlinkEns(child);
 
     if (parent.IsNull())
     {

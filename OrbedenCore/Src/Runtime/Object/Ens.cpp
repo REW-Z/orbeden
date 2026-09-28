@@ -118,6 +118,32 @@ void Ens::SetLocalActive(bool value)
     GetWorld()->SetEnsLocalActive(ens, value);
 }
 
+//读取 static 世界变换约束
+bool Ens::GetStatic() const
+{
+    return isStatic;
+}
+
+//设置 static 约束
+bool Ens::SetStatic(bool value)
+{
+    staticError.clear();
+    World* world = GetWorld();
+    if (!world)
+    {
+        staticError = "The Ens is not attached to a world.";
+        return false;
+    }
+
+    return world->SetEnsStatic(ens, value, staticError);
+}
+
+//读取最近一次 static 设置的失败原因
+const std::string& Ens::GetStaticError() const
+{
+    return staticError;
+}
+
 //设置父级
 void Ens::SetParent(Ens* parent)
 {

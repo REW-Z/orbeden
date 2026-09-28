@@ -397,26 +397,18 @@ namespace
             pass.name = sourcePass.name;
             pass.state = sourcePass.state;
             pass.geometryContract = sourcePass.geometryContract;
+            pass.supportsExpandedGeometry = sourcePass.supportsExpandedGeometry;
 
-            bool compiled = true;
-            if (sourcePass.geometryContract == ShaderGeometryContract::Legacy)
+            bool compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram) &&
+                CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
+            //展开变体按开关编译：关闭它的 Shader 依赖模型空间顶点，不参与合批
+            if (compiled && sourcePass.supportsExpandedGeometry)
             {
-                //Legacy 保持原语法原样编译，不注入几何宏，未升级的自定义 Shader 行为不变
-                GpuShaderProgramDesc shaderProgramDesc;
-                shaderProgramDesc.vertexSource = sourcePass.vertexSource.c_str();
-                shaderProgramDesc.fragmentSource = sourcePass.fragmentSource.c_str();
-                pass.shaderProgram = backend->CreateShaderProgram(shaderProgramDesc);
-                compiled = pass.shaderProgram.IsValid();
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Expanded, pass.expandedProgram);
             }
-            else
+            if (compiled && sourcePass.geometryContract == ShaderGeometryContract::Particle)
             {
-                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram) &&
-                    CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
-                if (compiled && sourcePass.geometryContract == ShaderGeometryContract::Particle)
-                {
-                    compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Expanded, pass.expandedProgram) &&
-                        CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::TrailInstanced, pass.trailInstancedProgram);
-                }
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::TrailInstanced, pass.trailInstancedProgram);
             }
 
             //失败的 Pass 也入列，交给统一的释放路径回收已经编译成功的变体。

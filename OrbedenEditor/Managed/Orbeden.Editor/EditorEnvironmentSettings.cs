@@ -19,8 +19,7 @@ internal static class EditorEnvironmentSettings
     private static string status = string.Empty;
     private static Skybox? skybox;
     private static bool skyboxEnabled;
-    private static vector3 ambientRgb;
-    private static float ambientAlpha = 1.0f;
+    private static color ambientColor = new() { r = 0.34f, g = 0.37f, b = 0.42f, a = 1.0f };
     private static float ambientIntensity = 1.0f;
     private static Skybox? reflectionEnvironment;
     private static float reflectionIntensity = 1.0f;
@@ -39,8 +38,7 @@ internal static class EditorEnvironmentSettings
             reflectionEnvironment = null;
             skyboxEnabled = false;
             //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
-            ambientRgb = new vector3(0.34f, 0.37f, 0.42f);
-            ambientAlpha = 1.0f;
+            ambientColor = new color { r = 0.34f, g = 0.37f, b = 0.42f, a = 1.0f };
             status = "World render settings are unavailable.";
             return;
         }
@@ -48,8 +46,7 @@ internal static class EditorEnvironmentSettings
         skybox = string.IsNullOrEmpty(key) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), key) as Skybox;
         skyboxEnabled = enabled;
         reflectionEnvironment = string.IsNullOrEmpty(reflectionKey) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), reflectionKey) as Skybox;
-        ambientRgb = new vector3(ambient.X, ambient.Y, ambient.Z);
-        ambientAlpha = ambient.W;
+        ambientColor = new color { r = ambient.X, g = ambient.Y, b = ambient.Z, a = ambient.W };
     }
 
     /// <summary>切项目后丢弃草稿，下次绘制重新读取。
@@ -84,7 +81,7 @@ internal static class EditorEnvironmentSettings
         EditorApplication.SetWorldRenderSettings(
             skybox?.GetInstanceId() ?? string.Empty,
             skyboxEnabled,
-            new Vector4(ambientRgb.x, ambientRgb.y, ambientRgb.z, ambientAlpha), ambientIntensity,
+            new Vector4(ambientColor.r, ambientColor.g, ambientColor.b, ambientColor.a), ambientIntensity,
             reflectionEnvironment?.GetInstanceId() ?? string.Empty, reflectionIntensity);
         dirty = false;
         status = string.Empty;
@@ -104,8 +101,8 @@ internal static class EditorEnvironmentSettings
                 Skybox? selected = skybox;
                 if (EditorGUI.ObjectField<Skybox>("Skybox", ref selected)) { skybox = selected; dirty = true; }
                 if (EditorGUI.Checkbox("Skybox Enabled", ref skyboxEnabled)) dirty = true;
-                if (EditorGUI.InputVector3("Ambient Color RGB", ref ambientRgb)) dirty = true;
-                if (EditorGUI.InputFloat("Ambient Color Alpha", ref ambientAlpha)) dirty = true;
+                //与 Inspector 的颜色字段共用同一个原语：RGB 与 Alpha 在同一行、带棋盘预览
+                if (GUI.ColorField("Ambient Color", ref ambientColor)) dirty = true;
                 if (EditorGUI.InputFloat("Ambient Intensity", ref ambientIntensity))
                 {
                     ambientIntensity = Math.Max(0.0f, ambientIntensity);

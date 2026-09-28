@@ -15,8 +15,11 @@ void Transform::SetLocalPosition(const vector3& value)
 {
     if (localPosition.x == value.x && localPosition.y == value.y && localPosition.z == value.z) return;
 
-    localPosition = value;
+    //模拟期间 static 的世界变换不变：保留原值，也不发变换通知
     World* world = GetWorld();
+    if (world && !world->CanChangeTransform(GetEnsId())) return;
+
+    localPosition = value;
     if (world) world->NotifyTransformChanged(GetEnsId());
 }
 
@@ -32,8 +35,10 @@ void Transform::SetLocalRotation(const quaternion& value)
     if (localRotation.x == value.x && localRotation.y == value.y &&
         localRotation.z == value.z && localRotation.w == value.w) return;
 
-    localRotation = value;
     World* world = GetWorld();
+    if (world && !world->CanChangeTransform(GetEnsId())) return;
+
+    localRotation = value;
     if (world) world->NotifyTransformChanged(GetEnsId());
 }
 
@@ -48,8 +53,10 @@ void Transform::SetLocalScale(const vector3& value)
 {
     if (localScale.x == value.x && localScale.y == value.y && localScale.z == value.z) return;
 
-    localScale = value;
     World* world = GetWorld();
+    if (world && !world->CanChangeTransform(GetEnsId())) return;
+
+    localScale = value;
     if (world) world->NotifyTransformChanged(GetEnsId());
 }
 

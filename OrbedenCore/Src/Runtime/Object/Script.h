@@ -135,6 +135,10 @@ public:
     ORBEDEN_BIND_IGNORE
     bool SetManagedFieldValue(const std::string& name, const std::string& value);
 
+    //删除一个托管字段。只用来同步脚本类型：字段已经不在类型里时由调用方判断，
+    //这里不做任何"该不该删"的判断
+    bool RemoveManagedField(const std::string& name);
+
     //把受支持的字段类型名转换为原生 Inspector 字段分类。
     ORBEDEN_BIND_IGNORE
     static Reflection::FieldKind GetManagedFieldKind(const std::string& typeName);

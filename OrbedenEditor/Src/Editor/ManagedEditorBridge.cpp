@@ -169,24 +169,7 @@ namespace
         uint64 rejectedCount = 0;
     };
 
-    //渲染批次统计，按字段顺序装箱，固定 128 字节
-    struct RenderBatchStatsAbi
-    {
-    public:
-        uint64 values[16] = {};
-    };
-
-    //粒子模拟统计，11 项计数加一个丢弃时长，固定 96 字节
-    struct ParticleSimulationStatsAbi
-    {
-    public:
-        uint64 values[11] = {};
-        float64 droppedSimulationSeconds = 0.0;
-    };
-
     static_assert(sizeof(ParticlePreviewInfoAbi) == 32);
-    static_assert(sizeof(RenderBatchStatsAbi) == 128);
-    static_assert(sizeof(ParticleSimulationStatsAbi) == 96);
 
     struct EditorApplicationNativeApi
     {
@@ -206,8 +189,6 @@ namespace
         void* setWorldRenderSettings = nullptr;
         void* controlParticlePreview = nullptr;
         void* getParticlePreviewInfo = nullptr;
-        void* installParticleBuiltins = nullptr;
-        void* getParticleRenderingStats = nullptr;
     };
 
     //传给 Editor C# 的日志函数表。
@@ -254,21 +235,21 @@ namespace
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 17);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 15);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 162);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 160);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 82);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 99);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 104);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 106);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 125);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 149);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 154);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 97);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 102);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 104);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 123);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 147);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 152);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1008,80 +989,6 @@ namespace
         output->time = info.time;
         output->emittedCount = info.emittedCount;
         output->rejectedCount = info.rejectedCount;
-        return 1;
-    }
-
-    //安装内置粒子资源，已存在的同名文件保留不动
-    uint8 ORBEDEN_NATIVE_CALL InstallManagedParticleBuiltins(void* context, uint8* errorText, int32 errorCapacity)
-    {
-        EditorSystem* editor = static_cast<EditorSystem*>(context);
-        if (errorText && errorCapacity > 0) errorText[0] = 0;
-        if (!editor || editor->IsPlaying() || !PathDefines::HasContentRoot()) return 0;
-
-        std::string error;
-        if (!NewProjectTemplate::InstallParticleBuiltinFiles(editor->GetProjectRoot(), editor->GetProjectTemplateDirectory(), error))
-        {
-            if (errorText && errorCapacity > 0)
-            {
-                usize length = std::min(static_cast<usize>(errorCapacity - 1), error.size());
-                std::memcpy(errorText, error.data(), length);
-                errorText[length] = 0;
-            }
-            return 0;
-        }
-
-        return 1;
-    }
-
-    //复制当前渲染与粒子统计，禁止在读取时推进模拟或提交 Render
-    uint8 ORBEDEN_NATIVE_CALL GetManagedParticleRenderingStats(void* context, RenderBatchStatsAbi* render,
-        ParticleSimulationStatsAbi* simulation)
-    {
-        if (!render || !simulation) return 0;
-        *render = RenderBatchStatsAbi();
-        *simulation = ParticleSimulationStatsAbi();
-
-        RenderSystem* renderSystem = RenderSystem::Current();
-        if (renderSystem)
-        {
-            const RenderBatchStats& stats = renderSystem->GetBatchStats();
-            render->values[0] = stats.sourceItems;
-            render->values[1] = stats.visibleItems;
-            render->values[2] = stats.ordinaryDraws;
-            render->values[3] = stats.instancedDraws;
-            render->values[4] = stats.dynamicBatchDraws;
-            render->values[5] = stats.submittedInstances;
-            render->values[6] = stats.expandedVertices;
-            render->values[7] = stats.expandedIndices;
-            render->values[8] = stats.uploadedBytes;
-            render->values[9] = stats.shadowDraws;
-            render->values[10] = stats.invalidTransforms;
-            render->values[11] = stats.invalidResources;
-            render->values[12] = stats.failedUploads;
-            render->values[13] = stats.legacyShaderItems;
-            render->values[14] = stats.multiPassItems;
-            render->values[15] = stats.transparentBatchBreaks;
-        }
-
-        if (ParticleSimulationSystem* particles = ParticleSimulationSystem::Current())
-        {
-            //预览优先：编辑态下用户关心的就是预览的那一份
-            const ParticleSimulationContext& particleContext = particles->GetRenderContext(particles->HasRunningPreview());
-            ParticleSimulationStats total = particleContext.CollectStats();
-            simulation->values[0] = total.aliveParticles;
-            simulation->values[1] = total.activeTrails;
-            simulation->values[2] = total.emittedParticles;
-            simulation->values[3] = total.rejectedCapacity;
-            simulation->values[4] = total.rejectedTrails;
-            simulation->values[5] = total.collisionQueries;
-            simulation->values[6] = total.collisionHits;
-            simulation->values[7] = total.subEmitterEvents;
-            simulation->values[8] = total.droppedSubEmitterEvents;
-            simulation->values[9] = total.invalidTargets;
-            simulation->values[10] = total.invalidTransforms;
-            simulation->droppedSimulationSeconds = total.droppedSimulationSeconds;
-        }
-
         return 1;
     }
 
@@ -1953,8 +1860,6 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.setWorldRenderSettings = reinterpret_cast<void*>(&SetManagedWorldRenderSettings);
     editorApi.application.controlParticlePreview = reinterpret_cast<void*>(&ControlManagedParticlePreview);
     editorApi.application.getParticlePreviewInfo = reinterpret_cast<void*>(&GetManagedParticlePreviewInfo);
-    editorApi.application.installParticleBuiltins = reinterpret_cast<void*>(&InstallManagedParticleBuiltins);
-    editorApi.application.getParticleRenderingStats = reinterpret_cast<void*>(&GetManagedParticleRenderingStats);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);

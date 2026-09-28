@@ -161,6 +161,15 @@ namespace
         return host && host->SetManagedField(field, fieldType, kind, ReadUtf8(value, valueLength), inspectorVisible != 0) ? 1 : 0;
     }
 
+    //删除一个宿主字段：脚本类型不再声明它时由托管侧调用
+    uint8 ORBEDEN_NATIVE_CALL RemoveScriptHostField(void* context, void* pointer,
+        const uint8* fieldName,
+        int32 fieldNameLength)
+    {
+        Script* host = ResolveManagedHost(static_cast<World*>(context), pointer);
+        return host && host->RemoveManagedField(ReadUtf8(fieldName, fieldNameLength)) ? 1 : 0;
+    }
+
     //解析稳定引用，返回已校验的原生对象、组件所属 Ens 和绑定类型。
     void* ORBEDEN_NATIVE_CALL ResolveScriptReference(void* context, const uint8* key, int32 length,
         const uint8* typeName, int32 typeLength, EnsId* ens, int32* bindingKind)
@@ -207,6 +216,10 @@ OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
     api.Object = ObjectBind::Create();
     api.ObjectExtension = ObjectExtensionBind::Create();
     api.Bindings = NativeBindingsApi::Create();
+    api.Gui = RuntimeGuiBridge::GetApi();
+    api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();
+    api.GuiAdvanced = RuntimeGuiBridge::GetAdvancedApi();
+    api.GuiCurve = RuntimeGuiBridge::GetCurveApi();
     return api;
 }
 
@@ -229,6 +242,7 @@ ScriptBindApi ScriptBindApi::Create(World* world)
     api.GetFieldValue = reinterpret_cast<void*>(&GetScriptHostFieldValue);
     api.SetField = reinterpret_cast<void*>(&SetScriptHostField);
     api.ResolveReference = reinterpret_cast<void*>(&ResolveScriptReference);
+    api.RemoveField = reinterpret_cast<void*>(&RemoveScriptHostField);
     return api;
 }
 
@@ -248,5 +262,6 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.ScriptInterop = ScriptInterop::ScriptInteropApi::Create();
     api.Script = ScriptBindApi::Create(world);
     api.GuiDraw = RuntimeGuiBridge::GetDrawApi();
+    api.GuiCurve = RuntimeGuiBridge::GetCurveApi();
     return api;
 }

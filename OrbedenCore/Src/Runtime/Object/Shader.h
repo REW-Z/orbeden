@@ -24,14 +24,14 @@ enum class ShaderPassToggle
 };
 
 //Shader 几何 ABI 契约，决定一个 Pass 编译哪些几何变体。
-//数值写入 Cooked 载荷，序号固定。
+//数值写入 Cooked 载荷，序号固定：0 是已删除的旧值，不允许重新解释为 Standard。
 enum class ShaderGeometryContract : uint32
 {
-    //未声明几何 ABI，只编译 uniform 单绘制
-    Legacy = 0,
-    //接入几何 ABI，编译 uniform 与实例绘制
+    //已删除的旧值：没有几何 ABI 的 Shader 不再受支持，读到 0 一律拒绝
+    Removed = 0,
+    //接入几何 ABI，编译 uniform、实例绘制，以及展开几何（supportsExpandedGeometry 关闭时除外）
     Standard = 1,
-    //粒子用几何 ABI，编译全部四种模式
+    //粒子用几何 ABI，在 Standard 之上再加拖尾实例
     Particle = 2,
 };
 
@@ -51,8 +51,11 @@ struct ShaderPass
 public:
     std::string name = "Default";
     ShaderPassState state;
-    //未声明 Geometry 时保持 Legacy，原 Shader 语法与逐对象绘制行为不变
-    ShaderGeometryContract geometryContract = ShaderGeometryContract::Legacy;
+    //未声明 Geometry 时按 Standard 处理
+    ShaderGeometryContract geometryContract = ShaderGeometryContract::Standard;
+    //是否编译展开几何变体。依赖模型空间顶点动画的 Shader 用 expandedGeometry off 关闭，
+    //关闭后该 Pass 不参与静态与动态合批，只走单绘制与实例绘制。
+    bool supportsExpandedGeometry = true;
     ORBEDEN_BIND_ACCESSORS(Direct, None)
     std::string vertexSource;
     ORBEDEN_BIND_ACCESSORS(Direct, None)

@@ -77,6 +77,10 @@ vec2 OrbedenGetUv(vec2 uv)
     return uv * u_InstanceUvRect.zw + u_InstanceUvRect.xy;
 #elif ORBEDEN_GEOMETRY_MODE == 1
     return uv * a_InstanceUvRect.zw + a_InstanceUvRect.xy;
+#elif ORBEDEN_GEOMETRY_MODE == 3
+    //拖尾实例：沿长度的 uv 由弧长区间给出，横向仍是四边形自身的 V。
+    //结果必须与展开路径写在顶点里的 (longitudinal, lateral) 完全一致。
+    return vec2(mix(a_TrailUvRange.x, a_TrailUvRange.y, uv.y), uv.x);
 #else
     return uv;
 #endif

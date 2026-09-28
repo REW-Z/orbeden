@@ -3,6 +3,7 @@
 #include "Runtime/Native/RuntimeComponentBinds.h"
 #include "Runtime/Native/RuntimeResourceBinds.h"
 #include "Runtime/Native/NativeBindings.h"
+#include "Runtime/Gui/RuntimeGuiBridge.h"
 
 #pragma pack(push, 8)
 
@@ -18,6 +19,10 @@ public:
     ObjectBind Object;
     ObjectExtensionBind ObjectExtension;
     NativeBindingsApi Bindings;
+    RuntimeGuiApi Gui;
+    RuntimeGuiExtensionApi GuiExtension;
+    RuntimeGuiAdvancedApi GuiAdvanced;
+    RuntimeGuiCurveApi GuiCurve;
 
     //创建引擎原生 API 函数表。
     static OrbedenEngineNativeApi Create();
@@ -25,6 +30,6 @@ public:
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 33);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 69);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
-static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 23);
+static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 25);

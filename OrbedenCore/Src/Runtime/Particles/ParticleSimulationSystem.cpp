@@ -9,6 +9,15 @@
 namespace
 {
     ParticleSimulationSystem* currentSimulationSystem = nullptr;
+
+    //暂停一个发射器：记下恢复时要回到的状态，已经停下的不动。
+    //运行时命令与编辑预览共用这一份，避免两处各写一遍状态迁移。
+    void PauseEmitterState(ParticleEmitterState& state)
+    {
+        if (state.state != ParticlePlaybackState::Playing && state.state != ParticlePlaybackState::Draining) return;
+        state.resumeState = state.state;
+        state.state = ParticlePlaybackState::Paused;
+    }
 }
 
 ParticleSimulationSystem* ParticleSimulationSystem::Current()
@@ -110,8 +119,13 @@ void ParticleSimulationSystem::AdvanceRuntime(World& world, float32 deltaTime)
 void ParticleSimulationSystem::AdvancePreview(World& world, float32 deltaTime)
 {
     PrepareWorld(previewContext, world);
-    if (!HasRunningPreview()) return;
-    if (PhysicsSystem* physics = previewContext.GetPhysicsSystem()) physics->SynchronizeQueries(world);
+    //只同步查询场景是有开销的，没有推进中的预览就跳过
+    if (HasRunningPreview())
+    {
+        if (PhysicsSystem* physics = previewContext.GetPhysicsSystem()) physics->SynchronizeQueries(world);
+    }
+
+    //暂停或停止时也要进 Advance：它会在没有活动发射器时清掉累积器，恢复后不会补上暂停的那段帧时间
     previewContext.Advance(deltaTime);
 }
 
@@ -142,11 +156,7 @@ bool ParticleSimulationSystem::ControlRuntime(ParticleSystem& system, ParticleCo
         }
         break;
     case ParticleControl::Pause:
-        if (state->state == ParticlePlaybackState::Playing || state->state == ParticlePlaybackState::Draining)
-        {
-            state->resumeState = state->state;
-            state->state = ParticlePlaybackState::Paused;
-        }
+        PauseEmitterState(*state);
         break;
     case ParticleControl::Stop:
         if (argument)
@@ -215,12 +225,7 @@ bool ParticleSimulationSystem::ControlPreview(int32 objectId, ParticlePreviewAct
     }
 
     case ParticlePreviewAction::Pause:
-        if (!state) return false;
-        if (state->state == ParticlePlaybackState::Playing || state->state == ParticlePlaybackState::Draining)
-        {
-            state->resumeState = state->state;
-            state->state = ParticlePlaybackState::Paused;
-        }
+        PauseEmitterState(*state);
         return true;
 
     case ParticlePreviewAction::Reset:
@@ -265,6 +270,11 @@ bool ParticleSimulationSystem::HasRunningPreview() const
     return false;
 }
 
+bool ParticleSimulationSystem::HasPreviewContent() const
+{
+    return previewContext.GetPreviewRootCount() != 0;
+}
+
 const ParticleSimulationContext& ParticleSimulationSystem::GetRenderContext(bool preview) const
 {
     return preview ? previewContext : runtimeContext;
@@ -283,6 +293,8 @@ const ParticleSimulationContext& ParticleSimulationSystem::GetRenderContext(bool
 
 namespace
 {
+    //循环诊断的固定前缀，重建图时用它撤掉上一轮的旧警告
+    constexpr const char* CycleErrorPrefix = "Sub-emitter cycle disabled: ";
     //每个候选出生固定消费的随机样本数量，模块开关不改变消费数量
     constexpr uint32 BirthSampleCount = 16;
     //每发射器每步实际尝试出生的数量上限
@@ -304,28 +316,6 @@ namespace
         return range.min + (range.max - range.min) * u;
     }
 
-    //绕局部 +Z 的旋转四元数，角度单位是度
-    quaternion CreateZRotation(float32 degrees)
-    {
-        float32 half = degrees * 0.01745329251994329577f * 0.5f;
-        quaternion result;
-        result.x = 0.0f;
-        result.y = 0.0f;
-        result.z = std::sin(half);
-        result.w = std::cos(half);
-        return result;
-    }
-
-    quaternion MultiplyQuaternion(const quaternion& a, const quaternion& b)
-    {
-        quaternion result;
-        result.x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y;
-        result.y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x;
-        result.z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w;
-        result.w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z;
-        return result;
-    }
-
     //归一化四元数；零四元数返回单位四元数
     quaternion NormalizeQuaternion(const quaternion& value)
     {
@@ -340,34 +330,11 @@ namespace
         return result;
     }
 
-    //从矩阵取旋转部分
-
-
-
     //把方向按旋转四元数变换，不平移
     vector3 RotateDirection(const quaternion& rotation, const vector3& direction)
     {
         matrix4x4 matrix = RenderMath::Rotation(rotation);
         return RenderMath::TransformDirection(matrix, direction);
-    }
-
-    //世界矩阵三基向量的最大长度，用于把出生尺寸换算到世界尺度
-    float32 GetMaximumBasisLength(const matrix4x4& matrix)
-    {
-        vector3 basis[3] =
-        {
-            { matrix.m[0], matrix.m[1], matrix.m[2] },
-            { matrix.m[4], matrix.m[5], matrix.m[6] },
-            { matrix.m[8], matrix.m[9], matrix.m[10] },
-        };
-        float32 maximum = 0.0f;
-        for (const vector3& axis : basis)
-        {
-            float32 length = std::sqrt(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
-            maximum = std::max(maximum, length);
-        }
-
-        return maximum;
     }
 }
 
@@ -503,19 +470,13 @@ void ParticleSimulationContext::AllocateTrailPool(ParticleEmitterState& state)
 void ParticleSimulationContext::ResetEmitter(ParticleEmitterState& state, bool keepPlaybackIntent)
 {
     ParticlePlaybackState previous = state.state;
+    //ClearParticles 已经清掉粒子、拖尾与待派发事件并归还槽位，这里只补它不管的时钟与随机流
     ClearParticles(state);
     state.particles.reserve(state.validatedSettings.main.maxParticles);
     state.fireTimelineZero = true;
-    //保留容量，只清内容
-    state.particles.clear();
-    state.trails.clear();
-    state.trailPoints.clear();
-    state.freeTrailSlots.clear();
-    state.births.clear();
     state.elapsed = 0.0;
     state.simulationTime = 0.0;
     state.rateAccumulator = 0.0;
-    state.loopIndex = 0;
     state.nextBirthId = 1;
     state.nextTrailId = 1;
     state.randomState = state.validatedSettings.main.randomSeed;
@@ -548,10 +509,6 @@ void ParticleSimulationContext::ResetEmitter(ParticleEmitterState& state, bool k
         state.state = ParticlePlaybackState::Playing;
     }
 }
-
-//同步组件的启用与激活状态
-
-
 
 void ParticleSimulationContext::SynchronizeEmitters()
 {
@@ -595,6 +552,8 @@ void ParticleSimulationContext::SynchronizeEmitters()
             bool reset = first || ParticleSettingsCodec::Encode(oldSimulation) != ParticleSettingsCodec::Encode(newSimulation);
             state.validatedSettings = std::move(settings);
             state.appliedRevision = source->GetConfigurationRevision();
+            //加载旧场景或改过资源后也要重算一次，不指望用户在 Inspector 里再动一下字段
+            source->RefreshResourceDiagnostic();
             if (reset) ResetEmitter(state, !first);
             state.initialized = true;
             if (first && !preview && state.validatedSettings.main.playOnAwake) state.state = ParticlePlaybackState::Playing;
@@ -793,10 +752,9 @@ void ParticleSimulationContext::ScheduleBirths(ParticleEmitterState& state, floa
                 bool atStart = state.fireTimelineZero && eventTime == 0.0 && oldTime <= StepEpsilon;
                 if (!(eventTime <= newTime + StepEpsilon && (eventTime > oldTime + StepEpsilon || atStart))) continue;
 
-                if (state.births.size() >= MaximumBirthsPerStep) continue;
-
-                //每个计划事件都消费一个事件样本，容量是否足够不影响消费
+                //每个计划事件都消费一个事件样本，容量是否足够不影响消费，所以抽样必须排在容量判断之前
                 if (NextRandomSample(state.eventRandomState) >= burst.probability) continue;
+                if (state.births.size() >= MaximumBirthsPerStep) continue;
 
                 ParticleScheduledBirth birth;
                 birth.offset = static_cast<float32>(eventTime - oldTime);
@@ -819,10 +777,6 @@ void ParticleSimulationContext::ScheduleBirths(ParticleEmitterState& state, floa
             return a.burstIndex < b.burstIndex;
         });
 }
-
-//把 t=0 的 Burst 排进本步
-
-
 
 //执行一次出生
 void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float32 remainingStep, const ParticleEvent* parent, const ParticleSubEmitterRule* rule)
@@ -926,7 +880,7 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
     bool local = settings.main.simulationSpace == ParticleSimulationSpace::Local;
     Transform* transform = sourceHolder ? world->GetTransform(sourceHolder->GetEnsId()) : nullptr;
     quaternion emitterRotation = transform ? transform->worldRotation : quaternion();
-    quaternion rotation = MultiplyQuaternion(parent ? parent->worldRotation : emitterRotation, CreateZRotation(startRotation));
+    quaternion rotation = RenderMath::Mul(parent ? parent->worldRotation : emitterRotation, RenderMath::RotationZ(startRotation));
     vector3 position = parent ? RotateDirection(parent->worldRotation, localPosition) : RenderMath::TransformPoint(emitterWorld, localPosition);
     if (parent) position = {position.x + parent->worldPosition.x, position.y + parent->worldPosition.y, position.z + parent->worldPosition.z};
     vector3 velocity = ScaleVector(RotateDirection(parent ? parent->worldRotation : emitterRotation, direction), speed);
@@ -940,10 +894,10 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
         position = RenderMath::TransformPoint(inverse, position);
         velocity = parent ? RenderMath::TransformDirection(inverse, velocity) : ScaleVector(direction, speed);
         quaternion inverseRotation{-emitterRotation.x,-emitterRotation.y,-emitterRotation.z,emitterRotation.w};
-        rotation = MultiplyQuaternion(inverseRotation, rotation);
-        if (parent) size /= GetMaximumBasisLength(emitterWorld);
+        rotation = RenderMath::Mul(inverseRotation, rotation);
+        if (parent) size /= RenderMath::GetMaximumBasisLength(emitterWorld);
     }
-    else if (!parent) size *= GetMaximumBasisLength(emitterWorld);
+    else if (!parent) size *= RenderMath::GetMaximumBasisLength(emitterWorld);
 
     ParticleRecord record;
     record.birthId = state.nextBirthId++;
@@ -985,7 +939,6 @@ void ParticleSimulationContext::SpawnParticle(ParticleEmitterState& state, float
             trail.pointStart = slot * settings.trails.maxPointsPerTrail;
             trail.head = 1;
             trail.count = 1;
-            trail.lastSampleTime = state.simulationTime;
 
             ParticleTrailPoint point;
             point.position = record.position;
@@ -1077,7 +1030,7 @@ bool ParticleSimulationContext::IntegrateParticle(ParticleEmitterState& state, u
         matrix4x4 emitterWorld = GetEmitterWorldMatrix(state);
         if (settings.main.simulationSpace == ParticleSimulationSpace::Local)
         {
-            float32 maximumBasis = GetMaximumBasisLength(emitterWorld);
+            float32 maximumBasis = RenderMath::GetMaximumBasisLength(emitterWorld);
             radius *= maximumBasis;
         }
 
@@ -1114,10 +1067,6 @@ bool ParticleSimulationContext::IntegrateParticle(ParticleEmitterState& state, u
     return true;
 }
 
-//手工出生一颗粒子，跳过时间线与速率
-
-
-
 //删除某个发射器已排队但未派发的事件
 void ParticleSimulationContext::ResetEmitterEvents(int32 objectId)
 {
@@ -1139,18 +1088,20 @@ void ParticleSimulationContext::AddPreviewRoot(int32 objectId)
 void ParticleSimulationContext::RemovePreviewRoot(int32 objectId)
 {
     previewRoots.erase(std::remove(previewRoots.begin(), previewRoots.end(), objectId), previewRoots.end());
+    if (ParticleEmitterState* state = FindEmitter(objectId)) state->previewRoot = false;
 
-    ParticleEmitterState* state = FindEmitter(objectId);
-    if (state)
-    {
-        state->previewRoot = false;
-        ResetEmitter(*state, false);
-    }
-
-    //失去全部根可达性的状态一起清理
+    //只清理失去全部根可达性的状态：仍被另一个根共享的子发射器要留在原样
+    List<int32> reachable;
+    CollectReachableEmitters(previewRoots, reachable);
     for (ParticleEmitterState& candidate : emitters)
     {
-        if (candidate.previewRoot) continue;
+        ParticleSystem* source = candidate.source.Get();
+        if (!source || candidate.previewRoot) continue;
+        if (std::find(reachable.begin(), reachable.end(), source->GetObjectId()) != reachable.end()) continue;
+        //从未被任何预览带动过的状态保持不动，免得连带清掉它的统计
+        bool idle = candidate.state == ParticlePlaybackState::Stopped &&
+            candidate.particles.empty() && candidate.trails.empty();
+        if (idle) continue;
         ResetEmitter(candidate, false);
     }
 }
@@ -1161,10 +1112,48 @@ void ParticleSimulationContext::ResetEmitterForPreview(int32 objectId)
     ParticleEmitterState* state = FindEmitter(objectId);
     if (!state) return;
 
-    //共享目标可能仍被另一个根使用，只清该根自己的资源与事件
+    //该根独占的可达状态一起清；仍被其它根共享的目标保留，避免重置另一个根的特效
+    List<int32> exclusive;
+    List<int32> seeds{ objectId };
+    CollectReachableEmitters(seeds, exclusive);
+    List<int32> otherRoots;
+    for (int32 root : previewRoots) if (root != objectId) otherRoots.push_back(root);
+    List<int32> shared;
+    CollectReachableEmitters(otherRoots, shared);
+
+    //保留播放与暂停意图：播放中的重置后从 0 继续播，暂停的仍然停在 0
     ResetEmitter(*state, true);
-    state->state = ParticlePlaybackState::Stopped;
-    ResetEmitterEvents(objectId);
+    for (int32 reachable : exclusive)
+    {
+        if (reachable == objectId) continue;
+        if (std::find(shared.begin(), shared.end(), reachable) != shared.end()) continue;
+        if (ParticleEmitterState* child = FindEmitter(reachable)) ResetEmitter(*child, false);
+    }
+}
+
+//按子发射器规则展开一个根集合能到达的发射器编号
+void ParticleSimulationContext::CollectReachableEmitters(const List<int32>& seeds, List<int32>& output) const
+{
+    output = seeds;
+    for (usize index = 0; index < output.size(); ++index)
+    {
+        const ParticleEmitterState* state = FindEmitter(output[index]);
+        ParticleSystem* source = state ? state->source.Get() : nullptr;
+        if (!source) continue;
+
+        for (const ParticleSubEmitterRule& rule : state->validatedSettings.subEmitters)
+        {
+            if (rule.targetSlot >= source->subEmitterTargets.size()) continue;
+            Ens* targetEns = world ? world->GetEns(source->subEmitterTargets[rule.targetSlot]) : nullptr;
+            ParticleSystem* target = targetEns ? targetEns->GetComponent<ParticleSystem>() : nullptr;
+            if (!target || target == source) continue;
+
+            int32 targetId = target->GetObjectId();
+            if (!FindEmitter(targetId)) continue;
+            if (std::find(output.begin(), output.end(), targetId) != output.end()) continue;
+            output.push_back(targetId);
+        }
+    }
 }
 
 //在世界空间做球体扫描并处理碰撞响应
@@ -1333,64 +1322,70 @@ void ParticleSimulationContext::RefreshSubEmitterGraph()
 {
     for (ParticleEmitterState& state : emitters)
     {
-        ParticleSystem* source = state.source.Get();
-        if (!source) continue;
-
         const List<ParticleSubEmitterRule>& rules = state.validatedSettings.subEmitters;
-        if (state.ruleDisabled.size() != rules.size())
+        if (state.ruleDisabled.size() != rules.size()) state.ruleDisabled.assign(rules.size(), 0u);
+        for (usize ruleIndex = 0; ruleIndex < rules.size(); ++ruleIndex) state.ruleDisabled[ruleIndex] = 0;
+
+        //撤掉上一轮的循环诊断：循环可能已经被改掉了，留着会一直报警
+        if (ParticleSystem* source = state.source.Get())
         {
-            state.ruleDisabled.assign(rules.size(), 0u);
+            if (source->lastError.rfind(CycleErrorPrefix, 0) == 0) source->lastError.clear();
         }
+    }
 
-        if (rules.empty()) continue;
+    //一次全局 DFS：节点按 ObjectId 升序（emitters 本身有序）作为入口，
+    //灰色的目标就是回边。逐个发射器各跑一次 DFS 会把别人禁掉的回边重新放开。
+    enum class Visited : uint8 { White, Gray, Black };
+    List<Visited> marks(emitters.size(), Visited::White);
+    List<usize> pathNodes;
 
-        //按 source ObjectId 与 ruleIndex 升序做 DFS，发现回边就禁用
-        int32 rootId = source->GetObjectId();
-        for (usize ruleIndex = 0; ruleIndex < rules.size(); ++ruleIndex)
+    std::function<void(usize)> visit = [&](usize nodeIndex)
+    {
+        ParticleEmitterState& current = emitters[nodeIndex];
+        ParticleSystem* currentSource = current.source.Get();
+        marks[nodeIndex] = Visited::Gray;
+        pathNodes.push_back(nodeIndex);
+
+        const List<ParticleSubEmitterRule>& currentRules = current.validatedSettings.subEmitters;
+        for (usize ruleIndex = 0; currentSource && ruleIndex < currentRules.size(); ++ruleIndex)
         {
-            state.ruleDisabled[ruleIndex] = 0;
-        }
+            uint32 slot = currentRules[ruleIndex].targetSlot;
+            if (slot >= currentSource->subEmitterTargets.size()) continue;
 
-        List<int32> path{ rootId };
-        List<uint8> onPath{ 1 };
-        std::function<void(ParticleEmitterState&)> visit = [&](ParticleEmitterState& current)
-        {
-            ParticleSystem* currentSource = current.source.Get();
-            if (!currentSource) return;
+            Ens* targetEns = world ? world->GetEns(currentSource->subEmitterTargets[slot]) : nullptr;
+            ParticleSystem* target = targetEns ? targetEns->GetComponent<ParticleSystem>() : nullptr;
+            if (!target || target == currentSource) continue;
 
-            const List<ParticleSubEmitterRule>& currentRules = current.validatedSettings.subEmitters;
-            for (usize ruleIndex = 0; ruleIndex < currentRules.size(); ++ruleIndex)
+            const ParticleEmitterState* targetState = FindEmitter(target->GetObjectId());
+            if (!targetState) continue;
+            usize targetIndex = static_cast<usize>(targetState - emitters.data());
+
+            if (marks[targetIndex] == Visited::Gray)
             {
-                if (current.ruleDisabled.size() == currentRules.size() && current.ruleDisabled[ruleIndex]) continue;
-                uint32 slot = currentRules[ruleIndex].targetSlot;
-                if (slot >= currentSource->subEmitterTargets.size()) continue;
-
-                EnsId targetId = currentSource->subEmitterTargets[slot];
-                Ens* targetEns = world ? world->GetEns(targetId) : nullptr;
-                ParticleSystem* target = targetEns ? targetEns->GetComponent<ParticleSystem>() : nullptr;
-                if (!target || target == currentSource) continue;
-
-                int32 targetObjectId = target->GetObjectId();
-                //回边：禁用并继续检查其它边
-                bool isBackEdge = std::find(path.begin(), path.end(), targetObjectId) != path.end();
-                if (isBackEdge)
+                //回边：禁用该边并报出完整循环路径，继续检查其它边
+                if (current.ruleDisabled.size() == currentRules.size()) current.ruleDisabled[ruleIndex] = 1;
+                std::string cycle;
+                for (auto step = std::find(pathNodes.begin(), pathNodes.end(), targetIndex); step != pathNodes.end(); ++step)
                 {
-                    if (current.ruleDisabled.size() == currentRules.size()) current.ruleDisabled[ruleIndex] = 1;
-                    continue;
+                    ParticleSystem* node = emitters[*step].source.Get();
+                    cycle += std::to_string(node ? node->GetObjectId() : 0) + " -> ";
                 }
 
-                ParticleEmitterState* targetState = FindEmitter(targetObjectId);
-                if (!targetState) continue;
-
-                path.push_back(targetObjectId);
-                onPath.push_back(1);
-                visit(*targetState);
-                path.pop_back();
-                onPath.pop_back();
+                currentSource->lastError = std::string(CycleErrorPrefix) + cycle +
+                    std::to_string(target->GetObjectId()) + ".";
+                continue;
             }
-        };
 
-        visit(state);
+            if (marks[targetIndex] == Visited::White) visit(targetIndex);
+        }
+
+        pathNodes.pop_back();
+        marks[nodeIndex] = Visited::Black;
+    };
+
+    for (usize index = 0; index < emitters.size(); ++index)
+    {
+        if (marks[index] == Visited::White) visit(index);
     }
 }
 
@@ -1436,12 +1431,14 @@ void ParticleSimulationContext::RebuildBounds(ParticleEmitterState& state)
     bounds3 bounds;
     matrix4x4 emitterWorld = GetEmitterWorldMatrix(state);
     bool local = state.validatedSettings.main.simulationSpace == ParticleSimulationSpace::Local;
+    //局部尺寸要乘发射器世界尺度才能与渲染侧的包围盒口径一致
+    float32 emitterBasis = local ? RenderMath::GetMaximumBasisLength(emitterWorld) : 1.0f;
 
     for (const ParticleRecord& particle : state.particles)
     {
         float32 size = particle.startSize * particle.inheritedSize *
             std::max(0.0f, EvaluateCurve(state.validatedSettings.motion.sizeOverLifetime,
-                particle.lifetime > 0.0f ? std::clamp(particle.age / particle.lifetime, 0.0f, 1.0f) : 1.0f));
+                particle.lifetime > 0.0f ? std::clamp(particle.age / particle.lifetime, 0.0f, 1.0f) : 1.0f)) * emitterBasis;
         vector3 position = local ? RenderMath::TransformPoint(emitterWorld, particle.position) : particle.position;
         //Billboard 的保守半径是外接圆，Mesh 粒子按尺寸盒近似
         float32 radius = size * 0.70710678118f;
@@ -1499,12 +1496,12 @@ void ParticleSimulationContext::QueueEvent(ParticleEmitterState& state, const Pa
     event.stepIndex=stepIndex; event.eventTime=time; event.sourceObjectId=source->GetObjectId(); event.birthId=particle.birthId; event.type=type;
     event.worldPosition = local ? RenderMath::TransformPoint(matrix,particle.position) : particle.position;
     event.worldVelocity = local ? RenderMath::TransformDirection(matrix,particle.velocity) : particle.velocity;
-    event.worldRotation = MultiplyQuaternion(particle.rotation,CreateZRotation(particle.angle-particle.startAngle));
-    if (local && transform) event.worldRotation = MultiplyQuaternion(transform->worldRotation,event.worldRotation);
+    event.worldRotation = RenderMath::Mul(particle.rotation,RenderMath::RotationZ(particle.angle-particle.startAngle));
+    if (local && transform) event.worldRotation = RenderMath::Mul(transform->worldRotation,event.worldRotation);
     event.linearColor = {tint.r*particle.startLinearColor.r*particle.inheritedColor.r,tint.g*particle.startLinearColor.g*particle.inheritedColor.g,
         tint.b*particle.startLinearColor.b*particle.inheritedColor.b,tint.a*particle.startLinearColor.a*particle.inheritedColor.a};
     event.size = particle.startSize*particle.inheritedSize*std::max(0.0f,EvaluateCurve(settings.motion.sizeOverLifetime,age));
-    if (local) event.size *= GetMaximumBasisLength(matrix);
+    if (local) event.size *= RenderMath::GetMaximumBasisLength(matrix);
     event.generation=particle.generation;
     for (uint32 i=0;i<settings.subEmitters.size();++i)
     {

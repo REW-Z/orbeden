@@ -16,6 +16,15 @@ namespace RenderMath
     //矩阵相乘
     matrix4x4 Mul(const matrix4x4& a, const matrix4x4& b);
 
+    //四元数相乘
+    quaternion Mul(const quaternion& a, const quaternion& b);
+
+    //创建绕局部 +Z 的旋转四元数，角度单位是度
+    quaternion RotationZ(float32 degrees);
+
+    //读取矩阵三个基向量的最大长度，用于把局部尺寸换算到世界尺度
+    float32 GetMaximumBasisLength(const matrix4x4& matrix);
+
     //创建平移矩阵
     matrix4x4 Translation(const vector3& value);
 

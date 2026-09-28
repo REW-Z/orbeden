@@ -21,6 +21,7 @@
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
+#include "Runtime/Object/TextResource.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/WheelCollider.h"
@@ -2917,8 +2918,20 @@ public:
         return Reflection::SetFromValue(instance->name, value);
     }
 
+    //调用 Mesh.GetContentVersion 方法
+    static Reflection::Value Invoke_Mesh_GetContentVersion_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Mesh* instance = static_cast<Mesh*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetContentVersion();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Mesh.MarkDirty 方法
-    static Reflection::Value Invoke_Mesh_MarkDirty_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_MarkDirty_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -2930,7 +2943,7 @@ public:
     }
 
     //调用 Mesh.ClearGeometry 方法
-    static Reflection::Value Invoke_Mesh_ClearGeometry_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_ClearGeometry_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -2942,7 +2955,7 @@ public:
     }
 
     //调用 Mesh.ResizeSubMeshes 方法
-    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_ResizeSubMeshes_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -2956,7 +2969,7 @@ public:
     }
 
     //调用 Mesh.ConfigureSubMesh 方法
-    static Reflection::Value Invoke_Mesh_ConfigureSubMesh_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_ConfigureSubMesh_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -2976,7 +2989,7 @@ public:
     }
 
     //调用 Mesh.RefreshNormals 方法
-    static Reflection::Value Invoke_Mesh_RefreshNormals_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Mesh_RefreshNormals_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Mesh* instance = static_cast<Mesh*>(object);
@@ -4358,33 +4371,33 @@ public:
         return Reflection::SetFromValue(instance->receiveShadows, value);
     }
 
-    //读取 StaticMeshRenderer.enableInstancing 字段
-    static std::string Get_StaticMeshRenderer_enableInstancing(Object* object)
+    //读取 StaticMeshRenderer.drawStrategy 字段
+    static std::string Get_StaticMeshRenderer_drawStrategy(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::ToXmlValue(instance->enableInstancing);
+        return Reflection::ToXmlValue(instance->drawStrategy);
     }
 
-    //直接读取 StaticMeshRenderer.enableInstancing 字段
-    static Reflection::Value GetValue_StaticMeshRenderer_enableInstancing(Object* object)
+    //直接读取 StaticMeshRenderer.drawStrategy 字段
+    static Reflection::Value GetValue_StaticMeshRenderer_drawStrategy(Object* object)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return instance ? Reflection::ToValue(instance->enableInstancing) : Reflection::Value();
+        return instance ? Reflection::ToValue(instance->drawStrategy) : Reflection::Value();
     }
 
-    //写入 StaticMeshRenderer.enableInstancing 字段
-    static bool Set_StaticMeshRenderer_enableInstancing(Object* object, const std::string& value)
+    //写入 StaticMeshRenderer.drawStrategy 字段
+    static bool Set_StaticMeshRenderer_drawStrategy(Object* object, const std::string& value)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
-        return Reflection::SetFromXmlValue(instance->enableInstancing, value);
+        return Reflection::SetFromXmlValue(instance->drawStrategy, value);
     }
 
-    //直接写入 StaticMeshRenderer.enableInstancing 字段
-    static bool SetValue_StaticMeshRenderer_enableInstancing(Object* object, const Reflection::Value& value)
+    //直接写入 StaticMeshRenderer.drawStrategy 字段
+    static bool SetValue_StaticMeshRenderer_drawStrategy(Object* object, const Reflection::Value& value)
     {
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->enableInstancing, value);
+        return Reflection::SetFromValue(instance->drawStrategy, value);
     }
 
     //调用 StaticMeshRenderer.GetEnabled 方法
@@ -4461,6 +4474,35 @@ public:
         instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //读取 TextResource.text 字段
+    static std::string Get_TextResource_text(Object* object)
+    {
+        TextResource* instance = static_cast<TextResource*>(object);
+        return Reflection::ToXmlValue(instance->text);
+    }
+
+    //直接读取 TextResource.text 字段
+    static Reflection::Value GetValue_TextResource_text(Object* object)
+    {
+        TextResource* instance = static_cast<TextResource*>(object);
+        return instance ? Reflection::ToValue(instance->text) : Reflection::Value();
+    }
+
+    //写入 TextResource.text 字段
+    static bool Set_TextResource_text(Object* object, const std::string& value)
+    {
+        TextResource* instance = static_cast<TextResource*>(object);
+        return Reflection::SetFromXmlValue(instance->text, value);
+    }
+
+    //直接写入 TextResource.text 字段
+    static bool SetValue_TextResource_text(Object* object, const Reflection::Value& value)
+    {
+        TextResource* instance = static_cast<TextResource*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->text, value);
     }
 
     //读取 Texture2D.name 字段
@@ -5661,6 +5703,7 @@ namespace Reflection
             {
                 FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("dirtyFlags", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("contentVersion", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("localBounds", "bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr, ReflectionGeneratedAccess::GetValue_Mesh_name, ReflectionGeneratedAccess::SetValue_Mesh_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5673,11 +5716,12 @@ namespace Reflection
 
         RegisterTypeMethods(Mesh::StaticType(),
             {
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_0),
-                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_1),
-                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_2),
-                MethodInfo("ConfigureSubMesh", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("index", "int32", Reflection::ValueKind::Int32), ParameterInfo("subMeshName", "std::string", Reflection::ValueKind::String), ParameterInfo("indexStart", "uint32", Reflection::ValueKind::UInt32), ParameterInfo("indexCount", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_Mesh_ConfigureSubMesh_3),
-                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_4),
+                MethodInfo("GetContentVersion", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_GetContentVersion_0),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_1),
+                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_2),
+                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_3),
+                MethodInfo("ConfigureSubMesh", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("index", "int32", Reflection::ValueKind::Int32), ParameterInfo("subMeshName", "std::string", Reflection::ValueKind::String), ParameterInfo("indexStart", "uint32", Reflection::ValueKind::UInt32), ParameterInfo("indexCount", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_Mesh_ConfigureSubMesh_4),
+                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_5),
             });
 
         RegisterTypeFields(Orbeden::Object::StaticType(),
@@ -5795,7 +5839,7 @@ namespace Reflection
                 FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("enableInstancing", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enableInstancing, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enableInstancing, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enableInstancing, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enableInstancing, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("drawStrategy", "DrawStrategy", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawStrategy, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawStrategy, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
@@ -5806,6 +5850,15 @@ namespace Reflection
                 MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_3),
                 MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_4),
                 MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_5),
+            });
+
+        RegisterTypeFields(TextResource::StaticType(),
+            {
+                FieldInfo("text", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_TextResource_text, ReflectionGeneratedAccess::Set_TextResource_text, nullptr, ReflectionGeneratedAccess::GetValue_TextResource_text, ReflectionGeneratedAccess::SetValue_TextResource_text, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+            });
+
+        RegisterTypeMethods(TextResource::StaticType(),
+            {
             });
 
         RegisterTypeFields(Texture2D::StaticType(),

@@ -83,6 +83,8 @@ public 的受支持字段参与序列化；非 public 字段需要 `[SerializeFi
 
 支持基本数值、字符串、vector3、color、quaternion、EnsId 和可绑定的原生 Object 引用。数组、列表、自定义结构体、委托和任意托管对象图不属于当前字段协议。
 
+宿主字段表按脚本类型对账：类型里有、宿主里没有的字段补进宿主（取值来自构造函数与字段初始化器），类型里已经删掉的字段从宿主删除。对账发生在脚本程序集重新加载后（编辑器里由 Inspector 在画组件卡片前做一次，运行时在构造 Wrapper 时做一次）。**类型解析不到时一律不动**——Missing Script 或程序集加载失败不会丢字段与值。编辑器里的删除进撤销；改名等于删旧加新，旧值不保留。
+
 ## 3. 编写 C++ 脚本
 
 ```cpp
@@ -246,7 +248,7 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 16 个指针槽，完整运行时表为 105 个；Editor GUI 表为 78 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，应用表为 11 个，完整 Editor 表为 153 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 17 个指针槽，完整运行时表为 110 个；Editor GUI 表为 78 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，应用表为 11 个，完整 Editor 表为 153 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
 
 组件自定义 Inspector、Scene GUI 和 Gizmos 的注册方式、程序集隔离与示例见 [CustomEditor](CustomEditors.md)。
 

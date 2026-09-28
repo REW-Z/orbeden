@@ -117,6 +117,9 @@
     <ClInclude Include="Src\Runtime\Object\Skybox.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\Object\TextResource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Object\InstanceDrawList.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -159,6 +162,9 @@
     <ClInclude Include="Src\Rendering\RenderMath.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Rendering\StaticBatchCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Rendering\RenderScene.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -181,6 +187,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Rendering\GeometryExpander.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Rendering\GpuResourceManager.h">
@@ -326,6 +335,9 @@
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Runtime\Object\TextResource.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Runtime\Object\InstanceDrawList.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -353,6 +365,9 @@
     <ClCompile Include="Src\Rendering\RenderMath.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Rendering\StaticBatchCache.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Rendering\RenderScene.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -369,6 +384,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Rendering\GeometryExpander.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp">

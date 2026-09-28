@@ -335,6 +335,7 @@ static FieldKindInfo? GetFieldKind(string type)
         "EnsId" => new FieldKindInfo("Reflection::FieldKind::EnsId"),
         "ClearMode" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         "DrawQueue" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
+        "DrawStrategy" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         "TextureColorSpace" => new FieldKindInfo("Reflection::FieldKind::UInt32"),
         _ => null,
     };

@@ -500,10 +500,9 @@ bool RenderSystem::ValidateInstanceSubmission(Mesh* mesh, Material* material, ui
     usize count = static_cast<usize>(subMesh.indexCount);
     if (count == 0 || start > mesh->indices.size() || count > mesh->indices.size() - start) return false;
 
-    //显式实例提交拒绝多 Pass，也拒绝没有几何 ABI 的 Shader，不悄悄改变 Pass 顺序
+    //显式实例提交拒绝多 Pass，不悄悄改变 Pass 顺序；几何契约已统一为 Standard，不再有兼容分支
     Shader* shader = material->shader.Get();
-    if (!shader || shader->passes.size() != 1) return false;
-    return shader->passes[0].geometryContract != ShaderGeometryContract::Legacy;
+    return shader && shader->passes.size() == 1;
 }
 
 //接收一次显式实例提交

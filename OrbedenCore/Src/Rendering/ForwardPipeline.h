@@ -5,6 +5,7 @@
 #include "Rendering/DrawBatchBuilder.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/ParticleRenderer.h"
+#include "Rendering/StaticBatchCache.h"
 #include "Rendering/RenderScene.h"
 
 #include <unordered_set>
@@ -52,13 +53,24 @@ private:
     List<GpuTrailInstance> trailInstanceScratch;
     List<ExpandedGeometryChunk> expandedChunks;
 
+    //持久静态几何缓存，运行时每帧刷新受影响的组
+    StaticBatchCache staticBatches;
+
     //粒子几何的来源，快照每帧刷新一次，与本帧所有相机共用。
     ParticleRenderer particleRenderer;
     ParticleFrameSnapshot particleSnapshot;
     bool particleRendererReady = false;
+    //静态批缓存是否已经绑定后端
+    bool staticBatchesReady = false;
+
+    //已经报过「材质缺少几何变体」的材质编号，同一材质只报一次，资源失效时清空
+    std::unordered_set<int32> reportedMissingVariants;
 
     //刷新粒子渲染快照，runtime 与 preview 二选一。
     void CaptureParticleFrame(World& world);
+
+    //记录一次因材质缺少几何变体而跳过的粒子绘制
+    void ReportMissingGeometryVariant(Material* source, const GpuShader& shader, const char* variant);
 
 public:
     //初始化后端引用并等待首次绘制时加载内置 shader。

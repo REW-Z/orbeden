@@ -27,6 +27,10 @@ private:
     //最近的配置、资源或引用图诊断
     std::string lastError;
 
+    //检查当前配置引用的材质能否支持粒子几何，不兼容时写入 lastError。
+    //必须在模拟之外做：几何变体是否编译由 Shader 的几何契约决定，缺变体的绘制会被管线丢弃。
+    void RefreshResourceDiagnostic();
+
 public:
     /// <summary>注册组件的持久化字段。</summary>
     ORBEDEN_BIND_IGNORE

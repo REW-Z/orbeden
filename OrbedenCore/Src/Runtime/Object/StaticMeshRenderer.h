@@ -32,6 +32,8 @@ private:
     friend class CascadedShadowMap;
     //阴影候选从完整场景直接读取渲染器快照，不经过主相机的可见集合
     friend class DrawBatchBuilder;
+    //静态几何缓存直接读取渲染器快照收集候选
+    friend class StaticBatchCache;
 
     bool enabled = true;
     Ref<Mesh> runtimeMesh;
@@ -48,8 +50,8 @@ public:
     uint32 drawLayer = 1u;
     bool castShadows = true;
     bool receiveShadows = true;
-    //关闭后这个渲染器始终作为普通绘制与排序屏障，不参与自动合批
-    bool enableInstancing = true;
+    //这个渲染器允许的绘制策略；Individual 表示始终单绘制并作为排序屏障
+    DrawStrategy drawStrategy = DrawStrategy::Auto;
 
     /// <summary>设置非持久化渲染网格，传空恢复源网格；对象由调用方管理。</summary>
     ORBEDEN_BIND_IGNORE

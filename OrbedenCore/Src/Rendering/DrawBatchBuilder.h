@@ -67,6 +67,9 @@ static_assert(offsetof(GpuTrailInstance, uvRange) == 96);
 //矩阵非有限或奇异时返回 false，该实例不提交。
 bool BuildGpuMeshInstance(const matrix4x4& model, const color& linearTint, const color& uvRect, GpuMeshInstance& instance);
 
+//单批实例数量上限。批次切分与流式缓冲的越界检查共用同一个值，不能各写一份。
+constexpr uint32 MaximumBatchInstances = 65536u;
+
 //流式绘制缓冲：一份实例 VBO、一份展开顶点 VBO 与其索引 IBO、一份展开顶点输入。
 //每次上传都写偏移 0，上传完立即绘制该批，驱动负责在途旧存储的寿命。
 class GpuDrawStream
@@ -76,8 +79,6 @@ private:
     static constexpr usize MinimumStreamCapacity = 64u * 1024u;
     //初始索引缓冲的元素数量，必须非零，否则顶点输入会被零索引数检查拒绝
     static constexpr uint32 MinimumIndexCapacity = 3u;
-    //单批实例数量上限
-    static constexpr usize MaximumBatchInstances = 65536u;
     //单批展开顶点与索引数量上限
     static constexpr usize MaximumExpandedVertices = 262144u;
     static constexpr usize MaximumExpandedIndices = 786432u;
@@ -123,6 +124,7 @@ public:
 
 class GpuResourceManager;
 class ParticleRenderer;
+class StaticBatchCache;
 class RenderScene;
 struct ParticleFrameSnapshot;
 struct GpuShader;
@@ -179,7 +181,12 @@ public:
     bool castShadows = true;
     bool receiveShadows = true;
     //来源是否允许参与自动合批；关闭时该项永远是普通绘制与排序屏障
-    bool instancingEnabled = true;
+    //这个绘制项允许的绘制策略；决定它能进哪类批次
+    DrawStrategy strategy = DrawStrategy::Auto;
+    //是否使用静态几何缓存的持久顶点；此时索引区间指向缓存组
+    bool persistentGeometry = false;
+    //静态组下标，persistentGeometry 为真时有效
+    uint32 staticGroup = 0xFFFFFFFFu;
     //只有最终状态为深度测试开、深度写开、混合关的单 Pass Standard 项才允许重排
     bool reorderable = false;
     //指向本帧粒子或拖尾几何记录的下标，不能跨 Render 保存
@@ -219,6 +226,9 @@ public:
     DrawBatchKey key;
     //连续输入索引列表，按排序后的绘制项下标给出
     List<uint32> items;
+    //持久静态几何：直接绑定缓存组的顶点输入，按 key 的索引区间绘制
+    bool persistentGeometry = false;
+    uint32 staticGroup = 0xFFFFFFFFu;
     uint32 instanceCount = 0;
     uint32 expandedVertexCount = 0;
     uint32 expandedIndexCount = 0;
@@ -234,10 +244,13 @@ private:
     bool instancingAvailable = false;
     //粒子几何由渲染器产生，builder 只负责按相机追加
     ParticleRenderer* particleRenderer = nullptr;
+    //静态几何缓存，非拥有型；构建相机项时跳过已收编的渲染器并追加持久批
+    StaticBatchCache* staticBatches = nullptr;
 
 public:
     //注入本帧使用的 GPU 资源管理器、后端实例能力与粒子渲染器
-    void Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles);
+    void Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles,
+        StaticBatchCache* staticCache = nullptr);
 
     //把当前相机的可见静态项、显式实例与粒子展开为统一绘制项，并完成绘制状态解析
     void BuildCameraItems(const RenderScene& scene, const VisibleSet& visibleSet,
@@ -249,9 +262,10 @@ public:
     //按排序结果顺序扫描生成批次，同时决定每个批次使用哪种几何模式
     void BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats);
 
-    //从完整场景、全部显式实例收集阴影候选，不使用主相机的可见集合
+    //从完整场景、全部显式实例与 Opaque Mesh 粒子收集阴影候选，不使用主相机的可见集合
     void BuildShadowItems(const RenderScene& scene, const List<InstanceSubmission>& submissions,
-        const RenderCamera& camera, const frustum& lightFrustum, List<DrawItem>& items);
+        const ParticleFrameSnapshot& particles, const RenderCamera& camera, const frustum& lightFrustum,
+        List<DrawItem>& items);
 
     //按阴影键分组生成批次，键不含材质，深度 program 由外部给定
     void BuildShadowBatches(const List<DrawItem>& items, const GpuShader& depthShader,

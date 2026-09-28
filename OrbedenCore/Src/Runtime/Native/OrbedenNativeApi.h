@@ -27,6 +27,7 @@ struct ScriptBindApi
     void* GetFieldValue = nullptr;
     void* SetField = nullptr;
     void* ResolveReference = nullptr;
+    void* RemoveField = nullptr;
 
     //创建绑定到指定 World 的宿主函数表。
     static ScriptBindApi Create(World* world);
@@ -50,6 +51,7 @@ public:
     ScriptInterop::ScriptInteropApi ScriptInterop;
     ScriptBindApi Script;
     RuntimeGuiDrawApi GuiDraw;
+    RuntimeGuiCurveApi GuiCurve;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create(::World* world);
@@ -57,7 +59,7 @@ public:
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 16);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 105);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 17);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 110);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
-static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 55);
+static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 57);

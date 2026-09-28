@@ -110,6 +110,8 @@ bool Mesh::IsDirty(MeshDirtyFlags flags) const
 
 void Mesh::MarkDirty(MeshDirtyFlags flags)
 {
+    //内容版本只在几何数据变化时推进，纯编辑器状态不算内容变化
+    if ((static_cast<uint32>(flags) & static_cast<uint32>(MeshDirtyFlags::Gpu)) != 0) ++contentVersion;
     dirtyFlags |= static_cast<uint32>(flags);
 }
 

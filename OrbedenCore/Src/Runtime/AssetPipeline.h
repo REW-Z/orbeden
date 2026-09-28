@@ -80,6 +80,7 @@ enum class AssetImporter
     Glsl,
     OrbMat,
     OrbSky,
+    Text,
 };
 
 //资源导入管道，负责把文件输入转换为Object资源
@@ -106,6 +107,9 @@ public:
 
     //导入六面天空盒资产
     static AssetCollection Import_ORBSKY(std::string path);
+
+    //导入纯文本资产：内容原样保存，不解析格式
+    static AssetCollection Import_TEXT(std::string path);
 
     /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
     static bool SaveMaterialAsset(const Material& material, const std::string& path, std::string& error);

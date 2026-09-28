@@ -473,11 +473,12 @@ float32 EvaluateCurve(const ParticleCurve& curve, float32 t)
 color EvaluateGradient(const ParticleGradient& gradient, float32 t)
 {
     if (gradient.keys.empty()) return { 1.0f, 1.0f, 1.0f, 1.0f };
-    if (gradient.keys.size() == 1) return gradient.keys[0].value;
 
     float32 time = std::clamp(t, 0.0f, 1.0f);
-    if (time <= gradient.keys.front().time) return gradient.keys.front().value;
-    if (time >= gradient.keys.back().time) return gradient.keys.back().value;
+    //单 key 与落在端点之外都取端点值，同样要转成线性，否则端点比插值段亮一档
+    if (gradient.keys.size() == 1 || time <= gradient.keys.front().time)
+        return ColorSpace::SrgbToLinear(gradient.keys.front().value);
+    if (time >= gradient.keys.back().time) return ColorSpace::SrgbToLinear(gradient.keys.back().value);
 
     auto upper = std::upper_bound(gradient.keys.begin(), gradient.keys.end(), time,
         [](float32 value, const ParticleGradientKey& key) { return value < key.time; });

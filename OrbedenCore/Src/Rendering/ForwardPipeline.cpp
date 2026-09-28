@@ -168,9 +168,13 @@ void ForwardPipeline::InvalidateResourceCaches()
     }
 
     //重置管线资源状态
+    staticBatches.Shutdown();
+    staticBatchesReady = false;
     particleRenderer.Shutdown();
     particleRendererReady = false;
     particleSnapshot = ParticleFrameSnapshot();
+    //Shader 重新导入后同一个材质可能已经补上变体，允许再报一次
+    reportedMissingVariants.clear();
     expandedChunks.clear();
     shadowDepthShader.Set(nullptr);
     skyboxShader.Set(nullptr);
@@ -194,14 +198,22 @@ void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager&
 {
     if (!backend) return;
     LoadBuiltinShaders();
+    if (staticBatchesReady == false)
+    {
+        staticBatches.Initialize(backend);
+        staticBatchesReady = true;
+    }
     if (!particleRendererReady)
     {
         particleRenderer.Initialize(backend);
         particleRendererReady = true;
     }
 
-    batchBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer);
+    batchBuilder.Initialize(&gpuResourceManager, backend->SupportsInstancing(), &particleRenderer, &staticBatches);
     shadows.BeginFrame(scene);
+
+    //静态几何缓存每帧刷新一次：收集候选、按内容版本重建受影响的组
+    if (frameWorld) staticBatches.Refresh(*frameWorld, gpuResourceManager);
 
     //粒子快照每帧只抓一次，本帧所有相机共用
     if (frameWorld) CaptureParticleFrame(*frameWorld);
@@ -230,8 +242,9 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         Shader* depthShader = GetOrLoadBuiltinShader(shadowDepthShader,
             ResolveBuiltinShaderKey(ShadowDepthShaderFileName, GetBuiltinShaderKeys().shadowDepth));
         static const List<InstanceSubmission> NoSubmissions;
-        shadows.Render(scene, drawSubmissions ? *drawSubmissions : NoSubmissions, camera, *shadowLight, depthShader,
-            gpuResourceManager, batchBuilder, drawStream, batchStats);
+        shadows.Render(scene, drawSubmissions ? *drawSubmissions : NoSubmissions, particleSnapshot, camera,
+            *shadowLight, depthShader, gpuResourceManager, particleRenderer, &staticBatches, batchBuilder,
+            drawStream, batchStats);
     }
 
     //开始相机主 Pass。
@@ -355,6 +368,24 @@ void ForwardPipeline::ExecuteBatch(const DrawBatch& batch, const RenderScene& sc
     ExecuteUniformBatch(batch, scene, camera, gpuResourceManager, mainLight, cameraTexturesReady, *material, configuredPrograms);
 }
 
+//记录一次因材质缺少几何变体而跳过的粒子绘制
+void ForwardPipeline::ReportMissingGeometryVariant(Material* source, const GpuShader& shader, const char* variant)
+{
+    //同一材质只报一次：Billboard 每颗粒子自成一个批次，不去重会每帧刷屏
+    int32 key = source ? source->GetObjectId() : 0;
+    if (!reportedMissingVariants.insert(key).second) return;
+
+    std::string message = "Particle draw skipped: material '";
+    message += source ? source->name : std::string("<none>");
+    message += "' uses shader '";
+    message += shader.source ? shader.source->name : std::string("<none>");
+    message += "' without the ";
+    message += variant;
+    message += " geometry variant. Re-import the shader after fixing the declaration: "
+        "expandedGeometry off disables the expanded path, and trails require the Particle contract.";
+    Log::Error(message.c_str());
+}
+
 //刷新粒子渲染快照
 void ForwardPipeline::CaptureParticleFrame(World& world)
 {
@@ -367,8 +398,10 @@ void ForwardPipeline::CaptureParticleFrame(World& world)
         return;
     }
 
-    //编辑态预览优先：正在播放预览时相机应该看到预览的那一份
-    bool usePreview = simulation->HasRunningPreview();
+    //编辑态预览优先：只要还有预览根，相机就该看预览那一份。
+    //这里判「有没有内容」而不是「有没有在推进」，否则暂停的下一帧会切回空的 runtime 上下文，画面整片消失。
+    //Play 期间例外：预览那一路在 Play 时不推进，照画就是停在空中的一堆粒子，所以这段必须看 runtime
+    bool usePreview = simulation->HasPreviewContent() && !world.IsRuntimeActive();
     const ParticleSimulationContext& context = simulation->GetRenderContext(usePreview);
     particleRenderer.CaptureFrame(world, context, simulation->GetTransformCache(), particleSnapshot);
 }
@@ -378,14 +411,34 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
     GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
     const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms)
 {
-    if (!PrepareDrawStream()) return false;
-
     const GpuShaderPass& shaderPass = material.shader->passes[0];
     if (!shaderPass.expandedProgram.IsValid())
     {
         ++batchStats.failedUploads;
+        ReportMissingGeometryVariant(cameraItems[batch.items[0]].material, *material.shader, "expanded");
         return false;
     }
+
+    //持久静态批直接绑定缓存组的顶点输入，不重新展开也不上传
+    if (batch.persistentGeometry)
+    {
+        const StaticBatchGroup* group = staticBatches.GetGroup(batch.staticGroup);
+        if (!group || !group->vertexInput.IsValid())
+        {
+            ++batchStats.invalidResources;
+            return false;
+        }
+
+        BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+            shaderPass.expandedProgram.id, configuredPrograms);
+        backend->BindShaderProgram(shaderPass.expandedProgram);
+        backend->BindVertexInput(group->vertexInput);
+        backend->DrawIndexed(batch.key.indexStart, batch.key.indexCount);
+        ++batchStats.dynamicBatchDraws;
+        return true;
+    }
+
+    if (!PrepareDrawStream()) return false;
 
     {
         PROFILE("Render/ExpandParticles");
@@ -438,6 +491,7 @@ bool ForwardPipeline::ExecuteTrailInstancedBatch(const DrawBatch& batch, const R
     if (!shaderPass.trailInstancedProgram.IsValid())
     {
         ++batchStats.failedUploads;
+        ReportMissingGeometryVariant(cameraItems[batch.items[0]].material, *material.shader, "trail instanced");
         return false;
     }
 
@@ -520,7 +574,9 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
     const GpuShaderPass& shaderPass = material.shader->passes[0];
     if (!shaderPass.instancedProgram.IsValid())
     {
+        //材质没编译出实例变体（编译失败）：本批不画，但要报出原因而不是静默丢弃
         ++batchStats.failedUploads;
+        ReportMissingGeometryVariant(cameraItems[batch.items[0]].material, *material.shader, "instanced");
         return false;
     }
 
@@ -545,22 +601,8 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
         return false;
     }
 
-    //实例顺序必须与透明排序序列一致
-    instanceScratch.clear();
-    instanceScratch.reserve(batch.items.size());
-    for (uint32 itemIndex : batch.items)
-    {
-        const DrawItem& item = cameraItems[itemIndex];
-        GpuMeshInstance instance;
-        if (!BuildGpuMeshInstance(item.model, item.linearTint, item.uvRect, instance))
-        {
-            ++batchStats.invalidTransforms;
-            continue;
-        }
-
-        instanceScratch.push_back(instance);
-    }
-
+    //实例顺序必须与透明排序序列一致，构建与阴影 Pass 共用同一份实现
+    batchStats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, cameraItems, instanceScratch);
     if (instanceScratch.empty()) return false;
     {
         PROFILE("Render/UploadInstances");

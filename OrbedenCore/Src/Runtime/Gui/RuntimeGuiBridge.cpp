@@ -6,9 +6,222 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
+
+namespace
+{
+    //刻度间隔收成 1 / 2 / 5 × 10^n，轴上就只会出现 0.1、0.2、1、2 这样的整数刻度
+    float32 NiceTickStep(float32 span)
+    {
+        if (!(span > 0.0f)) return 1.0f;
+        const float32 magnitude = std::pow(10.0f, std::floor(std::log10(span)));
+        const float32 normalized = span / magnitude;
+        const float32 factor = normalized <= 1.0f ? 1.0f : (normalized <= 2.0f ? 2.0f : (normalized <= 5.0f ? 5.0f : 10.0f));
+        return factor * magnitude;
+    }
+
+    //按间隔决定小数位；值很大时退回有效数字写法，免得刻度文本顶到画布外
+    void FormatTickText(char* buffer, usize size, float32 value, int32 decimals)
+    {
+        if (std::fabs(value) >= 10000.0f) std::snprintf(buffer, size, "%.3g", static_cast<double>(value));
+        else std::snprintf(buffer, size, "%.*f", decimals, static_cast<double>(value));
+    }
+
+    //绘制归一化曲线画布并返回鼠标事件。
+    //着色模式（colors 非空）只标时间轴；曲线模式另外把左侧留成数值刻度，并允许滚轮缩放值域。
+    uint32 ORBEDEN_NATIVE_CALL RuntimeGuiCurveCanvas(const uint8* label, int32 length,
+        const vector2* samples, int32 sampleCount, const color* colors, const vector2* keys,
+        int32 keyCount, const vector2* handles, int32 handleMask, int32 selected,
+        float32 viewMinimum, float32 viewMaximum, float32 height, vector2* mouse, float32* wheel, uint32* identity)
+    {
+        std::string id(reinterpret_cast<const char*>(label), static_cast<usize>(length));
+        *identity = ImGui::GetID(id.c_str());
+        *wheel = 0.0f;
+        if (height <= 0.0f) return 0;
+        const bool colorMode = colors != nullptr;
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        const float32 width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+        //左侧数值刻度和底部时间刻度占掉一部分高度，作图区就是剩下的矩形
+        const float32 left = colorMode ? 6.0f : std::min(52.0f, width * 0.3f);
+        const float32 top = 8.0f;
+        const float32 plotMinX = origin.x + left;
+        const float32 plotMaxX = origin.x + width - 6.0f;
+        const float32 plotMinY = origin.y + top;
+        const float32 plotMaxY = origin.y + std::max(top + 1.0f, height - 18.0f);
+        const float32 plotWidth = std::max(1.0f, plotMaxX - plotMinX);
+        const float32 plotHeight = std::max(1.0f, plotMaxY - plotMinY);
+        const float32 viewSpan = std::max(1.0e-9f, viewMaximum - viewMinimum);
+        const float32 valueToPixels = plotHeight / viewSpan;
+
+        ImGui::InvisibleButton(id.c_str(), ImVec2(width, height));
+        const bool hovered = ImGui::IsItemHovered();
+        const ImVec2 position = ImGui::GetMousePos();
+        mouse->x = std::clamp((position.x - plotMinX) / plotWidth, 0.0f, 1.0f);
+        mouse->y = std::clamp(1.0f - (position.y - plotMinY) / plotHeight, 0.0f, 1.0f);
+        //缩放要按住 Ctrl 才算：不按修饰键时滚轮留给面板滚动，划过曲线也不会被吃掉。
+        //渐变没有值轴，不参与缩放
+        if (!colorMode && hovered && ImGui::GetIO().KeyCtrl && ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY))
+            *wheel = ImGui::GetIO().MouseWheel;
+
+        //切线手柄：方向来自斜率，长度固定成像素数，斜率再陡也不会飞出画布
+        constexpr float32 HandlePixels = 46.0f;
+        constexpr float32 HandlePickPixels = 9.0f;
+        ImVec2 anchor = ImVec2(0.0f, 0.0f);
+        ImVec2 handlePoints[2] = { ImVec2(0.0f, 0.0f), ImVec2(0.0f, 0.0f) };
+        bool handleHovered[2] = { false, false };
+        if (handles && keys && handleMask != 0 && selected >= 0 && selected < keyCount)
+        {
+            anchor = ImVec2(plotMinX + keys[selected].x * plotWidth, plotMinY + (1.0f - keys[selected].y) * plotHeight);
+            for (int32 index = 0; index < 2; ++index)
+            {
+                if ((handleMask & (1 << index)) == 0) continue;
+                const bool incoming = index == 0;
+                float32 dx = incoming ? -plotWidth : plotWidth;
+                float32 dy = (incoming ? handles[index].x : -handles[index].x) * valueToPixels;
+                const float32 length = std::sqrt(dx * dx + dy * dy);
+                if (length <= 1.0e-6f) { dx = incoming ? -1.0f : 1.0f; dy = 0.0f; }
+                else { dx /= length; dy /= length; }
+                handlePoints[index] = ImVec2(anchor.x + dx * HandlePixels, anchor.y + dy * HandlePixels);
+                const float32 offsetX = position.x - handlePoints[index].x, offsetY = position.y - handlePoints[index].y;
+                handleHovered[index] = hovered && offsetX * offsetX + offsetY * offsetY <= HandlePickPixels * HandlePickPixels;
+            }
+        }
+
+        uint32 events = hovered ? 1u : 0u;
+        if (hovered && ImGui::IsMouseClicked(0))
+        {
+            events |= 2u;
+            //手柄比关键帧先认：两者重叠时按手柄算
+            if (handleHovered[0]) events |= 128u;
+            else if (handleHovered[1]) events |= 256u;
+        }
+        if (hovered && ImGui::IsMouseDoubleClicked(0)) events |= 4u;
+        if (ImGui::IsMouseDown(0)) events |= 8u;
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) events |= 16u;
+        if (hovered && ImGui::IsMouseClicked(1)) events |= 32u;
+        if (hovered && (ImGui::IsKeyPressed(ImGuiKey_Delete) || ImGui::IsKeyPressed(ImGuiKey_Backspace))) events |= 64u;
+
+        //绘制背景和采样图形
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        const float32 fontSize = ImGui::GetFontSize() * 0.8f;
+        draw->PushClipRect(origin, ImVec2(origin.x + width, origin.y + height), true);
+        draw->AddRectFilled(origin, ImVec2(origin.x + width, origin.y + height), IM_COL32(32, 32, 38, 255));
+        auto point = [&](float32 x, float32 y)
+        {
+            return ImVec2(plotMinX + x * plotWidth, plotMinY + (1.0f - y) * plotHeight);
+        };
+        auto drawTickLabel = [&](const char* text, float32 x, float32 y, ImU32 color)
+        {
+            draw->AddText(ImGui::GetFont(), fontSize, ImVec2(x, y), color, text);
+        };
+        constexpr ImU32 tickColor = IM_COL32(150, 150, 162, 255);
+        constexpr ImU32 gridColor = IM_COL32(65, 65, 72, 255);
+        for (int32 index = 0; index <= 4; ++index)
+        {
+            const float32 t = index / 4.0f;
+            draw->AddLine(point(t, 0), point(t, 1), gridColor);
+        }
+        if (colorMode)
+        {
+            for (int32 index = 0; index < sampleCount - 1; ++index)
+            {
+                const color& sample = colors[index];
+                for (int32 row = 0; row < 4; ++row)
+                {
+                    const float32 checker = ((index / 4 + row) % 2) == 0 ? 0.3f : 0.55f;
+                    const float32 alpha = std::clamp(sample.a, 0.0f, 1.0f);
+                    ImVec4 display(sample.r * alpha + checker * (1 - alpha), sample.g * alpha + checker * (1 - alpha), sample.b * alpha + checker * (1 - alpha), 1);
+                    draw->AddRectFilled(point(static_cast<float32>(index) / (sampleCount - 1), 1.0f - row / 4.0f),
+                        point(static_cast<float32>(index + 1) / (sampleCount - 1), 1.0f - (row + 1) / 4.0f), ImGui::ColorConvertFloat4ToU32(display));
+                }
+            }
+        }
+        else
+        {
+            //左侧数值刻度：视图值域由调用方给出，刻度间隔自己取整
+            const float32 step = NiceTickStep(viewSpan / 4.0f);
+            const int32 decimals = std::max(0, static_cast<int32>(-std::floor(std::log10(step))));
+            const float32 firstTick = std::ceil(viewMinimum / step) * step;
+            const int32 tickCount = static_cast<int32>(std::floor((viewMaximum - firstTick) / step + 1.0e-4f));
+            for (int32 index = 0; index <= tickCount; ++index)
+            {
+                float32 value = firstTick + index * step;
+                if (std::fabs(value) < step * 1.0e-4f) value = 0.0f;
+                const float32 t = (value - viewMinimum) / viewSpan;
+                draw->AddLine(point(0, t), point(1, t), gridColor);
+                char text[32];
+                FormatTickText(text, sizeof(text), value, decimals);
+                const float32 textWidth = ImGui::CalcTextSize(text).x * 0.8f;
+                drawTickLabel(text, plotMinX - 5.0f - textWidth, plotMinY + (1.0f - t) * plotHeight - fontSize * 0.5f, tickColor);
+            }
+        }
+        //底部时间刻度：0 / 0.5 / 1 三个数够用，四分之一处只画线。
+        //两端的数字居中会顶出画布，贴回画布范围里，不然最后一个数只剩半个
+        for (int32 index = 0; index <= 2; ++index)
+        {
+            const float32 t = index * 0.5f;
+            char text[32];
+            FormatTickText(text, sizeof(text), t, 1);
+            const float32 textWidth = ImGui::CalcTextSize(text).x * 0.8f;
+            const float32 labelX = std::clamp(plotMinX + t * plotWidth - textWidth * 0.5f, origin.x, origin.x + width - textWidth);
+            drawTickLabel(text, labelX, plotMaxY + 2.0f, tickColor);
+        }
+        draw->AddRect(ImVec2(plotMinX, plotMinY), ImVec2(plotMaxX, plotMaxY), IM_COL32(80, 80, 90, 255));
+        if (!colorMode)
+        {
+            for (int32 index = 1; samples && index < sampleCount; ++index)
+                draw->AddLine(point(samples[index - 1].x, samples[index - 1].y), point(samples[index].x, samples[index].y), IM_COL32(115, 199, 255, 255), 1.6f);
+        }
+        for (int32 index = 0; keys && index < keyCount; ++index)
+        {
+            ImVec2 p = point(keys[index].x, keys[index].y);
+            draw->AddRectFilled(ImVec2(p.x - 4, p.y - 4), ImVec2(p.x + 4, p.y + 4),
+                index == selected ? IM_COL32(255, 185, 64, 255) : IM_COL32(230, 230, 245, 255));
+        }
+        //选中关键帧的切线手柄，位掩码决定这一端有没有手柄
+        if (handleMask != 0)
+        {
+            for (int32 index = 0; index < 2; ++index)
+            {
+                if ((handleMask & (1 << index)) == 0) continue;
+                const ImU32 color = index == 0 ? IM_COL32(255, 159, 64, 255) : IM_COL32(120, 210, 255, 255);
+                draw->AddLine(anchor, handlePoints[index], color, 1.4f);
+                draw->AddCircleFilled(handlePoints[index], handleHovered[index] ? 5.0f : 3.5f, color);
+            }
+        }
+        draw->PopClipRect();
+        return events;
+    }
+
+    //绘制带 Alpha 通道的颜色选择器
+    uint8 ORBEDEN_NATIVE_CALL RuntimeGuiColorField(const uint8* label, int32 length, color* value)
+    {
+        if (!value) return 0;
+        std::string text(reinterpret_cast<const char*>(label), static_cast<usize>(length));
+        const usize marker = text.find("##");
+        ImGui::TextUnformatted(text.substr(0, marker).c_str());
+        ImGui::PushID(text.c_str());
+        ImGui::SetNextItemWidth(-1.0f);
+        float32 channels[] = { value->r, value->g, value->b, value->a };
+        const bool changed = ImGui::ColorEdit4("##Color", channels, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreviewHalf);
+        if (changed) { value->r = channels[0]; value->g = channels[1]; value->b = channels[2]; value->a = channels[3]; }
+        ImGui::PopID();
+        return changed ? 1 : 0;
+    }
+}
+
+//读取共享曲线画布和颜色字段函数表
+RuntimeGuiCurveApi RuntimeGuiBridge::GetCurveApi()
+{
+    RuntimeGuiCurveApi api;
+    api.Canvas = reinterpret_cast<void*>(&RuntimeGuiCurveCanvas);
+    api.ColorField = reinterpret_cast<void*>(&RuntimeGuiColorField);
+    return api;
+}
 
 namespace
 {

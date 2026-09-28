@@ -55,10 +55,9 @@ bool InstanceDrawList::Configure(Mesh* targetMesh, uint32 targetSubMeshIndex, Ma
     usize count = static_cast<usize>(subMesh.indexCount);
     if (count == 0 || start > targetMesh->indices.size() || count > targetMesh->indices.size() - start) return false;
 
-    //显式实例提交不支持多 Pass，也不支持没有几何 ABI 的 Legacy Shader
+    //显式实例提交不支持多 Pass
     Shader* shader = targetMaterial->shader.Get();
     if (!shader || shader->passes.size() != 1) return false;
-    if (shader->passes[0].geometryContract == ShaderGeometryContract::Legacy) return false;
 
     mesh.Set(targetMesh);
     material.Set(targetMaterial);

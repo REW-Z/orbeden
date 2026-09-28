@@ -145,7 +145,7 @@ internal static class ScriptRuntime
             return null;
         }
 
-        ManagedTypeMetadataCache.WriteMissingHostFields(instance.Script, host);
+        ManagedTypeMetadataCache.SyncHostFields(instance.Script, host);
         return instance.Script;
     }
 
@@ -325,7 +325,7 @@ internal static class ScriptRuntime
             };
             Register(instance);
             ManagedTypeMetadataCache.ApplyHostFields(script, host);
-            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
+            ManagedTypeMetadataCache.SyncHostFields(script, host);
             callsDirty = true;
             return instance;
         }

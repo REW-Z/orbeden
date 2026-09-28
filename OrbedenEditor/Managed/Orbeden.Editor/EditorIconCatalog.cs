@@ -38,6 +38,7 @@ internal static class EditorIconCatalog
             "Material" => "Material",
             "Shader" => "ShaderFile",
             "Texture2D" or "Texture" => "TextureFile",
+            "TextResource" => "TextFile",
             _ => Fallback,
         };
     }

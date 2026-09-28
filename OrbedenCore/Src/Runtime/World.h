@@ -25,6 +25,7 @@ private:
     };
 
     bool preparing = false;
+    bool runtimeActive = false;//世界已进入模拟或 Player 运行，static 约束开始生效
     bool dirty = false;//场景内容相对磁盘文件已有改动
     bool dirtyTrackingEnabled = true;//Play 期间关闭，运行时改动不污染磁盘脏标记
     int32 dirtySuppressionDepth = 0;//大于 0 表示正在写编辑器临时对象
@@ -75,6 +76,15 @@ private:
     //刷新指定 Ens 子树的 worldActive
     void RefreshEnsWorldActive(EnsId ens);
 
+    //把 Ens 从当前父级摘下来，只动层级数据；销毁等内部操作走这里，不受 static 移动限制
+    void UnlinkEns(EnsId child);
+
+    //子树里是否存在 static 的 Ens
+    bool HasStaticDescendant(EnsId ens) const;
+
+    //校验 static 层级与物理约束，失败时输出第一个出问题的 Ens 与原因
+    bool ValidateStaticConstraints(EnsId& outEns, std::string& outError) const;
+
 public:
     RenderSettings renderSettings;
 
@@ -84,6 +94,22 @@ public:
 
     //判断世界是否正在准备尚未激活的内容
     bool IsPreparing() const { return preparing; }
+
+    //设置世界是否已经进入模拟；进入后 static 约束与只读规则生效，暂停不解除
+    void SetRuntimeActive(bool value) { runtimeActive = value; }
+
+    //判断世界是否已经进入模拟
+    bool IsRuntimeActive() const { return runtimeActive; }
+
+    //读取 Ens 的 static 约束
+    bool GetEnsStatic(EnsId ens) const;
+
+    //设置 Ens 的 static 约束；失败返回 false 并写出原因。
+    //置真要求所有祖先已经是 static，置假要求没有 static 后代，都不隐式修改其它 Ens。
+    bool SetEnsStatic(EnsId ens, bool value, std::string& outError);
+
+    //世界变换此刻是否允许变化：编辑态一律允许，模拟期间 static 的 Ens 不允许
+    bool CanChangeTransform(EnsId ens) const;
 
     //获取内容整体替换序号
     uint64 GetContentRevision() const { return contentRevision; }

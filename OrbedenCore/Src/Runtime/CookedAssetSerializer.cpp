@@ -8,6 +8,7 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Skybox.h"
+#include "Runtime/Object/TextResource.h"
 #include "Runtime/Object/Texture2D.h"
 
 #include <algorithm>
@@ -20,7 +21,8 @@ namespace
 {
     constexpr char BlobMagic[4] = { 'O', 'R', 'B', 'O' };
     //3：Shader Pass 载荷增加 geometryContract 字段，位置式布局随之改变，旧产物必须失效。
-    constexpr uint32 BlobFormatTag = 3;
+    //4：删除 Legacy 契约，Pass 载荷增加 supportsExpandedGeometry 字段。
+    constexpr uint32 BlobFormatTag = 4;
 
     //解析源文件磁盘路径，与 AssetPipeline 的 Key 解析保持一致
     std::string GetSourceFilePath(const std::string& sourceKey)
@@ -339,8 +341,9 @@ namespace
             writer.WriteValue(static_cast<uint32>(pass.state.depthWrite));
             writer.WriteValue(static_cast<uint32>(pass.state.blend));
             writer.WriteValue(static_cast<uint32>(pass.state.cull));
-            //几何契约紧跟剔除模式之后，位置式布局不能改动顺序
+            //几何契约与展开开关紧跟剔除模式之后，位置式布局不能改动顺序
             writer.WriteValue(static_cast<uint32>(pass.geometryContract));
+            writer.WriteValue(pass.supportsExpandedGeometry ? 1u : 0u);
             writer.WriteText(pass.vertexSource);
             writer.WriteText(pass.fragmentSource);
         }
@@ -371,22 +374,28 @@ namespace
             uint32 blend = 0;
             uint32 cull = 0;
             uint32 geometryContract = 0;
+            uint32 supportsExpandedGeometry = 0;
             if (!reader.ReadText(pass.name)) return false;
             if (!reader.ReadValue(depthTest)) return false;
             if (!reader.ReadValue(depthWrite)) return false;
             if (!reader.ReadValue(blend)) return false;
             if (!reader.ReadValue(cull)) return false;
             if (!reader.ReadValue(geometryContract)) return false;
+            if (!reader.ReadValue(supportsExpandedGeometry)) return false;
             if (!reader.ReadText(pass.vertexSource)) return false;
             if (!reader.ReadText(pass.fragmentSource)) return false;
 
-            if (geometryContract > static_cast<uint32>(ShaderGeometryContract::Particle)) return false;
+            //0 是已删除的旧契约值，不能当成 Standard 接受
+            if (geometryContract != static_cast<uint32>(ShaderGeometryContract::Standard) &&
+                geometryContract != static_cast<uint32>(ShaderGeometryContract::Particle)) return false;
+            if (supportsExpandedGeometry > 1u) return false;
 
             pass.state.depthTest = static_cast<ShaderPassToggle>(depthTest);
             pass.state.depthWrite = static_cast<ShaderPassToggle>(depthWrite);
             pass.state.blend = static_cast<ShaderPassToggle>(blend);
             pass.state.cull = static_cast<CullMode>(cull);
             pass.geometryContract = static_cast<ShaderGeometryContract>(geometryContract);
+            pass.supportsExpandedGeometry = supportsExpandedGeometry != 0;
         }
 
         //替换 Passes 会从源码重新反射材质槽位并刷新兼容源码
@@ -420,6 +429,19 @@ namespace
         return true;
     }
 
+    //写入文本资源载荷：正文就是全部内容
+    bool WriteTextResource(BlobWriter& writer, TextResource* resource)
+    {
+        writer.WriteText(resource->text);
+        return true;
+    }
+
+    //读取文本资源载荷
+    bool ReadTextResource(BlobReader& reader, TextResource* resource)
+    {
+        return reader.ReadText(resource->text);
+    }
+
     //按资源类型写入载荷
     bool WritePayload(BlobWriter& writer, Object* object, std::string& error)
     {
@@ -428,6 +450,7 @@ namespace
         if (Material* material = object->Cast<Material>()) return WriteMaterial(writer, material);
         if (Shader* shader = object->Cast<Shader>()) return WriteShader(writer, shader);
         if (Skybox* skybox = object->Cast<Skybox>()) return WriteSkybox(writer, skybox);
+        if (TextResource* resource = object->Cast<TextResource>()) return WriteTextResource(writer, resource);
 
         error = "Resource type cannot be packaged: " + std::string(object->GetType()->GetName());
         return false;
@@ -441,6 +464,7 @@ namespace
         if (Material* material = object->Cast<Material>()) return ReadMaterial(reader, material, externalRefs);
         if (Shader* shader = object->Cast<Shader>()) return ReadShader(reader, shader);
         if (Skybox* skybox = object->Cast<Skybox>()) return ReadSkybox(reader, skybox, externalRefs);
+        if (TextResource* resource = object->Cast<TextResource>()) return ReadTextResource(reader, resource);
 
         error = "Resource type cannot be unpacked: " + std::string(object->GetType()->GetName());
         return false;

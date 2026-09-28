@@ -68,6 +68,19 @@ enum class GeometryMode : uint32
     TrailInstanced = 3,
 };
 
+//渲染器允许的绘制策略。数值参与批次键比较，序号固定。
+enum class DrawStrategy : uint32
+{
+    //自动：能用静态批就用，其余按实例批、动态批、单绘制的顺序退化
+    Auto = 0,
+    //仅单绘制：不参与任何合批，作为排序屏障
+    Individual = 1,
+    //只允许实例批，条件不足时退回单绘制
+    GpuInstancing = 2,
+    //只允许动态批，条件不足时退回单绘制
+    DynamicBatching = 3,
+};
+
 //渲染系统创建的离屏目标句柄，0 表示默认窗口帧缓冲
 struct RenderTargetID
 {
@@ -96,7 +109,6 @@ public:
     uint64 invalidTransforms = 0;
     uint64 invalidResources = 0;
     uint64 failedUploads = 0;
-    uint64 legacyShaderItems = 0;
     uint64 multiPassItems = 0;
     uint64 transparentBatchBreaks = 0;
 };

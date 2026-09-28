@@ -4,6 +4,8 @@
 
 本文按本次读取的仓库编写；“现状依据”中的行号指设计时的代码。本文只新增设计文档，不代表其中声明的类型、接口、测试已经存在。实施者按章节定义实现，不把示例、验收场景或性能目标当成已完成结果。
 
+> **被取代的部分：** [Standard 几何统一、绘制策略与 Ens Static 修改方案](StandardGeometryAndBatchingDesign.md) 删除 `Legacy` 契约并让 `Standard` 编译展开变体，因此本文中所有关于 `Legacy` 的条款（§3 的接入点表、§6.1 的契约与变体表、§16.2 的旧内容兼容、§19.2 的 GLSL 完整性）按新文档执行：未声明几何契约的 Shader 不再受支持，`Standard` 现在也编译 `Expanded`（可用 `expandedGeometry off` 关闭）。粒子与拖尾条款（`Particle` 契约、两种绘制路径、拖尾实例）继续有效。
+
 ## 1. 已确认范围与交付边界
 
 本次交付包含：
@@ -355,7 +357,7 @@ ForwardPipeline 新增 `DrawBatchBuilder batchBuilder; GpuDrawStream drawStream;
 
 `ParticleSystem : Component` 使用 OBJECT_TYPE_DECLARE、ORBEDEN_COMPONENT_UNIQUE。
 
-公开持久化字段：`Ref<Mesh> mesh; List<Ref<Material>> materials; Ref<Material> trailMaterial; std::array<EnsId,16> subEmitterTargets{}; uint32 drawLayer=1; bool castShadows=false; bool receiveShadows=false;`。Mesh 模式逐子网格取 materials；Billboard 只读 materials[0]。空材质不画，但继续模拟；trailMaterial 空时不画拖尾。新加组件保持空资源，Inspector 提供“使用内置粒子材质”按钮赋值，不在构造函数同步加载资源。
+公开持久化字段：`Ref<Mesh> mesh; List<Ref<Material>> materials; Ref<Material> trailMaterial; std::array<EnsId,16> subEmitterTargets{}; uint32 drawLayer=1; bool castShadows=false; bool receiveShadows=false;`。Mesh 模式逐子网格取 materials；Billboard 只读 materials[0]。空材质不画，但继续模拟；trailMaterial 空时不画拖尾。新加组件保持空资源，不在构造函数同步加载资源；材质由使用者在 Inspector 里赋值（原先计划的“使用内置粒子材质”按钮已删除，内置资源统一走 DevPanel 的 Reset Builtin）。
 
 资源、目标列表、drawLayer、shadow 字段均加 `ORBEDEN_BIND_CHANGED(OnConfigurationChanged)`。private：`bool enabled=true; ParticleSettings settings; uint64 configurationRevision=1;`。settings 仅通过 Get/Set 修改。运行时粒子不放在组件字段中。
 
@@ -365,6 +367,8 @@ ForwardPipeline 新增 `DrawBatchBuilder batchBuilder; GpuDrawStream drawStream;
 - `settings`：String，持久化；读 Encode(GetSettings())，写 Decode→SetSettings；typed getter/setter 都使用 Reflection::Value string。
 
 整张表一次 RegisterTypeFields。`MetaGen/Program.cs::IsPersistentField` 对 ParticleSystem 白名单只有上述7个公开字段，enabled/settings 由手工表管理；对 InstanceDrawList 返回 false。`configurationRevision` 不持久化，不能只加 BIND_IGNORE。
+
+**仿真产生的数据一律不落盘**：粒子、拖尾、随机流、发射计时与统计只活在 ParticleSimulationSystem 的 runtime / preview 两套上下文里，组件上没有任何一处能写进 `.world`，`WorldSerializer` 也不引用粒子系统；存档无论何时执行都只写上面那9个配置字段。往组件加字段前先确认它不是运行时状态，模拟侧新增状态不要挂到组件上。
 
 资源和目标不埋在 settings 字符串里，从而让 WorldSerializer 预加载资源、重映射 Prefab/复制中的 EnsId。subEmitterTargets 固定16槽且槽号稳定；规则通过 targetSlot 定位。新增规则占用最小未使用槽；删除规则时仅在无其它规则引用该槽时清空目标，绝不移动其它槽。UI把规则与目标画在同一行，隐藏底层槽号；数组仍利用现有fixedSize元数据、EnsId编辑与场景重映射。
 
@@ -656,9 +660,11 @@ GpuResourceManager的UploadShader按契约编译，删除函数遍历四个具�
 
 新增两份.orbmat：drawqueue Auto，shader分别指向 `Builtin/Shaders/particle_unlit.orbshader` 和 `Builtin/Shaders/particle_trail.orbshader`；color u_DiffuseColor为白色，float u_Intensity为1。不附带外部图片，默认白色采样；用户赋贴图后启用采样。
 
-新增粒子Shader和geometry_input.orbinc放进当前Builtin模板；新项目复制流程由 `NewProjectTemplate.cpp:357` 的现有目录复制带入。增加 `NewProjectTemplate::InstallParticleBuiltinFiles(contentRoot,templateRoot,error)`，仅复制以下缺失的5个文件：geometry_input.orbinc、两份粒子Shader、两份粒子Material。若文件已存在则保留，不覆盖；检查已存在资源contract，不兼容时返回错误指出key。该函数由“使用内置粒子材质”按钮对应的编辑器项目操作调用，按钮只在编辑态启用；结束后刷新资产目录并用生成的资源引用赋材质，记录字段撤销。复制文件不属于场景字段撤销，撤销后资源仍存在。
+新增粒子Shader和geometry_input.orbinc放进当前Builtin模板；新项目复制流程由 `NewProjectTemplate.cpp:357` 的现有目录复制带入。
 
-该项目操作使用第19节定义的独立InstallParticleBuiltins函数槽，同步返回成功或错误文本，不修改现有RequestProjectAction的项目打开/新建分发。
+**本次整改删除（原设计）：** 原计划新增 `NewProjectTemplate::InstallParticleBuiltinFiles` 与粒子 Inspector 上的「使用内置粒子材质」按钮，只补缺失的 5 个文件（geometry_input.orbinc、两份粒子 Shader、两份粒子 Material）且不覆盖已有文件。实施后项目决定**内置资源的同步只保留一个入口**：一律用 DevPanel 的 `Reset Builtin (template -> project)`（`MirrorTree`，模板 → 项目镜像）。因此该函数、按钮与 `InstallParticleBuiltins` 函数槽一并删除。注意两者语义不同：镜像会覆盖内容不同的同名文件，并删除项目里模板没有的文件（自定义 Shader 会被删掉），同步前先确认 Builtin 目录里没有只存在于项目侧的文件。
+
+该项目操作原计划使用第19节定义的独立InstallParticleBuiltins函数槽；该槽与按钮已随本次整改删除，内置资源改由 DevPanel 的 Reset Builtin 同步。
 
 旧Content中的blinn_phong、pbs、transparent、shadow_depth不自动覆盖。旧项目引擎升级后仍能用Legacy逐绘制；要启用静态自动合批，由使用者同步当前Builtin Shader或为自定义Shader接入Standard。Dev的Reset Builtin具有原有覆盖语义，本功能按钮不调用它。版本26记录须明确这点，以及重新生成SDK/绑定、重建Editor/游戏原生模块/脚本和重新Build Player。
 
@@ -741,6 +747,11 @@ particle_unlit顶点的Mesh/Billboard分支产生worldPosition、最终UV和tint
 - `uint8 GetParticleRenderingStats(void* context,RenderBatchStatsAbi* render,ParticleSimulationStatsAbi* simulation)`：复制当前RenderSystem统计和当前渲染context统计；任一输出null返回0；尚未初始化时输出零并返回1。
 
 RenderBatchStatsAbi完全按第17节16项uint64顺序，128字节；ParticleSimulationStatsAbi按11项uint64再double droppedSimulationSeconds，96字节。C#Pack=8，C++static_assert字段offsetof，EditorRuntime增加128/96字节校验。RenderingPanel新增“批次/粒子”折叠区显示普通draw、实例draw、动态draw、上传字节、活粒子、尾迹、碰撞查询、拒绝数和丢弃模拟时间。统计读取不能主动推进模拟或提交Render。
+
+**本次整改删除：**上面两个槽位都被删除，Application 表 17→15 槽，其后各表偏移整体前移两格；原生结构、C# 包装与 `EditorRuntime` 的槽数校验同步更新。
+
+- `GetParticleRenderingStats`：槽位与托管包装始终没有调用方，RenderingPanel 的统计区也从未落地，按“删除空接口”处理——原生槽、两个 ABI 结构与 `TryGetRenderingStats` 一并删除。`RenderBatchStats` / `ParticleSimulationStats` 本身仍由 C++ 侧累计，只是不再经编辑器 ABI 暴露。
+- `InstallParticleBuiltins`：项目决定内置资源的同步只保留 DevPanel 一个入口（见 16.2），按钮、槽位与 `NewProjectTemplate::InstallParticleBuiltinFiles` 一并删除。
 
 ### 19.4 初始化、关闭与资源安全点
 

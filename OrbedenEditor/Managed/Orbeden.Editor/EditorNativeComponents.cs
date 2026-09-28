@@ -432,13 +432,23 @@ internal static unsafe class EditorNativeComponents
         fixed (byte* pointer = bytes) return api.FindComponent(api.Context, pointer, bytes.Length);
     }
 
-    /// <summary>在真实宿主上构造字段默认值，不启动生命周期。</summary>
-    internal static void InitializeManagedFields(EnsId ens, int objectId, Type type)
+    /// <summary>在真实宿主上构造字段默认值，不启动生命周期。
+    /// 返回按脚本类型对账时删掉的字段，供撤销写回。</summary>
+    internal static IReadOnlyList<DroppedScriptField> InitializeManagedFields(EnsId ens, int objectId, Type type)
     {
         if (api.GetHostBinding == null) throw new InvalidOperationException("Script host binding is unavailable.");
         IntPtr host;
         IntPtr binding = api.GetHostBinding(api.Context, objectId, &host);
-        GameScriptRuntime.InitializeEditorHost(binding, host, Ens.FromId(ens), type);
+        return GameScriptRuntime.InitializeEditorHost(binding, host, Ens.FromId(ens), type);
+    }
+
+    /// <summary>取宿主指针，撤销时按组件重新定位：撤销可能发生在组件被删除又恢复之后。</summary>
+    internal static IntPtr FindHost(int objectId)
+    {
+        if (api.GetHostBinding == null || objectId == 0) return IntPtr.Zero;
+        IntPtr host;
+        IntPtr binding = api.GetHostBinding(api.Context, objectId, &host);
+        return binding == IntPtr.Zero ? IntPtr.Zero : host;
     }
 
     //用先查询长度再写入的 ABI 读取 UTF-8 文本。

@@ -113,6 +113,17 @@ public abstract unsafe partial class Script
         return fields;
     }
 
+    //从宿主字段表里删除一个字段，用于脚本类型不再声明它的时候。
+    internal static bool RemoveHostField(IntPtr host, string name)
+    {
+        if (!initialized || host == IntPtr.Zero || api.RemoveField == null || string.IsNullOrEmpty(name))
+            return false;
+
+        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
+        fixed (byte* namePointer = nameBytes)
+            return api.RemoveField(api.Context, host, namePointer, nameBytes.Length) != 0;
+    }
+
     //在宿主字段表中新增或更新字段。
     internal static bool WriteHostField(IntPtr host, string name, string typeName, string value, bool inspectorVisible)
     {
@@ -200,11 +211,12 @@ public abstract unsafe partial class Script
     }
 
     /// <summary>临时使用 Editor 宿主表构造默认值，结束后释放反射 Wrapper。</summary>
-    internal static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
+    internal static List<DroppedScriptField> InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
     {
         if (binding == IntPtr.Zero || host == IntPtr.Zero || !NativeBindingRuntime.IsManagedScript(type))
             throw new InvalidOperationException("Invalid Editor script host.");
-        if (Object.FindCachedObject(Object.GetInstanceId(host)) is Script) return;
+        //宿主已经有活跃 Wrapper（Play 中）时不动它，字段由运行时那边对账
+        if (Object.FindCachedObject(Object.GetInstanceId(host)) is Script) return [];
         ScriptBindApi previous = api;
         bool wasInitialized = initialized;
         Script? script = null;
@@ -216,7 +228,7 @@ public abstract unsafe partial class Script
                 script = type.GetConstructor([typeof(Ens)])?.Invoke([ens]) as Script;
             if (script == null) throw new InvalidOperationException("Script requires a public (Ens ens) constructor.");
             ManagedTypeMetadataCache.ApplyHostFields(script, host);
-            ManagedTypeMetadataCache.WriteMissingHostFields(script, host);
+            return ManagedTypeMetadataCache.SyncHostFields(script, host);
         }
         finally
         {
@@ -270,5 +282,6 @@ internal unsafe struct ScriptBindApi
     public delegate* unmanaged[Cdecl]<void*, IntPtr, int, byte*, int, int> GetFieldValue;
     public delegate* unmanaged[Cdecl]<void*, IntPtr, byte*, int, byte*, int, byte*, int, byte, byte> SetField;
     public delegate* unmanaged[Cdecl]<void*, byte*, int, byte*, int, EnsId*, int*, IntPtr> ResolveReference;
+    public delegate* unmanaged[Cdecl]<void*, IntPtr, byte*, int, byte> RemoveField;
 }
 #pragma warning restore CS0649

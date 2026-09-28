@@ -9,6 +9,7 @@
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
+#include "Runtime/Object/TextResource.h"
 #include "Runtime/Object/Texture2D.h"
 
 #include <algorithm>
@@ -176,6 +177,20 @@ bool AssetInspection::TryGetFieldSummary(Object* object, const char* fieldName, 
         if (name == "colorSpace")
         {
             result = texture->colorSpace == TextureColorSpace::SRGB ? "sRGB" : "Linear";
+            return true;
+        }
+    }
+    if (TextResource* resource = object->Cast<TextResource>())
+    {
+        if (name == "text")
+        {
+            //正文可能很长：只报体量与行数，正文去源文件里看
+            usize lines = 1;
+            for (char character : resource->text)
+            {
+                if (character == '\n') ++lines;
+            }
+            result = std::to_string(resource->text.size()) + " bytes, " + std::to_string(lines) + " lines";
             return true;
         }
     }

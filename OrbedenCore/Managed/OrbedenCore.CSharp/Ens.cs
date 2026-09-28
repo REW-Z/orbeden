@@ -58,6 +58,17 @@ public sealed partial class Ens : Object, IEquatable<Ens>
         set => SetLocalActive(Id, value);
     }
 
+    /// <summary>static 世界变换约束。置真要求祖先全为 static，置假要求没有 static 后代；
+    /// 模拟期间只读。写入失败时本属性静默保持原值，需要结果请用 TrySetStatic。</summary>
+    public bool Static
+    {
+        get => GetStatic(Id);
+        set => SetStatic(Id, value);
+    }
+
+    /// <summary>设置 static 约束并返回是否成功；失败时世界变换约束不变。</summary>
+    public bool TrySetStatic(bool value) => SetStatic(Id, value);
+
     /// <summary>Ens 经父子层级计算后的实际激活状态。</summary>
     public bool WorldActive => GetWorldActive(Id);
 
@@ -241,6 +252,9 @@ internal unsafe struct EnsBindApi
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
     public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
     public delegate* unmanaged[Cdecl]<EnsId, int> GetObjectId;
+    //追加槽必须留在末尾：这张表按位置对应 C++ 结构
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetStatic;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, byte> SetStatic;
 }
 #pragma warning restore CS0649
 
@@ -289,6 +303,16 @@ public sealed unsafe partial class Ens
     }
 
     //设置 Ens 的 localActive
+    internal static bool GetStatic(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetStatic != null && ensApi.GetStatic(ens) != 0;
+    }
+
+    internal static bool SetStatic(EnsId ens, bool value)
+    {
+        return ensApiInitialized && ensApi.SetStatic != null && ensApi.SetStatic(ens, value ? (byte)1 : (byte)0) != 0;
+    }
+
     internal static void SetLocalActive(EnsId ens, bool active)
     {
         if (ensApiInitialized && ensApi.SetLocalActive != null) ensApi.SetLocalActive(ens, active ? (byte)1 : (byte)0);

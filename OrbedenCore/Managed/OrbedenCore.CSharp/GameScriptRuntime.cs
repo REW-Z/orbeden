@@ -3,12 +3,24 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Orbeden;
 
+/// <summary>脚本类型里已经不存在、对账时从宿主删掉的字段。撤销要把它们原样写回去。</summary>
+public readonly record struct DroppedScriptField(string Name, string TypeName, string Value);
+
 /// <summary>供游戏主程序集的固定 NativeAOT 导出薄层调用。</summary>
 public static class GameScriptRuntime
 {
-    /// <summary>供 Editor 为新宿主补齐构造函数和字段初始化器的默认值。</summary>
-    public static void InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type) =>
+    /// <summary>供 Editor 为新宿主补齐构造函数和字段初始化器的默认值。
+    /// 返回按脚本类型对账时删掉的字段，供编辑器撤销。</summary>
+    public static IReadOnlyList<DroppedScriptField> InitializeEditorHost(IntPtr binding, IntPtr host, Ens ens,
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type) =>
         Script.InitializeEditorHost(binding, host, ens, type);
+
+    /// <summary>把字段写回宿主字段表；撤销删除时用，字段可见性按可见写回。</summary>
+    public static bool WriteHostField(IntPtr host, string name, string typeName, string value) =>
+        Script.WriteHostField(host, name, typeName, value, true);
+
+    /// <summary>从宿主字段表删除字段；重做删除时用。</summary>
+    public static bool RemoveHostField(IntPtr host, string name) => Script.RemoveHostField(host, name);
 
     /// <summary>初始化当前 World 的脚本运行时。</summary>
     public static void Initialize(IntPtr nativeApi) => ScriptRuntime.Initialize(nativeApi);

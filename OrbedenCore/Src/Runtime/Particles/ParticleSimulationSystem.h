@@ -65,7 +65,6 @@ public:
     uint32 pointStart = 0;
     uint32 head = 0;
     uint32 count = 0;
-    float64 lastSampleTime = 0.0;
 };
 
 //排队中的子发射事件。只存值，不保留粒子记录引用。
@@ -109,7 +108,6 @@ public:
     bool fireTimelineZero = false;
     //逐条子发射器规则的启用位，回边在重建图时被禁用
     List<uint8> ruleDisabled;
-    uint64 loopIndex = 0;
     uint64 nextBirthId = 1;
     uint64 nextTrailId = 1;
     uint32 randomState = 1;
@@ -211,9 +209,6 @@ public:
     //设置是否为编辑预览上下文
     void SetPreview(bool value) { preview = value; }
 
-    //手工出生一颗粒子，跳过时间线与速率
-
-
     //删除某个发射器已排队但未派发的事件
     void ResetEmitterEvents(int32 objectId);
 
@@ -230,14 +225,14 @@ public:
     void ResetEmitterForPreview(int32 objectId);
 
 private:
+    //按子发射器规则展开一个根集合能到达的发射器编号，用于预览状态的归属判定
+    void CollectReachableEmitters(const List<int32>& seeds, List<int32>& output) const;
+
     //执行一步模拟
     void Step(float32 step);
 
     //按时间线安排本步的出生
     void ScheduleBirths(ParticleEmitterState& state, float32 step);
-
-    //把 t=0 的 Burst 排进本步，供 Play 后单独执行一次
-
 
     //执行一次出生。parent 非空时按子发射器规则继承。
     void SpawnParticle(ParticleEmitterState& state, float32 remainingStep, const ParticleEvent* parent, const ParticleSubEmitterRule* rule);
@@ -275,9 +270,6 @@ private:
 
     //按配置分配拖尾点池，关闭拖尾时不分配
     void AllocateTrailPool(ParticleEmitterState& state);
-
-    //按组件的启用与激活状态同步播放状态
-
 
     //读取发射器的世界矩阵
     matrix4x4 GetEmitterWorldMatrix(const ParticleEmitterState& state) const;
@@ -340,8 +332,11 @@ public:
     //读取播放状态快照
     ParticlePlaybackInfo GetPlaybackInfo(int32 objectId, bool preview) const;
 
-    //是否有正在推进的预览
+    //是否有正在推进的预览；只用于连续重绘门控
     bool HasRunningPreview() const;
+
+    //预览是否仍占有画面：只要还有根，暂停期间的粒子与拖尾也要继续画
+    bool HasPreviewContent() const;
 
     //读取指定上下文，供渲染快照使用
     const ParticleSimulationContext& GetRenderContext(bool preview) const;

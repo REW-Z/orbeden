@@ -108,9 +108,11 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         ".txt" or ".md" or ".json" or ".xml" or ".csv" or ".tsv" or ".log"
         or ".ini" or ".cfg" or ".conf" or ".toml" or ".yaml" or ".yml" or ".layers";
 
-    /// <summary>仅为可承载导入对象的原始文件提供展开入口。</summary>
-    public static bool CanExpandSource(string path) => !IsCodeFile(path) && !IsTextFile(path)
-        && !Path.GetExtension(path).Equals(".world", StringComparison.OrdinalIgnoreCase);
+    /// <summary>仅为可承载导入对象的原始文件提供展开入口。
+    /// 判据与导入白名单一致：只有能导入的文件才有对象可展开，代码文件与 world 不产生这样的对象。</summary>
+    public static bool CanExpandSource(string path) => !IsCodeFile(path)
+        && !Path.GetExtension(path).Equals(".world", StringComparison.OrdinalIgnoreCase)
+        && EditorAssetInspection.CanInspect(path);
 
     /// <summary>返回资源文件在 ProjectPanel 中显示的类型。</summary>
     public string GetSourceType(string path)
@@ -129,6 +131,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             ".world" => "World",
             ".vert" or ".frag" or ".glsl" => "Shader Source",
             ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => "Texture2D",
+            ".txt" or ".xml" or ".json" or ".csv" or ".yaml" or ".fnt" or ".bytes" => "TextResource",
             _ => "File",
         };
     }

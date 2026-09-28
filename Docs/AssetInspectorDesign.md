@@ -86,7 +86,7 @@ Inspector 承担三种检视用途，由**选择来源**决定走哪一支：
 | Ens 及其 Components | 场景视图、EnsView | 原生组件快照 | 是，走 PropertyDocument，带多选与 Undo/Redo |
 | 引擎内部资源 | Project 选 `.orbmat` | 内存中的 Material 对象 | 是，写回 `.orbmat` 文本源 |
 | | Project 选 `.orbo` / `.orbshader` / `.glsl` | 后台导入清单 | 只读 |
-| 外部原始资源 | Project 选 `.png` / `.jpg` / `.obj` / `.gltf` 等 | 后台导入清单 | 导入设置可编辑，对象清单只读 |
+| 外部原始资源 | Project 选 `.png` / `.jpg` / `.obj` / `.gltf` / `.xml` 等 | 后台导入清单 | 导入设置可编辑，对象清单只读 |
 
 **Ens 优先于资源**：两者同时有选择时清掉资源选择，回到组件检查。选择与焦点所有权的规则见 [Project 选择、展开与引用](#project-选择展开与引用)。
 
@@ -101,6 +101,7 @@ Inspector 承担三种检视用途，由**选择来源**决定走哪一支：
 - Texture2D：尺寸、通道、格式及像素字节数。
 - Material：Shader 引用、纹理槽、颜色槽、浮点槽。
 - Shader：反射字段、Pass 名称和槽数量。
+- TextResource：正文的字节数与行数，正文本身留在源文件里看。
 
 长文本截断到有限长度并标记，避免直接展示整块几何或像素数据。Inspector 使用导入快照，不为浏览清单而把这些对象加载到主进程。导入错误、源文件消失、空资源文件及已删除子资源都有显式状态；导入中或失败时不展示旧对象，禁止拖拽未完成的产物。
 

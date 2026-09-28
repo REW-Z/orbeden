@@ -15,6 +15,10 @@ internal unsafe struct OrbedenEngineNativeApi
     public ObjectBindApi Object;
     public ObjectExtensionBindApi ObjectExtension;
     public NativeBindingsApi Bindings;
+    public RuntimeGuiApi Gui;
+    public RuntimeGuiExtensionApi GuiExtension;
+    public RuntimeGuiAdvancedApi GuiAdvanced;
+    public RuntimeGuiCurveApi GuiCurve;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -34,6 +38,7 @@ internal unsafe struct OrbedenNativeApi
     public NativeScriptInteropApi ScriptInterop;
     public ScriptBindApi Script;
     public RuntimeGuiDrawApi GuiDraw;
+    public RuntimeGuiCurveApi GuiCurve;
 }
 #pragma warning restore CS0649
 
@@ -54,6 +59,7 @@ public static unsafe class OrbedenCoreRuntime
             Script.InitializeNativeApi(default);
             GUI.InitializeNativeApi(default, default, default);
             GUI.InitializeDrawApi(default);
+            GUI.InitializeCurveApi(default);
             return;
         }
 
@@ -64,6 +70,7 @@ public static unsafe class OrbedenCoreRuntime
         Script.InitializeNativeApi(api.Script);
         GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
         GUI.InitializeDrawApi(api.GuiDraw);
+        GUI.InitializeCurveApi(api.GuiCurve);
     }
 
     /// <summary>初始化引擎对象和组件绑定。</summary>
@@ -78,6 +85,8 @@ public static unsafe class OrbedenCoreRuntime
             Ens.InitializeEnsNativeApi(default);
             Object.InitializeNativeApi(default, default);
             NativeBindingRuntime.Initialize(default);
+            GUI.InitializeNativeApi(default, default, default);
+            GUI.InitializeCurveApi(default);
             return;
         }
 
@@ -94,6 +103,8 @@ public static unsafe class OrbedenCoreRuntime
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
+        GUI.InitializeNativeApi(api.Gui, api.GuiExtension, api.GuiAdvanced);
+        GUI.InitializeCurveApi(api.GuiCurve);
     }
 
     /// <summary>初始化 Game 使用的引擎对象和组件绑定。</summary>
@@ -129,19 +140,20 @@ public static unsafe class OrbedenCoreRuntime
 
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
-        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 7);
+        ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 9);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 6);
         ValidateFunctionTable<NativeBindingsApi>(nameof(NativeBindingsApi), 10);
         ValidateFunctionTable<ObjectExtensionBindApi>(nameof(ObjectExtensionBindApi), 1);
+        ValidateFunctionTable<RuntimeGuiCurveApi>(nameof(RuntimeGuiCurveApi), 2);
         ValidateFunctionTable<RuntimeGuiApi>(nameof(RuntimeGuiApi), 11);
         ValidateFunctionTable<RuntimeGuiExtensionApi>(nameof(RuntimeGuiExtensionApi), 4);
         ValidateFunctionTable<RuntimeGuiAdvancedApi>(nameof(RuntimeGuiAdvancedApi), 17);
         ValidateFunctionTable<RuntimeGuiDrawApi>(nameof(RuntimeGuiDrawApi), 15);
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
-        ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 16);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 33 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 105 * IntPtr.Size);
+        ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 69 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 110 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

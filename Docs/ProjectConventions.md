@@ -146,7 +146,7 @@ Object 类型分三类，创建方式不同：
 | 类别 | 示例 | 创建方式 |
 |---|---|---|
 | 组件（继承 `Component`） | `Transform`、`Camera`、`RigidBody` | `Ens.AddComponent<T>()`（C#） |
-| 资源对象 | `Material`、`Mesh`、`Shader`、`Skybox`、`Texture2D` | `Resources.Load<T>(key)`（C#）/ `ResourceManager::Load<T>(key)`（C++） |
+| 资源对象 | `Material`、`Mesh`、`Shader`、`Skybox`、`Texture2D`、`TextResource` | `Resources.Load<T>(key)`（C#）/ `ResourceManager::Load<T>(key)`（C++） |
 | 其他运行时对象 | `Object` 直接派生且非资源 | `Object.CreateInstance<T>()`（C#）/ `Object::CreateInstance<T>()`（C++） |
 
 抽象类型只能查询（`GetComponent<T>()`），不能直接创建。

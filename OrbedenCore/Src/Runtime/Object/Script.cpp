@@ -242,6 +242,22 @@ bool Script::SetManagedFieldValue(const std::string& name, const std::string& va
     return false;
 }
 
+bool Script::RemoveManagedField(const std::string& name)
+{
+    if (!IsManagedHost() || name.empty()) return false;
+    for (usize index = 0; index < managedFields.size(); ++index)
+    {
+        if (managedFields[index].name != name) continue;
+        ManagedScriptField previous = managedFields[index];
+        managedFields.erase(managedFields.begin() + static_cast<isize>(index));
+        if (ScriptInterop::NotifyManagedHostFieldChanged(this, name)) return true;
+        managedFields.insert(managedFields.begin() + static_cast<isize>(index), std::move(previous));
+        return false;
+    }
+
+    return false;
+}
+
 Reflection::FieldKind Script::GetManagedFieldKind(const std::string& typeName)
 {
     if ((typeName.starts_with("Array<") || typeName.starts_with("List<")) && typeName.ends_with('>'))

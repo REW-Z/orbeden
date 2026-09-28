@@ -395,6 +395,8 @@ public:
     PxControllerManager* controllerManager = nullptr;
     std::unique_ptr<PxCookingParams> cookingParams;
     std::unordered_map<uint64, std::unique_ptr<BodyRecord>> bodies;
+    //已经报过「static 被物理驱动」的 Ens，按对象去重
+    std::unordered_set<uint64> reportedStaticDrives;
     std::unordered_map<uint64, std::unique_ptr<HeightFieldRecord>> heightFields;
     std::unordered_map<uint64, std::unique_ptr<ControllerRecord>> controllers;
     std::unordered_map<Mesh*, PxConvexMesh*> convexMeshes;
@@ -795,6 +797,12 @@ public:
         if (colliders.empty()) return nullptr;
 
         PhysicsBodyType bodyType = body ? body->bodyType : PhysicsBodyType::Static;
+        //static 的 Ens 不驱动任何活动刚体：组合被拒绝，静态碰撞体仍然创建
+        if (bodyType != PhysicsBodyType::Static && world && world->GetEnsStatic(colliders.front()->GetEnsId()))
+        {
+            ReportStaticDrive(colliders.front()->GetEnsId());
+            bodyType = PhysicsBodyType::Static;
+        }
         if (bodyType == PhysicsBodyType::Dynamic && !transform.parent.IsNull())
         {
             Ens* ens = body->GetEns();
@@ -1200,6 +1208,13 @@ public:
 
     std::unique_ptr<ControllerRecord> CreateController(CharacterController& component, Transform& transform, uint64 configurationHash)
     {
+        //static 的 Ens 不允许被角色控制器驱动
+        if (world && world->GetEnsStatic(component.GetEnsId()))
+        {
+            ReportStaticDrive(component.GetEnsId());
+            return nullptr;
+        }
+
         if (!transform.parent.IsNull())
         {
             Log::Warning("Character controllers must be root entities; the controller was skipped.");
@@ -1322,6 +1337,17 @@ public:
         }
     }
 
+    //static 的 Ens 被物理驱动时按 Ens 去重上报，避免每帧刷屏
+    void ReportStaticDrive(EnsId ens)
+    {
+        if (!reportedStaticDrives.insert(EnsKey(ens)).second) return;
+
+        std::string message = "Physics skipped a driven body or controller: the Ens is static";
+        Ens* entity = world ? world->GetEns(ens) : nullptr;
+        if (entity) message += " (" + entity->GetName() + ")";
+        Log::Warning((message + ".").c_str());
+    }
+
     void WriteDynamicPoses(World& currentWorld)
     {
         for (auto& entry : bodies)
@@ -1334,6 +1360,15 @@ public:
             if (!transform || !body) continue;
 
             PxRigidDynamic* dynamic = static_cast<PxRigidDynamic*>(record.actor);
+            //回写前校验：static 的 Ens 不改世界变换，也不继续推进这个 actor，避免显示与物理位置分离
+            if (!currentWorld.CanChangeTransform(record.binding.ens))
+            {
+                dynamic->setLinearVelocity(PxVec3(0.0f, 0.0f, 0.0f));
+                dynamic->setAngularVelocity(PxVec3(0.0f, 0.0f, 0.0f));
+                ReportStaticDrive(record.binding.ens);
+                continue;
+            }
+
             PxTransform pose = dynamic->getGlobalPose();
             transform->SetLocalPosition(FromPx(pose.p));
             transform->SetLocalRotation(FromPx(pose.q));
@@ -1628,6 +1663,13 @@ uint32 PhysicsSystem::OverlapSphere(const vector3& center, float32 radius, List<
 uint32 PhysicsSystem::MoveCharacter(EnsId ens, const vector3& displacement, float32 deltaTime)
 {
     if (!IsInitialized() || !impl->world || deltaTime <= 0.0f) return CharacterCollisionNone;
+    //static 的 Ens 不允许被控制器驱动
+    if (impl->world->GetEnsStatic(ens))
+    {
+        impl->ReportStaticDrive(ens);
+        return CharacterCollisionNone;
+    }
+
     auto found = impl->controllers.find(EnsKey(ens));
     if (found == impl->controllers.end()) return CharacterCollisionNone;
 

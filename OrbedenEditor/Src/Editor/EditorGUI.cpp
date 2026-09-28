@@ -459,7 +459,13 @@ namespace
         //否则一次点击会同时打中标题与勾选框（ImGui 自己画关闭叉时也是这么标记的）
         if (toggleRequested) flags |= ImGuiTreeNodeFlags_AllowOverlap;
         DrawInlineIcon(iconName, ImGui::GetFrameHeight());
-        bool expanded = ImGui::CollapsingHeader(value.c_str(), flags);
+        //标题自己要占一个独立 ID：CollapsingHeader 是 ImGuiTreeNodeFlags_CollapsingHeader，
+        //它只画表头、不压 ID 栈，卡片正文与标题处在同一层。标题一旦和卡内某个字段同名
+        //（Shape 模块里的 Shape 下拉框就是这种情况），两处算出的 ID 完全相同，
+        //ImGui 的 ID 冲突调试器会报 "2 visible items with conflicting ID"。
+        //"##" 之后只参与 ID 计算，画在标题行上的仍是纯名字。
+        const std::string headerLabel = value + "##component_header";
+        bool expanded = ImGui::CollapsingHeader(headerLabel.c_str(), flags);
         //标题行几何要在 LastItemData 还有效时取：勾选框是按这个矩形摆的，而 Separator 会顶掉它
         const ImVec2 headerMin = ImGui::GetItemRectMin();
         const ImVec2 headerMax = ImGui::GetItemRectMax();

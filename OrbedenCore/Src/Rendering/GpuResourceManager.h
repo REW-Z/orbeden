@@ -41,15 +41,17 @@ public:
 struct GpuShaderPass
 {
 public:
-    //Uniform 单绘制程序，Legacy/Standard/Particle 都有
+    //Uniform 单绘制程序，每个 Pass 都有
     GpuShaderProgramID shaderProgram;
-    //实例绘制程序，Standard 与 Particle 才有
+    //实例绘制程序，Standard 与 Particle 都有
     GpuShaderProgramID instancedProgram;
-    //展开顶点程序，只有 Particle 才有
+    //展开顶点程序，Standard 声明 expandedGeometry on 时也有，Particle 始终有
     GpuShaderProgramID expandedProgram;
     //拖尾实例程序，只有 Particle 才有
     GpuShaderProgramID trailInstancedProgram;
-    ShaderGeometryContract geometryContract = ShaderGeometryContract::Legacy;
+    ShaderGeometryContract geometryContract = ShaderGeometryContract::Standard;
+    //与 CPU ShaderPass 的展开开关同步，关闭时 expandedProgram 不创建
+    bool supportsExpandedGeometry = true;
     std::string name;
     ShaderPassState state;
 
@@ -79,12 +81,11 @@ public:
         if (passes.empty()) return false;
         for (const GpuShaderPass& pass : passes)
         {
-            if (!pass.shaderProgram.IsValid()) return false;
-            //Legacy 只编译 uniform 单绘制，不要求不存在的变体
-            if (pass.geometryContract == ShaderGeometryContract::Legacy) continue;
-            if (!pass.instancedProgram.IsValid()) return false;
+            if (!pass.shaderProgram.IsValid() || !pass.instancedProgram.IsValid()) return false;
+            //展开变体只在声明开启时要求存在
+            if (pass.supportsExpandedGeometry && !pass.expandedProgram.IsValid()) return false;
             if (pass.geometryContract != ShaderGeometryContract::Particle) continue;
-            if (!pass.expandedProgram.IsValid() || !pass.trailInstancedProgram.IsValid()) return false;
+            if (!pass.trailInstancedProgram.IsValid()) return false;
         }
         return true;
     }

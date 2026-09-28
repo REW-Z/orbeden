@@ -1,5 +1,8 @@
 --------queue Opaque
 
+--------geometry Standard
+--------expandedGeometry off
+
 --------vert
 #version 430 core
 

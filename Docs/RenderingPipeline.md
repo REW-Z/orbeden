@@ -198,7 +198,8 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 - 实际只使用一个主方向光；各相机顺序重绘并复用级联 atlas。
 - CSM 每级默认 2048²、4 级，可选择固定分区或异步 SDSM；VSM、云阴影和屏幕空间接触阴影尚未实现。
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
-- 每个可见 SubMesh 对应一次 `DrawIndexed`，尚未实现 Instancing/Indirect Draw。
+- 绘制路径按渲染器的 `drawStrategy` 与批次可合并性选择：`Auto` 依次尝试持久静态批、实例批、动态展开批，都不成立才逐对象绘制；`Individual` 始终单绘制并作为排序屏障；`GpuInstancing` 与 `DynamicBatching` 各自限定一种合批方式，条件不足时退回单绘制。实例批要求同 Mesh、子网格区间与材质；动态展开批只要求同材质与同渲染状态，用 `DrawIndexedInstanced` 与 `DrawIndexed` 分别提交（持久静态批直接绑定缓存组的顶点输入）。Indirect Draw 尚未实现。
+- `StaticMeshRenderer` 只是组件类名，**不代表它所属的 Ens 已 static**：是否进入持久静态批由 Ens 的 `static` 约束和渲染器的 `drawStrategy` 共同决定。
 - RenderScene 在同一线程增量更新并立即消费。
 - 所有 Refraction 物体共享同一份冻结快照，因此不会互相折射。
 - 普通透明物体全部先于 Refraction 绘制；前景透明物体可能被后绘制的折射表面覆盖。

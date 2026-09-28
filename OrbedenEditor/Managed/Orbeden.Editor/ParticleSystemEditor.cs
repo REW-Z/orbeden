@@ -1,3 +1,4 @@
+using System.Reflection;
 using Orbeden;
 
 namespace OrbedenEditor;
@@ -6,9 +7,11 @@ namespace OrbedenEditor;
 [CustomEditor(typeof(Orbeden.ParticleSystem))]
 internal sealed class ParticleSystemEditor : ComponentEditor
 {
-    //本次绘制里模块改动的字段路径，用于捕获错误时给出具体位置
+    //最近一次读取或提交失败的原因，显示在面板底部
     private string lastError = string.Empty;
     private ParticleSettings working;
+    //打开这一帧时第一个目标的配置，提交时用它判断用户改动了哪些叶字段
+    private ParticleSettings baseline;
     private bool settingsLoaded;
     private bool settingsMixed;
 
@@ -26,7 +29,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             return;
         }
 
-        if (settingsMixed) EditorGUI.TextWrapped("Multi-selection has different particle settings; editing writes them to every selected emitter.");
+        if (settingsMixed) EditorGUI.TextWrapped("Multi-selection has different particle settings; a change is written to every selected emitter, the fields you did not touch are left alone.");
 
         bool changed = false;
         changed |= DrawMain();
@@ -56,6 +59,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
         if (first == null) return false;
         working = first.Value;
+        baseline = first.Value;
         return true;
     }
 
@@ -78,21 +82,72 @@ internal sealed class ParticleSystemEditor : ComponentEditor
     //提交：每个目标读自己的文本、改用户正在编辑的叶字段、再写回
     private void Commit()
     {
-        string candidate = Orbeden.ParticleSystem.FormatSettings(working);
-        if (candidate.Length == 0)
-        {
-            lastError = "The particle settings are invalid; the native configuration is unchanged.";
-            return;
-        }
-
         List<PropertyTargetWrite> writes = [];
         foreach (IPropertyTarget target in Properties.Targets)
         {
+            if (!TryReadTargetSettings(target, out ParticleSettings settings))
+            {
+                lastError = "The particle settings of a selected emitter cannot be read.";
+                return;
+            }
+
+            //只搬用户改过的叶字段：整段写回会用第一个目标的配置冲掉其它目标的未编辑字段
+            object boxed = settings;
+            ApplyEditedFields(baseline, working, boxed);
+            string candidate = Orbeden.ParticleSystem.FormatSettings((ParticleSettings)boxed);
+            if (candidate.Length == 0)
+            {
+                lastError = "The particle settings are invalid; the native configuration is unchanged.";
+                return;
+            }
+
             writes.Add(new PropertyTargetWrite(target, "settings", InteropValue.From(candidate)));
         }
 
         if (!Properties.ApplyTargetChanges($"Edit {Target.TypeName} particles", writes)) lastError = "Writing the particle settings was rejected.";
         else lastError = string.Empty;
+    }
+
+    //把 working 里被改动的叶字段搬进目标配置，未改动的字段保留目标自己的值。
+    //列表长度变化按整段替换：新增或删除条目本身就是一次整体编辑。
+    private static void ApplyEditedFields(object source, object edited, object destination)
+    {
+        foreach (FieldInfo field in source.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
+        {
+            object? before = field.GetValue(source);
+            object? after = field.GetValue(edited);
+            if (field.FieldType.IsArray)
+            {
+                Array original = (Array)before!;
+                Array changed = (Array)after!;
+                Array current = (Array)field.GetValue(destination)!;
+                if (original.Length != changed.Length)
+                {
+                    field.SetValue(destination, changed);
+                    continue;
+                }
+
+                for (int index = 0; index < original.Length; ++index)
+                {
+                    object element = current.GetValue(index)!;
+                    ApplyEditedFields(original.GetValue(index)!, changed.GetValue(index)!, element);
+                    current.SetValue(element, index);
+                }
+                continue;
+            }
+
+            //嵌套的配置结构继续下钻；枚举与数值类型（含 color、vector3）本身就是叶
+            if (field.FieldType.IsValueType && !field.FieldType.IsEnum &&
+                field.FieldType.FullName!.StartsWith("Orbeden.Particle", StringComparison.Ordinal))
+            {
+                object nested = field.GetValue(destination)!;
+                ApplyEditedFields(before!, after!, nested);
+                field.SetValue(destination, nested);
+                continue;
+            }
+
+            if (!Equals(before, after)) field.SetValue(destination, after);
+        }
     }
 
     private void DrawStatus()
@@ -110,24 +165,24 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         bool hasInfo = EditorApplication.TryGetParticlePreviewInfo(Target.ObjectId, ref info);
         if (hasInfo)
         {
-            EditorGUI.Label($"预览状态 {DescribeState(info.State)}  时间 {info.Time:F2}s  粒子 {info.AliveCount}  拖尾 {info.TrailCount}  已发射 {info.EmittedCount}  拒绝 {info.RejectedCount}");
+            EditorGUI.Label($"Preview {DescribeState(info.State)}  Time {info.Time:F2}s  Particles {info.AliveCount}  Trails {info.TrailCount}  Emitted {info.EmittedCount}  Rejected {info.RejectedCount}");
         }
 
         //诊断文本来自组件本身，不在 ABI 里返回临时字符串
         Orbeden.ParticleSystem? component = Target.Ens.GetComponent<Orbeden.ParticleSystem>();
         string error = component?.GetLastError() ?? string.Empty;
-        if (error.Length != 0) EditorGUI.TextColored($"错误：{error}", new color { r = 1.0f, g = 0.5f, b = 0.35f, a = 1.0f });
+        if (error.Length != 0) EditorGUI.TextColored($"Error: {error}", new color { r = 1.0f, g = 0.5f, b = 0.35f, a = 1.0f });
     }
 
     private static string DescribeState(uint state)
     {
         return state switch
         {
-            0 => "已停止",
-            1 => "播放中",
-            2 => "已暂停",
-            3 => "排空中",
-            _ => "未知",
+            0 => "Stopped",
+            1 => "Playing",
+            2 => "Paused",
+            3 => "Draining",
+            _ => "Unknown",
         };
     }
 
@@ -167,39 +222,28 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         bool changed = false;
         float low = range.min;
         float high = range.max;
-        changed |= FloatField($"{label} Min", ref low, minimum, maximum);
-        EditorGUI.SameLine();
-        changed |= FloatField($"{label} Max", ref high, minimum, maximum);
+        EditorGUI.Label(label);
+        changed |= FloatField($"Min##{label}", ref low, minimum, maximum);
+        changed |= FloatField($"Max##{label}", ref high, minimum, maximum);
         if (high < low) (low, high) = (high, low);
         range.min = low;
         range.max = high;
         return changed;
     }
 
-    //配置里的颜色没有对应的独立字段，用四个数值框编辑
+    /// <summary>通过共享颜色选择器编辑粒子初始颜色。</summary>
     private static bool ColorField(string label, ref color value)
     {
-        bool changed = false;
-        float red = value.r;
-        float green = value.g;
-        float blue = value.b;
-        float alpha = value.a;
-        changed |= FloatField($"{label} R", ref red, 0.0f, 1.0f);
-        EditorGUI.SameLine();
-        changed |= FloatField($"{label} G", ref green, 0.0f, 1.0f);
-        EditorGUI.SameLine();
-        changed |= FloatField($"{label} B", ref blue, 0.0f, 1.0f);
-        EditorGUI.SameLine();
-        changed |= FloatField($"{label} A", ref alpha, 0.0f, 1.0f);
-        value = new color { r = red, g = green, b = blue, a = alpha };
-        return changed;
+        return GUI.ColorField(label, ref value);
     }
 
     private bool DrawMain()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Main", "Main", "particle-main")) return false;
+        //折叠也要走 finally：原生在 Begin 里已经压了 ID、样式与子窗，漏掉收尾会留下孤儿子窗
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Main", "particle-main");
         try
         {
+            if (!expanded) return false;
             ParticleMainSettings main = working.main;
             bool changed = false;
             int capacity = (int)main.maxParticles;
@@ -228,9 +272,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawEmission()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Emission", "Emission", "particle-emission")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Emission", "particle-emission");
         try
         {
+            if (!expanded) return false;
             ParticleEmissionSettings emission = working.emission;
             bool changed = EditorGUI.Checkbox("Enabled", ref emission.enabled);
             changed |= FloatField("Rate Over Time", ref emission.rateOverTime, 0.0f, 100000.0f);
@@ -279,9 +324,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawShape()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Shape", "Shape", "particle-shape")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Shape", "particle-shape");
         try
         {
+            if (!expanded) return false;
             ParticleShapeSettings shape = working.shape;
             bool changed = EnumCombo("Shape", ref shape.shape);
             switch (shape.shape)
@@ -312,9 +358,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawMotion()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Motion", "Motion", "particle-motion")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Motion", "particle-motion");
         try
         {
+            if (!expanded) return false;
             ParticleMotionSettings motion = working.motion;
             bool changed = FloatField("Gravity Multiplier", ref motion.gravityMultiplier, -100.0f, 100.0f);
             changed |= EditorGUI.InputVector3("Acceleration", ref motion.acceleration);
@@ -323,14 +370,13 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             motion.acceleration.z = Math.Clamp(motion.acceleration.z, -100000.0f, 100000.0f);
             changed |= FloatField("Drag", ref motion.drag, 0.0f, 1000.0f);
 
-            ParticleCurveEditResult sizeResult = ParticleCurveEditor.Draw("size", motion.sizeOverLifetime, false, out ParticleCurve sizeCurve);
-            if (sizeResult == ParticleCurveEditResult.Commit) { motion.sizeOverLifetime = sizeCurve; changed = true; }
+            EditorGUI.Label("Size multiplier over normalized lifetime");
+            changed |= GUI.AnimationCurve("Size Over Lifetime", $"{Target.ObjectId}:size", ref motion.sizeOverLifetime, 0.0f);
 
-            ParticleCurveEditResult angularResult = ParticleCurveEditor.Draw("angular", motion.angularVelocityOverLifetime, false, out ParticleCurve angularCurve);
-            if (angularResult == ParticleCurveEditResult.Commit) { motion.angularVelocityOverLifetime = angularCurve; changed = true; }
+            EditorGUI.Label("Angular velocity (degrees / second)");
+            changed |= GUI.AnimationCurve("Angular Velocity Over Lifetime", $"{Target.ObjectId}:angular", ref motion.angularVelocityOverLifetime, float.MinValue);
 
-            ParticleCurveEditResult colorResult = ParticleGradientEditor.Draw("color", motion.colorOverLifetime, false, out ParticleGradient gradient);
-            if (colorResult == ParticleCurveEditResult.Commit) { motion.colorOverLifetime = gradient; changed = true; }
+            changed |= GUI.ColorGradient("Color Over Lifetime", $"{Target.ObjectId}:color", ref motion.colorOverLifetime);
 
             working.motion = motion;
             return changed;
@@ -340,9 +386,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawCollision()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Collision", "Collision", "particle-collision")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Collision", "particle-collision");
         try
         {
+            if (!expanded) return false;
             ParticleCollisionSettings collision = working.collision;
             bool changed = EditorGUI.Checkbox("Enabled", ref collision.enabled);
             int layerMask = unchecked((int)collision.layerMask);
@@ -361,9 +408,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawTrails()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Trails", "Trails", "particle-trails")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Trails", "particle-trails");
         try
         {
+            if (!expanded) return false;
             ParticleTrailSettings trails = working.trails;
             bool changed = EditorGUI.Checkbox("Enabled", ref trails.enabled);
             changed |= FloatField("Lifetime", ref trails.lifetime, 0.001f, 60.0f);
@@ -377,11 +425,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             changed |= FloatField("Texture Tile Length", ref trails.textureTileLength, 0.0001f, 100000.0f);
             changed |= EditorGUI.Checkbox("Die With Particle", ref trails.dieWithParticle);
 
-            ParticleCurveEditResult widthResult = ParticleCurveEditor.Draw("trail-width", trails.widthOverLength, false, out ParticleCurve widthCurve);
-            if (widthResult == ParticleCurveEditResult.Commit) { trails.widthOverLength = widthCurve; changed = true; }
+            EditorGUI.Label("Width multiplier over normalized length");
+            changed |= GUI.AnimationCurve("Width Over Length", $"{Target.ObjectId}:trail-width", ref trails.widthOverLength, 0.0f);
 
-            ParticleCurveEditResult colorResult = ParticleGradientEditor.Draw("trail-color", trails.colorOverLength, false, out ParticleGradient gradient);
-            if (colorResult == ParticleCurveEditResult.Commit) { trails.colorOverLength = gradient; changed = true; }
+            changed |= GUI.ColorGradient("Color Over Length", $"{Target.ObjectId}:trail-color", ref trails.colorOverLength);
 
             DrawProperty("trailMaterial");
 
@@ -393,9 +440,10 @@ internal sealed class ParticleSystemEditor : ComponentEditor
 
     private bool DrawRendering()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Rendering", "Rendering", "particle-rendering")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Rendering", "particle-rendering");
         try
         {
+            if (!expanded) return false;
             ParticleRenderSettings rendering = working.rendering;
             bool changed = EnumCombo("Path", ref rendering.path);
             changed |= EnumCombo("Mode", ref rendering.mode);
@@ -414,7 +462,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             DrawProperty("drawLayer");
             DrawProperty("receiveShadows");
             if (rendering.mode == ParticleRenderMode.Mesh) DrawProperty("castShadows");
-            else EditorGUI.TextWrapped("Billboard 与拖尾不投射阴影。");
+            else EditorGUI.TextWrapped("Billboard and trail particles do not cast shadows.");
 
             int tilesX = (int)rendering.tilesX;
             if (IntField("Tiles X", ref tilesX, 1, 256)) { rendering.tilesX = (uint)tilesX; changed = true; }
@@ -423,27 +471,18 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             changed |= FloatField("Animation Cycles", ref rendering.animationCycles, 0.0f, 1000.0f);
             changed |= EditorGUI.Checkbox("Random Start Frame", ref rendering.randomStartFrame);
 
-            if (EditorGUI.Button("使用内置粒子材质")) InstallBuiltins();
-
             working.rendering = rendering;
             return changed;
         }
         finally { EditorGUI.EndComponentBlock(); }
     }
 
-    private void InstallBuiltins()
-    {
-        if (!EditorApplication.InstallParticleBuiltins(out string error))
-        {
-            lastError = error.Length != 0 ? error : "Installing the builtin particle resources failed.";
-        }
-    }
-
     private bool DrawSubEmitters()
     {
-        if (!EditorGUI.BeginCollapsibleComponentBlock("Sub Emitters", "Sub Emitters", "particle-sub")) return false;
+        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Sub Emitters", "particle-sub");
         try
         {
+            if (!expanded) return false;
             bool changed = false;
             List<ParticleSubEmitterRule> rules = [.. working.subEmitters];
             List<int> removeIndices = [];
@@ -451,7 +490,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             {
                 ParticleSubEmitterRule rule = rules[index];
                 bool rowChanged = false;
-                EditorGUI.Label($"规则 {index}  槽位 {rule.targetSlot}");
+                EditorGUI.Label($"Rule {index}  Slot {rule.targetSlot}");
                 rowChanged |= EnumCombo($"Event {index}", ref rule.@event);
                 int count = (int)rule.count;
                 if (IntField($"Count {index}", ref count, 1, 65536)) { rule.count = (uint)count; rowChanged = true; }

@@ -23,11 +23,27 @@ internal static partial class ManagedTypeMetadataCache
         return true;
     }
 
-    //把新脚本字段的默认值补进空白宿主。
-    internal static void WriteMissingHostFields(Script script, IntPtr host)
+    //把宿主字段表按脚本类型对账：类型里有而宿主里没有的补上（取构造函数里的默认值），
+    //宿主里有而类型里没有的删掉。已有字段的值原样保留，值没变就不会标脏世界。
+    //类型必须已经解析出来才允许走这条路：程序集加载失败或 Missing Script 时根本到不了这里，
+    //所以那两种情况不会把字段删光。
+    //返回被删掉的字段，供编辑器做撤销；运行时那两条路忽略返回值即可。
+    internal static List<DroppedScriptField> SyncHostFields(Script script, IntPtr host)
     {
+        ManagedTypeMetadata metadata = Get(script.GetType());
         IReadOnlyDictionary<string, ManagedHostField> stored = Script.ReadHostFields(host);
-        foreach (ManagedFieldMetadata field in Get(script.GetType()).Fields.Values)
+        List<DroppedScriptField> dropped = [];
+
+        //先删后加：删除只针对类型不再声明的字段
+        foreach ((string name, ManagedHostField field) in stored)
+        {
+            if (name == "enabled" || metadata.Fields.ContainsKey(name)) continue;
+            if (!Script.RemoveHostField(host, name))
+                throw new InvalidOperationException($"Cannot drop script field '{name}'.");
+            dropped.Add(new DroppedScriptField(name, field.TypeName, field.Value));
+        }
+
+        foreach (ManagedFieldMetadata field in metadata.Fields.Values)
         {
             if (field.Name == "enabled") continue;
             bool success = stored.TryGetValue(field.Name, out ManagedHostField existing)
@@ -35,6 +51,8 @@ internal static partial class ManagedTypeMetadataCache
                 : WriteHostField(script, host, field);
             if (!success) throw new InvalidOperationException($"Cannot persist script field '{field.Name}'.");
         }
+
+        return dropped;
     }
 
     //把显式代理写入同步到原生宿主字段表。

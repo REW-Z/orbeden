@@ -179,12 +179,14 @@
     <ClInclude Include="Src\Rendering\DrawBatchBuilder.h" />
     <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
     <ClInclude Include="Src\Rendering\FullscreenQuad.h" />
+    <ClInclude Include="Src\Rendering\GeometryExpander.h" />
     <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
     <ClInclude Include="Src\Rendering\ImGuiLayer.h" />
     <ClInclude Include="Src\Rendering\OutputPass.h" />
     <ClInclude Include="Src\Rendering\ParticleRenderer.h" />
     <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
     <ClInclude Include="Src\Rendering\RenderMath.h" />
+    <ClInclude Include="Src\Rendering\StaticBatchCache.h" />
     <ClInclude Include="Src\Rendering\RenderScene.h" />
     <ClInclude Include="Src\Rendering\RenderSystem.h" />
     <ClInclude Include="Src\Scripting\ScriptSystem.h" />
@@ -220,6 +222,7 @@
     <ClInclude Include="Src\Runtime\Object\Shader.h" />
     <ClInclude Include="Src\Runtime\Object\Mesh.h" />
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
+    <ClInclude Include="Src\Runtime\Object\TextResource.h" />
     <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
     <ClInclude Include="Src\Runtime\Object\Transform.h" />
     <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
@@ -263,12 +266,14 @@
     <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
     <ClCompile Include="Src\Rendering\FullscreenQuad.cpp" />
+    <ClCompile Include="Src\Rendering\GeometryExpander.cpp" />
     <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
     <ClCompile Include="Src\Rendering\ImGuiLayer.cpp" />
     <ClCompile Include="Src\Rendering\OutputPass.cpp" />
     <ClCompile Include="Src\Rendering\ParticleRenderer.cpp" />
     <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
     <ClCompile Include="Src\Rendering\RenderMath.cpp" />
+    <ClCompile Include="Src\Rendering\StaticBatchCache.cpp" />
     <ClCompile Include="Src\Rendering\RenderScene.cpp" />
     <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
     <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
@@ -302,6 +307,7 @@
     <ClCompile Include="Src\Runtime\Object\Shader.cpp" />
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
+    <ClCompile Include="Src\Runtime\Object\TextResource.cpp" />
     <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
     <ClCompile Include="Src\Runtime\Object\Transform.cpp" />
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />
@@ -364,8 +370,9 @@
       <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == '' and Exists('$(VCToolsInstallDir)bin\HostX64\x64\lib.exe')">$(VCToolsInstallDir)bin\HostX64\x64\</OrbedenLibToolDir>
       <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == ''">$(VCToolsInstallDir)bin\HostX86\x64\</OrbedenLibToolDir>
     </PropertyGroup>
+    <!--按本工程的源文件表推导 obj，不能扫中间目录：改名或合并文件后残留的旧 obj 会被一起打进静态库。-->
     <ItemGroup>
-      <OrbedenCoreArchiveObject Include="$(IntDir)*.obj" />
+      <OrbedenCoreArchiveObject Include="@(ClCompile-&gt;'$(IntDir)%(Filename).obj')" />
     </ItemGroup>
     <Error Condition="'@(OrbedenCoreArchiveObject)' == ''" Text="No Core object files were found in $(IntDir); the Player static library cannot be archived." />
     <WriteLinesToFile File="$(IntDir)OrbedenCoreStatic.rsp" Lines="@(OrbedenCoreArchiveObject-&gt;'&quot;%(FullPath)&quot;')" Overwrite="true" />

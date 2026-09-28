@@ -3,9 +3,12 @@
 #include "Log/Log.h"
 #include "Runtime/Object/Ens.h"
 
+#include "Runtime/Object/Shader.h"
 #include "Runtime/Particles/ParticleSettings.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
 #include "Runtime/World.h"
+
+#include <cstring>
 
 OBJECT_TYPE_IMPLEMENT(ParticleSystem, Component)
 
@@ -30,6 +33,8 @@ bool ParticleSystem::SetSettings(const ParticleSettings& value)
 
     settings = candidate;
     lastError.clear();
+    //模式与路径都在配置里，几何变体的要求跟着变，所以这里重算一次资源诊断
+    RefreshResourceDiagnostic();
     //配置变化让模拟系统在下一步重建该发射器，同时把所属 World 标脏
     ++configurationRevision;
     if (World* owner = GetWorld()) owner->SetDirty();
@@ -90,6 +95,78 @@ uint64 ParticleSystem::GetConfigurationRevision() const
 void ParticleSystem::OnConfigurationChanged()
 {
     ++configurationRevision;
+    RefreshResourceDiagnostic();
+}
+
+//检查当前配置引用的材质能否支持粒子几何
+void ParticleSystem::RefreshResourceDiagnostic()
+{
+    //需要的变体由模式与路径决定：路径 Instanced 要实例变体，两种契约都有；
+    //路径 DynamicBatch 要展开变体，声明 expandedGeometry off 的 Shader 没有；
+    //拖尾另有 TrailInstanced 要求，只有 Particle 契约编译。
+    bool needsExpandedVariants = settings.rendering.path == ParticleRenderPath::DynamicBatch;
+
+    std::string diagnostic;
+    auto checkMaterial = [&](const Ref<Material>& reference, bool trail, const char* usage)
+    {
+        if (!diagnostic.empty()) return;
+
+        //空槽位不画也不报：新加的组件本来就保持空资源
+        Material* material = reference.Get();
+        if (!material) return;
+
+        Shader* shader = material->shader.Get();
+        if (!shader)
+        {
+            diagnostic = "Material '" + material->name + "' (" + std::string(usage) + ") has no shader.";
+            return;
+        }
+
+        if (shader->passes.empty())
+        {
+            diagnostic = "Shader '" + shader->name + "' has no passes.";
+            return;
+        }
+
+        //粒子的两种路径都不接受多 Pass，管线只按第一个 Pass 的几何契约取变体
+        if (shader->passes.size() > 1)
+        {
+            diagnostic = "Material '" + material->name + "' (" + std::string(usage) + ") uses a multi-pass shader; particle rendering supports single-pass shaders only.";
+            return;
+        }
+
+        const ShaderPass& pass = shader->passes[0];
+        //拖尾的实例路径要 TrailInstanced，展开路径要 Expanded；普通粒子只在走展开路径时要 Expanded
+        bool trailUnsupported = trail && pass.geometryContract != ShaderGeometryContract::Particle;
+        bool expandedUnsupported = !pass.supportsExpandedGeometry && (trail || needsExpandedVariants);
+        if (!trailUnsupported && !expandedUnsupported) return;
+
+        diagnostic = "Material '" + material->name + "' (" + std::string(usage) + ") uses shader '" + shader->name +
+            "' which " + (pass.geometryContract != ShaderGeometryContract::Particle && trail
+                ? std::string("does not declare the Particle contract required by trails")
+                : std::string("declares 'expandedGeometry off', so the dynamic batch path has no geometry")) +
+            ". Nothing is drawn for this emitter.";
+    };
+
+    if (settings.rendering.mode == ParticleRenderMode::Mesh)
+    {
+        for (usize index = 0; index < materials.size(); ++index) checkMaterial(materials[index], false, "mesh");
+    }
+    else
+    {
+        checkMaterial(materials.empty() ? Ref<Material>() : materials[0], false, "billboard");
+    }
+
+    if (settings.trails.enabled) checkMaterial(trailMaterial, true, "trail");
+
+    //资源类诊断由本函数独占，配置与引用图诊断由各自的路径写入
+    if (diagnostic.empty())
+    {
+        if (lastError.rfind("Material '", 0) == 0 || lastError.rfind("Shader '", 0) == 0) lastError.clear();
+        return;
+    }
+
+    lastError = std::move(diagnostic);
 }
 
 //读取最近一次诊断
@@ -189,6 +266,12 @@ void ParticleSystem::OnWorldActiveChanged(bool worldActive)
 
 namespace
 {
+    //手工注册的字段名；生成表里同名的占位项在注册时要让位
+    bool IsHandWrittenField(const char* name)
+    {
+        return name && (std::strcmp(name, "enabled") == 0 || std::strcmp(name, "settings") == 0);
+    }
+
     //读取启用状态
     std::string ReflectParticleGetEnabled(Object* object)
     {
@@ -232,10 +315,10 @@ namespace
         return true;
     }
 
-    //类型化读取：配置文本
+    //类型化读取：配置文本，与 XML 读取共用同一条校验加编码路径
     Reflection::Value ReflectParticleGetSettingsValue(Object* object)
     {
-        return Reflection::Value(ParticleSettingsCodec::Encode(static_cast<ParticleSystem*>(object)->GetSettings()));
+        return Reflection::Value(ReflectParticleGetSettings(object));
     }
 
     bool ReflectParticleSetSettingsValue(Object* object, const Reflection::Value& value)
@@ -261,10 +344,16 @@ void ParticleSystem::RegisterReflection()
         fields.reserve(generated.size() + 2);
         for (const Reflection::FieldInfo* field : generated)
         {
-            if (field) fields.push_back(*field);
+            if (!field) continue;
+            //生成表给私有字段留的是无访问器的占位项，必须剔除：表里留两个同名项会让按名查找
+            //命中前面那个占位项，存档因此写得出、读不回来
+            if (IsHandWrittenField(field->name)) continue;
+            fields.push_back(*field);
         }
 
-        //configurationRevision 不在此列，它不进持久化也不对外暴露
+        //configurationRevision 不在此列，它不进持久化也不对外暴露。
+        //表里只能有配置：粒子、拖尾、随机流与统计都在 ParticleSimulationSystem 里，
+        //组件上任何一处都不要挂运行时状态，否则会被存档写进场景
         fields.push_back(Reflection::FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true,
             ReflectParticleGetEnabled, ReflectParticleSetEnabled, nullptr, ReflectParticleGetEnabledValue, ReflectParticleSetEnabledValue));
         fields.push_back(Reflection::FieldInfo("settings", "string", Reflection::FieldKind::String, true,

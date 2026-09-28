@@ -393,7 +393,8 @@ namespace
         WriteIndent(output, depth);
         output << "<Ens stableId=\"" << EscapeXml(ens.GetInstanceId().GetPath()) << "\" name=\""
             << EscapeXml(ens.GetName()) << "\" localActive=\""
-            << (ens.GetLocalActive() ? "true" : "false") << "\">\n";
+            << (ens.GetLocalActive() ? "true" : "false") << "\" static=\""
+            << (ens.GetStatic() ? "true" : "false") << "\">\n";
 
         for (Component* component : ens.GetComponents())
         {
@@ -560,6 +561,13 @@ namespace
         if (localActive == "false" || localActive == "0")
         {
             ens->SetLocalActive(false);
+        }
+
+        //static 在组件之前恢复；准备阶段只写值，层级约束由整棵树读完后的校验负责
+        const std::string& isStatic = GetAttribute(startToken, "static");
+        if (isStatic == "true" || isStatic == "1")
+        {
+            ens->SetStatic(true);
         }
 
         if (startToken.emptyElement) return true;
@@ -1086,6 +1094,19 @@ std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
     bool loaded = reader.Next(root) && ReadWorld(reader, *prepared, root)
         && ApplyEnsReferences(*prepared, document, paths) && LoadWorldResourceRefs(*prepared);
     World::SetCurrentWorld(previousWorld);
+
+    if (loaded)
+    {
+        //整棵树读完后再校验 static 层级，失败拒绝激活并指出具体的 Ens
+        EnsId offender;
+        std::string reason;
+        if (!prepared->ValidateStaticConstraints(offender, reason))
+        {
+            Ens* ens = prepared->GetEns(offender);
+            error = reason + " (Ens: " + (ens ? ens->GetName() : std::string("<invalid>")) + ")";
+            loaded = false;
+        }
+    }
 
     if (!loaded)
     {

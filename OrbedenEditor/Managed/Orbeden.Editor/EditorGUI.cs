@@ -43,19 +43,21 @@ public static class EditorGUI
     /// <summary>结束组件块。</summary>
     public static void EndComponentBlock() => NativeEditorGUI.EndComponentBlock();
 
-    /// <summary>开始可折叠组件块，未指定图标时使用通用图标。</summary>
+    /// <summary>开始可折叠组件块，未指定图标时使用通用图标。
+    /// 返回值只是「是否展开」，与收尾无关：原生在开始时就压了 ID、样式与子窗，
+    /// 所以折叠时也必须调用 EndComponentBlock，缺一次就会漏掉一层 ID 栈。</summary>
     public static bool BeginCollapsibleComponentBlock(string title, string id)
     {
         return NativeEditorGUI.BeginCollapsibleComponentBlock("Other", title, id);
     }
 
-    /// <summary>开始带图标与显示名称的可折叠组件块。</summary>
+    /// <summary>开始带图标与显示名称的可折叠组件块；必须与 EndComponentBlock 配对。</summary>
     public static bool BeginCollapsibleComponentBlock(string title, string icon, string id)
     {
         return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id);
     }
 
-    /// <summary>开始带激活勾选框的可折叠组件块；未激活时整张卡片压暗。</summary>
+    /// <summary>开始带激活勾选框的可折叠组件块；未激活时整张卡片压暗。必须与 EndComponentBlock 配对。</summary>
     public static bool BeginCollapsibleComponentBlock(string title,
         string icon,
         string id,
@@ -65,7 +67,7 @@ public static class EditorGUI
         return NativeEditorGUI.BeginCollapsibleComponentBlock(icon, title, id, enabled, out toggled);
     }
 
-    /// <summary>开始带激活勾选框的可折叠组件块，并可指定默认是展开还是折叠（没有记住状态时生效）。</summary>
+    /// <summary>开始带激活勾选框的可折叠组件块，并可指定默认是展开还是折叠（没有记住状态时生效）。必须与 EndComponentBlock 配对。</summary>
     public static bool BeginCollapsibleComponentBlock(string title,
         string icon,
         string id,
