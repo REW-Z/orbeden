@@ -650,6 +650,10 @@ void EditorSystem::Update(World& world, float deltaTime)
         RequestRepaint();
     }
 
+    //后台脚本构建的结算延迟到这里：完成回调发生在托管面板绘制中途，
+    //切换程序集与进入 Play 都不能在那时做
+    if (scriptBuildCompleted) ApplyCompletedScriptBuild();
+
     //Play 期间的改动不落盘，脏标记跟随 Play 状态；每帧赋值，异常路径也能自愈
     world.SetDirtyTrackingEnabled(!playMode.IsPlaying());
 
@@ -714,6 +718,8 @@ void EditorSystem::RenderEditorGUI()
     DrawProjectDialog();
     DrawNewProjectDialog();
     DrawUpgradeProjectDialog();
+    //进度浮层是模态弹窗，必须在顶层窗口上下文绘制，不能塞进状态栏的侧栏里
+    managedBridge.DrawProgressOverlay();
     if (!playMode.IsPlaying()) editorScene.PruneSelection(app.GetWorld());
     {
         PROFILE("Editor/Panels");
@@ -756,6 +762,14 @@ void EditorSystem::RequestOpenProjectDialog()
 void EditorSystem::RequestOpenProjectFile(const std::string& path)
 {
     if (path.empty()) return;
+    //构建完成时会按启动时的项目重载程序集，中途换项目会加载到不存在的那一份
+    if (scriptBuildRunning)
+    {
+        projectStatus = "A script build is running. Wait for it or cancel it before switching projects.";
+        Log::Warning(projectStatus.c_str());
+        return;
+    }
+
     pendingProjectFile = path;
     projectStatus.clear();
     RequestRepaint();
@@ -823,6 +837,15 @@ void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std:
 //加载一个已通过版本闸门的项目
 void EditorSystem::LoadProjectFromFolder(const std::string& folder)
 {
+    //构建完成时会按启动时的项目重载程序集，中途换项目会加载到不存在的那一份
+    if (scriptBuildRunning)
+    {
+        dialogError = "A script build is running. Wait for it or cancel it before switching projects.";
+        projectStatus = dialogError;
+        Log::Warning(projectStatus.c_str());
+        return;
+    }
+
     RequestStop();
     SaveEditorLayout();
     if (project.LoadProjectFolder(folder))
@@ -942,6 +965,21 @@ void EditorSystem::DrawUpgradeProjectDialog()
     ImGui::EndPopup();
 }
 
+//准备脚本构建：定位脚本工程、修复 MSBuild 配置、同步 Core C# 运行库引用
+bool EditorSystem::PrepareScriptBuild(std::string& outScriptProject, std::string& outError) const
+{
+    outScriptProject = GetProjectScriptProjectPath();
+    outError.clear();
+    if (outScriptProject.empty())
+    {
+        outError = "No C# project found in script root.";
+        return false;
+    }
+
+    if (!NewProjectGenerator::RepairScriptProjectBuildProps(outScriptProject, outError)) return false;
+    return RefreshLocalRuntimeDllReference(outScriptProject, FindRuntimeCSharpDll(), outError);
+}
+
 void EditorSystem::RequestBuildScripts()
 {
     if (playMode.IsPlaying())
@@ -955,35 +993,130 @@ void EditorSystem::RequestBuildScripts()
         return;
     }
 
-    std::string csproj = GetProjectScriptProjectPath();
-    if (csproj.empty())
+    if (scriptBuildRunning)
     {
-        projectStatus = "No C# project found in script root.";
+        projectStatus = "A script build is already running.";
+        Log::Warning(projectStatus.c_str());
+        return;
+    }
+
+    std::string csproj;
+    std::string error;
+    if (!PrepareScriptBuild(csproj, error))
+    {
+        projectStatus = error;
         Log::Error(projectStatus.c_str());
         return;
     }
 
-    std::string projectRepairError;
-    if (!NewProjectGenerator::RepairScriptProjectBuildProps(csproj, projectRepairError))
+    scriptBuildRunning = true;
+    projectStatus = "Building Game C#...";
+    //这个入口的语义就是"现在就编"，过期判断交给托管侧跳过，与旧的无条件构建一致
+    managedBridge.RequestScriptBuild(csproj, false, true);
+    RequestRepaint();
+}
+
+void EditorSystem::RequestRefresh()
+{
+    if (playMode.IsPlaying())
     {
-        projectStatus = projectRepairError;
+        //Play 期间快捷键整表失效、菜单也置灰，这条只在托管侧直接触发时兜底
+        projectStatus = "Stop Play-In-Editor before refreshing.";
+        Log::Warning(projectStatus.c_str());
         return;
     }
 
-    std::string runtimeRefreshError;
-    if (!RefreshLocalRuntimeDllReference(csproj, FindRuntimeCSharpDll(), runtimeRefreshError))
+    if (!project.HasProject())
     {
-        projectStatus = runtimeRefreshError;
+        projectStatus = "No project is open.";
+        return;
+    }
+
+    if (scriptBuildRunning)
+    {
+        projectStatus = "A script build is already running.";
+        Log::Warning(projectStatus.c_str());
+        return;
+    }
+
+    std::string csproj;
+    std::string error;
+    if (!PrepareScriptBuild(csproj, error))
+    {
+        projectStatus = error;
         Log::Error(projectStatus.c_str());
         return;
     }
 
-    std::string command = "dotnet build " + Quote(csproj) + " -c Debug";
-    if (RunCommand(command, "Build Game C#"))
+    scriptBuildRunning = true;
+    projectStatus = "Refreshing project...";
+    managedBridge.RequestScriptBuild(csproj, true,
+        IsProjectScriptBuildOutdated(project.GetProjectRoot(), GetProjectGameAssemblyPath()));
+    RequestRepaint();
+}
+
+//接收托管侧后台脚本构建的结算；只记结果，帧边界才应用
+void EditorSystem::CompleteScriptBuild(bool succeeded, bool cancelled, bool compiled, int32 reimportedCount)
+{
+    //构建没在跑就丢弃：迟到或重复的结算不该改动状态
+    if (!scriptBuildRunning) return;
+
+    pendingScriptBuildResult.succeeded = succeeded;
+    pendingScriptBuildResult.cancelled = cancelled;
+    pendingScriptBuildResult.compiled = compiled;
+    pendingScriptBuildResult.reimportedCount = reimportedCount;
+    scriptBuildCompleted = true;
+    RequestRepaint();
+}
+
+//应用后台脚本构建的结算结果：重载程序集、写状态、必要时进 Play
+void EditorSystem::ApplyCompletedScriptBuild()
+{
+    scriptBuildCompleted = false;
+    scriptBuildRunning = false;
+    ScriptBuildResult result = pendingScriptBuildResult;
+    pendingScriptBuildResult = {};
+
+    if (result.cancelled)
     {
-        RefreshInspectorGameAssembly();
-        projectStatus = "Built Game C#: " + GetProjectGameAssemblyPath();
+        projectStatus = "Script build cancelled.";
+        Log::Warning(projectStatus.c_str());
     }
+    else if (result.succeeded)
+    {
+        //只有真的产出新程序集才重载：纯重导那条路径不该清掉用户的撤销栈
+        if (result.compiled) RefreshInspectorGameAssembly();
+        //条件重导下"什么都没改"是常态，单独给一条文案，与 Unity 的 "Nothing changed" 对应
+        projectStatus = result.compiled
+            ? "Built Game C#: " + GetProjectGameAssemblyPath()
+            : result.reimportedCount == 0 ? "Refresh complete. Nothing changed."
+            : "Refresh complete. Reimported " + std::to_string(result.reimportedCount) + " source file(s).";
+    }
+    else
+    {
+        projectStatus = "Build Game C# failed. See the Console panel for the compiler output.";
+        Log::Error(projectStatus.c_str());
+    }
+
+    if (pendingPlayAfterScriptBuild)
+    {
+        pendingPlayAfterScriptBuild = false;
+        std::string assemblyPath = GetProjectGameAssemblyPath();
+        if (result.succeeded && FileExists(assemblyPath)
+            && !IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
+        {
+            StartPlayMode();
+            return;
+        }
+
+        if (result.succeeded)
+        {
+            projectStatus = "C# build finished but the output is still out of date.";
+            Log::Warning(projectStatus.c_str());
+        }
+    }
+
+    RequestRepaint();
 }
 
 void EditorSystem::RequestBuildNative()
@@ -995,6 +1128,13 @@ void EditorSystem::RequestBuildNative()
 bool EditorSystem::ReloadProjectContent()
 {
     if (!project.HasProject() || playMode.IsPlaying()) return false;
+    //这条路径自己会跑一次同步 dotnet build，和后台构建撞上会同时写 Build/Managed
+    if (scriptBuildRunning)
+    {
+        projectStatus = "A script build is running. Wait for it or cancel it before reloading content.";
+        Log::Warning(projectStatus.c_str());
+        return false;
+    }
 
     project.MarkWorldPendingReload();
     managedBridge.UnloadGameAssembly();
@@ -1163,19 +1303,34 @@ void EditorSystem::RequestPlay()
         return;
     }
 
+    //只要有构建在跑就排队，不能只看脚本是否过期：构建写到一半时可能已生成了新时间戳的
+    //DLL 而源文件看起来都更旧，此时进 Play 做影子拷贝会拷到半成品
+    if (scriptBuildRunning)
+    {
+        pendingPlayAfterScriptBuild = true;
+        projectStatus = "Waiting for the running script build to finish...";
+        RequestRepaint();
+        return;
+    }
+
     std::string assemblyPath = GetProjectGameAssemblyPath();
     if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
     {
+        //脚本过期时同样排队，构建成功后由 ApplyCompletedScriptBuild 进 Play
+        pendingPlayAfterScriptBuild = true;
         RequestBuildScripts();
-        assemblyPath = GetProjectGameAssemblyPath();
-        if (IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
-        {
-            projectStatus = "C# build failed or output is out of date.";
-            Log::Error(projectStatus.c_str());
-            return;
-        }
+        //构建没起来（无项目、无 csproj）就不要再排队进 Play
+        if (!scriptBuildRunning) pendingPlayAfterScriptBuild = false;
+        return;
     }
 
+    StartPlayMode();
+}
+
+//进入 Play-In-Editor；产物检查由调用方完成
+void EditorSystem::StartPlayMode()
+{
+    std::string assemblyPath = GetProjectGameAssemblyPath();
     if (!FileExists(assemblyPath))
     {
         projectStatus = "Game DLL is missing. Build Game C# first: " + assemblyPath;
@@ -1911,11 +2066,10 @@ const List<EditorShortcut>& EditorSystem::GetEditorShortcuts()
         { "Edit", "Toggle Active", "Alt+Shift+A", ImGuiKey_A, false, true, true, EditorShortcutScope::Global,
             [](EditorSystem& editor) { editor.managedBridge.RequestToggleActiveSelected(); } },
 
-        //重新导入同样由选择系统指名面板；全量版本不依赖选择，直接派发
-        { "Project", "Reimport", "Ctrl+R", ImGuiKey_R, true, false, false, EditorShortcutScope::Global,
-            [](EditorSystem& editor) { editor.managedBridge.RequestReimportSelected(); } },
-        { "Project", "Reimport All", "Ctrl+Shift+R", ImGuiKey_R, true, true, false, EditorShortcutScope::Global,
-            [](EditorSystem& editor) { editor.managedBridge.RequestReimportAll(); } },
+        //重导与重编由 Refresh 统一承担，Ctrl+R 与 Unity 的 Assets/Refresh 对齐。
+        //不进 Project 菜单（那个菜单只留新建与载入）：重导的两个入口在 Project 面板的右键菜单里
+        { nullptr, nullptr, "Ctrl+R", ImGuiKey_R, true, false, false, EditorShortcutScope::Global,
+            [](EditorSystem& editor) { editor.RequestRefresh(); } },
 
         //手柄模式与坐标系跟随鼠标位置，鼠标不在场景视口内时不生效
         { nullptr, nullptr, "W", ImGuiKey_W, false, false, false, EditorShortcutScope::SceneView,

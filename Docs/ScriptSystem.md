@@ -248,7 +248,13 @@ Editor 使用 CLR 和可卸载的游戏程序集上下文；Player 使用生成�
 
 Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄带 generation；World/运行时或模块重载后必须重新获取。不要跨程序集卸载保存 Type、delegate 或已失效的代理。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 17 个指针槽，完整运行时表为 110 个；Editor GUI 表为 78 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，应用表为 11 个，完整 Editor 表为 153 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+编辑器重载游戏程序集（`Ctrl+R` 编译出新的 DLL、按 Play、停止 Play 都会触发）时会**无条件清空撤销/重做栈**，Inspector 的属性文档缓存与自定义编辑器实例也一并重建。不丢的是：World 的未保存改动、面板布局与可见性、`.resinfo` 里的导入设置。因此 `Ctrl+R` 只在脚本确实编译过时才重载程序集——纯重导资源那条路径不碰程序集，撤销栈原样保留。
+
+能重载的只有用户游戏程序集：`GameAssemblyLoadContext` 是唯一可收集的上下文。编辑器自身的 `Orbeden.Editor.dll` 由 hostfxr 加载进默认（非可收集）上下文，本仓库没有卸载或重启机制，改了编辑器 C# 代码必须重新构建 `OrbedenEditor.vcxproj`。
+
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 17 个指针槽，完整运行时表为 110 个；Editor GUI 表为 82 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，面板表为 2 个，资源表为 19 个，应用表为 16 个，完整 Editor 表为 162 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+
+断言只保证结构体尺寸一致，保证不了字段顺序：两端同名表的槽位顺序必须逐字对应，新槽一律追加在表尾。顺序错了三个断言会全部通过，却把某个槽调成另一个函数。
 
 组件自定义 Inspector、Scene GUI 和 Gizmos 的注册方式、程序集隔离与示例见 [CustomEditor](CustomEditors.md)。
 

@@ -13,7 +13,7 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, void> RequestRepaint;
     public delegate* unmanaged[Cdecl]<IntPtr, byte> IsPlaying;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, int> GetProjectText;
-    public delegate* unmanaged[Cdecl]<IntPtr, int, void> RequestBuild;
+    public delegate* unmanaged[Cdecl]<IntPtr, int, void> RequestEditorAction;
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetSelectedPlayerTarget;
     public delegate* unmanaged[Cdecl]<IntPtr, int, void> SetSelectedPlayerTarget;
     public delegate* unmanaged[Cdecl]<IntPtr, byte, byte, byte*, int, int> MirrorTemplate;
@@ -24,6 +24,7 @@ internal unsafe struct EditorApplicationNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, EditorWorldRenderSettingsAbi*, void> SetWorldRenderSettings;
     public delegate* unmanaged[Cdecl]<IntPtr, int, uint, byte> ControlParticlePreview;
     public delegate* unmanaged[Cdecl]<IntPtr, int, ParticlePreviewInfoAbi*, byte> GetParticlePreviewInfo;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte, byte, byte, int, void> ScriptBuildCompleted;
 }
 
 /// <summary>编辑态粒子预览快照，布局与 ManagedEditorBridge.cpp 的 ParticlePreviewInfoAbi 一致。</summary>
@@ -65,7 +66,8 @@ internal enum EditorProjectField
     Name, Root, Content, World, Managed, Native, Repository, SourceTemplate, Status, PlayerTargets, ProjectFile
 }
 
-internal enum EditorBuildKind { Scripts, Native, Player }
+/// <summary>编辑器请求的种类：构建脚本/原生模块/Player，以及重导并重编的刷新。</summary>
+internal enum EditorRequestKind { Scripts, Native, Player, Refresh }
 
 /// <summary>模板内容目录位，与 ManagedEditorBridge.cpp 的 TemplateFolder* 常量对应。</summary>
 internal enum EditorTemplateFolder { Examples = 1, Builtin = 2 }
@@ -160,8 +162,16 @@ public static unsafe class EditorApplication
         return Encoding.UTF8.GetString(bytes);
     }
 
-    //请求构建脚本、原生模块或 Player
-    internal static void RequestBuild(EditorBuildKind kind) => api.RequestBuild(api.Context, (int)kind);
+    //请求构建脚本、原生模块、Player，或重导并重编的刷新
+    internal static void RequestEditorAction(EditorRequestKind kind) => api.RequestEditorAction(api.Context, (int)kind);
+
+    /// <summary>向原生结算一次后台脚本构建：是否成功、是否取消、是否产出新程序集、重导的源文件数。</summary>
+    internal static void CompleteScriptBuild(bool succeeded, bool cancelled, bool compiled, int reimportedCount)
+    {
+        if (api.ScriptBuildCompleted == null) return;
+        api.ScriptBuildCompleted(api.Context, succeeded ? (byte)1 : (byte)0, cancelled ? (byte)1 : (byte)0,
+            compiled ? (byte)1 : (byte)0, reimportedCount);
+    }
 
     //读取当前构建目标
     internal static int GetSelectedPlayerTarget() => api.GetSelectedPlayerTarget(api.Context);

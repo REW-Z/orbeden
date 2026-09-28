@@ -100,11 +100,12 @@ public:
     void* drawPolyline = nullptr;
     void* isItemActive = nullptr;
     void* isMouseDown = nullptr;
+    void* drawIcon = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 81);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 82);
 
 //Editor ImGui 绑定层
 class EditorGUI

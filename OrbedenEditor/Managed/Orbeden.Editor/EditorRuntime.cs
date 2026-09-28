@@ -20,6 +20,7 @@ public static class EditorRuntime
         public EditorComponentNativeApi Components;
         public EditorLogNativeApi Log;
         public EditorProfilerNativeApi Profiler;
+        public EditorAssetReimportNativeApi Reimport;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -45,6 +46,7 @@ public static class EditorRuntime
                 EditorApplication.Initialize(default);
                 Gizmos.Initialize(default);
                 EditorAssetsNative.Initialize(default);
+                EditorAssetReimportNative.Initialize(default);
                 EditorNativeComponents.Initialize(default);
                 EditorGUI.SetObjectFieldAssetProvider(null);
                 return 0;
@@ -63,6 +65,7 @@ public static class EditorRuntime
             EditorPropertyHistory.Clear();
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
+            EditorAssetReimportNative.Initialize(api.Reimport);
             EditorNativeComponents.Initialize(api.Components);
             EditorAssetCatalog.Instance.Refresh();
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
@@ -165,8 +168,29 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static void RequestReimportAll()
     {
-        try { EditorAssetsNative.ReimportAllAssets(); }
+        //必须带上设置表：不传会让颜色空间、网格缩放、上轴这些导入设置退回语义推断
+        try { EditorAssetsNative.ReimportAllAssets(EditorAssetCache.EncodeAllSettings()); }
         catch (Exception ex) { Console.Error.WriteLine($"Editor reimport all failed: {ex}"); }
+    }
+
+    /// <summary>开始一次后台脚本构建；原生已完成工程准备与过期判断。</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe void RequestScriptBuild(byte* scriptProject, int scriptProjectLength, byte reimport, byte outdated)
+    {
+        try { EditorRefresh.Start(ReadUtf8(scriptProject, scriptProjectLength), reimport != 0, outdated != 0); }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor script build dispatch failed: {ex}");
+            EditorRefresh.Abort(ex.Message);
+        }
+    }
+
+    /// <summary>绘制后台任务的进度浮层。原生在顶层窗口上下文每帧调用一次。</summary>
+    [UnmanagedCallersOnly]
+    public static void DrawProgressOverlay()
+    {
+        try { EditorProgress.DrawModal(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Editor progress overlay draw failed: {ex}"); }
     }
 
     /// <summary>请求当前聚焦的面板复制选中项。</summary>
@@ -261,6 +285,9 @@ public static class EditorRuntime
     {
         try
         {
+            //后台任务在这里每帧推进一次；它只碰状态与原生调用，不做 ImGui 绘制，
+            //因此放在状态栏的侧栏上下文里是安全的（进度浮层另走 DrawProgressOverlay）
+            EditorRefresh.Pump();
             EditorStatusBar.Draw();
             EditorRecentProjects.TrackCurrentProject();
         }
@@ -372,15 +399,16 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 81);
-        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 15);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 82);
+        ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 16);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 5);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 160);
+        ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 164);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);

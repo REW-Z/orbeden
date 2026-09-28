@@ -54,6 +54,7 @@ namespace
     using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedCommandFn = uint8(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedRequestScriptBuildFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, uint8, uint8);
     using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
         const uint8*, int32,
         const uint8*, int32,
@@ -82,6 +83,8 @@ namespace
     constexpr const char* EditorRequestCopySelectedMethod = "RequestCopySelected";
     constexpr const char* EditorRequestPasteSelectedMethod = "RequestPasteSelected";
     constexpr const char* EditorRequestToggleActiveSelectedMethod = "RequestToggleActiveSelected";
+    constexpr const char* EditorRequestScriptBuildMethod = "RequestScriptBuild";
+    constexpr const char* EditorDrawProgressOverlayMethod = "DrawProgressOverlay";
 
     //托管 Panel 注册期间使用的原生上下文。
     struct ManagedPanelRegistrationContext
@@ -178,7 +181,7 @@ namespace
         void* requestRepaint = nullptr;
         void* isPlaying = nullptr;
         void* getProjectText = nullptr;
-        void* requestBuild = nullptr;
+        void* requestEditorAction = nullptr;
         void* getSelectedPlayerTarget = nullptr;
         void* setSelectedPlayerTarget = nullptr;
         void* mirrorTemplate = nullptr;
@@ -189,6 +192,7 @@ namespace
         void* setWorldRenderSettings = nullptr;
         void* controlParticlePreview = nullptr;
         void* getParticlePreviewInfo = nullptr;
+        void* scriptBuildCompleted = nullptr;
     };
 
     //传给 Editor C# 的日志函数表。
@@ -216,6 +220,14 @@ namespace
         void* copyName = nullptr;
     };
 
+    //传给 Editor C# 的条件重导函数表。
+    struct EditorAssetReimportNativeApi
+    {
+    public:
+        void* context = nullptr;
+        void* getLoadedSources = nullptr;
+    };
+
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
     {
@@ -229,27 +241,31 @@ namespace
         EditorComponentNativeApi components;
         EditorLogNativeApi log;
         EditorProfilerNativeApi profiler;
+        EditorAssetReimportNativeApi reimport;
     };
 
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 15);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 16);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetReimportNativeApi, 2);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 160);
+    //新表一律追加在表尾，既有表的偏移才不会跟着动
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 164);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 82);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 97);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 102);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 104);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 123);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 147);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 152);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 83);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 99);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 104);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 106);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 125);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 149);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 154);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 162);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -443,6 +459,22 @@ namespace
         return CopyUtf8(ens ? WorldSerializer::CaptureEns(*ens) : std::string(), buffer, capacity);
     }
 
+    //读取已加载资源涉及的源文件 Key，条目以 '\0' 分隔写入缓冲区；返回总长度
+    int32 ORBEDEN_NATIVE_CALL GetLoadedSources(void* context, uint8* buffer, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || !editor->HasProject() || editor->IsPlaying()) return 0;
+
+        List<std::string> sources = ResourceManager::CollectLoadedSources();
+        std::string text;
+        for (const std::string& source : sources)
+        {
+            text += source;
+            text.push_back('\0');
+        }
+        return CopyUtf8(text, buffer, capacity);
+    }
+
     //实例化资产、恢复快照或复制快照并设置层级顺序
     //kind：0 预制体文件、1 按快照恢复原身份（撤销）、2 按快照复制成新身份（复制粘贴）
     int32 ORBEDEN_NATIVE_CALL InstantiateManagedPrefab(void* context, const uint8* text, int32 length,
@@ -536,14 +568,15 @@ namespace
         else if (action == 2) editor->RequestNewProjectDialog();
     }
 
-    //请求现有原生构建流程
-    void ORBEDEN_NATIVE_CALL RequestManagedBuild(void* context, int32 kind)
+    //请求现有原生构建流程或刷新；kind 与托管侧 EditorRequestKind 同序
+    void ORBEDEN_NATIVE_CALL RequestManagedEditorAction(void* context, int32 kind)
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || !editor->HasProject()) return;
         if (kind == 0) editor->RequestBuildScripts();
         else if (kind == 1) editor->RequestBuildNative();
         else if (kind == 2) editor->RequestBuildPlayer();
+        else if (kind == 3) editor->RequestRefresh();
     }
 
     //读取当前 Player 构建目标
@@ -707,6 +740,14 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (editor) editor->RequestRepaint();
+    }
+
+    //接收托管侧后台脚本构建的结算；只落到待应用状态，帧边界再切换程序集
+    void ORBEDEN_NATIVE_CALL CompleteManagedScriptBuild(void* context, uint8 succeeded, uint8 cancelled,
+        uint8 compiled, int32 reimportedCount)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (editor) editor->CompleteScriptBuild(succeeded != 0, cancelled != 0, compiled != 0, reimportedCount);
     }
 
     //查询当前是否处于 Play-In-Editor。
@@ -1821,6 +1862,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUnloadGameAssemblyMethod, &UnloadGameAssemblyFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawSceneGizmosMethod, &DrawSceneGizmosFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawStatusBarMethod, &DrawStatusBarFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawProgressOverlayMethod, &DrawProgressOverlayFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
@@ -1832,6 +1874,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestCopySelectedMethod, &RequestCopySelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestPasteSelectedMethod, &RequestPasteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestToggleActiveSelectedMethod, &RequestToggleActiveSelectedFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestScriptBuildMethod, &RequestScriptBuildFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorGetInitializationErrorMethod, reinterpret_cast<void**>(&getInitializationError)))
     {
         Log::Warning("ManagedEditorBridge initialize failed: managed entry binding failed.");
@@ -1849,7 +1892,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.requestRepaint = reinterpret_cast<void*>(&RequestManagedRepaint);
     editorApi.application.isPlaying = reinterpret_cast<void*>(&IsManagedEditorPlaying);
     editorApi.application.getProjectText = reinterpret_cast<void*>(&GetManagedProjectText);
-    editorApi.application.requestBuild = reinterpret_cast<void*>(&RequestManagedBuild);
+    editorApi.application.requestEditorAction = reinterpret_cast<void*>(&RequestManagedEditorAction);
     editorApi.application.getSelectedPlayerTarget = reinterpret_cast<void*>(&GetManagedPlayerTarget);
     editorApi.application.setSelectedPlayerTarget = reinterpret_cast<void*>(&SetManagedPlayerTarget);
     editorApi.application.mirrorTemplate = reinterpret_cast<void*>(&MirrorManagedTemplate);
@@ -1860,6 +1903,9 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.application.setWorldRenderSettings = reinterpret_cast<void*>(&SetManagedWorldRenderSettings);
     editorApi.application.controlParticlePreview = reinterpret_cast<void*>(&ControlManagedParticlePreview);
     editorApi.application.getParticlePreviewInfo = reinterpret_cast<void*>(&GetManagedParticlePreviewInfo);
+    editorApi.application.scriptBuildCompleted = reinterpret_cast<void*>(&CompleteManagedScriptBuild);
+    editorApi.reimport.context = &editor;
+    editorApi.reimport.getLoadedSources = reinterpret_cast<void*>(&GetLoadedSources);
     editorApi.gizmo = gizmoApi;
     editorApi.panels.context = &panelContext;
     editorApi.panels.registerPanel = reinterpret_cast<void*>(&RegisterManagedPanel);
@@ -1942,6 +1988,7 @@ void ManagedEditorBridge::Shutdown()
     SetPanelVisibleFunction = nullptr;
     DrawSceneGizmosFunction = nullptr;
     DrawStatusBarFunction = nullptr;
+    DrawProgressOverlayFunction = nullptr;
     LoadGameAssemblyFunction = nullptr;
     UnloadGameAssemblyFunction = nullptr;
     PublishGameAotFunction = nullptr;
@@ -1955,6 +2002,7 @@ void ManagedEditorBridge::Shutdown()
     RequestCopySelectedFunction = nullptr;
     RequestPasteSelectedFunction = nullptr;
     RequestToggleActiveSelectedFunction = nullptr;
+    RequestScriptBuildFunction = nullptr;
     initialized = false;
     clrHost = nullptr;
 }
@@ -2068,6 +2116,22 @@ void ManagedEditorBridge::RequestReimportAll()
     if (!initialized || !RequestReimportAllFunction) return;
     ManagedDrawEditorFn requestReimportAll = reinterpret_cast<ManagedDrawEditorFn>(RequestReimportAllFunction);
     requestReimportAll();
+}
+
+void ManagedEditorBridge::RequestScriptBuild(const std::string& scriptProject, bool reimport, bool outdated)
+{
+    if (!initialized || !RequestScriptBuildFunction) return;
+    ManagedRequestScriptBuildFn requestScriptBuild = reinterpret_cast<ManagedRequestScriptBuildFn>(RequestScriptBuildFunction);
+    requestScriptBuild(reinterpret_cast<const uint8*>(scriptProject.data()), static_cast<int32>(scriptProject.size()),
+        reimport ? 1 : 0, outdated ? 1 : 0);
+}
+
+//绘制后台任务的进度浮层，必须在顶层窗口上下文调用
+void ManagedEditorBridge::DrawProgressOverlay()
+{
+    if (!initialized || !DrawProgressOverlayFunction) return;
+    ManagedDrawEditorFn drawProgressOverlay = reinterpret_cast<ManagedDrawEditorFn>(DrawProgressOverlayFunction);
+    drawProgressOverlay();
 }
 
 void ManagedEditorBridge::RequestCopySelected()

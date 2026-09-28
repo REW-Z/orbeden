@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Orbeden;
@@ -13,8 +15,12 @@ namespace OrbedenEditor;
 internal static class EditorAssetCache
 {
     internal sealed record Stamp(string Path, long Length, long Modified);
+    /// <summary>运行态最后一次导入的输入快照。只由 Ctrl+R 的条件重导路径写：
+    /// 伴生文件里的 Dependencies 是后台导入进程维护的，它变新不代表主进程的运行态对象变新。</summary>
+    internal sealed record RuntimeImport(List<Stamp> Inputs, string SettingsHash, string ContentHash);
     internal sealed record Manifest(int Version, string Source, Dictionary<string, string> Settings,
-        List<Stamp> Dependencies, List<string> Blobs, EditorAssetInspection.Result Data);
+        List<Stamp> Dependencies, List<string> Blobs, EditorAssetInspection.Result Data,
+        RuntimeImport? Runtime = null);
     private sealed class Entry
     {
         internal Manifest? Manifest;
@@ -27,6 +33,8 @@ internal static class EditorAssetCache
         Task<string> Output, Task<string> Error, DateTime Started, Stamp SourceStamp);
     private static readonly Dictionary<string, Entry> entries = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> sources = new(StringComparer.OrdinalIgnoreCase);
+    //哈希分块读取的复用缓冲区，避免大贴图整块进内存
+    private static readonly byte[] hashBuffer = new byte[1 << 20];
     private static string root = string.Empty;
     private static Job? job;
 
@@ -224,6 +232,165 @@ internal static class EditorAssetCache
                 text.Append('\n').Append(GetRelativePath(source)).Append('\t').Append(name).Append('\t').Append(value);
         }
         return text.ToString();
+    }
+
+    /// <summary>把源文件 Key 解析到它在磁盘上的文件；.glsl 源对以剥掉后缀的基名注册，所以基名无文件时依次试两个源对文件。</summary>
+    internal static string ResolveSourcePath(string sourceKey)
+    {
+        if (root.Length == 0 || string.IsNullOrWhiteSpace(sourceKey) || Path.IsPathRooted(sourceKey)
+            || sourceKey == ".." || sourceKey.StartsWith("../", StringComparison.Ordinal)) return string.Empty;
+        foreach (string candidate in new[] { sourceKey, sourceKey + ".vert.glsl", sourceKey + ".frag.glsl" })
+        {
+            string path = Path.Combine(root, candidate);
+            if (File.Exists(path)) return Path.GetFullPath(path);
+        }
+        return string.Empty;
+    }
+
+    /// <summary>判断某个已加载源是否需要重导；需要时给出该源的设置行表与触发原因。判定只在 Ctrl+R 路径上调用。</summary>
+    internal static bool NeedsReimport(string path, out string settingsRows, out string reason)
+    {
+        settingsRows = string.Empty;
+        reason = string.Empty;
+        Manifest? manifest = ReadManifest(GetMetadataPath(path));
+        RuntimeImport? snapshot = manifest?.Runtime;
+        //没有运行态快照就只能重导：伴生文件的时间戳由后台导入进程维护，它变新不代表运行态对象变新
+        if (snapshot == null || snapshot.Inputs.Count == 0)
+        {
+            reason = "no recorded runtime import";
+            return true;
+        }
+
+        Dictionary<string, string> settings = ReadSettings(path);
+        //平台不一致必须重导，与文件时间戳无关
+        if (!PlatformMatches())
+        {
+            settingsRows = EncodeSettingsTable(path, settings);
+            reason = "target platform changed";
+            return true;
+        }
+
+        bool settingsMatch = ComputeSettingsHash(settings) == snapshot.SettingsHash;
+        //输入时间戳与设置都没动：直接跳过，不读任何文件内容
+        if (settingsMatch && InputsUnchanged(snapshot.Inputs)) return false;
+
+        //时间戳动了才值得读内容，且只有设置也没变时内容相同才能豁免重导。
+        //输入集合按当前的 Dependencies 现取，这样后台导入进程刚补上的新依赖也能进指纹。
+        if (settingsMatch && ComputeContentHash(ReadInputStamps(path)) == snapshot.ContentHash) return false;
+
+        settingsRows = EncodeSettingsTable(path, settings);
+        reason = settingsMatch ? "content changed" : "import settings changed";
+        return true;
+    }
+
+    /// <summary>记录运行态完成了一次导入：写入输入快照并同步内存条目。</summary>
+    internal static void RecordRuntimeImport(string path)
+    {
+        string file = GetMetadataPath(path);
+        Manifest? existing = ReadManifest(file);
+        if (existing == null) return;
+
+        List<Stamp> inputs = ReadInputStamps(path);
+        //只换 Runtime 段：动 Dependencies 会让缓存被判为有效，从而压制后台导入进程对该源的重新导入
+        Manifest manifest = existing with
+        {
+            Runtime = new(inputs, ComputeSettingsHash(ReadSettings(path)), ComputeContentHash(inputs)),
+        };
+        WriteMetadata(path, manifest);
+
+        //写后必须同步指纹，否则下一帧读取会以为伴生文件被外部改动而丢掉内存清单
+        if (!entries.TryGetValue(path, out Entry? entry)) entries[path] = entry = new Entry();
+        entry.Manifest = manifest;
+        entry.MetadataStamp = ReadStamp(file);
+    }
+
+    //收集某个源参与哈希的全部输入文件：源文件加上伴生文件记录的依赖
+    private static List<Stamp> ReadInputStamps(string path)
+    {
+        HashSet<string> inputs = new(StringComparer.OrdinalIgnoreCase) { GetRelativePath(path) };
+        foreach (Stamp stamp in ReadManifest(GetMetadataPath(path))?.Dependencies ?? [])
+        {
+            if (!string.IsNullOrEmpty(stamp.Path)) inputs.Add(stamp.Path);
+        }
+
+        //依赖路径来自伴生文件，可能被手工编辑；内容根之外的路径一律剔除。
+        //Dependencies 来自 HashSet，枚举顺序不保证，排序后哈希才可复现。
+        List<string> ordered = [.. inputs.Where(item => item.Length != 0 && !Path.IsPathRooted(item)
+            && item != ".." && !item.StartsWith("../", StringComparison.Ordinal))];
+        ordered.Sort(StringComparer.Ordinal);
+        return ordered.Select(item => ReadStamp(Path.Combine(root, item))).ToList();
+    }
+
+    //判断运行态上次导入的目标平台与当前选择是否一致。
+    //TODO: 多平台导入落地后改为把目标平台存进 RuntimeImport 并在此比对。现在恒为真，
+    //      因此这个判定是空操作——引擎的导入与 cook 都是平台无关的：ImportSource 不接受平台参数，
+    //      AssetImportSettings 也只有 colorSpace/scale/upAxis 三个字段，且五个目标里只有 Windows x64 可用。
+    private static bool PlatformMatches() => true;
+
+    //逐个核对输入的时间戳；任一项读不到或已变化都返回 false（调用方据此进入内容哈希门）
+    private static bool InputsUnchanged(IReadOnlyList<Stamp> inputs)
+    {
+        foreach (Stamp stamp in inputs)
+        {
+            if (string.IsNullOrEmpty(stamp.Path) || Path.IsPathRooted(stamp.Path)) return false;
+            if (ReadStamp(Path.Combine(root, stamp.Path)) != stamp) return false;
+        }
+        return true;
+    }
+
+    //计算一组输入的内容指纹：源文件不存在是合法状态，编码成长度 -1、摘要 "-"
+    private static string ComputeContentHash(IReadOnlyList<Stamp> inputs)
+    {
+        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        AppendDescriptor(hash, "OrbedenAssetContent1");
+        foreach (Stamp stamp in inputs)
+        {
+            AppendDescriptor(hash, "F", stamp.Path, stamp.Length.ToString(CultureInfo.InvariantCulture), ReadDigest(stamp));
+        }
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    //计算导入设置的指纹：用原始键值对而不是原生解析后的结构体，不认识的设置名与非法值也要参与
+    private static string ComputeSettingsHash(Dictionary<string, string> settings)
+    {
+        List<string> names = [.. settings.Keys];
+        names.Sort(StringComparer.Ordinal);
+        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        AppendDescriptor(hash, "OrbedenAssetSettings1", names.Count.ToString(CultureInfo.InvariantCulture));
+        foreach (string name in names) AppendDescriptor(hash, "S", name, settings[name]);
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    //读取单个文件的内容摘要；不存在或读不到时返回 "-"
+    private static string ReadDigest(Stamp stamp)
+    {
+        if (stamp.Length < 0) return "-";
+        try
+        {
+            using FileStream stream = new(Path.Combine(root, stamp.Path),
+                FileMode.Open, FileAccess.Read, FileShare.ReadWrite, hashBuffer.Length, FileOptions.SequentialScan);
+            using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            int read;
+            while ((read = stream.Read(hashBuffer)) > 0) hash.AppendData(hashBuffer, 0, read);
+            return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "-";
+        }
+    }
+
+    //把每个字段以十进制长度前缀写进哈希流，避免路径里出现分隔符导致拼接歧义
+    private static void AppendDescriptor(IncrementalHash hash, params string[] fields)
+    {
+        foreach (string field in fields)
+        {
+            byte[] utf8 = Encoding.UTF8.GetBytes(field);
+            hash.AppendData(Encoding.UTF8.GetBytes(utf8.Length.ToString(CultureInfo.InvariantCulture)));
+            hash.AppendData([(byte)'\n']);
+            hash.AppendData(utf8);
+            hash.AppendData([(byte)'\n']);
+        }
     }
 
     /// <summary>原子写出伴生文件。</summary>

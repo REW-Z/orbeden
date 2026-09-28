@@ -258,4 +258,8 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
     <ClInclude Include="Src\Editor\AssetInspection.h" />
     <ClCompile Include="Src\Editor\AssetInspection.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc"></ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico"></Image>
+  </ItemGroup>
 </Project>

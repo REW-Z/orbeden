@@ -71,6 +71,20 @@ private:
     std::atomic_bool repaintRequested = true;
     bool continuousRepaint = false;
 
+    //一次后台脚本构建的结果。完成回调发生在托管侧绘制中途，
+    //切换程序集与进入 Play 都不能在那时做，所以只记结果，留到帧边界统一应用
+    struct ScriptBuildResult
+    {
+        bool succeeded = false;
+        bool cancelled = false;
+        bool compiled = false;
+        int32 reimportedCount = 0;
+    };
+    bool scriptBuildRunning = false;
+    bool scriptBuildCompleted = false;
+    bool pendingPlayAfterScriptBuild = false;
+    ScriptBuildResult pendingScriptBuildResult;
+
 public:
     EditorSystem(Application& application, const char* startupExecutablePath);
     ~EditorSystem();
@@ -113,6 +127,12 @@ public:
 
     //请求构建当前项目 C# 脚本
     void RequestBuildScripts();
+
+    //请求刷新：重导已加载资源，脚本过期时重新编译并重载程序集
+    void RequestRefresh();
+
+    //接收托管侧后台脚本构建的结算；只记结果，帧边界才应用
+    void CompleteScriptBuild(bool succeeded, bool cancelled, bool compiled, int32 reimportedCount);
 
     //请求构建并热重载当前项目 C++ 模块。
     void RequestBuildNative();
@@ -234,6 +254,15 @@ private:
 
     //运行外部命令
     bool RunCommand(const std::string& command, const char* actionName);
+
+    //准备脚本构建：定位脚本工程、修复 MSBuild 配置、同步 Core C# 运行库引用
+    bool PrepareScriptBuild(std::string& outScriptProject, std::string& outError) const;
+
+    //应用后台脚本构建的结算结果：重载程序集、写状态、必要时进 Play
+    void ApplyCompletedScriptBuild();
+
+    //进入 Play-In-Editor；产物检查由调用方完成
+    void StartPlayMode();
 
     //绘制一个托管面板
     void DrawManagedPanel(int32 handle);

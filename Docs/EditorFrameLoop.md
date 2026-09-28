@@ -50,7 +50,7 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 | 理由 | 来源 |
 | --- | --- |
 | 有输入事件 | 键鼠、窗口消息 |
-| 有人请求重绘 | 面板自己（每秒刷新的 Profiler）、日志写入、自走的动画（聚焦飞行） |
+| 有人请求重绘 | 面板自己（每秒刷新的 Profiler）、日志写入、自走的动画（聚焦飞行）、后台任务在跑（`EditorRefresh` 每帧请求） |
 | 连续重绘中 | 有控件处于活动或拖拽中、浮动窗口在交互、模态暗化层正在淡入淡出、Play 中且未暂停 |
 | 到点了 | 宽限期内的 1 秒超时；连续重绘时按目标帧率节流 |
 
@@ -87,6 +87,7 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 
 1. **要连续几帧才完成的表现，必须自己每帧请求重绘**——动画、进度、需要连续刷新的自绘都算。相机聚焦动画就是这么做的：`EditorScene::Update` 每帧推进曲线的同时由 `IsAnimatingFocus()` 让 `EditorSystem::Update` 请求重绘，0.4 秒走完自然停下，不需要收尾逻辑。
    这条代价很实在：缺少请求时表现不会报错，只会「等一秒突然到位」——空闲唤醒那一帧的 `DeltaTime` 是真实的约 1 秒，靠逐帧累积的动画一步就顶满了。（模态暗化层同样需要连续帧，但它已经归入框架的 `continuousRepaint`，见上文，弹窗自己不必再请求。）
+   后台构建同理：`EditorRefresh` 在子进程存活期间每帧请求重绘，进度条的**脉冲相位按墙上时钟算**而不是累积 `DeltaTime`，所以就算中间漏了几帧也不会跳变。
 2. **不要无事每帧请求重绘**，那会把空闲 CPU 从 0 拉起来。只请求需要的次数：一次性的刷新请求一次，周期性的用 `EditorPanel.RequestPeriodicRepaint`。
 3. **不要把时间推进放在空闲帧上**。空闲唤醒帧的模拟 delta 是 0，靠帧数量累积的逻辑（计时、动画曲线）在空闲时会停住。
 
@@ -96,6 +97,8 @@ Immediate GUI 里控件不是对象，而是函数调用：`EditorGUI.Button("OK
 | --- | --- |
 | `OrbedenEditor/Src/editor_main.cpp` | 主循环、宽限期、三种等待的选择 |
 | `OrbedenEditor/Src/Editor/EditorSystem.cpp` | `RequestRepaint` / `TakeRepaintRequest` / `NeedsContinuousRepaint`、日志唤醒注册 |
+| `OrbedenEditor/Managed/Orbeden.Editor/EditorRefresh.cs` | 后台脚本构建：每帧推进、自己请求重绘 |
+| `OrbedenEditor/Managed/Orbeden.Editor/EditorProgress.cs` | 进度状态与两个展示位（状态栏细条、模态浮窗） |
 | `OrbedenCore/Src/Platform/GlfwWindow.cpp` | `WaitEvents` / `WaitEventsTimeout` / `WakeEventLoop` 的实现 |
 | `OrbedenCore/Src/Application.cpp` | `WaitForNextFrame` 与 `WaitUntilFrameTime`：限帧、容差与自旋窗口 |
 | `OrbedenEditor/Managed/Orbeden.Editor/EditorApplication.cs` | 托管侧 `RequestRepaint()` |

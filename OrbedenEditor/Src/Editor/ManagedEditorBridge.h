@@ -19,6 +19,7 @@ private:
     void* SetPanelVisibleFunction = nullptr;
     void* DrawSceneGizmosFunction = nullptr;
     void* DrawStatusBarFunction = nullptr;
+    void* DrawProgressOverlayFunction = nullptr;
     void* LoadGameAssemblyFunction = nullptr;
     void* UnloadGameAssemblyFunction = nullptr;
     void* PublishGameAotFunction = nullptr;
@@ -32,6 +33,7 @@ private:
     void* RequestCopySelectedFunction = nullptr;
     void* RequestPasteSelectedFunction = nullptr;
     void* RequestToggleActiveSelectedFunction = nullptr;
+    void* RequestScriptBuildFunction = nullptr;
     bool initialized = false;
 
 public:
@@ -69,6 +71,9 @@ public:
     //绘制底部状态栏内容。
     void DrawStatusBar();
 
+    //绘制后台任务的进度浮层，必须在顶层窗口上下文调用。
+    void DrawProgressOverlay();
+
     //保存托管 Editor 暂存的项目数据。
     bool SaveProjectState();
 
@@ -98,6 +103,9 @@ public:
 
     //请求当前聚焦的面板切换选中项的激活状态。
     void RequestToggleActiveSelected();
+
+    //请求托管侧异步构建脚本工程；reimport 为真时先重导已加载资源，outdated 为假时跳过编译。
+    void RequestScriptBuild(const std::string& scriptProject, bool reimport, bool outdated);
 
     // 使用 Editor C# 发布用户游戏 NativeAOT 库。
     bool PublishGameAot(const std::string& repositoryRoot,

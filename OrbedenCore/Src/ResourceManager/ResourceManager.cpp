@@ -59,6 +59,22 @@ namespace
         return nullptr;
     }
 
+    //收集指定范围内已加载资源涉及的源文件 Key 并去重；target 为空表示全部
+    List<std::string> CollectMatchingSources(const std::string& target, bool prefix)
+    {
+        List<std::string> sources;
+        for (const auto& pair : GetResourceRuntime().records)
+        {
+            const std::string source = ResourceManager::GetSourceKey(pair.first);
+            if (source.empty()) continue;
+            bool matched = target.empty() || source == target
+                || (prefix && source.size() > target.size()
+                    && source.compare(0, target.size(), target) == 0 && source[target.size()] == '/');
+            if (matched && std::find(sources.begin(), sources.end(), source) == sources.end()) sources.push_back(source);
+        }
+        return sources;
+    }
+
     //正在加载中的资源 Key，防止跨文件引用成环时无限递归
     std::unordered_set<std::string>& GetLoadingAssetKeys()
     {
@@ -249,16 +265,7 @@ uint32 ResourceManager::Reimport(const std::string& key, bool prefix, const std:
     const std::string target = key.empty() ? std::string() : GetSourceKey(ToResourceKey(key));
 
     //先收集命中的源文件 Key：边遍历边导入会让记录表迭代器失效
-    List<std::string> sources;
-    for (const auto& pair : GetResourceRuntime().records)
-    {
-        const std::string source = GetSourceKey(pair.first);
-        if (source.empty()) continue;
-        bool matched = target.empty() || source == target
-            || (prefix && source.size() > target.size()
-                && source.compare(0, target.size(), target) == 0 && source[target.size()] == '/');
-        if (matched && std::find(sources.begin(), sources.end(), source) == sources.end()) sources.push_back(source);
-    }
+    List<std::string> sources = CollectMatchingSources(target, prefix);
 
     //重新导入读源文件并原地写入原对象，各资源按自身脏标记重建 GPU 资源。
     //设置表按源文件 Key 逐个取用，因此整目录重导也能各自带上自己的导入设置。
@@ -268,6 +275,14 @@ uint32 ResourceManager::Reimport(const std::string& key, bool prefix, const std:
         (void)collection;
     }
     return static_cast<uint32>(sources.size());
+}
+
+//收集已加载资源涉及的源文件 Key，去重后按序数升序排列；调用方按此逐个判定是否需要重导
+List<std::string> ResourceManager::CollectLoadedSources()
+{
+    List<std::string> sources = CollectMatchingSources(std::string(), false);
+    std::sort(sources.begin(), sources.end());
+    return sources;
 }
 
 //注册导入出来的资源对象

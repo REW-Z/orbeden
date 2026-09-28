@@ -1261,6 +1261,18 @@ namespace
         return ImGui::IsMouseDown(static_cast<ImGuiMouseButton>(button)) ? 1 : 0;
     }
 
+    //在屏幕位置绘制资源图标并应用指定颜色
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawIcon(const uint8* name, int32 length, const vector2* position,
+        float32 size, const color* tint)
+    {
+        if (!position || !tint || !std::isfinite(size) || size <= 0.0f) return;
+        ImTextureID texture = EditorIcons::Get(ReadUtf8Text(name, length), size);
+        if (texture == 0) return;
+        ImGui::GetWindowDrawList()->AddImage(texture, ImVec2(position->x, position->y),
+            ImVec2(position->x + size, position->y + size), ImVec2(0, 0), ImVec2(1, 1),
+            ImGui::GetColorU32(ToImVec4(*tint)));
+    }
+
     //在指定位置绘制被裁剪的文本
     void ORBEDEN_NATIVE_CALL EditorGuiDrawTextClipped(const vector2* clipMin, const vector2* clipMax,
         const vector2* position, const color* value, const uint8* text, int32 length, float32 fontSize)
@@ -1753,6 +1765,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.drawPolyline = reinterpret_cast<void*>(&EditorGuiDrawPolyline);
     api.isItemActive = reinterpret_cast<void*>(&EditorGuiIsItemActive);
     api.isMouseDown = reinterpret_cast<void*>(&EditorGuiIsMouseDown);
+    api.drawIcon = reinterpret_cast<void*>(&EditorGuiDrawIcon);
     return api;
 }
 

@@ -90,6 +90,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<vector2*, int, color*, float, vector2*, vector2*, void> DrawPolyline;
     public delegate* unmanaged[Cdecl]<byte> IsItemActive;
     public delegate* unmanaged[Cdecl]<int, byte> IsMouseDown;
+    public delegate* unmanaged[Cdecl]<byte*, int, vector2*, float, color*, void> DrawIcon;
 }
 #pragma warning restore CS0649
 
@@ -845,6 +846,14 @@ internal static unsafe class NativeEditorGUI
     internal static void EndDisabled()
     {
         if (initialized && api.EndDisabled != null) api.EndDisabled();
+    }
+
+    /// <summary>在屏幕位置绘制资源图标，应用颜色并保留透明度。</summary>
+    internal static void DrawIcon(string name, vector2 position, float size, color tint)
+    {
+        if (!initialized || api.DrawIcon == null || !float.IsFinite(size) || size <= 0f) return;
+        byte[] bytes = Encode(name);
+        fixed (byte* pointer = bytes) api.DrawIcon(pointer, bytes.Length, &position, size, &tint);
     }
 
     //绘制一条屏幕空间折线，可选裁剪矩形；指针只在本次调用内有效

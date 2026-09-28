@@ -23,9 +23,9 @@ internal sealed class BuildGamePanel : EditorPanel
         EditorGUI.BeginDisabled(root.Length == 0);
         try
         {
-            if (EditorGUI.Button("Build Game C#")) EditorApplication.RequestBuild(EditorBuildKind.Scripts);
+            if (EditorGUI.Button("Build Game C#")) EditorApplication.RequestEditorAction(EditorRequestKind.Scripts);
             EditorGUI.SameLine();
-            if (EditorGUI.Button("Build Game C++")) EditorApplication.RequestBuild(EditorBuildKind.Native);
+            if (EditorGUI.Button("Build Game C++")) EditorApplication.RequestEditorAction(EditorRequestKind.Native);
 
             //显示平台可用性并保存选择
             string[] targets = EditorApplication.GetProjectText(EditorProjectField.PlayerTargets).Split('\0');
@@ -49,7 +49,7 @@ internal sealed class BuildGamePanel : EditorPanel
                 finally { EditorGUI.EndCombo(); }
             }
             EditorGUI.SameLine();
-            if (EditorGUI.Button("Build Player")) EditorApplication.RequestBuild(EditorBuildKind.Player);
+            if (EditorGUI.Button("Build Player")) EditorApplication.RequestEditorAction(EditorRequestKind.Player);
         }
         finally { EditorGUI.EndDisabled(); }
         string status = EditorApplication.GetProjectText(EditorProjectField.Status);

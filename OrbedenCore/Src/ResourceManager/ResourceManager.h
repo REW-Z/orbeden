@@ -47,6 +47,9 @@ public:
     //settingsTable 是 "源Key\t设置名\t值" 行表；为空时全部按语义自动推断
     static uint32 Reimport(const std::string& key, bool prefix, const std::string& settingsTable = "");
 
+    //收集已加载资源涉及的源文件 Key，去重后按序数升序排列
+    static List<std::string> CollectLoadedSources();
+
     //把已加载资源的 Key 迁移到新路径，对象身份保持不变，返回迁移的记录数
     static uint32 RemapKeys(const std::string& oldKey, const std::string& newKey, bool prefix);
 

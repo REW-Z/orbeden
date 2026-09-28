@@ -56,8 +56,25 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 | Blobs | 生成 | 本次生成的全部对象文件名，包括可达依赖 |
 | Data.Objects | 生成 | 完整资源 Key、原生类型、BlobName、反射摘要 |
 | Data.Messages | 生成 | 导入器警告 |
+| Runtime | 生成 | 运行态导入快照，见下 |
 
 **重新导入只重建生成部分，`Settings` 原样保留**——这是伴生文件与纯缓存的根本区别。
+
+#### Runtime 段与 Ctrl+R 条件重导
+
+`Runtime` 记录 **主进程运行态**最后一次导入的输入：`Inputs`（输入文件及其长度与修改时间）、`SettingsHash`、`ContentHash`（输入内容与设置的内容指纹）。
+
+**它必须与 `Dependencies` 分开，因为两者描述的不是一件事**：`Dependencies` 由 `--inspect-asset` 工作进程独占维护，而工作进程是另一个进程——它把 `Dependencies` 的时间戳刷成新的，只说明"工作进程见过当前内容"，**不代表主进程的运行态对象被重新导入了**。所以：
+
+- **`Runtime` 只由 `Ctrl+R`（Refresh）的条件重导路径写**，工作进程永不触碰。写回时只替换 `Runtime` 字段，不动 `Dependencies`——改了 `Dependencies` 会让清单被判为有效，从而压制工作进程对该源的重新导入，产物与 `Data` 会停在旧内容上。
+- 判定顺序：`Runtime` 缺席则重导（保守）；否则先比 `Inputs` 的时间戳与 `SettingsHash`（**不读文件内容**），全部相符即跳过；时间戳变了才算 `ContentHash`，相同则跳过——这让"文件被动过但内容没变"（`git checkout` 回来、备份还原）不再触发重导。
+- 这条路径**只服务 `Ctrl+R` 与 Project 面板右键菜单里的 `Refresh`**（两者走同一个入口）。同一菜单里的 `Reimport` / `Reimport All` 保持无条件强制重导，语义分明；顶部 Project 菜单只留新建与载入，不挂这三项。
+- 判定结果会打进 Console：一条汇总（`Refresh: N of M loaded source(s) need reimporting.`）加逐源的原因（`no recorded runtime import` / `content changed` / `import settings changed`），最多列 50 条以免冲掉日志窗口。
+- 命中键**不含导入器版本**，这是有意的：改了引擎的导入逻辑（例如 `Import_IMG` 的默认色空间推断）之后，未变资源不会因 Ctrl+R 而重导，需要靠递增 `CurrentVersion` 或显式 Reimport。Unity 把 importer ID 与 importer version 纳入判定，我们这一维暂缺。
+- 命中键里的**目标平台是占位**（`EditorAssetCache.PlatformMatches` 恒为真，带 TODO）：引擎的导入与 cook 都是平台无关的——`ImportSource` 不接受平台参数、`AssetImportSettings` 只有三个字段、五个 Player 目标里只有 Windows x64 可用。多平台导入落地时改成把平台存进 `RuntimeImport` 并在判定里比对。
+- 已知缺口：给 `#include` 之外的依赖维度（例如某文件的存在性改变了 include 解析结果）在时间戳全符时无法察觉；若给 shader 新增 `#include`，那个新文件要等工作进程重扫进 `Dependencies` 后才能参与指纹。
+
+指纹用 SHA-256（BCL 自带，`NuGet.config` 已清空包源），输入集合按相对路径序数排序后以长度前缀编码，避免拼接歧义；大文件流式分块读取，不整块进内存。
 
 `Settings` 可以缺席：没有伴生文件、或伴生文件由更早版本写下时都按空处理，行为与"全部自动推断"一致，因此老项目升级后画面不变。
 

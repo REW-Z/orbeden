@@ -25,6 +25,9 @@ public static class EditorStatusBar
     //绘制状态栏内容。原生每帧在底边栏里调用，这里不请求重绘：状态随 Print 与日志写入而变
     internal static void Draw()
     {
+        //有后台任务时整行让给进度条，任务结束后自动回落到日志文本
+        if (EditorProgress.DrawStatusBarRow()) return;
+
         long newest = RefreshConsoleMessage();
         if (printed.Length != 0 && printedRevision == newest)
         {

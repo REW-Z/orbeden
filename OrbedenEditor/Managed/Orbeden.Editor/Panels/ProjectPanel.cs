@@ -576,11 +576,10 @@ internal sealed class ProjectPanel : EditorPanel
                 DrawCreateMenu(canModify);
                 if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
                 if (EditorGUI.MenuItem("Paste", canModify && EditorAssetClipboard.HasEntry)) PasteEntry(currentDirectory);
-                if (EditorGUI.MenuItem("Refresh"))
-                {
-                    EditorAssetCatalog.Instance.Refresh();
-                    status = "Assets refreshed.";
-                }
+                //Refresh 与 Ctrl+R 是同一条路径：重导已加载资源、脚本过期时重编、重载程序集。
+                //执行结果走原生的项目状态与 Console，不在这里写面板自己的 status
+                if (EditorGUI.MenuItem("Refresh", canModify))
+                    EditorApplication.RequestEditorAction(EditorRequestKind.Refresh);
                 //这里的 Reimport 以当前目录为范围，覆盖其下全部已加载资源
                 if (EditorGUI.MenuItem("Reimport")) ReimportEntry(currentDirectory);
                 if (EditorGUI.MenuItem("Reimport All")) ReimportAll();
@@ -948,11 +947,9 @@ internal sealed class ProjectPanel : EditorPanel
         if (EditorGUI.MenuItem("Create Folder", canModify)) CreateFolder();
         DrawCreateMenu(canModify);
         if (EditorGUI.MenuItem("Import...", canModify)) ImportFile();
-        if (EditorGUI.MenuItem("Refresh"))
-        {
-            EditorAssetCatalog.Instance.Refresh();
-            status = "Assets refreshed.";
-        }
+        //Refresh 与 Ctrl+R 是同一条路径：重导已加载资源、脚本过期时重编、重载程序集
+        if (EditorGUI.MenuItem("Refresh", canModify))
+            EditorApplication.RequestEditorAction(EditorRequestKind.Refresh);
 
         //Reimport 重读磁盘上的源文件，会改已加载对象的内容，空白处的背景菜单也放一份
         EditorGUI.Separator();

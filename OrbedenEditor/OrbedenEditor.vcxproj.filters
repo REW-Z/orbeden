@@ -149,4 +149,8 @@
     <ClInclude Include="Src\Editor\AssetInspection.h" />
     <ClCompile Include="Src\Editor\AssetInspection.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc"><Filter>资源文件</Filter></ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico"><Filter>资源文件</Filter></Image>
+  </ItemGroup>
 </Project>

@@ -57,9 +57,12 @@ internal sealed class WelcomePanel : EditorPanel
         NativeEditorGUI.InvisibleButton("##welcome_hero", new vector2(Math.Max(1, available), 174));
         float left = origin.x + margin;
         float right = left + width;
-        Fill(left, origin.y + 35, 7, 62, theme.Active, 3);
-        Text(left + 23, origin.y + 34, right, 16, "WELCOME TO", Muted(theme), 12);
-        Text(left + 21, origin.y + 56, right, 46, "ORBEDEN", theme.Text, 36);
+        //按背景亮度绘制黑白品牌图标
+        float brightness = theme.Background.r * 0.2126f + theme.Background.g * 0.7152f + theme.Background.b * 0.0722f;
+        color iconTint = brightness < 0.5f ? new color(1, 1, 1, 1) : new color(0, 0, 0, 1);
+        NativeEditorGUI.DrawIcon("Orbeden", new vector2(left - 8, origin.y + 24), 88, iconTint);
+        Text(left + 92, origin.y + 34, right, 16, "WELCOME TO", Muted(theme), 12);
+        Text(left + 90, origin.y + 56, right, 46, "ORBEDEN", theme.Text, 36);
         Text(left, origin.y + 118, right, 28, "Your next world starts here.", Muted(theme), 16);
 
         DrawActions(available, margin, width, theme);

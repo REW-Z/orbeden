@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Orbeden</title>
+  <desc id="desc">An open orb crowned by a curved leaf with a tapered cutout vein and an empty center.</desc>
+  <g fill="#000">
+    <path d="M124 36C70 36 28 79 28 132C28 187 73 232 128 232C183 232 228 187 228 132H200C200 172 168 204 128 204C88 204 56 172 56 132C56 94 86 64 124 64Z"/>
+    <path d="M140 116C122 75 161 37 224 28C228 84 197 126 151 124C159 103 176 81 198 58C171 75 152 94 140 116Z"/>
+  </g>
+</svg>
