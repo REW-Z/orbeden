@@ -411,7 +411,11 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 164);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
-        ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 64);
+        ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 80);
+        //尺寸相同也可能字段次序不同，把新增字段的位置一并钉住
+        if (Marshal.OffsetOf<EditorPropertyAbi>(nameof(EditorPropertyAbi.TypeName)).ToInt32() != 32
+            || Marshal.OffsetOf<EditorPropertyAbi>(nameof(EditorPropertyAbi.Value)).ToInt32() != 48)
+            throw new TypeLoadException("EditorPropertyAbi ABI layout mismatch.");
         ValidateSize<EditorComponentSnapshotAbi>(nameof(EditorComponentSnapshotAbi), 32);
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);

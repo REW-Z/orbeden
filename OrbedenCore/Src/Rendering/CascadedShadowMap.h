@@ -65,6 +65,20 @@ public:
     void CaptureDepth(const RenderCamera& camera);
 
 private:
+    //阴影批次被跳过的原因位，同一原因只报一次，便于定位"某个物体没阴影"
+    enum ShadowSkipReason : uint32
+    {
+        ShadowSkipInstances = 1u << 0,
+        ShadowSkipMesh = 1u << 1,
+        ShadowSkipUpload = 1u << 2,
+        ShadowSkipBind = 1u << 3,
+        ShadowSkipStaticGroup = 1u << 4,
+    };
+    uint32 reportedShadowSkips = 0;
+
+    //记录一次阴影批次跳过，同一原因只报一次
+    void ReportShadowSkip(uint32 reason, const DrawBatch& batch, const char* detail);
+
     //判断统计是否适用于当前相机
     static bool CanReuseView(const RenderCamera& previous, const RenderCamera& current, float32 maxDistance);
     //创建指定尺寸的 atlas

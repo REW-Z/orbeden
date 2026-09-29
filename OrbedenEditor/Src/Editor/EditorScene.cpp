@@ -578,7 +578,7 @@ void EditorScene::DrawSceneOverlay()
     managedBridge.DrawSceneGizmos(true);
     HandleSelection(scene);
     SubmitSelectionHighlight(world);
-    componentGizmos.Draw(world, *this, gizmoView);
+    componentGizmos.Draw(world, *this, gizmoView, scene);
     DrawGizmoHandles();
     //罗盘是视口部件而非组件 Gizmo：放在最后画，且不受 Gizmos 开关影响
     EditorGizmoHandles::DrawAxisCompass(gizmoView);
@@ -1149,7 +1149,7 @@ void EditorScene::HandleSelection(const RenderScene& scene)
     vector3 hitPosition;
     const vector2 mouse { io.MousePos.x, io.MousePos.y };
     //Gizmo 画在场景之上，先按屏幕距离拾取：没有网格的 Ens 只能靠它点选
-    if (!componentGizmos.Pick(app.GetWorld(), *this, gizmoView, mouse, hit))
+    if (!componentGizmos.Pick(app.GetWorld(), *this, gizmoView, scene, mouse, hit))
         RaycastScene(scene, mouse, hit, hitPosition);
     if (selectionCtrl)
     {
@@ -1522,6 +1522,7 @@ void EditorScene::DrawGizmoToolbar()
             ImGui::Checkbox("Show Gizmos", &componentGizmos.enabled);
             ImGui::Separator();
             ImGui::Checkbox("Directional Lights", &componentGizmos.lights);
+            ImGui::Checkbox("Cameras", &componentGizmos.cameras);
             ImGui::Checkbox("Colliders", &componentGizmos.colliders);
             ImGui::Checkbox("All Colliders", &componentGizmos.allColliders);
             ImGui::EndPopup();

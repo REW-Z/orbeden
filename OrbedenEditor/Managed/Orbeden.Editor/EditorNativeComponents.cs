@@ -83,6 +83,7 @@ internal struct EditorPropertyAbi
 {
     public EditorTextAbi Name;
     public EditorTextAbi ReferenceType;
+    public EditorTextAbi TypeName;
     public EditorValueAbi Value;
     public InteropValueKind DeclaredKind;
     public uint Reserved;
@@ -111,6 +112,7 @@ internal static unsafe class EditorNativeComponents
         internal PropertyDescriptor Descriptor;
         internal byte[] Name = [];
         internal byte[] ReferenceType = [];
+        internal byte[] TypeName = [];
         internal byte[] Text = [];
         internal ulong PayloadLow;
         internal ulong PayloadHigh;
@@ -186,7 +188,8 @@ internal static unsafe class EditorNativeComponents
             changed = field.Descriptor.Kind != source.DeclaredKind
                 || field.Descriptor.IsFixedSize != ((source.Reserved & 1) != 0)
                 || !source.Name.Bytes.SequenceEqual(field.Name)
-                || !source.ReferenceType.Bytes.SequenceEqual(field.ReferenceType);
+                || !source.ReferenceType.Bytes.SequenceEqual(field.ReferenceType)
+                || !source.TypeName.Bytes.SequenceEqual(field.TypeName);
         }
         if (changed)
         {
@@ -199,9 +202,11 @@ internal static unsafe class EditorNativeComponents
                 ref EditorPropertyAbi source = ref snapshot.Properties[index];
                 PropertySnapshot field = new()
                 {
-                    Descriptor = new(source.Name.ToString(), source.DeclaredKind, source.ReferenceType.ToString(), IsFixedSize: (source.Reserved & 1) != 0),
+                    Descriptor = new(source.Name.ToString(), source.DeclaredKind, source.ReferenceType.ToString(),
+                        TypeName: source.TypeName.ToString(), IsFixedSize: (source.Reserved & 1) != 0),
                     Name = source.Name.Bytes.ToArray(),
                     ReferenceType = source.ReferenceType.Bytes.ToArray(),
+                    TypeName = source.TypeName.Bytes.ToArray(),
                 };
                 destination.Fields.Add(field);
                 destination.FieldsByName[field.Descriptor.Name] = field;

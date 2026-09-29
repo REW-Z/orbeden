@@ -940,6 +940,7 @@ namespace
     };
 
     //世界级渲染设置的读写载荷。skyboxKey 仅在当前同步调用期间借用。
+    //大气字段追加在原有 64 字节布局之后：托管侧按同一份偏移镜像结构，偏移由断言钉死。
     struct EditorWorldRenderSettingsAbi
     {
         EditorTextAbi skyboxKey;
@@ -949,8 +950,57 @@ namespace
         float32 ambientIntensity = 1.0f;
         float32 reflectionIntensity = 1.0f;
         EditorTextAbi reflectionEnvironmentKey;
+        //天空模式与大气参数
+        uint32 skyMode = 0;
+        uint32 fogEnabled = 0;
+        uint32 quality = 0;
+        uint32 atmosphereReserved = 0;
+        //地心，单位为米
+        float64 planetCenterX = 0.0;
+        float64 planetCenterY = -6371000.0;
+        float64 planetCenterZ = 0.0;
+        float32 metersPerWorldUnit = 1.0f;
+        float32 aerosolDensity = 1.0f;
+        float32 sunRadianceScale = 20.0f;
+        float32 atmosphereReservedTail = 0.0f;
+        //浓雾参数：能见度、参考高度、层厚、过渡与散射倍率
+        uint32 denseFogEnabled = 0;
+        uint32 denseFogReserved = 0;
+        float32 fogVisibilityMeters = 200.0f;
+        float32 fogReferenceHeight = 0.0f;
+        float32 fogLayerHeight = 100.0f;
+        float32 fogFade = 30.0f;
+        float32 fogScatteringScale = 1.0f;
+        float32 fogSunScatteringScale = 1.0f;
+        float32 denseFogReservedTail = 0.0f;
+        float32 fogTopFadeMeters = 20.0f;
+        uint32 fogDebugView = 0;
+        float32 denseFogReservedTail2 = 0.0f;
     };
-    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 64);
+    static_assert(sizeof(EditorWorldRenderSettingsAbi) == 168);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, skyMode) == 64);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogEnabled) == 68);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, quality) == 72);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, atmosphereReserved) == 76);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterX) == 80);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterY) == 88);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, planetCenterZ) == 96);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, metersPerWorldUnit) == 104);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, aerosolDensity) == 108);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, sunRadianceScale) == 112);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, atmosphereReservedTail) == 116);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogEnabled) == 120);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReserved) == 124);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogVisibilityMeters) == 128);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogReferenceHeight) == 132);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogLayerHeight) == 136);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogFade) == 140);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogScatteringScale) == 144);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogSunScatteringScale) == 148);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail) == 152);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopFadeMeters) == 156);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogDebugView) == 160);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail2) == 164);
 
     //读取世界级渲染设置。Key 借用 World 里的字符串，只在本次调用期间有效。
     uint8 ORBEDEN_NATIVE_CALL GetManagedWorldRenderSettings(void* context, EditorWorldRenderSettingsAbi* settings)
@@ -968,6 +1018,24 @@ namespace
         settings->ambientIntensity = source.ambientIntensity;
         settings->reflectionIntensity = source.reflectionIntensity;
         settings->reflectionEnvironmentKey = EditorTextAbi(source.reflectionEnvironment.GetInstanceId().GetPath());
+        settings->skyMode = static_cast<uint32>(source.skyMode);
+        settings->fogEnabled = source.atmosphere.fogEnabled ? 1u : 0u;
+        settings->quality = static_cast<uint32>(source.atmosphere.quality);
+        settings->planetCenterX = source.atmosphere.planetCenterX;
+        settings->planetCenterY = source.atmosphere.planetCenterY;
+        settings->planetCenterZ = source.atmosphere.planetCenterZ;
+        settings->metersPerWorldUnit = source.atmosphere.metersPerWorldUnit;
+        settings->aerosolDensity = source.atmosphere.aerosolDensity;
+        settings->sunRadianceScale = source.atmosphere.sunRadianceScale;
+        settings->denseFogEnabled = source.atmosphere.denseFog.enabled ? 1u : 0u;
+        settings->fogVisibilityMeters = source.atmosphere.denseFog.visibilityMeters;
+        settings->fogReferenceHeight = source.atmosphere.denseFog.referenceHeightMeters;
+        settings->fogLayerHeight = source.atmosphere.denseFog.layerHeightMeters;
+        settings->fogFade = source.atmosphere.denseFog.fadeMeters;
+        settings->fogScatteringScale = source.atmosphere.denseFog.scatteringScale;
+        settings->fogSunScatteringScale = source.atmosphere.denseFog.sunScatteringScale;
+        settings->fogTopFadeMeters = source.atmosphere.denseFog.topFadeMeters;
+        settings->fogDebugView = static_cast<uint32>(source.atmosphere.denseFog.debugView);
         return 1;
     }
 
@@ -993,6 +1061,28 @@ namespace
         target.ambientColor = color { settings->ambientColor[0], settings->ambientColor[1], settings->ambientColor[2], settings->ambientColor[3] };
         target.ambientIntensity = settings->ambientIntensity;
         target.reflectionIntensity = settings->reflectionIntensity;
+
+        //写入天空模式与大气参数
+        target.skyMode = static_cast<SkyMode>(settings->skyMode);
+        target.atmosphere.fogEnabled = settings->fogEnabled != 0;
+        target.atmosphere.quality = static_cast<AtmosphereQuality>(settings->quality);
+        target.atmosphere.planetCenterX = settings->planetCenterX;
+        target.atmosphere.planetCenterY = settings->planetCenterY;
+        target.atmosphere.planetCenterZ = settings->planetCenterZ;
+        target.atmosphere.metersPerWorldUnit = settings->metersPerWorldUnit;
+        target.atmosphere.aerosolDensity = settings->aerosolDensity;
+        target.atmosphere.sunRadianceScale = settings->sunRadianceScale;
+
+        //写入浓雾参数
+        target.atmosphere.denseFog.enabled = settings->denseFogEnabled != 0;
+        target.atmosphere.denseFog.visibilityMeters = settings->fogVisibilityMeters;
+        target.atmosphere.denseFog.referenceHeightMeters = settings->fogReferenceHeight;
+        target.atmosphere.denseFog.layerHeightMeters = settings->fogLayerHeight;
+        target.atmosphere.denseFog.fadeMeters = settings->fogFade;
+        target.atmosphere.denseFog.scatteringScale = settings->fogScatteringScale;
+        target.atmosphere.denseFog.sunScatteringScale = settings->fogSunScatteringScale;
+        target.atmosphere.denseFog.topFadeMeters = settings->fogTopFadeMeters;
+        target.atmosphere.denseFog.debugView = static_cast<int32>(settings->fogDebugView);
         editor->GetWorld().SetDirty();
     }
 
@@ -1044,6 +1134,8 @@ namespace
     {
         EditorTextAbi name;
         EditorTextAbi referenceType;
+        //字段的声明类型名，托管端按它找回同名枚举画下拉框
+        EditorTextAbi typeName;
         EditorValueAbi value;
         Reflection::ValueKind declaredKind = Reflection::ValueKind::Empty;
         uint32 reserved = 0;
@@ -1059,7 +1151,10 @@ namespace
 
     static_assert(sizeof(EditorTextAbi) == 16);
     static_assert(sizeof(EditorValueAbi) == 24);
-    static_assert(sizeof(EditorPropertyAbi) == 64);
+    static_assert(sizeof(EditorPropertyAbi) == 80);
+    static_assert(offsetof(EditorPropertyAbi, referenceType) == 16);
+    static_assert(offsetof(EditorPropertyAbi, typeName) == 32);
+    static_assert(offsetof(EditorPropertyAbi, value) == 48);
     static_assert(sizeof(EditorComponentSnapshotAbi) == 32);
 
     //读取内存中的类型化值
@@ -1238,6 +1333,7 @@ namespace
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field.name);
                 entry.declaredKind = kind;
+                entry.typeName = EditorTextAbi(field.typeName);
                 if (field.kind == Reflection::FieldKind::ObjectRef)
                 {
                     texts.emplace_back(field.typeName);
@@ -1300,6 +1396,7 @@ namespace
                 EditorPropertyAbi entry;
                 entry.name = EditorTextAbi(field->name);
                 entry.declaredKind = kind;
+                if (field->typeName) entry.typeName = EditorTextAbi(field->typeName);
                 if (field->kind == Reflection::FieldKind::EnsId) entry.referenceType = EditorTextAbi("EnsId");
                 else if (field->kind == Reflection::FieldKind::ObjectRef && field->objectRefTypeName)
                     entry.referenceType = EditorTextAbi(field->objectRefTypeName);

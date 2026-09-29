@@ -23,4 +23,14 @@ namespace ContentMigration
 
     //按起始版本迁移内容根。起始版本已经达到当前版本时不做事，返回 true。
     bool MigrateForVersion(const std::string& contentRoot, uint32 fromVersion, MigrationReport& outReport, std::string& outError);
+
+    //铺入 v29 的大气 Shader 与 include，并把仍等于 v28 基线的内置 Shader 换成接入空气透视的版本。
+    //升级器保留 Content，内置内容不会随模板重铺，只能在这里显式发布。报告与 MigrateForVersion 累加。
+    bool MigrateAtmosphereAssets(const std::string& contentRoot, const std::string& templateRoot,
+        MigrationReport& outReport, std::string& outError);
+
+    //铺入 v30 的浓雾 include，并把仍等于 v29 基线的大气 include 与两处天空绘制换成接入浓雾的版本。
+    //skybox 来自 Project/Content，其余来自 Builtin，两者的模板来源目录不同。
+    bool MigrateDenseFogAssets(const std::string& contentRoot, const std::string& templateRoot,
+        MigrationReport& outReport, std::string& outError);
 }

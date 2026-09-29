@@ -48,6 +48,7 @@ uniform float u_Opacity;
 uniform float u_TintStrength;
 uniform vec4 u_TintColor;
 out vec4 FragColor;
+#include "Builtin/atmosphere_sampling.orbinc"
 
 //沿负 V 方向平移水滴并累积上方水痕
 float SampleRainLayer(vec2 uv, float time, float seed)
@@ -86,7 +87,8 @@ void main()
 {
     if (!u_UseCameraTextures)
     {
-        FragColor = vec4(0.0);
+        //没有相机颜色时退化成普通表面，按表面规则合成空气透视
+        FragColor = vec4(ApplyAtmosphereToSurface(vec3(0.0), v_WorldPosition, GetAtmosphereScreenUv()), 0.0);
         return;
     }
 
@@ -123,5 +125,7 @@ void main()
     float nDotL = max(dot(wetNormal, lightDir), 0.0);
     float highlight = pow(max(dot(wetNormal, halfDir), 0.0), 160.0) * clamp(height, 0.0, 1.0) * nDotL;
     vec3 reflection = u_LightColor.rgb * max(u_LightIntensity, 0.0) * (0.025 * fresnel + 0.18 * highlight);
-    FragColor = vec4(transmitted + reflection, clamp(u_Opacity, 0.0, 1.0));
+    //透射光取自已加雾的背景，本地反光只乘该表面的透光率，不重复叠加散射
+    AtmosphereSample atmosphere = SampleSurfaceAtmosphere(v_WorldPosition, GetAtmosphereScreenUv());
+    FragColor = vec4(transmitted + reflection * atmosphere.transmittance, clamp(u_Opacity, 0.0, 1.0));
 }

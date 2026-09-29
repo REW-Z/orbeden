@@ -95,7 +95,7 @@ public:
     bool srgb = false;
 };
 
-//GPU 渲染目标创建描述，可创建颜色+深度或纯深度目标。
+//GPU 渲染目标创建描述，可创建颜色+深度、纯深度或无深度颜色目标。
 struct GpuRenderTargetDesc
 {
 public:
@@ -103,6 +103,9 @@ public:
     int32 height = 0;
     GpuDepthTextureID depthTexture;
     bool depthOnly = false;
+    //只是颜色附件，不挂深度。仅 depthOnly=false 且 depthTexture 无效时合法，
+    //中间结果这类不需要深度测试的目标用它省一次深度分配。
+    bool colorOnly = false;
     bool linearColorFilter = false;
     //默认 RGBA8：显示目标与掩码目标都在这个格式下工作，
     //只有场景缓冲需要显式声明 RGBA16F 承载线性 HDR。
@@ -212,6 +215,8 @@ public:
 
     //实例化能力在初始化时确定，绘制期间不再查询 GL。
     virtual bool SupportsInstancing() const = 0;
+    //片元着色器可用的纹理槽数量，初始化时确定，用于判断材质绑定是否越界。
+    virtual uint32 GetFragmentTextureUnitCount() const = 0;
     //把数据流式写入已有顶点缓冲，超出容量的请求被拒绝。
     virtual bool UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity) = 0;
     //把索引流式写入已有索引缓冲，同时刷新引用它的顶点输入的索引数量缓存。

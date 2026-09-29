@@ -100,6 +100,27 @@ bool CascadedShadowMap::CreateAtlas()
     return true;
 }
 
+//记录一次阴影批次跳过，同一原因只报一次，避免每帧刷屏
+void CascadedShadowMap::ReportShadowSkip(uint32 reason, const DrawBatch& batch, const char* detail)
+{
+    if ((reportedShadowSkips & reason) != 0) return;
+    reportedShadowSkips |= reason;
+
+    std::string message = "Shadow caster batch skipped: ";
+    message += detail;
+    message += ". mode=";
+    message += std::to_string(static_cast<uint32>(batch.key.mode));
+    message += " items=";
+    message += std::to_string(batch.items.size());
+    message += " indexStart=";
+    message += std::to_string(batch.key.indexStart);
+    message += " indexCount=";
+    message += std::to_string(batch.key.indexCount);
+    message += " program=";
+    message += std::to_string(batch.key.programId);
+    Log::Error(message.c_str());
+}
+
 void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubmission>& submissions,
     const ParticleFrameSnapshot& particles, const RenderCamera& camera, const RenderDirectionalLight& light,
     Shader* depthShader, GpuResourceManager& resources, ParticleRenderer& particleRenderer,
@@ -244,6 +265,7 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
                 const StaticBatchGroup* group = staticBatchCache ? staticBatchCache->GetGroup(batch.staticGroup) : nullptr;
                 if (!group || !group->vertexInput.IsValid() || !depthPass.expandedProgram.IsValid())
                 {
+                    ReportShadowSkip(ShadowSkipStaticGroup, batch, "the persistent static group or expanded depth program is invalid");
                     continue;
                 }
 
@@ -260,19 +282,25 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
                 //实例化阴影：同一深度程序，实例数据走流式缓冲
                 //被拒绝的项已经计入 invalidTransforms，这里没有可画的实例就直接跳过
                 stats.invalidTransforms += particleRenderer.BuildMeshInstances(batch, shadowItems, shadowInstances);
-                if (shadowInstances.empty()) continue;
+                if (shadowInstances.empty())
+                {
+                    ReportShadowSkip(ShadowSkipInstances, batch, "no instance survived");
+                    continue;
+                }
 
                 const DrawItem& first = shadowItems[batch.items[0]];
                 const GpuMesh* mesh = resources.GetMesh(first.mesh);
                 if (!mesh || !mesh->instancedVertexInput.IsValid())
                 {
                     ++stats.invalidResources;
+                    ReportShadowSkip(ShadowSkipMesh, batch, "the instanced vertex input is invalid");
                     continue;
                 }
 
                 if (!stream.UploadMeshInstances(shadowInstances))
                 {
                     ++stats.failedUploads;
+                    ReportShadowSkip(ShadowSkipUpload, batch, "the instance upload was rejected");
                     continue;
                 }
 
@@ -283,6 +311,7 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
                 if (!backend->BindInstanceBuffer(stream.GetInstanceBuffer(), 0))
                 {
                     ++stats.failedUploads;
+                    ReportShadowSkip(ShadowSkipBind, batch, "the instance buffer bind was rejected");
                     continue;
                 }
 

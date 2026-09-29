@@ -2,7 +2,9 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "", string Label = "", bool IsFixedSize = false);
+//TypeName 是字段的声明类型名：枚举字段靠它找回同名枚举画下拉框，其余字段留空
+internal readonly record struct PropertyDescriptor(string Name, InteropValueKind Kind, string ReferenceType = "",
+    string Label = "", bool IsFixedSize = false, string TypeName = "");
 
 internal interface IPropertyTarget
 {
@@ -104,6 +106,8 @@ public sealed class PropertyValue
     public string Name { get; }
     public InteropValueKind Kind { get; }
     public string ReferenceType { get; }
+    //字段的声明类型名，枚举字段画下拉框时用来找枚举；其余字段为空
+    public string TypeName { get; }
     //行的显示名，空表示直接用 Name；Name 是存取用的标识，可能不适合直接展示
     public string Label { get; }
     public bool IsFixedSize { get; }
@@ -113,7 +117,8 @@ public sealed class PropertyValue
     internal bool Modified { get; private set; }
     internal bool IsReadable { get; set; } = true;
 
-    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label, bool isFixedSize = false)
+    internal PropertyValue(PropertyDocument owner, string name, InteropValueKind kind, string referenceType, string label,
+        bool isFixedSize = false, string typeName = "")
     {
         document = owner;
         Name = name;
@@ -121,6 +126,7 @@ public sealed class PropertyValue
         ReferenceType = referenceType;
         Label = label;
         IsFixedSize = isFixedSize;
+        TypeName = typeName;
     }
 
     public void SetValue(InteropValue newValue)
@@ -198,7 +204,8 @@ public sealed class PropertyDocument
                     if (!current.TryGetValue(name, out PropertyDescriptor descriptor) || descriptor != common[name]) common.Remove(name);
             }
             foreach ((string name, PropertyDescriptor descriptor) in common.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType, descriptor.Label, descriptor.IsFixedSize));
+                properties.Add(new PropertyValue(this, name, descriptor.Kind, descriptor.ReferenceType, descriptor.Label,
+                    descriptor.IsFixedSize, descriptor.TypeName));
             initialized = true;
             ++structureVersion;
         }

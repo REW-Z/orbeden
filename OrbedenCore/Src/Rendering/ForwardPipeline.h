@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/AtmosphereRenderer.h"
 #include "Rendering/Backend/RenderBackend.h"
 #include "Rendering/CascadedShadowMap.h"
 #include "Rendering/DrawBatchBuilder.h"
@@ -23,6 +24,9 @@ private:
 
     CascadedShadowMap shadows;
     GpuEnvironmentReflection environmentReflection;
+
+    //物理大气：查找表与程序化天空，按相机顺序复用同一套资源
+    AtmosphereRenderer atmosphere;
 
     //内置天空盒立方体网格。
     GpuMesh skyboxMesh;
@@ -65,6 +69,9 @@ private:
 
     //已经报过「材质缺少几何变体」的材质编号，同一材质只报一次，资源失效时清空
     std::unordered_set<int32> reportedMissingVariants;
+
+    //已经报过「空气透视纹理槽不足」的材质编号
+    std::unordered_set<int32> reportedAtmosphereOverflow;
 
     //刷新粒子渲染快照，runtime 与 preview 二选一。
     void CaptureParticleFrame(World& world);
@@ -154,8 +161,8 @@ private:
         GpuResourceManager& gpuResourceManager, const RenderDirectionalLight* mainLight, bool cameraTexturesReady,
         const GpuMaterial& material, std::unordered_set<uint32>& configuredPrograms);
 
-    //绑定一个批次的固定功能状态、公共 uniform 与材质参数。
-    void BindDrawState(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
+    //绑定一个批次的固定功能状态、公共 uniform 与材质参数；返回 false 表示该材质不允许配置
+    bool BindDrawState(const DrawBatch& batch, const RenderScene& scene, const RenderCamera& camera,
         const RenderDirectionalLight* mainLight, bool cameraTexturesReady, const GpuMaterial& material, uint32 programId,
         std::unordered_set<uint32>& configuredPrograms);
 

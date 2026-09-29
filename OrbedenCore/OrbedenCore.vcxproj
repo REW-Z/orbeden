@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -174,6 +174,7 @@
     <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h" />
     <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />
     <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h" />
+    <ClInclude Include="Src\Rendering\AtmosphereRenderer.h" />
     <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
     <ClInclude Include="Src\Rendering\ColorSpace.h" />
     <ClInclude Include="Src\Rendering\DrawBatchBuilder.h" />
@@ -216,6 +217,7 @@
     <ClInclude Include="Src\FileSystem\PathDefines.h" />
     <ClInclude Include="Src\Runtime\Reflection.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
+    <ClInclude Include="Src\Runtime\AtmosphereSettings.h" />
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
     <ClInclude Include="Src\ResourceManager\ResourceManager.h" />
     <ClInclude Include="Src\Runtime\Object\Material.h" />
@@ -262,6 +264,7 @@
     <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
     <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\AtmosphereRenderer.cpp" />
     <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
     <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp" />
     <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />

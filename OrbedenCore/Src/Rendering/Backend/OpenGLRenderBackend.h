@@ -33,6 +33,8 @@ private:
     CullMode cullMode = CullMode::None;
     //实例化能力，初始化时按 GL_MAX_VERTEX_ATTRIBS 判定一次
     bool instancingSupported = false;
+    //片元纹理槽上限，初始化时按 GL_MAX_TEXTURE_IMAGE_UNITS 查询一次
+    uint32 fragmentTextureUnitCount = 0;
     //当前混合方程，BeginFrame 重设为 Alpha 基线
     BlendMode blendMode = BlendMode::Alpha;
     //当前顶点输入绑定的实例缓冲及其字节偏移，用于绘制前校验范围
@@ -108,6 +110,7 @@ public:
     void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) override;
 
     bool SupportsInstancing() const override;
+    uint32 GetFragmentTextureUnitCount() const override;
     bool UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity) override;
     bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) override;
     bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) override;

@@ -1,7 +1,10 @@
 #include <cctype>
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <locale>
 #include <sstream>
 #include <unordered_map>
 #include <utility>
@@ -114,6 +117,69 @@ namespace
 
         auto it = token.attributes.find(name);
         return it == token.attributes.end() ? empty : it->second;
+    }
+
+    //按 17 位有效数字写出 float64
+    void WriteFloat64(std::ostream& output, float64 value)
+    {
+        std::ostringstream stream;
+        stream.imbue(std::locale::classic());
+        stream << std::setprecision(17) << value;
+        output << stream.str();
+    }
+
+    //读取 float64 属性，非数值与非有限值都判定文件损坏
+    bool ReadFloat64Attribute(const XmlToken& token, const std::string& name, float64& target)
+    {
+        const std::string& text = GetAttribute(token, name);
+        if (text.empty()) return true;
+
+        std::istringstream stream(text);
+        stream.imbue(std::locale::classic());
+        float64 parsed = 0.0;
+        stream >> parsed;
+        if (stream.fail() || !std::isfinite(parsed))
+        {
+            Log::Error(("World load failed: the RenderSettings attribute '" + name + "' is not a finite number.").c_str());
+            return false;
+        }
+
+        target = parsed;
+        return true;
+    }
+
+    //读取枚举属性并按取值上界校验
+    bool ReadEnumAttribute(const XmlToken& token, const std::string& name, uint32 maximum, uint32& target)
+    {
+        const std::string& text = GetAttribute(token, name);
+        if (text.empty()) return true;
+
+        uint32 parsed = 0;
+        if (!Reflection::SetFromXmlValue(parsed, text) || parsed > maximum)
+        {
+            Log::Error(("World load failed: the RenderSettings attribute '" + name + "' is out of range.").c_str());
+            return false;
+        }
+
+        target = parsed;
+        return true;
+    }
+
+    //读取 float32 属性，非数值与非有限值都判定文件损坏
+    bool ReadFloat32Attribute(const XmlToken& token, const std::string& name, float32& target)
+    {
+        const std::string& text = GetAttribute(token, name);
+        if (text.empty()) return true;
+
+        float32 parsed = 0.0f;
+        if (!Reflection::SetFromXmlValue(parsed, text) || !std::isfinite(parsed))
+        {
+            Log::Error(("World load failed: the RenderSettings attribute '" + name + "' is not a finite number.").c_str());
+            return false;
+        }
+
+        target = parsed;
+        return true;
     }
 
     //判断 XML 名称字符
@@ -634,6 +700,50 @@ namespace
                 world.renderSettings.reflectionEnvironment.SetInstanceId(StringId(GetAttribute(token, "reflectionEnvironment")));
                 const std::string& reflectionIntensity = GetAttribute(token, "reflectionIntensity");
                 if (!reflectionIntensity.empty() && !Reflection::SetFromXmlValue(world.renderSettings.reflectionIntensity, reflectionIntensity)) return false;
+
+                //读取天空模式与大气参数，缺失属性保留默认值
+                uint32 skyMode = static_cast<uint32>(world.renderSettings.skyMode);
+                if (!ReadEnumAttribute(token, "skyMode", 1u, skyMode)) return false;
+                world.renderSettings.skyMode = static_cast<SkyMode>(skyMode);
+
+                AtmosphereSettings& atmosphere = world.renderSettings.atmosphere;
+                const std::string& fogEnabled = GetAttribute(token, "atmosphereFogEnabled");
+                if (!fogEnabled.empty() && !Reflection::SetFromXmlValue(atmosphere.fogEnabled, fogEnabled)) return false;
+
+                uint32 quality = static_cast<uint32>(atmosphere.quality);
+                if (!ReadEnumAttribute(token, "atmosphereQuality", 1u, quality)) return false;
+                atmosphere.quality = static_cast<AtmosphereQuality>(quality);
+
+                //读取浓雾参数，缺失属性保留默认值
+                const std::string& denseFogEnabled = GetAttribute(token, "denseFogEnabled");
+                if (!denseFogEnabled.empty() && !Reflection::SetFromXmlValue(atmosphere.denseFog.enabled, denseFogEnabled)) return false;
+                if (!ReadFloat32Attribute(token, "fogVisibilityMeters", atmosphere.denseFog.visibilityMeters)) return false;
+                if (!ReadFloat32Attribute(token, "fogReferenceHeight", atmosphere.denseFog.referenceHeightMeters)) return false;
+                if (!ReadFloat32Attribute(token, "fogLayerHeight", atmosphere.denseFog.layerHeightMeters)) return false;
+                if (!ReadFloat32Attribute(token, "fogFade", atmosphere.denseFog.fadeMeters)) return false;
+                if (!ReadFloat32Attribute(token, "fogScatteringScale", atmosphere.denseFog.scatteringScale)) return false;
+                if (!ReadFloat32Attribute(token, "fogSunScatteringScale", atmosphere.denseFog.sunScatteringScale)) return false;
+
+                //能见度必须为正，否则消光系数无意义
+                if (!(atmosphere.denseFog.visibilityMeters > 0.0f))
+                {
+                    Log::Error("World load failed: fogVisibilityMeters must be greater than zero.");
+                    return false;
+                }
+
+                if (!ReadFloat64Attribute(token, "planetCenterX", atmosphere.planetCenterX)) return false;
+                if (!ReadFloat64Attribute(token, "planetCenterY", atmosphere.planetCenterY)) return false;
+                if (!ReadFloat64Attribute(token, "planetCenterZ", atmosphere.planetCenterZ)) return false;
+                if (!ReadFloat32Attribute(token, "metersPerWorldUnit", atmosphere.metersPerWorldUnit)) return false;
+                if (!ReadFloat32Attribute(token, "aerosolDensity", atmosphere.aerosolDensity)) return false;
+                if (!ReadFloat32Attribute(token, "sunRadianceScale", atmosphere.sunRadianceScale)) return false;
+
+                //拒绝非正的单位比例
+                if (!(atmosphere.metersPerWorldUnit > 0.0f))
+                {
+                    Log::Error("World load failed: metersPerWorldUnit must be greater than zero.");
+                    return false;
+                }
                 if (!token.emptyElement && !reader.SkipElement(token.name)) return false;
                 continue;
             }
@@ -867,7 +977,27 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
         << "\" ambientColor=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientColor))
         << "\" ambientIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.ambientIntensity))
         << "\" reflectionEnvironment=\"" << EscapeXml(world.renderSettings.reflectionEnvironment.GetInstanceId().GetPath())
-        << "\" reflectionIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.reflectionIntensity)) << "\" />\n";
+        << "\" reflectionIntensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.reflectionIntensity))
+        //写入天空模式与大气参数
+        << "\" skyMode=\"" << static_cast<uint32>(world.renderSettings.skyMode)
+        << "\" atmosphereFogEnabled=\"" << (world.renderSettings.atmosphere.fogEnabled ? "true" : "false")
+        << "\" atmosphereQuality=\"" << static_cast<uint32>(world.renderSettings.atmosphere.quality)
+        << "\" planetCenterX=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterX);
+    output << "\" planetCenterY=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterY);
+    output << "\" planetCenterZ=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterZ);
+    output << "\" denseFogEnabled=\"" << (world.renderSettings.atmosphere.denseFog.enabled ? "true" : "false")
+        << "\" fogVisibilityMeters=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.visibilityMeters))
+        << "\" fogReferenceHeight=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.referenceHeightMeters))
+        << "\" fogLayerHeight=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.layerHeightMeters))
+        << "\" fogFade=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.fadeMeters))
+        << "\" fogScatteringScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.scatteringScale))
+        << "\" fogSunScatteringScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.sunScatteringScale))
+        << "\" fogTopFadeMeters=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.topFadeMeters))
+        << "\" fogDebugView=\"" << world.renderSettings.atmosphere.denseFog.debugView
+        << "\" metersPerWorldUnit=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.metersPerWorldUnit))
+        << "\" aerosolDensity=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.aerosolDensity))
+        << "\" sunRadianceScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.sunRadianceScale))
+        << "\" />\n";
     world.ForEachEns([&output](Ens& ens)
         {
             if (ens.GetParent()) return;

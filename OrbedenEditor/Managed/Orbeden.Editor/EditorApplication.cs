@@ -59,6 +59,52 @@ internal struct EditorWorldRenderSettingsAbi
     public IntPtr ReflectionEnvironmentKey;
     public int ReflectionEnvironmentKeyLength;
     public int ReflectionEnvironmentKeyReserved;
+    public uint SkyMode;
+    public uint FogEnabled;
+    public uint Quality;
+    public uint AtmosphereReserved;
+    public double PlanetCenterX;
+    public double PlanetCenterY;
+    public double PlanetCenterZ;
+    public float MetersPerWorldUnit;
+    public float AerosolDensity;
+    public float SunRadianceScale;
+    public float AtmosphereReservedTail;
+    public uint DenseFogEnabled;
+    public uint DenseFogReserved;
+    public float FogVisibilityMeters;
+    public float FogReferenceHeight;
+    public float FogLayerHeight;
+    public float FogFade;
+    public float FogScatteringScale;
+    public float FogSunScatteringScale;
+    public float DenseFogReservedTail;
+    public float FogTopFadeMeters;
+    public uint FogDebugView;
+    public float DenseFogReservedTail2;
+}
+
+/// <summary>世界级大气设置，字段与原生 RenderSettings::atmosphere 一一对应。</summary>
+internal struct WorldAtmosphereSettings
+{
+    public uint SkyMode;
+    public bool FogEnabled;
+    public uint Quality;
+    public double PlanetCenterX;
+    public double PlanetCenterY;
+    public double PlanetCenterZ;
+    public float MetersPerWorldUnit;
+    public float AerosolDensity;
+    public float SunRadianceScale;
+    public bool DenseFogEnabled;
+    public float FogVisibilityMeters;
+    public float FogReferenceHeight;
+    public float FogLayerHeight;
+    public float FogFade;
+    public float FogScatteringScale;
+    public float FogSunScatteringScale;
+    public float FogTopFadeMeters;
+    public uint FogDebugView;
 }
 
 internal enum EditorProjectField
@@ -89,7 +135,8 @@ public static unsafe class EditorApplication
 
     /// <summary>读取当前 World 的渲染设置。环境光是 sRGB 语义，与世界文件里存的一致。</summary>
     internal static bool TryGetWorldRenderSettings(out string skyboxKey, out bool skyboxEnabled, out Vector4 ambientColor,
-        out float ambientIntensity, out string reflectionEnvironmentKey, out float reflectionIntensity)
+        out float ambientIntensity, out string reflectionEnvironmentKey, out float reflectionIntensity,
+        out WorldAtmosphereSettings atmosphere)
     {
         skyboxKey = string.Empty;
         skyboxEnabled = false;
@@ -98,6 +145,13 @@ public static unsafe class EditorApplication
         ambientIntensity = 1.0f;
         reflectionEnvironmentKey = string.Empty;
         reflectionIntensity = 1.0f;
+        atmosphere = new WorldAtmosphereSettings
+        {
+            PlanetCenterY = -6371000.0,
+            MetersPerWorldUnit = 1.0f,
+            AerosolDensity = 1.0f,
+            SunRadianceScale = 20.0f,
+        };
         if (api.GetWorldRenderSettings == null) return false;
 
         EditorWorldRenderSettingsAbi settings;
@@ -113,12 +167,33 @@ public static unsafe class EditorApplication
         reflectionEnvironmentKey = settings.ReflectionEnvironmentKeyLength > 0 && settings.ReflectionEnvironmentKey != IntPtr.Zero
             ? Encoding.UTF8.GetString((byte*)settings.ReflectionEnvironmentKey, settings.ReflectionEnvironmentKeyLength)
             : string.Empty;
+        atmosphere = new WorldAtmosphereSettings
+        {
+            SkyMode = settings.SkyMode,
+            FogEnabled = settings.FogEnabled != 0,
+            Quality = settings.Quality,
+            PlanetCenterX = settings.PlanetCenterX,
+            PlanetCenterY = settings.PlanetCenterY,
+            PlanetCenterZ = settings.PlanetCenterZ,
+            MetersPerWorldUnit = settings.MetersPerWorldUnit,
+            AerosolDensity = settings.AerosolDensity,
+            SunRadianceScale = settings.SunRadianceScale,
+            DenseFogEnabled = settings.DenseFogEnabled != 0,
+            FogVisibilityMeters = settings.FogVisibilityMeters,
+            FogReferenceHeight = settings.FogReferenceHeight,
+            FogLayerHeight = settings.FogLayerHeight,
+            FogFade = settings.FogFade,
+            FogScatteringScale = settings.FogScatteringScale,
+            FogSunScatteringScale = settings.FogSunScatteringScale,
+            FogTopFadeMeters = settings.FogTopFadeMeters,
+            FogDebugView = settings.FogDebugView,
+        };
         return true;
     }
 
     /// <summary>写入当前 World 的渲染设置。播放中由原生侧拒绝。</summary>
     internal static void SetWorldRenderSettings(string skyboxKey, bool skyboxEnabled, Vector4 ambientColor,
-        float ambientIntensity, string reflectionEnvironmentKey, float reflectionIntensity)
+        float ambientIntensity, string reflectionEnvironmentKey, float reflectionIntensity, WorldAtmosphereSettings atmosphere)
     {
         if (api.SetWorldRenderSettings == null) return;
 
@@ -134,6 +209,24 @@ public static unsafe class EditorApplication
                 AmbientR = ambientColor.X, AmbientG = ambientColor.Y, AmbientB = ambientColor.Z, AmbientA = ambientColor.W,
                 AmbientIntensity = ambientIntensity, ReflectionIntensity = reflectionIntensity,
                 ReflectionEnvironmentKey = (IntPtr)reflectionPointer, ReflectionEnvironmentKeyLength = reflectionBytes.Length,
+                SkyMode = atmosphere.SkyMode,
+                FogEnabled = atmosphere.FogEnabled ? 1u : 0u,
+                Quality = atmosphere.Quality,
+                PlanetCenterX = atmosphere.PlanetCenterX,
+                PlanetCenterY = atmosphere.PlanetCenterY,
+                PlanetCenterZ = atmosphere.PlanetCenterZ,
+                MetersPerWorldUnit = atmosphere.MetersPerWorldUnit,
+                AerosolDensity = atmosphere.AerosolDensity,
+                SunRadianceScale = atmosphere.SunRadianceScale,
+                DenseFogEnabled = atmosphere.DenseFogEnabled ? 1u : 0u,
+                FogVisibilityMeters = atmosphere.FogVisibilityMeters,
+                FogReferenceHeight = atmosphere.FogReferenceHeight,
+                FogLayerHeight = atmosphere.FogLayerHeight,
+                FogFade = atmosphere.FogFade,
+                FogScatteringScale = atmosphere.FogScatteringScale,
+                FogSunScatteringScale = atmosphere.FogSunScatteringScale,
+                FogTopFadeMeters = atmosphere.FogTopFadeMeters,
+                FogDebugView = atmosphere.FogDebugView,
             };
             api.SetWorldRenderSettings(api.Context, &settings);
         }
@@ -141,10 +234,31 @@ public static unsafe class EditorApplication
 
     public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 
-    /// <summary>保存原生 Editor 应用 API。</summary>
+    /// <summary>保存原生 Editor 应用 API，并校验环境设置载荷布局。</summary>
     internal static void Initialize(EditorApplicationNativeApi value)
     {
         api = value;
+        CheckRenderSettingsLayout();
+    }
+
+    /// <summary>校验环境设置载荷的尺寸与关键偏移；托管与原生布局不一致时立刻中止。</summary>
+    private static void CheckRenderSettingsLayout()
+    {
+        bool matches = Marshal.SizeOf<EditorWorldRenderSettingsAbi>() == 168
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SkyMode)).ToInt32() == 64
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.PlanetCenterX)).ToInt32() == 80
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.MetersPerWorldUnit)).ToInt32() == 104
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.SunRadianceScale)).ToInt32() == 112
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.DenseFogEnabled)).ToInt32() == 120
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogVisibilityMeters)).ToInt32() == 128
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogScatteringScale)).ToInt32() == 144
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogSunScatteringScale)).ToInt32() == 148
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogTopFadeMeters)).ToInt32() == 156
+            && Marshal.OffsetOf<EditorWorldRenderSettingsAbi>(nameof(EditorWorldRenderSettingsAbi.FogDebugView)).ToInt32() == 160;
+        if (!matches)
+        {
+            throw new InvalidOperationException("EditorWorldRenderSettingsAbi layout does not match the native bridge.");
+        }
     }
 
     /// <summary>请求 Editor 在主线程重绘。</summary>

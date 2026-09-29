@@ -51,6 +51,7 @@ uniform sampler2D u_DiffuseTexture;
 uniform float u_Opacity;
 #include "Builtin/shadow_common.orbinc"
 #include "Builtin/environment_reflection.orbinc"
+#include "Builtin/atmosphere_sampling.orbinc"
 
 out vec4 FragColor;
 
@@ -96,6 +97,8 @@ void main()
     //每实例 tint 默认白色，Alpha 默认 1，不改变原有画面
     color *= v_Tint.rgb;
     alpha *= v_Tint.a;
+    //光照与 tint 完成后合成空气透视，alpha 保持不变
+    color = ApplyAtmosphereToSurface(color, v_WorldPosition, GetAtmosphereScreenUv());
     //输出线性值，显示转换统一在输出 Pass 完成
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, color), alpha);
 }

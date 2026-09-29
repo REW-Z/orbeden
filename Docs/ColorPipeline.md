@@ -11,6 +11,7 @@ Orbeden 的颜色空间是**定死**的，不提供用户开关。本文记录�
 线性工作空间 ──────────── 全部光照计算在这里，HDR、float
    │
    │  场景缓冲 RGBA16F（每相机一块，引擎分配）
+   │  大气查找表与空气透视在线性空间计算并合成在这里
    ▼
 输出 Pass：曝光 → AgX 色调映射 → sRGB 编码
    │
@@ -79,6 +80,16 @@ direct = albedo · nDotL · lightColor · intensity
 第一版使用普通 Cubemap mip 近似粗糙度模糊，叠加带粗糙度修正的 Schlick 环境菲涅耳；PBS 使用金属度混合后的 F0 与材质遮蔽，Blinn-Phong 和普通透明材质使用镜面颜色并从光泽指数估算粗糙度。环境反射不乘方向光的 NdotL、强度或阴影。
 
 这不是完整的预过滤 IBL：没有 GGX 卷积、BRDF LUT、天空辐照度卷积和局部场景反射，最高 mip 仍可能存在面间差异。环境图片目前是 LDR 输入，场景合成仍为 HDR。内置资源与设置方法见 [Builtin 说明](../OrbedenEditor/Templates/Builtin/README.md)。
+
+## 大气与空气透视
+
+大气查找表存的是线性量：太阳透光率、散射亮度与光学厚度都不做任何编码转换，图集与天空查找表用 `RGBA16F`、线性过滤、无 mip。表面合成 `rgb × T + L` 在线性场景缓冲内完成，因此空气透视与场景光照共用同一条曝光与色调映射路径；输出 Pass 不需要为它做任何处理。
+
+大气参数里的太阳辐射按 `mainLight.color × intensity × sunRadianceScale` 在线性空间合成，`sunRadianceScale` 不改变消光、表面主光与环境光，也不表示 lux。地面的颜色底板取自相机已线性化的清屏色，不是实体地面。
+
+浓雾的散射亮度是两项之和：世界环境光（已含 `ambientIntensity`）乘 `fogScatteringScale`，加上主方向光的 `color × intensity` 乘 `fogSunScatteringScale`；再按 `散射色 × (1 − 透光率)` 计入，全程在线性空间。
+
+只用环境光时浓雾会明显偏暗——环境光是柔和的补光，而实际浓雾的亮度主要由被多次散射的太阳光决定，`Fog Sun Scattering` 默认 `1` 让浓雾被主光完全照亮时与白色漫反射面同亮度。两项都是美术照明量，夜间同时趋零，因此不会出现自发光的白色覆盖层。
 
 ## 曝光
 

@@ -12,6 +12,7 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | `SceneCuller` | Layer Mask 与视锥裁剪 |
 | `RenderItemSorter` | Opaque、Transparent、Refraction 队列排序 |
 | `ForwardPipeline` | 阴影、天空盒、环境反射绑定、Forward Main Pass 与原生 Refraction Pass |
+| `AtmosphereRenderer` | 太阳透光率、空气透视图集、程序化天空三张查找表与表面加雾参数 |
 | `GpuResourceManager` | GPU 资源按需上传、缓存和释放 |
 | `OpenGLRenderBackend` | OpenGL Pass、状态、Uniform 和 Draw 调用 |
 
@@ -105,8 +106,8 @@ ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 
 ```mermaid
 flowchart TD
     A["绑定相机场景缓冲 / Viewport\n（RGBA16F，原点 0，视口尺寸）"] --> B["按 ClearMode 局部清屏"]
-    B --> C{"SolidColor 且启用 Skybox?"}
-    C -- 是 --> D["绘制 Skybox"]
+    B --> C{"SolidColor 且启用背景?"}
+    C -- 是 --> D["绘制程序化天空\n不可用时退回 Skybox"]
     C -- 否 --> E["Opaque Pass"]
     D --> E
     E --> F["DepthTest On\nDepthWrite On\nBlend Off"]
@@ -163,7 +164,30 @@ u_Time
 
 新项目包含 `Builtin/camera_texture_common.orbinc`、雨水玻璃和热浪 Shader 范例。这些 Shader 已声明默认 `Refraction` 队列，材质默认继承，无需在 Renderer 上配置。
 
-### 6. OrbShader 多 Pass
+### 6. 物理大气与空气透视
+
+`AtmosphereRenderer` 用球形大气做单次散射，产出三张查找表，供背景与表面共用：
+
+| 查找表 | 内容 | 尺寸（Low / Balanced） |
+| --- | --- | --- |
+| 太阳透光率 | 二维，节点按高度平方与视线余弦平方分布 | 128×64 / 256×64 |
+| 空气透视图集 | 每相机一套，距离层 × 视口节点，L 与 Tau 各一张 | 96×56 / 288×112 |
+| 天空查找表 | 每相机一套，只含散射，不含太阳盘 | 96×48 / 192×96 |
+
+- 透视与天空模式由 `RenderSettings.skyMode` 独立选择，默认 `Cubemap`；`atmosphere.fogEnabled` 只控制物体表面的空气透视。四种组合互不隐含：Cubemap＋FogOff 完整保留原有画面，Cubemap＋FogOn 只给表面加雾，Atmosphere＋FogOff 只换背景，Atmosphere＋FogOn 天空与表面共用同一份密度、太阳输入与散射算法。
+- 查找表在主 Pass 之前生成，一张全屏四边形一个 Pass，不嵌套主 Pass；材质只查询图集，不做光线步进。
+- 表面合成在光照、自发光与 tint 之后：alpha 混合用 `rgb × T + L`，加性混合只用 `rgb × T`。折射与热浪采样的相机颜色已经含雾，不再调用表面加雾函数；雨玻璃只给本地反光乘该表面的 `T`。
+- 菜单与设置入口在 Rendering 面板；世界文件保存全部大气参数，缺失属性按默认值读取。
+
+相机高度没有停用阈值：每条射线由着色器求大气球壳的入射点、出射点与地球交点，相机在大气层外时从入射点开始积分，射线不经过大气时返回零散射与单位透光率，观察表面时再以表面距离截断。只有落到地心以下的位置才判为无效并回退天空盒。
+
+**浓雾**是独立于球形大气的第二种介质，默认关闭。它用 `visibilityMeters` 按 MOR（5% 透射阈值）描述自身消光，密度沿参考高度、层厚与过渡宽度构成的高度剖面分布，透光率由射线在球壳内的弦长解析积分得到，不依赖空气透视那套面向远景的稀疏查找表。散射亮度取世界环境光乘 `fogScatteringScale`，环境光为零时浓雾不发光，夜间不会自行泛白。六面天空与程序化天空都被浓雾遮蔽，各算一次。
+
+两种介质的合成：透光率相乘，薄霾的散射亮度再乘浓雾透光率，浓雾散射按 `散射色 × (1 − 透光率)` 计入。重叠段的散射不做逐步积分，这是明确的低成本近似——无雾与浓雾两个极限都与逐段结果一致，中间段有偏差。总开关是 `atmosphere.fogEnabled`，关闭时薄霾与浓雾一起停；程序化天空仍由 `skyMode` 独立控制。
+
+限制：透视距离上限 2500 km；不实现多次散射、臭氧、月亮、星空、云层与地形体积阴影；浓雾不做水平雾区、三维噪声、降落灯光束与体积阴影；程序化天空不自动烘焙反射 Cubemap，反射环境始终独立配置；夜景单次散射偏暗，环境照明与反射不由此功能补偿。算法、参数与验收见 [大气散射设计](AtmosphereScatteringDesign.md)。
+
+### 7. OrbShader 多 Pass
 
 旧的单组 `vert/frag` 文件会自动成为名为 `Default` 的 Pass。多 Pass 文件使用以下格式：
 

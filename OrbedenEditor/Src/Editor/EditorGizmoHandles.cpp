@@ -1079,7 +1079,8 @@ void EditorGizmoHandles::DrawAxisCompass(const EditorGizmoView& view)
         drawArm[index] = std::sqrt(screenX * screenX + screenY * screenY) * CompassRadiusPixels > CompassMinArmPixels;
     }
 
-    //先铺一层暗色衬线再上色，保证亮背景上也看得清，做法与线框 Gizmo 一致。
+    //先铺一层暗色衬线再上色，保证亮背景上也看得清：罗盘三根轴在圆心处叠在一起，
+    //没有衬线时相邻两轴的端头会糊成一片。
     //两趟都按远到近的顺序画，近处的轴压住远处的轴。
     const ImU32 outline = IM_COL32(10, 20, 15, 170);
     for (int32 pass = 0; pass < 2; ++pass)

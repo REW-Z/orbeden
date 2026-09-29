@@ -77,6 +77,36 @@ rain.SetFloat("u_RainAmount", 0.9f);
 
 PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 Cubemap mip 近似粗糙反射；目前没有 GGX 预过滤、反射探针、场景捕获或法线贴图。雨玻璃的掠射亮光仍是独立近似值，并非场景反射。
 
+## 物理大气与空气透视
+
+`Shaders/atmosphere_*.orbshader` 与 `atmosphere_common.orbinc`、`atmosphere_sampling.orbinc` 是引擎内置的大气实现，不挂材质，由管线自行加载。Rendering 面板的 Sky Mode 选择背景来源，Atmosphere Fog 控制物体表面的空气透视，两者独立。
+
+| 组合 | 画面 |
+|---|---|
+| Cubemap ＋ Fog 关 | 完整保留原有天空盒与材质画面 |
+| Cubemap ＋ Fog 开 | 天空盒保持原图，场景表面按大气消光与散射加雾；天空盒已含大气时不再整体二次加雾 |
+| Atmosphere ＋ Fog 关 | 程序化天空与太阳盘正常显示，场景材质不加空气透视 |
+| Atmosphere ＋ Fog 开 | 天空与表面共用同一套密度、太阳输入与单次散射算法 |
+
+参数：`Quality` 选择 Low 或 Balanced；`Aerosol Density` 只缩放 Mie（0 关闭 Mie、保留 Rayleigh）；`Sun Radiance Scale` 只缩放散射亮度与太阳盘；`Planet Center` 是地心在当前世界原点坐标系内的位置（米，默认 6371 km 在原点正下方，即原点位于海平面）；`Meters Per World Unit` 是世界单位到米的换算，世界用更小尺度表达长距离时改它。
+
+### 浓雾
+
+`Builtin/dense_fog.orbinc` 是与薄霾分开的第二种介质，默认关闭，用 Rendering 面板的 Dense Fog 打开。它做的是贴地浓雾，能见度最低 10 米。
+
+- `Visibility (m)`：按 MOR（5% 透射阈值）给出的能见度，换算成消光系数 `sigmaT = -ln(0.05) / 能见度`。它是**浓雾自身的消光**，不含背景大气。到达该距离时透光率约为 0.05，不是硬裁剪距离，更远的物体仍会残留。
+- `Fog Base Height` / `Fog Layer Height` / `Fog Fade`：高度剖面。底面高度、层厚与上下边界的过渡宽度，单位米，相对参考球面。相机穿过边界时连续过渡，不切换表现模型。
+- `Fog Ambient Scattering`：环境光散射倍率，颜色取世界环境光。
+- `Fog Sun Scattering`：主光散射倍率，颜色取主方向光。`1` 表示浓雾被主光完全照亮时与白色漫反射面同亮度。
+
+浓雾的散射亮度是这两项之和。只有环境光时雾会很暗——环境光是柔和的补光，而实际浓雾的亮度主要由被多次散射的太阳光决定。两项都是美术照明量，夜间（主光强度与环境光都趋零）雾会跟着变暗，不会自发光泛白。
+
+浓雾的透光率由射线在球壳内的弦长解析积分得到，不采样空气透视的查找表；散射照明是低成本近似，与逐段积分的差别在薄霾与浓雾重叠的中间段，两端极限一致。六面天空与程序化天空同样被浓雾遮蔽。浓雾受 `Atmosphere Fog` 总开关控制。
+
+限制：相机高度没有停用阈值，可以从大气层外观察；最长支持 2500 km 透视距离。只实现 Rayleigh＋Mie 单次散射，夜景偏暗，环境照明与反射不自动补偿；浓雾不做水平雾区、三维噪声、降落灯光束与体积阴影；程序化天空不自动生成反射 Cubemap，Reflection Environment 始终单独选择；天空模式切换当帧生效，不做交叉淡化。
+
+自定义表面 Shader 要参与空气透视，需要包含 `Builtin/atmosphere_sampling.orbinc`、声明 `uniform vec3 u_CameraPosition;`，并在着色完成后调用 `ApplyAtmosphereToSurface(rgb, v_WorldPosition, GetAtmosphereScreenUv())`；加性混合的粒子用 `SampleSurfaceAtmosphere` 只取透光率，不叠加散射。折射与热浪采样的相机颜色已经含雾，不要再调用加雾函数。宿主 Shader 多占两个片元纹理槽（`u_AtmosphereRadianceTexture`、`u_AtmosphereOpticalDepthTexture`）。
+
 ## 天空盒与环境反射
 
 Rendering 面板的 Skybox 可选择 `Builtin/Skyboxes/soft_daylight.orbsky`，勾选 Skybox Enabled 显示背景。此资源由六张 128×128 的 sRGB PNG 组成，包含柔和天空、云层与地面反照，没有太阳圆盘；可运行 `Build/GenerateBuiltinSky.ps1` 确定性重新生成。

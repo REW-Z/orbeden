@@ -183,6 +183,11 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
         Log::Warning("OpenGL backend: GL_MAX_VERTEX_ATTRIBS is below 14, instanced drawing is disabled.");
     }
 
+    //片元纹理槽上限在此查询一次，供需要额外纹理槽的功能判断能否绑定
+    GLint maxFragmentTextures = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextures);
+    fragmentTextureUnitCount = static_cast<uint32>(std::max(maxFragmentTextures, 0));
+
     LogOpenGLError("OpenGLRenderBackend::Initialize");
     return true;
 }
@@ -493,7 +498,12 @@ void OpenGLRenderBackend::DeleteCubeTexture(GpuCubeTextureID id)
 
 GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetDesc& desc)
 {
-    if (!desc.depthTexture.IsValid() || desc.width <= 0 || desc.height <= 0) return GpuRenderTargetID();
+    //颜色专用目标不带深度，且必须与纯深度目标互斥；其余目标仍要求调用方提供深度纹理
+    if (desc.width <= 0 || desc.height <= 0) return GpuRenderTargetID();
+    if (desc.depthOnly && desc.colorOnly) return GpuRenderTargetID();
+    if (desc.colorOnly && desc.depthTexture.IsValid()) return GpuRenderTargetID();
+    if (!desc.colorOnly && !desc.depthTexture.IsValid()) return GpuRenderTargetID();
+    const bool colorOnly = desc.colorOnly;
 
     GLuint colorTexture = 0;
     if (!desc.depthOnly)
@@ -513,7 +523,7 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     GLuint id = 0;
     glGenFramebuffers(1, &id);
     glBindFramebuffer(GL_FRAMEBUFFER, id);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, desc.depthTexture.id, 0);
+    if (!colorOnly) glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, desc.depthTexture.id, 0);
     if (desc.depthOnly)
     {
         glDrawBuffer(GL_NONE);
@@ -979,6 +989,12 @@ void OpenGLRenderBackend::DrawIndexedInstanced(uint32 indexStart, uint32 indexCo
 bool OpenGLRenderBackend::SupportsInstancing() const
 {
     return instancingSupported;
+}
+
+//查询片元纹理槽上限
+uint32 OpenGLRenderBackend::GetFragmentTextureUnitCount() const
+{
+    return fragmentTextureUnitCount;
 }
 
 //流式更新顶点缓冲

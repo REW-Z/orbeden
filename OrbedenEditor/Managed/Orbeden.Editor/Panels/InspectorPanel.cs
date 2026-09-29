@@ -242,6 +242,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
+        enumOptions.Clear();
         addChoicesDirty = true;
         //程序集换了，已有宿主的字段表要按新类型重补一次
         ++scriptAssemblyGeneration;
@@ -283,6 +284,7 @@ internal sealed class InspectorPanel : EditorPanel
     {
         UnloadReflectionAssembly();
         scriptTypes.Clear();
+        enumOptions.Clear();
         addChoicesDirty = true;
         componentSearch = string.Empty;
         status = "Game assembly is not loaded.";
@@ -854,22 +856,23 @@ internal sealed class InspectorPanel : EditorPanel
             {
                 if (!EditorLayerSettings.Draw(label, property, out value)) continue;
             }
-            else if (property.Kind == InteropValueKind.UInt32 && nativeType.Length != 0
-                && property.Name is "drawQueue" or "bodyType" or "shape")
+            else if (property.Kind is InteropValueKind.UInt32 or InteropValueKind.Int32
+                && GetEnumOptions(property.TypeName) is { } options)
             {
-                string[] labels = property.Name == "drawQueue" ? ["Opaque", "Transparent", "Refraction"]
-                    : property.Name == "bodyType" ? ["Static", "Dynamic", "Kinematic"] : ["Capsule", "Box"];
-                property.Value.TryGet(out uint current);
-                uint selected = current;
-                if (!EditorGUI.BeginCombo(label, current < labels.Length ? labels[current] : current.ToString())) continue;
+                property.Value.TryGet(out uint unsignedValue);
+                property.Value.TryGet(out int signedValue);
+                bool isUnsigned = property.Kind == InteropValueKind.UInt32;
+                long current = isUnsigned ? unsignedValue : signedValue;
+                long selected = current;
+                if (!EditorGUI.BeginCombo(label, GetEnumLabel(options, current))) continue;
                 try
                 {
-                    for (uint index = 0; index < labels.Length; ++index)
-                        if (EditorGUI.Selectable(labels[index], index == current)) selected = index;
+                    foreach ((long option, string optionLabel) in options)
+                        if (EditorGUI.Selectable(optionLabel, option == current)) selected = option;
                 }
                 finally { EditorGUI.EndCombo(); }
                 if (selected == current) continue;
-                value = InteropValue.From(selected);
+                value = isUnsigned ? InteropValue.From((uint)selected) : InteropValue.From((int)selected);
             }
             else if (!TryDrawProperty(label, property, out value)) continue;
             property.SetValue(value);
@@ -877,6 +880,61 @@ internal sealed class InspectorPanel : EditorPanel
         if (document.HasPendingChanges)
             propertyError = document.ApplyChanges($"Edit {undoPrefix}") ? string.Empty
                 : $"Failed to apply {undoPrefix}; changes were rolled back.";
+    }
+
+    //按声明类型名缓存的枚举下拉项，值为空表示该类型名不是可解析的枚举
+    private static readonly Dictionary<string, (long Value, string Label)[]?> enumOptions = new(StringComparer.Ordinal);
+
+    /// <summary>按字段的声明类型名取出枚举的取值与显示名；不是枚举时返回 null。</summary>
+    private static (long Value, string Label)[]? GetEnumOptions(string typeName)
+    {
+        if (typeName.Length == 0) return null;
+        if (enumOptions.TryGetValue(typeName, out (long, string)[]? cached)) return cached;
+
+        Type? type = FindEnumType(typeName);
+        Type? underlying = type == null ? null : Enum.GetUnderlyingType(type);
+        (long, string)[]? options = null;
+        //只认 32 位底的枚举：属性值本身只有 UInt32 与 Int32 两种承载
+        if (underlying == typeof(uint) || underlying == typeof(int))
+        {
+            List<(long, string)> items = [];
+            foreach (object option in Enum.GetValues(type!))
+            {
+                long number = underlying == typeof(uint)
+                    ? Convert.ToUInt32(option, CultureInfo.InvariantCulture)
+                    : Convert.ToInt32(option, CultureInfo.InvariantCulture);
+                items.Add((number, Enum.GetName(type!, option) ?? number.ToString(CultureInfo.InvariantCulture)));
+            }
+            items.Sort((left, right) => left.Item1.CompareTo(right.Item1));
+            options = [.. items];
+        }
+
+        enumOptions[typeName] = options;
+        return options;
+    }
+
+    /// <summary>按数值取枚举的显示名，没有对应项时退回数字文本。</summary>
+    private static string GetEnumLabel((long Value, string Label)[] options, long value)
+    {
+        foreach ((long option, string optionLabel) in options)
+            if (option == value) return optionLabel;
+        return value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>按类型名找回枚举类型：内建枚举在 Orbeden 程序集里，脚本枚举按全名在已加载程序集里找。</summary>
+    private static Type? FindEnumType(string typeName)
+    {
+        Assembly bindings = typeof(Skybox).Assembly;
+        Type? type = bindings.GetType(typeName) ?? bindings.GetType("Orbeden." + typeName);
+        if (type is { IsEnum: true }) return type;
+
+        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            type = assembly.GetType(typeName);
+            if (type is { IsEnum: true }) return type;
+        }
+
+        return null;
     }
 
     /// <summary>供 CustomEditor 复用单个默认字段控件。</summary>

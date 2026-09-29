@@ -15,6 +15,7 @@ uniform mat4 u_ViewProjection;
 
 out vec2 v_TexCoord;
 out vec4 v_Tint;
+out vec3 v_WorldPosition;
 
 void main()
 {
@@ -22,7 +23,8 @@ void main()
     //实例路径用 uv.y 选起终点、uv.x 选左右；展开路径在 CPU 已经写好同样的最终 UV。
     v_TexCoord = OrbedenGetUv(a_TexCoord);
     v_Tint = OrbedenGetTrailColor(a_TexCoord);
-    gl_Position = u_ViewProjection * vec4(OrbedenGetTrailPosition(a_TexCoord), 1.0);
+    v_WorldPosition = OrbedenGetTrailPosition(a_TexCoord);
+    gl_Position = u_ViewProjection * vec4(v_WorldPosition, 1.0);
 }
 
 --------frag
@@ -30,11 +32,15 @@ void main()
 
 in vec2 v_TexCoord;
 in vec4 v_Tint;
+in vec3 v_WorldPosition;
 
+uniform vec3 u_CameraPosition;
 uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
 uniform vec4 u_DiffuseColor;
 uniform float u_Intensity;
+uniform bool u_AtmosphereAdditive;
+#include "Builtin/atmosphere_sampling.orbinc"
 
 out vec4 FragColor;
 
@@ -49,5 +55,11 @@ void main()
 
     vec3 color = sampled.rgb * max(u_DiffuseColor.rgb, vec3(0.0)) * v_Tint.rgb * max(u_Intensity, 0.0);
     float alpha = sampled.a * u_DiffuseColor.a * v_Tint.a;
+
+    //加性混合只吃消光，叠上散射会整片发灰
+    AtmosphereSample atmosphere = SampleSurfaceAtmosphere(v_WorldPosition, GetAtmosphereScreenUv());
+    color *= atmosphere.transmittance;
+    if (!u_AtmosphereAdditive) color += atmosphere.radiance;
+
     FragColor = vec4(color, alpha);
 }

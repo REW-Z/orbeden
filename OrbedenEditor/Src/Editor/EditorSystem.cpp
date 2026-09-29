@@ -881,9 +881,24 @@ bool EditorSystem::RunProjectUpgrade(std::string& outError)
     ContentMigration::MigrationReport report;
     const std::string contentRoot = pendingUpgrade.projectRoot + "/" + ProjectLayout::ContentFolder;
     if (!ContentMigration::MigrateForVersion(contentRoot, pendingUpgrade.storedVersion, report, outError)) return false;
+
+    //28 → 29：升级器保留 Content，内置 Shader 与 include 必须在这里显式发布
+    if (pendingUpgrade.storedVersion < 29 &&
+        !ContentMigration::MigrateAtmosphereAssets(contentRoot, templateRoot, report, outError))
+    {
+        return false;
+    }
+
+    //29 → 30：浓雾 include 与接入浓雾的天空绘制
+    if (pendingUpgrade.storedVersion < 30 &&
+        !ContentMigration::MigrateDenseFogAssets(contentRoot, templateRoot, report, outError))
+    {
+        return false;
+    }
+
     for (const std::string& key : report.pendingShaderKeys)
     {
-        Log::Warning(("Shader needs manual migration to the geometry interface: " + key).c_str());
+        Log::Warning(("Shader was kept as authored and needs manual migration: " + key).c_str());
     }
 
     ProjectUpgrader::UpgradeRequest request;

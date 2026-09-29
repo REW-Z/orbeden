@@ -96,13 +96,19 @@ namespace
             || uniformName == "u_SkyboxTexture"
             || uniformName == "u_EnvironmentTexture"
             || uniformName == "u_CameraColorTexture"
-            || uniformName == "u_CameraDepthTexture";
+            || uniformName == "u_CameraDepthTexture"
+            || uniformName == "u_AtmosphereRadianceTexture"
+            || uniformName == "u_AtmosphereOpticalDepthTexture"
+            || uniformName == "u_AtmosphereTransmittanceTexture"
+            || uniformName == "u_AtmosphereSkyTexture";
     }
 
     //判断是否为渲染管线内置 uniform
     bool IsBuiltinMaterialUniform(const std::string& uniformName)
     {
         return IsBuiltinTextureUniform(uniformName)
+            //大气查找表与控制参数全部由管线提交，不进材质属性列表
+            || StartsWith(uniformName, "u_Atmosphere")
             || StartsWith(uniformName, "u_Shadow")
             || uniformName == "u_Model"
             || uniformName == "u_InstanceTint"

@@ -249,7 +249,10 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                     continue;
                 }
                 fields[field.Name] = field;
-                descriptors.Add(new PropertyDescriptor(field.Name, kind, kind is InteropValueKind.Object or InteropValueKind.EnsId ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty));
+                //枚举字段带上枚举的全名，Inspector 据此画下拉框
+                descriptors.Add(new PropertyDescriptor(field.Name, kind,
+                    kind is InteropValueKind.Object or InteropValueKind.EnsId ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty,
+                    TypeName: field.FieldType.IsEnum ? field.FieldType.FullName ?? field.FieldType.Name : string.Empty));
             }
             foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
@@ -263,7 +266,9 @@ internal sealed class ManagedObjectPropertyTarget : IPropertyTarget
                     continue;
                 }
                 managedProperties[property.Name] = property;
-                descriptors.Add(new PropertyDescriptor(property.Name, kind, kind is InteropValueKind.Object or InteropValueKind.EnsId ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty));
+                descriptors.Add(new PropertyDescriptor(property.Name, kind,
+                    kind is InteropValueKind.Object or InteropValueKind.EnsId ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty,
+                    TypeName: property.PropertyType.IsEnum ? property.PropertyType.FullName ?? property.PropertyType.Name : string.Empty));
             }
         }
         properties = descriptors;

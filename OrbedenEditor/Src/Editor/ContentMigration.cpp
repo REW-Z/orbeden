@@ -75,6 +75,200 @@ namespace
         if (error) return Utf8Path::ToUtf8(path);
         return Utf8Path::ToUtf8(relative);
     }
+
+    //迁移条目：Key 是内容根相对路径，SourcePath 是模板根相对源路径。
+    //Builtin 内容的两个前缀相同，项目模板内容来自 Project/Content，两者不能靠一条规则推出来。
+    struct MigrationFile
+    {
+        const char* key;
+        const char* sourcePath;
+    };
+
+    //v29 新增大气功能所需的内容文件
+    const MigrationFile AtmosphereNewFiles[] =
+    {
+        { "Builtin/atmosphere_common.orbinc", "Builtin/atmosphere_common.orbinc" },
+        { "Builtin/atmosphere_sampling.orbinc", "Builtin/atmosphere_sampling.orbinc" },
+        { "Builtin/Shaders/atmosphere_transmittance.orbshader", "Builtin/Shaders/atmosphere_transmittance.orbshader" },
+        { "Builtin/Shaders/atmosphere_aerial.orbshader", "Builtin/Shaders/atmosphere_aerial.orbshader" },
+        { "Builtin/Shaders/atmosphere_sky_lut.orbshader", "Builtin/Shaders/atmosphere_sky_lut.orbshader" },
+        { "Builtin/Shaders/atmosphere_sky.orbshader", "Builtin/Shaders/atmosphere_sky.orbshader" },
+    };
+
+    //v29 接入空气透视的既有内置 Shader，基线文件与它们同名
+    const MigrationFile AtmospherePatchedFiles[] =
+    {
+        { "Builtin/Shaders/pbs_metallic.orbshader", "Builtin/Shaders/pbs_metallic.orbshader" },
+        { "Builtin/Shaders/blinn_phong.orbshader", "Builtin/Shaders/blinn_phong.orbshader" },
+        { "Builtin/Shaders/transparent.orbshader", "Builtin/Shaders/transparent.orbshader" },
+        { "Builtin/Shaders/particle_unlit.orbshader", "Builtin/Shaders/particle_unlit.orbshader" },
+        { "Builtin/Shaders/particle_trail.orbshader", "Builtin/Shaders/particle_trail.orbshader" },
+        { "Builtin/Shaders/refraction.orbshader", "Builtin/Shaders/refraction.orbshader" },
+        { "Builtin/Shaders/rain_glass.orbshader", "Builtin/Shaders/rain_glass.orbshader" },
+        { "Builtin/Shaders/heat_wake.orbshader", "Builtin/Shaders/heat_wake.orbshader" },
+    };
+
+    constexpr const char* AtmosphereBaselineFolder = "Migrations/28AtmosphereBaseline";
+
+    //v30 新增浓雾 include
+    const MigrationFile DenseFogNewFiles[] =
+    {
+        { "Builtin/dense_fog.orbinc", "Builtin/dense_fog.orbinc" },
+    };
+
+    //v30 接入浓雾的既有文件：大气 include 与两处天空绘制
+    const MigrationFile DenseFogPatchedFiles[] =
+    {
+        { "Builtin/atmosphere_common.orbinc", "Builtin/atmosphere_common.orbinc" },
+        { "Builtin/atmosphere_sampling.orbinc", "Builtin/atmosphere_sampling.orbinc" },
+        { "Builtin/Shaders/atmosphere_sky.orbshader", "Builtin/Shaders/atmosphere_sky.orbshader" },
+        { "Shaders/skybox.orbshader", "Project/Content/Shaders/skybox.orbshader" },
+    };
+
+    constexpr const char* DenseFogBaselineFolder = "Migrations/29DenseFogBaseline";
+
+    //去掉回车；行尾不是内容差异，比较前统一
+    std::string RemoveCarriageReturns(const std::string& text)
+    {
+        std::string result;
+        result.reserve(text.size());
+        for (char ch : text)
+        {
+            if (ch != '\r') result += ch;
+        }
+
+        return result;
+    }
+
+    //判断文本是否使用 CRLF
+    bool UsesCarriageReturns(const std::string& text)
+    {
+        return text.find("\r\n") != std::string::npos;
+    }
+
+    //按指定行尾风格写出，不把目标文件的换行整体翻掉
+    std::string MatchLineEndings(const std::string& text, const std::string& reference)
+    {
+        if (!UsesCarriageReturns(reference)) return text;
+
+        std::string result;
+        result.reserve(text.size() + text.size() / 16);
+        for (usize index = 0; index < text.size(); ++index)
+        {
+            if (text[index] == '\n' && (index == 0 || text[index - 1] != '\r')) result += '\r';
+            result += text[index];
+        }
+
+        return result;
+    }
+
+    //铺入一个新增文件：内容一致跳过，同名内容不同说明作者自己写过，保留并列入报告
+    bool CopyNewAssetFile(const std::filesystem::path& source, const std::filesystem::path& target,
+        ContentMigration::MigrationReport& outReport, std::string& outError, const std::string& key)
+    {
+        std::string sourceText;
+        if (!ReadTextFile(source, sourceText))
+        {
+            outError = "Cannot read migration source " + Utf8Path::ToUtf8(source) + " for " + key;
+            return false;
+        }
+
+        std::error_code error;
+        if (std::filesystem::exists(target, error) && !error)
+        {
+            std::string targetText;
+            if (!ReadTextFile(target, targetText))
+            {
+                outError = "Cannot read " + key;
+                return false;
+            }
+
+            if (RemoveCarriageReturns(targetText) != RemoveCarriageReturns(sourceText))
+            {
+                outReport.pendingShaderKeys.push_back(key);
+            }
+
+            return true;
+        }
+
+        std::error_code createError;
+        if (target.has_parent_path()) std::filesystem::create_directories(target.parent_path(), createError);
+        if (!WriteTextFile(target, sourceText))
+        {
+            outError = "Cannot write " + key;
+            return false;
+        }
+
+        outReport.rewrittenFiles += 1;
+        return true;
+    }
+
+    //只把仍等于基线的内容换成新版本：作者改过的保留原样并列入报告
+    bool UpdateAssetFile(const std::filesystem::path& source, const std::filesystem::path& baseline,
+        const std::filesystem::path& target, ContentMigration::MigrationReport& outReport,
+        std::string& outError, const std::string& key)
+    {
+        //作者删掉的内置 Shader 不再补回，也不该挡住整次升级
+        std::error_code error;
+        if (!std::filesystem::exists(target, error) || error) return true;
+
+        std::string sourceText;
+        std::string baselineText;
+        std::string targetText;
+        if (!ReadTextFile(source, sourceText) || !ReadTextFile(baseline, baselineText) || !ReadTextFile(target, targetText))
+        {
+            outError = "Cannot read " + key;
+            return false;
+        }
+
+        //行尾不是作者的改动，比较前统一
+        const std::string targetContent = RemoveCarriageReturns(targetText);
+        if (targetContent == RemoveCarriageReturns(sourceText)) return true;
+        if (targetContent != RemoveCarriageReturns(baselineText))
+        {
+            outReport.pendingShaderKeys.push_back(key);
+            return true;
+        }
+
+        if (!WriteTextFile(target, MatchLineEndings(sourceText, targetText)))
+        {
+            outError = "Cannot write " + key;
+            return false;
+        }
+
+        outReport.rewrittenFiles += 1;
+        return true;
+    }
+
+    //按表铺入新增文件，并把仍等于基线的既有文件换成当前版本
+    bool MigrateAssetFiles(const std::filesystem::path& content, const std::filesystem::path& templates,
+        const MigrationFile* newFiles, usize newFileCount, const MigrationFile* patchedFiles, usize patchedFileCount,
+        const char* baselineFolder, ContentMigration::MigrationReport& outReport, std::string& outError)
+    {
+        for (usize index = 0; index < newFileCount; ++index)
+        {
+            const MigrationFile& entry = newFiles[index];
+            const std::filesystem::path target = content / Utf8Path::FromUtf8(entry.key);
+            if (!CopyNewAssetFile(templates / Utf8Path::FromUtf8(entry.sourcePath), target, outReport, outError, entry.key))
+            {
+                return false;
+            }
+        }
+
+        for (usize index = 0; index < patchedFileCount; ++index)
+        {
+            const MigrationFile& entry = patchedFiles[index];
+            const std::filesystem::path target = content / Utf8Path::FromUtf8(entry.key);
+            const std::filesystem::path baseline = templates / baselineFolder / target.filename();
+            if (!UpdateAssetFile(templates / Utf8Path::FromUtf8(entry.sourcePath), baseline, target,
+                outReport, outError, entry.key))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 bool ContentMigration::MigrateForVersion(const std::string& contentRoot, uint32 fromVersion,
@@ -143,4 +337,44 @@ bool ContentMigration::MigrateForVersion(const std::string& contentRoot, uint32 
     }
 
     return true;
+}
+
+bool ContentMigration::MigrateAtmosphereAssets(const std::string& contentRoot, const std::string& templateRoot,
+    MigrationReport& outReport, std::string& outError)
+{
+    outError.clear();
+
+    std::filesystem::path content = Utf8Path::FromUtf8(contentRoot);
+    std::filesystem::path templates = Utf8Path::FromUtf8(templateRoot);
+    std::error_code error;
+    if (!std::filesystem::is_directory(content, error))
+    {
+        outError = "Content root was not found: " + contentRoot;
+        return false;
+    }
+
+    return MigrateAssetFiles(content, templates,
+        AtmosphereNewFiles, std::size(AtmosphereNewFiles),
+        AtmospherePatchedFiles, std::size(AtmospherePatchedFiles),
+        AtmosphereBaselineFolder, outReport, outError);
+}
+
+bool ContentMigration::MigrateDenseFogAssets(const std::string& contentRoot, const std::string& templateRoot,
+    MigrationReport& outReport, std::string& outError)
+{
+    outError.clear();
+
+    std::filesystem::path content = Utf8Path::FromUtf8(contentRoot);
+    std::filesystem::path templates = Utf8Path::FromUtf8(templateRoot);
+    std::error_code error;
+    if (!std::filesystem::is_directory(content, error))
+    {
+        outError = "Content root was not found: " + contentRoot;
+        return false;
+    }
+
+    return MigrateAssetFiles(content, templates,
+        DenseFogNewFiles, std::size(DenseFogNewFiles),
+        DenseFogPatchedFiles, std::size(DenseFogPatchedFiles),
+        DenseFogBaselineFolder, outReport, outError);
 }

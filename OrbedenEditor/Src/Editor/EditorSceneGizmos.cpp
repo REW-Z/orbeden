@@ -5,6 +5,7 @@
 #include "Runtime/World.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/Object/Transform.h"
+#include "Runtime/Object/Camera.h"
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/DirectionalLight.h"
 #include <imgui.h>
@@ -18,6 +19,10 @@ namespace
     constexpr float32 Pi = 3.14159265358979323846f;
     //Gizmo 的屏幕拾取半径：不小于方向光标记圆的半径，点在线围出的圆内也算命中
     constexpr float32 PickPixels = 8.0f;
+    //相机视锥画到多长：沿屏幕方向折算成世界距离，视锥形状与真实投影一致、大小随缩放稳定
+    constexpr float32 FrustumPixels = 110.0f;
+    //近平面画在整条视锥的多远处：只影响显示，真实近平面照实画会塌成一个点
+    constexpr float32 FrustumNearRatio = 0.35f;
     constexpr float32 DegenerateEpsilon = 0.0001f;
 
     /// <summary>对向量做带权偏移。</summary>
@@ -94,12 +99,7 @@ public:
         }
         if (picked) picked->push_back({owner, screen[0], screen[1]});
         if (!draw) return;
-
-        //暗色衬线提升复杂背景上的辨识度
-        ImVec2 from(screen[0].x, screen[0].y);
-        ImVec2 to(screen[1].x, screen[1].y);
-        draw->AddLine(from, to, IM_COL32(10, 20, 15, 140), thickness + 1.6f);
-        draw->AddLine(from, to, ink, thickness);
+        draw->AddLine(ImVec2(screen[0].x, screen[0].y), ImVec2(screen[1].x, screen[1].y), ink, thickness);
     }
 
     /// <summary>绘制任意平面上的圆弧。</summary>
@@ -117,20 +117,21 @@ public:
 };
 
 //按组件真实几何和当前变换绘制编辑器辅助线。
-void EditorSceneGizmos::Draw(World& world, const EditorScene& scene, const EditorGizmoView& view) const
+void EditorSceneGizmos::Draw(World& world, const EditorScene& scene, const EditorGizmoView& view,
+    const RenderScene& renderScene) const
 {
     if (!enabled || !view.valid) return;
     ImDrawList* draw = ImGui::GetWindowDrawList();
     draw->PushClipRect(ImVec2(view.renderPosition.x, view.renderPosition.y),
         ImVec2(view.renderPosition.x + view.renderSize.x, view.renderPosition.y + view.renderSize.y), true);
     Sink sink{view, draw, IM_COL32(90, 230, 135, 245)};
-    Emit(world, scene, view, sink);
+    Emit(world, scene, view, renderScene, sink);
     draw->PopClipRect();
 }
 
 //拾取屏幕位置下最近的一条 Gizmo 线段，返回它所属的 Ens。
 bool EditorSceneGizmos::Pick(World& world, const EditorScene& scene, const EditorGizmoView& view,
-    const vector2& screenPosition, EnsId& hitEns) const
+    const RenderScene& renderScene, const vector2& screenPosition, EnsId& hitEns) const
 {
     hitEns = EnsId();
     if (!enabled || !view.valid) return false;
@@ -139,7 +140,7 @@ bool EditorSceneGizmos::Pick(World& world, const EditorScene& scene, const Edito
     List<PickSegment> segments;
     Sink sink{view};
     sink.picked = &segments;
-    Emit(world, scene, view, sink);
+    Emit(world, scene, view, renderScene, sink);
 
     float32 bestDistance = PickPixels;
     for (const PickSegment& segment : segments)
@@ -153,7 +154,8 @@ bool EditorSceneGizmos::Pick(World& world, const EditorScene& scene, const Edito
 }
 
 //把当前世界的组件 Gizmo 几何写进输出口。
-void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const EditorGizmoView& view, Sink& sink) const
+void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const EditorGizmoView& view,
+    const RenderScene& renderScene, Sink& sink) const
 {
     for (auto item = meshes.begin(); item != meshes.end();)
         if (!Object::FindObjectById(static_cast<int32>(item->first >> 1))) item = meshes.erase(item); else ++item;
@@ -205,6 +207,67 @@ void EditorSceneGizmos::Emit(World& world, const EditorScene& scene, const Edito
                     sink.Line(start, end);
                     sink.Line(end, Offset(Offset(end, direction, -size * 0.45f), side, size * 0.22f));
                     sink.Line(end, Offset(Offset(end, direction, -size * 0.45f), side, -size * 0.22f));
+                }
+            }
+            if (Camera* camera = component->Cast<Camera>(); cameras && camera)
+            {
+                vector2 screen, unit;
+                if (!EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize, transform->worldPosition, screen)
+                    || !EditorGizmoHandles::ProjectPoint(view.viewProjection, view.renderPosition, view.renderSize,
+                        Offset(transform->worldPosition, view.cameraRight, 1.0f), unit)) continue;
+                float32 pixels = std::hypot(unit.x - screen.x, unit.y - screen.y);
+                if (!std::isfinite(pixels) || pixels < 0.0001f) continue;
+
+                //视锥按屏幕上的固定长度绘制，长度夹在该相机真实的近/远平面之间：缩放时大小稳定，
+                //远平面一千米的相机也不会在视口里铺出一大块线框
+                float32 nearDistance = std::max(camera->nearPlane, 0.001f);
+                float32 farDistance = std::max(camera->farPlane, nearDistance * 2.0f);
+                float32 depth = std::clamp(FrustumPixels / pixels, nearDistance * 1.5f, farDistance);
+
+                //近平面按显示距离画：真实近平面相对远平面往往只有万分之几（默认 0.1 对 1000），
+                //照实画会塌成一个点，整条视锥看着像从相机位置发散的四棱锥而不是截头四棱锥
+                float32 nearDisplay = depth * FrustumNearRatio;
+
+                //宽高比取该相机实际渲染的视口，没注册进渲染场景时退回场景视口比例
+                float32 aspect = view.renderSize.y > 0.0f ? view.renderSize.x / view.renderSize.y : 1.0f;
+                for (const RenderCamera& registered : renderScene.cameras)
+                    if (registered.ens == ens.GetId() && registered.viewportWidth > 0 && registered.viewportHeight > 0)
+                    {
+                        aspect = static_cast<float32>(registered.viewportWidth) / static_cast<float32>(registered.viewportHeight);
+                        break;
+                    }
+
+                //视锥角的半高按渲染侧同一个公式展开，前向是局部 -Z
+                float32 tangent = std::tan(std::clamp(camera->fieldOfView, 1.0f, 179.0f) * 0.5f * Pi / 180.0f);
+                sink.ink = active && camera->GetEnabled() ? IM_COL32(120, 200, 240, 235) : IM_COL32(105, 130, 150, 170);
+                sink.thickness = selected ? 1.7f : 1.2f;
+                float32 nearHalfWidth = nearDisplay * tangent * aspect;
+                float32 nearHalfHeight = nearDisplay * tangent;
+                float32 farHalfWidth = depth * tangent * aspect;
+                float32 farHalfHeight = depth * tangent;
+                vector3 nearCorners[4];
+                vector3 farCorners[4];
+                for (int32 index = 0; index < 4; ++index)
+                {
+                    nearCorners[index] = RenderMath::TransformPoint(transform->worldMatrix,
+                        {(index & 1) ? nearHalfWidth : -nearHalfWidth, (index & 2) ? nearHalfHeight : -nearHalfHeight, -nearDisplay});
+                    farCorners[index] = RenderMath::TransformPoint(transform->worldMatrix,
+                        {(index & 1) ? farHalfWidth : -farHalfWidth, (index & 2) ? farHalfHeight : -farHalfHeight, -depth});
+                }
+                //角点按位编号：index 与 index|bit 只差一位，连起来正好是矩形的四条边；
+                //按周长顺序连会在矩形里连出两条对角线
+                for (int32 index = 0; index < 4; ++index)
+                    for (int32 bit : {1, 2})
+                    {
+                        if (index & bit) continue;
+                        sink.Line(nearCorners[index], nearCorners[index | bit]);
+                        sink.Line(farCorners[index], farCorners[index | bit]);
+                    }
+                //侧棱与镜筒四棱从相机位置本身引出，位置标记与点选都落在相机本体上
+                for (int32 index = 0; index < 4; ++index)
+                {
+                    sink.Line(nearCorners[index], farCorners[index]);
+                    sink.Line(transform->worldPosition, nearCorners[index]);
                 }
             }
             Collider* collider = component->Cast<Collider>();

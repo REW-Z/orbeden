@@ -45,6 +45,7 @@ uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
 #include "Builtin/shadow_common.orbinc"
 #include "Builtin/environment_reflection.orbinc"
+#include "Builtin/atmosphere_sampling.orbinc"
 out vec4 FragColor;
 
 void main()
@@ -85,6 +86,8 @@ void main()
     vec3 result = direct + ambient + reflection + max(u_EmissionColor.rgb, vec3(0.0));
     //每实例 tint 默认白色，不改变原有画面
     result *= v_Tint.rgb;
+    //光照、自发光与 tint 完成后合成空气透视
+    result = ApplyAtmosphereToSurface(result, v_WorldPosition, GetAtmosphereScreenUv());
     //输出线性值。曝光、色调映射与 sRGB 编码统一由管线末端的输出 Pass 完成，
     //本 Shader 不做任何颜色空间转换。
     FragColor = vec4(GetShadowDebugColor(v_WorldPosition, result), v_Tint.a);

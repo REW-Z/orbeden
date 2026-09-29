@@ -25,10 +25,33 @@ void main()
 in vec3 v_TexCoord;
 
 uniform samplerCube u_SkyboxTexture;
+uniform float u_AtmosphereCameraHeightKm;
+uniform vec3 u_AtmosphereCameraUp;
+uniform int u_AtmosphereFogDebugView;
+#include "Builtin/dense_fog.orbinc"
 
 out vec4 FragColor;
 
 void main()
 {
-    FragColor = texture(u_SkyboxTexture, v_TexCoord);
+    vec3 viewRay = normalize(v_TexCoord);
+
+    //调试视图直接替换天空颜色
+    if (u_AtmosphereFogDebugView > 0)
+    {
+        FragColor = vec4(GetDenseFogDebugColor(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay,
+            1000000.0, u_AtmosphereFogDebugView), 1.0);
+        return;
+    }
+
+    vec3 color = texture(u_SkyboxTexture, v_TexCoord).rgb;
+
+    //六面天空同样被浓雾遮蔽，视线取立方体顶点方向，整幅天空只算一次
+    vec3 fogTransmittance = vec3(1.0);
+    vec3 fogRadiance = vec3(0.0);
+    float fogEntryKm = -1.0;
+    SampleDenseFog(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay, 1000000.0,
+        fogTransmittance, fogRadiance, fogEntryKm);
+
+    FragColor = vec4(color * fogTransmittance + fogRadiance, 1.0);
 }

@@ -15,13 +15,15 @@ uniform mat4 u_ViewProjection;
 
 out vec2 v_TexCoord;
 out vec4 v_Tint;
+out vec3 v_WorldPosition;
 
 void main()
 {
     //展开顶点已经是世界空间，图集变换也已在 CPU 完成，三条路径共用这一条公式
     v_TexCoord = OrbedenGetUv(a_TexCoord);
     v_Tint = OrbedenGetTint();
-    gl_Position = u_ViewProjection * OrbedenGetModel() * vec4(a_Position, 1.0);
+    v_WorldPosition = (OrbedenGetModel() * vec4(a_Position, 1.0)).xyz;
+    gl_Position = u_ViewProjection * vec4(v_WorldPosition, 1.0);
 }
 
 --------frag
@@ -29,11 +31,15 @@ void main()
 
 in vec2 v_TexCoord;
 in vec4 v_Tint;
+in vec3 v_WorldPosition;
 
+uniform vec3 u_CameraPosition;
 uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
 uniform vec4 u_DiffuseColor;
 uniform float u_Intensity;
+uniform bool u_AtmosphereAdditive;
+#include "Builtin/atmosphere_sampling.orbinc"
 
 out vec4 FragColor;
 
@@ -49,5 +55,11 @@ void main()
     //直通 Alpha 输出，不预先乘到 RGB，避免 SRC_ALPHA 二次相乘
     vec3 color = sampled.rgb * max(u_DiffuseColor.rgb, vec3(0.0)) * v_Tint.rgb * max(u_Intensity, 0.0);
     float alpha = sampled.a * u_DiffuseColor.a * v_Tint.a;
+
+    //加性混合只吃消光，叠上散射会整片发灰
+    AtmosphereSample atmosphere = SampleSurfaceAtmosphere(v_WorldPosition, GetAtmosphereScreenUv());
+    color *= atmosphere.transmittance;
+    if (!u_AtmosphereAdditive) color += atmosphere.radiance;
+
     FragColor = vec4(color, alpha);
 }
