@@ -104,6 +104,7 @@ PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 C
 
 - `Visibility (m)`：按 MOR（5% 透射阈值）给出的能见度，换算成消光系数 `sigmaT = -ln(0.05) / 能见度`。它是**浓雾自身的消光**，不含背景大气。到达该距离时透光率约为 0.05，不是硬裁剪距离，更远的物体仍会残留。
 - `Fog Base Height` / `Fog Layer Height` / `Fog Fade`：高度剖面。底面高度、层厚与上下边界的过渡宽度，单位米，相对参考球面。相机穿过边界时连续过渡，不切换表现模型。
+- `Fog Top Fade (m)`：雾顶衰减尺度。满密度区到 `base + layerHeight - topFade` 为止，层内平滑降到名义顶部的 5% 密度；顶部上方按 `0.05 × (1+t) × exp(-t)` 衰减，两侧密度和一阶导数连续。尾部在顶部上方 24 倍 Top Fade 处截断，此处密度约 4.7×10⁻¹¹。设为 0 保留硬顶部。
 - `Fog Ambient Scattering`：环境光散射倍率，颜色取世界环境光。
 - `Fog Sun Scattering`：主光散射倍率，颜色取主方向光。`1` 表示浓雾被主光完全照亮时与白色漫反射面同亮度。
 
@@ -137,3 +138,5 @@ drawqueue Auto
 ```
 
 `float` 接受一个数，`color` 接受四个 RGBA 数；参数行末不加注释，注释请单独起行。`drawqueue Auto` 继承 Shader，必要时可覆盖为 Opaque、Transparent 或 Refraction。编辑 `.orbmat` 后重新导入；Shader Pass 中显式配置的 Blend/DepthWrite 不会因材质队列覆盖自动改变。
+
+浓雾底面过渡可延伸到参考高度以下，参考高度 0 不代表不透明地面。天空只计算本地雾层，不透过内球累计行星背面的浓雾；程序化天空对空气与浓雾重叠区联合积分。

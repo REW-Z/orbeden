@@ -10,21 +10,21 @@ uniform float u_AtmosphereDenseFogExtinction;
 uniform vec4 u_AtmosphereDenseFogScattering;
 //(底面高度 km, 层厚 km, 底面过渡 km, 参考球半径 km)
 uniform vec4 u_AtmosphereDenseFogProfile;
-//雾顶内部渐变厚度 km
+//雾顶衰减尺度 km，名义顶部保留稀薄尾部
 uniform float u_AtmosphereDenseFogTopFade;
 
 //积分步数的编译上限与默认分配
-const int FogMaxSteps = 16;
-const int FogStepCount = 8;
+const int FogMaxSteps = 32;
+const int FogStepCount = 32;
 
-//求射线与指定半径球面的两个交点
-bool IntersectRadius(float cameraRadius, float mu, float radius, out float entry, out float exit)
+//按相对高度求射线与球面的两个交点
+bool IntersectFogBoundary(float cameraHeight, float mu, float height, float groundRadius, out float entry, out float exit)
 {
     entry = 0.0;
     exit = 0.0;
 
-    float b = cameraRadius * mu;
-    float c = cameraRadius * cameraRadius - radius * radius;
+    float b = (groundRadius + cameraHeight) * mu;
+    float c = (cameraHeight - height) * (2.0 * groundRadius + cameraHeight + height);
     float discriminant = b * b - c;
     if (discriminant < 0.0) return false;
 
@@ -36,9 +36,9 @@ bool IntersectRadius(float cameraRadius, float mu, float radius, out float entry
     return true;
 }
 
-//求射线落在球壳 [inner, outer] 内的区间。球壳内外两段是允许的：
-//相机在内壳里、或射线先穿过内壳再回到壳层，都会得到两段。返回段数。
-int ComputeShellIntervals(float cameraRadius, float mu, float inner, float outer, float maxDistance,
+//求射线在本地球壳 [inner, outer] 内的首段区间。
+//底面过渡允许延伸到参考高度以下；不累计穿过内球后的背面雾层。边界参数使用相对高度。
+int ComputeShellIntervals(float cameraHeight, float mu, float inner, float outer, float groundRadius, float maxDistance,
     out float firstStart, out float firstEnd, out float secondStart, out float secondEnd)
 {
     firstStart = 0.0;
@@ -48,7 +48,10 @@ int ComputeShellIntervals(float cameraRadius, float mu, float inner, float outer
 
     float outerEntry = 0.0;
     float outerExit = 0.0;
-    if (!IntersectRadius(cameraRadius, mu, outer, outerEntry, outerExit)) return 0;
+    if (!IntersectFogBoundary(cameraHeight, mu, outer, groundRadius, outerEntry, outerExit)) return 0;
+
+    //排除底面以下朝向行星背面的射线
+    if (cameraHeight < inner && mu < 0.0) return 0;
 
     float start = max(outerEntry, 0.0);
     float end = min(outerExit, maxDistance);
@@ -56,7 +59,7 @@ int ComputeShellIntervals(float cameraRadius, float mu, float inner, float outer
 
     float innerEntry = 0.0;
     float innerExit = 0.0;
-    if (inner <= 0.0 || !IntersectRadius(cameraRadius, mu, inner, innerEntry, innerExit))
+    if (inner <= -groundRadius || !IntersectFogBoundary(cameraHeight, mu, inner, groundRadius, innerEntry, innerExit))
     {
         firstStart = start;
         firstEnd = end;
@@ -73,43 +76,33 @@ int ComputeShellIntervals(float cameraRadius, float mu, float inner, float outer
         return 1;
     }
 
-    int count = 0;
+    //只保留相机所在一侧的雾层
     if (cutStart > start)
     {
         firstStart = start;
         firstEnd = cutStart;
-        count = 1;
     }
-    if (cutEnd < end)
+    else
     {
-        if (count == 0)
-        {
-            firstStart = cutEnd;
-            firstEnd = end;
-            count = 1;
-        }
-        else
-        {
-            secondStart = cutEnd;
-            secondEnd = end;
-            count = 2;
-        }
+        firstStart = cutEnd;
+        firstEnd = end;
     }
-
-    return count;
+    return firstEnd > firstStart ? 1 : 0;
 }
 
-//射线在给定距离处的半径
-float RadiusAtDistance(float cameraRadius, float mu, float distance)
+//计算射线在给定距离处的相对高度
+float ComputeFogHeight(float cameraHeight, float mu, float distance, float groundRadius)
 {
-    return sqrt(max(cameraRadius * cameraRadius + 2.0 * cameraRadius * mu * distance + distance * distance, 0.0));
+    float q = cameraHeight * (2.0 * groundRadius + cameraHeight)
+        + 2.0 * (groundRadius + cameraHeight) * mu * distance + distance * distance;
+    return q / (sqrt(max(groundRadius * groundRadius + q, 0.0)) + groundRadius);
 }
 
-//高度剖面：底面过渡在层下升起（描述雾层往下如何变薄），雾顶渐变在层内落下。
-//满密度段是 [base, top - topFade]。
+//高度剖面：底面平滑升起，雾顶平滑降至 5%，再延伸指数尾部。
+//尾部为 0.05 * (1 + t) * exp(-t)，与层内渐变在顶部具有相同的一阶导数。
 float EvaluateFogProfile(float height, float base, float top, float baseFade, float topFade)
 {
-    if (height > top || height < base - baseFade) return 0.0;
+    if (height > top + 24.0 * topFade || height < base - baseFade) return 0.0;
 
     float density = 1.0;
     if (baseFade > 0.0 && height < base)
@@ -119,15 +112,23 @@ float EvaluateFogProfile(float height, float base, float top, float baseFade, fl
     }
     if (topFade > 0.0 && height > top - topFade)
     {
-        float t = (height - (top - topFade)) / topFade;
-        density *= 1.0 - t * t * (3.0 - 2.0 * t);
+        if (height <= top)
+        {
+            float t = (height - (top - topFade)) / topFade;
+            density *= 1.0 - 0.95 * t * t * (3.0 - 2.0 * t);
+        }
+        else
+        {
+            float t = (height - top) / topFade;
+            density *= 0.05 * (1.0 + t) * exp(-t);
+        }
     }
 
     return density;
 }
 
 //沿一段区间积分密度，步长均匀，取每段中点的密度
-float IntegrateFogInterval(float cameraRadius, float mu, float start, float end, int steps,
+float IntegrateFogInterval(float cameraHeight, float mu, float start, float end, int steps,
     float base, float top, float baseFade, float topFade, float groundRadius)
 {
     if (steps <= 0 || end <= start) return 0.0;
@@ -139,7 +140,7 @@ float IntegrateFogInterval(float cameraRadius, float mu, float start, float end,
         if (index >= steps) break;
 
         float distance = start + (float(index) + 0.5) * ds;
-        float height = RadiusAtDistance(cameraRadius, mu, distance) - groundRadius;
+        float height = ComputeFogHeight(cameraHeight, mu, distance, groundRadius);
         length += EvaluateFogProfile(height, base, top, baseFade, topFade) * ds;
     }
 
@@ -157,24 +158,23 @@ void SampleDenseFog(float cameraHeightKm, vec3 cameraUp, vec3 ray, float distanc
     if (u_AtmosphereDenseFogEnabled == 0 || u_AtmosphereDenseFogExtinction <= 0.0) return;
 
     float groundRadius = u_AtmosphereDenseFogProfile.w;
-    float cameraRadius = groundRadius + cameraHeightKm;
     float mu = dot(cameraUp, ray);
 
-    //剖面给的是相对参考球面的高度，求交要的是绝对半径，两者单位不同不能混用
+    //读取相对参考球面的高度剖面
     float baseHeight = u_AtmosphereDenseFogProfile.x;
     float topHeight = baseHeight + max(u_AtmosphereDenseFogProfile.y, 0.0);
     float baseFade = max(u_AtmosphereDenseFogProfile.z, 0.0);
     float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, max(topHeight - baseHeight, 0.0));
 
-    float baseRadius = max(groundRadius + baseHeight, 0.0);
-    float topRadius = max(groundRadius + topHeight, baseRadius);
+    float baseBoundary = max(baseHeight, -groundRadius);
+    float topBoundary = max(topHeight + 24.0 * topFade, baseBoundary);
     //底面过渡在层下，雾的几何下界随之降低
-    float innerRadius = max(baseRadius - baseFade, 0.0);
+    float innerBoundary = max(baseBoundary - baseFade, -groundRadius);
     float firstStart = 0.0;
     float firstEnd = 0.0;
     float secondStart = 0.0;
     float secondEnd = 0.0;
-    int count = ComputeShellIntervals(cameraRadius, mu, innerRadius, topRadius, distanceKm,
+    int count = ComputeShellIntervals(cameraHeightKm, mu, innerBoundary, topBoundary, groundRadius, distanceKm,
         firstStart, firstEnd, secondStart, secondEnd);
     if (count == 0) return;
 
@@ -199,11 +199,11 @@ void SampleDenseFog(float cameraHeightKm, vec3 cameraUp, vec3 ray, float distanc
             secondSteps = max(FogStepCount - firstSteps, 1);
         }
 
-        pathLength = IntegrateFogInterval(cameraRadius, mu, firstStart, firstEnd, firstSteps,
+        pathLength = IntegrateFogInterval(cameraHeightKm, mu, firstStart, firstEnd, firstSteps,
             baseHeight, topHeight, baseFade, topFade, groundRadius);
         if (count == 2)
         {
-            pathLength += IntegrateFogInterval(cameraRadius, mu, secondStart, secondEnd, secondSteps,
+            pathLength += IntegrateFogInterval(cameraHeightKm, mu, secondStart, secondEnd, secondSteps,
                 baseHeight, topHeight, baseFade, topFade, groundRadius);
         }
     }
@@ -222,20 +222,19 @@ vec3 GetDenseFogDebugColor(float cameraHeightKm, vec3 cameraUp, vec3 ray, float 
     if (view <= 0) return vec3(0.0);
 
     float groundRadius = u_AtmosphereDenseFogProfile.w;
-    float cameraRadius = groundRadius + cameraHeightKm;
     float mu = dot(cameraUp, ray);
     float baseHeight = u_AtmosphereDenseFogProfile.x;
     float topHeight = baseHeight + max(u_AtmosphereDenseFogProfile.y, 0.0);
     float baseFade = max(u_AtmosphereDenseFogProfile.z, 0.0);
     float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, max(topHeight - baseHeight, 0.0));
-    float baseRadius = max(groundRadius + baseHeight, 0.0);
-    float topRadius = max(groundRadius + topHeight, baseRadius);
+    float baseBoundary = max(baseHeight, -groundRadius);
+    float topBoundary = max(topHeight + 24.0 * topFade, baseBoundary);
 
     float firstStart = 0.0;
     float firstEnd = 0.0;
     float secondStart = 0.0;
     float secondEnd = 0.0;
-    int count = ComputeShellIntervals(cameraRadius, mu, max(baseRadius - baseFade, 0.0), topRadius, distanceKm,
+    int count = ComputeShellIntervals(cameraHeightKm, mu, max(baseBoundary - baseFade, -groundRadius), topBoundary, groundRadius, distanceKm,
         firstStart, firstEnd, secondStart, secondEnd);
 
     if (view == 1)
@@ -267,11 +266,11 @@ vec3 GetDenseFogDebugColor(float cameraHeightKm, vec3 cameraUp, vec3 ray, float 
             secondSteps = max(FogStepCount - firstSteps, 1);
         }
 
-        pathLength = IntegrateFogInterval(cameraRadius, mu, firstStart, firstEnd, firstSteps,
+        pathLength = IntegrateFogInterval(cameraHeightKm, mu, firstStart, firstEnd, firstSteps,
             baseHeight, topHeight, baseFade, topFade, groundRadius);
         if (count == 2)
         {
-            pathLength += IntegrateFogInterval(cameraRadius, mu, secondStart, secondEnd, secondSteps,
+            pathLength += IntegrateFogInterval(cameraHeightKm, mu, secondStart, secondEnd, secondSteps,
                 baseHeight, topHeight, baseFade, topFade, groundRadius);
         }
     }

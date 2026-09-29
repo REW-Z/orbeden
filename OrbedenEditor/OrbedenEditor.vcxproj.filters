@@ -18,7 +18,9 @@
     <ClCompile Include="Src\editor_main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Editor\EditorSceneGizmos.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="Src\Editor\EditorSceneGizmos.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="Src\Editor\NewProjectTemplate.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -67,12 +69,20 @@
     <ClCompile Include="Src\Editor\Panels\**\*.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Editor\EditorGizmoHandles.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\NativeGameModule.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Editor\NewProjectTemplate.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Src\Editor\EditorSceneGizmos.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Src\Editor\EditorSceneGizmos.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Editor\EditorProject.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -121,6 +131,18 @@
     <ClInclude Include="Src\Editor\Panels\**\*.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGizmoAbi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGizmoHandles.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\NativeGameModule.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\Panels\**\*.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
@@ -144,13 +166,29 @@
     <None Include="Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Editor\AssetInspection.h" />
     <ClCompile Include="Src\Editor\AssetInspection.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Resources\OrbedenEditor.rc"><Filter>资源文件</Filter></ResourceCompile>
-    <Image Include="Resources\Brand\Orbeden.ico"><Filter>资源文件</Filter></Image>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico">
+      <Filter>资源文件</Filter>
+    </Image>
   </ItemGroup>
 </Project>

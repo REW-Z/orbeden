@@ -95,6 +95,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,6 +109,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -119,6 +121,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -138,6 +141,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -336,10 +340,7 @@
     <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src&quot; &quot;$(ProjectDir)Src\Runtime\Generated&quot; --bindings --docs &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot;" UseUtf8Encoding="Always" />
   </Target>
   <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
-    <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;"
-          UseUtf8Encoding="Always"
-          StdOutEncoding="UTF-8"
-          StdErrEncoding="UTF-8" />
+    <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
   </Target>
   <Target Name="PublishNativeGameSdk" AfterTargets="Build" DependsOnTargets="GenerateUserDocumentation" Condition="'$(Platform)'=='x64'">
     <ItemGroup>
@@ -359,27 +360,17 @@
     <Copy SourceFiles="$(OrbedenSharedBuildDir)GameAotExports.cs" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.EditorExtensions.csproj" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
-          DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(OrbedenNativeSdkHeader)" DestinationFiles="@(OrbedenNativeSdkHeader->'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <!--用户手册：镜像 Docs/Manual（含生成的 Api/），游戏工程构建时从这里刷新进工程。-->
     <ItemGroup>
       <OrbedenManualFile Include="$(ProjectDir)..\Docs\Manual\**\*" />
     </ItemGroup>
-    <Copy SourceFiles="@(OrbedenManualFile)"
-          DestinationFiles="@(OrbedenManualFile-&gt;'$(OrbedenEditorSdkDir)Manual\%(RecursiveDir)%(Filename)%(Extension)')"
-          SkipUnchangedFiles="true" />
-    <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;"
-          UseUtf8Encoding="Always"
-          StdOutEncoding="UTF-8"
-          StdErrEncoding="UTF-8" />
+    <Copy SourceFiles="@(OrbedenManualFile)" DestinationFiles="@(OrbedenManualFile->'$(OrbedenEditorSdkDir)Manual\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
   </Target>
   <!--用户文档：必须在 C# 程序集之后（要反射托管层），且在 SDK 发布之前（Sdk/Manual 由发布步骤拷贝）。-->
   <Target Name="GenerateUserDocumentation" AfterTargets="BuildCoreCSharpSdk" Condition="'$(Platform)'=='x64' and '$(OrbedenSkipDocs)' != 'true'">
-    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenDocGen\OrbedenDocGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.xml&quot; &quot;$(ProjectDir)..\Docs\Manual\Api&quot;"
-          UseUtf8Encoding="Always"
-          StdOutEncoding="UTF-8"
-          StdErrEncoding="UTF-8" />
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenDocGen\OrbedenDocGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.xml&quot; &quot;$(ProjectDir)..\Docs\Manual\Api&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
   </Target>
   <!--Player 用静态库由同一批 obj 归档：DLL 与静态库共享一次编译，不重复编译 Core 源码。-->
   <Target Name="ArchiveCoreStaticLibrary" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
@@ -389,10 +380,10 @@
     </PropertyGroup>
     <!--按本工程的源文件表推导 obj，不能扫中间目录：改名或合并文件后残留的旧 obj 会被一起打进静态库。-->
     <ItemGroup>
-      <OrbedenCoreArchiveObject Include="@(ClCompile-&gt;'$(IntDir)%(Filename).obj')" />
+      <OrbedenCoreArchiveObject Include="@(ClCompile->'$(IntDir)%(Filename).obj')" />
     </ItemGroup>
     <Error Condition="'@(OrbedenCoreArchiveObject)' == ''" Text="No Core object files were found in $(IntDir); the Player static library cannot be archived." />
-    <WriteLinesToFile File="$(IntDir)OrbedenCoreStatic.rsp" Lines="@(OrbedenCoreArchiveObject-&gt;'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <WriteLinesToFile File="$(IntDir)OrbedenCoreStatic.rsp" Lines="@(OrbedenCoreArchiveObject->'&quot;%(FullPath)&quot;')" Overwrite="true" />
     <Exec Command="&quot;$(OrbedenLibToolDir)lib.exe&quot; /NOLOGO /OUT:&quot;$(OrbedenCoreOutputDir)OrbedenCoreStatic.lib&quot; @&quot;$(IntDir)OrbedenCoreStatic.rsp&quot;" />
   </Target>
   <ImportGroup Label="ExtensionTargets">

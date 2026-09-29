@@ -34,7 +34,7 @@ public:
     float32 layerHeightMeters = 100.0f;
     //底面过渡宽度，单位米，在层内由零升到满密度
     float32 fadeMeters = 30.0f;
-    //雾顶内部渐变厚度，单位米，密度在层内降到零，不得超过层厚
+    //雾顶衰减尺度，单位米；名义顶部密度约为 5%，上方延伸稀薄尾部，不得超过层厚
     float32 topFadeMeters = 20.0f;
     //环境光散射倍率，颜色取自世界环境光
     float32 scatteringScale = 1.0f;

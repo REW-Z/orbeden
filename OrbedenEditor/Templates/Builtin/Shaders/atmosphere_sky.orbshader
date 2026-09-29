@@ -30,11 +30,78 @@ uniform vec4 u_AtmosphereSunRadiance;
 uniform vec4 u_AtmosphereSkySize;
 uniform sampler2D u_AtmosphereSkyTexture;
 uniform int u_AtmosphereFogDebugView;
+uniform float u_AtmosphereAerosolDensity;
+uniform int u_AtmosphereStepCount;
 #include "Builtin/atmosphere_common.orbinc"
 #include "Builtin/dense_fog.orbinc"
 
 out vec4 FragColor;
 
+//联合积分重叠区空气与浓雾，保留完整天空中区间外的贡献
+vec3 IntegrateSkyFog(vec3 color, vec3 ray, vec3 frontRadiance, vec3 frontTau)
+{
+    float groundRadius = u_AtmosphereDenseFogProfile.w;
+    float cameraHeight = u_AtmosphereCameraHeightKm;
+    float mu = dot(u_AtmosphereCameraUp, ray);
+    float base = u_AtmosphereDenseFogProfile.x;
+    float top = base + max(u_AtmosphereDenseFogProfile.y, 0.0);
+    float baseFade = max(u_AtmosphereDenseFogProfile.z, 0.0);
+    float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, top - base);
+    float start = 0.0;
+    float end = 0.0;
+    float secondStart = 0.0;
+    float secondEnd = 0.0;
+    if (ComputeShellIntervals(cameraHeight, mu, max(base - baseFade, -groundRadius),
+        max(top + 24.0 * topFade, -groundRadius), groundRadius, 1000000.0,
+        start, end, secondStart, secondEnd) == 0) return color;
+
+    //裁剪空气区间，浓雾仍使用真实底面过渡
+    float airStart = 0.0;
+    float airEnd = 0.0;
+    ClipAtmosphereSegment(cameraHeight, mu, end, airStart, airEnd);
+    vec2 phase = EvaluatePhase(dot(ray, u_AtmosphereSunDirection));
+    vec3 airTransmittance = exp(-frontTau);
+    vec3 mixedTransmittance = airTransmittance;
+    vec3 airRadiance = vec3(0.0);
+    vec3 mixedRadiance = vec3(0.0);
+    float fogTransmittance = 1.0;
+    int steps = clamp(u_AtmosphereStepCount, 32, AtmosphereMaxSteps);
+    float ds = (end - start) / float(steps);
+    for (int index = 0; index < AtmosphereMaxSteps; ++index)
+    {
+        if (index >= steps) break;
+        float distance = start + (float(index) + 0.5) * ds;
+        float height = ComputeFogHeight(cameraHeight, mu, distance, groundRadius);
+        float fogExtinction = u_AtmosphereDenseFogExtinction * EvaluateFogProfile(height, base, top, baseFade, topFade);
+        vec3 airExtinction = vec3(0.0);
+        vec3 airSource = vec3(0.0);
+        if (distance >= airStart && distance < airEnd)
+        {
+            vec3 rayleigh = vec3(0.0);
+            vec3 mie = vec3(0.0);
+            EvaluateScattering(height, u_AtmosphereAerosolDensity, rayleigh, mie, airExtinction);
+            vec3 localUp = normalize((groundRadius + cameraHeight) * u_AtmosphereCameraUp + distance * ray);
+            vec3 sunlight = u_AtmosphereSunRadiance.rgb * SampleSunTransmittance(height, dot(localUp, u_AtmosphereSunDirection));
+            airSource = sunlight * (rayleigh * phase.x + mie * phase.y);
+        }
+
+        //累计同一步的空气与混合介质散射
+        vec3 mixedExtinction = airExtinction + vec3(fogExtinction);
+        vec3 airAttenuation = exp(-airExtinction * ds);
+        vec3 mixedAttenuation = exp(-mixedExtinction * ds);
+        vec3 airWeight = mix(vec3(ds), (vec3(1.0) - airAttenuation) / max(airExtinction, vec3(1.0e-6)), step(vec3(1.0e-6), airExtinction));
+        vec3 mixedWeight = mix(vec3(ds), (vec3(1.0) - mixedAttenuation) / max(mixedExtinction, vec3(1.0e-6)), step(vec3(1.0e-6), mixedExtinction));
+        airRadiance += airTransmittance * airSource * airWeight;
+        mixedRadiance += mixedTransmittance * (airSource + fogExtinction * u_AtmosphereDenseFogScattering.rgb) * mixedWeight;
+        airTransmittance *= airAttenuation;
+        mixedTransmittance *= mixedAttenuation;
+        fogTransmittance *= exp(-fogExtinction * ds);
+    }
+
+    //用混合散射替换天空中原有的重叠区空气散射
+    return max(color * fogTransmittance + frontRadiance * (1.0 - fogTransmittance)
+        + mixedRadiance - fogTransmittance * airRadiance, vec3(0.0));
+}
 void main()
 {
     //按节点参数查询天空查找表，太阳盘不烘焙进去
@@ -59,7 +126,7 @@ void main()
     }
 
     //调试视图直接替换天空颜色
-    if (u_AtmosphereFogDebugView > 0)
+    if (u_AtmosphereFogDebugView > 0 && u_AtmosphereFogDebugView != 7)
     {
         FragColor = vec4(GetDenseFogDebugColor(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay,
             1000000.0, u_AtmosphereFogDebugView), 1.0);
@@ -73,5 +140,24 @@ void main()
     SampleDenseFog(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay, 1000000.0,
         fogTransmittance, fogRadiance, fogEntryKm);
 
-    FragColor = vec4(color * fogTransmittance + fogRadiance, 1.0);
+    //积分相机到浓雾入口之间的空气
+    vec3 frontRadiance = vec3(0.0);
+    vec3 frontTau = vec3(0.0);
+    if (fogEntryKm > 0.0)
+    {
+        IntegrateAtmosphere(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay, fogEntryKm,
+            u_AtmosphereStepCount, 0, u_AtmosphereAerosolDensity,
+            u_AtmosphereSunRadiance.rgb, u_AtmosphereSunDirection, frontRadiance, frontTau);
+    }
+
+    if (u_AtmosphereFogDebugView == 7)
+    {
+        FragColor = vec4(clamp(frontRadiance, 0.0, 1.0), 1.0);
+        return;
+    }
+
+    //联合计算重叠区，关闭或未命中浓雾时保留天空
+    if (fogTransmittance.x < 1.0)
+        color = IntegrateSkyFog(color, viewRay, frontRadiance, frontTau);
+    FragColor = vec4(color, 1.0);
 }

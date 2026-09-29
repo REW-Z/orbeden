@@ -84,6 +84,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,6 +116,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,6 +146,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -176,6 +179,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -259,7 +263,9 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
     <ClCompile Include="Src\Editor\AssetInspection.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Resources\OrbedenEditor.rc"></ResourceCompile>
-    <Image Include="Resources\Brand\Orbeden.ico"></Image>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc">
+    </ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico">
+    </Image>
   </ItemGroup>
 </Project>

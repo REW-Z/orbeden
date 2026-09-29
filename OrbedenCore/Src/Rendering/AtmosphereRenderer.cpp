@@ -589,7 +589,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
         }
         outFrame.denseFogScattering = { scatteringR, scatteringG, scatteringB, 1.0f };
 
-        //底面过渡在层下，不占层厚；雾顶渐变在层内，不得超过层厚
+        //提交底面过渡与雾顶衰减尺度，衰减尺度不超过层厚
         const float32 layerKm = std::max(denseFog.layerHeightMeters, 0.0f) * 0.001f;
         outFrame.denseFogProfile = { denseFog.referenceHeightMeters * 0.001f, layerKm,
             std::max(denseFog.fadeMeters, 0.0f) * 0.001f, static_cast<float32>(EarthRadiusKm) };
@@ -691,6 +691,8 @@ bool AtmosphereRenderer::RenderSky()
     backend->SetDepthWrite(false);
     backend->SetBlend(false);
     backend->BindShaderProgram(skyPass);
+    backend->SetUniformFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
+    backend->SetUniformInt("u_AtmosphereStepCount", quality.skySteps);
     backend->SetUniformMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
     backend->SetUniformMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
     backend->SetUniformFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);

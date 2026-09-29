@@ -388,12 +388,13 @@ internal static class EditorEnvironmentSettings
                         fogSunScatteringScale = Math.Clamp(fogSunScatteringScale, 0.0f, 8.0f);
                         dirty = true;
                     }
-                    //雾顶渐变在层内，超过层厚就会被钳掉
+                    //提示雾顶衰减尺度的层厚限制
                     if (fogTopFadeMeters > fogLayerHeight)
                     {
                         EditorGUI.TextColored("Top Fade exceeds the layer height; it is clamped to the layer.",
                             EditorTheme.Current.LogWarning);
                     }
+                    EditorGUI.Label("Top Fade keeps about 5% density at the nominal top and adds a thin tail above it. Zero gives a hard top.");
                     if (DrawFogDebugView(ref fogDebugView)) dirty = true;
                     EditorGUI.Label("Visibility is MOR (5% transmission) and covers the fog's own extinction, not the background atmosphere. "
                         + "Scattered light is the world ambient plus the main light scaled by the two values above; both fade out at night.");
