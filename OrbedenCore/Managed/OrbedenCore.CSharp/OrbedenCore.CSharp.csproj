@@ -13,7 +13,9 @@
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
-    <NoWarn>$(NoWarn);CS8981</NoWarn>
+    <!--用户文档生成器读取这里产出的成员注释。CS1591 必须一起静音：生成的绑定文件里数百个公开成员没有注释。-->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS8981;CS1591</NoWarn>
   </PropertyGroup>
 
   <Target Name="CopyRuntimeSdkToGame" AfterTargets="Build">

@@ -11,8 +11,8 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
     private readonly Dictionary<CppType, ulong> signatures = [];
     private static string Symbol(CppType type) => type.QualifiedName.Replace("::", "_");
 
-    /// <summary>生成共享 schema 的类型化入口与托管包装。</summary>
-    internal void Generate(string sourceRoot, string outputDirectory)
+    /// <summary>生成共享 schema 的类型化入口与托管包装；docsPath 非空时同时写出用户文档投影。</summary>
+    internal void Generate(string sourceRoot, string outputDirectory, string docsPath = "")
     {
         foreach (CppType type in model.ObjectTypes)
         {
@@ -61,6 +61,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         WriteChanged(Path.Combine(outputDirectory, "Bindings.Generated.cpp"), cpp);
         WriteChanged(Path.Combine(outputDirectory, "Bindings.Generated.cs"), cs);
         model.WriteManifest(Path.Combine(outputDirectory, "Bindings.Manifest.json"));
+        if (docsPath.Length != 0) DocProjection.Write(docsPath, model, types, calls, IsComponent);
     }
 
     /// <summary>把递归值布局和枚举定义纳入签名，拒绝混用不同生成版本。</summary>
@@ -375,13 +376,13 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         return false;
     }
 
-    private bool IsComponent(CppType type)
+    internal bool IsComponent(CppType type)
     {
         for (CppType? current = type; current != null; current = model.Resolve(current.BaseName, current))
             if (current.Name == "Component") return true;
         return false;
     }
-    private static void WriteChanged(string path, string text)
+    internal static void WriteChanged(string path, string text)
     {
         if (!File.Exists(path) || File.ReadAllText(path) != text) File.WriteAllText(path, text);
     }

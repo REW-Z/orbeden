@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace OrbedenMetaGen;
 
@@ -9,7 +10,12 @@ internal sealed class CppMember
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";
     public string Access { get; set; } = "private";
+    //行号只服务于本地报错，写进清单就会带上编译机的路径，因此不参与序列化
+    [JsonIgnore]
     public int Line { get; set; }
+    //声明上方紧贴的行注释，只服务于用户文档生成；清单是跨模块导入契约，不掺文档文本
+    [JsonIgnore]
+    public string Doc { get; set; } = "";
     public bool IsMethod { get; set; }
     public bool IsStatic { get; set; }
     public bool IsConst { get; set; }
@@ -30,8 +36,14 @@ internal sealed class CppType
     public string Name { get; set; } = "";
     public string QualifiedName { get; set; } = "";
     public string BaseName { get; set; } = "";
+    //清单要跨机器共用，来源文件是扫描时的绝对路径，只服务于本地报错，不参与序列化
+    [JsonIgnore]
     public string File { get; set; } = "";
+    [JsonIgnore]
     public int Line { get; set; }
+    //类型上方的行注释，只服务于用户文档生成，不参与序列化
+    [JsonIgnore]
+    public string Doc { get; set; } = "";
     public string Kind { get; set; } = "class";
     public string EnumBase { get; set; } = "int32";
     public bool IsObject { get; set; }
@@ -105,11 +117,11 @@ internal static class CppDeclarations
     {
         List<CppType> result = [];
         List<CppToken> tokens = Tokenize(source);
-        ParseScope(tokens, 0, tokens.Count, "", file, result);
+        ParseScope(tokens, 0, tokens.Count, "", file, source.Split('\n'), result);
         return result;
     }
 
-    private static void ParseScope(List<CppToken> tokens, int start, int end, string scope, string file, List<CppType> result)
+    private static void ParseScope(List<CppToken> tokens, int start, int end, string scope, string file, string[] lines, List<CppType> result)
     {
         for (int index = start; index < end; ++index)
         {
@@ -121,7 +133,7 @@ internal static class CppDeclarations
                 if (open >= end || tokens[open].Text != "{") continue;
                 int close = Match(tokens, open, "{", "}");
                 string name = Join(tokens.GetRange(index + 1, open - index - 1));
-                ParseScope(tokens, open + 1, close, Qualify(scope, name), file, result);
+                ParseScope(tokens, open + 1, close, Qualify(scope, name), file, lines, result);
                 index = close; continue;
             }
             if (keyword is not ("class" or "struct" or "enum"))
@@ -140,6 +152,7 @@ internal static class CppDeclarations
             {
                 Name = tokens[nameIndex].Text, QualifiedName = Qualify(scope, tokens[nameIndex].Text),
                 File = file, Line = tokens[index].Line, Kind = keyword,
+                Doc = DocAbove(lines, tokens[index].Line),
                 IsFinal = tokens.GetRange(nameIndex + 1, brace - nameIndex - 1).Any(value => value.Text == "final")
             };
             int colon = tokens.FindIndex(nameIndex + 1, brace - nameIndex - 1, value => value.Text == ":");
@@ -158,13 +171,13 @@ internal static class CppDeclarations
                     type.EnumValues.Add(new(item[0].Text, equals < 0 ? "" : Join(item[(equals + 1)..])));
                 }
             }
-            else ParseMembers(tokens, brace + 1, closing, type, result);
+            else ParseMembers(tokens, brace + 1, closing, type, lines, result);
             result.Add(type);
             index = closing;
         }
     }
 
-    private static void ParseMembers(List<CppToken> tokens, int start, int end, CppType type, List<CppType> result)
+    private static void ParseMembers(List<CppToken> tokens, int start, int end, CppType type, string[] lines, List<CppType> result)
     {
         string access = type.Kind == "struct" ? "public" : "private";
         bool ignored = false, serialize = false, template = false;
@@ -215,7 +228,7 @@ internal static class CppDeclarations
                     bool method = tokens.GetRange(statementStart, index - statementStart).Any(value => value.Text == ")");
                     bool nested = tokens[statementStart].Text is "class" or "struct" or "enum";
                     int close = Match(tokens, index, "{", "}");
-                    if (nested) ParseScope(tokens, statementStart, close + 1, type.QualifiedName, type.File, result);
+                    if (nested) ParseScope(tokens, statementStart, close + 1, type.QualifiedName, type.File, lines, result);
                     if (method || nested) { body = true; break; }
                     index = close;
                 }
@@ -229,6 +242,7 @@ internal static class CppDeclarations
                 {
                     member.Access = access; member.IgnoreBinding = ignored; member.Serialize = serialize;
                     member.Changed = changed; member.Getter = getter; member.Setter = setter; member.Buffer = buffer; member.Count = count; member.IsTemplate = template;
+                    member.Doc = DocAbove(lines, member.Line);
                     type.Members.Add(member);
                 }
             }
@@ -327,4 +341,48 @@ internal static class CppDeclarations
     private static string Qualify(string scope, string name) => scope.Length == 0 ? name : name.Length == 0 ? scope : scope + "::" + name;
     private static bool IsIdentifier(string value) => value.Length != 0 && (char.IsLetter(value[0]) || value[0] == '_');
     private static bool IsWord(string value) => value.Length != 0 && (char.IsLetterOrDigit(value[0]) || value[0] == '_');
+
+    //声明上方紧贴的行注释；跨空行、跨预处理指令、跨上一条声明都不算——那类注释是分节标题，不是文档。
+    //注解宏与 template 行不携带文档，向上找时越过它们，否则带 ORBEDEN_ 注解的成员会整批漏掉说明。
+    private static string DocAbove(string[] lines, int declarationLine)
+    {
+        int index = declarationLine - 2;
+        while (index >= 0 && IsAnnotationLine(lines[index])) --index;
+        List<string> collected = [];
+        while (index >= 0)
+        {
+            string text = lines[index].Trim();
+            if (!text.StartsWith("//", StringComparison.Ordinal)) break;
+            collected.Insert(0, text);
+            --index;
+        }
+        return NormalizeComment(collected);
+    }
+
+    //去掉行注释标记与 <summary> 包裹，压掉首尾空行后按行合并。
+    private static string NormalizeComment(List<string> lines)
+    {
+        List<string> text = [];
+        foreach (string line in lines)
+        {
+            string value = line.StartsWith("///", StringComparison.Ordinal) || line.StartsWith("//!", StringComparison.Ordinal)
+                ? line[3..] : line[2..];
+            value = value.Trim();
+            if (value.StartsWith("<summary>", StringComparison.Ordinal)) value = value["<summary>".Length..];
+            if (value.EndsWith("</summary>", StringComparison.Ordinal)) value = value[..^"</summary>".Length];
+            text.Add(value.Trim());
+        }
+        while (text.Count != 0 && text[0].Length == 0) text.RemoveAt(0);
+        while (text.Count != 0 && text[^1].Length == 0) text.RemoveAt(text.Count - 1);
+        return string.Join("\n", text);
+    }
+
+    //注解宏与 template 声明行：它们不构成声明，注释属于紧随其后的那个成员或类型。
+    private static bool IsAnnotationLine(string line)
+    {
+        string text = line.Trim();
+        return text.StartsWith("ORBEDEN_", StringComparison.Ordinal)
+            || text.StartsWith("template<", StringComparison.Ordinal)
+            || text.StartsWith("template <", StringComparison.Ordinal);
+    }
 }

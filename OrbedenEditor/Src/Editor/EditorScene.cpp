@@ -1147,7 +1147,10 @@ void EditorScene::HandleSelection(const RenderScene& scene)
 
     EnsId hit;
     vector3 hitPosition;
-    RaycastScene(scene, { io.MousePos.x, io.MousePos.y }, hit, hitPosition);
+    const vector2 mouse { io.MousePos.x, io.MousePos.y };
+    //Gizmo 画在场景之上，先按屏幕距离拾取：没有网格的 Ens 只能靠它点选
+    if (!componentGizmos.Pick(app.GetWorld(), *this, gizmoView, mouse, hit))
+        RaycastScene(scene, mouse, hit, hitPosition);
     if (selectionCtrl)
     {
         if (!hit.IsNull()) ToggleEns(hit);

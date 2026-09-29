@@ -20,6 +20,16 @@ var sourceRoot = CanonicalPath(args[0]);
 var outputDir = CanonicalPath(args[1]);
 var gameModule = args.Skip(2).Any(value => value == "--game-module");
 
+//用户文档投影的输出路径；只做绑定生成时不指定。
+string docsPath = "";
+for (int index = 2; index + 1 < args.Length; ++index)
+    if (args[index] == "--docs") docsPath = CanonicalPath(args[index + 1]);
+if (docsPath.Length != 0 && !args.Contains("--bindings", StringComparer.Ordinal))
+{
+    Console.Error.WriteLine("--docs requires --bindings");
+    return 1;
+}
+
 if (!Directory.Exists(sourceRoot))
 {
     Console.Error.WriteLine($"Source root does not exist: {sourceRoot}");
@@ -165,7 +175,7 @@ if (bindings != null)
             foreach (string error in errors) Console.Error.WriteLine(error);
             return 1;
         }
-        new BindingGenerator(bindings, bindingTypes, gameModule).Generate(sourceRoot, outputDir);
+        new BindingGenerator(bindings, bindingTypes, gameModule).Generate(sourceRoot, outputDir, docsPath);
     }
     catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 }

@@ -330,7 +330,7 @@
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="GenerateObjectBindings" BeforeTargets="ClCompile">
-    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src&quot; &quot;$(ProjectDir)Src\Runtime\Generated&quot; --bindings" UseUtf8Encoding="Always" />
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src&quot; &quot;$(ProjectDir)Src\Runtime\Generated&quot; --bindings --docs &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot;" UseUtf8Encoding="Always" />
   </Target>
   <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
     <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;"
@@ -338,7 +338,7 @@
           StdOutEncoding="UTF-8"
           StdErrEncoding="UTF-8" />
   </Target>
-  <Target Name="PublishNativeGameSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+  <Target Name="PublishNativeGameSdk" AfterTargets="Build" DependsOnTargets="GenerateUserDocumentation" Condition="'$(Platform)'=='x64'">
     <ItemGroup>
       <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.h" />
       <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.hpp" />
@@ -346,7 +346,7 @@
     </ItemGroup>
     <!--头文件发布只拷不删，改名或移动后的旧头会残留在 SDK 里被游戏工程误用；发布前先清空。-->
     <RemoveDir Directories="$(OrbedenNativeSdkIncludeDir)" />
-    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir)" />
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual" />
     <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
     <!--游戏工程的原生构建契约：唯一来源是 Templates/Shared/，工程内不再保留副本。-->
     <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.props" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
@@ -359,7 +359,21 @@
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)"
           DestinationFiles="@(OrbedenNativeSdkHeader-&gt;'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
+    <!--用户手册：镜像 Docs/Manual（含生成的 Api/），游戏工程构建时从这里刷新进工程。-->
+    <ItemGroup>
+      <OrbedenManualFile Include="$(ProjectDir)..\Docs\Manual\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OrbedenManualFile)"
+          DestinationFiles="@(OrbedenManualFile-&gt;'$(OrbedenEditorSdkDir)Manual\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
     <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;"
+          UseUtf8Encoding="Always"
+          StdOutEncoding="UTF-8"
+          StdErrEncoding="UTF-8" />
+  </Target>
+  <!--用户文档：必须在 C# 程序集之后（要反射托管层），且在 SDK 发布之前（Sdk/Manual 由发布步骤拷贝）。-->
+  <Target Name="GenerateUserDocumentation" AfterTargets="BuildCoreCSharpSdk" Condition="'$(Platform)'=='x64' and '$(OrbedenSkipDocs)' != 'true'">
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenDocGen\OrbedenDocGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.xml&quot; &quot;$(ProjectDir)..\Docs\Manual\Api&quot;"
           UseUtf8Encoding="Always"
           StdOutEncoding="UTF-8"
           StdErrEncoding="UTF-8" />

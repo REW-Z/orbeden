@@ -15,6 +15,9 @@
     <OrbedenNativeSource>$(OrbedenContentRoot)</OrbedenNativeSource>
     <OrbedenBindingOutput>$(OrbedenProjectRoot)/Build/Native/Generated</OrbedenBindingOutput>
     <OrbedenBindingNamespace>$(RootNamespace).Native</OrbedenBindingNamespace>
+    <!--用户手册随 SDK 刷新，落点与 Lib 下其他 SDK 快照同级。-->
+    <OrbedenManualSource>$(OrbedenSdkRoot)/Manual</OrbedenManualSource>
+    <OrbedenManualTarget>$(OrbedenProjectRoot)/Lib/Docs</OrbedenManualTarget>
   </PropertyGroup>
   <!--
     是否包含原生模块，与上面的源根无关：源根是内容根，工程文件则在项目根，不能跟着源根一起改。
@@ -51,5 +54,18 @@
     </PropertyGroup>
     <Error Condition="'@(OrbedenEditorSource)' != '' and !Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />
     <Exec UseUtf8Encoding="Always" Condition="Exists('$(OrbedenEditorAssembly)')" Command="dotnet build &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.EditorExtensions.csproj&quot; -c $(Configuration) -o &quot;$(TargetDir).&quot; /p:GameBindingNamespace=&quot;$(OrbedenEditorBindingNamespace)&quot; /p:GameAssemblyName=&quot;$(AssemblyName)&quot; /p:GameAssemblyPath=&quot;$(TargetPath)&quot; /p:GameContentRoot=&quot;$(OrbedenContentRoot)&quot; /p:GameRuntimeAssembly=&quot;$(OrbedenSdkRoot)/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll&quot; /p:GameEditorAssembly=&quot;$(OrbedenEditorAssembly)&quot; /p:BaseIntermediateOutputPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot; /p:MSBuildProjectExtensionsPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot;" />
+  </Target>
+  <!--
+    用户手册随 SDK 刷新：先清空再铺，和 SDK 头文件发布同一套路，改名或删除后不留残页。
+    旧 SDK 没有 Manual/ 时整段跳过，不会误删工程里已有的文档。
+  -->
+  <Target Name="RefreshOrbedenUserManual" AfterTargets="Build" Condition="Exists('$(OrbedenManualSource)')">
+    <ItemGroup>
+      <OrbedenManualFile Include="$(OrbedenManualSource)/**/*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(OrbedenManualTarget)" />
+    <MakeDir Directories="$(OrbedenManualTarget)" />
+    <Copy SourceFiles="@(OrbedenManualFile)"
+          DestinationFiles="@(OrbedenManualFile-&gt;'$(OrbedenManualTarget)/%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 </Project>

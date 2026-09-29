@@ -443,7 +443,7 @@ MyGame/
 ├─ MyGame.csproj            工程文件直接放在项目根
 ├─ MyGameNative.vcxproj
 ├─ Directory.Build.props
-├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path
+├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path、用户手册 Lib/Docs/
 ├─ ResourceCache/           资源导入产物缓存，可由 cook 全量重建（可删除，不进版本控制）
 ├─ Content/                 内容根：内部结构完全自由
 │   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/
@@ -463,6 +463,8 @@ MyGame/
 ```
 
 `Content/` 下的六个初始子目录只是**新建时的默认结构**，之后可以随意增删改名。`.oeproj` 只记 `version`、`name`、`startupWorld`、`lastWorld`——位置既然固定，就不该做成可配置属性。
+
+`Lib/Docs/` 里的用户手册是引擎仓库 `Docs/Manual/` 的副本：引擎构建生成并发布到 `Sdk/Manual/`，游戏工程构建时整块刷新，与 `Lib/` 下其他 SDK 快照同一生命周期（升级时被清除、下次构建重建）。工程内不手工维护这份文档，自己的笔记写进 `Content/`。
 
 两个场景 Key 各服务一端，不要混：
 

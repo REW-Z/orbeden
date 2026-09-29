@@ -8,4 +8,5 @@
   <Project Path="OrbedenEditor/Managed/Orbeden.Editor/Orbeden.Editor.csproj" />
   <Project Path="OrbedenEditor/OrbedenEditor.vcxproj" Id="3d2f40a3-67c9-4ee0-a524-36f4be99a9f2" />
   <Project Path="Tools/OrbedenMetaGen/OrbedenMetaGen.csproj" />
+  <Project Path="Tools/OrbedenDocGen/OrbedenDocGen.csproj" />
 </Solution>

@@ -220,7 +220,8 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 # 构建与代码生成
 
 - 新增、移动、改名文件后同步更新 `OrbedenCore/OrbedenCore.vcxproj` 与 `OrbedenCore.vcxproj.filters`（显式文件列表）。
-- 新增 Object 派生类无需手写绑定：构建 `OrbedenCore` 时会先运行 `OrbedenMetaGen` 重新生成 `Src/Runtime/Generated/`（反射、C++/C# Binding、类型清单），再发布 SDK 头文件到 `OrbedenEditor/Sdk/`。
+- 新增 Object 派生类无需手写绑定：构建 `OrbedenCore` 时会先运行 `OrbedenMetaGen` 重新生成 `Src/Runtime/Generated/`（反射、C++/C# Binding、类型清单、用户文档投影 `ApiDocs.json`），再发布 SDK 头文件到 `OrbedenEditor/Sdk/`。
+- 面向游戏开发者的接口文档同样是构建产物：`OrbedenDocGen` 把 `ApiDocs.json` 与托管程序集的反射结果合成到 `Docs/Manual/Api/`，随 SDK 发布，游戏工程构建时刷新到 `Lib/Docs/`。成员说明取自头文件里紧贴声明上方的 `//` 注释，改注释即改文档。
 - 生成物提交到仓库，但只通过构建刷新；`Bindings.Manifest.json` 中的 schema hash 随签名变化属正常。
 - `PublishNativeGameSdk` 发布前会先清空 `OrbedenEditor/Sdk/Native/Include/` 再复制，改名或移动后不会有旧头文件残留。
 - 游戏工程的构建脚手架一律引用 SDK，不在项目内保留副本；游戏工程布局、位置无关规则与升级流程见 [构建与打包](BuildAndPackaging.md)。

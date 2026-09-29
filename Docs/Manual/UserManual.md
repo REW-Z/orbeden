@@ -91,7 +91,7 @@ Inspector 按当前选择切换内容，同一块面板服务三类检视：
 
 两个「哪个场景」各管一边，别混：**启动场景只服务打包后的 Player**；编辑器重新打开项目时回到**上次编辑的场景**，PIE 也从当前打开的场景开始，都与启动场景无关。
 
-导入设置写进源文件旁的 `.resinfo` 伴生文件，重新导入时保留；细节见 [资源 Inspector 设计](AssetInspectorDesign.md)。
+导入设置写进源文件旁的 `.resinfo` 伴生文件，重新导入时保留；细节见 [资源 Inspector 设计](../AssetInspectorDesign.md)。
 
 ### 场景视图手柄
 
@@ -128,7 +128,7 @@ Inspector 按当前选择切换内容，同一块面板服务三类检视：
 
 模型、材质、贴图和 Shader 放在 `Content/` 下（默认分别放 `Meshes/`、`Materials/`、`Textures/`、`Shaders/`），再通过 Project 面板和 Inspector 使用。
 
-绘制队列由 Shader 提供默认值，Material 可覆盖，Renderer 的每个子网格按自身材质分别分类。透明 Shader 在 `.orbshader` 文件开头写 `--------queue Transparent`，折射 Shader 写 `--------queue Refraction`；省略时为 `Opaque`。`.orbmat` 内写 `drawqueue Transparent` 可覆盖，写 `drawqueue Auto` 恢复继承。脚本设置 `material.drawQueue` 后需开启 `material.overrideDrawQueue`；`material.GetDrawQueue()` 返回最终队列。详细规则见 [渲染管线](RenderingPipeline.md)。Builtin 提供雨玻璃、热浪、尾流和 PBS 材质预设，参数与用法见 [Builtin 示例](../OrbedenEditor/Templates/Builtin/README.md)。`.orbmat` 是材质专用内部格式，一个文件对应一个 Material，直接以文件路径加载，并支持 `float uniform名称 数值` 与 `color uniform名称 R G B A` 参数。
+绘制队列由 Shader 提供默认值，Material 可覆盖，Renderer 的每个子网格按自身材质分别分类。透明 Shader 在 `.orbshader` 文件开头写 `--------queue Transparent`，折射 Shader 写 `--------queue Refraction`；省略时为 `Opaque`。`.orbmat` 内写 `drawqueue Transparent` 可覆盖，写 `drawqueue Auto` 恢复继承。脚本设置 `material.drawQueue` 后需开启 `material.overrideDrawQueue`；`material.GetDrawQueue()` 返回最终队列。详细规则见 [渲染管线](../RenderingPipeline.md)。Builtin 提供雨玻璃、热浪、尾流和 PBS 材质预设，参数与用法见 [Builtin 示例](../../OrbedenEditor/Templates/Builtin/README.md)。`.orbmat` 是材质专用内部格式，一个文件对应一个 Material，直接以文件路径加载，并支持 `float uniform名称 数值` 与 `color uniform名称 R G B A` 参数。
 
 从项目版本 12 或更早版本升级时，旧 `StaticMeshRenderer.drawQueue` 不再生效。自有透明、折射资源请迁移到 Shader 或材质配置，并重新 `Build Player`；模板资源已更新。
 
@@ -171,7 +171,7 @@ Inspector 按当前选择切换内容，同一块面板服务三类检视：
 
 `Ctrl+R`（Refresh）一次做完三件事：重导已加载资源、脚本过期时重新编译、重载编辑器侧的游戏程序集。编译走后台进程，期间编辑器保持可用，进度显示在模态浮窗里（可 `Run in Background` 退到状态栏细条，或 `Cancel` 取消）。重导**已加载**资源会原地写回，对象身份与引用不变。
 
-重导是**条件**的：逐个比对每个已加载源的导入输入（源文件与依赖文件的长度和时间戳、导入设置），只有输入变了的才真正重新导入，因此"什么都没改"的一次刷新只会打出 `Refresh complete. Nothing changed.`，不会重新解码贴图、不会重传显存。判定依据记在源文件旁 `.resinfo` 的 `Runtime` 段里，细节见 [资源检视设计](AssetInspectorDesign.md) 的「Runtime 段与 Ctrl+R 条件重导」。
+重导是**条件**的：逐个比对每个已加载源的导入输入（源文件与依赖文件的长度和时间戳、导入设置），只有输入变了的才真正重新导入，因此"什么都没改"的一次刷新只会打出 `Refresh complete. Nothing changed.`，不会重新解码贴图、不会重传显存。判定依据记在源文件旁 `.resinfo` 的 `Runtime` 段里，细节见 [资源检视设计](../AssetInspectorDesign.md) 的「Runtime 段与 Ctrl+R 条件重导」。
 
 **Project 面板的右键菜单**（背景处或某个条目上都可以）有三个入口：
 
@@ -230,7 +230,7 @@ OnDrawGUI()
 OnEnd()
 ```
 
-`OnDrawGUI()` 在引擎 GUI 帧内执行，除标准控件外还可使用 `GUI` 自由绘制 API（线段、圆弧、文本、裁剪区、固定位置窗口）绘制 PFD、仪表等 HUD，详见 [脚本系统](ScriptSystem.md)。
+`OnDrawGUI()` 在引擎 GUI 帧内执行，除标准控件外还可使用 `GUI` 自由绘制 API（线段、圆弧、文本、裁剪区、固定位置窗口）绘制 PFD、仪表等 HUD，详见 [脚本系统](../ScriptSystem.md)。
 
 public 字段会进入序列化和 Inspector。private/protected 字段需要添加 `[SerializeField]`。
 
@@ -317,7 +317,7 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 
 Object 派生的 C++ 组件由 MetaGen 自动生成强类型 C# 包装，直接 `ens.AddComponent<MoveBehaviour>()` 并使用类型化成员。对没有生成 Binding 的 C++ API（非 Object 派生类）使用 `ens.GetNativeComponent("MoveBehaviour")` 得到动态代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
-重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](ScriptSystem.md)。
+重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](../ScriptSystem.md)。
 
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 

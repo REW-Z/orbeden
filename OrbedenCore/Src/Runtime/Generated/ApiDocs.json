@@ -1,0 +1,5866 @@
+{
+  "SchemaVersion": 1,
+  "Namespace": "Orbeden",
+  "Types": [
+    {
+      "Name": "Object",
+      "QualifiedName": "Orbeden::Object",
+      "ManagedName": "Orbeden.Object",
+      "BaseName": "",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "",
+      "Members": [
+        {
+          "Name": "DeleteInstance",
+          "Doc": "\u9500\u6BC1\u5BF9\u8C61",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "object",
+              "Type": "Object*",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "FindObject",
+          "Doc": "\u67E5\u627E\u5BF9\u8C61",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Object*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "const StringId\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "FindObject",
+          "Doc": "\u67E5\u627E\u5BF9\u8C61",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Object*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "hash",
+              "Type": "uint64",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "FindObjectById",
+          "Doc": "\u6309\u8FD0\u884C\u65F6\u5BF9\u8C61ID\u67E5\u627E\u5BF9\u8C61",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Object*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "GetInstanceId",
+          "Doc": "\u83B7\u53D6\u5B9E\u4F8BID",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const StringId\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetObjectId",
+          "Doc": "\u83B7\u53D6\u8FD0\u884C\u65F6\u5BF9\u8C61ID",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsObjectAlive",
+          "Doc": "\u5224\u65AD\u8FD0\u884C\u65F6\u5BF9\u8C61ID\u662F\u5426\u4ECD\u7136\u5B58\u6D3B",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "IsRuntimeInstancePath",
+          "Doc": "\u5224\u65AD\u5BF9\u8C61ID\u662F\u5426\u4E3A\u8FD0\u884C\u65F6\u5BF9\u8C61ID",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "instancePath",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetInstanceId",
+          "Doc": "\u8BBE\u7F6E\u5B9E\u4F8BID",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "const StringId\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "UnloadUnusedObjects",
+          "Doc": "\u91CA\u653E\u672A\u4F7F\u7528\u7684\u5BF9\u8C61",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "managedRootIds",
+              "Type": "const int32*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Component",
+      "QualifiedName": "Component",
+      "ManagedName": "Orbeden.Component",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u7EC4\u4EF6\u57FA\u7C7B",
+      "Members": [
+        {
+          "Name": "GetEnsId",
+          "Doc": "\u83B7\u53D6\u6240\u5C5E\u53E5\u67C4",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "EnsId",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Ens",
+      "QualifiedName": "Ens",
+      "ManagedName": "Orbeden.Ens",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "",
+      "Members": [
+        {
+          "Name": "GetId",
+          "Doc": "\u83B7\u53D6\u5E95\u5C42ID",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "EnsId",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "InstanceDrawList",
+      "QualifiedName": "InstanceDrawList",
+      "ManagedName": "Orbeden.InstanceDrawList",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "\u663E\u5F0F\u5B9E\u4F8B\u63D0\u4EA4\u5217\u8868\uFF1A\u628A\u4E00\u6279 TRS \u8BB0\u5F55\u4EA4\u7ED9\u4E0B\u4E00\u6B21 Render \u7ED8\u5236\u3002\n\u5B83\u4E0D\u662F\u7EC4\u4EF6\u4E5F\u4E0D\u662F\u8D44\u6E90\uFF0C\u7528 Object.CreateInstance\u003CInstanceDrawList\u003E() \u521B\u5EFA\u3002",
+      "Members": [
+        {
+          "Name": "Clear",
+          "Doc": "\u6E05\u7A7A\u5BF9\u8C61\u5185\u5B9E\u4F8B\uFF0C\u4E0D\u64A4\u56DE\u5DF2\u7ECF\u63D0\u4EA4\u7684\u5FEB\u7167\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "Configure",
+          "Doc": "\u914D\u7F6E\u7ED8\u5236\u76EE\u6807\uFF1B\u6821\u9A8C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u914D\u7F6E\uFF0C\u4E14\u4E0D\u6E05\u7A7A\u5DF2\u8BBE\u7F6E\u7684\u5B9E\u4F8B\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "targetMesh",
+              "Type": "Mesh*",
+              "Default": ""
+            },
+            {
+              "Name": "targetSubMeshIndex",
+              "Type": "uint32",
+              "Default": ""
+            },
+            {
+              "Name": "targetMaterial",
+              "Type": "Material*",
+              "Default": ""
+            },
+            {
+              "Name": "drawOptions",
+              "Type": "const InstanceDrawOptions\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            4
+          ]
+        },
+        {
+          "Name": "GetInstanceCount",
+          "Doc": "\u8BFB\u53D6\u5F53\u524D\u5B9E\u4F8B\u6570\u91CF\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetInstances",
+          "Doc": "\u66FF\u6362\u5168\u90E8\u5B9E\u4F8B\u6570\u636E\uFF1B\u4EFB\u4E00\u6761\u975E\u6CD5\u5219\u6574\u4F53\u62D2\u7EDD\u5E76\u4FDD\u7559\u65E7\u503C\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const MeshInstanceData*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "Submit",
+          "Doc": "\u628A\u914D\u7F6E\u4E0E\u5B9E\u4F8B\u590D\u5236\u5230\u4E0B\u4E00\u6B21 Render \u7684\u63D0\u4EA4\u5217\u8868\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Material",
+      "QualifiedName": "Material",
+      "ManagedName": "Orbeden.Material",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU\u6750\u8D28\u8D44\u6E90\uFF0C\u4FDD\u5B58\u53C2\u6570\u548C\u8D34\u56FE/Shader\u5F15\u7528",
+      "Members": [
+        {
+          "Name": "ClearColor",
+          "Doc": "\u6E05\u9664\u6750\u8D28\u989C\u8272\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "ClearFloat",
+          "Doc": "\u6E05\u9664\u6750\u8D28\u6D6E\u70B9\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "ClearTexture",
+          "Doc": "\u6E05\u9664\u6750\u8D28\u7EB9\u7406\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "GetColor",
+          "Doc": "\u83B7\u53D6\u6750\u8D28\u989C\u8272\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "color",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "defaultValue",
+              "Type": "const color\u0026",
+              "Default": "color{0.0f,0.0f,0.0f,1.0f}"
+            }
+          ],
+          "Arities": [
+            1,
+            2
+          ]
+        },
+        {
+          "Name": "GetDrawQueue",
+          "Doc": "\u83B7\u53D6\u6750\u8D28\u8986\u76D6\u6216 Shader \u9ED8\u8BA4\u7684\u7ED8\u5236\u961F\u5217\uFF1B\u672A\u7ED1\u5B9A Shader \u65F6\u4F7F\u7528\u4E0D\u900F\u660E\u961F\u5217\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "DrawQueue",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetFloat",
+          "Doc": "\u83B7\u53D6\u6750\u8D28\u6D6E\u70B9\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "defaultValue",
+              "Type": "float32",
+              "Default": "0.0f"
+            }
+          ],
+          "Arities": [
+            1,
+            2
+          ]
+        },
+        {
+          "Name": "GetTexture",
+          "Doc": "\u83B7\u53D6\u6750\u8D28\u7EB9\u7406",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "Texture2D*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "HasColor",
+          "Doc": "\u5224\u65AD\u6750\u8D28\u989C\u8272\u69FD\u662F\u5426\u5DF2\u8BBE\u7F6E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "HasFloat",
+          "Doc": "\u5224\u65AD\u6750\u8D28\u6D6E\u70B9\u69FD\u662F\u5426\u5DF2\u8BBE\u7F6E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "HasTexture",
+          "Doc": "\u5224\u65AD\u6750\u8D28\u7EB9\u7406\u69FD\u662F\u5426\u5DF2\u8BBE\u7F6E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "IsDirty",
+          "Doc": "\u5224\u65AD GPU \u6570\u636E\u662F\u5426\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "MarkDirty",
+          "Doc": "\u6807\u8BB0 GPU \u6570\u636E\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetColor",
+          "Doc": "\u8BBE\u7F6E\u6750\u8D28\u989C\u8272\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const color\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetFloat",
+          "Doc": "\u8BBE\u7F6E\u6750\u8D28\u6D6E\u70B9\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "value",
+              "Type": "float32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetShader",
+          "Doc": "\u8BBE\u7F6E\u6750\u8D28\u4F7F\u7528\u7684 Shader",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "Shader*",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetShader",
+          "Doc": "\u6309\u8D44\u6E90 ID \u8BBE\u7F6E\u6750\u8D28\u4F7F\u7528\u7684 Shader",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "shaderId",
+              "Type": "const StringId\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetTexture",
+          "Doc": "\u8BBE\u7F6E\u6750\u8D28\u7EB9\u7406\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "texture",
+              "Type": "Texture2D*",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetTexture",
+          "Doc": "\u8BBE\u7F6E\u6750\u8D28\u7EB9\u7406\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "slotName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "textureId",
+              "Type": "const StringId\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "colorSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CMaterialColorSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawQueue",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "DrawQueue",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "floatSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CMaterialFloatSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "name",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "overrideDrawQueue",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shader",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CShader\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "textureSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CMaterialTextureSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Mesh",
+      "QualifiedName": "Mesh",
+      "ManagedName": "Orbeden.Mesh",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU\u7F51\u683C\u8D44\u6E90",
+      "Members": [
+        {
+          "Name": "ClearDirty",
+          "Doc": "\u6E05\u9664\u6307\u5B9A\u6D88\u8D39\u65B9\u7684\u5237\u65B0\u6807\u8BB0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "flags",
+              "Type": "MeshDirtyFlags",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "ClearGeometry",
+          "Doc": "\u6E05\u7A7A\u6240\u6709\u51E0\u4F55\u6570\u636E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ConfigureSubMesh",
+          "Doc": "\u914D\u7F6E\u5B50\u7F51\u683C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "index",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "subMeshName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "indexStart",
+              "Type": "uint32",
+              "Default": ""
+            },
+            {
+              "Name": "indexCount",
+              "Type": "uint32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            4
+          ]
+        },
+        {
+          "Name": "GetContentVersion",
+          "Doc": "\u8BFB\u53D6\u5185\u5BB9\u7248\u672C\uFF0C\u51E0\u4F55\u6570\u636E\u53D8\u66F4\u65F6\u9012\u589E\uFF1B\u9759\u6001\u51E0\u4F55\u7F13\u5B58\u636E\u6B64\u5224\u65AD\u8981\u4E0D\u8981\u91CD\u5EFA",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint64",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetLocalBounds",
+          "Doc": "\u83B7\u53D6\u6309\u810F\u6807\u8BB0\u7F13\u5B58\u7684\u672C\u5730\u5305\u56F4\u76D2",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const bounds3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsDirty",
+          "Doc": "\u5224\u65AD\u6307\u5B9A\u6D88\u8D39\u65B9\u662F\u5426\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "flags",
+              "Type": "MeshDirtyFlags",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "MarkDirty",
+          "Doc": "\u6807\u8BB0\u6240\u6709\u6D88\u8D39\u65B9\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "MarkDirty",
+          "Doc": "\u6807\u8BB0\u6307\u5B9A\u6D88\u8D39\u65B9\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "flags",
+              "Type": "MeshDirtyFlags",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "RefreshNormals",
+          "Doc": "\u6839\u636E\u4E09\u89D2\u5F62\u7D22\u5F15\u91CD\u65B0\u8BA1\u7B97\u6CD5\u7EBF",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ResizeSubMeshes",
+          "Doc": "\u8C03\u6574\u5B50\u7F51\u683C\u6570\u91CF",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetIndexData",
+          "Doc": "\u5199\u5165\u7D22\u5F15\u6570\u636E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const uint32*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetSubMeshes",
+          "Doc": "\u66FF\u6362\u5B50\u7F51\u683C\u5FEB\u7167\u5E76\u901A\u77E5\u6240\u6709\u6570\u636E\u6D88\u8D39\u65B9\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const List\u003CSubMesh\u003E\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetVertexNormals",
+          "Doc": "\u5199\u5165\u9876\u70B9\u6CD5\u7EBF",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const vector3*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetVertexPositions",
+          "Doc": "\u5199\u5165\u9876\u70B9\u4F4D\u7F6E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const vector3*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetVertexTangents",
+          "Doc": "\u5199\u5165\u9876\u70B9\u5207\u7EBF",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const vector3*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "SetVertexTexcoords",
+          "Doc": "\u5199\u5165\u9876\u70B9 UV",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "const vector2*",
+              "Default": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "indices",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cuint32\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "name",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "normals",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cvector3\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "subMeshes",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003CSubMesh\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "tangents",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cvector3\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "texcoords",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cvector2\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "vertices",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cvector3\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Shader",
+      "QualifiedName": "Shader",
+      "ManagedName": "Orbeden.Shader",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU\u7740\u8272\u5668\u8D44\u6E90\uFF0C\u4FDD\u5B58\u6E90\u7801\u4F46\u4E0D\u7F16\u8BD1GPU\u7A0B\u5E8F",
+      "Members": [
+        {
+          "Name": "CreateFromSource",
+          "Doc": "\u521B\u5EFA\u5E26\u8FD0\u884C\u65F6\u8DEF\u5F84\u7684 Shader\uFF0C\u5E76\u5237\u65B0\u6E90\u7801\u53CD\u5C04\u3002",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Shader*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "vertex",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "fragment",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            3
+          ]
+        },
+        {
+          "Name": "GetPass",
+          "Doc": "\u83B7\u53D6\u6307\u5B9A Pass",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const ShaderPass*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "index",
+              "Type": "uint32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "GetPassCount",
+          "Doc": "\u83B7\u53D6 Pass \u6570\u91CF",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsDirty",
+          "Doc": "\u5224\u65AD GPU \u6570\u636E\u662F\u5426\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "MarkDirty",
+          "Doc": "\u6807\u8BB0 GPU \u6570\u636E\u9700\u8981\u5237\u65B0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ReflectSlotsFromSource",
+          "Doc": "\u4ECE GLSL \u6E90\u7801\u5237\u65B0\u6750\u8D28\u69FD\u53CD\u5C04\u7ED3\u679C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ReplacePasses",
+          "Doc": "\u66FF\u6362\u6709\u5E8F Pass \u5217\u8868\u5E76\u5237\u65B0\u517C\u5BB9\u6E90\u7801\u548C\u6750\u8D28\u69FD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const List\u003CShaderPass\u003E\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "ReplaceSource",
+          "Doc": "\u66FF\u6362 GLSL \u6E90\u7801\u5E76\u5237\u65B0\u53CD\u5C04\u7ED3\u679C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "vertex",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "fragment",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "colorSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CShaderColorSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawQueue",
+          "Doc": "\u6750\u8D28\u672A\u8986\u76D6\u65F6\u4F7F\u7528\u7684\u7ED8\u5236\u961F\u5217",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "DrawQueue",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "floatSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CShaderFloatSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "fragmentPath",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "fragmentSource",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "name",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "passes",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003CShaderPass\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "textureSlots",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "List\u003CShaderTextureSlot\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "vertexPath",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "vertexSource",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Skybox",
+      "QualifiedName": "Skybox",
+      "ManagedName": "Orbeden.Skybox",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU \u5929\u7A7A\u76D2\u8D44\u6E90\uFF0C\u4FDD\u5B58\u516D\u4E2A\u8DE8 API \u7684\u7EB9\u7406\u9762\u5F15\u7528\u3002",
+      "Members": [
+        {
+          "Name": "back",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "bottom",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "front",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "left",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "right",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "top",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "TextResource",
+      "QualifiedName": "TextResource",
+      "ManagedName": "Orbeden.TextResource",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU \u6587\u672C\u8D44\u6E90\uFF1A\u6E90\u6587\u4EF6\u539F\u6837\u4FDD\u5B58\uFF0C\u4F9B\u7EC4\u4EF6\u6309 Key \u5F15\u7528\u540E\u81EA\u884C\u89E3\u6790\u3002\n\u6587\u672C\u5728\u5BFC\u5165\u65F6\u8BFB\u8FDB cooked \u4EA7\u7269\uFF0C\u8FD0\u884C\u65F6\u4E0D\u4F9D\u8D56\u6E90\u6587\u4EF6\u8DEF\u5F84\uFF0C\u6253\u5305\u4E5F\u4E0D\u9700\u8981\u5E26\u4E0A\u6E90\u6587\u4EF6\u3002",
+      "Members": [
+        {
+          "Name": "text",
+          "Doc": "\u6E90\u6587\u4EF6\u7684\u539F\u59CB\u6587\u672C\uFF0C\u4E0D\u89E3\u91CA\u5185\u5BB9\u3001\u4E0D\u89E3\u6790\u683C\u5F0F",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Texture2D",
+      "QualifiedName": "Texture2D",
+      "ManagedName": "Orbeden.Texture2D",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "CPU\u7EB9\u7406\u6570\u636E\uFF0C\u4E0D\u7ED1\u5B9A\u5177\u4F53\u6E32\u67D3API",
+      "Members": [
+        {
+          "Name": "ClearDirty",
+          "Doc": "\u6E05\u9664 GPU \u5237\u65B0\u6807\u8BB0",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsDirty",
+          "Doc": "\u5224\u65AD GPU \u7EB9\u7406\u662F\u5426\u9700\u8981\u91CD\u65B0\u4E0A\u4F20",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "MarkDirty",
+          "Doc": "\u6807\u8BB0 GPU \u7EB9\u7406\u9700\u8981\u91CD\u65B0\u4E0A\u4F20",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "channels",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "colorSpace",
+          "Doc": "\u6539\u52A8\u540E\u5FC5\u987B\u91CD\u4F20 GPU \u7EB9\u7406\uFF0C\u5426\u5219\u4F1A\u9759\u9ED8\u590D\u7528\u6309\u65E7\u989C\u8272\u7A7A\u95F4\u521B\u5EFA\u7684\u7EB9\u7406\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "TextureColorSpace",
+          "Serialize": false,
+          "Changed": "MarkDirty",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "format",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "height",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "name",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "pixels",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cuint8\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "width",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Camera",
+      "QualifiedName": "Camera",
+      "ManagedName": "Orbeden.Camera",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u76F8\u673A\u7EC4\u4EF6\uFF0C\u4FDD\u5B58\u6E32\u67D3\u89C6\u89D2\u7684\u516C\u5F00\u53C2\u6570",
+      "Members": [
+        {
+          "Name": "GetEnabled",
+          "Doc": "\u83B7\u53D6\u542F\u7528\u72B6\u6001",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsRenderSceneEligible",
+          "Doc": "\u5224\u65AD\u5F53\u524D\u7EC4\u4EF6\u662F\u5426\u5E94\u6CE8\u518C\u5230\u6E32\u67D3\u573A\u666F",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetEnabled",
+          "Doc": "\u8BBE\u7F6E\u542F\u7528\u72B6\u6001\u5E76\u540C\u6B65\u6E32\u67D3\u573A\u666F\u6CE8\u518C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "clearColor",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "color",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "clearMode",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "ClearMode",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "depth",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawLayerMask",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "exposure",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "farPlane",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "fieldOfView",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "nearPlane",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "overrideExposure",
+          "Doc": "\u66DD\u5149\u63CF\u8FF0\u7684\u662F\u89C2\u5BDF\u65B9\u5F0F\uFF0C\u4E0E\u573A\u666F\u91CC\u7684\u706F\u5149\u5F3A\u5EA6\u4E92\u4E0D\u5F71\u54CD\u3002\n\u4E0D\u8986\u76D6\u65F6\u4F7F\u7528\u9879\u76EE\u7EA7\u9ED8\u8BA4\u503C\uFF08ProjectSettings.display\uFF09\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "renderTargetId",
+          "Doc": "0 \u8868\u793A\u7ED8\u5236\u5230\u9ED8\u8BA4\u7A97\u53E3\u5E27\u7F13\u51B2\uFF1B\u79BB\u5C4F\u76EE\u6807\u7531 RenderSystem \u5728\u8FD0\u884C\u65F6\u5206\u914D",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "viewportHeight",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "viewportWidth",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "viewportX",
+          "Doc": "\u5F52\u4E00\u5316 viewport\uFF0C\u5750\u6807\u539F\u70B9\u4F4D\u4E8E\u6E32\u67D3\u76EE\u6807\u5DE6\u4E0B\u89D2",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "viewportY",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "CharacterController",
+      "QualifiedName": "CharacterController",
+      "ManagedName": "Orbeden.CharacterController",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": true,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "PhysX CCT \u89D2\u8272\u63A7\u5236\u5668\u7EC4\u4EF6\uFF0C\u4F4D\u7F6E\u4F7F\u7528\u5B9E\u4F53\u53D8\u6362\u7684\u811A\u5E95\u5750\u6807",
+      "Members": [
+        {
+          "Name": "collisionLayer",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "collisionMask",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "contactOffset",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "halfExtents",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "height",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "minMoveDistance",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "radius",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shape",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "CharacterControllerShape",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "slopeLimit",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "stepOffset",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Collider",
+      "QualifiedName": "Collider",
+      "ManagedName": "Orbeden.Collider",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": true,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u6240\u6709\u7269\u7406\u78B0\u649E\u4F53\u7684\u62BD\u8C61\u57FA\u7C7B\uFF1B\u6CA1\u6709\u521A\u4F53\u7EC4\u4EF6\u65F6\u4F5C\u4E3A\u9759\u6001\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "\u83B7\u53D6\u5177\u4F53\u51E0\u4F55\u7C7B\u578B\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "center",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "collisionLayer",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "collisionMask",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "dynamicFriction",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "isTrigger",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "restitution",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "staticFriction",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "DirectionalLight",
+      "QualifiedName": "DirectionalLight",
+      "ManagedName": "Orbeden.DirectionalLight",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u65B9\u5411\u5149\u7EC4\u4EF6\uFF0C\u63CF\u8FF0\u5168\u5C40\u5E73\u884C\u5149\u548C\u57FA\u7840\u9634\u5F71\u53C2\u6570\u3002",
+      "Members": [
+        {
+          "Name": "GetEnabled",
+          "Doc": "\u83B7\u53D6\u542F\u7528\u72B6\u6001",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsRenderSceneEligible",
+          "Doc": "\u5224\u65AD\u5F53\u524D\u7EC4\u4EF6\u662F\u5426\u5E94\u6CE8\u518C\u5230\u6E32\u67D3\u573A\u666F",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetEnabled",
+          "Doc": "\u8BBE\u7F6E\u542F\u7528\u72B6\u6001\u5E76\u540C\u6B65\u6E32\u67D3\u573A\u666F\u6CE8\u518C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "castShadows",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "color",
+          "Doc": "\u5149\u7167\u65B9\u5411\u4E0D\u5728\u8FD9\u91CC\uFF1A\u5B83\u4E0E\u592A\u9633\u7684\u671D\u5411\u662F\u540C\u4E00\u4E2A\u4E1C\u897F\uFF0C\u76F4\u63A5\u53D6\u6240\u5C5E Ens \u7684 Transform \u524D\u5411\uFF0C\n\u7528\u65CB\u8F6C\u624B\u67C4\u8F6C\u592A\u9633\u5373\u53EF\u3002\u89C1 RenderScene \u751F\u6210\u65B9\u5411\u5149\u5FEB\u7167\u7684\u5730\u65B9\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "color",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "intensity",
+          "Doc": "\u4F7F\u7528 \u7F8E\u672F\u5F3A\u5EA6\u523B\u5EA6\uFF0C\u9ED8\u8BA4 1\uFF0C\u5141\u8BB8\u5927\u4E8E 1\u3002\n\u539F\u6837\u4F20\u5165 Shader\uFF0C\u6F2B\u53CD\u5C04\u91C7\u7528\u5355\u4F4D\u54CD\u5E94\uFF0C\u955C\u9762\u91C7\u7528\u914D\u5957\u5F52\u4E00\u5316\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowAdaptive",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowBias",
+          "Doc": "\u4E16\u754C\u5355\u4F4D\u7684\u6DF1\u5EA6\u504F\u79FB",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowBlendRatio",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowCascadeCount",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowDebugView",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowDistance",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowMapResolution",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowNormalBias",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowSplitLambda",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "shadowStrength",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "HeightField",
+      "QualifiedName": "HeightField",
+      "ManagedName": "Orbeden.HeightField",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u7531 fBm \u566A\u58F0\u751F\u6210\u9AD8\u5EA6\u573A\u7684\u5730\u5F62\u7EC4\u4EF6\uFF1A\n\u8FD0\u884C\u65F6\u751F\u6210\u6E32\u67D3\u7F51\u683C\uFF08\u5199\u5165\u540C Ens \u7684 StaticMeshRenderer\uFF09\u4E0E PhysX HeightField \u78B0\u649E\u4F53\n\uFF08\u7531 PhysicsSystem \u6D88\u8D39\uFF09\uFF0C\u53EF\u9009\u751F\u6210\u5E73\u94FA\u566A\u58F0\u8D34\u56FE\u5E76\u7ED1\u5B9A\u5230\u6307\u5B9A\u6750\u8D28\u3002\n\u4FEE\u6539\u53C2\u6570\u5B57\u6BB5\u4F1A\u7ACB\u5373\u8C03\u7528 Regenerate \u91CD\u5EFA\uFF08\u7531 MetaGen \u751F\u6210\u7684 setter \u89E6\u53D1\uFF09\u3002",
+      "Members": [
+        {
+          "Name": "GetColumnScale",
+          "Doc": "\u83B7\u53D6\u9AD8\u5EA6\u573A\u5217\u95F4\u8DDD\uFF08Z \u65B9\u5411\uFF09\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetGeneration",
+          "Doc": "\u83B7\u53D6\u5F53\u524D\u751F\u6210\u4EE3\u6570\uFF0C\u4F9B\u7269\u7406\u4FA7\u68C0\u6D4B\u6570\u636E\u53D8\u5316\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetHeightAtWorldXZ",
+          "Doc": "\u53CC\u7EBF\u6027\u91C7\u6837\u4E16\u754C XZ \u5904\u7684\u9AD8\u5EA6\uFF08\u89E3\u6790\u515C\u5E95\uFF09\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "x",
+              "Type": "float32",
+              "Default": ""
+            },
+            {
+              "Name": "z",
+              "Type": "float32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "GetHeights",
+          "Doc": "\u83B7\u53D6\u5F53\u524D\u9AD8\u5EA6\u91C7\u6837\uFF08\u884C\u6CBF X \u65B9\u5411\uFF0CrowCount*columnCount \u4E2A\uFF09\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const std::vector\u003Cfloat32\u003E\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetRowScale",
+          "Doc": "\u83B7\u53D6\u9AD8\u5EA6\u573A\u884C\u95F4\u8DDD\uFF08X \u65B9\u5411\uFF09\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetSurfaceMaterial",
+          "Doc": "\u83B7\u53D6\u751F\u6210\u7684\u8868\u9762\u6750\u8D28\uFF0C\u4F9B\u76F8\u90BB\u5730\u5F62\u5757\u5171\u4EAB\u566A\u58F0\u7EB9\u7406\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "Material*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "Regenerate",
+          "Doc": "\u6309\u5F53\u524D\u53C2\u6570\u91CD\u5EFA\u9AD8\u5EA6\u573A\u3001\u6E32\u67D3\u7F51\u683C\u4E0E\u566A\u58F0\u8D34\u56FE\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SyncPendingGeneration",
+          "Doc": "\u7269\u7406\u56FA\u5B9A\u6B65\u515C\u5E95\uFF1Amaterial \u89E3\u6790\u540E\u5B8C\u6210\u6E32\u67D3\u7F51\u683C\u66FF\u6362\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "amplitude",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "collisionLayer",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "columnCount",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenBlendDistance",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenHeight",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenMaxX",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenMaxZ",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenMinX",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "flattenMinZ",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "frequency",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "generateNoiseTexture",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "material",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMaterial\u003E",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "noiseHighColor",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "color",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "noiseLowColor",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "color",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "noiseTextureSize",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "octaves",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "rowCount",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "sampleTileX",
+          "Doc": "\u5168\u5C40\u91C7\u6837\u5757\u5750\u6807\uFF1B\u4F7F\u7528\u53CC\u7CBE\u5EA6\u8BA1\u7B97\u566A\u58F0\u4F4D\u7F6E\uFF0C\u6D6E\u52A8\u539F\u70B9\u4E0D\u6539\u53D8\u5730\u5F62\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "sampleTileZ",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "seed",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "sizeX",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "sizeZ",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "tileSize",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "Regenerate",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "ParticleSystem",
+      "QualifiedName": "ParticleSystem",
+      "ManagedName": "Orbeden.ParticleSystem",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": true,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "CPU \u7C92\u5B50\u53D1\u5C04\u5668\u7EC4\u4EF6\u3002\n\u7EC4\u4EF6\u53EA\u4FDD\u5B58\u6301\u4E45\u5316\u914D\u7F6E\u4E0E\u8D44\u6E90\u5F15\u7528\uFF0C\u7C92\u5B50\u3001\u62D6\u5C3E\u4E0E\u968F\u673A\u6D41\u5168\u90E8\u7531 ParticleSimulationSystem \u6301\u6709\u3002",
+      "Members": [
+        {
+          "Name": "Clear",
+          "Doc": "\u6E05\u7A7A\u7C92\u5B50\u3001\u62D6\u5C3E\u4E0E\u672A\u6D3E\u53D1\u4E8B\u4EF6\uFF0C\u4E0D\u6539\u53D8\u64AD\u653E\u72B6\u6001\u4E0E\u65F6\u949F\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "Emit",
+          "Doc": "\u624B\u5DE5\u51FA\u751F\u7C92\u5B50\u5E76\u8FD4\u56DE\u5B9E\u9645\u63A5\u6536\u6570\u91CF\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "count",
+              "Type": "uint32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "FormatSettings",
+          "Doc": "\u628A\u5408\u6CD5\u914D\u7F6E\u683C\u5F0F\u5316\u6210\u89C4\u8303\u6587\u672C\uFF1B\u975E\u6CD5\u914D\u7F6E\u8FD4\u56DE\u7A7A\u4E32\u3002",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const ParticleSettings\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "GetConfigurationRevision",
+          "Doc": "\u8BFB\u53D6\u914D\u7F6E\u7248\u672C\u53F7\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint64",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetEnabled",
+          "Doc": "\u8BFB\u53D6\u542F\u7528\u72B6\u6001\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetLastError",
+          "Doc": "\u8BFB\u53D6\u6700\u8FD1\u4E00\u6B21\u8BCA\u65AD\u6587\u672C\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetPlaybackInfo",
+          "Doc": "\u8BFB\u53D6\u8FD0\u884C\u65F6\u64AD\u653E\u72B6\u6001\u5FEB\u7167\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ParticlePlaybackInfo",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetSettings",
+          "Doc": "\u8BFB\u53D6\u914D\u7F6E\u526F\u672C\uFF0C\u4E0D\u66B4\u9732\u5185\u90E8\u5F15\u7528\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ParticleSettings",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "OnConfigurationChanged",
+          "Doc": "\u8D44\u6E90\u3001\u5C42\u6570\u6216\u9634\u5F71\u5F00\u5173\u53D8\u5316\u540E\u7684\u901A\u77E5\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ParseSettings",
+          "Doc": "\u89E3\u6790\u914D\u7F6E\u6587\u672C\uFF0C\u4E0D\u8BBF\u95EE World\u3002",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "ParticleSettingsParseResult",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "text",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "Pause",
+          "Doc": "\u6682\u505C\u8FD0\u884C\u65F6\u6A21\u62DF\uFF0C\u4FDD\u7559\u7C92\u5B50\u4E0E\u65F6\u95F4\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "Play",
+          "Doc": "\u64AD\u653E\u8FD0\u884C\u65F6\u6A21\u62DF\uFF1Brestart \u4E3A\u771F\u65F6\u6E05\u7A7A\u7C92\u5B50\u5E76\u91CD\u7F6E\u65F6\u95F4\u4E0E\u968F\u673A\u6D41\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "restart",
+              "Type": "bool",
+              "Default": "true"
+            }
+          ],
+          "Arities": [
+            0,
+            1
+          ]
+        },
+        {
+          "Name": "SetEnabled",
+          "Doc": "\u8BBE\u7F6E\u542F\u7528\u72B6\u6001\uFF1B\u5173\u95ED\u4F1A\u7ACB\u5373\u6E05\u7A7A\u4E24\u5957\u6A21\u62DF\u72B6\u6001\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetSettings",
+          "Doc": "\u66FF\u6362\u914D\u7F6E\uFF1B\u89C4\u8303\u5316\u4E0E\u6821\u9A8C\u5931\u8D25\u65F6\u4FDD\u7559\u65E7\u503C\u5E76\u8BB0\u5F55\u9519\u8BEF\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const ParticleSettings\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "Stop",
+          "Doc": "\u505C\u6B62\u8FD0\u884C\u65F6\u6A21\u62DF\uFF1Bclear \u4E3A\u771F\u65F6\u7ACB\u5373\u6E05\u7A7A\u7C92\u5B50\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "clear",
+              "Type": "bool",
+              "Default": "true"
+            }
+          ],
+          "Arities": [
+            0,
+            1
+          ]
+        },
+        {
+          "Name": "castShadows",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawLayer",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "materials",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003CRef\u003CMaterial\u003E\u003E",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "mesh",
+          "Doc": "Mesh \u6A21\u5F0F\u9010\u5B50\u7F51\u683C\u53D6\u6750\u8D28\uFF1BBillboard \u53EA\u8BFB\u7B2C\u4E00\u4E2A\u69FD\u4F4D",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMesh\u003E",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "receiveShadows",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "subEmitterTargets",
+          "Doc": "\u56FA\u5B9A\u5341\u516D\u69FD\u7684\u5B50\u53D1\u5C04\u5668\u76EE\u6807\uFF0C\u69FD\u53F7\u7A33\u5B9A\uFF0C\u89C4\u5219\u901A\u8FC7 targetSlot \u5B9A\u4F4D",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::array\u003CEnsId,16\u003E",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "trailMaterial",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMaterial\u003E",
+          "Serialize": false,
+          "Changed": "OnConfigurationChanged",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "RigidBody",
+      "QualifiedName": "RigidBody",
+      "ManagedName": "Orbeden.RigidBody",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": true,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u7531 PhysicsSystem \u9A71\u52A8\u7684\u521A\u4F53\u7EC4\u4EF6",
+      "Members": [
+        {
+          "Name": "AddForce",
+          "Doc": "\u7D2F\u79EF\u4E00\u4E2A\u4F5C\u7528\u4E8E\u8D28\u5FC3\u7684\u529B\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "force",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "AddForceAtPosition",
+          "Doc": "\u7D2F\u79EF\u4E00\u4E2A\u4F5C\u7528\u4E8E\u4E16\u754C\u7A7A\u95F4\u4F4D\u7F6E\u7684\u529B\uFF08\u81EA\u52A8\u6362\u7B97\u4E3A\u529B\u4E0E\u529B\u77E9\uFF09\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "force",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "worldPosition",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "AddTorque",
+          "Doc": "\u7D2F\u79EF\u4E00\u4E2A\u7ED5\u8D28\u5FC3\u7684\u529B\u77E9\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "torque",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "angularDamping",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "angularVelocity",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "bodyType",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "PhysicsBodyType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "continuousCollisionDetection",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "enabled",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "linearDamping",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "linearVelocity",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "lockFlags",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "mass",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "useGravity",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Script",
+      "QualifiedName": "Script",
+      "ManagedName": "Orbeden.Script",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u539F\u751F\u6E38\u620F\u811A\u672C\u7EC4\u4EF6\u57FA\u7C7B\uFF0C\u751F\u547D\u5468\u671F\u7531 ScriptSystem \u7684\u51FD\u6570\u6307\u9488\u8868\u8C03\u5EA6\u3002",
+      "Members": [
+        {
+          "Name": "GetDomain",
+          "Doc": "\u83B7\u53D6\u7531\u5B9E\u9645\u539F\u751F\u7C7B\u578B\u786E\u5B9A\u7684\u811A\u672C\u6267\u884C\u57DF\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ScriptDomain",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetEnabled",
+          "Doc": "\u83B7\u53D6\u811A\u672C\u542F\u7528\u72B6\u6001\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "RemoveManagedField",
+          "Doc": "\u5220\u9664\u4E00\u4E2A\u6258\u7BA1\u5B57\u6BB5\u3002\u53EA\u7528\u6765\u540C\u6B65\u811A\u672C\u7C7B\u578B\uFF1A\u5B57\u6BB5\u5DF2\u7ECF\u4E0D\u5728\u7C7B\u578B\u91CC\u65F6\u7531\u8C03\u7528\u65B9\u5224\u65AD\uFF0C\n\u8FD9\u91CC\u4E0D\u505A\u4EFB\u4F55\u0022\u8BE5\u4E0D\u8BE5\u5220\u0022\u7684\u5224\u65AD",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetEnabled",
+          "Doc": "\u8BBE\u7F6E\u811A\u672C\u542F\u7528\u72B6\u6001\u5E76\u5237\u65B0\u9636\u6BB5\u8868\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetManagedField",
+          "Doc": "\u65B0\u589E\u6216\u8986\u76D6\u4E00\u4E2A C# \u5E8F\u5217\u5316\u5B57\u6BB5\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "typeName",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "kind",
+              "Type": "Reflection::FieldKind",
+              "Default": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const std::string\u0026",
+              "Default": ""
+            },
+            {
+              "Name": "inspectorVisible",
+              "Type": "bool",
+              "Default": "true"
+            }
+          ],
+          "Arities": [
+            4,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "StaticMeshRenderer",
+      "QualifiedName": "StaticMeshRenderer",
+      "ManagedName": "Orbeden.StaticMeshRenderer",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": true,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "\u9759\u6001\u7F51\u683C\u6E32\u67D3\u7EC4\u4EF6",
+      "Members": [
+        {
+          "Name": "GetEnabled",
+          "Doc": "\u83B7\u53D6\u542F\u7528\u72B6\u6001",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsRenderSceneEligible",
+          "Doc": "\u5224\u65AD\u5F53\u524D\u7EC4\u4EF6\u662F\u5426\u5E94\u6CE8\u518C\u5230\u6E32\u67D3\u573A\u666F",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetEnabled",
+          "Doc": "\u8BBE\u7F6E\u542F\u7528\u72B6\u6001\u5E76\u540C\u6B65\u6E32\u67D3\u573A\u666F\u6CE8\u518C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "castShadows",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawLayer",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "drawStrategy",
+          "Doc": "\u8FD9\u4E2A\u6E32\u67D3\u5668\u5141\u8BB8\u7684\u7ED8\u5236\u7B56\u7565\uFF1BIndividual \u8868\u793A\u59CB\u7EC8\u5355\u7ED8\u5236\u5E76\u4F5C\u4E3A\u6392\u5E8F\u5C4F\u969C",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "DrawStrategy",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "materials",
+          "Doc": "\u6309\u5B50\u7F51\u683C\u69FD\u4F4D\u7ED9\u51FA\u7684\u6750\u8D28\uFF1B\u69FD\u4F4D\u4E3A\u7A7A\u6216\u8D85\u51FA\u6570\u7EC4\u957F\u5EA6\u7684\u5B50\u7F51\u683C\u4E0D\u7ED8\u5236\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003CRef\u003CMaterial\u003E\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "mesh",
+          "Doc": "\u6301\u4E45\u5316\u6E90\u7F51\u683C\uFF1B\u7A0B\u5E8F\u751F\u6210\u7684\u7F51\u683C\u901A\u8FC7 SetRuntimeMesh \u8986\u76D6\u6E32\u67D3\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMesh\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "receiveShadows",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "Transform",
+      "QualifiedName": "Transform",
+      "ManagedName": "Orbeden.Transform",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": true,
+      "IsFinal": false,
+      "IsComponent": true,
+      "Doc": "Ens\u53D8\u6362\u7EC4\u4EF6\uFF0C\u4FDD\u5B58\u573A\u666F\u5C42\u7EA7\u548C\u672C\u5730\u53D8\u6362",
+      "Members": [
+        {
+          "Name": "GetLocalPosition",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u4F4D\u7F6E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetLocalRotation",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u65CB\u8F6C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const quaternion\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetLocalScale",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u7F29\u653E",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "const vector3\u0026",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetParent",
+          "Doc": "\u8BFB\u53D6\u548C\u4FEE\u6539\u7236\u7EA7\uFF0C\u4FEE\u6539\u7ECF\u8FC7 World \u5C42\u7EA7\u903B\u8F91\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "EnsId",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetWorldPosition",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetWorldRotation",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "quaternion",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "SetLocalPosition",
+          "Doc": "\u8BBE\u7F6E\u672C\u5730\u4F4D\u7F6E\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetLocalRotation",
+          "Doc": "\u8BBE\u7F6E\u672C\u5730\u65CB\u8F6C\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const quaternion\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetLocalScale",
+          "Doc": "\u8BBE\u7F6E\u672C\u5730\u7F29\u653E\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "SetParent",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "EnsId",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "WheelCollider",
+      "QualifiedName": "WheelCollider",
+      "ManagedName": "Orbeden.WheelCollider",
+      "BaseName": "Component",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u5C04\u7EBF\u60AC\u6302\u673A\u8F6E\u7EC4\u4EF6\uFF1A\u7531 PhysicsSystem \u5728\u6BCF\u6B21\u7269\u7406\u6A21\u62DF\u524D\u9A71\u52A8\u3002\n\u901A\u8FC7\u5411\u4E0B\u5C04\u7EBF\u68C0\u6D4B\u5730\u9762\uFF0C\u65BD\u52A0\u5F39\u7C27\u963B\u5C3C\u60AC\u6302\u529B\u3001\u5730\u9762\u6469\u64E6\u4E0E\u8F6C\u5411\u4FA7\u5411\u529B\uFF0C\n\u529B\u4F5C\u7528\u5230\u540C Ens \u7684 RigidBody \u4E0A\uFF08\u5F53\u524D\u7269\u7406\u6B65\u751F\u6548\uFF09\u3002\n\u9700\u8981\u6302\u8F7D\u5728\u6839\u8282\u70B9 Dynamic \u521A\u4F53\u6240\u5728\u7684 Ens \u4E0A\u3002",
+      "Members": [
+        {
+          "Name": "GetCompression",
+          "Doc": "\u83B7\u53D6\u6700\u8FD1\u4E00\u6B21\u6A21\u62DF\u7684\u60AC\u6302\u538B\u7F29\u91CF\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "IsGrounded",
+          "Doc": "\u5224\u65AD\u6700\u8FD1\u4E00\u6B21\u6A21\u62DF\u4E2D\u673A\u8F6E\u662F\u5426\u63A5\u5730\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "enabled",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "groundQueryLayer",
+          "Doc": "\u53EA\u63A2\u6D4B\u6307\u5B9A\u78B0\u649E\u5C42\u7684\u5730\u9762\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "lateralFriction",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "raycastDistance",
+          "Doc": "\u5411\u4E0B\u63A2\u6D4B\u8DDD\u79BB\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "rollingFriction",
+          "Doc": "\u7EB5\u5411\u6EDA\u52A8\u6469\u64E6\u4E0E\u6A2A\u5411\u9632\u6ED1\u7CFB\u6570\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "steerAngle",
+          "Doc": "\u811A\u672C\u8BBE\u7F6E\u7684\u76EE\u6807\u8F6C\u5411\u89D2\uFF08\u5EA6\uFF09\uFF0C\u53EA\u5728\u63A5\u5730\u65F6\u751F\u6548\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "steeringWheel",
+          "Doc": "\u662F\u5426\u53C2\u4E0E\u5730\u9762\u8F6C\u5411\uFF08\u524D\u8F6E\u4E3A true\uFF09\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "suspensionDamping",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "suspensionRestLength",
+          "Doc": "\u60AC\u6302\u9759\u6B62\u957F\u5EA6\uFF08\u5B89\u88C5\u70B9\u5230\u8F6E\u5FC3\u7684\u8DDD\u79BB\uFF0C\u4E0D\u542B\u8F6E\u534A\u5F84\uFF09\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "suspensionStiffness",
+          "Doc": "\u5F39\u7C27\u521A\u5EA6\u4E0E\u963B\u5C3C\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "suspensionTravel",
+          "Doc": "\u60AC\u6302\u6700\u5927\u538B\u7F29\u884C\u7A0B\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "wheelOffset",
+          "Doc": "\u60AC\u6302\u5B89\u88C5\u70B9\u76F8\u5BF9 Ens \u539F\u70B9\u7684\u5C40\u90E8\u504F\u79FB\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "wheelRadius",
+          "Doc": "\u673A\u8F6E\u534A\u5F84\uFF0C\u53C2\u4E0E\u63A5\u5730\u51E0\u4F55\u8BA1\u7B97\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "BoxCollider",
+      "QualifiedName": "BoxCollider",
+      "ManagedName": "Orbeden.BoxCollider",
+      "BaseName": "Collider",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u76D2\u5F62\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "halfExtents",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "CapsuleCollider",
+      "QualifiedName": "CapsuleCollider",
+      "ManagedName": "Orbeden.CapsuleCollider",
+      "BaseName": "Collider",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u80F6\u56CA\u5F62\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "halfHeight",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "radius",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "ConvexMeshCollider",
+      "QualifiedName": "ConvexMeshCollider",
+      "ManagedName": "Orbeden.ConvexMeshCollider",
+      "BaseName": "Collider",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u51F8\u5305\u7F51\u683C\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "mesh",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMesh\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "SphereCollider",
+      "QualifiedName": "SphereCollider",
+      "ManagedName": "Orbeden.SphereCollider",
+      "BaseName": "Collider",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u7403\u5F62\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "radius",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
+      "Name": "TriangleMeshCollider",
+      "QualifiedName": "TriangleMeshCollider",
+      "ManagedName": "Orbeden.TriangleMeshCollider",
+      "BaseName": "Collider",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": true,
+      "IsComponent": true,
+      "Doc": "\u4E09\u89D2\u7F51\u683C\u78B0\u649E\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetGeometryType",
+          "Doc": "",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "ColliderGeometryType",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "mesh",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "Ref\u003CMesh\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    }
+  ],
+  "Values": [
+    {
+      "Name": "BlendMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.BlendMode",
+      "EnumBase": "uint32",
+      "Doc": "\u6DF7\u5408\u6A21\u5F0F\u3002\u6570\u503C\u53C2\u4E0E\u6279\u6B21\u952E\u6BD4\u8F83\uFF0C\u5E8F\u53F7\u56FA\u5B9A\u3002",
+      "Values": [
+        {
+          "Name": "Alpha",
+          "Value": "0"
+        },
+        {
+          "Name": "Additive",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "CharacterControllerShape",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.CharacterControllerShape",
+      "EnumBase": "uint32",
+      "Doc": "\u89D2\u8272\u63A7\u5236\u5668\u51E0\u4F55\u7C7B\u578B",
+      "Values": [
+        {
+          "Name": "Capsule",
+          "Value": "0"
+        },
+        {
+          "Name": "Box",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ClearMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ClearMode",
+      "EnumBase": "uint32",
+      "Doc": "\u76F8\u673A\u6E05\u5C4F\u65B9\u5F0F",
+      "Values": [
+        {
+          "Name": "None",
+          "Value": "0"
+        },
+        {
+          "Name": "DepthOnly",
+          "Value": "1"
+        },
+        {
+          "Name": "SolidColor",
+          "Value": "2"
+        },
+        {
+          "Name": "ColorOnly",
+          "Value": "3"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ColliderGeometryType",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ColliderGeometryType",
+      "EnumBase": "uint32",
+      "Doc": "\u78B0\u649E\u4F53\u51E0\u4F55\u7C7B\u578B\uFF0C\u4EC5\u7528\u4E8E\u539F\u751F\u7269\u7406\u548C\u6258\u7BA1\u5305\u88C5\u5206\u6D3E\u3002",
+      "Values": [
+        {
+          "Name": "Box",
+          "Value": "0"
+        },
+        {
+          "Name": "Sphere",
+          "Value": "1"
+        },
+        {
+          "Name": "Capsule",
+          "Value": "2"
+        },
+        {
+          "Name": "ConvexMesh",
+          "Value": "3"
+        },
+        {
+          "Name": "TriangleMesh",
+          "Value": "4"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "CullMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.CullMode",
+      "EnumBase": "uint32",
+      "Doc": "\u5149\u6805\u5316\u5254\u9664\u6A21\u5F0F\uFF0CAuto \u7531\u6E32\u67D3\u7BA1\u7EBF\u89E3\u6790\u4E3A\u57FA\u7EBF\u72B6\u6001",
+      "Values": [
+        {
+          "Name": "Auto",
+          "Value": "0"
+        },
+        {
+          "Name": "None",
+          "Value": "1"
+        },
+        {
+          "Name": "Front",
+          "Value": "2"
+        },
+        {
+          "Name": "Back",
+          "Value": "3"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "DrawQueue",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.DrawQueue",
+      "EnumBase": "uint32",
+      "Doc": "\u7ED8\u5236\u961F\u5217",
+      "Values": [
+        {
+          "Name": "Opaque",
+          "Value": "0"
+        },
+        {
+          "Name": "Transparent",
+          "Value": "1"
+        },
+        {
+          "Name": "Refraction",
+          "Value": "2"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "DrawStrategy",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.DrawStrategy",
+      "EnumBase": "uint32",
+      "Doc": "\u6E32\u67D3\u5668\u5141\u8BB8\u7684\u7ED8\u5236\u7B56\u7565\u3002\u6570\u503C\u53C2\u4E0E\u6279\u6B21\u952E\u6BD4\u8F83\uFF0C\u5E8F\u53F7\u56FA\u5B9A\u3002",
+      "Values": [
+        {
+          "Name": "Auto",
+          "Value": "0"
+        },
+        {
+          "Name": "Individual",
+          "Value": "1"
+        },
+        {
+          "Name": "GpuInstancing",
+          "Value": "2"
+        },
+        {
+          "Name": "DynamicBatching",
+          "Value": "3"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "FieldKind",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.Reflection.FieldKind",
+      "EnumBase": "int32",
+      "Doc": "\u53EF\u5E8F\u5217\u5316\u5B57\u6BB5\u7684\u7C7B\u578B\u5206\u7C7B",
+      "Values": [
+        {
+          "Name": "Unsupported",
+          "Value": ""
+        },
+        {
+          "Name": "Bool",
+          "Value": ""
+        },
+        {
+          "Name": "Int32",
+          "Value": ""
+        },
+        {
+          "Name": "UInt32",
+          "Value": ""
+        },
+        {
+          "Name": "UInt64",
+          "Value": ""
+        },
+        {
+          "Name": "Float32",
+          "Value": ""
+        },
+        {
+          "Name": "String",
+          "Value": ""
+        },
+        {
+          "Name": "StringId",
+          "Value": ""
+        },
+        {
+          "Name": "ObjectRef",
+          "Value": ""
+        },
+        {
+          "Name": "ObjectRefList",
+          "Value": ""
+        },
+        {
+          "Name": "Vector3",
+          "Value": ""
+        },
+        {
+          "Name": "Color",
+          "Value": ""
+        },
+        {
+          "Name": "Quaternion",
+          "Value": ""
+        },
+        {
+          "Name": "EnsId",
+          "Value": ""
+        },
+        {
+          "Name": "Array",
+          "Value": ""
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "InstanceDrawOptions",
+      "Kind": "record",
+      "ManagedName": "Orbeden.InstanceDrawOptions",
+      "EnumBase": "int32",
+      "Doc": "\u663E\u5F0F\u5B9E\u4F8B\u63D0\u4EA4\u7684\u7ED8\u5236\u9009\u9879",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "drawLayer",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "castShadows",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "receiveShadows",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "camera",
+          "Type": "EnsId",
+          "Doc": "\u7A7A\u8868\u793A\u53C2\u4E0E\u5168\u90E8\u76F8\u673A\uFF1B\u975E\u7A7A\u65F6\u53EA\u53C2\u4E0E\u8BE5\u76F8\u673A\u7684\u4E3B Pass \u4E0E\u9634\u5F71"
+        }
+      ]
+    },
+    {
+      "Name": "MaterialColorSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.MaterialColorSlot",
+      "EnumBase": "int32",
+      "Doc": "\u6750\u8D28\u4FDD\u5B58\u7684\u989C\u8272\u69FD\uFF0Cname \u4F7F\u7528 GLSL uniform \u540D",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "value",
+          "Type": "color",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "MaterialFloatSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.MaterialFloatSlot",
+      "EnumBase": "int32",
+      "Doc": "\u6750\u8D28\u4FDD\u5B58\u7684\u6D6E\u70B9\u69FD\uFF0Cname \u4F7F\u7528 GLSL uniform \u540D",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "value",
+          "Type": "float32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "MaterialTextureSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.MaterialTextureSlot",
+      "EnumBase": "int32",
+      "Doc": "\u6750\u8D28\u4FDD\u5B58\u7684\u7EB9\u7406\u69FD\uFF0Cname \u4F7F\u7528 GLSL uniform \u540D",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "texture",
+          "Type": "Ref\u003CTexture2D\u003E",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "MeshDirtyFlags",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.MeshDirtyFlags",
+      "EnumBase": "uint32",
+      "Doc": "\u7F51\u683C\u6570\u636E\u53D8\u66F4\u7684\u72EC\u7ACB\u6D88\u8D39\u65B9",
+      "Values": [
+        {
+          "Name": "None",
+          "Value": "0"
+        },
+        {
+          "Name": "Gpu",
+          "Value": "1u\u003C\u003C0"
+        },
+        {
+          "Name": "Bounds",
+          "Value": "1u\u003C\u003C1"
+        },
+        {
+          "Name": "Render",
+          "Value": "1u\u003C\u003C2"
+        },
+        {
+          "Name": "Physics",
+          "Value": "1u\u003C\u003C3"
+        },
+        {
+          "Name": "Editor",
+          "Value": "1u\u003C\u003C4"
+        },
+        {
+          "Name": "All",
+          "Value": "(1u\u003C\u003C5)-1u"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "MeshInstanceData",
+      "Kind": "record",
+      "ManagedName": "Orbeden.MeshInstanceData",
+      "EnumBase": "int32",
+      "Doc": "\u663E\u5F0F\u5B9E\u4F8B\u63D0\u4EA4\u7684\u6BCF\u5B9E\u4F8B\u6570\u636E\u3002\n\u8FD9\u4E00\u5C42\u53EA\u8868\u8FBE TRS\uFF1A\u7236\u7EA7\u53D8\u6362\u4E0E shear \u4E0D\u7531\u8BE5\u8BB0\u5F55\u8868\u793A\uFF0C\u9759\u6001\u6E32\u67D3\u5668\u4ECD\u8D70\u5B8C\u6574\u4E16\u754C\u77E9\u9635\u3002",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "position",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "rotation",
+          "Type": "quaternion",
+          "Doc": ""
+        },
+        {
+          "Name": "scale",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "tint",
+          "Type": "color",
+          "Doc": "\u8F93\u5165\u7684 RGB \u662F sRGB\uFF0CAlpha \u539F\u6837\uFF1B\u7BA1\u7EBF\u5728\u63D0\u4EA4\u65F6\u7EDF\u4E00\u8F6C\u6210\u7EBF\u6027"
+        },
+        {
+          "Name": "uvRect",
+          "Type": "color",
+          "Doc": "\u56FE\u96C6 uv \u53D8\u6362\uFF0C\u53EA\u4F5C\u4E3A\u56DB\u4E2A\u6D6E\u70B9\u4F7F\u7528\uFF0C\u7981\u6B62\u989C\u8272\u7A7A\u95F4\u8F6C\u6362"
+        }
+      ]
+    },
+    {
+      "Name": "ParticleBurst",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleBurst",
+      "EnumBase": "int32",
+      "Doc": "\u4E00\u6B21\u6279\u91CF\u53D1\u5C04",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "time",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "count",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "cycles",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "interval",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "probability",
+          "Type": "float32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleCollisionResponse",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleCollisionResponse",
+      "EnumBase": "uint32",
+      "Doc": "\u78B0\u649E\u54CD\u5E94",
+      "Values": [
+        {
+          "Name": "Bounce",
+          "Value": "0"
+        },
+        {
+          "Name": "Kill",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleCollisionSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleCollisionSettings",
+      "EnumBase": "int32",
+      "Doc": "\u78B0\u649E\u6A21\u5757",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "enabled",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "layerMask",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "radiusScale",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "restitution",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "friction",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "lifetimeLoss",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "response",
+          "Type": "ParticleCollisionResponse",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleCurve",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleCurve",
+      "EnumBase": "int32",
+      "Doc": "\u5F52\u4E00\u5316\u65F6\u95F4\u5230\u53D6\u503C\u7684\u66F2\u7EBF\uFF0Ckey \u6309\u65F6\u95F4\u4E25\u683C\u9012\u589E",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "keys",
+          "Type": "List\u003CParticleCurveKey\u003E",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleCurveInterpolation",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleCurveInterpolation",
+      "EnumBase": "uint32",
+      "Doc": "\u66F2\u7EBF\u63D2\u503C\u65B9\u5F0F\u3002\u6BB5\u6A21\u5F0F\u53D6\u5DE6 key \u7684\u63D2\u503C\u65B9\u5F0F\u3002",
+      "Values": [
+        {
+          "Name": "Linear",
+          "Value": "0"
+        },
+        {
+          "Name": "Cubic",
+          "Value": "1"
+        },
+        {
+          "Name": "Constant",
+          "Value": "2"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleCurveKey",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleCurveKey",
+      "EnumBase": "int32",
+      "Doc": "\u66F2\u7EBF\u5173\u952E\u5E27",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "time",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "value",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "inTangent",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "outTangent",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "interpolation",
+          "Type": "ParticleCurveInterpolation",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleEmissionSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleEmissionSettings",
+      "EnumBase": "int32",
+      "Doc": "\u53D1\u5C04\u6A21\u5757\uFF1A\u8FDE\u7EED\u901F\u7387\u4E0E Burst",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "enabled",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "rateOverTime",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "bursts",
+          "Type": "List\u003CParticleBurst\u003E",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleFloatRange",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleFloatRange",
+      "EnumBase": "int32",
+      "Doc": "\u533A\u95F4\u53D6\u503C\uFF0C\u51FA\u751F\u65F6\u5728\u4E0B\u4E00\u6B21\u968F\u673A\u6570\u4E0A\u505A lerp",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "min",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "max",
+          "Type": "float32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleGradient",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleGradient",
+      "EnumBase": "int32",
+      "Doc": "\u5F52\u4E00\u5316\u65F6\u95F4\u5230\u989C\u8272\u7684\u6E10\u53D8\uFF0CRGB \u5728\u7EBF\u6027\u7A7A\u95F4\u63D2\u503C\uFF0CAlpha \u5355\u72EC\u7EBF\u6027\u63D2\u503C",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "keys",
+          "Type": "List\u003CParticleGradientKey\u003E",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleGradientKey",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleGradientKey",
+      "EnumBase": "int32",
+      "Doc": "\u9ED8\u8BA4\u6E10\u53D8\uFF1A\u4E24\u7AEF\u767D\u8272",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "time",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "value",
+          "Type": "color",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleMainSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleMainSettings",
+      "EnumBase": "int32",
+      "Doc": "\u4E3B\u6A21\u5757\uFF1A\u5BB9\u91CF\u3001\u65F6\u95F4\u7EBF\u4E0E\u51FA\u751F\u5C5E\u6027",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "maxParticles",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "duration",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "looping",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "playOnAwake",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "startDelay",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "simulationSpace",
+          "Type": "ParticleSimulationSpace",
+          "Doc": ""
+        },
+        {
+          "Name": "randomSeed",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "startLifetime",
+          "Type": "ParticleFloatRange",
+          "Doc": ""
+        },
+        {
+          "Name": "startSpeed",
+          "Type": "ParticleFloatRange",
+          "Doc": ""
+        },
+        {
+          "Name": "startSize",
+          "Type": "ParticleFloatRange",
+          "Doc": ""
+        },
+        {
+          "Name": "startRotation",
+          "Type": "ParticleFloatRange",
+          "Doc": ""
+        },
+        {
+          "Name": "startColor",
+          "Type": "color",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleMotionSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleMotionSettings",
+      "EnumBase": "int32",
+      "Doc": "\u8FD0\u52A8\u6A21\u5757",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "gravityMultiplier",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "acceleration",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "drag",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "sizeOverLifetime",
+          "Type": "ParticleCurve",
+          "Doc": ""
+        },
+        {
+          "Name": "angularVelocityOverLifetime",
+          "Type": "ParticleCurve",
+          "Doc": ""
+        },
+        {
+          "Name": "colorOverLifetime",
+          "Type": "ParticleGradient",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticlePlaybackInfo",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticlePlaybackInfo",
+      "EnumBase": "int32",
+      "Doc": "\u64AD\u653E\u72B6\u6001\u5FEB\u7167\uFF0C\u53EA\u53D6\u7528\u6237\u5E38\u7528\u5B50\u96C6",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "state",
+          "Type": "ParticlePlaybackState",
+          "Doc": ""
+        },
+        {
+          "Name": "time",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "aliveCount",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "trailCount",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "emittedCount",
+          "Type": "uint64",
+          "Doc": ""
+        },
+        {
+          "Name": "rejectedCount",
+          "Type": "uint64",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticlePlaybackState",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticlePlaybackState",
+      "EnumBase": "uint32",
+      "Doc": "\u64AD\u653E\u72B6\u6001",
+      "Values": [
+        {
+          "Name": "Stopped",
+          "Value": "0"
+        },
+        {
+          "Name": "Playing",
+          "Value": "1"
+        },
+        {
+          "Name": "Paused",
+          "Value": "2"
+        },
+        {
+          "Name": "Draining",
+          "Value": "3"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleRenderMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleRenderMode",
+      "EnumBase": "uint32",
+      "Doc": "\u7C92\u5B50\u5448\u73B0\u65B9\u5F0F",
+      "Values": [
+        {
+          "Name": "Billboard",
+          "Value": "0"
+        },
+        {
+          "Name": "Mesh",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleRenderPath",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleRenderPath",
+      "EnumBase": "uint32",
+      "Doc": "\u6E32\u67D3\u8DEF\u5F84\uFF1ACPU \u5C55\u5F00\u51E0\u4F55\u5408\u5E76\u52A8\u6001\u7F13\u51B2\uFF0C\u6216\u4E0A\u4F20\u5B9E\u4F8B\u6570\u636E",
+      "Values": [
+        {
+          "Name": "DynamicBatch",
+          "Value": "0"
+        },
+        {
+          "Name": "Instanced",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleRenderSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleRenderSettings",
+      "EnumBase": "int32",
+      "Doc": "\u6E32\u67D3\u6A21\u5757",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "path",
+          "Type": "ParticleRenderPath",
+          "Doc": ""
+        },
+        {
+          "Name": "mode",
+          "Type": "ParticleRenderMode",
+          "Doc": ""
+        },
+        {
+          "Name": "blendMode",
+          "Type": "BlendMode",
+          "Doc": ""
+        },
+        {
+          "Name": "tilesX",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "tilesY",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "animationCycles",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "randomStartFrame",
+          "Type": "bool",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleSettings",
+      "EnumBase": "int32",
+      "Doc": "\u5B8C\u6574\u7C92\u5B50\u914D\u7F6E\u3002\u5B57\u6BB5\u987A\u5E8F\u662F\u6301\u4E45\u5316\u7F16\u7801\u987A\u5E8F\uFF0C\u4E0D\u80FD\u91CD\u6392\u3002",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "main",
+          "Type": "ParticleMainSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "emission",
+          "Type": "ParticleEmissionSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "shape",
+          "Type": "ParticleShapeSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "motion",
+          "Type": "ParticleMotionSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "collision",
+          "Type": "ParticleCollisionSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "trails",
+          "Type": "ParticleTrailSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "rendering",
+          "Type": "ParticleRenderSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "subEmitters",
+          "Type": "List\u003CParticleSubEmitterRule\u003E",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleSettingsParseResult",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleSettingsParseResult",
+      "EnumBase": "int32",
+      "Doc": "\u89E3\u6790\u7ED3\u679C\uFF0C\u4E0D\u8BBF\u95EE World",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "success",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "settings",
+          "Type": "ParticleSettings",
+          "Doc": ""
+        },
+        {
+          "Name": "error",
+          "Type": "std::string",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleShape",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleShape",
+      "EnumBase": "uint32",
+      "Doc": "\u53D1\u5C04\u5F62\u72B6",
+      "Values": [
+        {
+          "Name": "Point",
+          "Value": "0"
+        },
+        {
+          "Name": "Sphere",
+          "Value": "1"
+        },
+        {
+          "Name": "Cone",
+          "Value": "2"
+        },
+        {
+          "Name": "Box",
+          "Value": "3"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleShapeSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleShapeSettings",
+      "EnumBase": "int32",
+      "Doc": "\u5F62\u72B6\u6A21\u5757",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "shape",
+          "Type": "ParticleShape",
+          "Doc": ""
+        },
+        {
+          "Name": "radius",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "boxExtents",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "coneAngle",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "surfaceOnly",
+          "Type": "bool",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleSimulationSpace",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleSimulationSpace",
+      "EnumBase": "uint32",
+      "Doc": "\u6A21\u62DF\u7A7A\u95F4\uFF1A\u7C92\u5B50\u4F4D\u7F6E\u4E0E\u901F\u5EA6\u5B58\u5728\u4E16\u754C\u7A7A\u95F4\u8FD8\u662F\u53D1\u5C04\u5668\u5C40\u90E8\u7A7A\u95F4",
+      "Values": [
+        {
+          "Name": "World",
+          "Value": "0"
+        },
+        {
+          "Name": "Local",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleSubEmitterEvent",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ParticleSubEmitterEvent",
+      "EnumBase": "uint32",
+      "Doc": "\u5B50\u53D1\u5C04\u5668\u89E6\u53D1\u65F6\u673A",
+      "Values": [
+        {
+          "Name": "Birth",
+          "Value": "0"
+        },
+        {
+          "Name": "Collision",
+          "Value": "1"
+        },
+        {
+          "Name": "Death",
+          "Value": "2"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ParticleSubEmitterRule",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleSubEmitterRule",
+      "EnumBase": "int32",
+      "Doc": "\u4E00\u6761\u5B50\u53D1\u5C04\u89C4\u5219\uFF0C\u901A\u8FC7\u69FD\u53F7\u5B9A\u4F4D\u76EE\u6807\u53D1\u5C04\u5668",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "targetSlot",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "event",
+          "Type": "ParticleSubEmitterEvent",
+          "Doc": ""
+        },
+        {
+          "Name": "count",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "probability",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "inheritVelocity",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "inheritColor",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "inheritSize",
+          "Type": "bool",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ParticleTrailSettings",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ParticleTrailSettings",
+      "EnumBase": "int32",
+      "Doc": "\u62D6\u5C3E\u6A21\u5757",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "enabled",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "lifetime",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "minimumVertexDistance",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "maximumVertexInterval",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "maxPointsPerTrail",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "maxTrails",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "width",
+          "Type": "float32",
+          "Doc": ""
+        },
+        {
+          "Name": "widthOverLength",
+          "Type": "ParticleCurve",
+          "Doc": ""
+        },
+        {
+          "Name": "colorOverLength",
+          "Type": "ParticleGradient",
+          "Doc": ""
+        },
+        {
+          "Name": "dieWithParticle",
+          "Type": "bool",
+          "Doc": ""
+        },
+        {
+          "Name": "textureTileLength",
+          "Type": "float32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "PhysicsBodyType",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.PhysicsBodyType",
+      "EnumBase": "uint32",
+      "Doc": "\u521A\u4F53\u8FD0\u52A8\u7C7B\u578B",
+      "Values": [
+        {
+          "Name": "Static",
+          "Value": "0"
+        },
+        {
+          "Name": "Dynamic",
+          "Value": "1"
+        },
+        {
+          "Name": "Kinematic",
+          "Value": "2"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ScriptDomain",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ScriptDomain",
+      "EnumBase": "uint32",
+      "Doc": "\u811A\u672C\u7EC4\u4EF6\u7684\u6267\u884C\u57DF\uFF1B\u7CBE\u786E Script \u5B9E\u4F8B\u5C5E\u4E8E\u6258\u7BA1\u57DF\uFF0C\u539F\u751F\u6D3E\u751F\u7C7B\u5C5E\u4E8E\u539F\u751F\u57DF\u3002",
+      "Values": [
+        {
+          "Name": "Native",
+          "Value": ""
+        },
+        {
+          "Name": "Managed",
+          "Value": ""
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ShaderColorSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ShaderColorSlot",
+      "EnumBase": "int32",
+      "Doc": "Shader \u66B4\u9732\u7ED9 Material \u7684\u989C\u8272\u69FD",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "displayName",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "defaultValue",
+          "Type": "color",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ShaderFloatSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ShaderFloatSlot",
+      "EnumBase": "int32",
+      "Doc": "Shader \u66B4\u9732\u7ED9 Material \u7684\u6D6E\u70B9\u69FD",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "displayName",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "defaultValue",
+          "Type": "float32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ShaderGeometryContract",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ShaderGeometryContract",
+      "EnumBase": "uint32",
+      "Doc": "Shader \u51E0\u4F55 ABI \u5951\u7EA6\uFF0C\u51B3\u5B9A\u4E00\u4E2A Pass \u7F16\u8BD1\u54EA\u4E9B\u51E0\u4F55\u53D8\u4F53\u3002\n\u6570\u503C\u5199\u5165 Cooked \u8F7D\u8377\uFF0C\u5E8F\u53F7\u56FA\u5B9A\uFF1A0 \u662F\u5DF2\u5220\u9664\u7684\u65E7\u503C\uFF0C\u4E0D\u5141\u8BB8\u91CD\u65B0\u89E3\u91CA\u4E3A Standard\u3002",
+      "Values": [
+        {
+          "Name": "Removed",
+          "Value": "0"
+        },
+        {
+          "Name": "Standard",
+          "Value": "1"
+        },
+        {
+          "Name": "Particle",
+          "Value": "2"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ShaderPass",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ShaderPass",
+      "EnumBase": "int32",
+      "Doc": "Shader \u7684\u4E00\u4E2A\u6709\u5E8F\u7ED8\u5236 Pass",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "state",
+          "Type": "ShaderPassState",
+          "Doc": ""
+        },
+        {
+          "Name": "geometryContract",
+          "Type": "ShaderGeometryContract",
+          "Doc": "\u672A\u58F0\u660E Geometry \u65F6\u6309 Standard \u5904\u7406"
+        },
+        {
+          "Name": "supportsExpandedGeometry",
+          "Type": "bool",
+          "Doc": "\u662F\u5426\u7F16\u8BD1\u5C55\u5F00\u51E0\u4F55\u53D8\u4F53\u3002\u4F9D\u8D56\u6A21\u578B\u7A7A\u95F4\u9876\u70B9\u52A8\u753B\u7684 Shader \u7528 expandedGeometry off \u5173\u95ED\uFF0C\n\u5173\u95ED\u540E\u8BE5 Pass \u4E0D\u53C2\u4E0E\u9759\u6001\u4E0E\u52A8\u6001\u5408\u6279\uFF0C\u53EA\u8D70\u5355\u7ED8\u5236\u4E0E\u5B9E\u4F8B\u7ED8\u5236\u3002"
+        },
+        {
+          "Name": "vertexSource",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "fragmentSource",
+          "Type": "std::string",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ShaderPassState",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ShaderPassState",
+      "EnumBase": "int32",
+      "Doc": "Shader Pass \u56FA\u5B9A\u529F\u80FD\u72B6\u6001",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "depthTest",
+          "Type": "ShaderPassToggle",
+          "Doc": ""
+        },
+        {
+          "Name": "depthWrite",
+          "Type": "ShaderPassToggle",
+          "Doc": ""
+        },
+        {
+          "Name": "blend",
+          "Type": "ShaderPassToggle",
+          "Doc": ""
+        },
+        {
+          "Name": "cull",
+          "Type": "CullMode",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "ShaderPassToggle",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ShaderPassToggle",
+      "EnumBase": "int32",
+      "Doc": "Shader Pass \u5E03\u5C14\u72B6\u6001\uFF0CAuto \u8868\u793A\u4F7F\u7528\u6E32\u67D3\u7BA1\u7EBF\u57FA\u7EBF",
+      "Values": [
+        {
+          "Name": "Auto",
+          "Value": ""
+        },
+        {
+          "Name": "On",
+          "Value": ""
+        },
+        {
+          "Name": "Off",
+          "Value": ""
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ShaderTextureDimension",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.ShaderTextureDimension",
+      "EnumBase": "int32",
+      "Doc": "Shader\u7EB9\u7406\u7EF4\u5EA6\uFF0C\u5F53\u524D GLSL \u524D\u7AEF v1 \u53EA\u53CD\u5C04 sampler2D",
+      "Values": [
+        {
+          "Name": "Texture2D",
+          "Value": ""
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "ShaderTextureSlot",
+      "Kind": "record",
+      "ManagedName": "Orbeden.ShaderTextureSlot",
+      "EnumBase": "int32",
+      "Doc": "Shader \u66B4\u9732\u7ED9 Material \u7684\u7EB9\u7406\u69FD",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "displayName",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "dimension",
+          "Type": "ShaderTextureDimension",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "SubMesh",
+      "Kind": "record",
+      "ManagedName": "Orbeden.SubMesh",
+      "EnumBase": "int32",
+      "Doc": "\u5B50\u7F51\u683C\uFF1A\u53EA\u63CF\u8FF0\u51E0\u4F55\u533A\u95F4\uFF0C\u6750\u8D28\u7531\u6E32\u67D3\u5668\u6309\u69FD\u4F4D\u63D0\u4F9B",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Doc": ""
+        },
+        {
+          "Name": "indexStart",
+          "Type": "uint32",
+          "Doc": ""
+        },
+        {
+          "Name": "indexCount",
+          "Type": "uint32",
+          "Doc": ""
+        }
+      ]
+    },
+    {
+      "Name": "TextureColorSpace",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.TextureColorSpace",
+      "EnumBase": "uint32",
+      "Doc": "\u7EB9\u7406\u6570\u636E\u7684\u989C\u8272\u8BED\u4E49\u3002\u989C\u8272\u8D34\u56FE\uFF08albedo\u3001\u81EA\u53D1\u5149\u3001\u5929\u7A7A\u76D2\uFF09\u7684\u50CF\u7D20\u662F sRGB \u7F16\u7801\uFF0C\n\u91C7\u6837\u65F6\u9700\u8981\u89E3\u7801\u5230\u7EBF\u6027\uFF1B\u6570\u636E\u8D34\u56FE\uFF08\u6CD5\u7EBF\u3001\u7C97\u7CD9\u5EA6\u3001\u906E\u7F69\u3001\u9AD8\u5EA6\uFF09\u672C\u8EAB\u5C31\u662F\u7EBF\u6027\u6570\u636E\uFF0C\n\u89E3\u7801\u4F1A\u7834\u574F\u6570\u503C\u3002\u8FD9\u4E2A\u6807\u8BB0\u662F\u6570\u636E\u8BED\u4E49\uFF0C\u4E0D\u662F\u53EF\u9009\u7684\u6E32\u67D3\u5F00\u5173\u3002",
+      "Values": [
+        {
+          "Name": "Linear",
+          "Value": "0"
+        },
+        {
+          "Name": "SRGB",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "bounds3",
+      "Kind": "record",
+      "ManagedName": "Orbeden.bounds3",
+      "EnumBase": "int32",
+      "Doc": "\u8F7B\u91CF\u5305\u56F4\u76D2",
+      "Values": [],
+      "Fields": [
+        {
+          "Name": "center",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "extents",
+          "Type": "vector3",
+          "Doc": ""
+        },
+        {
+          "Name": "valid",
+          "Type": "bool",
+          "Doc": ""
+        }
+      ]
+    }
+  ]
+}
