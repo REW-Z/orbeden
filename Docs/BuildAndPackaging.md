@@ -537,6 +537,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 35 | 浓雾不再有底面：雾层覆盖雾顶以下的全部高度，远低于海平面处同样是满密度，原来的 `Fog Base Fade` 与底面过渡一并删除。`<RenderSettings>` 的 `fogReferenceHeight`、`fogLayerHeight`、`fogFade` 合并为 `fogTopHeight`（雾顶高度，相对参考球面）；读不到 `fogTopHeight` 时按 `fogReferenceHeight + fogLayerHeight` 还原雾顶，缺属性取两字段各自的旧默认值，老世界的雾顶位置不变（雾层下沿的变化即本次改动本身）。编辑器面板的 `Fog Base Height`、`Fog Layer Height`、`Fog Base Fade` 换成单个 `Fog Top Height`。编辑器环境设置 ABI 的尺寸与偏移不变，原 `fogLayerHeight`、`fogFade` 两格改名保留为预留。重建 Core 与 Editor，同步 `Builtin/dense_fog.orbinc`、`Builtin/Shaders/atmosphere_sky.orbshader` 与 `Builtin/README.md`（或 Dev 面板的 `Reset Builtin`，会覆盖 Builtin 定制）后重新导入，发布包需 Build Player。 |
 | 34 | 修复浓雾跨越 0 高度时的渲染突变：不再以参考地表截断浓雾，改为仅保留本地雾壳首段并排除背面雾层。雾顶尾部改为一阶连续的指数衰减，名义顶部仍为 5% 密度。程序化天空联合积分空气与浓雾的重叠区，浓雾密度积分为 32 步。重建 Core 与 Editor，同步 `Builtin/dense_fog.orbinc`、`Builtin/Shaders/atmosphere_sky.orbshader` 和 `Builtin/README.md` 后重新导入，发布包需 Build Player。字段布局与默认值不变。 |
 | 33 | 浓雾 Top Fade 改为跨越名义顶部的高斯衰减尺度，名义顶部保留约 5% 密度，上方保留稀薄尾部，避免跨越原硬顶部时出现亚像素级突变；0 仍表示硬顶部。默认浓雾积分增至 16 步。重建 Core 与 Editor；已有项目同步 `Builtin/dense_fog.orbinc`、`Builtin/README.md`，保留版本 32 的天空 Shader 修复，再重新导入并 Build Player。数值字段和默认值不变，开启浓雾且 Top Fade 大于 0 的世界外观会改变。 |
 | 32 | 修复程序化天空的浓雾合成：保留浓雾入口前的薄雾散射与消光，调试视图 7 显示前方空气；浓雾球壳求交与采样改用相对高度稳定公式，从参考地表上方观察时截断地表后方的雾层。重建 Core 与 Editor；已有项目需同步 `Builtin/dense_fog.orbinc` 和 `Builtin/Shaders/atmosphere_sky.orbshader` 后重新导入，或使用 Dev 面板的 `Reset Builtin`（会覆盖 Builtin 定制）。升级本身不覆盖这些已有内容，发布包需重新 Build Player。 |

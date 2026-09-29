@@ -462,8 +462,7 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
         && std::isfinite(atmosphere.planetCenterX) && std::isfinite(atmosphere.planetCenterY)
         && std::isfinite(atmosphere.planetCenterZ) && skyMode <= 1u && quality <= 1u
         && std::isfinite(atmosphere.denseFog.visibilityMeters) && atmosphere.denseFog.visibilityMeters > 0.0f
-        && std::isfinite(atmosphere.denseFog.referenceHeightMeters) && std::isfinite(atmosphere.denseFog.layerHeightMeters)
-        && std::isfinite(atmosphere.denseFog.fadeMeters) && std::isfinite(atmosphere.denseFog.scatteringScale)
+        && std::isfinite(atmosphere.denseFog.topHeightMeters) && std::isfinite(atmosphere.denseFog.scatteringScale)
         && std::isfinite(atmosphere.denseFog.sunScatteringScale)
         && std::isfinite(atmosphere.denseFog.topFadeMeters) && atmosphere.denseFog.topFadeMeters >= 0.0f
         && atmosphere.denseFog.debugView >= 0 && atmosphere.denseFog.debugView <= 7;
@@ -589,11 +588,10 @@ bool AtmosphereRenderer::BuildFrame(const RenderScene& scene, const RenderCamera
         }
         outFrame.denseFogScattering = { scatteringR, scatteringG, scatteringB, 1.0f };
 
-        //提交底面过渡与雾顶衰减尺度，衰减尺度不超过层厚
-        const float32 layerKm = std::max(denseFog.layerHeightMeters, 0.0f) * 0.001f;
-        outFrame.denseFogProfile = { denseFog.referenceHeightMeters * 0.001f, layerKm,
-            std::max(denseFog.fadeMeters, 0.0f) * 0.001f, static_cast<float32>(EarthRadiusKm) };
-        outFrame.denseFogTopFadeKm = std::clamp(std::max(denseFog.topFadeMeters, 0.0f) * 0.001f, 0.0f, layerKm);
+        //提交雾顶高度与雾顶衰减尺度，衰减尺度不超过雾顶高度
+        const float32 topKm = denseFog.topHeightMeters * 0.001f;
+        outFrame.denseFogProfile = { topKm, 0.0f, 0.0f, static_cast<float32>(EarthRadiusKm) };
+        outFrame.denseFogTopFadeKm = std::clamp(std::max(denseFog.topFadeMeters, 0.0f) * 0.001f, 0.0f, std::max(topKm, 0.0f));
         outFrame.denseFogDebugView = denseFog.debugView;
     }
 
@@ -620,11 +618,10 @@ bool AtmosphereRenderer::PrepareCamera(const RenderScene& scene, const RenderCam
         char line[512];
         snprintf(line, sizeof(line),
             "Atmosphere frame: fog=%d sky=%d height=%.3f km maxDistance=%.1f km "
-            "denseFog=%d extinction=%.1f/km profile=(base=%.4f top=%.4f baseFade=%.4f) topFade=%.4f km debug=%d",
+            "denseFog=%d extinction=%.1f/km profile=(top=%.4f) topFade=%.4f km debug=%d",
             frame.fogActive ? 1 : 0, frame.skyActive ? 1 : 0, frame.cameraHeightKm, frame.maxDistanceKm,
             frame.denseFogExtinction > 0.0f ? 1 : 0, frame.denseFogExtinction,
-            frame.denseFogProfile.r, frame.denseFogProfile.r + frame.denseFogProfile.g,
-            frame.denseFogProfile.b, frame.denseFogTopFadeKm, frame.denseFogDebugView);
+            frame.denseFogProfile.r, frame.denseFogTopFadeKm, frame.denseFogDebugView);
         Log::Info(line);
     }
 

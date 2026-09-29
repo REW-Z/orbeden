@@ -73,9 +73,10 @@ internal struct EditorWorldRenderSettingsAbi
     public uint DenseFogEnabled;
     public uint DenseFogReserved;
     public float FogVisibilityMeters;
-    public float FogReferenceHeight;
-    public float FogLayerHeight;
-    public float FogFade;
+    public float FogTopHeight;
+    //原雾层厚度与底面过渡的位置，保留以维持其后字段的偏移
+    public float FogLayerHeightReserved;
+    public float FogFadeReserved;
     public float FogScatteringScale;
     public float FogSunScatteringScale;
     public float DenseFogReservedTail;
@@ -98,9 +99,7 @@ internal struct WorldAtmosphereSettings
     public float SunRadianceScale;
     public bool DenseFogEnabled;
     public float FogVisibilityMeters;
-    public float FogReferenceHeight;
-    public float FogLayerHeight;
-    public float FogFade;
+    public float FogTopHeight;
     public float FogScatteringScale;
     public float FogSunScatteringScale;
     public float FogTopFadeMeters;
@@ -180,9 +179,7 @@ public static unsafe class EditorApplication
             SunRadianceScale = settings.SunRadianceScale,
             DenseFogEnabled = settings.DenseFogEnabled != 0,
             FogVisibilityMeters = settings.FogVisibilityMeters,
-            FogReferenceHeight = settings.FogReferenceHeight,
-            FogLayerHeight = settings.FogLayerHeight,
-            FogFade = settings.FogFade,
+            FogTopHeight = settings.FogTopHeight,
             FogScatteringScale = settings.FogScatteringScale,
             FogSunScatteringScale = settings.FogSunScatteringScale,
             FogTopFadeMeters = settings.FogTopFadeMeters,
@@ -220,9 +217,7 @@ public static unsafe class EditorApplication
                 SunRadianceScale = atmosphere.SunRadianceScale,
                 DenseFogEnabled = atmosphere.DenseFogEnabled ? 1u : 0u,
                 FogVisibilityMeters = atmosphere.FogVisibilityMeters,
-                FogReferenceHeight = atmosphere.FogReferenceHeight,
-                FogLayerHeight = atmosphere.FogLayerHeight,
-                FogFade = atmosphere.FogFade,
+                FogTopHeight = atmosphere.FogTopHeight,
                 FogScatteringScale = atmosphere.FogScatteringScale,
                 FogSunScatteringScale = atmosphere.FogSunScatteringScale,
                 FogTopFadeMeters = atmosphere.FogTopFadeMeters,

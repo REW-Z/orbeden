@@ -718,9 +718,20 @@ namespace
                 const std::string& denseFogEnabled = GetAttribute(token, "denseFogEnabled");
                 if (!denseFogEnabled.empty() && !Reflection::SetFromXmlValue(atmosphere.denseFog.enabled, denseFogEnabled)) return false;
                 if (!ReadFloat32Attribute(token, "fogVisibilityMeters", atmosphere.denseFog.visibilityMeters)) return false;
-                if (!ReadFloat32Attribute(token, "fogReferenceHeight", atmosphere.denseFog.referenceHeightMeters)) return false;
-                if (!ReadFloat32Attribute(token, "fogLayerHeight", atmosphere.denseFog.layerHeightMeters)) return false;
-                if (!ReadFloat32Attribute(token, "fogFade", atmosphere.denseFog.fadeMeters)) return false;
+                //雾层不再有底面与层厚，只保存雾顶高度；
+                //旧世界没有这个属性，用底面高度与层厚相加还原雾顶，缺属性时取两字段各自的旧默认值
+                if (!GetAttribute(token, "fogTopHeight").empty())
+                {
+                    if (!ReadFloat32Attribute(token, "fogTopHeight", atmosphere.denseFog.topHeightMeters)) return false;
+                }
+                else
+                {
+                    float32 legacyBaseMeters = 0.0f;
+                    float32 legacyLayerMeters = 100.0f;
+                    if (!ReadFloat32Attribute(token, "fogReferenceHeight", legacyBaseMeters)) return false;
+                    if (!ReadFloat32Attribute(token, "fogLayerHeight", legacyLayerMeters)) return false;
+                    atmosphere.denseFog.topHeightMeters = legacyBaseMeters + legacyLayerMeters;
+                }
                 if (!ReadFloat32Attribute(token, "fogScatteringScale", atmosphere.denseFog.scatteringScale)) return false;
                 if (!ReadFloat32Attribute(token, "fogSunScatteringScale", atmosphere.denseFog.sunScatteringScale)) return false;
 
@@ -987,9 +998,7 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     output << "\" planetCenterZ=\""; WriteFloat64(output, world.renderSettings.atmosphere.planetCenterZ);
     output << "\" denseFogEnabled=\"" << (world.renderSettings.atmosphere.denseFog.enabled ? "true" : "false")
         << "\" fogVisibilityMeters=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.visibilityMeters))
-        << "\" fogReferenceHeight=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.referenceHeightMeters))
-        << "\" fogLayerHeight=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.layerHeightMeters))
-        << "\" fogFade=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.fadeMeters))
+        << "\" fogTopHeight=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.topHeightMeters))
         << "\" fogScatteringScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.scatteringScale))
         << "\" fogSunScatteringScale=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.sunScatteringScale))
         << "\" fogTopFadeMeters=\"" << EscapeXml(Reflection::ToXmlValue(world.renderSettings.atmosphere.denseFog.topFadeMeters))

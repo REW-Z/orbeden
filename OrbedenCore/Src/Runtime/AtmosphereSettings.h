@@ -22,19 +22,16 @@ enum class AtmosphereQuality : uint32
 //能见度按 MOR 定义（5% 透射阈值）：sigmaT = -ln(0.05) / visibilityMeters。
 //该值只描述浓雾自身的消光，不含背景大气，界面与实现口径一致。
 //密度只随相对参考球面的高度变化，首版不做水平雾区、三维噪声与体积阴影。
+//雾层没有底面：低于雾顶高度的所有高度都保持满密度，只在雾顶一侧衰减。
 struct DenseFogSettings
 {
 public:
     bool enabled = false;
     //浓雾参考高度处的能见度，单位米
     float32 visibilityMeters = 200.0f;
-    //雾层底面高度，单位米
-    float32 referenceHeightMeters = 0.0f;
-    //雾层厚度，单位米
-    float32 layerHeightMeters = 100.0f;
-    //底面过渡宽度，单位米，在层内由零升到满密度
-    float32 fadeMeters = 30.0f;
-    //雾顶衰减尺度，单位米；名义顶部密度约为 5%，上方延伸稀薄尾部，不得超过层厚
+    //雾顶高度，单位米，相对参考球面
+    float32 topHeightMeters = 100.0f;
+    //雾顶衰减尺度，单位米；名义顶部密度约为 5%，上方延伸稀薄尾部，不得超过雾顶高度
     float32 topFadeMeters = 20.0f;
     //环境光散射倍率，颜色取自世界环境光
     float32 scatteringScale = 1.0f;

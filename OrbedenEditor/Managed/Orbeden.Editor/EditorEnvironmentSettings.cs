@@ -46,12 +46,10 @@ internal static class EditorEnvironmentSettings
     private static string planetCenterZText = "0";
     private static string fieldError = string.Empty;
 
-    //浓雾草稿：能见度按 MOR 定义，单位米
+    //浓雾草稿：能见度按 MOR 定义，单位米；雾层没有底面，雾顶以下都有雾
     private static bool denseFogEnabled;
     private static float fogVisibilityMeters = 200.0f;
-    private static float fogReferenceHeight;
-    private static float fogLayerHeight = 100.0f;
-    private static float fogFade = 30.0f;
+    private static float fogTopHeightMeters = 100.0f;
     private static float fogScatteringScale = 1.0f;
     private static float fogSunScatteringScale = 1.0f;
     private static float fogTopFadeMeters = 20.0f;
@@ -82,9 +80,7 @@ internal static class EditorEnvironmentSettings
             SetPlanetCenter(draft.PlanetCenterX, draft.PlanetCenterY, draft.PlanetCenterZ);
             denseFogEnabled = false;
             fogVisibilityMeters = 200.0f;
-            fogReferenceHeight = 0.0f;
-            fogLayerHeight = 100.0f;
-            fogFade = 30.0f;
+            fogTopHeightMeters = 100.0f;
             fogScatteringScale = 1.0f;
             fogSunScatteringScale = 1.0f;
             fogTopFadeMeters = 20.0f;
@@ -108,9 +104,7 @@ internal static class EditorEnvironmentSettings
 
         denseFogEnabled = draft.DenseFogEnabled;
         fogVisibilityMeters = draft.FogVisibilityMeters;
-        fogReferenceHeight = draft.FogReferenceHeight;
-        fogLayerHeight = draft.FogLayerHeight;
-        fogFade = draft.FogFade;
+        fogTopHeightMeters = draft.FogTopHeight;
         fogScatteringScale = draft.FogScatteringScale;
         fogSunScatteringScale = draft.FogSunScatteringScale;
         fogTopFadeMeters = draft.FogTopFadeMeters;
@@ -202,9 +196,7 @@ internal static class EditorEnvironmentSettings
             SunRadianceScale = sunRadianceScale,
             DenseFogEnabled = denseFogEnabled,
             FogVisibilityMeters = fogVisibilityMeters,
-            FogReferenceHeight = fogReferenceHeight,
-            FogLayerHeight = fogLayerHeight,
-            FogFade = fogFade,
+            FogTopHeight = fogTopHeightMeters,
             FogScatteringScale = fogScatteringScale,
             FogSunScatteringScale = fogSunScatteringScale,
             FogTopFadeMeters = fogTopFadeMeters,
@@ -231,8 +223,8 @@ internal static class EditorEnvironmentSettings
             fieldError = "Dense Fog Visibility must be greater than zero.";
             return false;
         }
-        if (!float.IsFinite(fogReferenceHeight) || !float.IsFinite(fogLayerHeight) || !float.IsFinite(fogFade)
-            || !float.IsFinite(fogScatteringScale) || !float.IsFinite(fogSunScatteringScale)
+        if (!float.IsFinite(fogTopHeightMeters) || !float.IsFinite(fogScatteringScale)
+            || !float.IsFinite(fogSunScatteringScale)
             || !float.IsFinite(fogTopFadeMeters) || fogTopFadeMeters < 0.0f
             || fogDebugView < 0 || fogDebugView > 7)
         {
@@ -358,21 +350,12 @@ internal static class EditorEnvironmentSettings
                         fogVisibilityMeters = Math.Clamp(fogVisibilityMeters, 10.0f, 100000.0f);
                         dirty = true;
                     }
-                    if (EditorGUI.InputFloat("Fog Base Height (m)", ref fogReferenceHeight))
+                    if (EditorGUI.InputFloat("Fog Top Height (m)", ref fogTopHeightMeters))
                     {
-                        fogReferenceHeight = Math.Clamp(fogReferenceHeight, -1000.0f, 20000.0f);
+                        fogTopHeightMeters = Math.Clamp(fogTopHeightMeters, -1000.0f, 20000.0f);
                         dirty = true;
                     }
-                    if (EditorGUI.InputFloat("Fog Layer Height (m)", ref fogLayerHeight))
-                    {
-                        fogLayerHeight = Math.Clamp(fogLayerHeight, 0.0f, 20000.0f);
-                        dirty = true;
-                    }
-                    if (EditorGUI.InputFloat("Fog Base Fade (m)", ref fogFade))
-                    {
-                        fogFade = Math.Clamp(fogFade, 0.0f, 5000.0f);
-                        dirty = true;
-                    }
+                    EditorGUI.Label("Fog fills every height below the top; the value is relative to the reference sphere.");
                     if (EditorGUI.InputFloat("Fog Top Fade (m)", ref fogTopFadeMeters))
                     {
                         fogTopFadeMeters = Math.Clamp(fogTopFadeMeters, 0.0f, 5000.0f);
@@ -388,10 +371,10 @@ internal static class EditorEnvironmentSettings
                         fogSunScatteringScale = Math.Clamp(fogSunScatteringScale, 0.0f, 8.0f);
                         dirty = true;
                     }
-                    //提示雾顶衰减尺度的层厚限制
-                    if (fogTopFadeMeters > fogLayerHeight)
+                    //提示雾顶衰减尺度的雾顶限制
+                    if (fogTopFadeMeters > fogTopHeightMeters)
                     {
-                        EditorGUI.TextColored("Top Fade exceeds the layer height; it is clamped to the layer.",
+                        EditorGUI.TextColored("Top Fade exceeds the fog top; it is clamped to the fog top.",
                             EditorTheme.Current.LogWarning);
                     }
                     EditorGUI.Label("Top Fade keeps about 5% density at the nominal top and adds a thin tail above it. Zero gives a hard top.");

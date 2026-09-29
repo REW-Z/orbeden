@@ -43,19 +43,17 @@ vec3 IntegrateSkyFog(vec3 color, vec3 ray, vec3 frontRadiance, vec3 frontTau)
     float groundRadius = u_AtmosphereDenseFogProfile.w;
     float cameraHeight = u_AtmosphereCameraHeightKm;
     float mu = dot(u_AtmosphereCameraUp, ray);
-    float base = u_AtmosphereDenseFogProfile.x;
-    float top = base + max(u_AtmosphereDenseFogProfile.y, 0.0);
-    float baseFade = max(u_AtmosphereDenseFogProfile.z, 0.0);
-    float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, top - base);
+    float top = max(u_AtmosphereDenseFogProfile.x, -groundRadius);
+    float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, max(top, 0.0));
     float start = 0.0;
     float end = 0.0;
     float secondStart = 0.0;
     float secondEnd = 0.0;
-    if (ComputeShellIntervals(cameraHeight, mu, max(base - baseFade, -groundRadius),
+    if (ComputeShellIntervals(cameraHeight, mu, -groundRadius,
         max(top + 24.0 * topFade, -groundRadius), groundRadius, 1000000.0,
         start, end, secondStart, secondEnd) == 0) return color;
 
-    //裁剪空气区间，浓雾仍使用真实底面过渡
+    //空气区间与浓雾区间裁到同一段
     float airStart = 0.0;
     float airEnd = 0.0;
     ClipAtmosphereSegment(cameraHeight, mu, end, airStart, airEnd);
@@ -72,7 +70,7 @@ vec3 IntegrateSkyFog(vec3 color, vec3 ray, vec3 frontRadiance, vec3 frontTau)
         if (index >= steps) break;
         float distance = start + (float(index) + 0.5) * ds;
         float height = ComputeFogHeight(cameraHeight, mu, distance, groundRadius);
-        float fogExtinction = u_AtmosphereDenseFogExtinction * EvaluateFogProfile(height, base, top, baseFade, topFade);
+        float fogExtinction = u_AtmosphereDenseFogExtinction * EvaluateFogProfile(height, top, topFade);
         vec3 airExtinction = vec3(0.0);
         vec3 airSource = vec3(0.0);
         if (distance >= airStart && distance < airEnd)

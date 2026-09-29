@@ -963,13 +963,14 @@ namespace
         float32 aerosolDensity = 1.0f;
         float32 sunRadianceScale = 20.0f;
         float32 atmosphereReservedTail = 0.0f;
-        //浓雾参数：能见度、参考高度、层厚、过渡与散射倍率
+        //浓雾参数：能见度、雾顶高度与散射倍率
         uint32 denseFogEnabled = 0;
         uint32 denseFogReserved = 0;
         float32 fogVisibilityMeters = 200.0f;
-        float32 fogReferenceHeight = 0.0f;
-        float32 fogLayerHeight = 100.0f;
-        float32 fogFade = 30.0f;
+        float32 fogTopHeight = 100.0f;
+        //原雾层厚度与底面过渡的位置，保留以维持其后字段的偏移
+        float32 fogLayerHeightReserved = 0.0f;
+        float32 fogFadeReserved = 0.0f;
         float32 fogScatteringScale = 1.0f;
         float32 fogSunScatteringScale = 1.0f;
         float32 denseFogReservedTail = 0.0f;
@@ -992,9 +993,9 @@ namespace
     static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogEnabled) == 120);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReserved) == 124);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, fogVisibilityMeters) == 128);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogReferenceHeight) == 132);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogLayerHeight) == 136);
-    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogFade) == 140);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogTopHeight) == 132);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogLayerHeightReserved) == 136);
+    static_assert(offsetof(EditorWorldRenderSettingsAbi, fogFadeReserved) == 140);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, fogScatteringScale) == 144);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, fogSunScatteringScale) == 148);
     static_assert(offsetof(EditorWorldRenderSettingsAbi, denseFogReservedTail) == 152);
@@ -1029,9 +1030,7 @@ namespace
         settings->sunRadianceScale = source.atmosphere.sunRadianceScale;
         settings->denseFogEnabled = source.atmosphere.denseFog.enabled ? 1u : 0u;
         settings->fogVisibilityMeters = source.atmosphere.denseFog.visibilityMeters;
-        settings->fogReferenceHeight = source.atmosphere.denseFog.referenceHeightMeters;
-        settings->fogLayerHeight = source.atmosphere.denseFog.layerHeightMeters;
-        settings->fogFade = source.atmosphere.denseFog.fadeMeters;
+        settings->fogTopHeight = source.atmosphere.denseFog.topHeightMeters;
         settings->fogScatteringScale = source.atmosphere.denseFog.scatteringScale;
         settings->fogSunScatteringScale = source.atmosphere.denseFog.sunScatteringScale;
         settings->fogTopFadeMeters = source.atmosphere.denseFog.topFadeMeters;
@@ -1076,9 +1075,7 @@ namespace
         //写入浓雾参数
         target.atmosphere.denseFog.enabled = settings->denseFogEnabled != 0;
         target.atmosphere.denseFog.visibilityMeters = settings->fogVisibilityMeters;
-        target.atmosphere.denseFog.referenceHeightMeters = settings->fogReferenceHeight;
-        target.atmosphere.denseFog.layerHeightMeters = settings->fogLayerHeight;
-        target.atmosphere.denseFog.fadeMeters = settings->fogFade;
+        target.atmosphere.denseFog.topHeightMeters = settings->fogTopHeight;
         target.atmosphere.denseFog.scatteringScale = settings->fogScatteringScale;
         target.atmosphere.denseFog.sunScatteringScale = settings->fogSunScatteringScale;
         target.atmosphere.denseFog.topFadeMeters = settings->fogTopFadeMeters;
