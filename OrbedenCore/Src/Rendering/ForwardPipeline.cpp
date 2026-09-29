@@ -176,6 +176,7 @@ void ForwardPipeline::InvalidateResourceCaches()
     particleSnapshot = ParticleFrameSnapshot();
     //Shader 重新导入后同一个材质可能已经补上变体，允许再报一次
     reportedMissingVariants.clear();
+    batchBuilder.InvalidateReports();
     reportedAtmosphereOverflow.clear();
     atmosphere.InvalidateResources();
     expandedChunks.clear();

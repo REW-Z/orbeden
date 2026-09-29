@@ -896,9 +896,22 @@ bool EditorSystem::RunProjectUpgrade(std::string& outError)
         return false;
     }
 
+    //30 → 31：阴影与天空两个引擎 Shader 从项目骨架转正到 Builtin
+    if (pendingUpgrade.storedVersion < 31 &&
+        !ContentMigration::MigrateBuiltinEngineShaders(contentRoot, templateRoot, report, outError))
+    {
+        return false;
+    }
+
     for (const std::string& key : report.pendingShaderKeys)
     {
         Log::Warning(("Shader was kept as authored and needs manual migration: " + key).c_str());
+    }
+
+    //删除是升级里唯一不可逆的动作，逐条报出来，方便作者从版本管理里找回
+    for (const std::string& key : report.removedKeys)
+    {
+        Log::Warning(("Superseded file was removed by content migration: " + key).c_str());
     }
 
     ProjectUpgrader::UpgradeRequest request;

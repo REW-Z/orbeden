@@ -2,6 +2,14 @@
 
 这些资源使用现有 Opaque、Transparent、Refraction 队列。Material 默认继承 Shader 的队列，无需设置 Renderer。新建项目自动复制到 `Content/Builtin/`；已有项目升级保留用户内容，需要手动复制新增文件及 include，保留同名自定义文件，然后重新导入资源。Dev 面板的 `Reset Builtin` 可以整目录从模板回退：它按镜像语义执行，会覆盖同名自定义文件、删掉模板里没有的文件，只想要新增文件时仍按上面手工复制。
 
+## 引擎内部 Shader
+
+`Shaders/shadow_depth.orbshader` 与 `Shaders/skybox.orbshader` 不挂材质，由管线自行加载：前者是级联阴影的深度绘制入口，顶点阶段按几何 ABI 取世界矩阵，普通、实例与展开几何共用这一条位置公式；后者绘制天空盒立方体，用自带的视投影与 `xyww` 深度。
+
+两个文件都由引擎**按文件名在内容根内查找**，位置不限，但同一内容根内同名只能有一份——引擎取字典序靠前的一份并打一条告警。v31 起它们属于 Builtin，新建项目与 `Reset Builtin` 都铺到 `Content/Builtin/Shaders/`，升级流程会删除项目级 `Content/Shaders/` 下的旧副本。
+
+要定制这两个 Shader，只能改这份同名文件（引擎固定按文件名取值，改名不生效）；改过之后不要再对 Builtin 执行 `Reset Builtin`，它是镜像语义，会把文件覆盖回模板版本。
+
 ## 选择材质
 
 Project 面板选择 `.orbmat` 材质资产，放入 `StaticMeshRenderer.materials` 对应子网格槽位。一个 `.orbmat` 文件就是一个 Material，对象名称取自文件名，资源 Key 直接使用内容根相对路径，例如 `Builtin/Materials/rain_glass.orbmat`。`.mtl` 仅是 OBJ 的附属原始文件；通用对象产物使用 `.orbo`。

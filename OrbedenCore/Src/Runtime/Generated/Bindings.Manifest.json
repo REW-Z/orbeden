@@ -9207,6 +9207,25 @@
           "Parameters": []
         },
         {
+          "Name": "reportedMissingGeometryAbi",
+          "Type": "std::unordered_set\u003Cuint64\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Initialize",
           "Type": "void",
           "Access": "public",
@@ -9461,6 +9480,25 @@
           "Parameters": []
         },
         {
+          "Name": "InvalidateReports",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "EmitBatches",
           "Type": "void",
           "Access": "private",
@@ -9496,6 +9534,46 @@
             {
               "Name": "stats",
               "Type": "RenderBatchStats\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReportMissingGeometryAbi",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "shader",
+              "Type": "const GpuShader*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "pass",
+              "Type": "const GpuShaderPass\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "mode",
+              "Type": "GeometryMode",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "first",
+              "Type": "const DrawItem\u0026",
               "DefaultValue": ""
             }
           ]
@@ -17492,6 +17570,25 @@
         },
         {
           "Name": "supportsExpandedGeometry",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "usesGeometryAbi",
           "Type": "bool",
           "Access": "public",
           "IsMethod": false,

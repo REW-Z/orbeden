@@ -34,7 +34,7 @@
 ## 4. Shader 迁移清单
 - Builtin/Shaders 下 refraction、rain_glass、heat_wake 改为 Standard，替换直接 u_Model 为统一模型接口，保持原法线公式和片元输出。
 - Examples/FlightTraining/Shaders 下 heat_wave_distortion、rain_glass_refraction 做同样迁移，保持已有 UV 与颜色行为。
-- Project/Content/Shaders/skybox 改为 Standard 且 expandedGeometry off，保持专用视投影与深度公式，只由天空盒路径提交 Uniform。
+- Builtin/Shaders/skybox 改为 Standard 且 expandedGeometry off，保持专用视投影与深度公式，只由天空盒路径提交 Uniform。
 - blinn_phong、pbs_metallic、transparent 保持 Standard，新增 Expanded 验证，不改变既有光照计算。
 - particle_unlit、particle_trail、shadow_depth 保持 Particle；粒子普通几何与拖尾分别验证合法提交模式。
 - 输出、描边、调试线的 C++ 内嵌 Program 不属于 ShaderGeometryContract，保持各自创建与绘制入口。

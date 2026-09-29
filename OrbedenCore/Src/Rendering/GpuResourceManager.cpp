@@ -388,6 +388,16 @@ namespace
         return false;
     }
 
+    //几何 ABI 入口函数名。include 在导入时已经展开进顶点源码，出现它就说明这个 Pass 按 ABI 取世界矩阵。
+    constexpr const char* GeometryAbiEntryPoint = "OrbedenGetModel";
+
+    //判断一个 Pass 的顶点阶段是否接入几何 ABI。未接入的旧 Shader 只会编译单绘制变体，
+    //否则实例与展开变体虽然能编译通过（注入的宏对它无效），运行时却拿不到世界矩阵。
+    bool PassUsesGeometryAbi(const ShaderPass& pass)
+    {
+        return pass.vertexSource.find(GeometryAbiEntryPoint) != std::string::npos;
+    }
+
     //编译 Shader Pass。契约声明支持的变体必须全部成功，任一失败让整个 Shader 上传失败。
     bool UploadShader(RenderBackend* backend, Shader* shader, GpuShader& uploaded)
     {
@@ -398,15 +408,20 @@ namespace
             pass.state = sourcePass.state;
             pass.geometryContract = sourcePass.geometryContract;
             pass.supportsExpandedGeometry = sourcePass.supportsExpandedGeometry;
+            pass.usesGeometryAbi = PassUsesGeometryAbi(sourcePass);
 
-            bool compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram) &&
-                CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
+            //单绘制变体是唯一必需项；接入几何 ABI 的 Pass 才继续编译实例、展开与拖尾变体
+            bool compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram);
+            if (compiled && pass.usesGeometryAbi)
+            {
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
+            }
             //展开变体按开关编译：关闭它的 Shader 依赖模型空间顶点，不参与合批
-            if (compiled && sourcePass.supportsExpandedGeometry)
+            if (compiled && pass.usesGeometryAbi && sourcePass.supportsExpandedGeometry)
             {
                 compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Expanded, pass.expandedProgram);
             }
-            if (compiled && sourcePass.geometryContract == ShaderGeometryContract::Particle)
+            if (compiled && pass.usesGeometryAbi && sourcePass.geometryContract == ShaderGeometryContract::Particle)
             {
                 compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::TrailInstanced, pass.trailInstancedProgram);
             }

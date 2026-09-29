@@ -3,6 +3,7 @@
 #include "Rendering/Backend/RenderBackend.h"
 
 #include <span>
+#include <unordered_set>
 
 //每实例网格数据：世界矩阵、法线矩阵、tint 与图集 uv 变换。
 //布局是后端 ABI，只允许内部使用，不暴露成生成 Span 的元素类型。
@@ -128,6 +129,7 @@ class StaticBatchCache;
 class RenderScene;
 struct ParticleFrameSnapshot;
 struct GpuShader;
+struct GpuShaderPass;
 struct RenderBatchStats;
 struct RenderCamera;
 struct VisibleSet;
@@ -246,6 +248,8 @@ private:
     ParticleRenderer* particleRenderer = nullptr;
     //静态几何缓存，非拥有型；构建相机项时跳过已收编的渲染器并追加持久批
     StaticBatchCache* staticBatches = nullptr;
+    //已经上报过「没有接入几何 ABI」的 Shader 与几何模式组合，取值是来源 ObjectId 与模式的合成键
+    std::unordered_set<uint64> reportedMissingGeometryAbi;
 
 public:
     //注入本帧使用的 GPU 资源管理器、后端实例能力与粒子渲染器
@@ -274,8 +278,14 @@ public:
     //清空本相机的临时容器，保留容量
     void Clear();
 
+    //允许重新上报一次「Pass 未接入几何 ABI」；Shader 重新导入后调用
+    void InvalidateReports();
+
 private:
     //生成批次。depthShader 非空时按阴影语义构造键并统一使用深度 program。
     void EmitBatches(const List<DrawItem>& items, const GpuShader* depthShader,
         List<DrawBatch>& batches, RenderBatchStats& stats);
+
+    //上报一次「这个 Pass 没有接入几何 ABI，因此没能按指定模式合批」，同一 Shader 与模式只报一次
+    void ReportMissingGeometryAbi(const GpuShader* shader, const GpuShaderPass& pass, GeometryMode mode, const DrawItem& first);
 };

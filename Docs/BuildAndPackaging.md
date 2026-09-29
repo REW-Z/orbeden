@@ -428,8 +428,8 @@ Core C# 和游戏脚本 C# 已按目标平台编译进 NativeAOT 静态库并静
 
 | 目录 | 内容 | 去向 |
 | --- | --- | --- |
-| `Project/` | 工程脚手架：`.oeproj`、`*.csproj`、`*.vcxproj`、`Directory.Build.props`、`Content/Shaders/` 下的内置 Shader | 铺到项目根 |
-| `Builtin/` | 默认着色器、材质与基础网格 | 新建时铺到 `<项目根>/Content/Builtin/`；升级保留，Dev 面板可单独重置 |
+| `Project/` | 工程脚手架：`.oeproj`、`*.csproj`、`*.vcxproj`、`Directory.Build.props` | 铺到项目根 |
+| `Builtin/` | 默认着色器、材质与基础网格，含引擎按文件名查找的 `shadow_depth.orbshader` 与 `skybox.orbshader` | 新建时铺到 `<项目根>/Content/Builtin/`；升级保留，Dev 面板可单独重置 |
 | `Examples/` | 示例内容：场景、资源、脚本与原生组件 | 新建时铺到 `<项目根>/Content/Examples/`；升级保留，Dev 面板可显式重置 |
 | `Shared/` | 共享属性表与固定桥接源码：`Orbeden.Native.props` / `.targets`、`GameModule.cpp`、`GameAotExports.cs` | 由 `PublishNativeGameSdk` 发布到 `Sdk/Native/` 与 `Sdk/Shared/`，不铺进项目 |
 
@@ -497,7 +497,7 @@ MyGame/
 - **C#**：`Directory.Build.props` 关掉 SDK 默认编译项通配，由 SDK 的 `Orbeden.Bindings.targets` 收集 `Content/**/*.cs`。
 - **C++**：`Orbeden.Native.targets` 收集 `Content/**/*.cpp`；Player 的 `OrbedenGame.vcxproj` 同样。
 - **场景**：`startupWorld` 与 `EditorProject::OpenWorld` 都以内容根为基准，在 Project 面板双击 `.world` 即可切换。
-- **内置 Shader**：`shadow_depth.orbshader` 与 `skybox.orbshader` 由引擎**按文件名在内容根内查找**（结果缓存），不要求固定位置。
+- **内置 Shader**：`shadow_depth.orbshader` 与 `skybox.orbshader` 由引擎**按文件名在内容根内查找**（结果缓存），不要求固定位置；新建项目与升级后都落在 `Content/Builtin/Shaders/`，由 Dev 面板的 `Reset Builtin` 管理。同名多份时引擎取字典序靠前的一份并打一条告警，所以同一内容根内只应保留一份。
 
 内容根之外按定义不含用户内容，因此 glob 不需要排除表。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
@@ -537,6 +537,7 @@ MyGame/
 
 | 版本 | 迁移内容 |
 | --- | --- |
+| 31 | 阴影与天空两个引擎 Shader 从项目骨架转正到 Builtin：`Templates/Project/Content/Shaders/` 下的 `shadow_depth.orbshader`、`skybox.orbshader` 移到 `Templates/Builtin/Shaders/`，新建项目与 `Reset Builtin` 从此统一铺到 `<项目根>/Content/Builtin/Shaders/`，项目骨架不再带内置 Shader。**新增兜底：顶点阶段没有接入几何 ABI 的 Shader Pass 只编译单绘制变体**——这类 Shader 即便声明了 `--------geometry Standard`（或什么都没声明）也不会再参与实例化与动态合批，合批请求退回逐对象绘制时按 Shader 与几何模式各报一条 warning。版本 26 起一直承诺的「旧 Shader 按 Legacy 逐对象绘制」到这里才真正成立：此前旧 Shader 凑成实例批会走实例路径，而实例路径不设 `u_Model`，实例要么画出退化几何（阴影消失）要么整片不可见。`ContentMigration::MigrateBuiltinEngineShaders` 铺入两份 Builtin Shader，并**删除**项目级 `Shaders/` 下的旧位置文件及其伴生 `.resinfo`（同名两份会让引擎取字典序靠前的一份并打告警），删除的文件在日志逐条列出，作者写在旧文件里的定制随之丢弃；这两个 Shader 由引擎按文件名取值、不能改名，要定制只能直接改这份同名文件（改后注意 `Reset Builtin` 是镜像语义，会覆盖回去）。`ContentMigration` 的 v30 条目来源路径同步改为 `Builtin/Shaders/skybox.orbshader`。升级后重新导入资源并重建 Core、Editor、游戏原生模块与脚本。 |
 | 30 | 大气支持大气层外观察并新增贴地浓雾。相机高度不再有停用阈值：着色器对每条射线求大气入射、出射与地球交点，相机在大气外时从入射点开始积分，射线不经过大气时返回零散射与单位透光率；只有落到地心以下的位置才判为无效。`<RenderSettings>` 增加 `denseFogEnabled`、`fogVisibilityMeters`、`fogReferenceHeight`、`fogLayerHeight`、`fogFade`、`fogScatteringScale`、`fogSunScatteringScale`，缺失属性按默认值读取（浓雾默认关闭，老世界画面不变）；能见度按 MOR 5% 阈值描述浓雾自身消光；散射亮度是环境光与主光两项之和，后者默认与白色漫反射面同亮度。编辑器环境设置 ABI 从 120 字节扩到 160 字节，需重建 Editor。`ContentMigration::MigrateDenseFogAssets` 铺入 `Builtin/dense_fog.orbinc`，并把仍等于 `Templates/Migrations/29DenseFogBaseline/` 基线的四个文件（`atmosphere_common.orbinc`、`atmosphere_sampling.orbinc`、`atmosphere_sky.orbshader`、`Shaders/skybox.orbshader`）换成接入浓雾的版本，作者改过的保留原样并在日志列出。升级后重新导入资源并重建 Core、Editor、游戏原生模块与脚本。 |
 | 29 | 新增球形物理大气与空气透视。`<RenderSettings>` 增加 `skyMode`、`atmosphereFogEnabled`、`atmosphereQuality`、`planetCenterX/Y/Z`、`metersPerWorldUnit`、`aerosolDensity`、`sunRadianceScale`；缺失属性按默认值读取，老世界仍是贴图天空＋雾关闭。编辑器环境设置 ABI 从 64 字节扩到 120 字节，C++ 与 C# 同步断言尺寸与偏移，需重建 Editor。**升级器保留 `Content/`，内置内容不随模板重铺**：`ContentMigration::MigrateAtmosphereAssets` 会铺入 `Builtin/atmosphere_common.orbinc`、`Builtin/atmosphere_sampling.orbinc` 与四个 `Builtin/Shaders/atmosphere_*.orbshader`（同名内容不同则保留并在日志列出），并把仍等于 `Templates/Migrations/28AtmosphereBaseline/` 基线的八个内置 Shader 换成接入空气透视的版本，作者改过的保留原样并在日志列出。升级后重新导入资源并重建 Core、Editor、游戏原生模块与脚本；自定义表面 Shader 需按 [Builtin 说明](../OrbedenEditor/Templates/Builtin/README.md) 接入 `atmosphere_sampling`。设计见 [大气散射设计](AtmosphereScatteringDesign.md)。 |
 | 28 | 新增共享 C# `GUI.AnimationCurve`、`GUI.ColorGradient`、`GUI.ColorField`，粒子 Inspector 使用共享控件；Editor 与 Player 的原生 GUI 函数表追加曲线画布和颜色输入，Editor 引擎表接入基础 GUI。布局尺寸检查拒绝旧模块，需重建 Core、Editor、游戏原生模块与脚本；粒子配置序列化格式不变。 |

@@ -44,7 +44,7 @@ DirectionLight 继续通过 `DirectionalLight` 组件配置；`RenderDirectional
 - `Rendering/Backend/OpenGLRenderBackend.h/.cpp`：每个统计句柄一个 SSBO 与 fence，compute program 在后端延迟创建。
 - `Templates/Builtin/shadow_common.orbinc`：统一 CSM atlas 查询与 PCF。
 - `Templates/Builtin/Shaders/blinn_phong.orbshader`：通过 include 使用统一查询。
-- `Templates/Project/Content/Shaders/shadow_depth.orbshader`：继续承担不透明几何深度绘制。
+- `Templates/Builtin/Shaders/shadow_depth.orbshader`：继续承担不透明几何深度绘制；v31 起属于 Builtin，随新建与 `Reset Builtin` 铺到 `Content/Builtin/Shaders/`。
 
 新增文件更新 Core vcxproj 与 filters；Object 绑定只通过 MetaGen 构建刷新。
 

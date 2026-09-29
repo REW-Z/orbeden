@@ -52,6 +52,9 @@ public:
     ShaderGeometryContract geometryContract = ShaderGeometryContract::Standard;
     //与 CPU ShaderPass 的展开开关同步，关闭时 expandedProgram 不创建
     bool supportsExpandedGeometry = true;
+    //顶点阶段是否真的从几何 ABI 取世界矩阵。未接入的 Pass 只有单绘制变体：
+    //实例化与展开路径都不设 u_Model，让它走合批只会画出退化几何（阴影消失、物体不可见）。
+    bool usesGeometryAbi = true;
     std::string name;
     ShaderPassState state;
 
@@ -81,7 +84,10 @@ public:
         if (passes.empty()) return false;
         for (const GpuShaderPass& pass : passes)
         {
-            if (!pass.shaderProgram.IsValid() || !pass.instancedProgram.IsValid()) return false;
+            if (!pass.shaderProgram.IsValid()) return false;
+            //没有接入几何 ABI 的 Pass 只要求单绘制变体，其余变体按不存在处理
+            if (!pass.usesGeometryAbi) continue;
+            if (!pass.instancedProgram.IsValid()) return false;
             //展开变体只在声明开启时要求存在
             if (pass.supportsExpandedGeometry && !pass.expandedProgram.IsValid()) return false;
             if (pass.geometryContract != ShaderGeometryContract::Particle) continue;

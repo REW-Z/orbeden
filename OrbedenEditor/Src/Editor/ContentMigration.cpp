@@ -77,7 +77,7 @@ namespace
     }
 
     //迁移条目：Key 是内容根相对路径，SourcePath 是模板根相对源路径。
-    //Builtin 内容的两个前缀相同，项目模板内容来自 Project/Content，两者不能靠一条规则推出来。
+    //两者不能靠一条规则推出来：内联的 Key 是项目内的位置，SourcePath 是模板里的位置。
     struct MigrationFile
     {
         const char* key;
@@ -122,10 +122,17 @@ namespace
         { "Builtin/atmosphere_common.orbinc", "Builtin/atmosphere_common.orbinc" },
         { "Builtin/atmosphere_sampling.orbinc", "Builtin/atmosphere_sampling.orbinc" },
         { "Builtin/Shaders/atmosphere_sky.orbshader", "Builtin/Shaders/atmosphere_sky.orbshader" },
-        { "Shaders/skybox.orbshader", "Project/Content/Shaders/skybox.orbshader" },
+        //skybox 这时还在项目级 Shaders 下，模板来源已随 v31 移入 Builtin
+        { "Shaders/skybox.orbshader", "Builtin/Shaders/skybox.orbshader" },
     };
 
     constexpr const char* DenseFogBaselineFolder = "Migrations/29DenseFogBaseline";
+
+    //v31 转正到 Builtin 的两个引擎 Shader，以及它们在项目内的新旧位置
+    constexpr const char* EngineShaderNames[] = { "shadow_depth.orbshader", "skybox.orbshader" };
+    constexpr const char* EngineShaderNewFolder = "Builtin/Shaders";
+    constexpr const char* EngineShaderOldFolder = "Shaders";
+    constexpr const char* ResInfoExtension = ".resinfo";
 
     //去掉回车；行尾不是内容差异，比较前统一
     std::string RemoveCarriageReturns(const std::string& text)
@@ -237,6 +244,33 @@ namespace
         }
 
         outReport.rewrittenFiles += 1;
+        return true;
+    }
+
+    //删除内容根内的一个文件，连带它的伴生 .resinfo。文件本来就不存在时按已删除处理。
+    bool RemoveAssetFile(const std::filesystem::path& target, ContentMigration::MigrationReport& outReport,
+        std::string& outError, const std::string& key)
+    {
+        std::filesystem::path resInfo = target;
+        resInfo += ResInfoExtension;
+        //伴生缓存先删：源文件没了它就成了无主缓存，留着只会让下次导入读到过期清单
+        std::error_code error;
+        std::filesystem::remove(resInfo, error);
+        error.clear();
+
+        if (std::filesystem::remove(target, error))
+        {
+            outReport.removedFiles += 1;
+            outReport.removedKeys.push_back(key);
+            return true;
+        }
+
+        if (error)
+        {
+            outError = "Cannot remove " + key + ": " + error.message();
+            return false;
+        }
+
         return true;
     }
 
@@ -377,4 +411,37 @@ bool ContentMigration::MigrateDenseFogAssets(const std::string& contentRoot, con
         DenseFogNewFiles, std::size(DenseFogNewFiles),
         DenseFogPatchedFiles, std::size(DenseFogPatchedFiles),
         DenseFogBaselineFolder, outReport, outError);
+}
+
+bool ContentMigration::MigrateBuiltinEngineShaders(const std::string& contentRoot, const std::string& templateRoot,
+    MigrationReport& outReport, std::string& outError)
+{
+    outError.clear();
+
+    std::filesystem::path content = Utf8Path::FromUtf8(contentRoot);
+    std::filesystem::path templates = Utf8Path::FromUtf8(templateRoot);
+    std::error_code error;
+    if (!std::filesystem::is_directory(content, error))
+    {
+        outError = "Content root was not found: " + contentRoot;
+        return false;
+    }
+
+    for (const char* name : EngineShaderNames)
+    {
+        const std::string newKey = std::string(EngineShaderNewFolder) + "/" + name;
+        const std::string oldKey = std::string(EngineShaderOldFolder) + "/" + name;
+
+        //新位置按新增文件铺入：项目里已经自己放过一份不同内容时保留原样并列入待迁移
+        if (!CopyNewAssetFile(templates / Utf8Path::FromUtf8(EngineShaderNewFolder) / Utf8Path::FromUtf8(name),
+            content / Utf8Path::FromUtf8(newKey), outReport, outError, newKey))
+        {
+            return false;
+        }
+
+        //旧位置一律删除：引擎按文件名在内容根内查找，同名两份会打告警并取字典序靠前的一份
+        if (!RemoveAssetFile(content / Utf8Path::FromUtf8(oldKey), outReport, outError, oldKey)) return false;
+    }
+
+    return true;
 }

@@ -33,6 +33,15 @@ namespace
         return strategy == DrawStrategy::Auto || strategy == DrawStrategy::DynamicBatching;
     }
 
+    //几何模式的诊断名称，用在「没能合批」的报告里
+    const char* GetBatchingModeName(GeometryMode mode)
+    {
+        if (mode == GeometryMode::Instanced) return "instanced";
+        if (mode == GeometryMode::Expanded) return "dynamic";
+        if (mode == GeometryMode::TrailInstanced) return "trail instanced";
+        return "per-object";
+    }
+
     //非有限距离排到最后，与既有排序器一致
     constexpr float32 SortableDistanceLimit = std::numeric_limits<float32>::max();
 
@@ -199,6 +208,36 @@ void DrawBatchBuilder::Initialize(GpuResourceManager* resources, bool instancing
 
 void DrawBatchBuilder::Clear()
 {
+}
+
+void DrawBatchBuilder::InvalidateReports()
+{
+    reportedMissingGeometryAbi.clear();
+}
+
+//上报一次「这个 Pass 没有接入几何 ABI，因此没能按指定模式合批」。
+//去重键是来源 ObjectId 与几何模式的合成，同一 Shader 的同一模式只报一条，避免每帧刷屏。
+void DrawBatchBuilder::ReportMissingGeometryAbi(const GpuShader* shader, const GpuShaderPass& pass, GeometryMode mode, const DrawItem& first)
+{
+    int32 sourceId = (shader && shader->source) ? shader->source->GetObjectId() : 0;
+    uint64 key = (static_cast<uint64>(static_cast<uint32>(sourceId)) << 8) | static_cast<uint64>(static_cast<uint32>(mode));
+    if (!reportedMissingGeometryAbi.insert(key).second) return;
+
+    std::string message = "Shader pass is not wired to the geometry interface, so the ";
+    message += GetBatchingModeName(mode);
+    message += " batch was drawn per object instead. Shader: ";
+    message += (shader && shader->source) ? shader->source->name : std::string("<unknown>");
+    message += ", pass: ";
+    message += pass.name;
+    if (first.material)
+    {
+        message += ", material: ";
+        message += first.material->name;
+    }
+    message += ". Include \"Builtin/geometry_input.orbinc\" and declare '--------geometry Standard' on that pass "
+        "to use instancing and dynamic batching; a pass without the geometry interface never receives the "
+        "per-instance world matrix, so batched draws would collapse.";
+    Log::Warning(message.c_str());
 }
 
 //把当前相机的可见静态项展开为统一绘制项
@@ -603,11 +642,9 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
 
         //阴影批次不引用材质，program 与固定状态由深度 Shader 决定
         const GpuMaterial* material = depthShader ? nullptr : gpuResources->GetMaterial(first.material);
-        const GpuShaderPass* pass = depthShader
-            ? (depthShader->passes.empty() ? nullptr : &depthShader->passes[0])
-            : ((material && material->shader && !material->shader->passes.empty()) ? &material->shader->passes[0] : nullptr);
-        bool singlePass = depthShader ? depthShader->passes.size() == 1
-            : (material && material->shader && material->shader->passes.size() == 1);
+        const GpuShader* shader = depthShader ? depthShader : (material ? material->shader : nullptr);
+        const GpuShaderPass* pass = (shader && !shader->passes.empty()) ? &shader->passes[0] : nullptr;
+        bool singlePass = shader && shader->passes.size() == 1;
 
         //合批只处理单 Pass 的 Shader。其余来源是排序屏障：多 Pass 必须每个对象依次跑完全部 Pass。
         if (!singlePass || !pass)
@@ -618,6 +655,8 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
 
         bool instancedCapable = instancingAvailable && singlePass && pass && pass->instancedProgram.IsValid();
         bool expandedCapable = singlePass && pass && pass->supportsExpandedGeometry && pass->expandedProgram.IsValid();
+        //未接入几何 ABI 的 Pass 只有单绘制变体：合批请求一律退回逐对象绘制，并且必须报出来
+        bool geometryAbiMissing = pass && !pass->usesGeometryAbi;
 
         //普通来源的绘制策略在这里落地：先试实例批，再试动态批，都不成立就单绘制。
         //显式实例与粒子已经带好自己的模式，不参与这套选择。
@@ -625,14 +664,16 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
         if (first.source == DrawSource::StaticMesh)
         {
             mode = GeometryMode::Uniform;
-            if (end > index + 1 && AllAllowInstancing(items, index, end) && instancedCapable)
+            if (end > index + 1 && AllAllowInstancing(items, index, end))
             {
-                mode = GeometryMode::Instanced;
+                if (instancedCapable) mode = GeometryMode::Instanced;
+                else if (geometryAbiMissing) ReportMissingGeometryAbi(shader, *pass, GeometryMode::Instanced, first);
             }
             else
             {
                 //动态批放宽到同材质与同状态，不要求同网格；按预算收编连续项
-                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && AllAllowDynamicBatching(items, index, end));
+                bool dynamicAllowed = AllAllowDynamicBatching(items, index, end);
+                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && dynamicAllowed);
                 if (dynamicEnd >= index + 2)
                 {
                     end = dynamicEnd;
@@ -640,9 +681,20 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
                 }
                 else
                 {
+                    //同材质项够多却没成动态批：声明了展开几何却拿不到变体时，未接入 ABI 的 Pass 要报出来
+                    if (geometryAbiMissing && pass->supportsExpandedGeometry && dynamicAllowed && end >= index + 2)
+                    {
+                        ReportMissingGeometryAbi(shader, *pass, GeometryMode::Expanded, first);
+                    }
                     end = index + 1;
                 }
             }
+        }
+        else if (depthShader && geometryAbiMissing && mode != GeometryMode::Uniform)
+        {
+            //显式实例与粒子的模式由来源固定，深度 Pass 没接入 ABI 时这里同样静默退回逐对象绘制；
+            //主 Pass 的同类情况由绘制阶段按「缺少几何变体」上报，不在这里重复。
+            ReportMissingGeometryAbi(shader, *pass, mode, first);
         }
 
         //实例上限之外的连续项拆成多个同键批次

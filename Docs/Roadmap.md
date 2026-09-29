@@ -8,15 +8,13 @@
 （DONE）Ctrl+R重新导入和编译脚本。 
 （DONE）用户文档生成器。
 （DONE）新项目创建和旧项目同步用户文档。   
-Gizmos可在SceneView点选。  
+（DONE）Gizmos可在SceneView点选。  
 文本编辑器。  
 
 # Core  
 
 （DONE）粒子系统。  
-
 雾效。  
-
 RetainedGUI。  
 
 # 未排期  

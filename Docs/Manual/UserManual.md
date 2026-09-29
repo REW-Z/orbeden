@@ -394,7 +394,7 @@ bin/
 
 ### 项目提示内置 Shader 缺失
 
-如果项目打开后出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，说明引擎在内容根内按文件名没找到它们。把这两个文件放回 `Content/` 下的任意位置即可（新建项目默认在 `Content/Shaders/`）。
+如果项目打开后出现 `shadow_depth.orbshader` 或 `skybox.orbshader` 缺失，说明引擎在内容根内按文件名没找到它们。把这两个文件放回 `Content/` 下的任意位置即可（新建项目与升级后都在 `Content/Builtin/Shaders/`，由 Dev 面板的 `Reset Builtin` 管理）。同一内容根内只应保留一份，同名多份时引擎取字典序靠前的一份并打告警。
 
 ### Inspector 中看不到新 C# 脚本
 
