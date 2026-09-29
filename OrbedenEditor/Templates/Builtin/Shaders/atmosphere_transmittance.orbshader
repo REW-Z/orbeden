@@ -43,5 +43,7 @@ void main()
     vec3 tau = vec3(0.0);
     IntegrateAtmosphere(h, up, ray, 1000000.0, 64, 1, u_AtmosphereAerosolDensity, vec3(0.0), ray, radiance, tau);
 
-    FragColor = vec4(exp(-tau), 1.0);
+    //存光学厚度本身，由采样端取 exp(-tau)：tau 是 O(1)~20 的量，半精度足够；
+    //存 exp(-tau) 会在掠射时把蓝通道下溢成 0，做比值/相减的用法会拿到错值
+    FragColor = vec4(tau, 1.0);
 }

@@ -126,10 +126,12 @@ vec2 EvaluatePhase(float nu)
     return vec2(rayleigh, mie);
 }
 
-//采样太阳透光率，太阳射线穿过地球时返回零
-vec3 SampleSunTransmittance(float h, float mu)
+//采样太阳（或任意向上方向）的光学厚度，太阳射线穿过地球时返回足够大的值。
+//表里存的是光学厚度本身而不是 exp(-tau)：掠射射线的 tau 能到 20 上下，
+//存 exp(-tau) 会在蓝通道下溢成 0（约 7e-9），凡是要做比值或相减的用法都会拿到错值
+vec3 SampleSunOpticalDepth(float h, float mu)
 {
-    if (IntersectGroundDistance(h, mu) >= 0.0) return vec3(0.0);
+    if (IntersectGroundDistance(h, mu) >= 0.0) return vec3(1.0e6);
 
     //反算查找表坐标：高度取平方分布，视线余弦在地平线到天顶之间取平方分布
     float altitude = clamp(h, 0.0, AtmosphereTopHeight);
@@ -141,6 +143,35 @@ vec3 SampleSunTransmittance(float h, float mu)
     vec2 uv = vec2(0.5 + u * (u_AtmosphereTransSize.x - 1.0), 0.5 + v * (u_AtmosphereTransSize.y - 1.0)) /
         u_AtmosphereTransSize.xy;
     return texture(u_AtmosphereTransmittanceTexture, uv).rgb;
+}
+
+//采样太阳透光率，太阳射线穿过地球时返回零
+vec3 SampleSunTransmittance(float h, float mu)
+{
+    return exp(-SampleSunOpticalDepth(h, mu));
+}
+
+//天空查找表的地平线相对仰角映射：v = 0.5 对应地平线，两侧各占一半，
+//靠地平线一端按平方加密。行数取偶数时地平线恰好落在节点行边界上，
+//掠过地平线的陡变不会被双线性抹成跨越两行的一段斜坡
+float AtmosphereSkyZenithCosFromUv(float v, float cameraHeightKm)
+{
+    float h = max(cameraHeightKm, 0.0);
+    float muHorizon = -sqrt(max(h * (2.0 * AtmosphereGroundRadius + h), 0.0)) / (AtmosphereGroundRadius + h);
+    float t = clamp(v * 2.0 - 1.0, -1.0, 1.0);
+    float span = t >= 0.0 ? 1.0 - muHorizon : muHorizon + 1.0;
+    return muHorizon + sign(t) * span * t * t;
+}
+
+//上面映射的反函数，天空着色器按像素的视线仰角反算表坐标
+float AtmosphereSkyUvFromZenithCos(float mu, float cameraHeightKm)
+{
+    float h = max(cameraHeightKm, 0.0);
+    float muHorizon = -sqrt(max(h * (2.0 * AtmosphereGroundRadius + h), 0.0)) / (AtmosphereGroundRadius + h);
+    float offset = mu - muHorizon;
+    float span = offset >= 0.0 ? 1.0 - muHorizon : muHorizon + 1.0;
+    float t = sqrt(clamp(abs(offset) / max(span, 1.0e-6), 0.0, 1.0));
+    return 0.5 + 0.5 * sign(offset) * t;
 }
 
 //沿一段视线距离积分，起点靠近相机、终点更远，步长在靠近最近点的那一端最小

@@ -98,6 +98,8 @@ PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 C
 
 参数：`Quality` 选择 Low 或 Balanced；`Aerosol Density` 只缩放 Mie（0 关闭 Mie、保留 Rayleigh）；`Sun Radiance Scale` 只缩放散射亮度与太阳盘；`Planet Center` 是地心在当前世界原点坐标系内的位置（米，默认 6371 km 在原点正下方，即原点位于海平面）；`Meters Per World Unit` 是世界单位到米的换算，世界用更小尺度表达长距离时改它。
 
+天空查找表按**方向**存放：行是地平线相对仰角（地平线落在 v=0.5 的节点行边界上，靠地平线平方加密），列是视线与太阳方向的夹角余弦；表与相机朝向无关。从大气层外观察时，命中的地球画成相机 clearColor 底板（代表未加载的远地形），遮挡边界由天空着色器逐像素解析求交、按 `fwidth` 做一像素覆盖过渡，底板透光率取自太阳透光率表（该表存光学厚度 τ），都与天空表的分辨率无关。
+
 ### 浓雾
 
 `Builtin/dense_fog.orbinc` 是与薄霾分开的第二种介质，默认关闭，用 Rendering 面板的 Dense Fog 打开。它做的是贴地浓雾，能见度最低 10 米。
@@ -112,7 +114,7 @@ PBS、Blinn-Phong 和普通透明材质支持全局环境镜面反射，使用 C
 
 浓雾的透光率由射线在雾层内的弦长解析积分得到，不采样空气透视的查找表；散射照明是低成本近似，与逐段积分的差别在薄霾与浓雾重叠的中间段，两端极限一致。六面天空与程序化天空同样被浓雾遮蔽。浓雾受 `Atmosphere Fog` 总开关控制。
 
-限制：相机高度没有停用阈值，可以从大气层外观察；最长支持 2500 km 透视距离。只实现 Rayleigh＋Mie 单次散射，夜景偏暗，环境照明与反射不自动补偿；浓雾不做水平雾区、三维噪声、降落灯光束与体积阴影；程序化天空不自动生成反射 Cubemap，Reflection Environment 始终单独选择；天空模式切换当帧生效，不做交叉淡化。
+限制：相机高度没有停用阈值，可以从大气层外观察；最长支持 2500 km 透视距离。只实现 Rayleigh＋Mie 单次散射，夜景偏暗，环境照明与反射不自动补偿（行星背光面因此也不会出现那层大气辉光：没有直射太阳就没有入射光源，要夜景可见属于新增多次散射或气辉）；浓雾不做水平雾区、三维噪声、降落灯光束与体积阴影；程序化天空不自动生成反射 Cubemap，Reflection Environment 始终单独选择；天空模式切换当帧生效，不做交叉淡化。
 
 自定义表面 Shader 要参与空气透视，需要包含 `Builtin/atmosphere_sampling.orbinc`、声明 `uniform vec3 u_CameraPosition;`，并在着色完成后调用 `ApplyAtmosphereToSurface(rgb, v_WorldPosition, GetAtmosphereScreenUv())`；加性混合的粒子用 `SampleSurfaceAtmosphere` 只取透光率，不叠加散射。折射与热浪采样的相机颜色已经含雾，不要再调用加雾函数。宿主 Shader 多占两个片元纹理槽（`u_AtmosphereRadianceTexture`、`u_AtmosphereOpticalDepthTexture`）。
 

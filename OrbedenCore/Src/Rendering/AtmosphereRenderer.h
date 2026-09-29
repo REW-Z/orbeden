@@ -44,10 +44,11 @@ public:
     matrix4x4 cameraWorldRotation;
     int32 viewportWidth = 0;
     int32 viewportHeight = 0;
+    //未加载远地形的颜色底板；命中地球的射线由天空着色器按像素解析合成，不烘焙进查找表
     color groundBackground;
     AtmosphereSettings settings;
 
-    //浓雾：消光系数（每 km）、散射亮度、剖面（参考高度、层厚、过渡、参考球半径，单位 km）
+    //浓雾：消光系数（每 km）、散射亮度、剖面（雾顶高度、预留、预留、参考球半径，单位 km）
     float32 denseFogExtinction = 0.0f;
     //雾顶内部渐变厚度，单位 km
     float32 denseFogTopFadeKm = 0.0f;

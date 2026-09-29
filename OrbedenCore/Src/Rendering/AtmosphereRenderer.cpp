@@ -296,7 +296,6 @@ void AtmosphereRenderer::BindLutUniforms()
     backend->SetUniformVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->SetUniformVector3("u_AtmosphereSunDirection", frame.sunDirection);
     backend->SetUniformColor("u_AtmosphereSunRadiance", frame.sunRadiance);
-    backend->SetUniformColor("u_AtmosphereGroundBackground", frame.groundBackground);
     backend->SetUniformFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
     backend->SetUniformFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
     backend->SetUniformMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
@@ -696,6 +695,8 @@ bool AtmosphereRenderer::RenderSky()
     backend->SetUniformVector3("u_AtmosphereCameraUp", frame.cameraUp);
     backend->SetUniformVector3("u_AtmosphereSunDirection", frame.sunDirection);
     backend->SetUniformColor("u_AtmosphereSunRadiance", frame.sunRadiance);
+    //地球底板由天空着色器按像素合成，查找表里不再烘焙
+    backend->SetUniformColor("u_AtmosphereGroundBackground", frame.groundBackground);
     backend->SetUniformColor("u_AtmosphereSkySize",
         { static_cast<float32>(quality.skyWidth), static_cast<float32>(quality.skyHeight), 0.0f, 0.0f });
     backend->SetUniformColor("u_AtmosphereTransSize",

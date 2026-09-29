@@ -27,6 +27,7 @@ uniform float u_AtmosphereCameraHeightKm;
 uniform vec3 u_AtmosphereCameraUp;
 uniform vec3 u_AtmosphereSunDirection;
 uniform vec4 u_AtmosphereSunRadiance;
+uniform vec4 u_AtmosphereGroundBackground;
 uniform vec4 u_AtmosphereSkySize;
 uniform sampler2D u_AtmosphereSkyTexture;
 uniform int u_AtmosphereFogDebugView;
@@ -100,28 +101,102 @@ vec3 IntegrateSkyFog(vec3 color, vec3 ray, vec3 frontRadiance, vec3 frontTau)
     return max(color * fogTransmittance + frontRadiance * (1.0 - fogTransmittance)
         + mixedRadiance - fogTransmittance * airRadiance, vec3(0.0));
 }
+
+//地面段透光率的积分步数。这一段只会随"透光率还有意义"的短距离出现，
+//段一长 tau 就远大于 1、结果必然是零，所以定点几步就够
+const int GroundSegmentSteps = 4;
+
+//解析地球底板：覆盖率由视线与地平线的相对位置逐像素求出，
+//透光率是地面到相机那一段自己的，不含地面之外的大气
+void EvaluateGroundLayer(vec3 ray, out float coverage, out vec3 transmittance)
+{
+    float h = max(u_AtmosphereCameraHeightKm, 0.0);
+    float r = AtmosphereGroundRadius + h;
+    float mu = dot(u_AtmosphereCameraUp, ray);
+
+    //d > 0 表示视线落在地球上；以地平线为中心做一个像素宽的覆盖抗锯齿。
+    //不能只向球内单边展开：那样恰好压在地平线上的那一像素拿不到底板，
+    //而查找表在该行的值又是地平线上下的混合（近地暗、掠射亮），那一个像素就会压出一条暗线
+    float muHorizon = -sqrt(max(h * (2.0 * AtmosphereGroundRadius + h), 0.0)) / r;
+    float d = muHorizon - mu;
+    float halfWidth = 0.5 * max(fwidth(d), 1.0e-7);
+    coverage = smoothstep(-halfWidth, halfWidth, d);
+    transmittance = vec3(1.0);
+
+    //覆盖率恰好为零的像素（明显在地平线之上）不参与底板合成，透光率取什么值都无所谓
+    if (coverage <= 0.0) return;
+
+    //抗锯齿带里落在地平线外侧的像素没有交点。底板那一侧的透光率必须取它在地平线上的极限：
+    //直接拿 mu 查会提前返回、让 transmittance 停在初始的 1.0，合成时底板就按"无衰减"
+    //整块叠上去——表现为沿弧线每隔几像素冒一个亮点（虚线），夜面反差最大时最明显。
+    //把方向夹到地平线以内再求交，拿到的就是掠过地平线那条的透光率
+    float groundMu = min(mu, muHorizon - 1.0e-6);
+    float groundDistance = IntersectGroundDistance(h, groundMu);
+    if (groundDistance < 0.0) return;
+
+    //相机在大气外：地面到相机之间是整层大气，沿视线一次查表足够
+    if (h >= AtmosphereTopHeight)
+    {
+        vec3 groundUp = normalize(r * u_AtmosphereCameraUp + groundDistance * ray);
+        transmittance = exp(-SampleSunOpticalDepth(0.0, dot(groundUp, -ray)));
+        return;
+    }
+
+    //相机在大气内：地面到相机是一段近距离，直接在射线上积分，不走透射率表。
+    //表在近地平线方向给不出这一段：两端的 tau 都很大（掠射气柱红约 24、蓝可到几百），
+    //要的是它们之间不到 1 的差，而半精度表在 tau≈287 处的 ulp 就有 0.25，
+    //相减只会得到零或噪声——表现为贴着地平线的一条亮线，转向时随雾与太阳方位闪动
+    vec3 tau = vec3(0.0);
+    float step = groundDistance / float(GroundSegmentSteps);
+    for (int index = 0; index < GroundSegmentSteps; ++index)
+    {
+        float distance = (float(index) + 0.5) * step;
+        vec3 scatteringRayleigh = vec3(0.0);
+        vec3 scatteringMie = vec3(0.0);
+        vec3 extinction = vec3(0.0);
+        EvaluateScattering(ComputeAltitude(h, groundMu, distance), u_AtmosphereAerosolDensity,
+            scatteringRayleigh, scatteringMie, extinction);
+        tau += extinction * step;
+    }
+
+    transmittance = exp(-tau);
+}
+
 void main()
 {
-    //按节点参数查询天空查找表，太阳盘不烘焙进去
-    vec2 skyUv = (0.5 + v_Uv * (u_AtmosphereSkySize.xy - 1.0)) / u_AtmosphereSkySize.xy;
-    vec3 color = texture(u_AtmosphereSkyTexture, skyUv).rgb;
-
-    //当前像素的重建方向，用于判定太阳盘与地球遮蔽
+    //当前像素的重建方向
     vec4 viewPosition = u_AtmosphereInverseProjection * vec4(v_Uv * 2.0 - 1.0, 1.0, 1.0);
     vec3 viewRay = normalize((u_AtmosphereCameraWorldRotation * viewPosition).xyz);
     float muSun = dot(viewRay, u_AtmosphereSunDirection);
+    float mu = dot(u_AtmosphereCameraUp, viewRay);
 
-    //视角光线落到地球上时不画太阳盘
-    if (IntersectGroundDistance(u_AtmosphereCameraHeightKm, dot(u_AtmosphereCameraUp, viewRay)) < 0.0)
-    {
-        //太阳盘边缘按像素覆盖宽度抗锯齿
-        float cosRadius = cos(AtmosphereSunAngularRadius);
-        float coverage = smoothstep(cosRadius - max(fwidth(muSun), 1.0e-7), cosRadius, muSun);
-        float solidAngle = AtmospherePi * sin(AtmosphereSunAngularRadius) * sin(AtmosphereSunAngularRadius);
-        vec3 transmittance = SampleSunTransmittance(u_AtmosphereCameraHeightKm,
-            dot(u_AtmosphereCameraUp, u_AtmosphereSunDirection));
-        color += u_AtmosphereSunRadiance.rgb * transmittance * coverage / solidAngle;
-    }
+    //按方向查询天空查找表：列是视线与太阳方向的夹角余弦，行是地平线相对仰角。
+    //地平线两侧的值分开取，不让表自己跨边界混合：以上是太空（掠射、亮），
+    //以下是最多几公里的近地散射（很暗，相机低于海平面时恰好为零）。
+    //混合出来的值哪一侧都不代表，贴着地平线的那一像素就会因此变暗——
+    //相机低于海平面时下面那行是 0，偏差最大；转动视角时偏差还随雾和太阳方位变化，
+    //看起来就是那条线在亮暗之间闪。这里把两个采样坐标夹到地平线的两侧行，
+    //再由地面覆盖率在"地面（含底板）"与"天空"之间混合
+    float skyV = AtmosphereSkyUvFromZenithCos(mu, u_AtmosphereCameraHeightKm);
+    float rowStep = 0.5 / max(u_AtmosphereSkySize.y, 1.0);
+    float skyU = muSun * 0.5 + 0.5;
+    vec3 skyBelow = texture(u_AtmosphereSkyTexture, vec2(skyU, min(skyV, 0.5 - rowStep))).rgb;
+    vec3 skyAbove = texture(u_AtmosphereSkyTexture, vec2(skyU, max(skyV, 0.5 + rowStep))).rgb;
+
+    //地球底板按像素解析合成：逐像素判交，边界与查找表分辨率无关
+    float groundCoverage = 0.0;
+    vec3 groundTransmittance = vec3(1.0);
+    EvaluateGroundLayer(viewRay, groundCoverage, groundTransmittance);
+    vec3 groundColor = skyBelow + groundTransmittance * u_AtmosphereGroundBackground.rgb;
+    vec3 color = mix(groundColor, skyAbove, 1.0 - groundCoverage);
+
+    //太阳盘边缘按像素覆盖宽度抗锯齿，落到地球上的部分按地面覆盖率淡出
+    float cosRadius = cos(AtmosphereSunAngularRadius);
+    float sunCoverage = smoothstep(cosRadius - max(fwidth(muSun), 1.0e-7), cosRadius, muSun);
+    float solidAngle = AtmospherePi * sin(AtmosphereSunAngularRadius) * sin(AtmosphereSunAngularRadius);
+    vec3 sunTransmittance = SampleSunTransmittance(u_AtmosphereCameraHeightKm,
+        dot(u_AtmosphereCameraUp, u_AtmosphereSunDirection));
+    color += u_AtmosphereSunRadiance.rgb * sunTransmittance * sunCoverage * (1.0 - groundCoverage) / solidAngle;
 
     //调试视图直接替换天空颜色
     if (u_AtmosphereFogDebugView > 0 && u_AtmosphereFogDebugView != 7)
