@@ -179,14 +179,21 @@ namespace
         *bindingKind = 0;
         std::string path = ReadUtf8(key, length);
         if (path.empty()) return nullptr;
+
+        //托管脚本类型不在原生类型表里。声明为托管类型时只按稳定路径定位脚本宿主，
+        //再校验 host 绑定的托管类型名，绝不拿 Orbeden.Button 这种短名去查原生类型表。
+        std::string declared = ReadUtf8(typeName, typeLength);
+        std::string nativeName = declared.starts_with("Orbeden.") ? declared.substr(8) : declared;
+        bool managedType = !nativeName.empty() && Object::FindType(nativeName) == nullptr;
+
         Object* object = Object::FindObject(StringId(path));
-        if (!object && !path.starts_with("world://"))
+        if (!object && !managedType && !path.starts_with("world://"))
         {
-            std::string name = ReadUtf8(typeName, typeLength);
-            if (name.starts_with("Orbeden.")) name.erase(0, 8);
-            if (Type* type = Object::FindType(name)) object = ResourceManager::Load(type, path);
+            if (Type* type = Object::FindType(nativeName)) object = ResourceManager::Load(type, path);
         }
         if (!object) return nullptr;
+        //托管声明必须落到托管脚本宿主上；声明基类引用派生实例的精确类型判定由托管侧按包装完成。
+        if (managedType && !(object->Cast<Script>() && object->Cast<Script>()->IsManagedHost())) return nullptr;
         if (object->GetWorld() && object->GetWorld() != static_cast<World*>(context)) return nullptr;
         if (Component* component = object->Cast<Component>())
         {
@@ -263,5 +270,6 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.Script = ScriptBindApi::Create(world);
     api.GuiDraw = RuntimeGuiBridge::GetDrawApi();
     api.GuiCurve = RuntimeGuiBridge::GetCurveApi();
+    api.GetRetainedGuiApi = reinterpret_cast<void*>(&GetRetainedGuiApiTable);
     return api;
 }

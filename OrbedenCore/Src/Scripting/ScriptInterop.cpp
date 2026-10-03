@@ -144,6 +144,13 @@ namespace
             WritePayload(destination, payload);
             return true;
         }
+        case Reflection::ValueKind::Vector2:
+        {
+            vector2 current;
+            if (!value.TryGet(current)) return false;
+            WritePayload(destination, current);
+            return true;
+        }
         case Reflection::ValueKind::Vector3:
         {
             vector3 current;
@@ -206,6 +213,7 @@ namespace
             value = kind == Reflection::ValueKind::String ? Reflection::Value(text) : Reflection::Value(StringId(text));
             return true;
         }
+        case Reflection::ValueKind::Vector2: value = Reflection::Value(ReadPayload<vector2>(source)); return true;
         case Reflection::ValueKind::Vector3: value = Reflection::Value(ReadPayload<vector3>(source)); return true;
         case Reflection::ValueKind::Color: value = Reflection::Value(ReadPayload<color>(source)); return true;
         case Reflection::ValueKind::Quaternion: value = Reflection::Value(ReadPayload<quaternion>(source)); return true;

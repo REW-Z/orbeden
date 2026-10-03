@@ -57,7 +57,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/vendor/msdfgen/cmake/msdfgen-config.
                "${CMAKE_CURRENT_BINARY_DIR}/msdfgen-config.h")
 
 # ---- GLFW ----
-# 上游自带 CMake：只建静态库，不要示例、文档与测试。
+# 必须是动态库：GLFW 的窗口表与平台后端是进程内单例，而 OrbedenCore.dll 与编辑器 exe
+# 都会直接调用它。静态库会给两者各一份互不相通的状态，编辑器建窗必崩。
+set(GLFW_LIBRARY_TYPE SHARED CACHE STRING "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -79,10 +81,18 @@ target_include_directories(imgui PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/misc/cpp")
+# ImGui 的上下文（GImGui）必须全进程唯一：编辑器 exe 建上下文、OrbedenCore.dll 渲染，
+# 各持一份就等于两个互不相干的 UI 世界。这里按 dllexport 编译，由 OrbedenCore.dll 导出、
+# 编辑器从导入库取；静态宿主（Player）下 dllexport 只是多一张导出表，无副作用。
+target_compile_definitions(imgui PRIVATE "IMGUI_API=__declspec(dllexport)")
+
 # ---- glad ----
 # 生成产物直接入库；引擎侧只链接，不编译。
+# glad 的 GL 函数指针表同样是全局状态，只允许 OrbedenCore.dll 里初始化过的那一份：
+# 这里按 dllexport 编译，编辑器用 GLAD_API_CALL_EXPORT（dllimport）从 DLL 取。
 add_library(glad STATIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/src/gl.c")
 target_include_directories(glad PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/include")
+target_compile_definitions(glad PRIVATE GLAD_API_CALL_EXPORT GLAD_API_CALL_EXPORT_BUILD)
 
 # imgui 的 GLFW 与 OpenGL3 后端分别要这两家的头文件与库。
 target_link_libraries(imgui PUBLIC glfw glad)

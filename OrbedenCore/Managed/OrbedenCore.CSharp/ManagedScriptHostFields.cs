@@ -16,7 +16,7 @@ internal static partial class ManagedTypeMetadataCache
         IReadOnlyDictionary<string, ManagedHostField> values = Script.ReadHostFields(host);
         if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)
             || !values.TryGetValue(name, out ManagedHostField stored)
-            || !TryReadHostValue(field, stored, out object? converted))
+            || !TryReadHostValue(script, field, stored, out object? converted))
             return false;
 
         field.Setter(script, converted);
@@ -55,8 +55,71 @@ internal static partial class ManagedTypeMetadataCache
         return dropped;
     }
 
+    //字段事务结束后的通知接收者，由 ScriptRuntime 装配；为空表示没有运行态宿主。
+    internal static Action<IntPtr>? HostFieldsChanged;
+
+    [ThreadStatic] private static int fieldTransactionDepth;
+
+    //按字段名列表原子应用宿主字段：先转换全部值，再统一赋值，任一步失败回滚到基线。
+    //最外层事务结束才通知一次 FieldsChanged，嵌套调用不重复通知。
+    internal static void ApplyHostFieldsTransaction(Script script, IntPtr host, IReadOnlyList<string> fieldNames)
+    {
+        if (host == IntPtr.Zero || fieldNames == null || fieldNames.Count == 0) return;
+        ManagedTypeMetadata metadata = Get(script.GetType());
+        IReadOnlyDictionary<string, ManagedHostField> stored = Script.ReadHostFields(host);
+
+        List<ManagedFieldMetadata> fields = [];
+        List<object?> baseline = [];
+        List<object?> converted = [];
+        foreach (string name in fieldNames)
+        {
+            if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field) || field.Name == "enabled") continue;
+            if (!stored.TryGetValue(name, out ManagedHostField value)) continue;
+            if (!TryReadHostValue(script, field, value, out object? applied)) continue;
+            fields.Add(field);
+            baseline.Add(field.Getter(script));
+            converted.Add(applied);
+        }
+
+        ++fieldTransactionDepth;
+        try
+        {
+            int written = 0;
+            try
+            {
+                for (; written < fields.Count; ++written) fields[written].Setter(script, converted[written]);
+            }
+            catch (Exception exception)
+            {
+                for (int index = written - 1; index >= 0; --index) fields[index].Setter(script, baseline[index]);
+                Console.Error.WriteLine(
+                    $"ScriptRuntime: field transaction on '{script.GetType().FullName}' rolled back. {exception}");
+            }
+        }
+        finally
+        {
+            if (--fieldTransactionDepth == 0) HostFieldsChanged?.Invoke(host);
+        }
+    }
+
+    //把当前 C# 值全部写回原生宿主字段表。原生字段表只是保存、复制、Prefab 与进入 Play
+    //使用的快照，所以普通 setter 不逐次写它，改由这些边界各刷一次。
+    internal static void FlushHostFields(Script script, IntPtr host)
+    {
+        if (host == IntPtr.Zero) return;
+        ManagedTypeMetadata metadata = Get(script.GetType());
+        foreach (ManagedFieldMetadata field in metadata.Fields.Values)
+        {
+            if (field.Name == "enabled") continue;
+            if (!WriteHostField(script, host, field))
+                Console.Error.WriteLine(
+                    $"ScriptRuntime: flush '{script.GetType().FullName}.{field.Name}' failed.");
+        }
+    }
+
     //把显式代理写入同步到原生宿主字段表。
-    internal static bool WriteHostField(Script script, IntPtr host, ManagedFieldMetadata field)
+    //explicitEdit 为真表示用户刚编辑过该字段：此时空值就是清空引用，不再回填保留路径。
+    internal static bool WriteHostField(Script script, IntPtr host, ManagedFieldMetadata field, bool explicitEdit = false)
     {
         if (field.Name == "enabled") return true;
         if (field.Kind == InteropValueKind.Array)
@@ -65,14 +128,27 @@ internal static partial class ManagedTypeMetadataCache
             TryGetKind(element, out var elementKind);
             List<string> values = [];
             if (field.Getter(script) is IEnumerable collection)
+            {
+                int index = 0;
                 foreach (object? item in collection)
                 {
-                    if (elementKind == InteropValueKind.Object) values.Add((item as Object)?.ResourceKey ?? string.Empty);
+                    if (elementKind == InteropValueKind.Object)
+                    {
+                        string key = (item as Object)?.ResourceKey ?? string.Empty;
+                        if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedElement(field.Name, index) ?? string.Empty;
+                        values.Add(key);
+                    }
                     else if (elementKind == InteropValueKind.EnsId && item is EnsId id)
-                        values.Add(id.IsNull ? string.Empty : Ens.FromId(id).ResourceKey ?? string.Empty);
+                    {
+                        string key = id.IsNull ? string.Empty : Ens.FromId(id).ResourceKey ?? string.Empty;
+                        if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedElement(field.Name, index) ?? string.Empty;
+                        values.Add(key);
+                    }
                     else if (TryToInterop(item, element, out var encoded)) values.Add(FormatSerialized(encoded));
                     else return false;
+                    ++index;
                 }
+            }
             StringBuilder text = new(values.Count.ToString(CultureInfo.InvariantCulture) + ":");
             foreach (string itemText in values) text.Append(Encoding.UTF8.GetByteCount(itemText)).Append(':').Append(itemText);
             return Script.WriteHostField(host, field.Name, GetSerializedTypeName(field.FieldType, field.Kind), text.ToString(), field.InspectorVisible);
@@ -80,6 +156,8 @@ internal static partial class ManagedTypeMetadataCache
         if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
         {
             string key = ensId.IsNull ? string.Empty : Ens.FromId(ensId).ResourceKey ?? string.Empty;
+            //未解析的引用继续写回原路径，避免一次保存把目标抹成空。
+            if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedReference(field.Name) ?? string.Empty;
             return Script.WriteHostField(host, field.Name, "EnsId", key, field.InspectorVisible);
         }
         if (field.Kind == InteropValueKind.Object)
@@ -87,6 +165,7 @@ internal static partial class ManagedTypeMetadataCache
             Object? reference = field.Getter(script) as Object;
             string key = reference?.ResourceKey ?? string.Empty;
             if (key.StartsWith("orphan://", StringComparison.Ordinal)) return false;
+            if (key.Length == 0 && !explicitEdit) key = script.GetUnresolvedReference(field.Name) ?? string.Empty;
             return Script.WriteHostField(host, field.Name,
                 GetSerializedTypeName(field.FieldType, field.Kind), key, field.InspectorVisible);
         }
@@ -106,6 +185,7 @@ internal static partial class ManagedTypeMetadataCache
         InteropValueKind.UInt64 => "uint64",
         InteropValueKind.Float32 => "float32",
         InteropValueKind.String => "string",
+        InteropValueKind.Vector2 => "vector2",
         InteropValueKind.Vector3 => "vector3",
         InteropValueKind.Color => "color",
         InteropValueKind.Quaternion => "quaternion",
@@ -132,6 +212,8 @@ internal static partial class ManagedTypeMetadataCache
                 return FormatFloat(number);
             case InteropValueKind.String when value.TryGet(out string text):
                 return text;
+            case InteropValueKind.Vector2 when value.TryGet(out vector2 pair):
+                return string.Join(" ", FormatFloat(pair.x), FormatFloat(pair.y));
             case InteropValueKind.Vector3 when value.TryGet(out vector3 vector):
                 return string.Join(" ", FormatFloat(vector.x), FormatFloat(vector.y), FormatFloat(vector.z));
             case InteropValueKind.Color when value.TryGet(out color color):
@@ -151,7 +233,7 @@ internal static partial class ManagedTypeMetadataCache
         value.ToString("R", CultureInfo.InvariantCulture);
 
     /// <summary>区分持久化引用和只用于互操作的运行时 ObjectId。</summary>
-    private static bool TryReadHostValue(ManagedFieldMetadata field, ManagedHostField stored, out object? result)
+    private static bool TryReadHostValue(Script script, ManagedFieldMetadata field, ManagedHostField stored, out object? result)
     {
         if (field.Kind == InteropValueKind.Array)
         {
@@ -168,8 +250,21 @@ internal static partial class ManagedTypeMetadataCache
                 string text = Encoding.UTF8.GetString(bytes, position, length);
                 position += length;
                 object? itemValue;
-                if (kind == InteropValueKind.Object) itemValue = Script.ResolveReference(text, element);
-                else if (kind == InteropValueKind.EnsId) itemValue = text.Length == 0 ? EnsId.Null : Ens.Find(text).Id;
+                if (kind == InteropValueKind.Object)
+                {
+                    itemValue = Script.ResolveReference(text, element);
+                    if (itemValue == null && text.Length != 0) script.RememberUnresolvedElement(field.Name, index, text);
+                }
+                else if (kind == InteropValueKind.EnsId)
+                {
+                    if (text.Length == 0) itemValue = EnsId.Null;
+                    else
+                    {
+                        Ens target = Ens.Find(text);
+                        itemValue = target.Id;
+                        if (target.Id.IsNull) script.RememberUnresolvedElement(field.Name, index, text);
+                    }
+                }
                 else if (!TryParseSerialized(kind, text, out var encoded) || !TryFromInterop(encoded, element, out itemValue)) return false;
                 array.SetValue(itemValue, index);
             }
@@ -183,14 +278,24 @@ internal static partial class ManagedTypeMetadataCache
             }
             return true;
         }
-        if (field.Kind == InteropValueKind.EnsId)
+        if (field.Kind is InteropValueKind.EnsId or InteropValueKind.Object)
         {
-            result = string.IsNullOrEmpty(stored.Value) ? EnsId.Null : Ens.Find(stored.Value).Id;
-            return true;
-        }
-        if (field.Kind == InteropValueKind.Object)
-        {
+            //每次加载都按当前世界重建保留表：解析成功即丢弃旧路径，失败则记下原路径。
+            script.ClearUnresolvedReferences(field.Name);
+            if (field.Kind == InteropValueKind.EnsId)
+            {
+                if (string.IsNullOrEmpty(stored.Value)) result = EnsId.Null;
+                else
+                {
+                    Ens target = Ens.Find(stored.Value);
+                    result = target.Id;
+                    if (target.Id.IsNull) script.RememberUnresolvedReference(field.Name, stored.Value);
+                }
+                return true;
+            }
             result = Script.ResolveReference(stored.Value, field.FieldType);
+            if (result == null && !string.IsNullOrEmpty(stored.Value))
+                script.RememberUnresolvedReference(field.Name, stored.Value);
             return true;
         }
         result = null;

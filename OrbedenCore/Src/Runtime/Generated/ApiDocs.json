@@ -266,6 +266,130 @@
       ]
     },
     {
+      "Name": "Font",
+      "QualifiedName": "Font",
+      "ManagedName": "Orbeden.Font",
+      "BaseName": "Object",
+      "Kind": "class",
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "IsComponent": false,
+      "Doc": "\u5B57\u4F53\u8D44\u6E90\uFF1A\u4FDD\u5B58\u5B57\u4F53\u6587\u4EF6\u5B57\u8282\u4E0E\u5B57\u4F53\u9762\u4E0B\u6807\uFF0C\u5143\u6570\u636E\u5728\u5BFC\u5165\u65F6\u7531\u5B57\u8282\u89E3\u6790\u3002\n\u4E0D\u4FDD\u5B58 FT_Face\u3001Atlas \u6216 GPU \u53E5\u67C4\uFF1A\u5B57\u4F53\u9762\u7531 FontRasterizer \u6309\u9700\u7F13\u5B58\uFF0C\n\u56FE\u96C6\u4E0E\u7EB9\u7406\u5F52\u6258\u7BA1\u4FA7\u7684\u5B57\u4F53\u56FE\u96C6\u7F13\u5B58\u3002Player \u53EA\u4F7F\u7528\u6253\u5305\u5B57\u8282\uFF0C\u4E0D\u8BFB\u7CFB\u7EDF\u5B57\u4F53\u3002",
+      "Members": [
+        {
+          "Name": "GetRevision",
+          "Doc": "\u8BFB\u53D6\u5185\u5BB9\u7248\u672C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint64",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "ascender",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "descender",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "faceIndex",
+          "Doc": "TTC \u91CC\u7684\u5B57\u4F53\u9762\u4E0B\u6807\uFF1B\u5355\u9762\u5B57\u4F53\u4E3A 0\u3002\u8D8A\u754C\u65F6\u5BFC\u5165\u5931\u8D25\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "familyName",
+          "Doc": "\u4EE5\u4E0B\u5143\u6570\u636E\u5728\u5BFC\u5165\u65F6\u4ECE\u5B57\u8282\u89E3\u6790\uFF0C\u4F9B\u68C0\u89C6\u9762\u677F\u5C55\u793A\uFF0C\u4E0D\u6301\u4E45\u5316\u3002\n\u5347\u90E8\u3001\u964D\u90E8\u4E0E\u884C\u9AD8\u4F7F\u7528\u672A hint \u7684\u5B57\u4F53\u5355\u4F4D\uFF1B\u6362\u7B97\u5230 em \u8981\u9664\u4EE5 unitsPerEm\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "lineHeight",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "float32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "sourceBytes",
+          "Doc": "\u5B57\u4F53\u6587\u4EF6\u5B57\u8282\u3002\u652F\u6301 .ttf/.otf/.ttc\uFF0CTTC \u7531 faceIndex \u9009\u62E9\u5B57\u4F53\u9762\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "List\u003Cuint8\u003E",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "styleName",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "std::string",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "unitsPerEm",
+          "Doc": "",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        }
+      ]
+    },
+    {
       "Name": "InstanceDrawList",
       "QualifiedName": "InstanceDrawList",
       "ManagedName": "Orbeden.InstanceDrawList",
@@ -446,6 +570,26 @@
             {
               "Name": "slotName",
               "Type": "const std::string\u0026",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            1
+          ]
+        },
+        {
+          "Name": "CopyFrom",
+          "Doc": "\u628A\u53E6\u4E00\u4EFD\u6750\u8D28\u7684 shader\u3001\u7ED8\u5236\u961F\u5217\u4E0E\u5168\u90E8\u69FD\u4F4D\u590D\u5236\u5230\u672C\u6750\u8D28\u3002\n\u7528\u4E8E\u8FD0\u884C\u671F\u5B9E\u4F8B\uFF1A\u6539\u672C\u6750\u8D28\u4E0D\u5F71\u54CD\u6765\u6E90\u8D44\u6E90\uFF0C\u9500\u6BC1\u6309\u666E\u901A\u5BF9\u8C61\u56DE\u6536\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "void",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "source",
+              "Type": "Material*",
               "Default": ""
             }
           ],
@@ -1705,6 +1849,103 @@
           ]
         },
         {
+          "Name": "CreateDynamic",
+          "Doc": "\u521B\u5EFA\u52A8\u6001\u7EB9\u7406\uFF1A\u4FDD\u6709 CPU \u50CF\u7D20\uFF0C\u5141\u8BB8\u5C40\u90E8\u5199\u5165\u3002channels \u4E3A 1\u30013 \u6216 4\u3002",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Texture2D*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "width",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "channels",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            3
+          ]
+        },
+        {
+          "Name": "CreateRenderTarget",
+          "Doc": "\u521B\u5EFA\u6E32\u67D3\u76EE\u6807\u7EB9\u7406\uFF1A\u4E0D\u8981\u6C42 CPU \u50CF\u7D20\uFF0C\u5C3A\u5BF8\u53EF\u968F\u76EE\u6807\u8C03\u6574\u3002",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "Texture2D*",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "width",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "GetAlphaMode",
+          "Doc": "\u8BFB\u53D6 Alpha \u8BED\u4E49",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "TextureAlphaMode",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetMaximumSize",
+          "Doc": "\u8BFB\u53D6\u540E\u7AEF\u5141\u8BB8\u7684\u6700\u5927\u7EB9\u7406\u8FB9\u957F",
+          "IsMethod": true,
+          "IsStatic": true,
+          "Property": "",
+          "Type": "int32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
+          "Name": "GetRevision",
+          "Doc": "\u8BFB\u53D6\u5185\u5BB9\u7248\u672C\uFF1B\u91CD\u65B0\u5BFC\u5165\u6216\u5C40\u90E8\u5199\u5165\u540E\u90FD\u4F1A\u63A8\u8FDB\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint64",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
           "Name": "IsDirty",
           "Doc": "\u5224\u65AD GPU \u7EB9\u7406\u662F\u5426\u9700\u8981\u91CD\u65B0\u4E0A\u4F20",
           "IsMethod": true,
@@ -1719,8 +1960,22 @@
           ]
         },
         {
+          "Name": "IsRenderTarget",
+          "Doc": "\u5224\u65AD\u5F53\u524D\u662F\u5426\u4E3A\u6E32\u67D3\u76EE\u6807\u7EB9\u7406",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
           "Name": "MarkDirty",
-          "Doc": "\u6807\u8BB0 GPU \u7EB9\u7406\u9700\u8981\u91CD\u65B0\u4E0A\u4F20",
+          "Doc": "\u6807\u8BB0 GPU \u7EB9\u7406\u9700\u8981\u91CD\u65B0\u4E0A\u4F20\uFF1B\u6574\u5757\u4E0A\u4F20",
           "IsMethod": true,
           "IsStatic": false,
           "Property": "",
@@ -1733,6 +1988,93 @@
           ]
         },
         {
+          "Name": "ResizeRenderTarget",
+          "Doc": "\u8C03\u6574\u6E32\u67D3\u76EE\u6807\u7684\u5C3A\u5BF8\uFF1B\u975E\u6E32\u67D3\u76EE\u6807\u62D2\u7EDD\u3002\u5C3A\u5BF8\u53D8\u5316\u540E\u5185\u5BB9\u672A\u5B9A\u4E49\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "width",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            2
+          ]
+        },
+        {
+          "Name": "UpdateRegion",
+          "Doc": "\u5C40\u90E8\u5199\u5165\u50CF\u7D20\u3002byteCount \u662F pixels \u7684\u5B57\u8282\u6570\uFF0CrowStride \u662F\u6BCF\u884C\u5B57\u8282\u6570\u3002\n\u8D8A\u754C\u6216\u4E0D\u5B8C\u6574\u7684\u8F93\u5165\u76F4\u63A5\u62D2\u7EDD\uFF0C\u4E0D\u505A\u90E8\u5206\u5199\u5165\u3002",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "bool",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [
+            {
+              "Name": "x",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "y",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "width",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "pixels",
+              "Type": "const uint8*",
+              "Default": ""
+            },
+            {
+              "Name": "byteCount",
+              "Type": "int32",
+              "Default": ""
+            },
+            {
+              "Name": "rowStride",
+              "Type": "int32",
+              "Default": ""
+            }
+          ],
+          "Arities": [
+            7
+          ]
+        },
+        {
+          "Name": "alphaMode",
+          "Doc": "Alpha \u8BED\u4E49\uFF1B\u753B\u5E03\u8F93\u51FA\u5FC5\u987B\u662F\u9884\u4E58\uFF0C\u666E\u901A\u56FE\u7247\u4FDD\u6301\u76F4\u901A\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "TextureAlphaMode",
+          "Serialize": false,
+          "Changed": "MarkDirty",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "channels",
           "Doc": "",
           "IsMethod": false,
@@ -1740,7 +2082,7 @@
           "Property": "getset",
           "Type": "int32",
           "Serialize": false,
-          "Changed": "",
+          "Changed": "MarkDirty",
           "Parameters": [],
           "Arities": []
         },
@@ -1764,7 +2106,7 @@
           "Property": "getset",
           "Type": "int32",
           "Serialize": false,
-          "Changed": "",
+          "Changed": "MarkDirty",
           "Parameters": [],
           "Arities": []
         },
@@ -1776,7 +2118,7 @@
           "Property": "getset",
           "Type": "int32",
           "Serialize": false,
-          "Changed": "",
+          "Changed": "MarkDirty",
           "Parameters": [],
           "Arities": []
         },
@@ -1805,6 +2147,18 @@
           "Arities": []
         },
         {
+          "Name": "revision",
+          "Doc": "\u5185\u5BB9\u7248\u672C\uFF1A\u50CF\u7D20\u6216\u5C3A\u5BF8\u53D8\u5316\u65F6\u63A8\u8FDB\uFF1B\u6258\u7BA1\u4FA7\u7684 CPU \u91C7\u6837\u7F13\u5B58\u636E\u6B64\u5931\u6548\u3002",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "uint64",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
           "Name": "width",
           "Doc": "",
           "IsMethod": false,
@@ -1812,7 +2166,7 @@
           "Property": "getset",
           "Type": "int32",
           "Serialize": false,
-          "Changed": "",
+          "Changed": "MarkDirty",
           "Parameters": [],
           "Arities": []
         }
@@ -3783,7 +4137,7 @@
       "Members": [
         {
           "Name": "GetLocalPosition",
-          "Doc": "\u83B7\u53D6\u672C\u5730\u4F4D\u7F6E",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u4F4D\u7F6E\uFF1B\u59CB\u7EC8\u8FD4\u56DE\u4F5C\u8005\u503C\uFF0C\u6D3E\u751F\u8986\u76D6\u4E0D\u5F71\u54CD\u5B83",
           "IsMethod": true,
           "IsStatic": false,
           "Property": "",
@@ -4373,6 +4727,10 @@
         {
           "Name": "Additive",
           "Value": "1"
+        },
+        {
+          "Name": "PremultipliedAlpha",
+          "Value": "2"
         }
       ],
       "Fields": []
@@ -4591,6 +4949,32 @@
         {
           "Name": "Array",
           "Value": ""
+        },
+        {
+          "Name": "Vector2",
+          "Value": ""
+        }
+      ],
+      "Fields": []
+    },
+    {
+      "Name": "FontRasterMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.FontRasterMode",
+      "EnumBase": "uint32",
+      "Doc": "\u5B57\u5F62\u5149\u6805\u5316\u6A21\u5F0F\u3002\u4E09\u79CD\u6A21\u5F0F\u7684 advance \u5B8C\u5168\u76F8\u540C\uFF0C\u53EA\u6709\u50CF\u7D20\u8868\u793A\u4E0D\u540C\u3002\nAtlas \u901A\u9053\u5206\u522B\u4E3A R8\u3001R8\u3001RGB8\uFF0C\u90FD\u662F\u7EBF\u6027\u6570\u636E\uFF0C\u91C7\u6837\u65F6\u4E0D\u505A sRGB \u89E3\u7801\u3002",
+      "Values": [
+        {
+          "Name": "Bitmap",
+          "Value": "0"
+        },
+        {
+          "Name": "SDF",
+          "Value": "1"
+        },
+        {
+          "Name": "MSDF",
+          "Value": "2"
         }
       ],
       "Fields": []
@@ -4624,6 +5008,248 @@
           "Doc": "\u7A7A\u8868\u793A\u53C2\u4E0E\u5168\u90E8\u76F8\u673A\uFF1B\u975E\u7A7A\u65F6\u53EA\u53C2\u4E0E\u8BE5\u76F8\u673A\u7684\u4E3B Pass \u4E0E\u9634\u5F71"
         }
       ]
+    },
+    {
+      "Name": "KeyEnum",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.KeyEnum",
+      "EnumBase": "int32",
+      "Doc": "\u6CBF\u7528\u65E7\u5DE5\u7A0B\u8F93\u5165\u679A\u4E3E\uFF0C\u65B9\u4FBF\u8FC1\u79FB\u5DF2\u6709\u73A9\u6CD5\u4EE3\u7801",
+      "Values": [
+        {
+          "Name": "MOUSEL",
+          "Value": ""
+        },
+        {
+          "Name": "MOUSER",
+          "Value": ""
+        },
+        {
+          "Name": "MOUSEMID",
+          "Value": ""
+        },
+        {
+          "Name": "NUM1",
+          "Value": ""
+        },
+        {
+          "Name": "NUM2",
+          "Value": ""
+        },
+        {
+          "Name": "NUM3",
+          "Value": ""
+        },
+        {
+          "Name": "NUM4",
+          "Value": ""
+        },
+        {
+          "Name": "NUM5",
+          "Value": ""
+        },
+        {
+          "Name": "NUM6",
+          "Value": ""
+        },
+        {
+          "Name": "NUM7",
+          "Value": ""
+        },
+        {
+          "Name": "NUM8",
+          "Value": ""
+        },
+        {
+          "Name": "NUM9",
+          "Value": ""
+        },
+        {
+          "Name": "NUM0",
+          "Value": ""
+        },
+        {
+          "Name": "Q",
+          "Value": ""
+        },
+        {
+          "Name": "W",
+          "Value": ""
+        },
+        {
+          "Name": "E",
+          "Value": ""
+        },
+        {
+          "Name": "R",
+          "Value": ""
+        },
+        {
+          "Name": "T",
+          "Value": ""
+        },
+        {
+          "Name": "Y",
+          "Value": ""
+        },
+        {
+          "Name": "U",
+          "Value": ""
+        },
+        {
+          "Name": "I",
+          "Value": ""
+        },
+        {
+          "Name": "O",
+          "Value": ""
+        },
+        {
+          "Name": "P",
+          "Value": ""
+        },
+        {
+          "Name": "A",
+          "Value": ""
+        },
+        {
+          "Name": "S",
+          "Value": ""
+        },
+        {
+          "Name": "D",
+          "Value": ""
+        },
+        {
+          "Name": "F",
+          "Value": ""
+        },
+        {
+          "Name": "G",
+          "Value": ""
+        },
+        {
+          "Name": "H",
+          "Value": ""
+        },
+        {
+          "Name": "J",
+          "Value": ""
+        },
+        {
+          "Name": "K",
+          "Value": ""
+        },
+        {
+          "Name": "L",
+          "Value": ""
+        },
+        {
+          "Name": "Z",
+          "Value": ""
+        },
+        {
+          "Name": "X",
+          "Value": ""
+        },
+        {
+          "Name": "C",
+          "Value": ""
+        },
+        {
+          "Name": "V",
+          "Value": ""
+        },
+        {
+          "Name": "B",
+          "Value": ""
+        },
+        {
+          "Name": "N",
+          "Value": ""
+        },
+        {
+          "Name": "M",
+          "Value": ""
+        },
+        {
+          "Name": "SPACE",
+          "Value": ""
+        },
+        {
+          "Name": "TAB",
+          "Value": ""
+        },
+        {
+          "Name": "LSHIFT",
+          "Value": ""
+        },
+        {
+          "Name": "LCTRL",
+          "Value": ""
+        },
+        {
+          "Name": "LALT",
+          "Value": ""
+        },
+        {
+          "Name": "BACKSPACE",
+          "Value": ""
+        },
+        {
+          "Name": "ENTER",
+          "Value": ""
+        },
+        {
+          "Name": "RSHIFT",
+          "Value": ""
+        },
+        {
+          "Name": "RCTRL",
+          "Value": ""
+        },
+        {
+          "Name": "RALT",
+          "Value": ""
+        },
+        {
+          "Name": "UP",
+          "Value": ""
+        },
+        {
+          "Name": "DOWN",
+          "Value": ""
+        },
+        {
+          "Name": "LEFT",
+          "Value": ""
+        },
+        {
+          "Name": "RIGHT",
+          "Value": ""
+        },
+        {
+          "Name": "HOME",
+          "Value": ""
+        },
+        {
+          "Name": "END",
+          "Value": ""
+        },
+        {
+          "Name": "DEL",
+          "Value": ""
+        },
+        {
+          "Name": "ESCAPE",
+          "Value": ""
+        },
+        {
+          "Name": "UNMAPPED",
+          "Value": ""
+        }
+      ],
+      "Fields": []
     },
     {
       "Name": "MaterialColorSlot",
@@ -5818,6 +6444,24 @@
           "Doc": ""
         }
       ]
+    },
+    {
+      "Name": "TextureAlphaMode",
+      "Kind": "enum",
+      "ManagedName": "Orbeden.TextureAlphaMode",
+      "EnumBase": "uint32",
+      "Doc": "\u7EB9\u7406\u6570\u636E\u7684 Alpha \u8BED\u4E49\u3002\u666E\u901A\u56FE\u7247\u662F\u76F4\u901A Alpha\uFF0C\u753B\u5E03\u8F93\u51FA\u4E0E\u9884\u4E58\u5408\u6210\u94FE\u662F\u9884\u4E58 Alpha\uFF0C\n\u91C7\u6837\u65F6\u4E0D\u80FD\u518D\u4E58\u4E00\u6B21\u3002",
+      "Values": [
+        {
+          "Name": "Straight",
+          "Value": "0"
+        },
+        {
+          "Name": "Premultiplied",
+          "Value": "1"
+        }
+      ],
+      "Fields": []
     },
     {
       "Name": "TextureColorSpace",

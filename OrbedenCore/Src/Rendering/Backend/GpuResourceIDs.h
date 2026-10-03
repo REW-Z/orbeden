@@ -71,4 +71,6 @@ struct GpuShaderProgramID
 public:
     uint32 id = 0;
     bool IsValid() const { return id != 0; }
+    bool operator==(const GpuShaderProgramID& other) const { return id == other.id; }
+    bool operator!=(const GpuShaderProgramID& other) const { return id != other.id; }
 };

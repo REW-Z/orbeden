@@ -20,7 +20,7 @@ extern "C" void OrbedenGameNative_RegisterReflection();
 //Core 是底层 SDK，不引用用户层符号，因此入口由本层运行时注入。
 extern "C"
 {
-    void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_Initialize(void* nativeApi, uint32 executionMode);
     void ORBEDEN_NATIVE_CALL OrbedenGame_Shutdown();
     void ORBEDEN_NATIVE_CALL OrbedenGame_Update(float32 deltaTime);
     void ORBEDEN_NATIVE_CALL OrbedenGame_FixedUpdate(float32 deltaTime);
@@ -28,6 +28,8 @@ extern "C"
     void ORBEDEN_NATIVE_CALL OrbedenGame_EnsWorldActiveChanged(EnsId ens, uint8 worldActive);
     void ORBEDEN_NATIVE_CALL OrbedenGame_EnsDestroyed(EnsId ens);
     void ORBEDEN_NATIVE_CALL OrbedenGame_DrawGui();
+    void ORBEDEN_NATIVE_CALL OrbedenGame_ProcessInput(float32 deltaTime);
+    void ORBEDEN_NATIVE_CALL OrbedenGame_PrepareRender(float32 deltaTime);
 }
 
 namespace
@@ -160,7 +162,10 @@ int main(int argc, char** argv)
     aotEntryPoints.ensWorldActiveChanged = &OrbedenGame_EnsWorldActiveChanged;
     aotEntryPoints.ensDestroyed = &OrbedenGame_EnsDestroyed;
     aotEntryPoints.drawGui = &OrbedenGame_DrawGui;
-    if (!scriptSystem->SetAotEntryPoints(aotEntryPoints) || !scriptSystem->Initialize())
+    aotEntryPoints.processInput = &OrbedenGame_ProcessInput;
+    aotEntryPoints.prepareRender = &OrbedenGame_PrepareRender;
+    if (!scriptSystem->SetAotEntryPoints(aotEntryPoints)
+        || !scriptSystem->Initialize(ScriptExecutionMode::Play))
     {
         Log::Error("Game startup failed: script domains could not initialize.");
         app.Quit();

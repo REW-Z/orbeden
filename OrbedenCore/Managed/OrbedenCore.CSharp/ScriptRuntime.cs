@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 
 namespace Orbeden;
 
@@ -15,30 +14,6 @@ internal static class ScriptRuntime
         DynamicallyAccessedMemberTypes.PublicConstructors |
         DynamicallyAccessedMemberTypes.PublicMethods |
         DynamicallyAccessedMemberTypes.NonPublicMethods;
-
-    private sealed class GameLoadContext(string assemblyPath) : AssemblyLoadContext(isCollectible: true)
-    {
-        private readonly AssemblyDependencyResolver resolver = new(assemblyPath);
-
-        [UnconditionalSuppressMessage("Trimming", "IL2026",
-            Justification = "Only the non-trimmed Editor CLR runtime loads files dynamically.")]
-        internal Assembly LoadFile(string path)
-        {
-            using FileStream assembly = File.OpenRead(path);
-            string symbolsPath = Path.ChangeExtension(path, ".pdb");
-            if (!File.Exists(symbolsPath)) return LoadFromStream(assembly);
-            using FileStream symbols = File.OpenRead(symbolsPath);
-            return LoadFromStream(assembly, symbols);
-        }
-
-        protected override Assembly? Load(AssemblyName name)
-        {
-            Assembly core = typeof(Script).Assembly;
-            if (name.Name == core.GetName().Name) return core;
-            string? path = resolver.ResolveAssemblyToPath(name);
-            return path == null ? null : LoadFile(path);
-        }
-    }
 
     private sealed class ScriptFactory
     {
@@ -55,6 +30,7 @@ internal static class ScriptRuntime
     {
         internal IntPtr Host;
         internal Script Script = null!;
+        internal IManagedComponentLifecycle? Lifecycle;
         internal Action? Start;
         internal Action<float>? Update;
         internal Action<float>? FixedUpdate;
@@ -65,6 +41,10 @@ internal static class ScriptRuntime
         internal bool Enabled;
         internal bool Started;
         internal bool Destroyed;
+        //是否已完成附着通知，以及最近一次发送给扩展的活动状态。
+        internal bool Attached;
+        internal bool LastActive;
+        internal bool HasActiveState;
     }
 
     private readonly record struct TimedCall(ScriptInstance Instance, Action<float> Callback);
@@ -79,41 +59,79 @@ internal static class ScriptRuntime
     private static readonly List<TimedCall> fixedUpdates = [];
     private static readonly List<TimedCall> lateUpdates = [];
     private static readonly List<Call> guiCalls = [];
-    private static GameLoadContext? gameContext;
-    private static Assembly? gameAssembly;
     private static bool callsDirty;
     private static bool rebuilding;
     private static int dispatchDepth;
     private static bool shuttingDown;
+    private static ScriptExecutionMode executionMode = ScriptExecutionMode.Play;
+    private static ulong worldRevision;
 
     /// <summary>连接原生 API，并为当前 World 已有的全部托管宿主创建 Wrapper。</summary>
-    public static void Initialize(IntPtr nativeApi)
+    public static void Initialize(IntPtr nativeApi, uint mode)
     {
+        executionMode = mode == (uint)ScriptExecutionMode.Editor
+            ? ScriptExecutionMode.Editor
+            : ScriptExecutionMode.Play;
         ShutdownScripts();
         OrbedenCoreRuntime.Initialize(nativeApi);
         ManagedScriptInterop.Shutdown();
         ScriptRuntimeRegistry.Clear();
         ManagedScriptInterop.Initialize();
+        ManagedTypeMetadataCache.HostFieldsChanged = OnHostFieldsChanged;
 
-        foreach (IntPtr host in Script.GetManagedHosts()) CreateForHost(host);
+        //两阶段实例构造：先让全部可解析宿主取得包装并登记，再统一恢复字段与发送附着通知。
+        //循环引用在第二阶段通过已登记包装解析，不递归构造对端。
+        List<ScriptInstance> constructed = [];
+        foreach (IntPtr host in Script.GetManagedHosts())
+        {
+            ScriptInstance? instance = ConstructHost(host);
+            if (instance != null && !instance.Attached) constructed.Add(instance);
+        }
+        foreach (ScriptInstance instance in constructed) ApplyHostState(instance);
+        foreach (ScriptInstance instance in constructed) AttachHost(instance);
         callsDirty = true;
         RebuildCalls();
+
+        //帧系统在全部包装建立之后附着：此时索引可以安全读取组件。
+        ++worldRevision;
+        if (worldRevision == 0) worldRevision = 1;
+        ManagedFrameSystems.AttachWorld(worldRevision, executionMode == ScriptExecutionMode.Editor);
     }
 
+    /// <summary>处理托管输入阶段；不受模拟暂停门控。</summary>
+    public static void ProcessInput(float deltaTime) => ManagedFrameSystems.ProcessInput(deltaTime);
+
+    /// <summary>准备托管渲染阶段；不受暂停门控，编辑模式同样执行。</summary>
+    public static void PrepareRender(float deltaTime) => ManagedFrameSystems.PrepareRender(deltaTime);
+
+    //编辑模式不执行游戏生命周期：只保留包装与帧系统。
+    private static bool SkipsGameLifecycle => executionMode == ScriptExecutionMode.Editor;
+
     /// <summary>执行 Update 表。</summary>
-    public static void Update(float deltaTime) => Dispatch(updates, deltaTime, "OnUpdate");
+    public static void Update(float deltaTime)
+    {
+        if (SkipsGameLifecycle) return;
+        Dispatch(updates, deltaTime, "OnUpdate");
+    }
 
     /// <summary>执行 FixedUpdate 表。</summary>
-    public static void FixedUpdate(float fixedDeltaTime) =>
+    public static void FixedUpdate(float fixedDeltaTime)
+    {
+        if (SkipsGameLifecycle) return;
         Dispatch(fixedUpdates, fixedDeltaTime, "OnFixedUpdate");
+    }
 
     /// <summary>执行 LateUpdate 表。</summary>
-    public static void LateUpdate(float deltaTime) =>
+    public static void LateUpdate(float deltaTime)
+    {
+        if (SkipsGameLifecycle) return;
         Dispatch(lateUpdates, deltaTime, "OnLateUpdate");
+    }
 
     /// <summary>执行 DrawGUI 表。</summary>
     public static void DrawGUI()
     {
+        if (SkipsGameLifecycle) return;
         PreparePhase();
         ++dispatchDepth;
         try
@@ -138,7 +156,7 @@ internal static class ScriptRuntime
         IntPtr host = Script.CreateManagedHost(ens, typeName);
         if (host == IntPtr.Zero) return null;
         if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance))
-            instance = CreateForHost(host);
+            instance = CreateAndAttach(host);
         if (instance == null)
         {
             Script.RemoveManagedHost(host);
@@ -172,7 +190,7 @@ internal static class ScriptRuntime
             pendingAdds.Add(host);
             return InteropStatus.Ok;
         }
-        return CreateForHost(host) == null ? InteropStatus.NotFound : InteropStatus.Ok;
+        return CreateAndAttach(host) == null ? InteropStatus.NotFound : InteropStatus.Ok;
     }
 
     /// <summary>响应原生宿主移除事件，并立即使旧代理失效。</summary>
@@ -190,6 +208,7 @@ internal static class ScriptRuntime
     {
         if (!scriptsByHost.TryGetValue(host, out ScriptInstance? instance)) return InteropStatus.NotFound;
         instance.Enabled = Script.GetHostEnabled(host);
+        SendActive(instance, IsRunnable(instance));
         callsDirty = true;
         return InteropStatus.Ok;
     }
@@ -201,16 +220,21 @@ internal static class ScriptRuntime
             return InteropStatus.NotFound;
         if (!ManagedTypeMetadataCache.Get(instance.Script.GetType()).Fields.ContainsKey(fieldName))
             return InteropStatus.NotFound;
-        return ManagedTypeMetadataCache.ApplyHostField(instance.Script, host, fieldName)
-            ? InteropStatus.Ok
-            : InteropStatus.InvocationFailed;
+        if (!ManagedTypeMetadataCache.ApplyHostField(instance.Script, host, fieldName))
+            return InteropStatus.InvocationFailed;
+        NotifyFieldsChanged(instance);
+        return InteropStatus.Ok;
     }
 
     /// <summary>响应 Ens 世界活动状态变化。</summary>
     public static void OnEnsWorldActiveChanged(EnsId ens, bool active)
     {
         if (!scriptsByEns.TryGetValue(ens, out List<ScriptInstance>? values)) return;
-        foreach (ScriptInstance value in values) value.WorldActive = active;
+        foreach (ScriptInstance value in values)
+        {
+            value.WorldActive = active;
+            SendActive(value, IsRunnable(value));
+        }
         callsDirty = true;
     }
 
@@ -224,19 +248,29 @@ internal static class ScriptRuntime
     /// <summary>结束全部 Wrapper；原生宿主仍由 World 负责销毁。</summary>
     public static void Shutdown()
     {
+        //帧系统先释放：UI 上下文要在包装断开之前撤销输入与缓存引用。
+        ManagedFrameSystems.DetachWorld();
         ShutdownScripts();
         ScriptRuntimeRegistry.Clear();
+        ManagedTypeMetadataCache.HostFieldsChanged = null;
         ManagedScriptInterop.Shutdown();
         factories.Clear();
         ManagedTypeMetadataCache.Clear();
-        if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
-        gameAssembly = null;
-        if (gameContext != null)
-        {
-            gameContext.Unload();
-            gameContext = null;
-        }
+        //程序集本身由 ManagedAssemblySession 持有：进出 Play 换的是世界实例，不重新加载程序集。
         Script.InitializeNativeApi(default);
+    }
+
+    /// <summary>当前是否仍有活动脚本宿主，即世界尚未分离。</summary>
+    internal static bool HasAttachedWorld => scripts.Count != 0;
+
+    /// <summary>会话卸载前清空工厂与元数据缓存；脚本实例在此之前已经断开。</summary>
+    internal static void OnAssemblySessionUnloaded()
+    {
+        //注册表里保存的是游戏程序集提供的工厂与实例，必须先清空才允许释放加载上下文。
+        ManagedFrameSystems.Clear();
+        factories.Clear();
+        ManagedTypeMetadataCache.Clear();
+        ManagedScriptInterop.ClearMembers();
     }
 
     /// <summary>加载 Editor CLR 模式使用的游戏程序集。</summary>
@@ -245,29 +279,10 @@ internal static class ScriptRuntime
         if (scripts.Count != 0 || string.IsNullOrWhiteSpace(assemblyPath)
             || !File.Exists(assemblyPath))
             return false;
-        try
-        {
-            if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
-            gameAssembly = null;
-            gameContext?.Unload();
-            string path = Path.GetFullPath(assemblyPath);
-            gameContext = new GameLoadContext(path);
-            gameAssembly = gameContext.LoadFile(path);
-            System.Runtime.CompilerServices.RuntimeHelpers.RunModuleConstructor(gameAssembly.ManifestModule.ModuleHandle);
-            NativeBindingRuntime.ActivateAssembly(gameAssembly);
-            factories.Clear();
-            ManagedTypeMetadataCache.Clear();
-            return true;
-        }
-        catch (Exception exception)
-        {
-            Console.Error.WriteLine($"ScriptRuntime: game assembly load failed. {exception}");
-            if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
-            gameAssembly = null;
-            gameContext?.Unload();
-            gameContext = null;
-            return false;
-        }
+        if (!ManagedAssemblySession.Load(assemblyPath, null)) return false;
+        factories.Clear();
+        ManagedTypeMetadataCache.Clear();
+        return true;
     }
 
     //执行一个带时间参数的阶段表。
@@ -287,8 +302,9 @@ internal static class ScriptRuntime
         finally { --dispatchDepth; }
     }
 
-    //在原生宿主上构造 Wrapper，并把生命周期方法绑定为闭合 delegate。
-    private static ScriptInstance? CreateForHost(IntPtr host)
+    //第一阶段：构造 Wrapper 并登记身份，只初始化字段，不读取宿主字段、不发送扩展通知。
+    //找不到托管类型时返回 null 并保留宿主与原字段，供编辑器显示 Missing Script。
+    private static ScriptInstance? ConstructHost(IntPtr host)
     {
         if (shuttingDown || host == IntPtr.Zero) return null;
         pendingAdds.Remove(host);
@@ -314,6 +330,7 @@ internal static class ScriptRuntime
             {
                 Host = host,
                 Script = script,
+                Lifecycle = script as IManagedComponentLifecycle,
                 Start = factory.Start?.CreateDelegate<Action>(script),
                 Update = factory.Update?.CreateDelegate<Action<float>>(script),
                 FixedUpdate = factory.FixedUpdate?.CreateDelegate<Action<float>>(script),
@@ -324,8 +341,6 @@ internal static class ScriptRuntime
                 Enabled = Script.GetHostEnabled(host),
             };
             Register(instance);
-            ManagedTypeMetadataCache.ApplyHostFields(script, host);
-            ManagedTypeMetadataCache.SyncHostFields(script, host);
             callsDirty = true;
             return instance;
         }
@@ -338,8 +353,85 @@ internal static class ScriptRuntime
         }
     }
 
+    //第二阶段：恢复宿主字段并解析引用；此时全部同批包装都已登记，循环引用可直接命中。
+    //单个实例失败只断开它自己，不阻塞其他实例。
+    private static void ApplyHostState(ScriptInstance instance)
+    {
+        if (instance.Destroyed) return;
+        try
+        {
+            ManagedTypeMetadataCache.ApplyHostFields(instance.Script, instance.Host);
+            ManagedTypeMetadataCache.SyncHostFields(instance.Script, instance.Host);
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine(
+                $"ScriptRuntime: apply fields for '{instance.Script.GetType().FullName}' failed. {exception}");
+            DestroyScript(instance);
+        }
+    }
+
+    //第三阶段：统一附着并发送初始活动通知，同一实例只附着一次。
+    private static void AttachHost(ScriptInstance instance)
+    {
+        if (instance.Destroyed || instance.Attached) return;
+        instance.Attached = true;
+        if (instance.Lifecycle != null)
+        {
+            try { instance.Lifecycle.OnComponentAttached(); }
+            catch (Exception exception) { LogFailure(instance, "OnComponentAttached", exception); }
+        }
+        SendActive(instance, IsRunnable(instance));
+    }
+
+    //一次完整的宿主接管：构造、恢复字段、附着通知。
+    private static ScriptInstance? CreateAndAttach(IntPtr host)
+    {
+        ScriptInstance? instance = ConstructHost(host);
+        if (instance == null || instance.Attached) return instance;
+        ApplyHostState(instance);
+        AttachHost(instance);
+        return instance.Destroyed ? null : instance;
+    }
+
+    //把全部活脚本的运行时值刷回原生宿主字段表。
+    //原生字段表是保存、复制、Prefab、进入 Play 与程序集重载使用的快照。
+    public static void FlushHostFields()
+    {
+        foreach (ScriptInstance instance in scripts.ToArray())
+        {
+            if (instance.Destroyed) continue;
+            ManagedTypeMetadataCache.FlushHostFields(instance.Script, instance.Host);
+        }
+    }
+
+    //字段事务结束后的通知入口。
+    private static void OnHostFieldsChanged(IntPtr host)
+    {
+        if (scriptsByHost.TryGetValue(host, out ScriptInstance? instance)) NotifyFieldsChanged(instance);
+    }
+
+    //通知扩展字段已整体应用；未附着实例不通知。
+    private static void NotifyFieldsChanged(ScriptInstance instance)
+    {
+        if (!instance.Attached || instance.Destroyed || instance.Lifecycle == null) return;
+        try { instance.Lifecycle.OnComponentFieldsChanged(); }
+        catch (Exception exception) { LogFailure(instance, "OnComponentFieldsChanged", exception); }
+    }
+
+    //把活动条件发送给扩展接口；未附着或状态未变时不通知。
+    private static void SendActive(ScriptInstance instance, bool active)
+    {
+        if (!instance.Attached || instance.Lifecycle == null
+            || instance.HasActiveState && instance.LastActive == active) return;
+        instance.LastActive = active;
+        instance.HasActiveState = true;
+        try { instance.Lifecycle.OnComponentActiveChanged(active); }
+        catch (Exception exception) { LogFailure(instance, "OnComponentActiveChanged", exception); }
+    }
+
     //注册宿主、Wrapper、ObjectId 和 Ens 索引。
-    internal static Script? GetOrCreateHost(IntPtr host) => CreateForHost(host)?.Script;
+    internal static Script? GetOrCreateHost(IntPtr host) => CreateAndAttach(host)?.Script;
 
     private static void Register(ScriptInstance instance)
     {
@@ -451,10 +543,11 @@ internal static class ScriptRuntime
             foreach (ScriptInstance instance in scripts.ToArray())
             {
                 if (!IsRunnable(instance)) continue;
+                //编辑模式不执行 OnStart：界面上的组件只做结构同步与渲染。
                 if (!instance.Started)
                 {
                     instance.Started = true;
-                    Invoke(instance, instance.Start, "OnStart");
+                    if (!SkipsGameLifecycle) Invoke(instance, instance.Start, "OnStart");
                     if (!IsRunnable(instance)) continue;
                 }
                 if (instance.Update != null) updates.Add(new(instance, instance.Update));
@@ -474,12 +567,25 @@ internal static class ScriptRuntime
     }
 
     //保证已 Start 的脚本只执行一次 End，并使注册表句柄立即失效。
+    //已附着实例先收到活动取消再收到分离，两者各至多一次；扩展异常不阻止释放。
     private static void DestroyScript(ScriptInstance instance)
     {
         if (instance.Destroyed) return;
         instance.Destroyed = true;
+        //顺序固定为取消活动、结束游戏生命周期、分离扩展，各自至多一次。
+        if (instance.Attached) SendActive(instance, false);
         if (instance.Started) Invoke(instance, instance.End, "OnEnd");
         instance.Started = false;
+        if (instance.Attached)
+        {
+            if (instance.Lifecycle != null)
+            {
+                try { instance.Lifecycle.OnComponentDetached(); }
+                catch (Exception exception) { LogFailure(instance, "OnComponentDetached", exception); }
+            }
+            instance.Attached = false;
+        }
+        instance.Lifecycle = null;
         scripts.Remove(instance);
         scriptsByHost.Remove(instance.Host);
         EnsId ens = instance.Script.EnsId;
@@ -499,11 +605,17 @@ internal static class ScriptRuntime
         if (dispatchDepth != 0) return;
         if (pendingAdds.Count != 0)
         {
+            //同批新增宿主按三阶段一起处理，批内互相引用也能解析。
             IntPtr[] changes = [.. pendingAdds];
+            foreach (IntPtr host in changes) pendingAdds.Remove(host);
+            List<ScriptInstance> constructed = [];
             foreach (IntPtr host in changes)
             {
-                if (pendingAdds.Remove(host)) CreateForHost(host);
+                ScriptInstance? instance = ConstructHost(host);
+                if (instance != null && !instance.Attached) constructed.Add(instance);
             }
+            foreach (ScriptInstance instance in constructed) ApplyHostState(instance);
+            foreach (ScriptInstance instance in constructed) AttachHost(instance);
         }
         RebuildCalls();
     }
@@ -548,14 +660,11 @@ internal static class ScriptRuntime
         Justification = "Game assemblies are explicit TrimmerRootAssembly entries.")]
     private static Type? ResolveType(string typeName)
     {
-        Type? type = gameAssembly?.GetType(typeName, throwOnError: false);
+        //只查当前会话与核心程序集，禁止扫描历史 AppDomain 程序集：
+        //上一次会话残留的程序集会给出属于旧加载上下文的 Type，注册进绑定表后永远卸载不掉。
+        Type? type = ManagedAssemblySession.GetGameAssembly()?.GetType(typeName, throwOnError: false);
         if (type != null) return type;
-        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (ReferenceEquals(assembly, typeof(ScriptRuntime).Assembly)) continue;
-            type = assembly.GetType(typeName, throwOnError: false);
-            if (type != null) return type;
-        }
-        return null;
+        type = ManagedAssemblySession.GetEditorAssembly()?.GetType(typeName, throwOnError: false);
+        return type ?? typeof(ScriptRuntime).Assembly.GetType(typeName, throwOnError: false);
     }
 }

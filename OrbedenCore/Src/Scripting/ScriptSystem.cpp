@@ -121,7 +121,7 @@ void ScriptSystem::OnShutdown()
     world = nullptr;
 }
 
-bool ScriptSystem::Initialize()
+bool ScriptSystem::Initialize(ScriptExecutionMode mode)
 {
     if (initialized) return true;
     if (!world || !renderSystem || !entryPoints.IsValid())
@@ -130,20 +130,25 @@ bool ScriptSystem::Initialize()
         return false;
     }
 
+    executionMode = mode;
     ScriptInterop::Initialize(world);
 
     domains.clear();
-    domains.push_back({
-        this,
-        {
-            &ScriptSystem::NativeStartDomain,
-            &ScriptSystem::NativeUpdateDomain,
-            &ScriptSystem::NativeFixedUpdateDomain,
-            &ScriptSystem::NativeLateUpdateDomain,
-            &ScriptSystem::NativeDrawGuiDomain,
-            &ScriptSystem::NativeEndDomain,
-        },
-    });
+    //编辑模式不注册原生域：C++ 脚本的 OnStart/OnUpdate 属于游戏生命周期。
+    if (executionMode == ScriptExecutionMode::Play)
+    {
+        domains.push_back({
+            this,
+            {
+                &ScriptSystem::NativeStartDomain,
+                &ScriptSystem::NativeUpdateDomain,
+                &ScriptSystem::NativeFixedUpdateDomain,
+                &ScriptSystem::NativeLateUpdateDomain,
+                &ScriptSystem::NativeDrawGuiDomain,
+                &ScriptSystem::NativeEndDomain,
+            },
+        });
+    }
     domains.push_back({
         this,
         {
@@ -484,7 +489,8 @@ void ScriptSystem::ManagedStartDomain(void* context)
 {
     ScriptSystem* system = static_cast<ScriptSystem*>(context);
     OrbedenNativeApi nativeApi = OrbedenNativeApi::Create(system->world);
-    if (system->entryPoints.initialize) system->entryPoints.initialize(&nativeApi);
+    if (system->entryPoints.initialize)
+        system->entryPoints.initialize(&nativeApi, static_cast<uint32>(system->executionMode));
 }
 
 void ScriptSystem::ManagedEndDomain(void* context)
@@ -508,12 +514,49 @@ void ScriptSystem::ManagedDrawGuiDomain(void* context)
     static_cast<ScriptSystem*>(context)->DispatchManagedDrawGUI();
 }
 
+void ScriptSystem::ProcessManagedInput(float32 deltaTime)
+{
+    //输入阶段在 FixedUpdate 之前跑；暂停与编辑模式都不中断它，编辑模式只跳过交互路由。
+    if (!initialized || !entryPoints.processInput) return;
+    if (executionMode == ScriptExecutionMode::Editor) return;
+
+    PROFILE("Script/ProcessInput");
+    entryPoints.processInput(deltaTime);
+}
+
+void ScriptSystem::PrepareManagedRender(float32 deltaTime)
+{
+    //渲染准备不在暂停门控内：暂停的 Play 里菜单仍要能响应。
+    if (!initialized || !entryPoints.prepareRender) return;
+
+    PROFILE("Script/PrepareRender");
+    entryPoints.prepareRender(deltaTime);
+}
+
+void ScriptSystem::DispatchExternalCallbacks(const std::function<void()>& callback)
+{
+    if (!callback) return;
+
+    //以作用域恢复派发标志：回调里再进脚本阶段时，外层保护不能被提前清掉。
+    struct DispatchScope
+    {
+        bool& flag;
+        bool previous;
+        DispatchScope(bool& value) : flag(value), previous(value) { flag = true; }
+        ~DispatchScope() { flag = previous; }
+    } scope(domainDispatching);
+
+    callback();
+    ApplyDeferredMutations();
+}
+
 void ScriptSystem::Update(World& currentWorld, float32 deltaTime)
 {
     PROFILE("Script/Update");
 
     (void)currentWorld;
     if (!initialized) return;
+    if (executionMode == ScriptExecutionMode::Editor) return;
 
     for (const ScriptDomainEntry& domain : domains)
     {
@@ -530,6 +573,7 @@ void ScriptSystem::FixedUpdate(World& currentWorld, float32 fixedDeltaTime)
 
     (void)currentWorld;
     if (!initialized) return;
+    if (executionMode == ScriptExecutionMode::Editor) return;
 
     for (const ScriptDomainEntry& domain : domains)
     {
@@ -546,6 +590,7 @@ void ScriptSystem::LateUpdate(World& currentWorld, float32 deltaTime)
 
     (void)currentWorld;
     if (!initialized) return;
+    if (executionMode == ScriptExecutionMode::Editor) return;
 
     for (const ScriptDomainEntry& domain : domains)
     {
@@ -559,6 +604,7 @@ void ScriptSystem::LateUpdate(World& currentWorld, float32 deltaTime)
 void ScriptSystem::DrawOverlay()
 {
     if (!initialized) return;
+    if (executionMode == ScriptExecutionMode::Editor) return;
 
     for (const ScriptDomainEntry& domain : domains)
     {

@@ -32,6 +32,8 @@ internal unsafe struct EditorComponentNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> GetReferenceLabel;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, EnsId, EnsId, byte, byte> MoveEns;
     public delegate* unmanaged[Cdecl]<IntPtr, EnsId, void> FocusEns;
+    //把组件移到新的挂载位置；顺序决定修改器与输入处理器的执行次序。
+    public delegate* unmanaged[Cdecl]<IntPtr, int, int, byte> MoveComponent;
 }
 #pragma warning restore CS0649
 
@@ -411,6 +413,10 @@ internal static unsafe class EditorNativeComponents
     }
 
     /// <summary>按对象 ID 删除指定原生组件实例。</summary>
+    /// <summary>把组件移到新的挂载位置；顺序决定修改器与输入处理器的执行次序。</summary>
+    internal static bool MoveComponent(int objectId, int index) =>
+        api.MoveComponent != null && api.MoveComponent(api.Context, objectId, index) != 0;
+
     internal static bool RemoveComponent(int objectId)
     {
         return api.RemoveComponent != null && api.RemoveComponent(api.Context, objectId) != 0;

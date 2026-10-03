@@ -1,4 +1,5 @@
 using Orbeden;
+using System.Reflection;
 
 namespace OrbedenEditor;
 
@@ -30,7 +31,7 @@ public readonly struct EnsContext
 /// <summary>允许 Editor 扩展向 EnsViewPanel 追加右键菜单项。</summary>
 public static class EnsContextMenuRegistry
 {
-    private sealed record Item(string Label, Func<EnsContext, bool>? Enabled, Action<EnsContext> Execute);
+    private sealed record Item(string Label, Func<EnsContext, bool>? Enabled, Action<EnsContext> Execute, Assembly? Source);
     private static readonly List<Item> Items = [];
 
     /// <summary>注册一个 EnsViewPanel 右键菜单项。</summary>
@@ -38,8 +39,34 @@ public static class EnsContextMenuRegistry
     {
         if (string.IsNullOrWhiteSpace(label)) throw new ArgumentException("Menu label is empty.", nameof(label));
         ArgumentNullException.ThrowIfNull(execute);
-        Items.Add(new Item(label, enabled, execute));
+        //记下来源程序集：卸载时按程序集整批摘掉，避免重复菜单与强引用泄漏。
+        Items.Add(new Item(label, enabled, execute, execute.Method.DeclaringType?.Assembly));
     }
+
+    /// <summary>注销一个菜单项；重复注销无副作用。</summary>
+    public static void Unregister(string label)
+    {
+        for (int index = Items.Count - 1; index >= 0; --index)
+        {
+            if (string.Equals(Items[index].Label, label, StringComparison.Ordinal)) Items.RemoveAt(index);
+        }
+    }
+
+    /// <summary>注销某个程序集登记的全部菜单项；程序集卸载时调用。</summary>
+    public static void UnregisterAssembly(Assembly assembly)
+    {
+        if (assembly == null) return;
+        for (int index = Items.Count - 1; index >= 0; --index)
+        {
+            if (ReferenceEquals(Items[index].Source, assembly)) Items.RemoveAt(index);
+        }
+    }
+
+    /// <summary>清空全部菜单项。</summary>
+    public static void Clear() => Items.Clear();
+
+    /// <summary>当前登记的菜单项数量。</summary>
+    public static int Count => Items.Count;
 
     //绘制所有扩展菜单项。
     internal static void Draw(EnsContext context, Action<string> report)

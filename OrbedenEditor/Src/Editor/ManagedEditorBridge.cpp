@@ -157,6 +157,8 @@ namespace
         void* getReferenceLabel = nullptr;
         void* moveEns = nullptr;
         void* focusEns = nullptr;
+        //把组件移到新的挂载位置；顺序决定修改器与输入处理器的执行次序。
+        void* moveComponent = nullptr;
     };
 
     //传给 Editor C# 的应用函数表。
@@ -228,6 +230,14 @@ namespace
         void* getLoadedSources = nullptr;
     };
 
+    //传给 Editor C# 的键盘状态函数表：托管手柄要在拖动中响应 Escape 这类按键。
+    struct EditorInputNativeApi
+    {
+    public:
+        void* isKeyDown = nullptr;
+        void* isKeyPressed = nullptr;
+    };
+
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
     {
@@ -242,6 +252,7 @@ namespace
         EditorLogNativeApi log;
         EditorProfilerNativeApi profiler;
         EditorAssetReimportNativeApi reimport;
+        EditorInputNativeApi input;
     };
 
     #pragma pack(pop)
@@ -249,23 +260,25 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 16);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 24);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 25);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorProfilerNativeApi, 8);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetReimportNativeApi, 2);
     //gui 表扩容后，排在它后面的每张表偏移都跟着后移
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 164);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 171);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 83);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 99);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 104);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 106);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 125);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 149);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 154);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 162);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 86);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 102);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 108);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 110);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 129);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 154);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 159);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 167);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 169);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -338,6 +351,27 @@ namespace
             start = separator + 1;
         }
         mapped = result;
+        return changed;
+    }
+
+    //重写托管字段的 UTF-8 长度前缀数组文本，逐元素映射资源 Key。
+    //托管集合使用长度前缀编码，与原生引用列表的 '|' 分隔文本不是同一种格式，不能共用上面的入口。
+    bool TryMapManagedReferenceArray(const std::string& value, const std::string& oldKey,
+        const std::string& newKey, bool prefix, std::string& mapped)
+    {
+        List<std::string> elements;
+        if (!Reflection::ParseArrayValues(value, elements)) return false;
+
+        bool changed = false;
+        for (std::string& element : elements)
+        {
+            if (element.starts_with("world://")) continue;
+            std::string entryMapped;
+            if (!TryMapResourceKey(element, oldKey, newKey, prefix, entryMapped)) continue;
+            element = entryMapped;
+            changed = true;
+        }
+        if (changed) mapped = Reflection::FormatArrayValues(elements);
         return changed;
     }
 
@@ -799,11 +833,17 @@ namespace
                     List<ManagedScriptField> stored = host->GetManagedFields();
                     for (const ManagedScriptField& field : stored)
                     {
+                        //标量 Ref 与 Ref 集合都要跟着资源路径重映射，只改前者会让列表引用悬空。
                         std::string mapped;
-                        if (field.kind == Reflection::FieldKind::ObjectRef
-                            && !field.value.starts_with("world://")
-                            && TryMapResourceKey(field.value, oldKey, newKey, prefix != 0, mapped)
-                            && host->SetManagedFieldValue(field.name, mapped)) ++changed;
+                        bool matched;
+                        if (field.kind == Reflection::FieldKind::ObjectRef)
+                            matched = !field.value.starts_with("world://")
+                                && TryMapResourceKey(field.value, oldKey, newKey, prefix != 0, mapped);
+                        else if (field.kind == Reflection::FieldKind::Array
+                            && field.typeName.find("<Ref<") != std::string::npos)
+                            matched = TryMapManagedReferenceArray(field.value, oldKey, newKey, prefix != 0, mapped);
+                        else continue;
+                        if (matched && host->SetManagedFieldValue(field.name, mapped)) ++changed;
                     }
                 }
                 for (const Reflection::FieldInfo& field : fields)
@@ -1766,6 +1806,15 @@ namespace
         return CopyUtf8(WorldSerializer::CaptureComponent(FindEditorComponent(context, objectId)), buffer, size);
     }
 
+    //把组件移到指定的挂载位置；越界由原生侧夹紧。
+    uint8 ORBEDEN_NATIVE_CALL MoveManagedComponent(void* context, int32 objectId, int32 index)
+    {
+        Component* component = FindEditorComponent(context, objectId);
+        Ens* ens = component ? component->GetEns() : nullptr;
+        if (!ens) return 0;
+        return ens->MoveComponent(component, index) ? 1 : 0;
+    }
+
     int32 ORBEDEN_NATIVE_CALL FindManagedComponent(void* context, const uint8* key, int32 length)
     {
         Object* object = Object::FindObject(StringId(ReadUtf8(key, length)));
@@ -1925,6 +1974,20 @@ namespace
     {
         return Profiler::CopyName(nameId, reinterpret_cast<char*>(text), capacity);
     }
+
+    //指定按键是否按住；键号取 ImGuiKey。
+    uint8 ORBEDEN_NATIVE_CALL EditorInputIsKeyDown(int32 key)
+    {
+        if (key < 0 || key >= ImGuiKey_NamedKey_COUNT) return 0;
+        return ImGui::IsKeyDown(static_cast<ImGuiKey>(key)) ? 1 : 0;
+    }
+
+    //指定按键这一帧是否按下；键号取 ImGuiKey。
+    uint8 ORBEDEN_NATIVE_CALL EditorInputIsKeyPressed(int32 key)
+    {
+        if (key < 0 || key >= ImGuiKey_NamedKey_COUNT) return 0;
+        return ImGui::IsKeyPressed(static_cast<ImGuiKey>(key)) ? 1 : 0;
+    }
 }
 
 bool ManagedEditorBridge::Initialize(EditorClrHost& host,
@@ -2046,6 +2109,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.components.getReferenceObjects = reinterpret_cast<void*>(&GetManagedReferenceObjects);
     editorApi.components.getReferenceLabel = reinterpret_cast<void*>(&GetManagedReferenceLabel);
     editorApi.components.focusEns = reinterpret_cast<void*>(&FocusManagedEns);
+    editorApi.components.moveComponent = reinterpret_cast<void*>(&MoveManagedComponent);
     editorApi.log.getRange = reinterpret_cast<void*>(&EditorLogGetRange);
     editorApi.log.copyEntry = reinterpret_cast<void*>(&EditorLogCopyEntry);
     editorApi.log.getCounts = reinterpret_cast<void*>(&EditorLogGetCounts);
@@ -2059,6 +2123,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.profiler.copyFrameEvents = reinterpret_cast<void*>(&EditorProfilerCopyFrameEvents);
     editorApi.profiler.getNameCount = reinterpret_cast<void*>(&EditorProfilerGetNameCount);
     editorApi.profiler.copyName = reinterpret_cast<void*>(&EditorProfilerCopyName);
+    editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);
+    editorApi.input.isKeyPressed = reinterpret_cast<void*>(&EditorInputIsKeyPressed);
     if (initializeEditor(&editorApi) == 0)
     {
         //托管侧没有日志通道，失败原因只能靠这个出口带回原生侧。

@@ -76,6 +76,8 @@ internal static unsafe class EditorAssetsNative
 
     internal static string CaptureEns(EnsId root)
     {
+        //快照直接读原生字段表，先把运行时值刷回去，复制与 Prefab 才不会丢托管字段。
+        ScriptRuntimeRegistry.FlushHostFields();
         int length = api.CaptureEns(api.Context, root, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.CaptureEns(api.Context, root, pointer, length);
@@ -116,6 +118,7 @@ internal static unsafe class EditorAssetsNative
     //保存 Ens 子树为独立预制体
     internal static bool SavePrefab(string source, string key)
     {
+        ScriptRuntimeRegistry.FlushHostFields();
         byte[] sourceBytes = Encoding.UTF8.GetBytes(source), keyBytes = Encoding.UTF8.GetBytes(key);
         fixed (byte* sourcePointer = sourceBytes)
         fixed (byte* keyPointer = keyBytes)
@@ -141,7 +144,11 @@ internal static unsafe class EditorAssetsNative
     }
 
     //保存当前编辑 World
-    internal static bool SaveWorld() => api.SaveWorld(api.Context) != 0;
+    internal static bool SaveWorld()
+    {
+        ScriptRuntimeRegistry.FlushHostFields();
+        return api.SaveWorld(api.Context) != 0;
+    }
 
     //设置启动 World
     internal static bool SetStartupWorld(string key)

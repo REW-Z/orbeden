@@ -181,6 +181,16 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
     forwardPipeline.Initialize(&backend);
     outputPass.Initialize(&backend);
     outlineQuad.Initialize(&backend);
+    //UI 渲染器失败不影响场景渲染：RetainedGUI 不显示，其余照常。
+    if (!uiRenderer.Initialize(backend, gpuResourceManager))
+    {
+        Log::Warning("RenderSystem initialize warning: RetainedGUI renderer is disabled.");
+    }
+    //深度回读交给 UI 渲染器：它才知道每个视图画在哪块目标上。
+    RetainedGuiFrame::SetDepthReader(&RenderSystem::ReadUIDepth);
+    //UI 的命中换算需要窗口逻辑尺寸；帧缓冲尺寸每帧都可能变，逻辑尺寸在缩放时更新。
+    uiRenderer.SetDisplayLogicalSize(vector2(static_cast<float32>(window->GetWidth()),
+        static_cast<float32>(window->GetHeight())));
     elapsedTime = 0.0f;
 
     //初始化 ImGui 覆盖层
@@ -201,6 +211,9 @@ void RenderSystem::Shutdown()
     debugLineWorld = nullptr;
     //释放渲染系统资源
     imguiLayer.Shutdown();
+    RetainedGuiFrame::SetDepthReader(nullptr);
+    //UI 渲染器必须在资源管理器之前释放：它持有网格缓冲与覆盖率池。
+    uiRenderer.Shutdown();
     ReleaseOutlineResources();
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
@@ -217,6 +230,17 @@ void RenderSystem::Shutdown()
 void RenderSystem::SetRenderOverlay(IRenderOverlay* overlay)
 {
     renderOverlay = overlay;
+}
+
+void RenderSystem::SetUIEditorPreviewTarget(const UIOutputTarget& target)
+{
+    editorPreviewTarget = target;
+    hasEditorPreviewTarget = target.width > 0 && target.height > 0;
+}
+
+void RenderSystem::ClearUIEditorPreviewTarget()
+{
+    hasEditorPreviewTarget = false;
 }
 
 void RenderSystem::SetFpsLabelVisible(bool value)
@@ -336,6 +360,8 @@ void RenderSystem::InvalidateResourceCaches()
     //释放内容资源 GPU 缓存
     forwardPipeline.InvalidateResourceCaches();
     gpuResourceManager.InvalidateCaches();
+    //UI 的纹理引用可能已经失效，覆盖层状态一并重来。
+    uiRenderer.InvalidateAll();
     warnedMissingCamera = false;
 }
 
@@ -401,7 +427,8 @@ void RenderSystem::Render(World& world, float deltaTime)
         backend.BeginPass(passDesc);
         backend.EndPass();
 
-        //绘制无相机场景的覆盖层
+        //无相机场景：离屏与屏幕画布照常绘制，只是没有世界空间画布。
+        uiRenderer.RenderOffscreen();
         RenderOverlayPass();
         backend.EndFrame();
         scene.EndRead();
@@ -410,6 +437,9 @@ void RenderSystem::Render(World& world, float deltaTime)
         FinishDrawSubmissions();
         return;
     }
+
+    //离屏画布在相机之前绘制：它们的结果可能被世界空间或屏幕画布采样。
+    uiRenderer.RenderOffscreen();
 
     //准备共享阴影资源
     warnedMissingCamera = false;
@@ -464,6 +494,9 @@ void RenderSystem::Render(World& world, float deltaTime)
             backend.DrawLines(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
             backend.EndPass();
         }
+
+        //世界空间画布写在输出 Pass 之前，与场景一起被转换到显示空间。
+        uiRenderer.RenderWorldSpace(camera);
 
         //输出 Pass 必须排在描边与调试线之后：那些内容也写进场景缓冲，要一起转换到显示空间
         RenderOutputPass(camera);
@@ -537,6 +570,12 @@ void RenderSystem::OnWindowResize(int width, int height)
     //更新主帧缓冲尺寸
     framebufferWidth = width;
     framebufferHeight = height;
+    //窗口逻辑尺寸跟着变，UI 的命中换算要用它。
+    if (window)
+    {
+        uiRenderer.SetDisplayLogicalSize(vector2(static_cast<float32>(window->GetWidth()),
+            static_cast<float32>(window->GetHeight())));
+    }
 }
 
 RenderSystem::ManagedRenderTarget* RenderSystem::FindRenderTarget(RenderTargetID id)
@@ -763,6 +802,20 @@ void RenderSystem::PrepareCameraRenderData()
 
 void RenderSystem::RenderOverlayPass()
 {
+    //RetainedGUI 画在 ImGui 之前：编辑器界面永远盖在游戏 UI 上。
+    //编辑态把屏幕画布画进场景面板的离屏目标，Play 与 Player 画主帧缓冲。
+    UIOutputTarget uiTarget;
+    if (hasEditorPreviewTarget)
+    {
+        uiTarget = editorPreviewTarget;
+    }
+    else
+    {
+        uiTarget.width = framebufferWidth;
+        uiTarget.height = framebufferHeight;
+    }
+    uiRenderer.RenderOverlay(uiTarget);
+
     if (!imguiLayer.IsInitialized()) return;
 
     //开始 GUI 覆盖层 Pass
@@ -789,6 +842,13 @@ void RenderSystem::RenderOverlayPass()
     backend.EndPass();
 }
 
+//命中快照的深度回读入口；由 RetainedGuiFrame 的函数指针转进来。
+bool RenderSystem::ReadUIDepth(uint64 viewId, uint64 viewerId, uint64 presentedFrame, int32 x, int32 y, float32* depth)
+{
+    if (!currentRenderSystem || !depth) return false;
+    return currentRenderSystem->uiRenderer.ReadDepth(viewId, viewerId, presentedFrame, x, y, *depth);
+}
+
 /// <summary>获取当前渲染系统。</summary>
 RenderSystem* RenderSystem::Current()
 {
@@ -811,6 +871,13 @@ void RenderSystem::DrawLine(World& world, const vector3& start, const vector3& e
 }
 
 /// <summary>提交本帧需要描边的物体。</summary>
+//取纹理的 GPU 句柄；资源管理器负责按需上传
+GpuTextureID RenderSystem::GetTextureId(Texture2D* texture)
+{
+    if (!initialized || !texture) return GpuTextureID();
+    return gpuResourceManager.GetTexture(texture);
+}
+
 void RenderSystem::SetSelectionHighlights(const List<SelectionHighlight>& highlights)
 {
     //描边色同样来自编辑器界面，语义是显示色

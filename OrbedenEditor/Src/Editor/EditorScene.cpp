@@ -391,6 +391,18 @@ namespace
         return true;
     }
 
+    //把世界点投影到场景视口屏幕坐标，供托管 Handles 自己摆放拖拽区。
+    uint8 ORBEDEN_NATIVE_CALL ProjectGizmoPointForManaged(EditorGizmoVector3 point, EditorGizmoVector2* screen)
+    {
+        if (!screen) return 0;
+
+        ImVec2 projected;
+        if (!ProjectGizmoPoint(point, projected)) return 0;
+        screen->x = projected.x;
+        screen->y = projected.y;
+        return 1;
+    }
+
     //绘制一条托管三维 Handle 线。
     void ORBEDEN_NATIVE_CALL DrawGizmoLine(EditorGizmoVector3 a, EditorGizmoVector3 b, EditorGizmoColor color)
     {
@@ -520,6 +532,23 @@ void EditorScene::RefreshSceneViewTarget(World& world)
                     sceneTargetHeight = requestedHeight;
                 }
             }
+        }
+    }
+
+    //屏幕画布跟着场景面板走：编辑态画进离屏目标，面板不可见时回到主帧缓冲。
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        if (requestedWidth > 0 && requestedHeight > 0 && sceneTarget.IsValid())
+        {
+            UIOutputTarget uiTarget;
+            uiTarget.renderTarget = GpuRenderTargetID{ sceneTarget.id };
+            uiTarget.width = sceneTargetWidth;
+            uiTarget.height = sceneTargetHeight;
+            renderSystem->SetUIEditorPreviewTarget(uiTarget);
+        }
+        else
+        {
+            renderSystem->ClearUIEditorPreviewTarget();
         }
     }
 
@@ -1002,6 +1031,7 @@ EditorGizmoApi EditorScene::GetGizmoApi()
     api.IsSelected = reinterpret_cast<void*>(&IsGizmoEnsSelected);
     api.IsVisible = reinterpret_cast<void*>(&AreGizmosVisible);
     api.TakeEdit = reinterpret_cast<void*>(&TakeGizmoEditNative);
+    api.ProjectPoint = reinterpret_cast<void*>(&ProjectGizmoPointForManaged);
     return api;
 }
 

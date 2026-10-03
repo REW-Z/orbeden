@@ -19,6 +19,7 @@ extern "C" __declspec(dllimport) unsigned int __stdcall timeEndPeriod(unsigned i
 #endif
 
 #include "Log/Log.h"
+#include "InputManager/InputEvent.h"
 #include "InputManager/InputManager.h"
 
 namespace
@@ -87,6 +88,10 @@ namespace
         keyMap[GLFW_KEY_DOWN] = KeyEnum::DOWN;
         keyMap[GLFW_KEY_LEFT] = KeyEnum::LEFT;
         keyMap[GLFW_KEY_RIGHT] = KeyEnum::RIGHT;
+        keyMap[GLFW_KEY_HOME] = KeyEnum::HOME;
+        keyMap[GLFW_KEY_END] = KeyEnum::END;
+        keyMap[GLFW_KEY_DELETE] = KeyEnum::DEL;
+        keyMap[GLFW_KEY_ESCAPE] = KeyEnum::ESCAPE;
     }
 
     bool StartGlfw()
@@ -118,6 +123,42 @@ namespace
 #endif
     }
 
+    //事件种类与设备，与 UIInputKind/UIInputDevice 的数值一致。
+    constexpr uint32 KindPointerMove = 0;
+    constexpr uint32 KindPointerDown = 1;
+    constexpr uint32 KindPointerUp = 2;
+    constexpr uint32 KindWheel = 4;
+    constexpr uint32 KindKeyDown = 5;
+    constexpr uint32 KindKeyUp = 6;
+    constexpr uint32 KindTextCommit = 7;
+    constexpr uint32 KindWindowFocusLost = 12;
+
+    constexpr uint32 DeviceMouse = 0;
+    constexpr uint32 DeviceKeyboard = 3;
+
+    //鼠标按键的 KeyEnum 值同时作为指针按钮标识：Left=0、Right=1、Middle=2。
+    uint32 PointerButtonOf(KeyEnum key)
+    {
+        if (key == KeyEnum::MOUSER) return 1;
+        if (key == KeyEnum::MOUSEMID) return 2;
+        return 0;
+    }
+
+    uint32 ModifierBits(int mods)
+    {
+        uint32 bits = 0;
+        if (mods & GLFW_MOD_SHIFT) bits |= 1;
+        if (mods & GLFW_MOD_CONTROL) bits |= 2;
+        if (mods & GLFW_MOD_ALT) bits |= 4;
+        return bits;
+    }
+
+    //原始键与鼠标位置由回调写入；事件带的是那一时刻的位置。
+    vector2 CurrentPointerPosition()
+    {
+        return InputManager::MousePos();
+    }
+
     KeyEnum MapKey(int key)
     {
         if (key < 0 || key > GLFW_KEY_LAST) return KeyEnum::UNMAPPED;
@@ -136,14 +177,32 @@ namespace
         (void)scancode;
         (void)mods;
 
+        KeyEnum mapped = MapKey(key);
         if (action == GLFW_PRESS)
         {
-            InputManager::SetKeyState(MapKey(key), true);
+            InputManager::SetKeyState(mapped, true);
         }
         else if (action == GLFW_RELEASE)
         {
-            InputManager::SetKeyState(MapKey(key), false);
+            InputManager::SetKeyState(mapped, false);
         }
+        else
+        {
+            //GLFW_REPEAT 只更新原始键，不生成新的事件。
+            InputManager::SetRawKeyState(static_cast<uint32>(key), true);
+            return;
+        }
+
+        InputManager::SetRawKeyState(static_cast<uint32>(key), action == GLFW_PRESS);
+        InputEvent event;
+        event.kind = action == GLFW_PRESS ? KindKeyDown : KindKeyUp;
+        event.device = DeviceKeyboard;
+        event.key = static_cast<uint32>(mapped);
+        event.rawKey = static_cast<uint32>(key);
+        event.modifiers = ModifierBits(mods);
+        event.position = CurrentPointerPosition();
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
     }
 
     void MouseButtonCallback(GLFWwindow* glfwWindow, int button, int action, int mods)
@@ -151,20 +210,102 @@ namespace
         (void)glfwWindow;
         (void)mods;
 
-        if (action == GLFW_PRESS)
-        {
-            InputManager::SetKeyState(MapMouseButton(button), true);
-        }
-        else if (action == GLFW_RELEASE)
-        {
-            InputManager::SetKeyState(MapMouseButton(button), false);
-        }
+        KeyEnum mapped = MapMouseButton(button);
+        if (action != GLFW_PRESS && action != GLFW_RELEASE) return;
+        InputManager::SetKeyState(mapped, action == GLFW_PRESS);
+
+        InputEvent event;
+        event.kind = action == GLFW_PRESS ? KindPointerDown : KindPointerUp;
+        event.device = DeviceMouse;
+        event.key = PointerButtonOf(mapped);
+        event.rawKey = static_cast<uint32>(button);
+        event.modifiers = ModifierBits(mods);
+        event.position = CurrentPointerPosition();
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
     }
 
     void CursorPosCallback(GLFWwindow* glfwWindow, double x, double y)
     {
         (void)glfwWindow;
-        InputManager::SetMousePosition(static_cast<float32>(x), static_cast<float32>(y));
+        vector2 previous = InputManager::MousePos();
+        vector2 position(static_cast<float32>(x), static_cast<float32>(y));
+        InputManager::SetMousePosition(position.x, position.y);
+
+        InputEvent event;
+        event.kind = KindPointerMove;
+        event.device = DeviceMouse;
+        event.position = position;
+        event.delta = vector2(position.x - previous.x, position.y - previous.y);
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
+    }
+
+    //滚轮：x 为横向、y 为纵向；事件按纵向一次记录，带原始两轴数值。
+    void ScrollCallback(GLFWwindow* glfwWindow, double xOffset, double yOffset)
+    {
+        (void)glfwWindow;
+        InputEvent event;
+        event.kind = KindWheel;
+        event.device = DeviceMouse;
+        event.position = CurrentPointerPosition();
+        event.delta = vector2(static_cast<float32>(xOffset), static_cast<float32>(yOffset));
+        event.value = static_cast<float32>(yOffset);
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
+    }
+
+    //字符回调只生成文本提交，不从键码推字符。
+    void CharCallback(GLFWwindow* glfwWindow, unsigned int codepoint)
+    {
+        (void)glfwWindow;
+        if (codepoint == 0) return;
+
+        InputEvent event;
+        event.kind = KindTextCommit;
+        event.device = DeviceKeyboard;
+        event.position = CurrentPointerPosition();
+        //UTF-8 编码；四个字节足够容纳一个码点。
+        char buffer[5] = {};
+        int length = 0;
+        if (codepoint < 0x80)
+        {
+            buffer[length++] = static_cast<char>(codepoint);
+        }
+        else if (codepoint < 0x800)
+        {
+            buffer[length++] = static_cast<char>(0xC0 | (codepoint >> 6));
+            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+        else if (codepoint < 0x10000)
+        {
+            buffer[length++] = static_cast<char>(0xE0 | (codepoint >> 12));
+            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+        else
+        {
+            buffer[length++] = static_cast<char>(0xF0 | (codepoint >> 18));
+            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+        }
+        event.text.assign(buffer, static_cast<usize>(length));
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
+    }
+
+    //失焦：生成一条事件让 UI 放手全部占有，按着的键继续屏蔽到抬起。
+    void WindowFocusCallback(GLFWwindow* glfwWindow, int focused)
+    {
+        (void)glfwWindow;
+        if (focused) return;
+
+        InputEvent event;
+        event.kind = KindWindowFocusLost;
+        event.position = CurrentPointerPosition();
+        event.timestamp = glfwGetTime();
+        InputManager::PushEvent(std::move(event));
     }
 
     void FramebufferSizeCallback(GLFWwindow* glfwWindow, int newWidth, int newHeight)
@@ -226,6 +367,9 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
     glfwSetMouseButtonCallback(window, MouseButtonCallback);
     glfwSetCursorPosCallback(window, CursorPosCallback);
     glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
+    glfwSetScrollCallback(window, ScrollCallback);
+    glfwSetCharCallback(window, CharCallback);
+    glfwSetWindowFocusCallback(window, WindowFocusCallback);
 
     if (desc.graphicsApi == WindowGraphicsApi::OpenGL)
     {

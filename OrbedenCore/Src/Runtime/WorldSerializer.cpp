@@ -454,6 +454,8 @@ namespace
     {
         Transform* transform = ens.Transform();
         if (!transform) return;
+        //运行时临时节点（弹层等）连同子树一起排除在保存、复制与 Prefab 之外
+        if (ens.GetDontSave()) return;
 
         //写入当前 Ens 和它的组件
         WriteIndent(output, depth);

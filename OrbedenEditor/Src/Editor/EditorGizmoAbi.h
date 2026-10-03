@@ -26,6 +26,14 @@ public:
     float32 w = 1.0f;
 };
 
+//Editor Gizmo 二维向量，布局与 C# Orbeden.vector2 一致；只用于投影结果的出参。
+struct EditorGizmoVector2
+{
+public:
+    float32 x = 0.0f;
+    float32 y = 0.0f;
+};
+
 //Editor Gizmo 颜色，布局与 C# Orbeden.color4 一致。
 struct EditorGizmoColor
 {
@@ -51,6 +59,10 @@ public:
 };
 
 #pragma pack(pop)
+
+static_assert(std::is_standard_layout_v<EditorGizmoVector2> && std::is_trivially_copyable_v<EditorGizmoVector2>);
+static_assert(sizeof(EditorGizmoVector2) == sizeof(float32) * 2 && alignof(EditorGizmoVector2) <= 4);
+static_assert(offsetof(EditorGizmoVector2, x) == 0 && offsetof(EditorGizmoVector2, y) == sizeof(float32));
 
 static_assert(std::is_standard_layout_v<EditorGizmoVector3> && std::is_trivially_copyable_v<EditorGizmoVector3>);
 static_assert(sizeof(EditorGizmoVector3) == sizeof(float32) * 3 && alignof(EditorGizmoVector3) <= 4);
@@ -81,7 +93,9 @@ public:
     void* TakeEdit = nullptr;              //取出一次待提交的手柄编辑，没有时返回 0
     void* IsSelected = nullptr;
     void* IsVisible = nullptr;
+    //把世界点投影到场景视口屏幕坐标；不可见或相机无效时返回 0
+    void* ProjectPoint = nullptr;
 };
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 5);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGizmoApi, 6);

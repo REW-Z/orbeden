@@ -90,6 +90,17 @@ public static class EditorPropertyHistory
         redo.Clear();
     }
 
+    /// <summary>
+    /// 记录一条可撤销动作。编辑器扩展在改动不属于属性文档的内容（布局矩形、事件表等）时用它；
+    /// 撤销与重做都只依赖稳定 ID 与序列化快照，不闭包保存可能已销毁的包装。
+    /// </summary>
+    public static void RecordAction(string label, Action undo, Action redo)
+    {
+        ArgumentNullException.ThrowIfNull(undo);
+        ArgumentNullException.ThrowIfNull(redo);
+        PushAction(label, undo, redo);
+    }
+
     internal static void PushAction(string label, Action undoAction, Action redoAction, string mergeKey = "", bool merge = false)
     {
         Push(new EditorChange { Label = label, MergeKey = mergeKey,

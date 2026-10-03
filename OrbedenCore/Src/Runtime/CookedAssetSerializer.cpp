@@ -8,6 +8,8 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Skybox.h"
+#include "Runtime/Fonts/FontRasterizer.h"
+#include "Runtime/Object/Font.h"
 #include "Runtime/Object/TextResource.h"
 #include "Runtime/Object/Texture2D.h"
 
@@ -442,6 +444,38 @@ namespace
         return reader.ReadText(resource->text);
     }
 
+    //字体载荷的格式版本；升级字节布局时递增。
+    constexpr uint32 FontPayloadVersion = 1;
+
+    //写入字体资源载荷：格式版本、字体面下标与字节
+    bool WriteFont(BlobWriter& writer, Font* font)
+    {
+        writer.WriteValue(FontPayloadVersion);
+        writer.WriteValue(font->faceIndex);
+        writer.WriteArray(font->sourceBytes);
+        return true;
+    }
+
+    //读取字体资源载荷：先校验再替换资源，解析失败时保留原内容
+    bool ReadFont(BlobReader& reader, Font* font)
+    {
+        uint32 version = 0;
+        if (!reader.ReadValue(version) || version != FontPayloadVersion) return false;
+
+        uint32 faceIndex = 0;
+        if (!reader.ReadValue(faceIndex)) return false;
+
+        List<uint8> bytes;
+        if (!reader.ReadArray(bytes)) return false;
+        if (!FontRasterizer::ValidateFontBytes(bytes, faceIndex)) return false;
+
+        font->faceIndex = faceIndex;
+        font->sourceBytes = std::move(bytes);
+        //内容换了：字形与图集缓存按键里的 revision 失效。
+        font->BumpRevision();
+        return true;
+    }
+
     //按资源类型写入载荷
     bool WritePayload(BlobWriter& writer, Object* object, std::string& error)
     {
@@ -450,6 +484,7 @@ namespace
         if (Material* material = object->Cast<Material>()) return WriteMaterial(writer, material);
         if (Shader* shader = object->Cast<Shader>()) return WriteShader(writer, shader);
         if (Skybox* skybox = object->Cast<Skybox>()) return WriteSkybox(writer, skybox);
+        if (Font* font = object->Cast<Font>()) return WriteFont(writer, font);
         if (TextResource* resource = object->Cast<TextResource>()) return WriteTextResource(writer, resource);
 
         error = "Resource type cannot be packaged: " + std::string(object->GetType()->GetName());
@@ -464,6 +499,7 @@ namespace
         if (Material* material = object->Cast<Material>()) return ReadMaterial(reader, material, externalRefs);
         if (Shader* shader = object->Cast<Shader>()) return ReadShader(reader, shader);
         if (Skybox* skybox = object->Cast<Skybox>()) return ReadSkybox(reader, skybox, externalRefs);
+        if (Font* font = object->Cast<Font>()) return ReadFont(reader, font);
         if (TextResource* resource = object->Cast<TextResource>()) return ReadTextResource(reader, resource);
 
         error = "Resource type cannot be unpacked: " + std::string(object->GetType()->GetName());

@@ -42,7 +42,7 @@ void TransformCache::Reset()
 }
 
 //接收变换失效通知
-void TransformCache::OnTransformChanged(World& changedWorld, EnsId ens)
+void TransformCache::OnTransformChanged(World& changedWorld, EnsId ens, TransformChangeSource source)
 {
     if (world != &changedWorld || ens.IsNull()) return;
     if (std::find(pendingNodes.begin(), pendingNodes.end(), ens) != pendingNodes.end()) return;
@@ -165,7 +165,8 @@ void TransformCache::UpdateNodeRecursive(EnsId ens, const matrix4x4& parentMatri
     bool dirty = parentDirty || transform->transformDirty || !transform->transformCacheInitialized;
     if (dirty)
     {
-        const vector3& localPosition = transform->GetLocalPosition();
+        //布局派生覆盖优先于作者位置，两者共用同一套矩阵计算。
+        const vector3& localPosition = transform->GetResolvedLocalPosition();
         const quaternion& localRotation = transform->GetLocalRotation();
         const vector3& localScale = transform->GetLocalScale();
         transform->localMatrix = RenderMath::TRS(localPosition, localRotation, localScale);

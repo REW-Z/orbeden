@@ -28,6 +28,7 @@ internal unsafe struct EditorGizmoApi
     public delegate* unmanaged[Cdecl]<EditorGizmoEdit*, int> TakeEdit;
     public delegate* unmanaged[Cdecl]<EnsId, byte> IsSelected;
     public delegate* unmanaged[Cdecl]<byte> IsVisible;
+    public delegate* unmanaged[Cdecl]<vector3, vector2*, byte> ProjectPoint;
 }
 #pragma warning restore CS0649
 
@@ -84,6 +85,21 @@ public static unsafe class Gizmos
     {
         api = value;
         initialized = api.Line3D != null;
+    }
+
+    /// <summary>
+    /// 把世界点投影到 SceneView 的屏幕坐标。相机未就绪、点在相机背后或不在视口深度范围内时返回 false；
+    /// 自定义手柄用它算出拖拽区的摆放位置，与原生手柄共用同一套投影。
+    /// </summary>
+    public static bool ProjectPoint(vector3 world, out vector2 screen)
+    {
+        screen = default;
+        if (!initialized || api.ProjectPoint == null) return false;
+
+        vector2 projected = default;
+        if (api.ProjectPoint(world, &projected) == 0) return false;
+        screen = projected;
+        return true;
     }
 
     /// <summary>绘制三维线段。</summary>

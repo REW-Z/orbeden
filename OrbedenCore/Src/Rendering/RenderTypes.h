@@ -57,6 +57,8 @@ enum class BlendMode : uint32
 {
     Alpha = 0,
     Additive = 1,
+    //预乘 Alpha：RGB 与 A 都用 ONE、ONE_MINUS_SRC_ALPHA，UI 与画布输出走这一支。
+    PremultipliedAlpha = 2,
 };
 
 //几何提交模式，决定一次绘制走哪条顶点路径。数值参与批次键比较，序号固定。

@@ -225,18 +225,52 @@ void World::EndDirtySuppression()
     if (dirtySuppressionDepth > 0) --dirtySuppressionDepth;
 }
 
+//批量写入布局派生的本地位置
+int32 World::ApplyDerivedPositions(uint64 owner, std::span<const UIDerivedPosition> positions)
+{
+    if (owner == 0 || positions.empty()) return 0;
+
+    //整批在同一个脏抑制区内完成：布局重建每帧都会写，逐条标脏会让场景一直显示未保存。
+    DirtySuppressionScope suppression(*this);
+    int32 accepted = 0;
+    for (const UIDerivedPosition& entry : positions)
+    {
+        Transform* transform = GetTransform(entry.ens);
+        if (!transform) continue;
+        if (entry.clear != 0)
+        {
+            transform->ClearDerivedLocalPosition(owner);
+            ++accepted;
+            continue;
+        }
+        if (transform->SetDerivedLocalPosition(owner, entry.position)) ++accepted;
+    }
+    return accepted;
+}
+
+//向生命周期监听器广播一次父级变化
+void World::NotifyEnsReparented(EnsId ens, EnsId parent)
+{
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsReparented(ens, parent);
+    }
+}
+
 //通知指定节点及其子树的世界变换失效
-void World::NotifyTransformChanged(EnsId ens)
+void World::NotifyTransformChanged(EnsId ens, TransformChangeSource source)
 {
     Transform* transform = GetTransform(ens);
     if (!transform) return;
 
-    //任何变换写入都算场景内容改动，手柄、脚本与 Inspector 都汇到这里
-    SetDirty();
+    //作者写入算场景内容改动，手柄、脚本与 Inspector 都汇到这里；
+    //派生写入来自布局驱动，每次重建都会发生，标脏会让场景永远处于未保存状态。
+    if (source != TransformChangeSource::Derived) SetDirty();
     transform->transformDirty = true;
     for (ITransformListener* listener : transformListeners)
     {
-        if (listener) listener->OnTransformChanged(*this, ens);
+        if (listener) listener->OnTransformChanged(*this, ens, source);
     }
 }
 
@@ -428,6 +462,13 @@ Ens* World::CreateEnsInternal(const std::string& name, const std::string& stable
     storedEns->name = name;
     storedEns->AddComponentInstance(transform);
     NotifyTransformChanged(value);
+
+    //结构订阅者在节点完整之后才收到通知，此时组件与变换都已就绪。
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsCreated(value);
+    }
     return storedEns;
 }
 
@@ -752,6 +793,7 @@ void World::SetParent(EnsId child, EnsId parent)
     {
         NotifyTransformChanged(child);
         RefreshEnsWorldActive(child);
+        NotifyEnsReparented(child, EnsId());
         return;
     }
 
@@ -780,6 +822,7 @@ void World::SetParent(EnsId child, EnsId parent)
     parentTransform->lastChild = child;
     NotifyTransformChanged(child);
     RefreshEnsWorldActive(child);
+    NotifyEnsReparented(child, parent);
 }
 
 //移动 Ens 到指定同级位置

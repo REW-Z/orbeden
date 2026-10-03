@@ -11,6 +11,8 @@
 #include <utility>
 
 #include "Platform/Window.h"
+#include "Platform/WindowsPointerInput.h"
+#include "Platform/WindowsTextInput.h"
 #include "Runtime/World.h"
 
 class Application;

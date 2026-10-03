@@ -96,6 +96,12 @@
     <ClInclude Include="Src\Runtime\Native\RuntimeResourceBinds.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiBridge.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiTypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h">
       <Filter>头文件</Filter>
     </ClInclude>

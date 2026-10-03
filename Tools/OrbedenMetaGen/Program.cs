@@ -1,4 +1,6 @@
 using OrbedenMetaGen;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -30,6 +32,10 @@ if (docsPath.Length != 0 && !args.Contains("--bindings", StringComparer.Ordinal)
     return 1;
 }
 
+bool generateBindings = args.Contains("--bindings", StringComparer.Ordinal);
+string? bindingNamespaceOption = Option("--namespace");
+List<string> importPaths = Imports();
+
 if (!Directory.Exists(sourceRoot))
 {
     Console.Error.WriteLine($"Source root does not exist: {sourceRoot}");
@@ -40,10 +46,28 @@ Directory.CreateDirectory(outputDir);
 //同一输出目录的独立 C# / Native 构建串行生成，避免读取半套生成物。
 using var generationLock = new GenerationLock(outputDir);
 
-//扫描所有 Runtime 头文件
+//扫描所有 Runtime 头文件；先把清单定下来，它同时是增量指纹的一部分。
+var headerFiles = Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDirectories)
+    .Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar).Any(part => part is "ThirdParty" or "Build" or "Generated" or "obj" or "bin" or "Managed" or "Aot" or "Legacy" or ".vs"))
+    .OrderBy(path => path, StringComparer.Ordinal)
+    .ToList();
+
+//输入没变就整体跳过：头文件清单与内容、导入的 manifest、生成器自身与输出模式共同决定指纹。
+//清单既带文件名也带内容散列，因此删除、改名或改内容都会让指纹失效；C# 文件不参与扫描，也不进入指纹。
+string fingerprintPath = Path.Combine(outputDir, "Bindings.Generated.fingerprint");
+string fingerprint = ComputeInputFingerprint(sourceRoot, headerFiles, gameModule, generateBindings,
+    docsPath.Length != 0, bindingNamespaceOption, importPaths);
+if (File.Exists(fingerprintPath)
+    && File.ReadAllText(fingerprintPath).Trim() == fingerprint
+    && RequiredOutputs(outputDir, generateBindings, docsPath.Length != 0).All(File.Exists))
+{
+    Console.WriteLine("Bindings are up to date.");
+    return 0;
+}
+
 var classes = new List<ClassInfo>();
 var declarations = new List<CppType>();
-foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDirectories).Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar).Any(part => part is "ThirdParty" or "Build" or "Generated" or "obj" or "bin" or "Managed" or "Aot" or "Legacy" or ".vs")).OrderBy(path => path, StringComparer.Ordinal))
+foreach (string file in headerFiles)
 {
     var text = File.ReadAllText(file);
     var parsed = CppDeclarations.Parse(text, file);
@@ -91,23 +115,12 @@ foreach (var classInfo in classes)
 
 //反射与 Binding 共用导入后的类型模型，识别跨模块脚本基类。
 BindingModel? bindings = null;
-if (args.Contains("--bindings", StringComparer.Ordinal))
+if (generateBindings)
 {
-    string? Option(string key)
-    {
-        int index = Array.IndexOf(args, key);
-        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
-    }
-    List<string> Imports()
-    {
-        List<string> paths = [];
-        for (int index = 0; index + 1 < args.Length; ++index)
-            if (args[index] == "--import") paths.Add(args[index + 1]);
-        return paths;
-    }
     try
     {
-        bindings = new BindingModel(declarations, Option("--namespace") ?? (gameModule ? "Game.Native" : "Orbeden"), Imports());
+        bindings = new BindingModel(declarations,
+            bindingNamespaceOption ?? (gameModule ? "Game.Native" : "Orbeden"), importPaths);
     }
     catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 }
@@ -185,7 +198,66 @@ string reflectionText = GenerateCpp(classes, sourceRoot, gameModule, bindingModu
 if (!File.Exists(generatedPath) || File.ReadAllText(generatedPath) != reflectionText)
     File.WriteAllText(generatedPath, reflectionText, new UTF8Encoding(false));
 Console.WriteLine($"Generated {generatedPath}");
+//生成成功后才落指纹：上次失败留下的旧指纹不能骗过下一次构建。
+File.WriteAllText(fingerprintPath, fingerprint, new UTF8Encoding(false));
 return 0;
+
+//读取命令行选项的取值。
+string? Option(string key)
+{
+    int index = Array.IndexOf(args, key);
+    return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+}
+
+//收集全部 --import 路径。
+List<string> Imports()
+{
+    List<string> paths = [];
+    for (int index = 0; index + 1 < args.Length; ++index)
+        if (args[index] == "--import") paths.Add(args[index + 1]);
+    return paths;
+}
+
+//生成器必须产出的文件；任一缺失都要重新生成。
+static string[] RequiredOutputs(string outputDir, bool bindings, bool docs)
+{
+    List<string> paths = [Path.Combine(outputDir, "Reflection.Generated.cpp")];
+    if (bindings)
+    {
+        paths.Add(Path.Combine(outputDir, "Bindings.Generated.cpp"));
+        paths.Add(Path.Combine(outputDir, "Bindings.Generated.cs"));
+        paths.Add(Path.Combine(outputDir, "Bindings.Manifest.json"));
+    }
+    if (docs) paths.Add(Path.Combine(outputDir, "ApiDocs.json"));
+    return [.. paths];
+}
+
+//计算生成输入指纹：生成器自身、头文件清单、导入 manifest 与输出模式。
+static string ComputeInputFingerprint(string sourceRoot, List<string> headerFiles, bool gameModule,
+    bool bindings, bool docs, string? bindingNamespace, List<string> importPaths)
+{
+    StringBuilder text = new();
+    text.Append("generator:").Append(File.GetLastWriteTimeUtc(Assembly.GetExecutingAssembly().Location).Ticks).Append('\n');
+    text.Append("module:").Append(gameModule ? '1' : '0').Append('\n');
+    text.Append("bindings:").Append(bindings ? '1' : '0').Append('\n');
+    text.Append("docs:").Append(docs ? '1' : '0').Append('\n');
+    text.Append("namespace:").Append(bindingNamespace ?? string.Empty).Append('\n');
+    //文件名之外还要算内容：只记名字的话，改头文件不会让指纹失效，绑定会一直停在旧版本。
+    foreach (string path in headerFiles)
+    {
+        text.Append(Path.GetRelativePath(sourceRoot, path)).Append('\n');
+        using FileStream header = File.OpenRead(path);
+        text.Append(Convert.ToHexString(SHA256.HashData(header))).Append('\n');
+    }
+    foreach (string import in importPaths)
+    {
+        text.Append("import:").Append(import).Append('\n');
+        if (!File.Exists(import)) continue;
+        using FileStream stream = File.OpenRead(import);
+        text.Append(Convert.ToHexString(SHA256.HashData(stream))).Append('\n');
+    }
+    return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
+}
 
 //从公共词法模型投影反射支持的成员，不改变 Binding 的完整声明数据。
 static IEnumerable<ClassInfo> ParseClasses(List<CppType> declarations, string file)
@@ -274,7 +346,14 @@ static bool IsPersistentField(string className, string fieldName)
 
     if (className == "Texture2D")
     {
-        return fieldName is "name" or "width" or "height" or "channels" or "format" or "colorSpace";
+        return fieldName is "name" or "width" or "height" or "channels" or "format" or "colorSpace" or "alphaMode";
+    }
+
+    //字体只把字体面下标写进场景序列化。派生元数据每次由字节解析，不重复存；
+    //原始字节走 cooked 产物，与 Texture2D::pixels 同一路径（字节数组不支持反射持久化）。
+    if (className == "Font")
+    {
+        return fieldName is "faceIndex";
     }
 
     if (className == "Skybox")
@@ -339,6 +418,7 @@ static FieldKindInfo? GetFieldKind(string type)
         "float32" => new FieldKindInfo("Reflection::FieldKind::Float32"),
         "std::string" => new FieldKindInfo("Reflection::FieldKind::String"),
         "StringId" => new FieldKindInfo("Reflection::FieldKind::StringId"),
+        "vector2" => new FieldKindInfo("Reflection::FieldKind::Vector2"),
         "vector3" => new FieldKindInfo("Reflection::FieldKind::Vector3"),
         "color" => new FieldKindInfo("Reflection::FieldKind::Color"),
         "quaternion" => new FieldKindInfo("Reflection::FieldKind::Quaternion"),
@@ -400,6 +480,7 @@ static ValueKindInfo? GetValueKind(string type)
         "float32" => new ValueKindInfo("Reflection::ValueKind::Float32"),
         "std::string" => new ValueKindInfo("Reflection::ValueKind::String"),
         "StringId" => new ValueKindInfo("Reflection::ValueKind::StringId"),
+        "vector2" => new ValueKindInfo("Reflection::ValueKind::Vector2"),
         "vector3" => new ValueKindInfo("Reflection::ValueKind::Vector3"),
         "color" => new ValueKindInfo("Reflection::ValueKind::Color"),
         "quaternion" => new ValueKindInfo("Reflection::ValueKind::Quaternion"),

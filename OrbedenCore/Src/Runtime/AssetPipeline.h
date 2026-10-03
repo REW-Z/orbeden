@@ -37,6 +37,10 @@ public:
     bool hasMeshUpAxis = false;
     MeshUpAxis meshUpAxis = MeshUpAxis::Y;
 
+    //TTC 里的字体面下标；未指定时取 0。越界时导入失败。
+    bool hasFontFaceIndex = false;
+    uint32 fontFaceIndex = 0;
+
     //从设置表里取出指定源文件的设置；首行是可选的版本头
     static AssetImportSettings Lookup(const std::string& table, const std::string& sourceKey);
 };
@@ -81,6 +85,7 @@ enum class AssetImporter
     OrbMat,
     OrbSky,
     Text,
+    Font,
 };
 
 //资源导入管道，负责把文件输入转换为Object资源
@@ -110,6 +115,9 @@ public:
 
     //导入纯文本资产：内容原样保存，不解析格式
     static AssetCollection Import_TEXT(std::string path);
+
+    //导入字体资产
+    static AssetCollection Import_FONT(std::string path, const AssetImportSettings& settings = {});
 
     /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
     static bool SaveMaterialAsset(const Material& material, const std::string& path, std::string& error);

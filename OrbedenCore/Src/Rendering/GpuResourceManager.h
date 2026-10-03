@@ -178,6 +178,7 @@ private:
     List<std::unique_ptr<GpuShader>> pendingShaders;
     List<std::unique_ptr<GpuMaterial>> pendingMaterials;
     List<GpuTextureID> pendingTextures;
+    List<GpuRenderTargetID> pendingRenderTargets;
     List<GpuCubeTextureID> pendingSkyboxes;
 
     //记录即将销毁的渲染资源对象
@@ -204,6 +205,9 @@ private:
     //摘下 CPU Texture 的 GPU ID 并延迟释放
     void QueueTextureRelease(Texture2D* texture);
 
+    //摘下渲染目标纹理的附件目标并延迟释放；颜色纹理随目标一起销毁
+    void QueueRenderTargetRelease(Texture2D* texture);
+
     //摘下 CPU Skybox 的 GPU ID 并延迟释放
     void QueueSkyboxRelease(Skybox* skybox);
 
@@ -223,8 +227,12 @@ public:
     //获取缓存中的网格；缺少或标记为脏时执行上传。
     const GpuMesh* GetMesh(Mesh* mesh);
 
-    //获取缓存中的纹理；缺少时执行上传。
+    //获取缓存中的纹理；缺少时执行上传。渲染目标纹理不上传像素，
+    //而是为它解析出颜色附件目标并返回那张颜色纹理。
     GpuTextureID GetTexture(Texture2D* texture);
+
+    //获取渲染目标纹理的附件目标；尺寸或内容版本变化时重建，对象身份不变。
+    GpuRenderTargetID GetTextureRenderTarget(Texture2D* texture);
 
     //获取缓存中的天空盒立方体纹理；缺少时执行上传。
     GpuCubeTextureID GetSkybox(Skybox* skybox);

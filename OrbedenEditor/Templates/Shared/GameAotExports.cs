@@ -7,7 +7,13 @@ using Orbeden;
 internal static class OrbedenAotExports
 {
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Initialize", CallConvs = [typeof(CallConvCdecl)])]
-    public static void Initialize(IntPtr nativeApi) => GameScriptRuntime.Initialize(nativeApi);
+    public static void Initialize(IntPtr nativeApi, uint executionMode) => GameScriptRuntime.Initialize(nativeApi, executionMode);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_ProcessInput", CallConvs = [typeof(CallConvCdecl)])]
+    public static void ProcessInput(float deltaTime) => GameScriptRuntime.ProcessInput(deltaTime);
+
+    [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_PrepareRender", CallConvs = [typeof(CallConvCdecl)])]
+    public static void PrepareRender(float deltaTime) => GameScriptRuntime.PrepareRender(deltaTime);
 
     [UnmanagedCallersOnly(EntryPoint = "OrbedenGame_Shutdown", CallConvs = [typeof(CallConvCdecl)])]
     public static void Shutdown() => GameScriptRuntime.Shutdown();

@@ -253,9 +253,13 @@ public abstract unsafe partial class Script
             pointer = api.ResolveReference(api.Context, keyPointer, keyBytes.Length,
                 typePointer, typeBytes.Length, &ens, &kind);
         if (pointer == IntPtr.Zero) return null;
-        Object? value = Object.FindCachedObject(Object.GetInstanceId(pointer));
-        if (value != null) return type.IsInstanceOfType(value) ? value : null;
-        value = NativeBindingRuntime.Wrap(Object.GetInstanceId(pointer));
+        int objectId = Object.GetInstanceId(pointer);
+        //托管组件先按原生脚本宿主取已登记的包装，再校验声明的托管类型：
+        //声明基类引用派生实例时按包装判定，不要求宿主类型名与声明完全相同。
+        Object? value = NativeBindingRuntime.IsManagedScript(type)
+            ? ScriptRuntime.GetOrCreateHost(pointer) ?? Object.FindCachedObject(objectId)
+            : Object.FindCachedObject(objectId);
+        value ??= NativeBindingRuntime.Wrap(objectId);
         return value != null && type.IsInstanceOfType(value) ? value : null;
     }
 }

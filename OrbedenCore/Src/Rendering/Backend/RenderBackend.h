@@ -9,6 +9,8 @@ enum class GpuRenderTargetFormat
 {
     RGBA8 = 0,
     RGBA16F = 1,
+    //单通道目标：UI 覆盖率池用它，只有 R 有效。
+    R8 = 2,
 };
 
 //GPU 顶点布局种类。数值稳定，后端按它选择 attribute 绑定方案。
@@ -22,6 +24,8 @@ enum class GpuVertexLayout : uint32
     Expanded = 2,
     //共享四边形网格顶点 + 每实例属性 locations 5..11，实例 stride 为 112 字节。
     InstancedTrail = 3,
+    //UI 顶点：位置 vec3、UV vec2、颜色 vec4，偏移 0/12/20，stride 为 36 字节。
+    UI = 4,
 };
 
 //GPU 缓冲用途。Stream 允许先按容量创建、之后重复流式覆盖。
@@ -62,6 +66,8 @@ public:
     //颜色贴图的像素是 sRGB 编码，用 sRGB 内部格式让采样自动解码；
     //数据贴图（法线、粗糙度、遮罩）保持线性，必须为 false。
     bool srgb = false;
+    //UI 纹理（字形图集、遮罩）必须夹边采样：越界取重复色会让遮罩边缘绕回另一侧。
+    bool clampToEdge = false;
 };
 
 //GPU 深度纹理创建描述，描述阴影图等深度贴图尺寸。
@@ -153,6 +159,15 @@ public:
 class RenderBackend
 {
 public:
+    //进程内活动后端的最大纹理边长。后端在初始化时写入，供与具体 API 无关的
+    //上层（动态纹理、字体图集）在分配前判断能否容纳；未初始化时为 0。
+    static int32 GetMaxTextureSize() { return activeMaxTextureSize; }
+    static void SetMaxTextureSize(int32 value) { activeMaxTextureSize = value; }
+
+private:
+    inline static int32 activeMaxTextureSize = 0;
+
+public:
     virtual ~RenderBackend() = default;
 
     virtual bool Initialize(IWindow* window) = 0;
@@ -170,6 +185,11 @@ public:
     virtual void DeleteVertexInput(GpuVertexInputID id) = 0;
     virtual GpuTextureID CreateTexture(const GpuTextureDesc& desc) = 0;
     virtual void DeleteTexture(GpuTextureID id) = 0;
+    //局部覆盖纹理的一块矩形。channels 是纹理的通道数（1、3 或 4），
+    //pixels 每行 rowStride 字节且只读取矩形内的像素。
+    //实现必须保存并恢复自己的解包状态与纹理绑定，调用方不做任何假设。
+    virtual bool UploadTextureRegion(GpuTextureID id, int32 x, int32 y, int32 width, int32 height,
+        int32 channels, const uint8* pixels, int32 rowStride) = 0;
     virtual GpuDepthTextureID CreateDepthTexture(const GpuDepthTextureDesc& desc) = 0;
     virtual void DeleteDepthTexture(GpuDepthTextureID id) = 0;
     //创建异步深度统计资源
@@ -219,6 +239,8 @@ public:
     virtual uint32 GetFragmentTextureUnitCount() const = 0;
     //把数据流式写入已有顶点缓冲，超出容量的请求被拒绝。
     virtual bool UploadVertexBuffer(GpuVertexBufferID id, const void* data, usize size, usize capacity) = 0;
+    //读取一个像素的深度，目标句柄为 0 时读默认帧缓冲。坐标以目标左下角为原点。
+    virtual bool ReadDepthPixel(GpuRenderTargetID target, int32 x, int32 y, float32& depth) = 0;
     //把索引流式写入已有索引缓冲，同时刷新引用它的顶点输入的索引数量缓存。
     virtual bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) = 0;
     //按当前顶点输入的实例布局设置实例 attribute 指针与 divisor。

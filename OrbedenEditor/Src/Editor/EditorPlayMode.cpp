@@ -17,6 +17,8 @@ namespace
     constexpr const char* EnsWorldActiveChangedMethod = "OrbedenGame_EnsWorldActiveChanged";
     constexpr const char* EnsDestroyedMethod = "OrbedenGame_EnsDestroyed";
     constexpr const char* DrawGuiMethod = "OrbedenGame_DrawGui";
+    constexpr const char* ProcessInputMethod = "OrbedenGame_ProcessInput";
+    constexpr const char* PrepareRenderMethod = "OrbedenGame_PrepareRender";
     constexpr const char* GameModuleType = "Orbeden.GameModule, OrbedenCore.CSharp";
 
     //规范化路径字符串。
@@ -139,7 +141,9 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, LateUpdateMethod, reinterpret_cast<void**>(&entryPoints.lateUpdate))
         || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, EnsWorldActiveChangedMethod, reinterpret_cast<void**>(&entryPoints.ensWorldActiveChanged))
         || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, EnsDestroyedMethod, reinterpret_cast<void**>(&entryPoints.ensDestroyed))
-        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui)))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, DrawGuiMethod, reinterpret_cast<void**>(&entryPoints.drawGui))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, ProcessInputMethod, reinterpret_cast<void**>(&entryPoints.processInput))
+        || !host.BindFunction(ToCleanPath(runtimeAssembly), GameModuleType, PrepareRenderMethod, reinterpret_cast<void**>(&entryPoints.prepareRender)))
     {
         lastError = host.GetLastError() + " Assembly: " + ToCleanPath(runtimeAssembly) + " Type: " + GameModuleType;
         ClearBindings();
@@ -153,7 +157,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    if (!scripts.SetClrEntryPoints(entryPoints) || !scripts.Initialize())
+    if (!scripts.SetClrEntryPoints(entryPoints) || !scripts.Initialize(ScriptExecutionMode::Play))
     {
         lastError = "ScriptSystem failed to initialize CLR game entry points.";
         ClearBindings();

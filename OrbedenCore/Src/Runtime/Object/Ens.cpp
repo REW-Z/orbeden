@@ -144,6 +144,18 @@ const std::string& Ens::GetStaticError() const
     return staticError;
 }
 
+//读取临时对象标志
+bool Ens::GetDontSave() const
+{
+    return dontSave;
+}
+
+//设置临时对象标志
+void Ens::SetDontSave(bool value)
+{
+    dontSave = value;
+}
+
 //设置父级
 void Ens::SetParent(Ens* parent)
 {

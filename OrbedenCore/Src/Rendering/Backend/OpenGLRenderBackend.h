@@ -69,6 +69,9 @@ public:
     void DeleteVertexInput(GpuVertexInputID id) override;
     GpuTextureID CreateTexture(const GpuTextureDesc& desc) override;
     void DeleteTexture(GpuTextureID id) override;
+    bool UploadTextureRegion(GpuTextureID id, int32 x, int32 y, int32 width, int32 height,
+        int32 channels, const uint8* pixels, int32 rowStride) override;
+    bool ReadDepthPixel(GpuRenderTargetID target, int32 x, int32 y, float32& depth) override;
     GpuDepthTextureID CreateDepthTexture(const GpuDepthTextureDesc& desc) override;
     void DeleteDepthTexture(GpuDepthTextureID id) override;
     //创建异步深度统计资源

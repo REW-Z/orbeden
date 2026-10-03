@@ -10,6 +10,7 @@
 #include "Runtime/Object/Component.h"
 #include "Runtime/Object/DirectionalLight.h"
 #include "Runtime/Object/Ens.h"
+#include "Runtime/Object/Font.h"
 #include "Runtime/Object/HeightField.h"
 #include "Runtime/Object/InstanceDrawList.h"
 #include "Runtime/Object/Material.h"
@@ -1721,6 +1722,59 @@ public:
         bool arg0{};
         if (!args[0].TryGet(arg0)) return Reflection::Value();
         instance->OnWorldActiveChanged(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //读取 Font.faceIndex 字段
+    static std::string Get_Font_faceIndex(Object* object)
+    {
+        Font* instance = static_cast<Font*>(object);
+        return Reflection::ToXmlValue(instance->faceIndex);
+    }
+
+    //直接读取 Font.faceIndex 字段
+    static Reflection::Value GetValue_Font_faceIndex(Object* object)
+    {
+        Font* instance = static_cast<Font*>(object);
+        return instance ? Reflection::ToValue(instance->faceIndex) : Reflection::Value();
+    }
+
+    //写入 Font.faceIndex 字段
+    static bool Set_Font_faceIndex(Object* object, const std::string& value)
+    {
+        Font* instance = static_cast<Font*>(object);
+        return Reflection::SetFromXmlValue(instance->faceIndex, value);
+    }
+
+    //直接写入 Font.faceIndex 字段
+    static bool SetValue_Font_faceIndex(Object* object, const Reflection::Value& value)
+    {
+        Font* instance = static_cast<Font*>(object);
+        if (!instance) return false;
+        return Reflection::SetFromValue(instance->faceIndex, value);
+    }
+
+    //调用 Font.GetRevision 方法
+    static Reflection::Value Invoke_Font_GetRevision_0(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Font* instance = static_cast<Font*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRevision();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Font.BumpRevision 方法
+    static Reflection::Value Invoke_Font_BumpRevision_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Font* instance = static_cast<Font*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        instance->BumpRevision();
         success = true;
         return Reflection::Value();
     }
@@ -4552,7 +4606,9 @@ public:
     static bool Set_Texture2D_width(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->width, value);
+        if (!Reflection::SetFromXmlValue(instance->width, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //直接写入 Texture2D.width 字段
@@ -4560,7 +4616,9 @@ public:
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->width, value);
+        if (!Reflection::SetFromValue(instance->width, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //读取 Texture2D.height 字段
@@ -4581,7 +4639,9 @@ public:
     static bool Set_Texture2D_height(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->height, value);
+        if (!Reflection::SetFromXmlValue(instance->height, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //直接写入 Texture2D.height 字段
@@ -4589,7 +4649,9 @@ public:
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->height, value);
+        if (!Reflection::SetFromValue(instance->height, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //读取 Texture2D.channels 字段
@@ -4610,7 +4672,9 @@ public:
     static bool Set_Texture2D_channels(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->channels, value);
+        if (!Reflection::SetFromXmlValue(instance->channels, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //直接写入 Texture2D.channels 字段
@@ -4618,7 +4682,9 @@ public:
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->channels, value);
+        if (!Reflection::SetFromValue(instance->channels, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //读取 Texture2D.format 字段
@@ -4639,7 +4705,9 @@ public:
     static bool Set_Texture2D_format(Object* object, const std::string& value)
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
-        return Reflection::SetFromXmlValue(instance->format, value);
+        if (!Reflection::SetFromXmlValue(instance->format, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //直接写入 Texture2D.format 字段
@@ -4647,7 +4715,9 @@ public:
     {
         Texture2D* instance = static_cast<Texture2D*>(object);
         if (!instance) return false;
-        return Reflection::SetFromValue(instance->format, value);
+        if (!Reflection::SetFromValue(instance->format, value)) return false;
+        instance->MarkDirty();
+        return true;
     }
 
     //读取 Texture2D.colorSpace 字段
@@ -4717,6 +4787,46 @@ public:
         instance->ClearDirty();
         success = true;
         return Reflection::Value();
+    }
+
+    //调用 Texture2D.ResizeRenderTarget 方法
+    static Reflection::Value Invoke_Texture2D_ResizeRenderTarget_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        int32 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        int32 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        auto result = instance->ResizeRenderTarget(arg0, arg1);
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Texture2D.IsRenderTarget 方法
+    static Reflection::Value Invoke_Texture2D_IsRenderTarget_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->IsRenderTarget();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Texture2D.GetRevision 方法
+    static Reflection::Value Invoke_Texture2D_GetRevision_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetRevision();
+        success = true;
+        return Reflection::Value(result);
     }
 
     //读取 Transform.localPosition 字段
@@ -4886,8 +4996,62 @@ public:
         return Reflection::Value(result);
     }
 
+    //调用 Transform.SetDerivedLocalPosition 方法
+    static Reflection::Value Invoke_Transform_SetDerivedLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 2) return Reflection::Value();
+
+        uint64 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        vector3 arg1{};
+        if (!args[1].TryGet(arg1)) return Reflection::Value();
+        auto result = instance->SetDerivedLocalPosition(arg0, arg1);
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Transform.ClearDerivedLocalPosition 方法
+    static Reflection::Value Invoke_Transform_ClearDerivedLocalPosition_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        uint64 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->ClearDerivedLocalPosition(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Transform.HasDerivedLocalPosition 方法
+    static Reflection::Value Invoke_Transform_HasDerivedLocalPosition_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->HasDerivedLocalPosition();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Transform.GetResolvedLocalPosition 方法
+    static Reflection::Value Invoke_Transform_GetResolvedLocalPosition_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetResolvedLocalPosition();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Transform.SetLocalPosition 方法
-    static Reflection::Value Invoke_Transform_SetLocalPosition_5(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalPosition_9(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -4901,7 +5065,7 @@ public:
     }
 
     //调用 Transform.GetLocalRotation 方法
-    static Reflection::Value Invoke_Transform_GetLocalRotation_6(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalRotation_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -4913,7 +5077,7 @@ public:
     }
 
     //调用 Transform.SetLocalRotation 方法
-    static Reflection::Value Invoke_Transform_SetLocalRotation_7(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalRotation_11(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -4927,7 +5091,7 @@ public:
     }
 
     //调用 Transform.GetLocalScale 方法
-    static Reflection::Value Invoke_Transform_GetLocalScale_8(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_GetLocalScale_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -4939,7 +5103,7 @@ public:
     }
 
     //调用 Transform.SetLocalScale 方法
-    static Reflection::Value Invoke_Transform_SetLocalScale_9(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Transform_SetLocalScale_13(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Transform* instance = static_cast<Transform*>(object);
@@ -5607,6 +5771,25 @@ namespace Reflection
             {
             });
 
+        RegisterTypeFields(Font::StaticType(),
+            {
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("sourceBytes", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("faceIndex", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Font_faceIndex, ReflectionGeneratedAccess::Set_Font_faceIndex, nullptr, ReflectionGeneratedAccess::GetValue_Font_faceIndex, ReflectionGeneratedAccess::SetValue_Font_faceIndex, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("familyName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("styleName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("unitsPerEm", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("ascender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("descender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("lineHeight", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+            });
+
+        RegisterTypeMethods(Font::StaticType(),
+            {
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_GetRevision_0),
+                MethodInfo("BumpRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_BumpRevision_1),
+            });
+
         RegisterTypeFields(HeightField::StaticType(),
             {
                 FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_enabled, ReflectionGeneratedAccess::Set_HeightField_enabled, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_enabled, ReflectionGeneratedAccess::SetValue_HeightField_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5707,7 +5890,7 @@ namespace Reflection
                 FieldInfo("localBounds", "bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr, ReflectionGeneratedAccess::GetValue_Mesh_name, ReflectionGeneratedAccess::SetValue_Mesh_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("normals", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("tangents", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("indices", "List<uint32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5864,15 +6047,24 @@ namespace Reflection
         RegisterTypeFields(Texture2D::StaticType(),
             {
                 FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuRenderTarget", "GpuRenderTargetID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("renderTarget", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("fullUpload", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("dirtyX", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("dirtyY", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("dirtyWidth", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("dirtyHeight", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_name, ReflectionGeneratedAccess::SetValue_Texture2D_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_width, ReflectionGeneratedAccess::SetValue_Texture2D_width, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_height, ReflectionGeneratedAccess::SetValue_Texture2D_height, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_channels, ReflectionGeneratedAccess::SetValue_Texture2D_channels, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_format, ReflectionGeneratedAccess::SetValue_Texture2D_format, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("colorSpace", "TextureColorSpace", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Texture2D_colorSpace, ReflectionGeneratedAccess::Set_Texture2D_colorSpace, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_colorSpace, ReflectionGeneratedAccess::SetValue_Texture2D_colorSpace, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("alphaMode", "TextureAlphaMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
             });
 
         RegisterTypeMethods(Texture2D::StaticType(),
@@ -5880,6 +6072,9 @@ namespace Reflection
                 MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsDirty_0),
                 MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_MarkDirty_1),
                 MethodInfo("ClearDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_ClearDirty_2),
+                MethodInfo("ResizeRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("width", "int32", Reflection::ValueKind::Int32), ParameterInfo("height", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Texture2D_ResizeRenderTarget_3),
+                MethodInfo("IsRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsRenderTarget_4),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_GetRevision_5),
             });
 
         RegisterTypeFields(Transform::StaticType(),
@@ -5887,6 +6082,9 @@ namespace Reflection
                 FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localPosition, ReflectionGeneratedAccess::Set_Transform_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localPosition, ReflectionGeneratedAccess::SetValue_Transform_localPosition, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_Transform_localRotation, ReflectionGeneratedAccess::Set_Transform_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localRotation, ReflectionGeneratedAccess::SetValue_Transform_localRotation, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localScale, ReflectionGeneratedAccess::Set_Transform_localScale, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localScale, ReflectionGeneratedAccess::SetValue_Transform_localScale, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("derivedOwnerToken", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("derivedPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("hasDerivedPosition", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5907,11 +6105,15 @@ namespace Reflection
                 MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_2),
                 MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_3),
                 MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_4),
-                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_5),
-                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_6),
-                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_7),
-                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_8),
-                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_9),
+                MethodInfo("SetDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64), ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetDerivedLocalPosition_5),
+                MethodInfo("ClearDerivedLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64) }, ReflectionGeneratedAccess::Invoke_Transform_ClearDerivedLocalPosition_6),
+                MethodInfo("HasDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_HasDerivedLocalPosition_7),
+                MethodInfo("GetResolvedLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetResolvedLocalPosition_8),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_9),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_10),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_11),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_12),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_13),
             });
 
         RegisterTypeFields(WheelCollider::StaticType(),

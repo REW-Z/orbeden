@@ -219,6 +219,24 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 
 # 构建与代码生成
 
+## 第三方依赖一律用库依赖
+
+第三方代码**不参与本工程的编译**：只提交 `include/`、预编译 `.lib` 与授权文件，`vcxproj` 里加 include 目录、库目录与依赖库，不加 `ClCompile`。
+
+理由与 Edit 时的表现直接相关：`vcxproj` 的「重新生成」按 MSBuild 语义等于 Clean + Build，源码依赖意味着每次重生成都要重啃整个第三方库。库依赖则完全不受影响。
+
+- 目录约定沿用 PhysX 与 glfw：`Src/ThirdParty/<库>/include/` 与 `Src/ThirdParty/<库>/lib/WindowsX64/$(Configuration)/`。
+- 需要按平台与配置分别提供二进制；运行时库必须与本工程一致（`/MDd` 与 `/MD`）。
+- 升级第三方库等于换一组二进制，不触碰工程源码。
+- 需要裁剪库的编译选项时（如 FreeType 关闭 ZLIB/BZIP2/PNG/HarfBuzz/Brotli），在产库侧裁剪，本工程不改。
+- 例外仅限于体积极小、无独立构建系统的单头文件库（如 `stb_image.h`、`cgltf.h`）。
+
+产库由 [Tools/OrbedenThirdParty](../Tools/OrbedenThirdParty/README.md) 承担：第三方源码放它的 `vendor/`，由它编成静态库并把 include 与 lib 发布到 `Src/ThirdParty/`。主工程对它只有一条 `ProjectReference`，它自身有增量跳过，库已就位时几乎不耗时。
+
+现有的 `glad` 与 `imgui` 仍是源码依赖，属待整理项；未来的目标是也纳入同一个生成器。
+
+## 其他
+
 - 新增、移动、改名文件后同步更新 `OrbedenCore/OrbedenCore.vcxproj` 与 `OrbedenCore.vcxproj.filters`（显式文件列表）。
 - 新增 Object 派生类无需手写绑定：构建 `OrbedenCore` 时会先运行 `OrbedenMetaGen` 重新生成 `Src/Runtime/Generated/`（反射、C++/C# Binding、类型清单、用户文档投影 `ApiDocs.json`），再发布 SDK 头文件到 `OrbedenEditor/Sdk/`。
 - 面向游戏开发者的接口文档同样是构建产物：`OrbedenDocGen` 把 `ApiDocs.json` 与托管程序集的反射结果合成到 `Docs/Manual/Api/`，随 SDK 发布，游戏工程构建时刷新到 `Lib/Docs/`。成员说明取自头文件里紧贴声明上方的 `//` 注释，改注释即改文档。

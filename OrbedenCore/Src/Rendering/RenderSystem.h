@@ -10,6 +10,7 @@
 #include "Rendering/RenderItemSorter.h"
 #include "Rendering/SceneCuller.h"
 #include "Rendering/TransformCache.h"
+#include "Runtime/Gui/UIRenderer.h"
 
 #include <span>
 
@@ -83,6 +84,8 @@ private:
     OutputPass outputPass;
     //ImGui 覆盖层
     ImGuiLayer imguiLayer;
+    //RetainedGUI 渲染器：屏幕、世界空间与离屏画布都经它提交
+    UIRenderer uiRenderer;
 
     //缓存实体变换
     TransformCache transformCache;
@@ -98,6 +101,10 @@ private:
 
     //由外部设置的额外覆盖层
     IRenderOverlay* renderOverlay = nullptr;
+
+    //编辑器预览目标；未设置时屏幕画布画主帧缓冲。
+    UIOutputTarget editorPreviewTarget;
+    bool hasEditorPreviewTarget = false;
 
     //复用的单相机可见集合
     VisibleSet visibleSet;
@@ -186,6 +193,10 @@ public:
     /// <summary>获取活动渲染系统。</summary>
     static RenderSystem* Current();
 
+    /// <summary>命中快照的深度回读；只读已经呈现的那一帧。</summary>
+    static bool ReadUIDepth(uint64 viewId, uint64 viewerId, uint64 presentedFrame,
+        int32 x, int32 y, float32* depth);
+
     /// <summary>提交当前帧世界空间线条；全部相机绘制完成后清除。</summary>
     void DrawLine(World& world, const vector3& start, const vector3& end, const color& tint,
         bool depthTest = false, uint32 drawLayer = 1u);
@@ -208,6 +219,12 @@ public:
     //设置是否在调试覆盖层中绘制 FPS 标签  
     void SetFpsLabelVisible(bool value);
 
+    //编辑器预览：屏幕画布改画进场景面板的离屏目标，而不是主帧缓冲。
+    void SetUIEditorPreviewTarget(const UIOutputTarget& target);
+
+    //撤销编辑器预览目标，屏幕画布回到主帧缓冲。
+    void ClearUIEditorPreviewTarget();
+
     //设置是否渲染直接画到主 framebuffer 的相机  
     void SetMainFramebufferRendering(bool value);
 
@@ -222,6 +239,9 @@ public:
 
     //获取离屏目标的颜色纹理
     GpuTextureID GetRenderTargetTexture(RenderTargetID id) const;
+
+    //取一张引擎纹理的 GPU 句柄；编辑器把纹理画进面板时用。
+    GpuTextureID GetTextureId(Texture2D* texture);
 
     //获取离屏目标的深度纹理，供后处理共享同一份深度
     GpuDepthTextureID GetRenderTargetDepthTexture(RenderTargetID id) const;

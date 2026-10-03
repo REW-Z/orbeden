@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Runtime.CompilerServices;
 using Orbeden;
 using NumericsQuaternion = System.Numerics.Quaternion;
@@ -10,38 +9,16 @@ namespace OrbedenEditor;
 /// <summary>显示并编辑当前 Ens 上的 C++ 与 C# 组件。</summary>
 internal sealed class InspectorPanel : EditorPanel
 {
-    private sealed class GameAssemblyLoadContext : AssemblyLoadContext
+    //编辑器侧的会话卸载清理：保存游戏 Type 的静态表必须先清空，否则旧加载上下文回收不掉。
+    static InspectorPanel()
     {
-        private readonly AssemblyDependencyResolver resolver;
-
-        /// <summary>创建可卸载的用户游戏程序集上下文。</summary>
-        public GameAssemblyLoadContext(string assemblyPath) : base(isCollectible: true)
+        ManagedAssemblySession.RegisterUnloadHandler(static () =>
         {
-            resolver = new AssemblyDependencyResolver(assemblyPath);
-        }
-
-        /// <summary>从内存加载程序集，避免锁定构建输出文件。</summary>
-        public Assembly LoadAssemblyFile(string assemblyPath)
-        {
-            using FileStream assemblyStream = File.OpenRead(assemblyPath);
-            string symbolPath = Path.ChangeExtension(assemblyPath, ".pdb");
-            if (!File.Exists(symbolPath)) return LoadFromStream(assemblyStream);
-
-            using FileStream symbolStream = File.OpenRead(symbolPath);
-            return LoadFromStream(assemblyStream, symbolStream);
-        }
-
-        /// <summary>解析用户游戏程序集依赖。</summary>
-        protected override Assembly? Load(AssemblyName assemblyName)
-        {
-            Assembly runtimeAssembly = typeof(Script).Assembly;
-            if (assemblyName.Name == runtimeAssembly.GetName().Name) return runtimeAssembly;
-            if (assemblyName.Name == typeof(ComponentEditor).Assembly.GetName().Name) return typeof(ComponentEditor).Assembly;
-            Assembly? loaded = Assemblies.FirstOrDefault(value => value.GetName().Name == assemblyName.Name);
-            if (loaded != null) return loaded;
-            string? path = resolver.ResolveAssemblyToPath(assemblyName);
-            return path != null ? LoadAssemblyFile(path) : null;
-        }
+            CustomEditorRegistry.Clear();
+            //清完立刻恢复内置编辑器：没有游戏程序集或编译失败时也要能编辑原生组件
+            CustomEditorRegistry.RegisterBuiltins();
+            EditorObjectField.Clear();
+        });
     }
 
     private readonly record struct ComponentAddChoice(
@@ -110,10 +87,10 @@ internal sealed class InspectorPanel : EditorPanel
     private readonly List<ComponentAddChoice> addChoices = [];
     private uint addChoicesGeneration;
     private bool addChoicesDirty = true;
+    //组件菜单请求的挂载顺序调整：-1 上移、1 下移、0 无请求。
+    private int moveRequested;
 
     private readonly List<Type> scriptTypes = [];
-    private GameAssemblyLoadContext? gameContext;
-    private Assembly? gameAssembly;
     private string componentSearch = string.Empty;
     private string status = "Game assembly is not loaded.";
     private static string propertyError = string.Empty;
@@ -156,13 +133,13 @@ internal sealed class InspectorPanel : EditorPanel
     /// <summary>加载 Inspector 用于发现 C# 脚本类型的游戏程序集。</summary>
     public override void OnGameAssemblyLoaded(string assemblyPath)
     {
-        LoadGameAssembly(assemblyPath);
+        RefreshScriptTypes(assemblyPath);
     }
 
-    /// <summary>卸载 Inspector 持有的游戏程序集。</summary>
+    /// <summary>卸载 Inspector 缓存的可添加脚本类型。</summary>
     public override void OnGameAssemblyUnloaded()
     {
-        UnloadGameAssembly();
+        ClearScriptTypes();
     }
 
     /// <summary>C# 字段由 World 的原生宿主统一管理。</summary>
@@ -237,73 +214,48 @@ internal sealed class InspectorPanel : EditorPanel
         DrawAddComponent(selection);
     }
 
-    //加载用户程序集并缓存可添加的具体 C# 脚本类型。
-    private void LoadGameAssembly(string assemblyPath)
+    //从统一会话里缓存可添加的具体 C# 脚本类型。
+    //会话本身由 EditorRuntime 负责装载与释放，这里只读它的结果，不再自建加载上下文。
+    private void RefreshScriptTypes(string assemblyPath)
     {
-        UnloadReflectionAssembly();
-        scriptTypes.Clear();
-        enumOptions.Clear();
-        addChoicesDirty = true;
+        ClearScriptTypes();
         //程序集换了，已有宿主的字段表要按新类型重补一次
         ++scriptAssemblyGeneration;
         refreshedManagedHosts.Clear();
-        if (string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath))
+
+        Assembly? gameAssembly = ManagedAssemblySession.GetGameAssembly();
+        if (gameAssembly == null)
         {
-            status = "Game assembly is not loaded.";
+            status = string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath)
+                ? "Game assembly is not loaded."
+                : "Game assembly load failed: " + Path.GetFileName(assemblyPath);
             return;
         }
 
-        try
+        CustomEditorRegistry.Register(gameAssembly);
+        Assembly? editorAssembly = ManagedAssemblySession.GetEditorAssembly();
+        if (editorAssembly != null) CustomEditorRegistry.Register(editorAssembly);
+        foreach (Type type in GetLoadableTypes(gameAssembly))
         {
-            gameContext = new GameAssemblyLoadContext(assemblyPath);
-            gameAssembly = gameContext.LoadAssemblyFile(Path.GetFullPath(assemblyPath));
-            CustomEditorRegistry.Register(gameAssembly);
-            string editorPath = Path.Combine(Path.GetDirectoryName(assemblyPath)!, Path.GetFileNameWithoutExtension(assemblyPath) + ".Editor.dll");
-            if (File.Exists(editorPath)) CustomEditorRegistry.Register(gameContext.LoadAssemblyFile(editorPath));
-            foreach (Type type in GetLoadableTypes(gameAssembly))
-            {
-                if (type.IsAbstract || !NativeBindingRuntime.IsManagedScript(type)) continue;
-                if (type.GetConstructor([typeof(Ens)]) == null) continue;
-                scriptTypes.Add(type);
-            }
-            scriptTypes.Sort((left, right) =>
-                string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
-            status = $"Loaded: {Path.GetFileName(assemblyPath)}";
+            if (type.IsAbstract || !NativeBindingRuntime.IsManagedScript(type)) continue;
+            if (type.GetConstructor([typeof(Ens)]) == null) continue;
+            scriptTypes.Add(type);
         }
-        catch (Exception exception)
-        {
-            UnloadReflectionAssembly();
-            scriptTypes.Clear();
-            addChoicesDirty = true;
-            status = "Game assembly load failed: " + exception.Message;
-        }
+        scriptTypes.Sort((left, right) =>
+            string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
+        status = $"Loaded: {Path.GetFileName(assemblyPath)}";
     }
 
-    //卸载用户程序集并清空类型缓存。
-    private void UnloadGameAssembly()
+    //清空类型缓存与组件选择状态；程序集由会话统一释放。
+    private void ClearScriptTypes()
     {
-        UnloadReflectionAssembly();
-        scriptTypes.Clear();
-        enumOptions.Clear();
-        addChoicesDirty = true;
-        componentSearch = string.Empty;
-        status = "Game assembly is not loaded.";
-    }
-
-    //卸载仅供 Inspector 反射的可收集程序集上下文。
-    private void UnloadReflectionAssembly()
-    {
-        CustomEditorRegistry.Clear();
-        //Clear 之后立刻恢复内置编辑器：没有游戏程序集或游戏脚本编译失败时也要能编辑原生组件
-        CustomEditorRegistry.RegisterBuiltins();
         ClearPropertyDocuments();
         addChoices.Clear();
         addChoicesDirty = true;
-        if (gameAssembly != null) NativeBindingRuntime.UnregisterAssembly(gameAssembly);
-        gameAssembly = null;
-        if (gameContext == null) return;
-        gameContext.Unload();
-        gameContext = null;
+        scriptTypes.Clear();
+        enumOptions.Clear();
+        componentSearch = string.Empty;
+        status = "Game assembly is not loaded.";
     }
 
     //读取程序集中的可加载类型，忽略单个坏类型。
@@ -691,6 +643,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (toggled && hasEnabled) ApplyPropertyToggle(document.Document, EnabledProperty, title, !enabled);
         //删组件同理：菜单是在画这张卡片的过程中打开的，必须等卡片画完再销毁它自己
         if (removeRequested) RemoveComponentGroup(selection, components, title);
+        if (moveRequested != 0) MoveComponentGroup(selection, components, moveRequested);
     }
 
     //取出或重建这一组同类型组件的属性文档。标题行的勾选框也读它，所以不分展开与否
@@ -731,6 +684,7 @@ internal sealed class InspectorPanel : EditorPanel
     private bool DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
     {
         bool removeRequested = false;
+        moveRequested = 0;
         NativeComponentInfo primary = components[0];
         if (EditorGUI.MenuItem("Copy Component")) EditorComponentClipboard.Capture(primary, asNew: true);
         if (EditorGUI.MenuItem("Copy Component Values")) EditorComponentClipboard.Capture(primary, asNew: false);
@@ -742,6 +696,10 @@ internal sealed class InspectorPanel : EditorPanel
         bool removable = primary.IsManaged
             || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         if (EditorGUI.MenuItem("Remove Component", removable)) removeRequested = true;
+        //挂载顺序决定网格修改器与输入处理器的执行次序，所以顺序要能调。
+        EditorGUI.Separator();
+        if (EditorGUI.MenuItem("Move Component Up")) moveRequested = -1;
+        if (EditorGUI.MenuItem("Move Component Down")) moveRequested = 1;
 
         //Script 的派生类才算脚本：C# 托管宿主与 C++ 脚本都命中，Transform / Camera 这类内建组件不命中
         if (!EditorNativeComponents.MatchesComponentType(primary.ObjectId, "Script")) return removeRequested;
@@ -1173,6 +1131,13 @@ internal sealed class InspectorPanel : EditorPanel
                 value = InteropValue.From(current);
                 return true;
             }
+            case InteropValueKind.Vector2:
+            {
+                property.Value.TryGet(out vector2 current);
+                if (!EditorGUI.InputVector2(label, ref current)) return false;
+                value = InteropValue.From(current);
+                return true;
+            }
             case InteropValueKind.Vector3:
             {
                 property.Value.TryGet(out vector3 current);
@@ -1466,6 +1431,41 @@ internal sealed class InspectorPanel : EditorPanel
             () =>
             {
                 RemoveSnapshots(snapshots);
+                TouchWorld();
+            });
+    }
+
+    //把这一组组件在挂载顺序里移动；顺序决定修改器与输入处理器的执行次序。
+    private void MoveComponentGroup(
+        IReadOnlyList<EnsId> selection,
+        IReadOnlyList<NativeComponentInfo> components,
+        int delta)
+    {
+        List<(int ObjectId, int From, int To)> moves = [];
+        for (int index = 0; index < components.Count; ++index)
+        {
+            List<NativeComponentInfo> ordered = EditorNativeComponents.GetComponents(selection[index]);
+            int from = ordered.FindIndex(value => value.ObjectId == components[index].ObjectId);
+            int to = from + delta;
+            if (from < 0 || to < 0 || to >= ordered.Count) continue;
+            if (!EditorNativeComponents.MoveComponent(components[index].ObjectId, to)) continue;
+            moves.Add((components[index].ObjectId, from, to));
+        }
+        if (moves.Count == 0) return;
+
+        TouchWorld();
+        EditorPropertyHistory.PushAction(
+            "Move Component",
+            () =>
+            {
+                //回退按逆序：同一 Ens 上多个组件的目标下标互相影响。
+                for (int index = moves.Count - 1; index >= 0; --index)
+                    EditorNativeComponents.MoveComponent(moves[index].ObjectId, moves[index].From);
+                TouchWorld();
+            },
+            () =>
+            {
+                foreach ((int objectId, int _, int to) in moves) EditorNativeComponents.MoveComponent(objectId, to);
                 TouchWorld();
             });
     }

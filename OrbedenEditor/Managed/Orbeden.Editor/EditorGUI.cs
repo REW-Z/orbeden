@@ -139,6 +139,39 @@ public static class EditorGUI
         => objectFieldAssetProvider?.GetAssets(type) ?? [];
 
     /// <summary>绘制分隔线。</summary>
+    /// <summary>
+    /// 绘制一张引擎纹理。显示尺寸由调用方给出；纹理对象身份在这里解析，
+    /// GL 句柄不外泄给面板代码。
+    /// </summary>
+    public static void DrawTexture(Texture2D texture, vector2 size)
+    {
+        ArgumentNullException.ThrowIfNull(texture);
+        if (!texture.IsAlive) return;
+        NativeEditorGUI.DrawTexture(texture.InstanceId, size);
+    }
+
+    /// <summary>下一个条目的屏幕坐标；用来把覆盖绘制对齐到刚画出的图像上。</summary>
+    public static vector2 CursorScreenPosition => NativeEditorGUI.GetCursorScreenPos();
+
+    /// <summary>按屏幕坐标画一个矩形边框；线与颜色非法时什么都不画。</summary>
+    public static void DrawRectOutline(vector2 min, vector2 max, color tint, float thickness = 1.5f)
+    {
+        if (max.x <= min.x || max.y <= min.y) return;
+
+        //折线接口要首尾闭合，这里补上第四个角再回到起点。
+        vector2[] points =
+        [
+            min,
+            new vector2(max.x, min.y),
+            max,
+            new vector2(min.x, max.y),
+            min,
+        ];
+        //裁剪交给当前窗口：给一个足够大的矩形，实际裁剪仍由 ImGui 的当前裁剪区决定。
+        vector2 far = new(1.0e6f, 1.0e6f);
+        NativeEditorGUI.DrawPolyline(points, tint, thickness, new vector2(-far.x, -far.y), far);
+    }
+
     public static void Separator() => NativeEditorGUI.Separator();
 
     /// <summary>切换到同行布局。</summary>
@@ -219,6 +252,9 @@ public static class EditorGUI
 
     /// <summary>绘制浮点输入框。</summary>
     public static bool InputFloat(string label, ref float value) => NativeEditorGUI.InputFloat(label, ref value);
+
+    /// <summary>绘制二维向量输入框。</summary>
+    public static bool InputVector2(string label, ref vector2 value) => NativeEditorGUI.InputVector2(label, ref value);
 
     /// <summary>绘制三维向量输入框。</summary>
     public static bool InputVector3(string label, ref vector3 value) => NativeEditorGUI.InputVector3(label, ref value);

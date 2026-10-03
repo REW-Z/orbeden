@@ -300,6 +300,13 @@ internal static class EditorAssetInspection
                 EditorGUI.Label(asset.Key);
                 foreach (Field field in asset.Fields) EditorGUI.Label(field.Name + ": " + field.Value);
                 if (asset.Fields.Count == 0) EditorGUI.Label("No reflected fields.");
+                //有类型专属检视时追加一块：资源不是组件，走的是这条扩展点。
+                if (EditorAssetInspectors.Find(asset.TypeName) is Action<string, int> inspector)
+                {
+                    EditorGUI.Separator();
+                    try { inspector(asset.Key, 0); }
+                    catch (Exception ex) { EditorGUI.Label($"{asset.TypeName} inspector failed: {ex.Message}"); }
+                }
             }
             finally { EditorGUI.EndComponentBlock(); }
         }

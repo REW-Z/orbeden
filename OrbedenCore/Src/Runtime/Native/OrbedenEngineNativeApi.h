@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Runtime/Native/RuntimeComponentBinds.h"
 #include "Runtime/Native/RuntimeResourceBinds.h"
 #include "Runtime/Native/NativeBindings.h"
+#include "Runtime/Gui/RetainedGuiBridge.h"
 #include "Runtime/Gui/RuntimeGuiBridge.h"
 
 #pragma pack(push, 8)
@@ -11,7 +12,7 @@
 struct OrbedenEngineNativeApi
 {
 public:
-    uint32 abiVersion = 2;
+    uint32 abiVersion = 3;
     uint32 structSize = sizeof(OrbedenEngineNativeApi);
     WorldBind World;
     PathDefinesBind PathDefines;
@@ -23,6 +24,8 @@ public:
     RuntimeGuiExtensionApi GuiExtension;
     RuntimeGuiAdvancedApi GuiAdvanced;
     RuntimeGuiCurveApi GuiCurve;
+    //尾部追加：RetainedGUI 函数表访问入口，唯一不动既有槽位的扩表方式。
+    void* GetRetainedGuiApi = nullptr;
 
     //创建引擎原生 API 函数表。
     static OrbedenEngineNativeApi Create();
@@ -30,6 +33,6 @@ public:
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 69);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 72);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
-static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 25);
+static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 27);

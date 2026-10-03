@@ -1,10 +1,12 @@
 #pragma once
 
 #include "Runtime/ComponentStorage.h"
+#include "Runtime/Gui/RetainedGuiTypes.h"
 #include "Runtime/Object/Ens.h"
 #include "Runtime/ITransformListener.h"
 #include "Runtime/RenderSettings.h"
 
+#include <span>
 #include <string>
 #include <type_traits>
 
@@ -179,8 +181,16 @@ public:
     //注销 Ens 生命周期监听器
     void RemoveLifecycleListener(class IWorldLifecycleListener* listener);
 
-    //通知指定节点及其子树的世界变换失效
-    void NotifyTransformChanged(EnsId ens);
+    //向生命周期监听器广播一次父级变化
+    void NotifyEnsReparented(EnsId ens, EnsId parent);
+
+    //通知指定节点及其子树的世界变换失效；派生写入不标脏场景
+    void NotifyTransformChanged(EnsId ens, TransformChangeSource source = TransformChangeSource::Author);
+
+    //批量写入布局派生的本地位置。整批在同一个脏抑制区内执行，只推进一次场景边界；
+    //owner 是写入持有者，Transform 用它判定覆盖所有权。返回全部条目都被接受的条目数。
+    ORBEDEN_BIND_IGNORE
+    int32 ApplyDerivedPositions(uint64 owner, std::span<const UIDerivedPosition> positions);
 
     //创建Ens
     Ens* CreateEns(const std::string& name = "");
@@ -284,6 +294,12 @@ public:
 
     //Ens 的层级活动状态发生变化。
     virtual void OnEnsWorldActiveChanged(EnsId ens, bool worldActive) { (void)ens; (void)worldActive; }
+
+    //Ens 已经创建完成并挂到世界上。
+    virtual void OnEnsCreated(EnsId ens) { (void)ens; }
+
+    //Ens 的父级发生变化；parent 为空表示移到根下。
+    virtual void OnEnsReparented(EnsId ens, EnsId parent) { (void)ens; (void)parent; }
 
     //Ens 即将完成销毁，额外组件已经卸载。
     virtual void OnEnsDestroyed(EnsId ens) { (void)ens; }

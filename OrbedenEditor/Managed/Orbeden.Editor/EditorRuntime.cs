@@ -21,6 +21,7 @@ public static class EditorRuntime
         public EditorLogNativeApi Log;
         public EditorProfilerNativeApi Profiler;
         public EditorAssetReimportNativeApi Reimport;
+        public EditorInputNativeApi Input;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -47,6 +48,7 @@ public static class EditorRuntime
                 Gizmos.Initialize(default);
                 EditorAssetsNative.Initialize(default);
                 EditorAssetReimportNative.Initialize(default);
+                EditorInput.Initialize(default);
                 EditorNativeComponents.Initialize(default);
                 EditorGUI.SetObjectFieldAssetProvider(null);
                 return 0;
@@ -66,6 +68,7 @@ public static class EditorRuntime
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
             EditorAssetReimportNative.Initialize(api.Reimport);
+            EditorInput.Initialize(api.Input);
             EditorNativeComponents.Initialize(api.Components);
             EditorAssetCatalog.Instance.Refresh();
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
@@ -105,7 +108,13 @@ public static class EditorRuntime
     public static unsafe void LoadGameAssembly(byte* assemblyPath, int assemblyPathLength)
     {
         EditorPropertyHistory.Clear();
-        EditorPanelRegistry.LoadGameAssembly(ReadUtf8(assemblyPath, assemblyPathLength));
+        string path = ReadUtf8(assemblyPath, assemblyPathLength);
+        if (path.Length == 0) return;
+        //这是编辑器显式的“装载这个程序集”入口：先释放旧会话，同路径重编译后也要拿到新代码。
+        ManagedAssemblySession.Unload();
+        //会话先建立，面板再刷新：两者必须看到同一份 Type 实例。
+        ManagedAssemblySession.Load(path, typeof(OrbedenEditor.ComponentEditor).Assembly);
+        EditorPanelRegistry.LoadGameAssembly(path);
     }
 
     /// <summary>卸载当前用户游戏程序集引用。</summary>
@@ -113,7 +122,9 @@ public static class EditorRuntime
     public static void UnloadGameAssembly()
     {
         EditorPropertyHistory.Clear();
+        //先广播给面板清自己的缓存，再释放会话；会话卸载回调负责编辑器静态表。
         EditorPanelRegistry.UnloadGameAssembly();
+        ManagedAssemblySession.Unload();
     }
 
     /// <summary>保存托管 Editor 面板暂存的项目数据。</summary>
@@ -399,16 +410,17 @@ public static class EditorRuntime
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。
     private static unsafe void ValidateNativeApiLayout()
     {
-        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 82);
+        ValidateFunctionTable<EditorGuiNativeApi>(nameof(EditorGuiNativeApi), 85);
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 16);
-        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 5);
+        ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 6);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
         ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
-        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 24);
+        ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 25);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 164);
+        ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 171);
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 80);

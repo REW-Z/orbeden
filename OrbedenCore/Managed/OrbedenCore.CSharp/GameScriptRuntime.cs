@@ -22,8 +22,14 @@ public static class GameScriptRuntime
     /// <summary>从宿主字段表删除字段；重做删除时用。</summary>
     public static bool RemoveHostField(IntPtr host, string name) => Script.RemoveHostField(host, name);
 
-    /// <summary>初始化当前 World 的脚本运行时。</summary>
-    public static void Initialize(IntPtr nativeApi) => ScriptRuntime.Initialize(nativeApi);
+    /// <summary>初始化当前 World 的脚本运行时；executionMode 为 ScriptExecutionMode。</summary>
+    public static void Initialize(IntPtr nativeApi, uint executionMode) => ScriptRuntime.Initialize(nativeApi, executionMode);
+
+    /// <summary>处理托管输入阶段。</summary>
+    public static void ProcessInput(float deltaTime) => ScriptRuntime.ProcessInput(deltaTime);
+
+    /// <summary>准备托管渲染阶段。</summary>
+    public static void PrepareRender(float deltaTime) => ScriptRuntime.PrepareRender(deltaTime);
 
     /// <summary>关闭当前 World 的脚本运行时。</summary>
     public static void Shutdown() => ScriptRuntime.Shutdown();

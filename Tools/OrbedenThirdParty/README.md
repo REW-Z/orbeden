@@ -38,6 +38,17 @@ OrbedenCore/Src/ThirdParty/<库>/LICENSE*          授权文件
 imgui 与 glfw 的目录形状按主工程的既有 include 路径发布：`ThirdParty/imgui/`（根、`backends/`、`misc/cpp/`）
 与 `ThirdParty/glfw/include/`。
 
+## 带全局状态的库必须全进程唯一
+
+GLFW、ImGui、GLAD 都在进程内持有单例状态（窗口表、`GImGui` 上下文、GL 函数指针表）。
+编辑器 exe 与 `OrbedenCore.dll` 都会直接调用它们，静态链接等于各持一份、互不相通：
+
+- **GLFW** 建动态库：宿主动态加载 `glfw3.dll`，两边共用同一份窗口状态；
+- **ImGui / GLAD** 按 `dllexport` 编译，符号由 `OrbedenCore.dll` 导出，编辑器从导入库取，
+  自身不再链接这两份静态库。静态宿主（Player）下 dllexport 只是多一张导出表，无副作用。
+
+新增第三方库时先问一句：它有全局状态吗？有，就必须让进程内只有一份。
+
 ## 增量逻辑
 
 `GenerateThirdPartyLibraries` 的输入是 `vendor/` 全部文件、`CMakeLists.txt`、`versions.txt` 与本工程文件；
@@ -59,8 +70,8 @@ imgui 与 glfw 的目录形状按主工程的既有 include 路径发布：`Thir
 |---|---|---|
 | FreeType | VER-2-14-3 | 关掉 ZLIB/BZIP2/PNG/HARFBUZZ/BROTLI，只保留自带模块 |
 | msdfgen | v1.13 | core-only：不建 standalone、不接 Skia、不开 OpenMP、不产 SVG/PNG |
-| GLFW | 3.4 | 静态库；不建示例、文档与测试 |
-| Dear ImGui | 1.92.8 | 上游文件原样入库，`src/imgui_impl_opengl3_orbeden.cpp` 用引擎的 GLAD2 包一层 |
+| GLFW | 3.4 | 动态库（`glfw3.dll` + `glfw3dll.lib`）；不建示例、文档与测试 |
+| Dear ImGui | 1.92.8 | 上游文件原样入库，`src/imgui_impl_opengl3_orbeden.cpp` 用引擎的 GLAD2 包一层；按 dllexport 编译，由 OrbedenCore.dll 统一导出 |
 | glad | 2.0.8 | 生成产物直接入库（GL 4.3 core），编成静态库 |
 | cgltf | 1.15 | 单头库，实现放在 `src/cgltf_impl.c` |
 | stb_image | 2.30 | 单头库，实现放在 `src/stb_image_impl.c` |

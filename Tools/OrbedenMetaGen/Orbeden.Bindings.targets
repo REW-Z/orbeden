@@ -20,6 +20,19 @@
     <OrbedenManualTarget>$(OrbedenProjectRoot)/Lib/Docs</OrbedenManualTarget>
   </PropertyGroup>
   <!--
+    Orbeden.UI 包：整包只有一个来源。项目内 Packages/Orbeden.UI/ 存在时整体覆盖 SDK 来源，
+    否则用 SDK 的 Packages/Orbeden.UI/。OrbedenUIPackageRoot 只会指向其中一个，
+    因此两份包不可能同时进入 Compile；加载顺序上 SDK 包先算，项目覆盖包把它整体顶掉。
+  -->
+  <PropertyGroup>
+    <OrbedenUIProjectPackageRoot>$(OrbedenProjectRoot)/Packages/Orbeden.UI</OrbedenUIProjectPackageRoot>
+    <OrbedenUISdkPackageRoot>$(OrbedenSdkRoot)/Packages/Orbeden.UI</OrbedenUISdkPackageRoot>
+    <OrbedenUIPackageRoot Condition="Exists('$(OrbedenUIProjectPackageRoot)/Orbeden.UI.targets')">$(OrbedenUIProjectPackageRoot)</OrbedenUIPackageRoot>
+    <OrbedenUIPackageRoot Condition="'$(OrbedenUIPackageRoot)' == '' and Exists('$(OrbedenUISdkPackageRoot)/Orbeden.UI.targets')">$(OrbedenUISdkPackageRoot)</OrbedenUIPackageRoot>
+    <!--引擎当前提供的 RetainedGuiApi 主版本；包声明的所需主版本必须与它相等。-->
+    <OrbedenRetainedGuiApiMajor>1</OrbedenRetainedGuiApiMajor>
+  </PropertyGroup>
+  <!--
     是否包含原生模块，与上面的源根无关：源根是内容根，工程文件则在项目根，不能跟着源根一起改。
   -->
   <ItemGroup>
@@ -39,6 +52,25 @@
     -->
     <Compile Include="$(OrbedenSdkRoot)/Shared/GameAotExports.cs" />
   </ItemGroup>
+  <!--
+    包版本合同：Package.version 首行是包版本，第二行是所需的 RetainedGuiApi 主版本。
+    引擎提供的主版本与它不等就构建失败，避免旧包配新引擎（或反过来）在运行期才炸。
+  -->
+  <Target Name="ValidateOrbedenUIPackage" BeforeTargets="CoreCompile" Condition="'$(OrbedenUIPackageRoot)' != ''">
+    <Error Condition="!Exists('$(OrbedenUIPackageRoot)/Package.version')"
+           Text="Orbeden.UI 包缺少 Package.version：$(OrbedenUIPackageRoot)" />
+    <ReadLinesFromFile File="$(OrbedenUIPackageRoot)/Package.version">
+      <Output TaskParameter="Lines" ItemName="_OrbedenUIPackageLines" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <_OrbedenUIPackageLineSeq>@(_OrbedenUIPackageLines)</_OrbedenUIPackageLineSeq>
+      <_OrbedenUIPackageApiMajor>$([System.Text.RegularExpressions.Regex]::Match('$(_OrbedenUIPackageLineSeq)', '^[0-9]+;[ \t]*([0-9]+)').Groups[1].Value)</_OrbedenUIPackageApiMajor>
+    </PropertyGroup>
+    <Error Condition="'$(_OrbedenUIPackageApiMajor)' == ''"
+           Text="Package.version 需要两行：包版本与所需的 RetainedGuiApi 主版本。$(OrbedenUIPackageRoot)" />
+    <Error Condition="'$(_OrbedenUIPackageApiMajor)' != '$(OrbedenRetainedGuiApiMajor)'"
+           Text="Orbeden.UI 包需要 RetainedGuiApi 主版本 $(_OrbedenUIPackageApiMajor)，当前引擎提供 $(OrbedenRetainedGuiApiMajor)：$(OrbedenUIPackageRoot)" />
+  </Target>
   <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="'@(NativeVcxProject)' != ''">
     <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Build OrbedenCore to refresh the SDK." />
     <Exec Command="dotnet &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll&quot; &quot;$(OrbedenNativeSource)&quot; &quot;$(OrbedenBindingOutput)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)/Native/Bindings.Manifest.json&quot;" />
@@ -53,8 +85,10 @@
       <OrbedenEditorBindingNamespace Condition="'@(NativeVcxProject)' != ''">$(OrbedenBindingNamespace)</OrbedenEditorBindingNamespace>
     </PropertyGroup>
     <Error Condition="'@(OrbedenEditorSource)' != '' and !Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />
-    <Exec UseUtf8Encoding="Always" Condition="Exists('$(OrbedenEditorAssembly)')" Command="dotnet build &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.EditorExtensions.csproj&quot; -c $(Configuration) -o &quot;$(TargetDir).&quot; /p:GameBindingNamespace=&quot;$(OrbedenEditorBindingNamespace)&quot; /p:GameAssemblyName=&quot;$(AssemblyName)&quot; /p:GameAssemblyPath=&quot;$(TargetPath)&quot; /p:GameContentRoot=&quot;$(OrbedenContentRoot)&quot; /p:GameRuntimeAssembly=&quot;$(OrbedenSdkRoot)/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll&quot; /p:GameEditorAssembly=&quot;$(OrbedenEditorAssembly)&quot; /p:BaseIntermediateOutputPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot; /p:MSBuildProjectExtensionsPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot;" />
+    <Exec UseUtf8Encoding="Always" Condition="Exists('$(OrbedenEditorAssembly)')" Command="dotnet build &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.EditorExtensions.csproj&quot; -c $(Configuration) -o &quot;$(TargetDir).&quot; /p:GameBindingNamespace=&quot;$(OrbedenEditorBindingNamespace)&quot; /p:GameAssemblyName=&quot;$(AssemblyName)&quot; /p:GameAssemblyPath=&quot;$(TargetPath)&quot; /p:GameContentRoot=&quot;$(OrbedenContentRoot)&quot; /p:GameEditorPackageRoot=&quot;$(OrbedenUIEditorPackageRoot)&quot; /p:GameRuntimeAssembly=&quot;$(OrbedenSdkRoot)/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll&quot; /p:GameEditorAssembly=&quot;$(OrbedenEditorAssembly)&quot; /p:BaseIntermediateOutputPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot; /p:MSBuildProjectExtensionsPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot;" />
   </Target>
+  <!--包源码接入。整包唯一来源已经在上面判定完毕，这里只负责把源码挂进编译。-->
+  <Import Project="$(OrbedenUIPackageRoot)/Orbeden.UI.targets" Condition="'$(OrbedenUIPackageRoot)' != ''" />
   <!--
     用户手册随 SDK 刷新：先清空再铺，和 SDK 头文件发布同一套路，改名或删除后不留残页。
     旧 SDK 没有 Manual/ 时整段跳过，不会误删工程里已有的文档。

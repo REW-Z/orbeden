@@ -8,6 +8,8 @@
 #include "FileSystem/Utf8Path.h"
 #include <filesystem>
 #include "Platform/GlfwWindow.h"
+#include "Rendering/RenderSystem.h"
+#include "Runtime/Object/Texture2D.h"
 #include "Runtime/Native/NativeCall.h"
 
 #include <glad/gl.h>
@@ -579,6 +581,45 @@ namespace
             value->x = values[0];
             value->y = values[1];
             value->z = values[2];
+        }
+        return changed ? 1 : 0;
+    }
+
+    //绘制二维向量输入框；与三维版本一样逐分量取最短写法
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiInputVector2(const uint8* label, int32 length, vector2* value)
+    {
+        if (!value) return 0;
+
+        std::string text = ReadUtf8Text(label, length);
+        float32 values[2] = { value->x, value->y };
+        std::string displays[2] = { FormatFloatText(values[0]), FormatFloatText(values[1]) };
+
+        bool changed = false;
+        ImGui::BeginGroup();
+        ImGui::PushID(text.c_str());
+        ImGui::PushMultiItemsWidths(2, ImGui::CalcItemWidth());
+        for (int32 index = 0; index < 2; ++index)
+        {
+            ImGui::PushID(index);
+            if (index > 0) ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            changed |= ImGui::InputFloat("", &values[index], 0.0f, 0.0f, displays[index].c_str()) != 0;
+            ImGui::PopID();
+            ImGui::PopItemWidth();
+        }
+        ImGui::PopID();
+
+        //标签画在两格右侧，与 ImGui::InputFloat2 的排布保持一致
+        const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
+        if (text.c_str() != labelEnd)
+        {
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            ImGui::TextEx(text.c_str(), labelEnd);
+        }
+        ImGui::EndGroup();
+        if (changed)
+        {
+            value->x = values[0];
+            value->y = values[1];
         }
         return changed ? 1 : 0;
     }
@@ -1262,6 +1303,22 @@ namespace
     }
 
     //在屏幕位置绘制资源图标并应用指定颜色
+    //画一张引擎纹理：解析对象身份，取它的 GPU 纹理句柄交给 ImGui。
+    //预览输出是线性预乘纹理，ImGui 按直通 Alpha 混合，半透明处会偏暗，仅供预览定位。
+    void ORBEDEN_NATIVE_CALL EditorGuiDrawTexture(int32 textureObjectId, float32 width, float32 height)
+    {
+        if (textureObjectId == 0 || width <= 0.0f || height <= 0.0f) return;
+
+        Object* object = Object::FindObjectById(textureObjectId);
+        Texture2D* texture = object ? object->Cast<Texture2D>() : nullptr;
+        if (!texture) return;
+
+        GpuTextureID gpu = RenderSystem::Current() ? RenderSystem::Current()->GetTextureId(texture) : GpuTextureID();
+        if (!gpu.IsValid()) return;
+
+        ImGui::Image(static_cast<ImTextureID>(gpu.id), ImVec2(width, height));
+    }
+
     void ORBEDEN_NATIVE_CALL EditorGuiDrawIcon(const uint8* name, int32 length, const vector2* position,
         float32 size, const color* tint)
     {
@@ -1296,6 +1353,13 @@ namespace
         //尺寸必须为正，否则 ImGui 断言
         ImVec2 area(std::max(size->x, 1.0f), std::max(size->y, 1.0f));
         return ImGui::InvisibleButton(ReadUtf8Text(id, length).c_str(), area) ? 1 : 0;
+    }
+
+    //把光标挪到屏幕坐标，下一个条目就落在那里
+    void ORBEDEN_NATIVE_CALL EditorGuiSetCursorScreenPos(const vector2* position)
+    {
+        if (!position) return;
+        ImGui::SetCursorScreenPos(ImVec2(position->x, position->y));
     }
 
     //判断上一个条目是否悬停
@@ -1696,6 +1760,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.inputInt = reinterpret_cast<void*>(&EditorGuiInputInt);
     api.inputFloat = reinterpret_cast<void*>(&EditorGuiInputFloat);
     api.inputVector3 = reinterpret_cast<void*>(&EditorGuiInputVector3);
+    api.inputVector2 = reinterpret_cast<void*>(&EditorGuiInputVector2);
     api.inputText = reinterpret_cast<void*>(&EditorGuiInputText);
     api.separator = reinterpret_cast<void*>(&EditorGuiSeparator);
     api.sameLine = reinterpret_cast<void*>(&EditorGuiSameLine);
@@ -1766,6 +1831,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.isItemActive = reinterpret_cast<void*>(&EditorGuiIsItemActive);
     api.isMouseDown = reinterpret_cast<void*>(&EditorGuiIsMouseDown);
     api.drawIcon = reinterpret_cast<void*>(&EditorGuiDrawIcon);
+    api.drawTexture = reinterpret_cast<void*>(&EditorGuiDrawTexture);
+    api.setCursorScreenPos = reinterpret_cast<void*>(&EditorGuiSetCursorScreenPos);
     return api;
 }
 

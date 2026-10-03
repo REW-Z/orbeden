@@ -41,6 +41,7 @@ public enum InteropValueKind : uint
     Object,
     //容器条目：值是元素个数，元素本身各自成条（与 Reflection::ValueKind 逐值对应）
     Array,
+    Vector2,
 }
 
 internal enum ComponentDomain : uint
@@ -121,6 +122,7 @@ public readonly struct InteropValue : IEquatable<InteropValue>
     public static InteropValue From(float value) => new(InteropValueKind.Float32, value);
     public static InteropValue From(string? value) => new(InteropValueKind.String, value ?? string.Empty);
     public static InteropValue FromStringId(string? value) => new(InteropValueKind.StringId, value ?? string.Empty);
+    public static InteropValue From(vector2 value) => new(InteropValueKind.Vector2, value);
     public static InteropValue From(vector3 value) => new(InteropValueKind.Vector3, value);
     public static InteropValue From(color value) => new(InteropValueKind.Color, value);
     public static InteropValue From(quaternion value) => new(InteropValueKind.Quaternion, value);
@@ -174,6 +176,26 @@ public readonly struct ComponentMethod
     }
 }
 
+/// <summary>一个可绑定方法的签名：名字、返回种类与参数种类。</summary>
+public sealed class BindableMethod
+{
+    /// <summary>方法名。</summary>
+    public string Name { get; }
+
+    /// <summary>返回种类；无返回值为 Empty。</summary>
+    public InteropValueKind ReturnKind { get; }
+
+    /// <summary>参数种类，按声明顺序。</summary>
+    public IReadOnlyList<InteropValueKind> ParameterKinds { get; }
+
+    internal BindableMethod(string name, InteropValueKind returnKind, InteropValueKind[] parameterKinds)
+    {
+        Name = name;
+        ReturnKind = returnKind;
+        ParameterKinds = parameterKinds;
+    }
+}
+
 /// <summary>预解析组件字段和方法的统一代理。</summary>
 public sealed class ComponentProxy
 {
@@ -184,6 +206,38 @@ public sealed class ComponentProxy
     internal ComponentProxy(ComponentHandle value)
     {
         handle = value;
+    }
+
+    /// <summary>
+    /// 取托管组件包装的代理。原生组件包装没有运行期句柄，返回空——
+    /// 那种情况用 <see cref="Ens.GetNativeComponent"/> 按类型名取。
+    /// </summary>
+    public static ComponentProxy? FromComponent(Component? component)
+    {
+        if (component is not Script script) return null;
+        return ScriptRuntimeRegistry.TryGetHandle(script, out ComponentHandle found) ? new ComponentProxy(found) : null;
+    }
+
+    /// <summary>
+    /// 列出组件上可绑定的方法签名。元数据在程序集加载时按类型建一次并缓存，
+    /// 枚举顺序按名字与参数个数排定，界面上的下拉因此不会每帧跳动。
+    /// </summary>
+    public static IReadOnlyList<BindableMethod> DescribeMethods(Component? component)
+    {
+        if (component == null) return [];
+
+        List<BindableMethod> listed = [];
+        foreach (List<ManagedMethodMetadata> overloads in ManagedTypeMetadataCache.Get(component.GetType()).Methods.Values)
+        {
+            foreach (ManagedMethodMetadata overload in overloads)
+                listed.Add(new BindableMethod(overload.Method.Name, overload.ReturnKind, overload.ParameterKinds));
+        }
+        listed.Sort(static (left, right) =>
+        {
+            int byName = string.CompareOrdinal(left.Name, right.Name);
+            return byName != 0 ? byName : left.ParameterKinds.Count.CompareTo(right.ParameterKinds.Count);
+        });
+        return listed;
     }
 
     public bool IsValid => ScriptInteropDispatch.IsValid(handle) == InteropStatus.Ok;
@@ -532,6 +586,7 @@ internal static unsafe class InteropAbiConverter
                 case InteropValueKind.StringId:
                     if (value.TryGet(out string text)) result.Pin(Encoding.UTF8.GetBytes(text)); else result.Success = false;
                     break;
+                case InteropValueKind.Vector2: if (value.TryGet(out vector2 v2)) *(vector2*)payload = v2; else result.Success = false; break;
                 case InteropValueKind.Vector3: if (value.TryGet(out vector3 v)) *(vector3*)payload = v; else result.Success = false; break;
                 case InteropValueKind.Color: if (value.TryGet(out color c)) *(color*)payload = c; else result.Success = false; break;
                 case InteropValueKind.Quaternion: if (value.TryGet(out quaternion q)) *(quaternion*)payload = q; else result.Success = false; break;
@@ -564,9 +619,11 @@ internal static unsafe class InteropAbiConverter
                 InteropValueKind.Quaternion => InteropValue.From(*(quaternion*)payload),
                 InteropValueKind.EnsId => InteropValue.From(*(EnsId*)payload),
                 InteropValueKind.Object => InteropValue.FromObjectId(*(int*)payload),
+                InteropValueKind.Vector2 => InteropValue.From(*(vector2*)payload),
                 _ => default,
             };
-            return kind <= InteropValueKind.Object;
+            //Array 是容器条目而不是可解码的值，其余已实现的值类型都在 Vector2 及之前。
+            return kind <= InteropValueKind.Object || kind == InteropValueKind.Vector2;
     }
 
     private static string ReadUtf8(byte* payload)

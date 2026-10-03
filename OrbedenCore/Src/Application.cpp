@@ -13,6 +13,9 @@
 #include "Runtime/Object/ParticleSystem.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
 #include "InputManager/InputManager.h"
+#include "Platform/GamepadInput.h"
+#include "Platform/WindowsPointerInput.h"
+#include "Platform/WindowsTextInput.h"
 #include "Profiler/Profiler.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Object.h"
@@ -204,7 +207,8 @@ bool Application::LoadWorld(const std::string& path)
     if (PhysicsSystem* physics = GetSystem<PhysicsSystem>()) physics->ResetWorld();
     world.CommitReplacement(*prepared);
     ++worldRevision;
-    if (restart) scripts->Initialize();
+    //换世界沿用原来的运行模式：编辑态加载场景不该把脚本域切成运行态。
+    if (restart) scripts->Initialize(scripts->GetExecutionMode());
     return true;
 }
 
@@ -293,7 +297,8 @@ void Application::ProcessWorldLoad()
     world.SetRuntimeActive(simulationEnabled);
     ++worldRevision;
     fixedAccumulator = 0.0f;
-    if (restart) scripts->Initialize();
+    //换世界沿用原来的运行模式：编辑态加载场景不该把脚本域切成运行态。
+    if (restart) scripts->Initialize(scripts->GetExecutionMode());
     operation->state = WorldLoadState::Succeeded;
 }
 
@@ -332,6 +337,13 @@ void Application::Tick(float deltaTime)
 
     //开新一轮帧采样，未开启采集时不做任何事
     Profiler::NewFrame();
+
+    //托管输入阶段排在 FixedUpdate 之前。它不属于游戏模拟，暂停与非模拟帧同样执行，
+    //否则暂停菜单在暂停状态下会失去响应。
+    if (ScriptSystem* managed = GetSystem<ScriptSystem>())
+    {
+        managed->ProcessManagedInput(deltaTime);
+    }
 
     //重置固定时间积累
     bool runSimulation = simulationEnabled && !paused;
@@ -396,6 +408,13 @@ void Application::Tick(float deltaTime)
             particles->AdvanceRuntime(world, deltaTime);
         }
     }
+
+    //托管渲染准备排在全部 LateUpdate 之后、Render 消费之前；暂停与非模拟帧同样执行。
+    if (ScriptSystem* managed = GetSystem<ScriptSystem>())
+    {
+        managed->PrepareManagedRender(deltaTime);
+    }
+
     dispatching = false;
     ProcessWorldLoad();
 }
@@ -438,6 +457,8 @@ void Application::Run()
     {
         //更新本帧输入状态
         InputManager::BeginFrame();
+        //手柄每帧轮询一次；键盘鼠标与触摸都是回调驱动，不需要轮询。
+        GamepadInput::Poll();
         window->PollEvents();
         if (window->ShouldClose())
         {
@@ -620,7 +641,16 @@ void Application::SetWindow(IWindow* newWindow)
         window->SetResizeListener(nullptr);
     }
 
+    //平台输入挂到窗口上：文本输入法、触摸，共用同一条子类入口。
+    //拿不到原生句柄（例如无头模式）时只是没有这些能力，不影响其余部分。
     window = newWindow;
+    if (void* nativeHandle = newWindow ? newWindow->GetNativeHandle() : nullptr)
+    {
+        if (!WindowsTextInputDetail::Instance().Attach(nativeHandle))
+            Log::Warning("Application: text input hook is unavailable.");
+        if (!WindowsPointerInputDetail::Instance().Attach(nativeHandle))
+            Log::Warning("Application: pointer input hook is unavailable.");
+    }
     if (!window) return;
 
     window->SetResizeListener(this);

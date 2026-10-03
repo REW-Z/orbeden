@@ -64,7 +64,8 @@
     <!-- 增量输出：发布到主工程的库文件。两个都要齐，缺任何一个都会重新生成。 -->
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration)\freetype.lib" />
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)\msdfgen-core.lib" />
-    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3dll.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" />
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)imgui\lib\WindowsX64\$(Configuration)\imgui.lib" />
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glad\lib\WindowsX64\$(Configuration)\glad.lib" />
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib" />
@@ -141,7 +142,12 @@
     <Copy SourceFiles="$(ThirdPartyVendorDir)glfw\LICENSE.md" DestinationFolder="$(OrbedenThirdPartyPublishDir)glfw" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ThirdPartyVendorDir)imgui\LICENSE.txt" DestinationFolder="$(OrbedenThirdPartyPublishDir)imgui" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ThirdPartyVendorDir)cgltf\LICENSE" DestinationFolder="$(OrbedenThirdPartyPublishDir)cgltf" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glfw3.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.lib" SkipUnchangedFiles="true" />
+    <!--glad 的授权声明与 Apache-2.0 全文随生成产物一起发布；stb 的许可原文在头文件尾部，这里单独落一份。-->
+    <Copy SourceFiles="$(ThirdPartyVendorDir)glad\LICENSE.md;$(ThirdPartyVendorDir)glad\LICENSE-APACHE-2.0.txt" DestinationFolder="$(OrbedenThirdPartyPublishDir)glad" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)stb\LICENSE" DestinationFolder="$(OrbedenThirdPartyPublishDir)stb" SkipUnchangedFiles="true" />
+    <!--GLFW 是动态库：glfw3dll.lib 是导入库，glfw3.dll 必须随宿主程序分发。-->
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glfw3dll.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3dll.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glfw3.dll" DestinationFiles="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\imgui.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)imgui\lib\WindowsX64\$(Configuration)\imgui.lib" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glad.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)glad\lib\WindowsX64\$(Configuration)\glad.lib" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\cgltf.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib" SkipUnchangedFiles="true" />

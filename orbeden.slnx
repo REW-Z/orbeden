@@ -3,6 +3,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="Tools/OrbedenThirdParty/OrbedenThirdParty.vcxproj" Id="7c4a1e92-3f6b-4d58-9a21-5e8d2b73c410" />
   <Project Path="OrbedenCore/OrbedenCore.vcxproj" Id="b12e5123-bd9c-4d91-a1ba-879726128c33" />
   <Project Path="OrbedenCore/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.csproj" Id="c73f4de0-68f3-4c89-bb0e-5208cf911574" />
   <Project Path="OrbedenEditor/Managed/Orbeden.Editor/Orbeden.Editor.csproj" />

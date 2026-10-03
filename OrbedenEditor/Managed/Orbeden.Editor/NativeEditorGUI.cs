@@ -91,6 +91,11 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte> IsItemActive;
     public delegate* unmanaged[Cdecl]<int, byte> IsMouseDown;
     public delegate* unmanaged[Cdecl]<byte*, int, vector2*, float, color*, void> DrawIcon;
+    public delegate* unmanaged[Cdecl]<byte*, int, vector2*, byte> InputVector2;
+    //按引擎纹理画一块图像：参数是 Texture2D 的运行时 ID 与显示尺寸。
+    public delegate* unmanaged[Cdecl]<int, float, float, void> DrawTexture;
+    //把光标挪到屏幕坐标，下一个条目就落在那里
+    public delegate* unmanaged[Cdecl]<vector2*, void> SetCursorScreenPos;
 }
 #pragma warning restore CS0649
 
@@ -649,6 +654,18 @@ internal static unsafe class NativeEditorGUI
         }
     }
 
+    //绘制二维向量输入框
+    internal static bool InputVector2(string? label, ref vector2 value)
+    {
+        if (!initialized || api.InputVector2 == null) return false;
+        byte[] bytes = Encode(label);
+        fixed (byte* pointer = bytes)
+        fixed (vector2* valuePointer = &value)
+        {
+            return api.InputVector2(pointer, bytes.Length, valuePointer) != 0;
+        }
+    }
+
     //绘制三维向量输入框
     internal static bool InputVector3(string? label, ref vector3 value)
     {
@@ -869,10 +886,26 @@ internal static unsafe class NativeEditorGUI
         }
     }
 
+    //把光标挪到屏幕坐标；场景手柄靠它把拖拽区放到任意位置
+    internal static void SetCursorScreenPos(vector2 position)
+    {
+        if (!initialized || api.SetCursorScreenPos == null) return;
+        if (!float.IsFinite(position.x) || !float.IsFinite(position.y)) return;
+        api.SetCursorScreenPos(&position);
+    }
+
     //当前控件是否正在被拖动，供曲线画布的 InvisibleButton 捕获拖动
     internal static bool IsItemActive()
     {
         return initialized && api.IsItemActive != null && api.IsItemActive() != 0;
+    }
+
+    //绘制一张引擎纹理；对象无效或尺寸非正时什么都不画
+    internal static void DrawTexture(int textureObjectId, vector2 size)
+    {
+        if (!initialized || api.DrawTexture == null || textureObjectId == 0) return;
+        if (!float.IsFinite(size.x) || !float.IsFinite(size.y) || size.x <= 0f || size.y <= 0f) return;
+        api.DrawTexture(textureObjectId, size.x, size.y);
     }
 
     //指定鼠标键是否按下，只接受 0..2

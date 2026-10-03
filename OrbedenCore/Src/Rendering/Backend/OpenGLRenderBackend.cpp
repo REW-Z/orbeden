@@ -86,12 +86,20 @@ namespace
 
     GLenum ToRenderTargetFormat(GpuRenderTargetFormat format)
     {
-        return format == GpuRenderTargetFormat::RGBA16F ? GL_RGBA16F : GL_RGBA8;
+        if (format == GpuRenderTargetFormat::RGBA16F) return GL_RGBA16F;
+        if (format == GpuRenderTargetFormat::R8) return GL_R8;
+        return GL_RGBA8;
     }
 
     GLenum ToRenderTargetSourceType(GpuRenderTargetFormat format)
     {
         return format == GpuRenderTargetFormat::RGBA16F ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE;
+    }
+
+    //渲染目标创建只给格式、不给像素，外部格式必须与内部格式的通道数一致。
+    GLenum ToRenderTargetSourceFormat(GpuRenderTargetFormat format)
+    {
+        return format == GpuRenderTargetFormat::R8 ? GL_RED : GL_RGBA;
     }
 
     std::string GetShaderLog(uint32 shader)
@@ -187,6 +195,11 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     GLint maxFragmentTextures = 0;
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextures);
     fragmentTextureUnitCount = static_cast<uint32>(std::max(maxFragmentTextures, 0));
+
+    //最大纹理边长同样查一次并登记到后端基类：动态纹理与字体图集要按它决定分页上限。
+    GLint maxTextureSize = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+    SetMaxTextureSize(static_cast<int32>(std::max(maxTextureSize, 0)));
 
     LogOpenGLError("OpenGLRenderBackend::Initialize");
     return true;
@@ -350,6 +363,16 @@ GpuVertexInputID OpenGLRenderBackend::CreateVertexInput(const GpuVertexInputDesc
         glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(44));
         glEnableVertexAttribArray(4);
     }
+    else if (desc.layout == GpuVertexLayout::UI)
+    {
+        //UI 顶点：位置、UV、顶点色，与 UIVertex 的内存布局一一对应。
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(12));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(20));
+        glEnableVertexAttribArray(2);
+    }
     else
     {
         //网格顶点属性。实例布局在这里只建立这一半，实例属性留给 BindInstanceBuffer，
@@ -402,12 +425,61 @@ GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    GLint wrap = desc.clampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.pixels);
     glBindTexture(GL_TEXTURE_2D, 0);
     boundTexture2Ds[currentTextureSlot] = 0;
     return { id };
+}
+
+//局部覆盖纹理区域：解包状态与纹理绑定用完即恢复，不把行距泄漏给后续上传。
+bool OpenGLRenderBackend::UploadTextureRegion(GpuTextureID id, int32 x, int32 y, int32 width, int32 height,
+    int32 channels, const uint8* pixels, int32 rowStride)
+{
+    if (!id.IsValid() || !pixels || width <= 0 || height <= 0 || rowStride <= 0) return false;
+    if (channels != 1 && channels != 3 && channels != 4) return false;
+    if (rowStride < width * channels) return false;
+
+    GLint previousRowLength = 0;
+    GLint previousAlignment = 0;
+    GLint previousSkipPixels = 0;
+    GLint previousSkipRows = 0;
+    glGetIntegerv(GL_UNPACK_ROW_LENGTH, &previousRowLength);
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousAlignment);
+    glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &previousSkipPixels);
+    glGetIntegerv(GL_UNPACK_SKIP_ROWS, &previousSkipRows);
+
+    //行距以像素计，按通道数换算；对齐取 1，避免行首被补齐影响部分上传。
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, rowStride / channels);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+
+    uint32 previousTexture = boundTexture2Ds[currentTextureSlot];
+    BindTexture2D(currentTextureSlot, id.id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, ToTextureFormat(channels), GL_UNSIGNED_BYTE, pixels);
+    BindTexture2D(currentTextureSlot, previousTexture);
+
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, previousRowLength);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, previousAlignment);
+    glPixelStorei(GL_UNPACK_SKIP_PIXELS, previousSkipPixels);
+    glPixelStorei(GL_UNPACK_SKIP_ROWS, previousSkipRows);
+    return true;
+}
+
+//读取一个像素的深度：只动读绑定，绘制绑定与后端缓存都不受影响。
+bool OpenGLRenderBackend::ReadDepthPixel(GpuRenderTargetID target, int32 x, int32 y, float32& depth)
+{
+    depth = 0.0f;
+
+    GLint previousRead = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousRead);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, target.id);
+    glReadPixels(x, y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, previousRead);
+    return true;
 }
 
 void OpenGLRenderBackend::DeleteTexture(GpuTextureID id)
@@ -515,7 +587,8 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, colorFilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, ToRenderTargetFormat(desc.format), desc.width, desc.height, 0, GL_RGBA, ToRenderTargetSourceType(desc.format), nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, ToRenderTargetFormat(desc.format), desc.width, desc.height, 0,
+            ToRenderTargetSourceFormat(desc.format), ToRenderTargetSourceType(desc.format), nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
         boundTexture2Ds[currentTextureSlot] = 0;
     }
@@ -844,6 +917,11 @@ void OpenGLRenderBackend::SetBlendMode(BlendMode mode)
     {
         //加法混合的 Alpha 不累加，目标覆盖率保持不变，否则叠加后会溢出成不透明。
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+    }
+    else if (mode == BlendMode::PremultipliedAlpha)
+    {
+        //源色已经是预乘的，RGB 与 A 都不能再乘一遍源 Alpha。
+        glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     }
     else
     {

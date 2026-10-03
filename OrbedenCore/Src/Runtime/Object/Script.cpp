@@ -269,6 +269,7 @@ Reflection::FieldKind Script::GetManagedFieldKind(const std::string& typeName)
     if (typeName == "float" || typeName == "float32") return Reflection::FieldKind::Float32;
     if (typeName == "string" || typeName == "System.String") return Reflection::FieldKind::String;
     if (typeName == "StringId") return Reflection::FieldKind::StringId;
+    if (typeName == "vector2") return Reflection::FieldKind::Vector2;
     if (typeName == "vector3") return Reflection::FieldKind::Vector3;
     if (typeName == "color" || typeName == "color4") return Reflection::FieldKind::Color;
     if (typeName == "quaternion") return Reflection::FieldKind::Quaternion;

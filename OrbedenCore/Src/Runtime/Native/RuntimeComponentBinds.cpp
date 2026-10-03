@@ -159,6 +159,20 @@ namespace
         return target && target->SetStatic(value != 0) ? 1 : 0;
     }
 
+    //读取 Ens 的临时对象标志。
+    uint8 ORBEDEN_NATIVE_CALL NativeEnsGetDontSave(EnsId ens)
+    {
+        Ens* value = GetNativeEns(ens);
+        return value && value->GetDontSave() ? 1 : 0;
+    }
+
+    //设置 Ens 的临时对象标志。
+    void ORBEDEN_NATIVE_CALL NativeEnsSetDontSave(EnsId ens, uint8 value)
+    {
+        Ens* target = GetNativeEns(ens);
+        if (target) target->SetDontSave(value != 0);
+    }
+
     //读取 Ens 名称到 UTF-8 缓冲区。
     int32 ORBEDEN_NATIVE_CALL NativeEnsGetName(EnsId ens, uint8* buffer, int32 bufferSize)
     {
@@ -210,6 +224,8 @@ EnsBind EnsBind::Create()
     bind.GetObjectId = reinterpret_cast<void*>(&NativeEnsGetObjectId);
     bind.GetStatic = reinterpret_cast<void*>(&NativeEnsGetStatic);
     bind.SetStatic = reinterpret_cast<void*>(&NativeEnsSetStatic);
+    bind.GetDontSave = reinterpret_cast<void*>(&NativeEnsGetDontSave);
+    bind.SetDontSave = reinterpret_cast<void*>(&NativeEnsSetDontSave);
     return bind;
 }
 

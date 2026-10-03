@@ -71,6 +71,33 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.EnsId)reader.Scalar<global::Orbeden.EnsId>();
     }
+    internal static void Write_uint8(NativeBindingWriter writer, byte value)
+    {
+        writer.Scalar((byte)value);
+    }
+    internal static byte Read_uint8(ref NativeBindingReader reader)
+    {
+        return (byte)reader.Scalar<byte>();
+    }
+    internal static void Write_List_uint8_(NativeBindingWriter writer, byte[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
+        foreach (var item in value) Write_uint8(writer, item);
+    }
+    internal static byte[] Read_List_uint8_(ref NativeBindingReader reader)
+    {
+        int length = reader.Count(); var value = new byte[length];
+        for (int index = 0; index < length; ++index) value[index] = Read_uint8(ref reader);
+        return value;
+    }
+    internal static void Write_float32(NativeBindingWriter writer, float value)
+    {
+        writer.Scalar((float)value);
+    }
+    internal static float Read_float32(ref NativeBindingReader reader)
+    {
+        return (float)reader.Scalar<float>();
+    }
     internal static void Write_Mesh_(NativeBindingWriter writer, global::Orbeden.Mesh? value)
     {
         writer.Scalar(NativeBindingRuntime.GetObjectId(value));
@@ -218,14 +245,6 @@ internal static unsafe class GeneratedBindingCodecs
         value.@name = Read_std__string(ref reader);
         value.@value = Read_float32(ref reader);
         return value;
-    }
-    internal static void Write_float32(NativeBindingWriter writer, float value)
-    {
-        writer.Scalar((float)value);
-    }
-    internal static float Read_float32(ref NativeBindingReader reader)
-    {
-        return (float)reader.Scalar<float>();
     }
     internal static void Write_List_MaterialFloatSlot_(NativeBindingWriter writer, global::Orbeden.MaterialFloatSlot[] value)
     {
@@ -521,24 +540,13 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.TextureColorSpace)reader.Scalar<uint>();
     }
-    internal static void Write_uint8(NativeBindingWriter writer, byte value)
+    internal static void Write_TextureAlphaMode(NativeBindingWriter writer, global::Orbeden.TextureAlphaMode value)
     {
-        writer.Scalar((byte)value);
+        writer.Scalar((uint)value);
     }
-    internal static byte Read_uint8(ref NativeBindingReader reader)
+    internal static global::Orbeden.TextureAlphaMode Read_TextureAlphaMode(ref NativeBindingReader reader)
     {
-        return (byte)reader.Scalar<byte>();
-    }
-    internal static void Write_List_uint8_(NativeBindingWriter writer, byte[] value)
-    {
-        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);
-        foreach (var item in value) Write_uint8(writer, item);
-    }
-    internal static byte[] Read_List_uint8_(ref NativeBindingReader reader)
-    {
-        int length = reader.Count(); var value = new byte[length];
-        for (int index = 0; index < length; ++index) value[index] = Read_uint8(ref reader);
-        return value;
+        return (global::Orbeden.TextureAlphaMode)reader.Scalar<uint>();
     }
     internal static void Write_ClearMode(NativeBindingWriter writer, global::Orbeden.ClearMode value)
     {
@@ -1079,6 +1087,22 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.DrawStrategy)reader.Scalar<uint>();
     }
+    internal static void Write_FontRasterMode(NativeBindingWriter writer, global::Orbeden.FontRasterMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.FontRasterMode Read_FontRasterMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.FontRasterMode)reader.Scalar<uint>();
+    }
+    internal static void Write_KeyEnum(NativeBindingWriter writer, global::Orbeden.KeyEnum value)
+    {
+        writer.Scalar((int)value);
+    }
+    internal static global::Orbeden.KeyEnum Read_KeyEnum(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.KeyEnum)reader.Scalar<int>();
+    }
 }
 internal static class GeneratedBindingRegistration
 {
@@ -1088,21 +1112,22 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 6039789372024472840UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 16482609640212011531UL, (ens, pointer) => new global::Orbeden.Font(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 17629515747893046868UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 4948362420089860798UL, (ens, pointer) => new global::Orbeden.Material(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 3298412916009026265UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 10408349486667592532UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Shader), "Shader", 8099457989792331087UL, (ens, pointer) => new global::Orbeden.Shader(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Skybox), "Skybox", 5502695681722555340UL, (ens, pointer) => new global::Orbeden.Skybox(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.TextResource), "TextResource", 11768548724227209485UL, (ens, pointer) => new global::Orbeden.TextResource(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Texture2D), "Texture2D", 14696962119404605806UL, (ens, pointer) => new global::Orbeden.Texture2D(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Texture2D), "Texture2D", 5833247944439309010UL, (ens, pointer) => new global::Orbeden.Texture2D(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Camera), "Camera", 1701664351275001347UL, (ens, pointer) => new global::Orbeden.Camera(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.CharacterController), "CharacterController", 5570124596910826920UL, (ens, pointer) => new global::Orbeden.CharacterController(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Collider), "Collider", 6347564027816963522UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.DirectionalLight), "DirectionalLight", 8098784669294264934UL, (ens, pointer) => new global::Orbeden.DirectionalLight(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.HeightField), "HeightField", 12049277348369327740UL, (ens, pointer) => new global::Orbeden.HeightField(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.ParticleSystem), "ParticleSystem", 5956242445408171042UL, (ens, pointer) => new global::Orbeden.ParticleSystem(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.ParticleSystem), "ParticleSystem", 2275182644830314560UL, (ens, pointer) => new global::Orbeden.ParticleSystem(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4065785324302559792UL, null);
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 11196905937671424513UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 485817780930741050UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 13157070993901949905UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 13396853297441896464UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
@@ -1289,6 +1314,14 @@ public enum TextureColorSpace : uint
 {
     Linear = 0,
     SRGB = 1,
+}
+}
+namespace Orbeden
+{
+public enum TextureAlphaMode : uint
+{
+    Straight = 0,
+    Premultiplied = 1,
 }
 }
 namespace Orbeden
@@ -1536,6 +1569,7 @@ public enum BlendMode : uint
 {
     Alpha = 0,
     Additive = 1,
+    PremultipliedAlpha = 2,
 }
 }
 namespace Orbeden
@@ -1627,6 +1661,7 @@ public enum FieldKind : int
     Quaternion,
     EnsId,
     Array,
+    Vector2,
 }
 }
 namespace Orbeden
@@ -1637,6 +1672,79 @@ public enum DrawStrategy : uint
     Individual = 1,
     GpuInstancing = 2,
     DynamicBatching = 3,
+}
+}
+namespace Orbeden
+{
+public enum FontRasterMode : uint
+{
+    Bitmap = 0,
+    SDF = 1,
+    MSDF = 2,
+}
+}
+namespace Orbeden
+{
+public enum KeyEnum : int
+{
+    MOUSEL,
+    MOUSER,
+    MOUSEMID,
+    NUM1,
+    NUM2,
+    NUM3,
+    NUM4,
+    NUM5,
+    NUM6,
+    NUM7,
+    NUM8,
+    NUM9,
+    NUM0,
+    Q,
+    W,
+    E,
+    R,
+    T,
+    Y,
+    U,
+    I,
+    O,
+    P,
+    A,
+    S,
+    D,
+    F,
+    G,
+    H,
+    J,
+    K,
+    L,
+    Z,
+    X,
+    C,
+    V,
+    B,
+    N,
+    M,
+    SPACE,
+    TAB,
+    LSHIFT,
+    LCTRL,
+    LALT,
+    BACKSPACE,
+    ENTER,
+    RSHIFT,
+    RCTRL,
+    RALT,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    HOME,
+    END,
+    DEL,
+    ESCAPE,
+    UNMAPPED,
 }
 }
 namespace Orbeden
@@ -1770,6 +1878,174 @@ public unsafe partial class Ens
 }
 namespace Orbeden
 {
+[NativeBinding("Font")]
+public unsafe partial class Font : global::Orbeden.Object
+{
+    protected internal Font(IntPtr pointer) : base(pointer) { }
+    public ulong @GetRevision()
+    {
+        ulong result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, ulong*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 0, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (ulong)result;
+    }
+    public float @ascender
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 1, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 2, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @descender
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public uint @faceIndex
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (uint)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public string @familyName
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 7, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 8, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public float @lineHeight
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 9, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 10, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public byte[] @sourceBytes
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_List_uint8_(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_List_uint8_(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public string @styleName
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 13, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 14, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public uint @unitsPerEm
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 15, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (uint)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 16, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+}
+}
+namespace Orbeden
+{
 [NativeBinding("InstanceDrawList")]
 public unsafe partial class InstanceDrawList : global::Orbeden.Object
 {
@@ -1861,6 +2137,11 @@ public unsafe partial class Material : global::Orbeden.Object
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length)));
         }
     }
+    public void @CopyFrom(global::Orbeden.Material? @source)
+    {
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@source)));
+    }
     public global::Orbeden.color @GetColor(string @slotName)
     {
         var writer_slotName = new NativeBindingWriter();
@@ -1869,7 +2150,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         global::Orbeden.color result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 4, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return (global::Orbeden.color)result;
         }
@@ -1882,7 +2163,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         global::Orbeden.color result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color, global::Orbeden.color*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color, global::Orbeden.color*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 5, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), @defaultValue, &result));
         return (global::Orbeden.color)result;
         }
@@ -1890,7 +2171,7 @@ public unsafe partial class Material : global::Orbeden.Object
     public global::Orbeden.DrawQueue @GetDrawQueue()
     {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 6, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.DrawQueue)result;
     }
@@ -1902,7 +2183,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 6, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 7, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return (float)result;
         }
@@ -1915,7 +2196,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 7, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 8, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), @defaultValue, &result));
         return (float)result;
         }
@@ -1928,7 +2209,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 8, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 9, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return NativeBindingRuntime.Wrap<global::Orbeden.Texture2D>(result);
         }
@@ -1941,7 +2222,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 9, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 10, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return result != 0;
         }
@@ -1954,7 +2235,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 10, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 11, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return result != 0;
         }
@@ -1967,7 +2248,7 @@ public unsafe partial class Material : global::Orbeden.Object
         fixed (byte* pointer_slotName = bytes_slotName)
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 11, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 12, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), &result));
         return result != 0;
         }
@@ -1975,13 +2256,13 @@ public unsafe partial class Material : global::Orbeden.Object
     public bool @IsDirty()
     {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 12, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
     }
     public void @MarkDirty()
     {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 13, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 14, this);
         NativeBindingRuntime.Check(callback(InstanceId));
     }
     public void @SetColor(string @slotName, global::Orbeden.color @value)
@@ -1991,7 +2272,7 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_slotName = writer_slotName.ToArray();
         fixed (byte* pointer_slotName = bytes_slotName)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 14, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, global::Orbeden.color, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 15, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), @value));
         }
     }
@@ -2002,13 +2283,13 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_slotName = writer_slotName.ToArray();
         fixed (byte* pointer_slotName = bytes_slotName)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 16, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), @value));
         }
     }
     public void @SetShader(global::Orbeden.Shader? @value)
     {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 16, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 17, this);
         NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
     }
     public void @SetShader(string @shaderId)
@@ -2018,7 +2299,7 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_shaderId = writer_shaderId.ToArray();
         fixed (byte* pointer_shaderId = bytes_shaderId)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 17, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 18, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_shaderId, bytes_shaderId.Length)));
         }
     }
@@ -2029,7 +2310,7 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_slotName = writer_slotName.ToArray();
         fixed (byte* pointer_slotName = bytes_slotName)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 18, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 19, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), NativeBindingRuntime.GetObjectId(@texture)));
         }
     }
@@ -2045,7 +2326,7 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_textureId = writer_textureId.ToArray();
         fixed (byte* pointer_textureId = bytes_textureId)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 19, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 20, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_slotName, bytes_slotName.Length), new NativeBindingSlice(pointer_textureId, bytes_textureId.Length)));
         }
         }
@@ -2055,7 +2336,7 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 20, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 21, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -2070,13 +2351,13 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 21, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 22, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.DrawQueue)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 22, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 23, this);
         NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
         }
     }
@@ -2085,7 +2366,7 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 23, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 24, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -2100,7 +2381,7 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 24, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 25, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -2116,7 +2397,7 @@ public unsafe partial class Material : global::Orbeden.Object
         byte[] bytes_value = writer_value.ToArray();
         fixed (byte* pointer_value = bytes_value)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 25, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 26, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
         }
         }
@@ -2126,13 +2407,13 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 26, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 27, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 27, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 28, this);
         NativeBindingRuntime.Check(callback(InstanceId, (byte)(@value ? 1 : 0)));
         }
     }
@@ -2141,13 +2422,13 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 28, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 29, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return NativeBindingRuntime.Wrap<global::Orbeden.Shader>(result);
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 29, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 30, this);
         NativeBindingRuntime.Check(callback(InstanceId, NativeBindingRuntime.GetObjectId(@value)));
         }
     }
@@ -2156,7 +2437,7 @@ public unsafe partial class Material : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 30, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Material), 31, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -2932,30 +3213,104 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 0, this);
         NativeBindingRuntime.Check(callback(InstanceId));
     }
+    public static global::Orbeden.Texture2D? @CreateDynamic(int @width, int @height, int @channels)
+    {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int, int, int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 1);
+        NativeBindingRuntime.Check(callback(0, @width, @height, @channels, &result));
+        return NativeBindingRuntime.Wrap<global::Orbeden.Texture2D>(result);
+    }
+    public static global::Orbeden.Texture2D? @CreateRenderTarget(int @width, int @height)
+    {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int, int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 2);
+        NativeBindingRuntime.Check(callback(0, @width, @height, &result));
+        return NativeBindingRuntime.Wrap<global::Orbeden.Texture2D>(result);
+    }
+    public global::Orbeden.TextureAlphaMode @GetAlphaMode()
+    {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.TextureAlphaMode)result;
+    }
+    public static int @GetMaximumSize()
+    {
+        int result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 4);
+        NativeBindingRuntime.Check(callback(0, &result));
+        return (int)result;
+    }
+    public ulong @GetRevision()
+    {
+        ulong result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, ulong*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (ulong)result;
+    }
     public bool @IsDirty()
     {
         byte result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 1, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return result != 0;
+    }
+    public bool @IsRenderTarget()
+    {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 7, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return result != 0;
     }
     public void @MarkDirty()
     {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 2, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 8, this);
         NativeBindingRuntime.Check(callback(InstanceId));
+    }
+    public bool @ResizeRenderTarget(int @width, int @height)
+    {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 9, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @width, @height, &result));
+        return result != 0;
+    }
+    public bool @UpdateRegion(int @x, int @y, int @width, int @height, ReadOnlySpan<byte> @pixels, int @rowStride)
+    {
+        fixed (byte* pointer_pixels = @pixels)
+        {
+        byte result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, int, int, int, int, byte*, int, int, byte*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 10, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @x, @y, @width, @height, pointer_pixels, @pixels.Length, @rowStride, &result));
+        return result != 0;
+        }
+    }
+    public global::Orbeden.TextureAlphaMode @alphaMode
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.TextureAlphaMode)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
+        }
     }
     public int @channels
     {
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 14, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -2964,13 +3319,13 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 15, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.TextureColorSpace)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 6, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 16, this);
         NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
         }
     }
@@ -2979,13 +3334,13 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 7, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 17, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 8, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 18, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -2994,13 +3349,13 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 9, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 19, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 10, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 20, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -3009,7 +3364,7 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 11, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 21, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -3025,7 +3380,7 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         byte[] bytes_value = writer_value.ToArray();
         fixed (byte* pointer_value = bytes_value)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 12, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 22, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
         }
         }
@@ -3035,7 +3390,7 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 13, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 23, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         try
         {
@@ -3051,9 +3406,24 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         byte[] bytes_value = writer_value.ToArray();
         fixed (byte* pointer_value = bytes_value)
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 14, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 24, this);
         NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
         }
+        }
+    }
+    public ulong @revision
+    {
+        get
+        {
+        ulong result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, ulong*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 25, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (ulong)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, ulong, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 26, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public int @width
@@ -3061,13 +3431,13 @@ public unsafe partial class Texture2D : global::Orbeden.Object
         get
         {
         int result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 27, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (int)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 16, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, int, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Texture2D), 28, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }

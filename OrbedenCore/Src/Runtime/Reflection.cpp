@@ -125,6 +125,12 @@ namespace Reflection
     {
     }
 
+    //创建 vector2 反射值
+    Value::Value(const vector2& value)
+        : kind(ValueKind::Vector2), data(value)
+    {
+    }
+
     //创建 vector3 反射值
     Value::Value(const vector3& value)
         : kind(ValueKind::Vector3), data(value)
@@ -180,6 +186,7 @@ namespace Reflection
         case ValueKind::Float32: return ToXmlValue(std::get<float32>(data));
         case ValueKind::String: return ToXmlValue(std::get<std::string>(data));
         case ValueKind::StringId: return ToXmlValue(std::get<StringId>(data));
+        case ValueKind::Vector2: return ToXmlValue(std::get<vector2>(data));
         case ValueKind::Vector3: return ToXmlValue(std::get<vector3>(data));
         case ValueKind::Color: return ToXmlValue(std::get<color>(data));
         case ValueKind::Quaternion: return ToXmlValue(std::get<quaternion>(data));
@@ -246,6 +253,14 @@ namespace Reflection
     {
         if (kind != ValueKind::StringId) return false;
         value = std::get<StringId>(data);
+        return true;
+    }
+
+    //尝试读取 vector2 值
+    bool Value::TryGet(vector2& value) const
+    {
+        if (kind != ValueKind::Vector2) return false;
+        value = std::get<vector2>(data);
         return true;
     }
 
@@ -356,6 +371,13 @@ namespace Reflection
         {
             //引用列表整体以 '|' 连接的 Key 文本传递
             value = Value(text);
+            return true;
+        }
+        case FieldKind::Vector2:
+        {
+            vector2 parsed;
+            if (!SetFromXmlValue(parsed, text)) return false;
+            value = Value(parsed);
             return true;
         }
         case FieldKind::Vector3:
@@ -722,6 +744,12 @@ namespace Reflection
         return value.GetPath();
     }
 
+    //转换 vector2 为 XML 文本
+    std::string ToXmlValue(const vector2& value)
+    {
+        return FormatFloat(value.x) + " " + FormatFloat(value.y);
+    }
+
     //转换 vector3 为 XML 文本
     std::string ToXmlValue(const vector3& value)
     {
@@ -799,6 +827,18 @@ namespace Reflection
     bool SetFromXmlValue(StringId& target, const std::string& value)
     {
         target = StringId(value);
+        return true;
+    }
+
+    //从 XML 文本读取 vector2
+    bool SetFromXmlValue(vector2& target, const std::string& value)
+    {
+        std::istringstream stream(value);
+        vector2 parsed;
+        stream >> parsed.x >> parsed.y;
+        if (stream.fail()) return false;
+
+        target = parsed;
         return true;
     }
 

@@ -221,6 +221,13 @@ namespace
         texture = GpuTextureID();
     }
 
+    //释放 GPU 渲染目标句柄；颜色纹理由目标持有，一并销毁
+    void DeleteGpuResource(RenderBackend* backend, GpuRenderTargetID& target)
+    {
+        if (backend) backend->DeleteRenderTarget(target);
+        target = GpuRenderTargetID();
+    }
+
     //释放 GPU 天空盒句柄
     void DeleteGpuResource(RenderBackend* backend, GpuCubeTextureID& skybox)
     {
@@ -471,16 +478,23 @@ void GpuResourceManager::InvalidateCaches()
     DeleteGpuResources(backend, meshes);
     DeleteGpuResources(backend, pendingMeshes);
 
-    //释放 Texture2D GPU 资源
+    //释放 Texture2D GPU 资源：渲染目标纹理释放附件目标，普通纹理释放纹理本体。
     for (Texture2D* texture : textures)
     {
         if (!texture) continue;
-        DeleteGpuResource(backend, texture->gpuTexture);
+        if (texture->renderTarget && texture->gpuRenderTarget.IsValid())
+            DeleteGpuResource(backend, texture->gpuRenderTarget);
+        else
+            DeleteGpuResource(backend, texture->gpuTexture);
+        texture->gpuRenderTarget = GpuRenderTargetID();
+        texture->gpuTexture = GpuTextureID();
         texture->gpuTextureStorageIndex = -1;
     }
     textures.clear();
     for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
     pendingTextures.clear();
+    for (GpuRenderTargetID& target : pendingRenderTargets) DeleteGpuResource(backend, target);
+    pendingRenderTargets.clear();
 
     //释放 Skybox GPU 资源
     for (Skybox* skybox : skyboxes)
@@ -549,6 +563,13 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
 {
     if (!backend || !texture) return GpuTextureID();
 
+    //渲染目标纹理没有 CPU 像素可上传，它的颜色纹理由附件目标提供。
+    if (texture->renderTarget)
+    {
+        GpuRenderTargetID target = GetTextureRenderTarget(texture);
+        return target.IsValid() ? texture->gpuTexture : GpuTextureID();
+    }
+
     //读取 Texture2D GPU 缓存
     if (texture->gpuTexture.IsValid() && !texture->IsDirty()) return texture->gpuTexture;
 
@@ -575,6 +596,40 @@ GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
     textures.push_back(texture);
     texture->ClearDirty();
     return textureID;
+}
+
+//渲染目标纹理的附件目标：尺寸或内容版本变化时重建，Texture2D 对象身份不变，
+//换掉的是它背后的 GPU 资源，依赖方按 revision 判断是否要重新取样。
+GpuRenderTargetID GpuResourceManager::GetTextureRenderTarget(Texture2D* texture)
+{
+    if (!backend || !texture || !texture->IsRenderTarget()) return GpuRenderTargetID();
+    if (texture->gpuRenderTarget.IsValid() && !texture->IsDirty()) return texture->gpuRenderTarget;
+
+    //先失效再释放：旧附件推到下一帧的释放点，本帧不留下悬空句柄。
+    if (texture->gpuRenderTarget.IsValid()) QueueRenderTargetRelease(texture);
+
+    GpuRenderTargetDesc desc;
+    desc.width = texture->width;
+    desc.height = texture->height;
+    desc.colorOnly = true;
+    desc.format = GpuRenderTargetFormat::RGBA8;
+    GpuRenderTargetID target = backend->CreateRenderTarget(desc);
+    if (!target.IsValid())
+    {
+        Log::Error("GpuResourceManager render target creation failed.");
+        return GpuRenderTargetID();
+    }
+
+    texture->gpuRenderTarget = target;
+    texture->gpuTexture = backend->GetRenderTargetColorTexture(target);
+    texture->ClearDirty();
+    //登记进纹理表，随对象销毁与缓存失效一起维护。
+    if (texture->gpuTextureStorageIndex < 0)
+    {
+        texture->gpuTextureStorageIndex = static_cast<int32>(textures.size());
+        textures.push_back(texture);
+    }
+    return target;
 }
 
 GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
@@ -867,9 +922,40 @@ void GpuResourceManager::QueueMaterialRelease(Material* material)
     pendingMaterials.push_back(TakeGpuResource(materials, resource));
 }
 
+//渲染目标纹理的释放是先用后放：立刻失效句柄，真正的删除推到下一帧的释放点，
+//避免同一帧里已经提交的绘制还引用着即将消失的附件。
+void GpuResourceManager::QueueRenderTargetRelease(Texture2D* texture)
+{
+    if (!texture) return;
+
+    if (texture->gpuRenderTarget.IsValid()) pendingRenderTargets.push_back(texture->gpuRenderTarget);
+    texture->gpuRenderTarget = GpuRenderTargetID();
+    //颜色纹理随目标一起销毁，句柄当场作废。
+    texture->gpuTexture = GpuTextureID();
+
+    int32 index = texture->gpuTextureStorageIndex;
+    if (index < 0 || static_cast<usize>(index) >= textures.size() || textures[index] != texture) return;
+
+    int32 lastIndex = static_cast<int32>(textures.size() - 1);
+    if (index != lastIndex)
+    {
+        Texture2D* moved = textures[lastIndex];
+        textures[index] = moved;
+        moved->gpuTextureStorageIndex = index;
+    }
+    textures.pop_back();
+    texture->gpuTextureStorageIndex = -1;
+}
+
 void GpuResourceManager::QueueTextureRelease(Texture2D* texture)
 {
     if (!texture || !texture->gpuTexture.IsValid()) return;
+    //渲染目标纹理的 GPU 资源是附件目标，不是可上传的纹理。
+    if (texture->renderTarget)
+    {
+        QueueRenderTargetRelease(texture);
+        return;
+    }
 
     int32 index = texture->gpuTextureStorageIndex;
     assert(index >= 0 && static_cast<usize>(index) < textures.size());
@@ -953,6 +1039,10 @@ void GpuResourceManager::ReleaseDestroyedResources()
 
     for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
     pendingTextures.clear();
+
+    //附件目标自带颜色纹理，删除目标即释放两者。
+    for (GpuRenderTargetID& target : pendingRenderTargets) DeleteGpuResource(backend, target);
+    pendingRenderTargets.clear();
 
     for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
     pendingSkyboxes.clear();

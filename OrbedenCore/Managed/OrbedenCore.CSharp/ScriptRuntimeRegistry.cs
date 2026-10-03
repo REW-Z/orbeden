@@ -80,6 +80,14 @@ public static class ScriptRuntimeRegistry
     /// <summary>创建具有独立原生组件身份的 C# 脚本。</summary>
     public static T? AddScript<T>(EnsId ens) where T : Script
     {
+        //与 Ens.AddComponent 共用同一套家族互斥检查，避免绕过约束的第二个入口。
+        Ens owner = Ens.FromId(ens);
+        if (!owner.IsValid) return null;
+        List<Type> existing = [];
+        foreach (Script script in GetScripts(ens)) existing.Add(script.GetType());
+        foreach (Component component in owner.GetComponents<Component>())
+            if (component is not Script) existing.Add(component.GetType());
+        owner.ValidateComponentSet(existing, typeof(T));
         return ScriptRuntime.AddManagedScript(ens, typeof(T)) as T;
     }
 
@@ -88,6 +96,10 @@ public static class ScriptRuntimeRegistry
     {
         return ScriptRuntime.RemoveManagedScript(script);
     }
+
+    /// <summary>本 Ens 上的托管组件数量；UI 用它判断修改器集合是否需要重新扫描。</summary>
+    public static int GetScriptCount(EnsId ens) =>
+        scriptsByEns.TryGetValue(ens, out List<Script>? scripts) ? scripts.Count : 0;
 
     /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>
     public static IReadOnlyList<Script> GetScripts(EnsId ens)
@@ -101,6 +113,12 @@ public static class ScriptRuntimeRegistry
                 ordered.Add(script);
         }
         return ordered;
+    }
+
+    /// <summary>把全部活脚本的运行时值刷回原生宿主字段表；保存、复制、Prefab 与进入 Play 前调用。</summary>
+    public static void FlushHostFields()
+    {
+        ScriptRuntime.FlushHostFields();
     }
 
     /// <summary>获取当前所有运行态脚本实例快照。</summary>

@@ -90,21 +90,10 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)..\THIRD-PARTY-NOTICES.md" "$(TargetDir)"
-if not exist "$(TargetDir)ThirdPartyLicenses" mkdir "$(TargetDir)ThirdPartyLicenses"
-if not exist "$(TargetDir)ThirdPartyLicenses\freetype" mkdir "$(TargetDir)ThirdPartyLicenses\freetype"
-if not exist "$(TargetDir)ThirdPartyLicenses\msdfgen" mkdir "$(TargetDir)ThirdPartyLicenses\msdfgen"
-if not exist "$(TargetDir)ThirdPartyLicenses\glfw" mkdir "$(TargetDir)ThirdPartyLicenses\glfw"
-if not exist "$(TargetDir)ThirdPartyLicenses\imgui" mkdir "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\msdfgen"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" "$(TargetDir)ThirdPartyLicenses\glfw"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
+      <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
@@ -132,21 +121,10 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)..\THIRD-PARTY-NOTICES.md" "$(TargetDir)"
-if not exist "$(TargetDir)ThirdPartyLicenses" mkdir "$(TargetDir)ThirdPartyLicenses"
-if not exist "$(TargetDir)ThirdPartyLicenses\freetype" mkdir "$(TargetDir)ThirdPartyLicenses\freetype"
-if not exist "$(TargetDir)ThirdPartyLicenses\msdfgen" mkdir "$(TargetDir)ThirdPartyLicenses\msdfgen"
-if not exist "$(TargetDir)ThirdPartyLicenses\glfw" mkdir "$(TargetDir)ThirdPartyLicenses\glfw"
-if not exist "$(TargetDir)ThirdPartyLicenses\imgui" mkdir "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\msdfgen"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" "$(TargetDir)ThirdPartyLicenses\glfw"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
+      <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
 dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
@@ -172,21 +150,11 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)..\THIRD-PARTY-NOTICES.md" "$(TargetDir)"
-if not exist "$(TargetDir)ThirdPartyLicenses" mkdir "$(TargetDir)ThirdPartyLicenses"
-if not exist "$(TargetDir)ThirdPartyLicenses\freetype" mkdir "$(TargetDir)ThirdPartyLicenses\freetype"
-if not exist "$(TargetDir)ThirdPartyLicenses\msdfgen" mkdir "$(TargetDir)ThirdPartyLicenses\msdfgen"
-if not exist "$(TargetDir)ThirdPartyLicenses\glfw" mkdir "$(TargetDir)ThirdPartyLicenses\glfw"
-if not exist "$(TargetDir)ThirdPartyLicenses\imgui" mkdir "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\msdfgen"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" "$(TargetDir)ThirdPartyLicenses\glfw"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+      <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
@@ -215,21 +183,11 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)..\THIRD-PARTY-NOTICES.md" "$(TargetDir)"
-if not exist "$(TargetDir)ThirdPartyLicenses" mkdir "$(TargetDir)ThirdPartyLicenses"
-if not exist "$(TargetDir)ThirdPartyLicenses\freetype" mkdir "$(TargetDir)ThirdPartyLicenses\freetype"
-if not exist "$(TargetDir)ThirdPartyLicenses\msdfgen" mkdir "$(TargetDir)ThirdPartyLicenses\msdfgen"
-if not exist "$(TargetDir)ThirdPartyLicenses\glfw" mkdir "$(TargetDir)ThirdPartyLicenses\glfw"
-if not exist "$(TargetDir)ThirdPartyLicenses\imgui" mkdir "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" "$(TargetDir)ThirdPartyLicenses\freetype"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\msdfgen"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" "$(TargetDir)ThirdPartyLicenses\glfw"
-copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" "$(TargetDir)ThirdPartyLicenses\imgui"
-copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+      <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
 copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
 if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
@@ -308,4 +266,22 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
     <Image Include="Resources\Brand\Orbeden.ico">
     </Image>
   </ItemGroup>
+  <Target Name="CopyThirdPartyLicenses" AfterTargets="Build">
+    <!--第三方组件的署名与许可：静态链接的库要求随二进制一起分发-->
+    <Copy SourceFiles="$(ProjectDir)..\THIRD-PARTY-NOTICES.md" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" Dir="freetype/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" Dir="freetype/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" Dir="msdfgen/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\LICENSE.md" Dir="PhysX/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" Dir="glfw/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" Dir="imgui/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\LICENSE.md" Dir="glad/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\LICENSE-APACHE-2.0.txt" Dir="glad/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\cgltf\LICENSE" Dir="cgltf/" />
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\OrbedenCore\Src\ThirdParty\stb\LICENSE" Dir="stb/" />
+    </ItemGroup>
+    <MakeDir Directories="@(OrbedenEditorLicenseFile->'$(TargetDir)ThirdPartyLicenses/%(Dir)')" />
+    <Copy SourceFiles="@(OrbedenEditorLicenseFile)" DestinationFiles="@(OrbedenEditorLicenseFile->'$(TargetDir)ThirdPartyLicenses/%(Dir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

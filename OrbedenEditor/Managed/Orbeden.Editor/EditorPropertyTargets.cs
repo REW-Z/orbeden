@@ -21,6 +21,7 @@ internal static class EditorInteropValueText
             case InteropValueKind.String: value = InteropValue.From(text); return true;
             case InteropValueKind.StringId: value = InteropValue.FromStringId(text); return true;
             case InteropValueKind.Object when int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int objectId): value = InteropValue.FromObjectId(objectId); return true;
+            case InteropValueKind.Vector2 when TryFloats(text, 2, out float[] pair): value = InteropValue.From(new vector2(pair[0], pair[1])); return true;
             case InteropValueKind.Vector3 when TryFloats(text, 3, out float[] vector): value = InteropValue.From(new vector3(vector[0], vector[1], vector[2])); return true;
             case InteropValueKind.Color when TryFloats(text, 4, out float[] color): value = InteropValue.From(new color(color[0], color[1], color[2], color[3])); return true;
             case InteropValueKind.Quaternion when TryFloats(text, 4, out float[] rotation): value = InteropValue.From(new quaternion(rotation[0], rotation[1], rotation[2], rotation[3])); return true;
@@ -50,6 +51,7 @@ internal static class EditorInteropValueText
             InteropValueKind.UInt64 => value.TryGet(out ulong unsignedLong) ? unsignedLong.ToString(CultureInfo.InvariantCulture) : string.Empty,
             InteropValueKind.Float32 => value.TryGet(out float number) ? number.ToString("R", CultureInfo.InvariantCulture) : string.Empty,
             InteropValueKind.String or InteropValueKind.StringId => value.TryGet(out string text) ? text : string.Empty,
+            InteropValueKind.Vector2 => value.TryGet(out vector2 pair) ? Join(pair.x, pair.y) : string.Empty,
             InteropValueKind.Vector3 => value.TryGet(out vector3 vector) ? Join(vector.x, vector.y, vector.z) : string.Empty,
             InteropValueKind.Color => value.TryGet(out color color) ? Join(color.r, color.g, color.b, color.a) : string.Empty,
             InteropValueKind.Quaternion => value.TryGet(out quaternion rotation) ? Join(rotation.x, rotation.y, rotation.z, rotation.w) : string.Empty,
@@ -153,6 +155,7 @@ internal static class EditorManagedInteropValue
         if (valueType == typeof(ulong)) return InteropValueKind.UInt64;
         if (valueType == typeof(float)) return InteropValueKind.Float32;
         if (valueType == typeof(string)) return InteropValueKind.String;
+        if (valueType == typeof(vector2)) return InteropValueKind.Vector2;
         if (valueType == typeof(vector3)) return InteropValueKind.Vector3;
         if (valueType == typeof(color)) return InteropValueKind.Color;
         if (valueType == typeof(quaternion)) return InteropValueKind.Quaternion;
@@ -171,6 +174,7 @@ internal static class EditorManagedInteropValue
         else if (valueType == typeof(ulong) && converted is ulong unsignedLong) result = InteropValue.From(unsignedLong);
         else if (valueType == typeof(float) && converted is float number) result = InteropValue.From(number);
         else if (valueType == typeof(string)) result = InteropValue.From(converted as string);
+        else if (valueType == typeof(vector2) && converted is vector2 pair) result = InteropValue.From(pair);
         else if (valueType == typeof(vector3) && converted is vector3 vector) result = InteropValue.From(vector);
         else if (valueType == typeof(color) && converted is color color) result = InteropValue.From(color);
         else if (valueType == typeof(quaternion) && converted is quaternion rotation) result = InteropValue.From(rotation);
@@ -190,6 +194,7 @@ internal static class EditorManagedInteropValue
         else if (valueType == typeof(ulong) && value.TryGet(out ulong unsignedLong)) raw = unsignedLong;
         else if (valueType == typeof(float) && value.TryGet(out float number)) raw = number;
         else if (valueType == typeof(string) && value.TryGet(out string text)) raw = text;
+        else if (valueType == typeof(vector2) && value.TryGet(out vector2 pair)) raw = pair;
         else if (valueType == typeof(vector3) && value.TryGet(out vector3 vector)) raw = vector;
         else if (valueType == typeof(color) && value.TryGet(out color color)) raw = color;
         else if (valueType == typeof(quaternion) && value.TryGet(out quaternion rotation)) raw = rotation;

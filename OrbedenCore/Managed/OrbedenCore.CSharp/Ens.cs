@@ -69,6 +69,14 @@ public sealed partial class Ens : Object, IEquatable<Ens>
     /// <summary>设置 static 约束并返回是否成功；失败时世界变换约束不变。</summary>
     public bool TrySetStatic(bool value) => SetStatic(Id, value);
 
+    /// <summary>临时对象标志。置真后世界保存、复制与 Prefab 枚举跳过本节点及子树；
+    /// 这是运行时标志，不从场景文件恢复。</summary>
+    public bool DontSave
+    {
+        get => GetDontSave(Id);
+        set => SetDontSave(Id, value);
+    }
+
     /// <summary>Ens 经父子层级计算后的实际激活状态。</summary>
     public bool WorldActive => GetWorldActive(Id);
 
@@ -146,6 +154,42 @@ public sealed partial class Ens : Object, IEquatable<Ens>
     //按实际原生类型枚举，并合并托管宿主的具体包装。
     private List<Component> GetNativeComponents(Type requestedType) => NativeBindingRuntime.GetComponents(Id, requestedType);
 
+    /// <summary>校验组件家族互斥：加入 addedType 后，同一 Ens 最多保留一个可赋值给各约束基类的组件。
+    /// 约束来自集合中任意组件（含派生类型）声明的 ComponentConstraintAttribute，违反时抛异常。</summary>
+    public void ValidateComponentSet(IReadOnlyList<Type> existingTypes, Type addedType)
+    {
+        List<Type> candidates = [.. existingTypes, addedType];
+        foreach (Type candidate in candidates)
+        {
+            foreach (ComponentConstraintAttribute constraint in candidate.GetCustomAttributes<ComponentConstraintAttribute>(true))
+            {
+                Type baseType = constraint.ExclusiveBaseType;
+                Type? first = null;
+                foreach (Type type in candidates)
+                {
+                    if (!baseType.IsAssignableFrom(type)) continue;
+                    if (first == null)
+                    {
+                        first = type;
+                        continue;
+                    }
+                    throw new InvalidOperationException(
+                        $"{baseType.Name} 在同一 Ens 上只能存在一个组件，{first.Name} 与 {type.Name} 互斥。");
+                }
+            }
+        }
+    }
+
+    //创建前执行家族互斥检查。已存在同类型的单实例组件会直接复用，不算新增，跳过检查。
+    private void ValidateComponentAddition(Type componentType)
+    {
+        List<Component> current = GetNativeComponents(typeof(Component));
+        bool returnsExisting = componentType.GetCustomAttribute<UniqueComponentAttribute>(true) != null
+            && current.Any(component => component.GetType() == componentType);
+        if (returnsExisting) return;
+        ValidateComponentSet([.. current.Select(component => component.GetType())], componentType);
+    }
+
     //验证组件依赖图并生成创建顺序
     private static void BuildComponentAddOrder(Type componentType, HashSet<Type> visiting, HashSet<Type> visited, List<Type> order)
     {
@@ -177,6 +221,8 @@ public sealed partial class Ens : Object, IEquatable<Ens>
     {
         List<Type> order = [];
         BuildComponentAddOrder(componentType, [], [], order);
+        //互斥检查必须在任何创建之前完成，失败时不需要回滚已经建出来的依赖。
+        ValidateComponentAddition(componentType);
 
         Component? requested = null;
         List<Component> createdComponents = [];
@@ -255,6 +301,8 @@ internal unsafe struct EnsBindApi
     //追加槽必须留在末尾：这张表按位置对应 C++ 结构
     public delegate* unmanaged[Cdecl]<EnsId, byte> GetStatic;
     public delegate* unmanaged[Cdecl]<EnsId, byte, byte> SetStatic;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetDontSave;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetDontSave;
 }
 #pragma warning restore CS0649
 
@@ -288,6 +336,18 @@ public sealed unsafe partial class Ens
     internal static bool IsEnsAlive(EnsId ens)
     {
         return ensApiInitialized && ensApi.IsAlive != null && ensApi.IsAlive(ens) != 0;
+    }
+
+    //读取 Ens 的临时对象标志
+    internal static bool GetDontSave(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetDontSave != null && ensApi.GetDontSave(ens) != 0;
+    }
+
+    //设置 Ens 的临时对象标志
+    internal static void SetDontSave(EnsId ens, bool value)
+    {
+        if (ensApiInitialized && ensApi.SetDontSave != null) ensApi.SetDontSave(ens, value ? (byte)1 : (byte)0);
     }
 
     //读取 Ens 的 localActive

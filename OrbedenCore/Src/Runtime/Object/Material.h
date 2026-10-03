@@ -111,6 +111,10 @@ public:
     //清除材质浮点槽
     void ClearFloat(const std::string& slotName);
 
+    //把另一份材质的 shader、绘制队列与全部槽位复制到本材质。
+    //用于运行期实例：改本材质不影响来源资源，销毁按普通对象回收。
+    void CopyFrom(Material* source);
+
     //判断 GPU 数据是否需要刷新
     bool IsDirty() const;
 

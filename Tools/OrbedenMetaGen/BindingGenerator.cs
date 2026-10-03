@@ -12,8 +12,21 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
     private static string Symbol(CppType type) => type.QualifiedName.Replace("::", "_");
 
     /// <summary>生成共享 schema 的类型化入口与托管包装；docsPath 非空时同时写出用户文档投影。</summary>
+    //跨语言合同的枚举。正常情况下只有被绑定成员引用到的枚举才会导出，
+    //而 RetainedGui ABI 是按值直接使用这些枚举的，没有这样的引用点，因此在这里显式点名。
+    //KeyEnum 是输入事件的稳定键标识，托管侧的输入模块按它判定方向键；
+    //它本身没有被绑定的成员引用，因此在这里显式点名。
+    private static readonly string[] ExportedEnums = ["FontRasterMode", "KeyEnum"];
+
     internal void Generate(string sourceRoot, string outputDirectory, string docsPath = "")
     {
+        foreach (string exported in ExportedEnums)
+        {
+            CppType? declaration = model.Resolve(exported, model.ObjectTypes[0]);
+            if (declaration == null) throw new InvalidDataException($"Exported enum '{exported}' was not found.");
+            types.Resolve(declaration.QualifiedName, declaration);
+        }
+
         foreach (CppType type in model.ObjectTypes)
         {
             List<BindingCall> entries = [];

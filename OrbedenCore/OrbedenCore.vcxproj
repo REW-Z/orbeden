@@ -118,7 +118,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;GLAD_API_CALL_EXPORT;GLAD_API_CALL_EXPORT_BUILD;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
@@ -128,7 +128,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -138,7 +138,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;GLAD_API_CALL_EXPORT;GLAD_API_CALL_EXPORT_BUILD;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
@@ -148,7 +148,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -386,6 +386,9 @@
       <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/glfw/LICENSE.md" Dir="glfw/" />
       <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/cgltf/LICENSE" Dir="cgltf/" />
       <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/imgui/LICENSE.txt" Dir="imgui/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/glad/LICENSE.md" Dir="glad/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/glad/LICENSE-APACHE-2.0.txt" Dir="glad/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/stb/LICENSE" Dir="stb/" />
     </ItemGroup>
     <Copy SourceFiles="$(ProjectDir)../THIRD-PARTY-NOTICES.md" DestinationFiles="$(OrbedenEditorSdkDir)THIRD-PARTY-NOTICES.md" SkipUnchangedFiles="true" />
     <!--按库分目录：多份 LICENSE.txt / LICENSE.md 同名，平铺会互相覆盖-->

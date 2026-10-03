@@ -80,6 +80,20 @@ DrawQueue Material::GetDrawQueue() const
     return currentShader ? currentShader->drawQueue : DrawQueue::Opaque;
 }
 
+void Material::CopyFrom(Material* source)
+{
+    if (!source || source == this) return;
+
+    name = source->name;
+    overrideDrawQueue = source->overrideDrawQueue;
+    drawQueue = source->drawQueue;
+    shader.Set(source->shader.Get());
+    textureSlots = source->textureSlots;
+    colorSlots = source->colorSlots;
+    floatSlots = source->floatSlots;
+    MarkDirty();
+}
+
 void Material::SetShader(Shader* value)
 {
     shader.Set(value);

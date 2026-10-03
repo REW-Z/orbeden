@@ -23,6 +23,8 @@ private:
     bool localActive = true;
     bool worldActive = true;
     bool isStatic = false;
+    //运行时临时对象标志：只影响序列化枚举，不从场景文件恢复。
+    bool dontSave = false;
     std::string name;
     //最近一次 static 设置的失败原因
     std::string staticError;
@@ -102,6 +104,14 @@ public:
     //读取最近一次 static 设置的失败原因
     ORBEDEN_BIND_IGNORE
     const std::string& GetStaticError() const;
+
+    //读取临时对象标志
+    ORBEDEN_BIND_IGNORE
+    bool GetDontSave() const;
+
+    //设置临时对象标志；置真后世界保存、复制与 Prefab 枚举会跳过本节点及子树
+    ORBEDEN_BIND_IGNORE
+    void SetDontSave(bool value);
 
     //设置父级
     ORBEDEN_BIND_IGNORE

@@ -25,7 +25,7 @@ public:
     ~TransformCache() override;
 
     //接收变换失效通知
-    void OnTransformChanged(World& changedWorld, EnsId ens) override;
+    void OnTransformChanged(World& changedWorld, EnsId ens, TransformChangeSource source) override;
 
     //处理变更通知并刷新所有受影响节点的世界矩阵
     void Update(World& currentWorld);

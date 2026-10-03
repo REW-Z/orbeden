@@ -101,11 +101,16 @@ public:
     void* isItemActive = nullptr;
     void* isMouseDown = nullptr;
     void* drawIcon = nullptr;
+    void* inputVector2 = nullptr;
+    //按运行时 ID 与显示尺寸画一张引擎纹理
+    void* drawTexture = nullptr;
+    //把光标挪到屏幕坐标；场景手柄靠它把拖拽区放到任意位置
+    void* setCursorScreenPos = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 82);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 85);
 
 //Editor ImGui 绑定层
 class EditorGUI

@@ -18,11 +18,25 @@ public static unsafe class GameModule
         return ScriptRuntime.LoadGameAssembly(path) ? (byte)1 : (byte)0;
     }
 
-    /// <summary>初始化当前 World 的脚本运行时。</summary>
+    /// <summary>初始化当前 World 的脚本运行时；executionMode 为 ScriptExecutionMode。</summary>
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    public static void OrbedenGame_Initialize(IntPtr nativeApi)
+    public static void OrbedenGame_Initialize(IntPtr nativeApi, uint executionMode)
     {
-        ScriptRuntime.Initialize(nativeApi);
+        ScriptRuntime.Initialize(nativeApi, executionMode);
+    }
+
+    /// <summary>处理托管输入阶段。</summary>
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_ProcessInput(float deltaTime)
+    {
+        ScriptRuntime.ProcessInput(deltaTime);
+    }
+
+    /// <summary>准备托管渲染阶段。</summary>
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    public static void OrbedenGame_PrepareRender(float deltaTime)
+    {
+        ScriptRuntime.PrepareRender(deltaTime);
     }
 
     /// <summary>关闭当前 World 的脚本运行时。</summary>

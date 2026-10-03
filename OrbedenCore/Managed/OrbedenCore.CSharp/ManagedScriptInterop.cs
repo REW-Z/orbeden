@@ -65,6 +65,7 @@ internal static partial class ManagedTypeMetadataCache
         else if (valueType == typeof(ulong)) kind = InteropValueKind.UInt64;
         else if (valueType == typeof(float)) kind = InteropValueKind.Float32;
         else if (valueType == typeof(string)) kind = InteropValueKind.String;
+        else if (valueType == typeof(vector2)) kind = InteropValueKind.Vector2;
         else if (valueType == typeof(vector3)) kind = InteropValueKind.Vector3;
         else if (valueType == typeof(color)) kind = InteropValueKind.Color;
         else if (valueType == typeof(quaternion)) kind = InteropValueKind.Quaternion;
@@ -105,6 +106,7 @@ internal static partial class ManagedTypeMetadataCache
             InteropValueKind.UInt64 => InteropValue.From((ulong)input),
             InteropValueKind.Float32 => InteropValue.From((float)input),
             InteropValueKind.String => InteropValue.From((string)input),
+            InteropValueKind.Vector2 => InteropValue.From((vector2)input),
             InteropValueKind.Vector3 => InteropValue.From((vector3)input),
             InteropValueKind.Color => InteropValue.From((color)input),
             InteropValueKind.Quaternion => InteropValue.From((quaternion)input),
@@ -153,7 +155,7 @@ internal static partial class ManagedTypeMetadataCache
         foreach ((string name, ManagedHostField stored) in Script.ReadHostFields(host))
         {
             if (!metadata.Fields.TryGetValue(name, out ManagedFieldMetadata? field)) continue;
-            if (!TryReadHostValue(field, stored, out object? converted)) continue;
+            if (!TryReadHostValue(script, field, stored, out object? converted)) continue;
             field.Setter(script, converted);
         }
     }
@@ -253,6 +255,7 @@ internal static partial class ManagedTypeMetadataCache
             case InteropValueKind.UInt64 when ulong.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out ulong unsignedLong): value = InteropValue.From(unsignedLong); return true;
             case InteropValueKind.Float32 when float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float number): value = InteropValue.From(number); return true;
             case InteropValueKind.String: value = InteropValue.From(text); return true;
+            case InteropValueKind.Vector2 when TryParseFloats(text, 2, out float[] pair): value = InteropValue.From(new vector2(pair[0], pair[1])); return true;
             case InteropValueKind.Vector3 when TryParseFloats(text, 3, out float[] vector): value = InteropValue.From(new vector3(vector[0], vector[1], vector[2])); return true;
             case InteropValueKind.Color when TryParseFloats(text, 4, out float[] color): value = InteropValue.From(new color(color[0], color[1], color[2], color[3])); return true;
             case InteropValueKind.Quaternion when TryParseFloats(text, 4, out float[] quaternion): value = InteropValue.From(new quaternion(quaternion[0], quaternion[1], quaternion[2], quaternion[3])); return true;
@@ -324,13 +327,19 @@ internal static unsafe partial class ManagedScriptInterop
     internal static void Shutdown()
     {
         ScriptInteropDispatch.RegisterManaged(null);
+        ClearMembers();
+        ManagedTypeMetadataCache.Clear();
+        ReleaseStringResult();
+    }
+
+    /// <summary>清空保存了游戏 Type 的成员表，但保留已注册的原生互操作入口。</summary>
+    internal static void ClearMembers()
+    {
         members.Clear();
         memberCache.Clear();
         nextMemberSlot = 1;
         ++memberGeneration;
         if (memberGeneration == 0) memberGeneration = 1;
-        ManagedTypeMetadataCache.Clear();
-        ReleaseStringResult();
     }
 
     internal static InteropStatus FindComponent(EnsId ens, string typeName, int occurrence, out ComponentHandle handle)
@@ -412,11 +421,13 @@ internal static unsafe partial class ManagedScriptInterop
         {
             object? previous = field.Getter(script);
             field.Setter(script, converted);
-            if (!ManagedTypeMetadataCache.WriteHostField(script, script.NativePtr, field))
+            //显式编辑按用户输入写回：新值为空就是真正清空引用，丢弃该字段的保留路径。
+            if (!ManagedTypeMetadataCache.WriteHostField(script, script.NativePtr, field, explicitEdit: true))
             {
                 field.Setter(script, previous);
                 return InteropStatus.InvocationFailed;
             }
+            script.ClearUnresolvedReferences(field.Name);
             return InteropStatus.Ok;
         }
         catch { return InteropStatus.InvocationFailed; }

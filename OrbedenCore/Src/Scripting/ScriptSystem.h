@@ -5,11 +5,22 @@
 #include "Runtime/Native/NativeCall.h"
 #include "Runtime/Object/Script.h"
 
+#include <functional>
+
+//脚本域的运行阶段模式。
+//编辑模式只构造包装与帧系统并执行结构与渲染，不执行游戏生命周期和交互路由。
+enum class ScriptExecutionMode : uint32
+{
+    Editor = 0,
+    Play = 1,
+};
+
 //托管脚本域的固定原生入口。
 struct ScriptEntryPoints
 {
 public:
-    using InitializeFunction = void(ORBEDEN_NATIVE_CALL*)(void*);
+    //第二个参数是 ScriptExecutionMode：编辑模式与 Play 模式共用同一套入口。
+    using InitializeFunction = void(ORBEDEN_NATIVE_CALL*)(void*, uint32);
     using ShutdownFunction = void(ORBEDEN_NATIVE_CALL*)();
     using LoadAssemblyFunction = uint8(ORBEDEN_NATIVE_CALL*)(const uint8*, int32);
     using UpdateFunction = void(ORBEDEN_NATIVE_CALL*)(float32);
@@ -26,6 +37,9 @@ public:
     EnsWorldActiveChangedFunction ensWorldActiveChanged = nullptr;
     EnsDestroyedFunction ensDestroyed = nullptr;
     DrawGuiFunction drawGui = nullptr;
+    //尾部追加：渲染前的托管 UI 阶段；旧宿主不提供时为空，按无 UI 处理。
+    UpdateFunction processInput = nullptr;
+    UpdateFunction prepareRender = nullptr;
 
     //判断运行所需的托管脚本入口是否完整。
     bool IsValid() const;
@@ -81,6 +95,7 @@ private:
     RenderSystem* renderSystem = nullptr;
     World* world = nullptr;
     ScriptRuntimeMode runtimeMode = ScriptRuntimeMode::AOT;
+    ScriptExecutionMode executionMode = ScriptExecutionMode::Play;
     bool initialized = false;
     bool renderOverlayAttached = false;
     bool nativeListsDirty = false;
@@ -164,7 +179,21 @@ public:
     bool SetAotEntryPoints(const ScriptEntryPoints& value);
 
     //在 World 加载完成后启动 C++ 与 C# 脚本域。
-    bool Initialize();
+    //编辑模式只构造包装与帧系统，不执行 OnStart 等游戏生命周期。
+    bool Initialize(ScriptExecutionMode mode = ScriptExecutionMode::Play);
+
+    //获取当前运行阶段模式。
+    ScriptExecutionMode GetExecutionMode() const { return executionMode; }
+
+    //在 FixedUpdate 之前处理托管输入阶段；不受模拟暂停门控，编辑模式不执行交互路由。
+    void ProcessManagedInput(float32 deltaTime);
+
+    //在全部 LateUpdate 之后、渲染消费之前准备托管渲染；不受暂停门控。
+    void PrepareManagedRender(float32 deltaTime);
+
+    //在延迟删除保护区内执行一段外部回调。作用域结束时恢复原来的派发标志，
+    //因此嵌在脚本阶段里的 UI 事件派发不会提前关掉外层的延迟删除保护。
+    void DispatchExternalCallbacks(const std::function<void()>& callback);
 
     //按 C++、C# 顺序关闭当前脚本域。
     void Shutdown();

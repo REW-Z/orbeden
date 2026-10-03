@@ -31,6 +31,7 @@ namespace Reflection
         Object,
         //容器条目：payload 是元素个数，元素本身各自成条（编辑器属性快照用）
         Array,
+        Vector2,
     };
 
     //可序列化字段的类型分类
@@ -51,6 +52,7 @@ namespace Reflection
         Quaternion,
         EnsId,
         Array,
+        Vector2,
     };
 
     //反射调用使用的轻量值容器
@@ -58,7 +60,7 @@ namespace Reflection
     {
     private:
         ValueKind kind = ValueKind::Empty;
-        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector3, color, quaternion, EnsId, Object*> data;
+        std::variant<std::monostate, bool, int32, uint32, uint64, float32, std::string, StringId, vector2, vector3, color, quaternion, EnsId, Object*> data;
 
     public:
         Value() = default;
@@ -86,6 +88,9 @@ namespace Reflection
 
         //创建稳定 ID 反射值
         Value(const StringId& value);
+
+        //创建 vector2 反射值
+        Value(const vector2& value);
 
         //创建 vector3 反射值
         Value(const vector3& value);
@@ -131,6 +136,9 @@ namespace Reflection
 
         //尝试读取稳定 ID 值
         bool TryGet(StringId& value) const;
+
+        //尝试读取 vector2 值
+        bool TryGet(vector2& value) const;
 
         //尝试读取 vector3 值
         bool TryGet(vector3& value) const;
@@ -446,6 +454,9 @@ namespace Reflection
         return ToXmlValue(static_cast<uint32>(value));
     }
 
+    //转换 vector2 为 XML 文本
+    std::string ToXmlValue(const vector2& value);
+
     //转换 vector3 为 XML 文本
     std::string ToXmlValue(const vector3& value);
 
@@ -506,6 +517,9 @@ namespace Reflection
         target = static_cast<T>(parsed);
         return true;
     }
+
+    //从 XML 文本读取 vector2
+    bool SetFromXmlValue(vector2& target, const std::string& value);
 
     //从 XML 文本读取 vector3
     bool SetFromXmlValue(vector3& target, const std::string& value);
