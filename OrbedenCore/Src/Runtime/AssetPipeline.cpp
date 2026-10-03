@@ -24,20 +24,13 @@
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Skybox.h"
+#include "Runtime/Object/Font.h"
 #include "Runtime/Object/TextResource.h"
+#include "Runtime/Fonts/FontRasterizer.h"
 
-#define STB_IMAGE_IMPLEMENTATION
+//实现编在第三方的静态库里（Tools/OrbedenThirdParty/src 下的编译单元），这里只取声明。
 #include "ThirdParty/stb/stb_image.h"
-
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif
-#define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 class AssetPipelineObjectFactory
 {
@@ -104,6 +97,17 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
             if (value == "Y") { settings.hasMeshUpAxis = true; settings.meshUpAxis = MeshUpAxis::Y; }
             else if (value == "Z") { settings.hasMeshUpAxis = true; settings.meshUpAxis = MeshUpAxis::Z; }
             else Log::Warning(("Unknown import setting value for upAxis: " + value).c_str());
+        }
+        else if (name == "faceIndex")
+        {
+            uint32 parsed = 0;
+            auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+            if (result.ec == std::errc() && result.ptr == value.data() + value.size())
+            {
+                settings.hasFontFaceIndex = true;
+                settings.fontFaceIndex = parsed;
+            }
+            else Log::Warning(("Unknown import setting value for faceIndex: " + value).c_str());
         }
         //不认识的设置名直接跳过：表由编辑器写，多出来的项属于更高版本的编辑器
 
@@ -217,6 +221,9 @@ namespace
 
     //读取文本文件
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection);
+
+    //读取二进制文件；字体等按字节保存的资源用它
+    List<uint8> LoadBytesOrError(const std::string& path, AssetCollection& collection);
 
     //判断字符串前缀
     bool StartsWith(const std::string& text, const std::string& prefix)
@@ -1171,6 +1178,33 @@ namespace
         return result;
     }
 
+    //读取二进制文件
+    List<uint8> LoadBytesOrError(const std::string& path, AssetCollection& collection)
+    {
+        std::string filePath = GetAssetFilePath(path);
+        if (!FileSystem::Exist(filePath))
+        {
+            collection.AddError("File does not exist: " + path);
+            return List<uint8>();
+        }
+
+        collection.AddSourceFile(filePath);
+        std::ifstream input(Utf8Path::FromUtf8(filePath), std::ios::binary);
+        if (!input)
+        {
+            collection.AddError("File could not be opened: " + path);
+            return List<uint8>();
+        }
+
+        List<uint8> bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        if (input.bad())
+        {
+            collection.AddError("File read failed: " + path);
+            return List<uint8>();
+        }
+        return bytes;
+    }
+
     //读取文本文件
     std::string LoadTextOrError(const std::string& path, AssetCollection& collection)
     {
@@ -1917,6 +1951,12 @@ AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
         return AssetImporter::OrbShader;
     }
 
+    //字体资产：字节原样保存，元数据与字形在运行时按需解析
+    if (extension == ".ttf" || extension == ".otf" || extension == ".ttc")
+    {
+        return AssetImporter::Font;
+    }
+
     //文本资产：内容原样读入，组件按 Key 引用后自己解析
     if (extension == ".txt" || extension == ".xml" || extension == ".json" || extension == ".csv"
         || extension == ".yaml" || extension == ".fnt" || extension == ".bytes")
@@ -1949,6 +1989,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
     case AssetImporter::OrbShader: return Import_ORBSHADER(sourceKey);
     case AssetImporter::Glsl: return Import_GLSL(sourceKey);
     case AssetImporter::Text: return Import_TEXT(sourceKey);
+    case AssetImporter::Font: return Import_FONT(sourceKey, settings);
     case AssetImporter::None: break;
     }
 
@@ -1975,6 +2016,35 @@ AssetCollection AssetPipeline::Import_TEXT(std::string path)
     }
 
     resource->text = source;
+    collection.AddObject(collection.sourceKey, resource, true);
+    return collection;
+}
+
+AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSettings& settings)
+{
+    AssetCollection collection;
+    collection.sourceKey = ResourceManager::ToResourceKey(path);
+    List<uint8> bytes = LoadBytesOrError(collection.sourceKey, collection);
+    if (!collection.Succeeded()) return collection;
+
+    Font* resource = CreateImportedObject<Font>(collection.sourceKey);
+    if (!resource)
+    {
+        collection.AddError("Failed to create Font: " + collection.sourceKey);
+        return collection;
+    }
+
+    resource->sourceBytes = std::move(bytes);
+    resource->faceIndex = settings.hasFontFaceIndex ? settings.fontFaceIndex : 0;
+
+    //导入时就打开一次：字体面下标越界或格式不支持时在这里失败，而不是等到运行时。
+    if (!FontRasterizer::OpenFont(*resource))
+    {
+        collection.AddError("Font could not be opened (unsupported format or face index out of range): " + collection.sourceKey);
+        Object::DeleteInstance(resource);
+        return collection;
+    }
+
     collection.AddObject(collection.sourceKey, resource, true);
     return collection;
 }

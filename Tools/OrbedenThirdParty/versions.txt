@@ -4,3 +4,9 @@
 
 freetype VER-2-14-3
 msdfgen v1.13
+glfw 3.4
+imgui 1.92.8
+glad 2.0.8
+cgltf 1.15
+stb_image 2.30
+physx 5.9.0

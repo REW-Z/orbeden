@@ -16,9 +16,9 @@
 | GLFW | 3.4 | zlib/libpng | `OrbedenCore/Src/ThirdParty/glfw/LICENSE.md` | 引擎、编辑器、游戏 |
 | Dear ImGui | 1.92.8 | MIT | `OrbedenCore/Src/ThirdParty/imgui/LICENSE.txt` | 引擎、编辑器 |
 | cgltf | 1.15 | MIT | `OrbedenCore/Src/ThirdParty/cgltf/LICENSE` | 引擎、游戏 |
-| stb_image | 2.30 | 公有领域（Unlicense 声明） | `OrbedenCore/Src/ThirdParty/stb/stb_image.h` 文件末尾 | 引擎、编辑器、游戏 |
-| glad 生成加载器 | glad 2.0.8 | (WTFPL OR CC0-1.0) AND Apache-2.0 | 生成文件头部的 SPDX 声明 | 引擎、编辑器、游戏 |
-| khrplatform.h | Khronos | Apache-2.0 | `OrbedenCore/Src/ThirdParty/glad/include/KHR/khrplatform.h` | 引擎、编辑器、游戏 |
+| stb_image | 2.30 | MIT 或公有领域（二选一） | `OrbedenCore/Src/ThirdParty/stb/LICENSE`（自 `stb_image.h` 尾部原文提取） | 引擎、编辑器、游戏 |
+| glad 生成加载器 | glad 2.0.8 | (WTFPL OR CC0-1.0) AND Apache-2.0 | `OrbedenCore/Src/ThirdParty/glad/LICENSE.md`、`LICENSE-APACHE-2.0.txt` | 引擎、编辑器、游戏 |
+| khrplatform.h | Khronos | MIT 式许可 | `OrbedenCore/Src/ThirdParty/glad/include/KHR/khrplatform.h` 头部 | 引擎、编辑器、游戏 |
 
 没有 copyleft 组件进入产物：GPL 一侧的许可（FreeType 的 GPLv2 选项）未被采用，见下。
 
@@ -50,7 +50,8 @@ FTL 的义务：
 - cgltf — MIT，Copyright (c) 2018-2021 Johannes Kuhlmann
 - PhysX — BSD 3-Clause，Copyright (c) 2008-2025, NVIDIA Corporation
 - GLFW — zlib/libpng，Copyright (c) 2002-2006 Marcus Geelnard，Copyright (c) 2006-2019 Camilla Löwy
-- stb_image — 公有领域（Unlicense），作者 Sean Barrett 及贡献者
-- glad 生成加载器与 khrplatform.h — Apache-2.0（保留声明与许可文本）
+- stb_image — MIT 或公有领域（二选一），Copyright (c) 2017 Sean Barrett
+- glad 生成加载器 — (WTFPL OR CC0-1.0) AND Apache-2.0，保留 SPDX 声明与 Apache-2.0 全文
+- khrplatform.h — Khronos Group 的 MIT 式许可，Copyright (c) 2008-2018 The Khronos Group Inc.
 
 MIT、BSD-3、zlib 与 Apache-2.0 都要求“保留版权声明与许可文本”，不要求开源衍生作品。

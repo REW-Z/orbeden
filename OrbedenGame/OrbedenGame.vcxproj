@@ -59,7 +59,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>$(OrbedenCoreStaticLib);$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3dll.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OrbedenCoreStaticLib);$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration)\imgui.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration)\glad.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration)\stb.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration)\freetype.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration)\msdfgen-core.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <!--同一 PostBuildEvent 里多个 Command 元数据会互相覆盖，改用 Copy 任务拷贝运行时依赖。-->
     <PostBuildEvent>
@@ -86,6 +86,18 @@
   </Target>
   <Target Name="CopyAotRuntime" AfterTargets="Build">
     <Copy SourceFiles="$(OrbedenGameAotDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'$(OrbedenGameAotDll)' != ''" />
-    <Copy SourceFiles="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib-vc2022\glfw3.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <!--第三方组件的署名与许可：静态链接的库要求随二进制一起分发 -->
+    <Copy SourceFiles="$(OrbedenEngineRoot)\THIRD-PARTY-NOTICES.md" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\freetype\LICENSE.TXT" Dir="freetype/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\freetype\FTL.TXT" Dir="freetype/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\msdfgen\LICENSE.txt" Dir="msdfgen/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\LICENSE.md" Dir="PhysX/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\LICENSE.md" Dir="glfw/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf\LICENSE" Dir="cgltf/" />
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\LICENSE.txt" Dir="imgui/" />
+    </ItemGroup>
+    <MakeDir Directories="@(OrbedenPlayerLicenseFile->'$(OutDir)ThirdPartyLicenses/%(Dir)')" />
+    <Copy SourceFiles="@(OrbedenPlayerLicenseFile)" DestinationFiles="@(OrbedenPlayerLicenseFile->'$(OutDir)ThirdPartyLicenses/%(Dir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 </Project>

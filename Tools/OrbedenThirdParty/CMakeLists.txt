@@ -55,3 +55,42 @@ set(MSDFGEN_ADDITIONAL_DEFINES "")
 string(TIMESTAMP MSDFGEN_COPYRIGHT_YEAR "%Y")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/vendor/msdfgen/cmake/msdfgen-config.h.in"
                "${CMAKE_CURRENT_BINARY_DIR}/msdfgen-config.h")
+
+# ---- GLFW ----
+# 上游自带 CMake：只建静态库，不要示例、文档与测试。
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(vendor/glfw glfw)
+
+# ---- Dear ImGui ----
+# 上游文件原样进 vendor/；imgui_impl_opengl3.cpp 由 src/ 下的 Orbeden 包装 include，
+# 以便使用引擎的 GLAD2 而不是 imgui 自带的加载器。
+add_library(imgui STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_draw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_tables.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_widgets.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/misc/cpp/imgui_stdlib.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_glfw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/imgui_impl_opengl3_orbeden.cpp")
+target_include_directories(imgui PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/misc/cpp")
+# ---- glad ----
+# 生成产物直接入库；引擎侧只链接，不编译。
+add_library(glad STATIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/src/gl.c")
+target_include_directories(glad PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/include")
+
+# imgui 的 GLFW 与 OpenGL3 后端分别要这两家的头文件与库。
+target_link_libraries(imgui PUBLIC glfw glad)
+
+# ---- cgltf / stb_image ----
+# 单头库：实现放在 src/ 下的编译单元里，引擎只 include 头文件。
+add_library(cgltf STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/cgltf_impl.c")
+target_include_directories(cgltf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/cgltf")
+
+add_library(stb STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/stb_image_impl.c")
+target_include_directories(stb PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb")

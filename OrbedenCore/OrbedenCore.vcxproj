@@ -83,6 +83,8 @@
     <OrbedenSharedSdkDir>$(OrbedenEditorSdkDir)Shared\</OrbedenSharedSdkDir>
     <OrbedenSharedBuildDir>$(ProjectDir)..\OrbedenEditor\Templates\Shared\</OrbedenSharedBuildDir>
     <OrbedenMetaGenSdkDir>$(OrbedenEditorSdkDir)Tools\OrbedenMetaGen\</OrbedenMetaGenSdkDir>
+    <OrbedenPackagesSdkDir>$(OrbedenEditorSdkDir)Packages\</OrbedenPackagesSdkDir>
+    <OrbedenUIPackageSourceDir>$(ProjectDir)Managed\Orbeden.UI\</OrbedenUIPackageSourceDir>
     <OutDir>$(OrbedenCoreOutputDir)</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -93,7 +95,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -107,7 +109,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -119,14 +121,14 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;GLAD_API_CALL_EXPORT;GLAD_API_CALL_EXPORT_BUILD;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -139,17 +141,23 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;GLAD_API_CALL_EXPORT;GLAD_API_CALL_EXPORT_BUILD;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib-vc2022;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <!-- 第三方库由生成器子项目产出；它自身有增量跳过，库已存在时几乎不耗时。 -->
+    <ProjectReference Include="..\Tools\OrbedenThirdParty\OrbedenThirdParty.vcxproj">
+      <Project>{7c4a1e92-3f6b-4d58-9a21-5e8d2b73c410}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Application.h" />
     <ClInclude Include="Src\Defines\types.h" />
@@ -170,7 +178,12 @@
     <ClInclude Include="Src\Runtime\Object\WheelCollider.h" />
     <ClInclude Include="Src\Platform\DynamicLibrary.h" />
     <ClInclude Include="Src\Platform\ExecutablePath.h" />
+    <ClInclude Include="Src\Platform\GamepadInput.h" />
     <ClInclude Include="Src\Platform\GlfwWindow.h" />
+    <ClInclude Include="Src\Platform\WindowsInputHook.h" />
+    <ClInclude Include="Src\Platform\WindowsPointerInput.h" />
+    <ClInclude Include="Src\Platform\WindowsTextInput.h" />
+    <ClInclude Include="Src\InputManager\InputEvent.h" />
     <ClInclude Include="Src\InputManager\InputManager.h" />
     <ClInclude Include="Src\Platform\Window.h" />
     <ClInclude Include="Src\Rendering\Backend\GpuResourceIDs.h" />
@@ -208,6 +221,10 @@
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeResourceBinds.h" />
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiBridge.h" />
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiTypes.h" />
+    <ClInclude Include="Src\Runtime\Gui\UIRenderer.h" />
+    <ClInclude Include="Src\Runtime\Gui\UIShaderSources.h" />
     <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h" />
     <ClInclude Include="Src\Runtime\Object\Camera.h" />
     <ClInclude Include="Src\Runtime\Object\Component.h" />
@@ -225,10 +242,12 @@
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
     <ClInclude Include="Src\ResourceManager\ResourceManager.h" />
     <ClInclude Include="Src\Runtime\Object\Material.h" />
+    <ClInclude Include="Src\Runtime\Object\Font.h" />
     <ClInclude Include="Src\Runtime\Object\Shader.h" />
     <ClInclude Include="Src\Runtime\Object\Mesh.h" />
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
     <ClInclude Include="Src\Runtime\Object\TextResource.h" />
+    <ClInclude Include="Src\Runtime\Fonts\FontRasterizer.h" />
     <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
     <ClInclude Include="Src\Runtime\Object\Transform.h" />
     <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
@@ -263,7 +282,11 @@
     <ClCompile Include="Src\Runtime\Object\WheelCollider.cpp" />
     <ClCompile Include="Src\Platform\DynamicLibrary.cpp" />
     <ClCompile Include="Src\Platform\ExecutablePath.cpp" />
+    <ClCompile Include="Src\Platform\GamepadInput.cpp" />
     <ClCompile Include="Src\Platform\GlfwWindow.cpp" />
+    <ClCompile Include="Src\Platform\WindowsInputHook.cpp" />
+    <ClCompile Include="Src\Platform\WindowsPointerInput.cpp" />
+    <ClCompile Include="Src\Platform\WindowsTextInput.cpp" />
     <ClCompile Include="Src\InputManager\InputManager.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
     <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
@@ -293,6 +316,8 @@
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeResourceBinds.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\RetainedGuiBridge.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\UIRenderer.cpp" />
     <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp" />
     <ClCompile Include="Src\Runtime\Object\Camera.cpp" />
     <ClCompile Include="Src\Runtime\Object\Component.cpp" />
@@ -311,20 +336,15 @@
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
     <ClCompile Include="Src\ResourceManager\ResourceManager.cpp" />
     <ClCompile Include="Src\Runtime\Object\Material.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Font.cpp" />
     <ClCompile Include="Src\Runtime\Object\Shader.cpp" />
     <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
     <ClCompile Include="Src\Runtime\Object\TextResource.cpp" />
+    <ClCompile Include="Src\Runtime\Fonts\FontRasterizer.cpp" />
     <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
     <ClCompile Include="Src\Runtime\Object\Transform.cpp" />
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />
-    <ClCompile Include="Src\ThirdParty\glad\src\gl.c" />
-    <ClCompile Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="Src\ThirdParty\imgui\backends\imgui_impl_opengl3_orbeden.cpp" />
-    <ClCompile Include="Src\ThirdParty\imgui\imgui.cpp" />
-    <ClCompile Include="Src\ThirdParty\imgui\imgui_draw.cpp" />
-    <ClCompile Include="Src\ThirdParty\imgui\imgui_tables.cpp" />
-    <ClCompile Include="Src\ThirdParty\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Src\Runtime\World.cpp" />
     <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
   </ItemGroup>
@@ -350,8 +370,31 @@
     </ItemGroup>
     <!--头文件发布只拷不删，改名或移动后的旧头会残留在 SDK 里被游戏工程误用；发布前先清空。-->
     <RemoveDir Directories="$(OrbedenNativeSdkIncludeDir)" />
-    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual" />
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual;$(OrbedenPackagesSdkDir)Orbeden.UI\" />
+    <!--GUI 源码包：SDK 里是只读基线，项目内的 Packages/Orbeden.UI 会整体覆盖它。-->
+    <ItemGroup>
+      <OrbedenUIPackageFile Include="$(OrbedenUIPackageSourceDir)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OrbedenUIPackageFile)" DestinationFiles="@(OrbedenUIPackageFile->'$(OrbedenPackagesSdkDir)Orbeden.UI\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <!--第三方组件的署名与许可：引擎静态链接的库要求随二进制产物分发，游戏工程从这里取。-->
+    <ItemGroup>
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/freetype/LICENSE.TXT" Dir="freetype/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/freetype/FTL.TXT" Dir="freetype/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/msdfgen/LICENSE.txt" Dir="msdfgen/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/PhysX/LICENSE.md" Dir="PhysX/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/glfw/LICENSE.md" Dir="glfw/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/cgltf/LICENSE" Dir="cgltf/" />
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)Src/ThirdParty/imgui/LICENSE.txt" Dir="imgui/" />
+    </ItemGroup>
+    <Copy SourceFiles="$(ProjectDir)../THIRD-PARTY-NOTICES.md" DestinationFiles="$(OrbedenEditorSdkDir)THIRD-PARTY-NOTICES.md" SkipUnchangedFiles="true" />
+    <!--按库分目录：多份 LICENSE.txt / LICENSE.md 同名，平铺会互相覆盖-->
+    <MakeDir Directories="@(OrbedenThirdPartyLicenseFile->'$(OrbedenEditorSdkDir)ThirdPartyLicenses/%(Dir)')" />
+    <Copy SourceFiles="@(OrbedenThirdPartyLicenseFile)" DestinationFiles="@(OrbedenThirdPartyLicenseFile->'$(OrbedenEditorSdkDir)ThirdPartyLicenses/%(Dir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+
+
+
+
     <!--游戏工程的原生构建契约：唯一来源是 Templates/Shared/，工程内不再保留副本。-->
     <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.props" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.targets" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />

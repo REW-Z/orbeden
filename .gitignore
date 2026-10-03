@@ -27,3 +27,9 @@ Tools/OrbedenThirdParty/obj/*
 
 #API 参考由 OrbedenDocGen 随构建重写，手写内容只放在 Manual 根目录
 Docs/Manual/Api/
+
+#PhysX 的工程生成物与中间产物：由 Tools/OrbedenThirdParty 按需重建
+Tools/OrbedenThirdParty/vendor/physx/bin/
+Tools/OrbedenThirdParty/vendor/physx/compiler/
+Tools/OrbedenThirdParty/vendor/physx/install/
+Tools/OrbedenThirdParty/vendor/physx/buildtools/packman/packages/

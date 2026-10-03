@@ -64,6 +64,19 @@
     <!-- 增量输出：发布到主工程的库文件。两个都要齐，缺任何一个都会重新生成。 -->
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration)\freetype.lib" />
     <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)\msdfgen-core.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)imgui\lib\WindowsX64\$(Configuration)\imgui.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)glad\lib\WindowsX64\$(Configuration)\glad.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)stb\lib\WindowsX64\$(Configuration)\stb.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
@@ -78,11 +91,11 @@
     <!-- 配置：只生成当前配置，Debug 与 Release 各自一个构建目录，互不覆盖。 -->
     <Exec Command="&quot;$(ThirdPartyCMake)&quot; -S &quot;$(ProjectDir).&quot; -B &quot;$(ThirdPartyCMakeBuildDir).&quot; -G &quot;Visual Studio 18 2026&quot; -A x64"
           UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
-    <Exec Command="&quot;$(ThirdPartyCMake)&quot; --build &quot;$(ThirdPartyCMakeBuildDir).&quot; --config $(Configuration) --target freetype msdfgen-core"
+    <Exec Command="&quot;$(ThirdPartyCMake)&quot; --build &quot;$(ThirdPartyCMakeBuildDir).&quot; --config $(Configuration) --target freetype msdfgen-core glfw imgui glad cgltf stb"
           UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
 
     <!-- 发布：头文件与库文件都进主工程的 ThirdParty 目录，主工程只认这一处。 -->
-    <MakeDir Directories="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)" />
+    <MakeDir Directories="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)imgui\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)glad\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)cgltf\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)stb\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)" />
     <ItemGroup>
       <FreetypeHeader Include="$(ThirdPartyVendorDir)freetype\include\**\*" />
       <!-- msdfgen.h 内部按相对路径引 core/ 下的头文件，用递归通配保住 core\ 这一层。 -->
@@ -114,6 +127,41 @@
           DestinationFolder="$(OrbedenThirdPartyPublishDir)freetype" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ThirdPartyVendorDir)msdfgen\LICENSE.txt"
           DestinationFolder="$(OrbedenThirdPartyPublishDir)msdfgen" SkipUnchangedFiles="true" />
+    <!-- 上游自带 CMake 的库与单头库：头文件按各自的目录形状发布，库文件统一放 lib/WindowsX64/配置。 -->
+    <ItemGroup>
+      <GlfwHeader Include="$(ThirdPartyVendorDir)glfw\include\**\*" />
+      <ImguiHeader Include="$(ThirdPartyVendorDir)imgui\**\*.h" />
+      <GladHeader Include="$(ThirdPartyVendorDir)glad\include\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(GlfwHeader)" DestinationFiles="@(GlfwHeader->'$(OrbedenThirdPartyPublishDir)glfw\include\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ImguiHeader)" DestinationFiles="@(ImguiHeader->'$(OrbedenThirdPartyPublishDir)imgui\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(GladHeader)" DestinationFiles="@(GladHeader->'$(OrbedenThirdPartyPublishDir)glad\include\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)cgltf\cgltf.h" DestinationFolder="$(OrbedenThirdPartyPublishDir)cgltf" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)stb\stb_image.h" DestinationFolder="$(OrbedenThirdPartyPublishDir)stb" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)glfw\LICENSE.md" DestinationFolder="$(OrbedenThirdPartyPublishDir)glfw" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)imgui\LICENSE.txt" DestinationFolder="$(OrbedenThirdPartyPublishDir)imgui" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)cgltf\LICENSE" DestinationFolder="$(OrbedenThirdPartyPublishDir)cgltf" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glfw3.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)glfw\lib\WindowsX64\$(Configuration)\glfw3.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\imgui.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)imgui\lib\WindowsX64\$(Configuration)\imgui.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\glad.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)glad\lib\WindowsX64\$(Configuration)\glad.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\cgltf.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Build\lib\$(Configuration)\stb.lib" DestinationFiles="$(OrbedenThirdPartyPublishDir)stb\lib\WindowsX64\$(Configuration)\stb.lib" SkipUnchangedFiles="true" />
+    <!-- PhysX：自带工程生成器 + ninja，配置映射 Debug->debug、Release->release。 -->
+    <PropertyGroup>
+      <PhysXConfig Condition="'$(Configuration)' == 'Debug'">debug</PhysXConfig>
+      <PhysXConfig Condition="'$(Configuration)' != 'Debug'">release</PhysXConfig>
+    </PropertyGroup>
+    <Exec Command="&quot;$(ProjectDir)physx-build.bat&quot; $(PhysXConfig)"
+          UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+    <ItemGroup>
+      <PhysXLib Include="$(ThirdPartyVendorDir)physx\bin\win.x86_64.vc143.md\$(PhysXConfig)\*.lib" />
+      <PhysXHeader Include="$(ThirdPartyVendorDir)physx\include\**\*" />
+    </ItemGroup>
+    <Error Condition="'@(PhysXLib)' == ''" Text="PhysX static libraries were not produced. Check the build output above." />
+    <Copy SourceFiles="@(PhysXHeader)" DestinationFiles="@(PhysXHeader->'$(OrbedenThirdPartyPublishDir)PhysX\include\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PhysXLib)" DestinationFolder="$(OrbedenThirdPartyPublishDir)PhysX\lib\WindowsX64\$(Configuration)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)physx\LICENSE.md" DestinationFolder="$(OrbedenThirdPartyPublishDir)PhysX" SkipUnchangedFiles="true" />
+
     <!--
       落地时间戳：Copy 在内容未变时会跳过，目标文件的时间因此不会推进，
       下一次增量检查又会认为输出比输入旧、无限重跑。这里统一把它抬到最新。

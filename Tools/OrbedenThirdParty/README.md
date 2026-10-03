@@ -11,13 +11,20 @@
 - 主工程的日常构建完全不碰第三方源码；
 - 本工程自身也有增量跳过：产物比输入新时整段不做，实测约 0.3 秒。
 
+判断标准很简单：**`OrbedenCore/Src/ThirdParty/<库>/` 下只允许出现 `include/`、`lib/`、`LICENSE*`
+与说明文件，不允许出现 `.c`／`.cpp`**。出现源码就说明这个库还没纳入本工程。
+
 ## 目录
 
 | 路径 | 内容 |
 |---|---|
 | `vendor/<库>/` | 第三方源码，是唯一的版本来源 |
-| `CMakeLists.txt` | 各库的编译选项；新增库在这里 `add_subdirectory` |
+| `src/` | 我们自己写的胶水编译单元（单头库的实现、后端包装） |
+| `CMakeLists.txt` | 各库的编译选项；上游自带 CMake 的用 `add_subdirectory`，其余用 `add_library` 直接列源文件 |
 | `versions.txt` | 版本清单，同时是增量输入：改版本号即触发重新生成 |
+| `physx-preset.xml` | PhysX 生成预设（静态库、CPU-only、ninja）；`physx-build.bat` 会把它复制进 SDK 的预设目录 |
+| `physx-build.bat` | PhysX 的生成与构建驱动：vcvars + 自带 ninja + 八个静态库目标 |
+| `IMGUI_SUBSET.txt` | vendor 里 imgui 收录了哪些文件、为什么 |
 | `Build/` | CMake 生成物与中间产物，不进版本管理 |
 
 发布出去的目录：
@@ -27,6 +34,9 @@ OrbedenCore/Src/ThirdParty/<库>/include/         头文件
 OrbedenCore/Src/ThirdParty/<库>/lib/WindowsX64/<配置>/  静态库
 OrbedenCore/Src/ThirdParty/<库>/LICENSE*          授权文件
 ```
+
+imgui 与 glfw 的目录形状按主工程的既有 include 路径发布：`ThirdParty/imgui/`（根、`backends/`、`misc/cpp/`）
+与 `ThirdParty/glfw/include/`。
 
 ## 增量逻辑
 
@@ -49,5 +59,12 @@ OrbedenCore/Src/ThirdParty/<库>/LICENSE*          授权文件
 |---|---|---|
 | FreeType | VER-2-14-3 | 关掉 ZLIB/BZIP2/PNG/HARFBUZZ/BROTLI，只保留自带模块 |
 | msdfgen | v1.13 | core-only：不建 standalone、不接 Skia、不开 OpenMP、不产 SVG/PNG |
+| GLFW | 3.4 | 静态库；不建示例、文档与测试 |
+| Dear ImGui | 1.92.8 | 上游文件原样入库，`src/imgui_impl_opengl3_orbeden.cpp` 用引擎的 GLAD2 包一层 |
+| glad | 2.0.8 | 生成产物直接入库（GL 4.3 core），编成静态库 |
+| cgltf | 1.15 | 单头库，实现放在 `src/cgltf_impl.c` |
+| stb_image | 2.30 | 单头库，实现放在 `src/stb_image_impl.c` |
+| PhysX | 5.9.0 | 官方生成器 + 自定义预设：静态库、CPU-only、ninja 生成器（本机只有 VS18，上游预设停在 VS2022） |
 
-`glad` 与 `imgui` 目前仍是主工程的源码依赖，属待整理项；未来的目标是也纳入本工程。
+注意 `src/` 下的 `.c` 编译单元必须是纯 ASCII：MSVC 按系统代码页读 C 文件，
+中文注释的 UTF-8 尾字节可能被当成行继续符，把后面的 `#define` 一起吞掉。
