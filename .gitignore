@@ -19,3 +19,11 @@ Tests/*
 ResourceCache/
 #伴生文件承载导入设置，必须进版本管理；只忽略原子写入过程中的临时文件
 *.resinfo.tmp
+
+#绑定生成的增量指纹：每次构建都会刷新，不是生成物本身
+OrbedenCore/Src/Runtime/Generated/Bindings.Generated.fingerprint
+Tools/OrbedenThirdParty/Build/*
+Tools/OrbedenThirdParty/obj/*
+
+#API 参考由 OrbedenDocGen 随构建重写，手写内容只放在 Manual 根目录
+Docs/Manual/Api/
