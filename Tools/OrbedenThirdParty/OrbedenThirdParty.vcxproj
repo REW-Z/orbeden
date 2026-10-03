@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    第三方库生成器。
+
+    职责：把 vendor/ 下的第三方源码编成静态库，并把「头文件 + 库文件」发布到
+    OrbedenCore/Src/ThirdParty/<库>/，主工程只按库依赖引用，永不编译第三方源码。
+
+    这个工程平时不需要点：产物比输入新时整段跳过（见 GenerateThirdPartyLibraries 的
+    Inputs/Outputs）。只有换第三方版本或改编译选项时才重新生成。
+  -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7C4A1E92-3F6B-4D58-9A21-5E8D2B73C410}</ProjectGuid>
+    <RootNamespace>OrbedenThirdParty</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Label="Configuration">
+    <!-- Utility：本身不编译任何源码，只作为 CMake 的驱动入口。 -->
+    <ConfigurationType>Utility</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)Build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
+    <!-- 用 VS 自带的 CMake，不要求调用方额外装一份。 -->
+    <ThirdPartyCMake Condition="'$(ThirdPartyCMake)' == ''">$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe</ThirdPartyCMake>
+    <ThirdPartyCMakeBuildDir>$(ProjectDir)Build\cmake\$(Configuration)\</ThirdPartyCMakeBuildDir>
+    <ThirdPartyVendorDir>$(ProjectDir)vendor\</ThirdPartyVendorDir>
+    <OrbedenThirdPartyPublishDir>$(ProjectDir)..\..\OrbedenCore\Src\ThirdParty\</OrbedenThirdPartyPublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 增量输入：第三方源码、版本清单与生成脚本本身。 -->
+    <ThirdPartySource Include="$(ThirdPartyVendorDir)**\*" />
+    <ThirdPartySource Include="$(ProjectDir)CMakeLists.txt" />
+    <ThirdPartySource Include="$(ProjectDir)versions.txt" />
+    <ThirdPartySource Include="$(MSBuildProjectFullPath)" />
+    <!-- 增量输出：发布到主工程的库文件。两个都要齐，缺任何一个都会重新生成。 -->
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration)\freetype.lib" />
+    <ThirdPartyArtifact Include="$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)\msdfgen-core.lib" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+  <Target Name="GenerateThirdPartyLibraries"
+          BeforeTargets="Build"
+          Inputs="@(ThirdPartySource)"
+          Outputs="@(ThirdPartyArtifact)">
+    <Error Condition="!Exists('$(ThirdPartyCMake)')"
+           Text="CMake was not found at $(ThirdPartyCMake). Run this project from a Visual Studio prompt." />
+
+    <!-- 配置：只生成当前配置，Debug 与 Release 各自一个构建目录，互不覆盖。 -->
+    <Exec Command="&quot;$(ThirdPartyCMake)&quot; -S &quot;$(ProjectDir).&quot; -B &quot;$(ThirdPartyCMakeBuildDir).&quot; -G &quot;Visual Studio 18 2026&quot; -A x64"
+          UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+    <Exec Command="&quot;$(ThirdPartyCMake)&quot; --build &quot;$(ThirdPartyCMakeBuildDir).&quot; --config $(Configuration) --target freetype msdfgen-core"
+          UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+
+    <!-- 发布：头文件与库文件都进主工程的 ThirdParty 目录，主工程只认这一处。 -->
+    <MakeDir Directories="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration);$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)" />
+    <ItemGroup>
+      <FreetypeHeader Include="$(ThirdPartyVendorDir)freetype\include\**\*" />
+      <!-- msdfgen.h 内部按相对路径引 core/ 下的头文件，用递归通配保住 core\ 这一层。 -->
+      <MsdfgenHeader Include="$(ThirdPartyVendorDir)msdfgen\**\*.h" />
+      <MsdfgenHeader Include="$(ThirdPartyVendorDir)msdfgen\**\*.hpp" />
+      <!-- FreeType 在 Debug 下产出 freetyped.lib；两个名字都收，发布时统一成 freetype.lib。 -->
+      <FreetypeLib Include="$(ProjectDir)Build\lib\$(Configuration)\freetype.lib" Condition="Exists('$(ProjectDir)Build\lib\$(Configuration)\freetype.lib')" />
+      <FreetypeLib Include="$(ProjectDir)Build\lib\$(Configuration)\freetyped.lib" Condition="Exists('$(ProjectDir)Build\lib\$(Configuration)\freetyped.lib')" />
+      <MsdfgenLib Include="$(ProjectDir)Build\lib\$(Configuration)\msdfgen-core.lib" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FreetypeHeader)"
+          DestinationFiles="@(FreetypeHeader->'$(OrbedenThirdPartyPublishDir)freetype\include\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(MsdfgenHeader)"
+          DestinationFiles="@(MsdfgenHeader->'$(OrbedenThirdPartyPublishDir)msdfgen\include\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <!-- msdfgen-config.h 由 CMake 按模板生成，路径要与 core/base.h 里的 include 一致。 -->
+    <Error Condition="!Exists('$(ThirdPartyCMakeBuildDir)msdfgen-config.h')"
+           Text="msdfgen-config.h was not generated. Check the CMake output above." />
+    <Copy SourceFiles="$(ThirdPartyCMakeBuildDir)msdfgen-config.h"
+          DestinationFiles="$(OrbedenThirdPartyPublishDir)msdfgen\include\msdfgen\msdfgen-config.h"
+          SkipUnchangedFiles="true" />
+    <Error Condition="'@(FreetypeLib)' == ''" Text="freetype.lib was not produced. Check the CMake output above." />
+    <Error Condition="!Exists('@(MsdfgenLib)')" Text="msdfgen-core.lib was not produced. Check the CMake output above." />
+    <Copy SourceFiles="@(FreetypeLib)" DestinationFiles="$(OrbedenThirdPartyPublishDir)freetype\lib\WindowsX64\$(Configuration)\freetype.lib" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(MsdfgenLib)" DestinationFolder="$(OrbedenThirdPartyPublishDir)msdfgen\lib\WindowsX64\$(Configuration)" SkipUnchangedFiles="true" />
+    <!-- 授权文件随库一起发布，打包时不会漏。 -->
+    <Copy SourceFiles="$(ThirdPartyVendorDir)freetype\LICENSE.TXT;$(ThirdPartyVendorDir)freetype\docs\FTL.TXT"
+          DestinationFolder="$(OrbedenThirdPartyPublishDir)freetype" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ThirdPartyVendorDir)msdfgen\LICENSE.txt"
+          DestinationFolder="$(OrbedenThirdPartyPublishDir)msdfgen" SkipUnchangedFiles="true" />
+    <!--
+      落地时间戳：Copy 在内容未变时会跳过，目标文件的时间因此不会推进，
+      下一次增量检查又会认为输出比输入旧、无限重跑。这里统一把它抬到最新。
+    -->
+    <Touch Files="@(ThirdPartyArtifact)" />
+  </Target>
+
+  <Target Name="CleanThirdPartyLibraries" AfterTargets="Clean">
+    <RemoveDir Directories="$(ThirdPartyCMakeBuildDir);$(ProjectDir)Build\lib" />
+  </Target>
+</Project>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="生成器">
+      <UniqueIdentifier>{1E2A3B4C-5D6E-4F70-8A91-B2C3D4E5F607}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor">
+      <UniqueIdentifier>{2F3A4B5C-6D7E-4F80-9A01-C2D3E4F50617}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeLists.txt">
+      <Filter>生成器</Filter>
+    </None>
+    <None Include="versions.txt">
+      <Filter>生成器</Filter>
+    </None>
+  </ItemGroup>
+</Project>

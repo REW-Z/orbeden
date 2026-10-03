@@ -1,0 +1,57 @@
+# Orbeden 第三方库生成器。
+#
+# 本项目只产出静态库，供主工程以库依赖方式使用；主工程永远不编译这里的源码。
+# 由 OrbedenThirdParty.vcxproj 驱动，日常开发不需要手动运行。
+# 新增第三方库时在这里 add_subdirectory，并把产物路径登记到工程文件的输出项里。
+
+cmake_minimum_required(VERSION 3.20)
+project(OrbedenThirdParty C CXX)
+
+# 一律静态库；不做安装、不产出可执行文件。
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+# 所有产物落在同一目录，主工程按固定路径取用。
+set(ORBEDEN_THIRDPARTY_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Build/lib" CACHE PATH "" FORCE)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ORBEDEN_THIRDPARTY_OUTPUT}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ORBEDEN_THIRDPARTY_OUTPUT}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ORBEDEN_THIRDPARTY_OUTPUT}")
+
+# ---- FreeType ----
+# 关掉全部外部依赖：只保留自带模块，不引入 zlib/bzip2/libpng/harfbuzz/brotli。
+set(FT_DISABLE_ZLIB TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2 TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_HARFBUZZ TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_BROTLI TRUE CACHE BOOL "" FORCE)
+set(FT_DISABLE_ZLIB TRUE CACHE BOOL "" FORCE)
+set(FT_ENABLE_ERROR_STRINGS OFF CACHE BOOL "" FORCE)
+add_subdirectory(vendor/freetype freetype)
+
+# ---- msdfgen ----
+# core-only：不建 standalone、不接 Skia、不开 OpenMP、不产 SVG/PNG 辅助功能。
+set(MSDFGEN_CORE_ONLY ON CACHE BOOL "" FORCE)
+set(MSDFGEN_BUILD_STANDALONE OFF CACHE BOOL "" FORCE)
+set(MSDFGEN_USE_VCPKG OFF CACHE BOOL "" FORCE)
+set(MSDFGEN_USE_SKIA OFF CACHE BOOL "" FORCE)
+set(MSDFGEN_USE_OPENMP OFF CACHE BOOL "" FORCE)
+set(MSDFGEN_INSTALL OFF CACHE BOOL "" FORCE)
+set(MSDFGEN_DISABLE_SVG ON CACHE BOOL "" FORCE)
+set(MSDFGEN_DISABLE_PNG ON CACHE BOOL "" FORCE)
+set(MSDFGEN_USE_CPP11 OFF CACHE BOOL "" FORCE)
+# 运行时库必须与引擎一致（/MDd 与 /MD）；msdfgen 默认静态运行时，这里显式打开动态运行时。
+set(MSDFGEN_DYNAMIC_RUNTIME ON CACHE BOOL "" FORCE)
+add_subdirectory(vendor/msdfgen msdfgen)
+
+# msdfgen 只在开启安装目标时才生成 msdfgen-config.h，而安装目标是我们明确不要的。
+# 这里按同一份模板自己生成一份，保证 MSDFGEN_INSTALL 保持关闭。
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/msdfgen/vcpkg.json" MSDFGEN_VCPKG_JSON)
+string(REGEX MATCH "\"version\"[ \t\n\r]*:[ \t\n\r]*\"([^\"]*)\"" _ "${MSDFGEN_VCPKG_JSON}")
+set(MSDFGEN_VERSION "${CMAKE_MATCH_1}")
+string(REGEX REPLACE "^([0-9]*)\\.([0-9]*)\\.([0-9]*)" "\\1" MSDFGEN_VERSION_MAJOR "${MSDFGEN_VERSION}")
+string(REGEX REPLACE "^([0-9]*)\\.([0-9]*)\\.([0-9]*)" "\\2" MSDFGEN_VERSION_MINOR "${MSDFGEN_VERSION}")
+string(REGEX REPLACE "^([0-9]*)\\.([0-9]*)\\.([0-9]*)" "\\3" MSDFGEN_VERSION_REVISION "${MSDFGEN_VERSION}")
+set(MSDFGEN_PUBLIC_MACRO_VALUE "")
+set(MSDFGEN_ADDITIONAL_DEFINES "")
+string(TIMESTAMP MSDFGEN_COPYRIGHT_YEAR "%Y")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/vendor/msdfgen/cmake/msdfgen-config.h.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/msdfgen-config.h")
