@@ -7,6 +7,7 @@
 #include "Runtime/CookedAssetSerializer.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/Object/Material.h"
+#include "Runtime/Object/Font.h"
 #include "Runtime/Object/Mesh.h"
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/TextResource.h"
@@ -19,6 +20,8 @@
 std::string AssetInspection::Inspect(const std::string& sourceKey, const std::string& outputDirectory,
     const std::string& settingsTable)
 {
+    //注册无图形检查进程使用的资源反射
+    Reflection::RegisterGeneratedReflection();
     std::string result;
     List<std::string> sourceFiles;
     std::string key = sourceKey;
@@ -179,6 +182,22 @@ bool AssetInspection::TryGetFieldSummary(Object* object, const char* fieldName, 
             result = texture->colorSpace == TextureColorSpace::SRGB ? "sRGB" : "Linear";
             return true;
         }
+    }
+    if (Font* font = object->Cast<Font>())
+    {
+        if (name == "sourceBytes") { result = std::to_string(font->sourceBytes.size()) + " bytes"; return true; }
+        if (name == "rasterMode")
+        {
+            result = font->rasterMode == FontRasterMode::MSDF ? "MSDF"
+                : font->rasterMode == FontRasterMode::SDF ? "SDF" : "Bitmap";
+            return true;
+        }
+        if (name == "atlasSize") { result = std::to_string(font->atlasSize); return true; }
+        if (name == "distanceFieldSize") { result = std::to_string(font->distanceFieldSize); return true; }
+        if (name == "distanceFieldRange") { result = Reflection::Value(font->distanceFieldRange).ToString(); return true; }
+        if (name == "familyName") { result = font->familyName; return true; }
+        if (name == "styleName") { result = font->styleName; return true; }
+        if (name == "unitsPerEm") { result = std::to_string(font->unitsPerEm); return true; }
     }
     if (TextResource* resource = object->Cast<TextResource>())
     {

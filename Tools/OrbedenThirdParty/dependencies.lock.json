@@ -241,19 +241,19 @@
       ]
     },
     {
-      "name": "noto-font",
-      "version": "Noto Sans SC Regular",
-      "repository": "https://github.com/notofonts/noto-cjk",
-      "revision": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
-      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+      "name": "cubic-font",
+      "version": "1.500",
+      "repository": "https://github.com/ACh-K/Cubic-11",
+      "revision": "4c566f7d6cc5c05ee360fe9cff56b5da1fcafd4d",
+      "url": "https://raw.githubusercontent.com/ACh-K/Cubic-11/4c566f7d6cc5c05ee360fe9cff56b5da1fcafd4d/fonts/ttf/Cubic_11.ttf",
       "format": "file",
-      "fileName": "Default.otf",
+      "fileName": "Default.ttf",
       "stripRoot": false,
       "subdirectory": "",
       "license": "OFL-1.1",
-      "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+      "sha256": "0193f5f033612496df6b45ee92ac3b335bc6a5a24ff95da55ca87b33e57dcf62",
       "licenseFiles": [],
-      "licenseUrl": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+      "licenseUrl": "https://raw.githubusercontent.com/ACh-K/Cubic-11/4c566f7d6cc5c05ee360fe9cff56b5da1fcafd4d/OFL.txt"
     },
     {
       "name": "python-runtime",
@@ -300,7 +300,7 @@
     "jinja2/LICENSE.txt": "3b49dcee4105eb37bac10faf1be260408fe85d252b8e9df2e0979fc1e094437b",
     "markupsafe/LICENSE.txt": "489a8e1108509ed98a37bb983e11e0f7e1d31f0bd8f99a79c8448e7ff37d07ea",
     "msdfgen/LICENSE.txt": "32a94b25ad7072a78457d35019b32d73d2c265c806b0b76e9638fe800330bbe4",
-    "noto-font/OFL.txt": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+    "cubic-font/OFL.txt": "2b6e5938e5cffa0b9e183bd05f8c363e174e7ebed1a0556e2855fd1707fa2188",
     "physx/LICENSE.md": "eb3e67b17b48c56ef26d8bf6634c0837503fefc28a916f98d4f02272eda50011",
     "stb/LICENSE": "bebfe904b14301657e4e5d655c811d51fd31b97c455b9cc2d8600d6bac6cff63",
     "python-runtime/LICENSE.txt": "62bec384df47b0328307db41455ff6ea2559e5546b394ac69148561b21703120"

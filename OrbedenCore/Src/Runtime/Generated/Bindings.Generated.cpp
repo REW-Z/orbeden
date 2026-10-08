@@ -48,6 +48,8 @@ void Write_DrawStrategy(NativeBindingWriter& writer, DrawStrategy const& value);
 DrawStrategy Read_DrawStrategy(NativeBindingReader& reader);
 void Write_EnsId(NativeBindingWriter& writer, EnsId const& value);
 EnsId Read_EnsId(NativeBindingReader& reader);
+void Write_FontRasterMode(NativeBindingWriter& writer, FontRasterMode const& value);
+FontRasterMode Read_FontRasterMode(NativeBindingReader& reader);
 void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions const& value);
 InstanceDrawOptions Read_InstanceDrawOptions(NativeBindingReader& reader);
 void Write_List_MaterialColorSlot_(NativeBindingWriter& writer, List<MaterialColorSlot> const& value);
@@ -284,6 +286,14 @@ void Write_EnsId(NativeBindingWriter& writer, EnsId const& value)
 EnsId Read_EnsId(NativeBindingReader& reader)
 {
     return static_cast<EnsId>(reader.Scalar<EnsId>());
+}
+void Write_FontRasterMode(NativeBindingWriter& writer, FontRasterMode const& value)
+{
+    writer.Scalar(static_cast<uint32>(value));
+}
+FontRasterMode Read_FontRasterMode(NativeBindingReader& reader)
+{
+    return static_cast<FontRasterMode>(reader.Scalar<uint32>());
 }
 void Write_InstanceDrawOptions(NativeBindingWriter& writer, InstanceDrawOptions const& value)
 {
@@ -1498,7 +1508,30 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_2(int32 objectId, float32 valu
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_3(int32 objectId, float32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_3(int32 objectId, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->atlasSize);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_4(int32 objectId, uint32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        instance->atlasSize = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_5(int32 objectId, float32* result)
 {
     try
     {
@@ -1510,7 +1543,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_3(int32 objectId, float32* res
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_4(int32 objectId, float32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_6(int32 objectId, float32 value)
 {
     try
     {
@@ -1521,7 +1554,53 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_4(int32 objectId, float32 valu
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_5(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_7(int32 objectId, float32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<float32>(instance->distanceFieldRange);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_8(int32 objectId, float32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        instance->distanceFieldRange = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_9(int32 objectId, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->distanceFieldSize);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_10(int32 objectId, uint32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        instance->distanceFieldSize = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_11(int32 objectId, uint32* result)
 {
     try
     {
@@ -1533,87 +1612,12 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_5(int32 objectId, uint32* resu
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_6(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_12(int32 objectId, uint32 value)
 {
     try
     {
         auto* instance = NativeBindings::Require<Font>(objectId);
         instance->faceIndex = value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_7(int32 objectId, NativeBindingBuffer* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        NativeBindingWriter writer; Write_std__string(writer, instance->familyName); *result = writer.Finish();
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_8(int32 objectId, NativeBindingSlice value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        NativeBindingReader reader_value(value);
-        auto decoded_value = Read_std__string(reader_value);
-        reader_value.Complete();
-        instance->familyName = decoded_value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_9(int32 objectId, float32* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<float32>(instance->lineHeight);
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_10(int32 objectId, float32 value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        instance->lineHeight = value;
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_11(int32 objectId, NativeBindingBuffer* result)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        if (!result) return NativeBindingStatus::InvalidArgument;
-        NativeBindingWriter writer; Write_List_uint8_(writer, instance->sourceBytes); *result = writer.Finish();
-        return NativeBindingStatus::Ok;
-    }
-    catch (const NativeBindingError& error) { return error.status; }
-    catch (...) { return NativeBindingStatus::InvocationFailed; }
-}
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_12(int32 objectId, NativeBindingSlice value)
-{
-    try
-    {
-        auto* instance = NativeBindings::Require<Font>(objectId);
-        NativeBindingReader reader_value(value);
-        auto decoded_value = Read_List_uint8_(reader_value);
-        reader_value.Complete();
-        instance->sourceBytes = decoded_value;
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -1625,7 +1629,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_13(int32 objectId, NativeBindi
     {
         auto* instance = NativeBindings::Require<Font>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        NativeBindingWriter writer; Write_std__string(writer, instance->styleName); *result = writer.Finish();
+        NativeBindingWriter writer; Write_std__string(writer, instance->familyName); *result = writer.Finish();
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -1639,13 +1643,111 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_14(int32 objectId, NativeBindi
         NativeBindingReader reader_value(value);
         auto decoded_value = Read_std__string(reader_value);
         reader_value.Complete();
+        instance->familyName = decoded_value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_15(int32 objectId, float32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<float32>(instance->lineHeight);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_16(int32 objectId, float32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        instance->lineHeight = value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_17(int32 objectId, uint32* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<uint32>(instance->rasterMode);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_18(int32 objectId, uint32 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        instance->rasterMode = static_cast<FontRasterMode>(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_19(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_List_uint8_(writer, instance->sourceBytes); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_20(int32 objectId, NativeBindingSlice value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_List_uint8_(reader_value);
+        reader_value.Complete();
+        instance->sourceBytes = decoded_value;
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_21(int32 objectId, NativeBindingBuffer* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        NativeBindingWriter writer; Write_std__string(writer, instance->styleName); *result = writer.Finish();
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_22(int32 objectId, NativeBindingSlice value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Font>(objectId);
+        NativeBindingReader reader_value(value);
+        auto decoded_value = Read_std__string(reader_value);
+        reader_value.Complete();
         instance->styleName = decoded_value;
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_15(int32 objectId, uint32* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_23(int32 objectId, uint32* result)
 {
     try
     {
@@ -1657,7 +1759,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_15(int32 objectId, uint32* res
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_16(int32 objectId, uint32 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Font_24(int32 objectId, uint32 value)
 {
     try
     {
@@ -6691,8 +6793,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Component::StaticType(), 3730866753121215061ULL, { functions_Component, 1 });
     static void* functions_Ens[] = { reinterpret_cast<void*>(&Call_Ens_0) };
     NativeBindings::Register(Ens::StaticType(), 6039789372024472840ULL, { functions_Ens, 1 });
-    static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16) };
-    NativeBindings::Register(Font::StaticType(), 16482609640212011531ULL, { functions_Font, 17 });
+    static void* functions_Font[] = { reinterpret_cast<void*>(&Call_Font_0), reinterpret_cast<void*>(&Call_Font_1), reinterpret_cast<void*>(&Call_Font_2), reinterpret_cast<void*>(&Call_Font_3), reinterpret_cast<void*>(&Call_Font_4), reinterpret_cast<void*>(&Call_Font_5), reinterpret_cast<void*>(&Call_Font_6), reinterpret_cast<void*>(&Call_Font_7), reinterpret_cast<void*>(&Call_Font_8), reinterpret_cast<void*>(&Call_Font_9), reinterpret_cast<void*>(&Call_Font_10), reinterpret_cast<void*>(&Call_Font_11), reinterpret_cast<void*>(&Call_Font_12), reinterpret_cast<void*>(&Call_Font_13), reinterpret_cast<void*>(&Call_Font_14), reinterpret_cast<void*>(&Call_Font_15), reinterpret_cast<void*>(&Call_Font_16), reinterpret_cast<void*>(&Call_Font_17), reinterpret_cast<void*>(&Call_Font_18), reinterpret_cast<void*>(&Call_Font_19), reinterpret_cast<void*>(&Call_Font_20), reinterpret_cast<void*>(&Call_Font_21), reinterpret_cast<void*>(&Call_Font_22), reinterpret_cast<void*>(&Call_Font_23), reinterpret_cast<void*>(&Call_Font_24) };
+    NativeBindings::Register(Font::StaticType(), 8904294447050588615ULL, { functions_Font, 25 });
     static void* functions_InstanceDrawList[] = { reinterpret_cast<void*>(&Call_InstanceDrawList_0), reinterpret_cast<void*>(&Call_InstanceDrawList_1), reinterpret_cast<void*>(&Call_InstanceDrawList_2), reinterpret_cast<void*>(&Call_InstanceDrawList_3), reinterpret_cast<void*>(&Call_InstanceDrawList_4) };
     NativeBindings::Register(InstanceDrawList::StaticType(), 17629515747893046868ULL, { functions_InstanceDrawList, 5 });
     static void* functions_Material[] = { reinterpret_cast<void*>(&Call_Material_0), reinterpret_cast<void*>(&Call_Material_1), reinterpret_cast<void*>(&Call_Material_2), reinterpret_cast<void*>(&Call_Material_3), reinterpret_cast<void*>(&Call_Material_4), reinterpret_cast<void*>(&Call_Material_5), reinterpret_cast<void*>(&Call_Material_6), reinterpret_cast<void*>(&Call_Material_7), reinterpret_cast<void*>(&Call_Material_8), reinterpret_cast<void*>(&Call_Material_9), reinterpret_cast<void*>(&Call_Material_10), reinterpret_cast<void*>(&Call_Material_11), reinterpret_cast<void*>(&Call_Material_12), reinterpret_cast<void*>(&Call_Material_13), reinterpret_cast<void*>(&Call_Material_14), reinterpret_cast<void*>(&Call_Material_15), reinterpret_cast<void*>(&Call_Material_16), reinterpret_cast<void*>(&Call_Material_17), reinterpret_cast<void*>(&Call_Material_18), reinterpret_cast<void*>(&Call_Material_19), reinterpret_cast<void*>(&Call_Material_20), reinterpret_cast<void*>(&Call_Material_21), reinterpret_cast<void*>(&Call_Material_22), reinterpret_cast<void*>(&Call_Material_23), reinterpret_cast<void*>(&Call_Material_24), reinterpret_cast<void*>(&Call_Material_25), reinterpret_cast<void*>(&Call_Material_26), reinterpret_cast<void*>(&Call_Material_27), reinterpret_cast<void*>(&Call_Material_28), reinterpret_cast<void*>(&Call_Material_29), reinterpret_cast<void*>(&Call_Material_30), reinterpret_cast<void*>(&Call_Material_31) };

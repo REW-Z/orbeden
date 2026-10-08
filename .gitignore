@@ -36,7 +36,7 @@ Docs/Manual/Api/
 /Tools/OrbedenThirdParty/.cache/
 /OrbedenCore/Src/ThirdParty/
 /OrbedenEditor/Src/ThirdParty/
-/OrbedenEditor/Templates/Builtin/Fonts/Default.otf
+/OrbedenEditor/Templates/Builtin/Fonts/Default.ttf
 
 #编译与托管还原产物
 *.lib

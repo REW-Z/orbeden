@@ -29,6 +29,7 @@ internal static class UILayoutRegistry
         {
             //按画布目标初始化根矩形
             if (root.Canvas == null || root.Layout == null || root.ConfigurationError.Length != 0) continue;
+            SynchronizePositions(root);
             vector2 size = context.ResolveCanvasLogicalSize(root.Canvas);
             vector2 pivot = root.Layout.GetPivot();
             vector2 min = root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace
@@ -48,6 +49,13 @@ internal static class UILayoutRegistry
 
         measuredWidths.Clear();
         measuredHeights.Clear();
+    }
+
+    //同步布局前的作者位置
+    private static void SynchronizePositions(UINode node)
+    {
+        node.Layout?.SynchronizePosition();
+        foreach (UINode child in node.Children) SynchronizePositions(child);
     }
 
     /// <summary>清空解析缓存；世界分离时调用。</summary>
@@ -197,16 +205,15 @@ internal static class UILayoutRegistry
 
         if (node.Canvas == null)
         {
-            vector2 anchorPoint = node.Layout.GetResolvedAnchorPoint();
-            vector3 author = Ens.FromId(node.Ens).Transform.GetLocalPosition();
+            vector3 position = node.Layout.GetResolvedLocalPosition();
             //屏幕画布根的逻辑矩形从 {0,0} 起算，而画布对象落在枢轴上：这段居中偏移要一起写进直接子节点的
             //位置，子节点的世界矩阵才与场景预览里画出来的位置重合（WorldSpace 根矩形已按枢轴解析，不加）。
             vector2 canvasOffset = node.Parent is UINode parent ? CanvasPivotOffset(parent) : default;
             positions.Add(new UIDerivedPosition
             {
                 ens = node.Ens,
-                position = new vector3(anchorPoint.x + author.x + canvasOffset.x,
-                    anchorPoint.y + author.y + canvasOffset.y, author.z),
+                position = new vector3(position.x + canvasOffset.x,
+                    position.y + canvasOffset.y, position.z),
                 clear = 0,
             });
         }

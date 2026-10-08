@@ -64,6 +64,13 @@ void Transform::SetLocalPosition(const vector3& value)
     World* world = GetWorld();
     if (world && !world->CanChangeTransform(GetEnsId())) return;
 
+    //同步作者位移到当前派生位置
+    if (hasDerivedPosition)
+    {
+        derivedPosition.x += value.x - localPosition.x;
+        derivedPosition.y += value.y - localPosition.y;
+        derivedPosition.z += value.z - localPosition.z;
+    }
     localPosition = value;
     if (world) world->NotifyTransformChanged(GetEnsId());
 }

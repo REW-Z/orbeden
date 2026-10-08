@@ -24,6 +24,7 @@ public abstract partial class Object
 
     private IntPtr nativePtr;
     private int instanceId;
+    private string resourceKey = string.Empty;
     internal uint BindingGeneration { get; private set; }
 
     /// <summary>创建空对象包装。</summary>
@@ -38,8 +39,15 @@ public abstract partial class Object
     /// <summary>原生对象运行时 ID。</summary>
     public int InstanceId => instanceId;
 
-    /// <summary>资源对象的稳定 Key；运行时临时对象也可能返回运行时路径。</summary>
-    public string ResourceKey => Object.GetResourceKey(NativePtr);
+    /// <summary>读取稳定 Key；对象失效后保留最后的路径供引用修复。</summary>
+    public string ResourceKey
+    {
+        get
+        {
+            if (IsAlive) resourceKey = Object.GetResourceKey(nativePtr);
+            return resourceKey;
+        }
+    }
 
     /// <summary>判断原生对象是否仍然存活。</summary>
     public bool IsAlive => instanceId != 0 && BindingGeneration == NativeBindingRuntime.Generation && Object.IsNativeAlive(instanceId);
@@ -107,6 +115,7 @@ public abstract partial class Object
 
         nativePtr = pointer;
         instanceId = id;
+        resourceKey = Object.GetResourceKey(pointer);
         BindingGeneration = NativeBindingRuntime.Generation;
 
         lock (cacheLock)

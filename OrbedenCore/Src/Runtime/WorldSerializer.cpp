@@ -783,7 +783,32 @@ namespace
     }
 
     //扫描单个对象的资源Ref字段
-    bool LoadResourceRefsFromObject(World& world, Object* object)
+    //加载字段引用并报告未解析目标
+    void LoadFieldReference(World& world, Object* owner, const std::string& fieldName, const std::string& key,
+        const std::string& typeName, const std::unordered_map<std::string, std::string>& paths)
+    {
+        if (key.empty()) return;
+        std::string nativeName = typeName.starts_with("Orbeden.") ? typeName.substr(8) : typeName;
+        Type* type = Object::FindType(nativeName);
+        Object* target = nullptr;
+        if (IsWorldObjectRef(key))
+        {
+            auto found = paths.find(key);
+            target = Object::FindObject(StringId(found == paths.end() ? key : found->second));
+            if (target && (target->GetWorld() != &world || (type && !target->Is(type)))) target = nullptr;
+        }
+        else if (type)
+        {
+            target = ResourceManager::TryLoad(type, key);
+        }
+        if (target) return;
+        std::string location = owner ? std::string(owner->GetType()->GetName()) + "." + fieldName
+            + " (" + owner->GetInstanceId().GetPath() + ")" : "World." + fieldName;
+        Log::Warning(("Unresolved reference in " + location + ": " + key + " (" + typeName + "). Keeping the stored key.").c_str());
+    }
+
+    bool LoadResourceRefsFromObject(World& world, Object* object,
+        const std::unordered_map<std::string, std::string>& paths = {})
     {
         if (!object) return true;
 
@@ -796,30 +821,32 @@ namespace
                 {
                     std::string elementType = field.typeName.substr(field.typeName.find('<') + 1);
                     elementType.pop_back();
-                    if (!elementType.starts_with("Ref<")) continue;
-                    std::string name = elementType.substr(4, elementType.size() - 5);
-                    if (name.starts_with("Orbeden.")) name.erase(0, 8);
-                    Type* type = Object::FindType(name);
+                    if (!elementType.starts_with("Ref<") && elementType != "EnsId") continue;
+                    std::string name = elementType == "EnsId" ? "Ens" : elementType.substr(4, elementType.size() - 5);
                     List<std::string> keys;
                     if (!Reflection::ParseArrayValues(field.value, keys)) return false;
                     for (const auto& key : keys)
-                        if (!key.empty() && !IsWorldObjectRef(key) && (!type || !ResourceManager::Load(type, key))) return false;
+                        LoadFieldReference(world, object, field.name, key, name, paths);
+                    continue;
+                }
+                if (field.kind == Reflection::FieldKind::EnsId)
+                {
+                    LoadFieldReference(world, object, field.name, field.value, "Ens", paths);
                     continue;
                 }
                 if (field.kind != Reflection::FieldKind::ObjectRef || field.value.empty()
-                    || IsWorldObjectRef(field.value) || !field.typeName.starts_with("Ref<")) continue;
+                    || !field.typeName.starts_with("Ref<")) continue;
                 std::string name = field.typeName.substr(4, field.typeName.size() - 5);
-                if (name.starts_with("Orbeden.")) name.erase(0, 8);
-                Type* type = Object::FindType(name);
-                if (!type || !ResourceManager::Load(type, field.value)) return false;
+                LoadFieldReference(world, object, field.name, field.value, name, paths);
             }
         }
 
-        const Reflection::TypeInfo* typeInfo = Reflection::FindTypeInfo(object->GetType());
-        if (!typeInfo) return true;
-
-        for (const Reflection::FieldInfo& field : typeInfo->fields)
+        List<const Reflection::FieldInfo*> fields;
+        Reflection::CollectFields(object->GetType(), fields);
+        for (const Reflection::FieldInfo* fieldInfo : fields)
         {
+            if (!fieldInfo) continue;
+            const Reflection::FieldInfo& field = *fieldInfo;
             bool isList = field.kind == Reflection::FieldKind::ObjectRefList;
             bool isArray = field.kind == Reflection::FieldKind::Array && field.elementKind == Reflection::FieldKind::ObjectRef;
             if ((!isList && !isArray && field.kind != Reflection::FieldKind::ObjectRef) || !field.objectRefTypeName || !field.getter) continue;
@@ -848,35 +875,27 @@ namespace
                 }
             }
 
-            Type* refType = Object::FindType(field.objectRefTypeName);
-            if (!refType)
-            {
-                Log::Warning(("Resource Ref uses unknown type: " + std::string(field.objectRefTypeName)).c_str());
-                return false;
-            }
-
             for (const std::string& key : keys)
             {
-                if (key.empty() || IsWorldObjectRef(key)) continue;
-                if (!ResourceManager::Load(refType, key)) return false;
+                LoadFieldReference(world, object, field.name, key, field.objectRefTypeName, paths);
             }
         }
         return true;
     }
 
     //扫描World中所有组件的资源Ref字段
-    bool LoadWorldResourceRefs(World& world)
+    bool LoadWorldResourceRefs(World& world, const std::unordered_map<std::string, std::string>& paths)
     {
         bool success = true;
         const std::string& skybox = world.renderSettings.skybox.GetInstanceId().GetPath();
-        if (!skybox.empty() && !ResourceManager::Load<Skybox>(skybox)) success = false;
+        LoadFieldReference(world, nullptr, "renderSettings.skybox", skybox, "Skybox", paths);
         const std::string& reflection = world.renderSettings.reflectionEnvironment.GetInstanceId().GetPath();
-        if (!reflection.empty() && !ResourceManager::Load<Skybox>(reflection)) success = false;
-        world.ForEachEns([&world, &success](Ens& ens)
+        LoadFieldReference(world, nullptr, "renderSettings.reflectionEnvironment", reflection, "Skybox", paths);
+        world.ForEachEns([&world, &success, &paths](Ens& ens)
             {
                 for (Component* component : ens.GetComponents())
                 {
-                    if (!LoadResourceRefsFromObject(world, component)) success = false;
+                    if (!LoadResourceRefsFromObject(world, component, paths)) success = false;
                 }
             });
         return success;
@@ -1237,7 +1256,7 @@ std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
     World* previousWorld = World::CurrentWorld();
     World::SetCurrentWorld(prepared.get());
     bool loaded = reader.Next(root) && ReadWorld(reader, *prepared, root)
-        && ApplyEnsReferences(*prepared, document, paths) && LoadWorldResourceRefs(*prepared);
+        && ApplyEnsReferences(*prepared, document, paths) && LoadWorldResourceRefs(*prepared, paths);
     World::SetCurrentWorld(previousWorld);
 
     if (loaded)

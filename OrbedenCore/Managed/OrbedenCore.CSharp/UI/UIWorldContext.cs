@@ -14,15 +14,15 @@ public sealed class UIWorldContext : IManagedFrameSystem
     public const int MaxPendingChanges = 65536;
 
     /// <summary>内置默认字体的资源键。</summary>
-    public const string DefaultFontResourceKey = "Builtin/Fonts/Default.otf";
+    public const string DefaultFontResourceKey = "Builtin/Fonts/Default.ttf//Font/Main";
     private Font? defaultFont;
     private bool defaultFontLoadAttempted;
 
     /// <summary>加载并缓存当前世界使用的默认字体。</summary>
     public Font? GetDefaultFont()
     {
-        if (defaultFont != null && defaultFont.IsAlive) return defaultFont;
-        if (defaultFont != null) defaultFontLoadAttempted = false;
+        if (defaultFont is { IsAlive: true }) return defaultFont;
+        if (!ReferenceEquals(defaultFont, null)) defaultFontLoadAttempted = false;
         if (defaultFontLoadAttempted) return null;
         defaultFontLoadAttempted = true;
         defaultFont = Resources.Load<Font>(DefaultFontResourceKey);
@@ -285,7 +285,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
 
         //原生上下文与世界代次绑定；接入失败时 UI 只做数据与布局，不提交也不绘制。
         bridge = RetainedGuiBridge.Create(revision, managedGeneration);
-        //字形缓存是世界无关的，只把当前上下文换掉：换世界不必重新光栅化。
+        //切换字形上下文并清理旧世界图集
         FontAtlasCache.SetSharedContext(bridge?.Context ?? 0);
         frameBuilder.Host = bridge;
         frameBuilder.Reset(managedGeneration);
@@ -393,7 +393,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
         eventDispatcher.Dispatch();
     }
 
-    //从原生侧取本阶段新增的原始事件；容量不足时按原生报出的需求扩容重来一次。
+    //从原生侧取本阶段新增的原始事件；容量不足时按需求扩容后重新读取。
     private void ReadRawEvents()
     {
         rawEventCount = 0;
@@ -403,16 +403,22 @@ public sealed class UIWorldContext : IManagedFrameSystem
         if (required <= 0) return;
         if (required > inputRecords.Length) inputRecords = new UIInputRecord[required];
 
-        int count = host.ReadInput(inputRecords.AsSpan(0, required), inputText, out int textBytes);
-        if (textBytes > inputText.Length)
+        int count = 0;
+        int textBytes = 0;
+        bool complete = false;
+        //扩容后重新读取完整的输入批次
+        for (int attempt = 0; attempt < 3; ++attempt)
         {
-            inputText = new byte[textBytes];
-            count = host.ReadInput(inputRecords.AsSpan(0, required), inputText, out textBytes);
+            count = host.ReadInput(inputRecords, inputText, out textBytes);
+            if (count <= 0) return;
+            bool resized = false;
+            if (count > inputRecords.Length) { inputRecords = new UIInputRecord[count]; resized = true; }
+            if (textBytes > inputText.Length) { inputText = new byte[textBytes]; resized = true; }
+            if (!resized) { complete = true; break; }
         }
-        if (count <= 0) return;
+        if (!complete) return;
 
-        //容量不足时原生侧不写也不消费，这一阶段就没有事件可处理。
-        if (count > required || count > rawEvents.Length) rawEvents = new UIRawInputEvent[Math.Max(count, required)];
+        if (count > rawEvents.Length) rawEvents = new UIRawInputEvent[count];
         for (int index = 0; index < count; ++index)
         {
             UIInputRecord record = inputRecords[index];
@@ -438,12 +444,13 @@ public sealed class UIWorldContext : IManagedFrameSystem
         //字形页在本帧重建期间被命中的一律固定，回收统一推迟到帧尾。
         FontAtlasCache.Shared.BeginFrame();
         //顺序固定：先结构、再布局，最后图形——几何依赖这一帧的解析矩形。
+        foreach (UINode node in nodes.Values)
+            UIGraphicRegistry.MarkInvalidatedGeometry(node, geometryDirty);
         UILayoutRegistry.Rebuild(this, layoutDirty);
         foreach (UINode node in nodes.Values)
         {
             (node.Visual as UIVisual)?.RefreshMeshModifiers();
             UIGraphicRegistry.MarkResizedGeometry(node, geometryDirty);
-            UIGraphicRegistry.MarkInvalidatedGeometry(node, geometryDirty);
         }
         UIGraphicRegistry.Rebuild(geometryDirty, rebuildingGeometry);
         //命中快照在图形重建后失效，由输入阶段读取。
@@ -1075,7 +1082,10 @@ public sealed class UIWorldContext : IManagedFrameSystem
                 break;
             case UISceneChangeKind.TransformChanged:
                 if (nodes.TryGetValue(change.ens, out UINode? touched) && touched.Layout != null)
+                {
+                    touched.Layout.SynchronizePosition();
                     EnqueueLayout(touched.Layout);
+                }
                 break;
             case UISceneChangeKind.FieldsChanged:
                 if (nodes.TryGetValue(change.ens, out UINode? changed) && changed.Layout != null)

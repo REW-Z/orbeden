@@ -42,6 +42,9 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
     public Orbeden.Object? Load(Type objectType, string resourceKey)
     {
         if (EditorAssetCache.TryLoad(resourceKey, objectType, out Orbeden.Object? cached)) return cached;
+        string sourceKey = resourceKey.Split("//", StringSplitOptions.None)[0];
+        string sourcePath = Path.Combine(ContentRoot, sourceKey);
+        if (!File.Exists(sourcePath) && !(File.Exists(sourcePath + ".vert.glsl") && File.Exists(sourcePath + ".frag.glsl"))) return null;
         Type actualType = objectType;
         if (!typeof(Orbeden.Object).IsAssignableFrom(actualType) || actualType.IsAbstract) return null;
         return typeof(Resources).GetMethod(nameof(Resources.Load))!.MakeGenericMethod(actualType)
@@ -124,6 +127,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             ".obj" => "Mesh Source",
             ".gltf" or ".glb" => "glTF Source",
             ".mtl" => "Mesh Material",
+            ".ttf" or ".otf" or ".ttc" => "Font Source",
             ".orbmat" => "Material",
             ".orbsky" => "Skybox",
             ".orbshader" => "Shader",

@@ -8,5 +8,6 @@ class PlayerContentCooker
 {
 public:
     //把源内容根内的资源全部 cook 到输出目录，输出目录会被清空重建
-    static bool Cook(const std::string& sourceContentRoot, const std::string& cookedOutputRoot, std::string& error);
+    static bool Cook(const std::string& sourceContentRoot, const std::string& cookedOutputRoot, std::string& error,
+        const std::string& settingsTable = {});
 };

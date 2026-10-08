@@ -49,7 +49,7 @@ internal static class EditorAssetInspection
     /// <summary>扩展名只用于选择导入器，不推断子资源。</summary>
     internal static bool CanInspect(string path) => Path.GetExtension(path).ToLowerInvariant() is
         ".obj" or ".orbmat" or ".orbsky" or ".gltf" or ".glb" or ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp"
-        or ".orbshader" or ".glsl" or ".orbo"
+        or ".orbshader" or ".glsl" or ".orbo" or ".ttf" or ".otf" or ".ttc"
         or ".txt" or ".xml" or ".json" or ".csv" or ".yaml" or ".fnt" or ".bytes";
 
     /// <summary>读取轻量清单；大文件导入由独立进程完成。</summary>
@@ -76,12 +76,15 @@ internal static class EditorAssetInspection
         Texture,
         /// <summary>模型：设置网格缩放倍率与源坐标系上轴。</summary>
         Mesh,
+        /// <summary>字体：设置字体面、字形模式与动态图集参数。</summary>
+        Font,
     }
 
     private static ImportSettingsKind GetImportSettingsKind(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
         ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp" => ImportSettingsKind.Texture,
         ".obj" or ".gltf" or ".glb" => ImportSettingsKind.Mesh,
+        ".ttf" or ".otf" or ".ttc" => ImportSettingsKind.Font,
         _ => ImportSettingsKind.None,
     };
 
@@ -166,7 +169,43 @@ internal static class EditorAssetInspection
             ]);
             EditorGUI.Label("The engine is Y-up. Z-up converts Blender and CAD exports on import.");
             break;
+
+        case ImportSettingsKind.Font:
+            DrawChoice("rasterMode", "Raster Mode",
+            [
+                (null, "Bitmap"),
+                ("SDF", "SDF"),
+                ("MSDF", "MSDF"),
+            ]);
+            DrawChoice("atlasSize", "Atlas Size",
+            [
+                ("256", "256 x 256"),
+                ("512", "512 x 512"),
+                (null, "1024 x 1024"),
+                ("2048", "2048 x 2048"),
+                ("4096", "4096 x 4096"),
+            ]);
+            if (DraftText("rasterMode") is "SDF" or "MSDF")
+            {
+                DrawFontInteger("distanceFieldSize", "Distance Field Size", 64, 16, 256);
+                string rangeText = DraftText("distanceFieldRange");
+                float range = float.TryParse(rangeText, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : 4.0f;
+                if (EditorGUI.InputFloat("Distance Field Range", ref range) && float.IsFinite(range))
+                    SetDraft("distanceFieldRange", Math.Clamp(range, 1.0f, 32.0f).ToString("R", CultureInfo.InvariantCulture));
+            }
+            if (Path.GetExtension(SourcePath).Equals(".ttc", StringComparison.OrdinalIgnoreCase))
+                DrawFontInteger("faceIndex", "Face Index", 0, 0, int.MaxValue);
+            EditorGUI.TextWrapped("Glyphs are added to dynamic atlas pages on demand. Text components use these font settings.");
+            break;
         }
+    }
+
+    /// <summary>绘制字体整数参数并限制有效范围。</summary>
+    private static void DrawFontInteger(string key, string label, int fallback, int minimum, int maximum)
+    {
+        int value = int.TryParse(DraftText(key), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ? parsed : fallback;
+        if (EditorGUI.InputInt(label, ref value))
+            SetDraft(key, Math.Clamp(value, minimum, maximum).ToString(CultureInfo.InvariantCulture));
     }
 
     /// <summary>写回设置并重新导入，让运行时对象与磁盘产物都跟上新设置。</summary>

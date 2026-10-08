@@ -67,7 +67,7 @@ Orbeden 保留自己的 `Canvas`、`UILayout` 和批量 ABI，不要求照搬 Un
 
 ## 5. 图形与网格扩展
 
-修改位置：`OrbedenCore/Managed/Orbeden.UI/Runtime/` 下的 `UIVisual.cs`、`UIMeshBuilder.cs`，新增 `IUIMeshModifier.cs`。
+修改位置：`OrbedenCore/Managed/OrbedenCore.CSharp/UI/` 下的 `UIVisual.cs`、`UIMeshBuilder.cs`，新增 `IUIMeshModifier.cs`。
 
 新增公开接口 `IUIMeshModifier.ModifyMesh(UIMeshBuilder mesh)`。
 挂在图形同一 Ens 上、启用且实现该接口的托管组件参与修改；按组件序列化顺序执行，不使用反射发现顺序。
@@ -234,7 +234,7 @@ Orbeden 保留自己的 `Canvas`、`UILayout` 和批量 ABI，不要求照搬 Un
 
 ### 阶段 1：网格修改器与状态分离
 
-- 新增 `OrbedenCore/Managed/Orbeden.UI/Runtime/IUIMeshModifier.cs`：`ModifyMesh(UIMeshBuilder)`。
+- 新增 `OrbedenCore/Managed/OrbedenCore.CSharp/UI/IUIMeshModifier.cs`：`ModifyMesh(UIMeshBuilder)`。
   挂在图形同 Ens 上、处于启用状态的组件按挂载顺序运行；顺序取组件挂载顺序，不做反射发现。
 - `UIMeshBuilder` 新增 `GetVertex`/`SetVertex`、`TriangleCount`/`TryGetTriangle`/`GetTriangleState`、
   `ClearTriangles`。重建三角流时先 `SetDrawState` 给出首段状态，之后每换一段再设一次；

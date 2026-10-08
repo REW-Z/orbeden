@@ -83,8 +83,6 @@
     <OrbedenSharedSdkDir>$(OrbedenEditorSdkDir)Shared\</OrbedenSharedSdkDir>
     <OrbedenSharedBuildDir>$(ProjectDir)..\OrbedenEditor\Templates\Shared\</OrbedenSharedBuildDir>
     <OrbedenMetaGenSdkDir>$(OrbedenEditorSdkDir)Tools\OrbedenMetaGen\</OrbedenMetaGenSdkDir>
-    <OrbedenPackagesSdkDir>$(OrbedenEditorSdkDir)Packages\</OrbedenPackagesSdkDir>
-    <OrbedenUIPackageSourceDir>$(ProjectDir)Managed\Orbeden.UI\</OrbedenUIPackageSourceDir>
     <OutDir>$(OrbedenCoreOutputDir)</OutDir>
     <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
@@ -368,12 +366,7 @@
     </ItemGroup>
     <!--头文件发布只拷不删，改名或移动后的旧头会残留在 SDK 里被游戏工程误用；发布前先清空。-->
     <RemoveDir Directories="$(OrbedenNativeSdkIncludeDir)" />
-    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual;$(OrbedenPackagesSdkDir)Orbeden.UI\" />
-    <!--GUI 源码包：SDK 里是只读基线，项目内的 Packages/Orbeden.UI 会整体覆盖它。-->
-    <ItemGroup>
-      <OrbedenUIPackageFile Include="$(OrbedenUIPackageSourceDir)**\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(OrbedenUIPackageFile)" DestinationFiles="@(OrbedenUIPackageFile->'$(OrbedenPackagesSdkDir)Orbeden.UI\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual\" />
     <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
     <!--第三方组件的署名与许可：引擎静态链接的库要求随二进制产物分发，游戏工程从这里取。-->
     <ItemGroup>

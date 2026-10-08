@@ -421,6 +421,7 @@ internal static class ScriptRuntime
         foreach (ScriptInstance instance in scripts.ToArray())
         {
             if (instance.Destroyed) continue;
+            if (instance.Attached) instance.Lifecycle?.OnComponentBeforeSerialize();
             ManagedTypeMetadataCache.FlushHostFields(instance.Script, instance.Host);
         }
     }

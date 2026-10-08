@@ -40,7 +40,7 @@ internal static class EditorAssetCache
 
     private const string MetadataExtension = ".resinfo";
     private const string SettingsFileNameSuffix = ".import.settings";
-    internal const int CurrentVersion = 3;
+    internal const int CurrentVersion = 5;
 
     /// <summary>将文件路径转换为 Content 相对路径。</summary>
     private static string GetRelativePath(string path) => Path.GetRelativePath(root, Path.GetFullPath(path)).Replace('\\', '/');

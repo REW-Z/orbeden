@@ -469,6 +469,20 @@ void UIRenderer::DrawCommand(const UIDrawCommand& command, const matrix4x4* matr
     if (command.indexCount == 0) return;
     if (!matrices || command.matrixIndex >= static_cast<uint32>(matrixCount)) return;
 
+    //检查字体图集纹理
+    const auto kind = static_cast<UIMaterialKind>(command.materialKind);
+    const bool glyph = kind == UIMaterialKind::Bitmap || kind == UIMaterialKind::SDF || kind == UIMaterialKind::MSDF;
+    GpuTextureID texture;
+    if (glyph)
+    {
+        Object* object = Object::FindObjectById(command.textureObjectId);
+        Texture2D* source = object ? object->Cast<Texture2D>() : nullptr;
+        if (!source || !resources) return;
+        texture = resources->GetTexture(source);
+        if (!texture.IsValid()) return;
+    }
+    else texture = ResolveTexture(command.textureObjectId);
+
     const MeshGpu* mesh = EnsureMesh(command.meshId, syncedFrame);
     if (!mesh) return;
 
@@ -485,7 +499,7 @@ void UIRenderer::DrawCommand(const UIDrawCommand& command, const matrix4x4* matr
         backend->SetUniformInt("u_Coverage", static_cast<int32>(CoverageSlot));
     }
 
-    backend->BindTexture(TextureSlot, ResolveTexture(command.textureObjectId));
+    backend->BindTexture(TextureSlot, texture);
     backend->SetUniformInt("u_Texture", static_cast<int32>(TextureSlot));
     backend->DrawIndexed(command.firstIndex, command.indexCount);
     ++drawCommandCount;

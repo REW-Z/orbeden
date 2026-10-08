@@ -113,6 +113,9 @@ public sealed class UILayoutGizmos
         LayoutBaseline end = LayoutBaseline.Capture(layout);
         if (start.Matches(end)) return;
 
+        ScriptRuntimeRegistry.FlushHostFields();
+        EditorApplication.MarkWorldDirty();
+
         UILayout target = layout;
         EditorPropertyHistory.RecordAction(label,
             () => start.Apply(target), () => end.Apply(target));
@@ -505,6 +508,8 @@ public sealed class UILayoutGizmos
             layout.SetOffset(offset);
             layout.SetSizeDelta(sizeDelta);
             layout.Ens.Transform.SetLocalPosition(position);
+            ScriptRuntimeRegistry.FlushHostFields();
+            EditorApplication.MarkWorldDirty();
         }
 
         internal bool Matches(in LayoutBaseline other) =>

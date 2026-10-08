@@ -112,7 +112,12 @@ public sealed unsafe class RetainedGuiBridge : IRetainedGuiHost, IUIDerivedPosit
 
     /// <summary>读取世界结构变化。复制成功才确认排空；fullResync 表示必须重建整个索引。</summary>
     /// <summary>窗口里的待消费输入条数。</summary>
-    public int CountInput() => IsValid ? Math.Max(0, RetainedGuiNative.ReadInput(context, null, 0, null, 0, null)) : 0;
+    public int CountInput()
+    {
+        if (!IsValid) return 0;
+        int textBytes = 0;
+        return Math.Max(0, RetainedGuiNative.ReadInput(context, null, 0, null, 0, &textBytes));
+    }
 
     /// <summary>
     /// 读取待消费输入。容量不足时原生侧不部分写也不消费，

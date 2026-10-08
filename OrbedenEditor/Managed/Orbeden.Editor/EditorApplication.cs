@@ -302,7 +302,8 @@ public static unsafe class EditorApplication
     }
 
     //标记 World 有改动。托管脚本字段的写入与撤销回放不经过原生钩子，只能由这里上报。
-    internal static void MarkWorldDirty()
+    /// <summary>标记当前编辑世界的内容已修改。</summary>
+    public static void MarkWorldDirty()
     {
         if (!IsPlaying && api.SetWorldDirty != null) api.SetWorldDirty(api.Context);
     }

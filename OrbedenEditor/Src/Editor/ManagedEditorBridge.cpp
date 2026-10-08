@@ -57,6 +57,7 @@ namespace
     using ManagedLoadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32);
     using ManagedUnloadGameAssemblyFn = void(CORECLR_DELEGATE_CALLTYPE*)();
     using ManagedCommandFn = uint8(CORECLR_DELEGATE_CALLTYPE*)();
+    using ManagedReadAssetImportSettingsFn = int32(CORECLR_DELEGATE_CALLTYPE*)(uint8*, int32);
     using ManagedRequestScriptBuildFn = void(CORECLR_DELEGATE_CALLTYPE*)(const uint8*, int32, uint8, uint8);
     using ManagedPublishGameAotFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(
         const uint8*, int32,
@@ -96,6 +97,7 @@ namespace
     constexpr const char* EditorRequestDeleteSelectedMethod = "RequestDeleteSelected";
     constexpr const char* EditorRequestReimportSelectedMethod = "RequestReimportSelected";
     constexpr const char* EditorRequestReimportAllMethod = "RequestReimportAll";
+    constexpr const char* EditorReadAssetImportSettingsMethod = "ReadAssetImportSettings";
     constexpr const char* EditorRequestCopySelectedMethod = "RequestCopySelected";
     constexpr const char* EditorRequestPasteSelectedMethod = "RequestPasteSelected";
     constexpr const char* EditorRequestToggleActiveSelectedMethod = "RequestToggleActiveSelected";
@@ -1669,7 +1671,15 @@ namespace
         if (!object) return 0;
         if (Ens* ens = object->Cast<Ens>()) return CopyUtf8(ens->GetName(), buffer, capacity);
         Component* component = object->Cast<Component>();
-        if (!component || !component->GetEns()) return CopyUtf8(object->GetInstanceId().GetPath(), buffer, capacity);
+        if (!component || !component->GetEns())
+        {
+            const std::string& objectKey = object->GetInstanceId().GetPath();
+            std::string sourceKey = ResourceManager::GetSourceKey(objectKey);
+            if (!FileSystem::Exist(PathDefines::GetContentFilePath(sourceKey))
+                && !FileSystem::Exist(CookedAssetSerializer::GetBlobPath(objectKey))
+                && AssetPipeline::SelectImporter(sourceKey) != AssetImporter::Glsl) return 0;
+            return CopyUtf8(objectKey, buffer, capacity);
+        }
         return CopyUtf8(component->GetEns()->GetName(), buffer, capacity);
     }
 
@@ -2082,6 +2092,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestDeleteSelectedMethod, &RequestDeleteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportSelectedMethod, &RequestReimportSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestReimportAllMethod, &RequestReimportAllFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorReadAssetImportSettingsMethod, &ReadAssetImportSettingsFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestCopySelectedMethod, &RequestCopySelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestPasteSelectedMethod, &RequestPasteSelectedFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRequestToggleActiveSelectedMethod, &RequestToggleActiveSelectedFunction)
@@ -2227,6 +2238,7 @@ void ManagedEditorBridge::Shutdown()
     RequestDeleteSelectedFunction = nullptr;
     RequestReimportSelectedFunction = nullptr;
     RequestReimportAllFunction = nullptr;
+    ReadAssetImportSettingsFunction = nullptr;
     RequestCopySelectedFunction = nullptr;
     RequestPasteSelectedFunction = nullptr;
     RequestToggleActiveSelectedFunction = nullptr;
@@ -2352,6 +2364,24 @@ bool ManagedEditorBridge::SaveProjectState()
     if (!initialized || !SaveProjectStateFunction) return true;
     ManagedCommandFn saveProjectState = reinterpret_cast<ManagedCommandFn>(SaveProjectStateFunction);
     return saveProjectState() != 0;
+}
+
+//读取源资源的导入设置表
+bool ManagedEditorBridge::ReadAssetImportSettings(std::string& settingsTable)
+{
+    settingsTable.clear();
+    if (!initialized || !ReadAssetImportSettingsFunction) return false;
+    auto readSettings = reinterpret_cast<ManagedReadAssetImportSettingsFn>(ReadAssetImportSettingsFunction);
+    int32 length = readSettings(nullptr, 0);
+    for (uint32 attempt = 0; attempt < 3 && length >= 0; ++attempt)
+    {
+        settingsTable.resize(length);
+        int32 written = readSettings(reinterpret_cast<uint8*>(settingsTable.data()), length);
+        if (written == length) return true;
+        length = written;
+    }
+    settingsTable.clear();
+    return false;
 }
 
 bool ManagedEditorBridge::Undo()

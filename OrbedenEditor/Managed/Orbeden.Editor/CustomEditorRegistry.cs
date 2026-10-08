@@ -19,7 +19,12 @@ internal static class CustomEditorRegistry
     private static readonly HashSet<Assembly> registeredAssemblies = [];
 
     /// <summary>注册编辑器自带的内置编辑器；没有游戏程序集时也必须可用。</summary>
-    internal static void RegisterBuiltins() => Register(typeof(ParticleSystemEditor).Assembly);
+    internal static void RegisterBuiltins()
+    {
+        Register(typeof(ParticleSystemEditor).Assembly);
+        //UI 组件住在核心程序集，注册它才能在按类型名解析时查到组件与它的 CustomEditor。
+        Register(typeof(Script).Assembly);
+    }
 
     /// <summary>注册程序集中的组件编辑器，拒绝重复和无效声明。</summary>
     internal static void Register(Assembly assembly)

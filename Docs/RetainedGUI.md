@@ -1,6 +1,6 @@
 # 需求/目标
 
-本文定义 Orbeden RetainedGUI 的实现边界、公共接口、算法、编辑器接入、发布方式与验收。
+本文定义 Orbeden RetainedGUI 的实现边界、公共接口、算法、编辑器接入、程序集归属与验收。
 UI 组件、布局、网格生成、文字排版、输入路由、控件状态与事件派发由 C# 实现。
 C++ 负责 GPU 执行、字体解析与光栅化、平台输入、原生资源及通用引擎桥接。
 设计遵守 Docs/ProjectConventions.md；坐标保持右手系，X 向右、Y 向上、Forward 为 -Z。
@@ -28,7 +28,7 @@ TextField 仅单行，不实现密码模式、屏幕键盘。
 **扩展验收**
 - 继承 UIVisual 能用 C# 增加图形；继承 UIControl 能增加交互控件。
 - 实现布局接口能增加布局；替换 UIInputModule 能改变输入策略。
-- GUI 源码随 SDK 发布，可在游戏工程覆盖并编译。
+- UI 由引擎程序集提供，游戏工程不编译 UI 源码，只派生与扩展控件。
 - 修改控件、排版、布局与路由不运行 C++ 编译，不改变原生函数表。
 - 自定义组件能挂载、保存、复制、Undo、热重载并运行于 NativeAOT。
 - 暖缓存且画面未变时，布局/几何重建、字形生成与顶点上传计数均为零。
@@ -40,68 +40,22 @@ UGUI 的借鉴点是托管图形生成、分阶段重建与原生渲染桥接，
 参考： https://github.com/Unity-Technologies/uGUI/blob/main/com.unity.ugui/Runtime/UGUI/UI/Core/CanvasUpdateRegistry.cs
 参考： https://github.com/Unity-Technologies/uGUI/blob/main/com.unity.ugui/Runtime/UGUI/UI/Core/Layout/LayoutRebuilder.cs
 
-# 项目现状
-
-以下为本次读取代码核实的基线；行号用于定位，实施时同时核对符号。
-路径缩写只用于本文；每个新增主类型与文件同名，紧密关联的 POD/枚举放在对应主类型文件。
+路径缩写只用于本文；每个主类型与文件同名，紧密关联的 POD/枚举放在对应主类型文件。
 
 | 缩写 | 目录 |
 |---|---|
 | CoreCS | OrbedenCore/Managed/OrbedenCore.CSharp/ |
-| Package | OrbedenCore/Managed/Orbeden.UI/ |
-| UI | Package/Runtime/ |
-| UIEditor | Package/Editor/ |
+| UI | CoreCS/UI/ |
 | Native | OrbedenCore/Src/ |
+| UIEditor | OrbedenEditor/Managed/Orbeden.Editor/UI/ |
 | EditorCS | OrbedenEditor/Managed/Orbeden.Editor/ |
-
-| 已核实事实 | 源码位置 | 设计处理 |
-|---|---|---|
-| Script 绑定原生 Script 宿主 | CoreCS/Script.cs:10 | UI 复用宿主 |
-| Ens 区分原生/托管工厂 | CoreCS/Ens.cs:213 | 沿用 AddComponent<T> |
-| 已有依赖与单实例属性 | CoreCS/InspectorAttributes.cs:3 | 补齐统一验证 |
-| 生命周期扫描拒绝 virtual | CoreCS/ScriptRuntime.cs:401 | UI 使用独立接口 |
-| 宿主创建时立即应用字段 | CoreCS/ScriptRuntime.cs:290 | 改为全体构造后恢复引用 |
-| 已有一维数组/List 持久化 | CoreCS/ManagedScriptHostFields.cs:58 | 复用集合编码 |
-| 托管类型分类缺少 vector2 | CoreCS/ManagedScriptInterop.cs:57 | 补齐值协议 |
-| 原生字段分类缺少 vector2 | Native/Runtime/Object/Script.cpp:261 | 同步分类 |
-| 编辑初始化创建临时包装 | CoreCS/Script.Native.cs:214 | 编辑世界保持包装 |
-| Inspector 自有加载上下文 | EditorCS/Panels/InspectorPanel.cs:13 | 统一程序集会话 |
-| ScriptRuntime 自有加载上下文 | CoreCS/ScriptRuntime.cs:19 | 统一程序集会话 |
-| Update 受模拟/暂停门控 | Native/Application.cpp:321 | UI 独立帧阶段 |
-| Transform setter 通知 World | Native/Runtime/Object/Transform.cpp:14 | 增加派生位置 |
-| World 有代次和脏抑制 | Native/Runtime/World.h:115 | 绑定上下文代次 |
-| 输入目前为状态查询 | Native/InputManager/InputManager.h:70 | 增加有序事件 |
-| RenderSystem 有无相机分支 | Native/Rendering/RenderSystem.cpp:387 | 接入屏幕 UI |
-| Texture2D 持有 CPU 像素 | Native/Runtime/Object/Texture2D.h:22 | 扩展动态/目标纹理 |
-| 组件编辑器统一编辑目标 | EditorCS/ComponentEditor.cs:6 | 复用编辑框架 |
-| 属性文档负责事务和历史 | EditorCS/PropertyDocument.cs:158 | UI 修改走事务 |
-| 游戏源码集中加入 Compile | Tools/OrbedenMetaGen/Orbeden.Bindings.targets:35 | 接入源码包 |
-| AOT 导出编进游戏主程序集 | OrbedenEditor/Templates/Shared/GameAotExports.cs:6 | 同步新增阶段 |
-| 当前项目版本为 36 | Native/Defines/Version.h:8 | 本次升级为 37 |
-
-Docs/ScriptSystem.md 的集合字段说明与当前实现不一致，本次同步更新。
-当前尚未具备下述 RetainedGUI 系统，路线图均保持未完成。
-
-# 总体路线图
-
-- [x] 托管组件基础系统更新
-- [x] GUI源码包与程序集系统落地
-- [x] UI对象与帧调度系统落地
-- [x] 矩形与自动布局系统落地
-- [x] 图形与原生提交系统落地
-- [x] 字体与文字系统落地
-- [x] 裁剪与渲染系统落地
-- [x] 输入与事件系统落地
-- [x] 控件系统落地
-- [x] UI编辑器系统落地
-- [ ] 发布与验收系统落地
 
 # 关于托管组件基础系统
 
 所有 UI 组件继承 Orbeden.Script，每实例对应独立原生 Script 宿主。
 原生宿主只保存身份、managedTypeName、enabled 与字段快照，不保存控件状态机。
 示例：同一 Ens 上为 Transform、Script→UILayout、Script→Image、Script→Button。
-场景仍使用 Component type="Script" 与完整 managedTypeName，例如 Orbeden.Button。
+场景使用 Component type="Script" 与完整 managedTypeName，例如 Orbeden.Button。
 稳定组件路径用于持久化引用；ObjectId、包装指针与数组下标只用于当前进程。
 
 **两阶段实例构造**
@@ -111,7 +65,7 @@ Docs/ScriptSystem.md 的集合字段说明与当前实现不一致，本次同�
 找不到托管类型时保留宿主和原字段，显示 Missing Script；不删除数据。
 单个构造失败断开该实例；引用它的字段保留未解析路径，不阻塞其他实例。
 
-新增 CoreCS/IManagedComponentLifecycle.cs：
+CoreCS/IManagedComponentLifecycle.cs：
 ```csharp
 public interface IManagedComponentLifecycle
 {
@@ -132,35 +86,30 @@ GUI 配置使用 [SerializeField] private 字段；缓存保持 private 且不�
 集合仅开放本文明确列出的操作方法，不返回可写 List。
 Setter 先校验、再比较、再赋值和标脏；相同值不产生事件或重建。
 运行时权威值在 C#；原生字段表是保存、复制与编辑事务使用的快照。
-保存、复制、Prefab、进入 Play、程序集重载前调用 FlushHostFields。
+保存、复制、Prefab、进入 Play、程序集重载前调用 FlushHostFields，序列化边界另调用 IManagedComponentLifecycle.OnComponentBeforeSerialize()。
 普通 setter 不逐次调用原生字段写入；派生矩形、选区、捕获、网格、委托不持久化。
 Inspector 事务先转换全部值，成功后一起应用，最后调用一次 FieldsChanged。
 转换失败整批拒绝；验证失败回滚该事务，不保存部分值。
 加载配置非法时保留原数据，标记该组件不可运行并显示错误；用户修复后重新验证。
 未解析引用单独记录字段/元素对应的稳定路径；未被明确编辑为 null 前不能刷新成空路径。
 
-新增 ComponentConstraintAttribute(Type exclusiveBaseType)，Inherited=true、AllowMultiple=true。
+托管组件约束使用 ComponentConstraintAttribute(Type exclusiveBaseType)，Inherited=true、AllowMultiple=true。
 同一 Ens 最多一个可赋值给 exclusiveBaseType 的组件；检查范围包括 C# 派生类型。
 UniqueComponent 用于 UILayout、Canvas、Mask；家族互斥用于 UIVisual、UIControl、UILayoutGroup。
 用户添加时补齐依赖，失败逆序撤销新增组件；场景加载只验证、不插入依赖。
 单删被依赖组件被拒绝；整 Ens 销毁放行；Undo/复制恢复在整批对象建完后验证。
-字段协议追加 vector2，不移动已有枚举值；标量序列化名称为 vector2，值为 invariant 的 x y。
-一维集合继续采用已有 UTF-8 字节长度前缀协议；不增加任意托管对象图序列化。
+字段协议含 vector2，标量序列化名称为 vector2，值为 invariant 的 x y。
+一维集合采用 UTF-8 字节长度前缀协议；不增加任意托管对象图序列化。
 
-# 关于GUI源码包与程序集系统
+# 关于程序集与会话系统
 
-Package/Runtime 编译进游戏主程序集，Package/Editor 编译进 <Game>.Editor。
-包内类型使用 Orbeden 命名空间；编辑器类型使用 OrbedenEditor。
-CoreCS 只提供合同和桥接，不引用游戏程序集中的具体 UI 类型。
-源码发布为 Sdk/Packages/Orbeden.UI/{Runtime,Editor,Orbeden.UI.targets,Package.version}。
-游戏项目覆盖位置固定为 <Project>/Packages/Orbeden.UI/，存在时整包覆盖 SDK 来源。
-OrbedenUIPackageRoot 指向唯一来源；禁止把 SDK 与项目包同时加入 Compile。
-Package.version 首行为 3，声明所需 RetainedGuiApi 主版本 2；不匹配则构建失败。
-项目覆盖包不被 SDK 刷新覆盖；普通用户扩展放 Content/，框架修改放覆盖包。
-Runtime 不引用 Orbeden.Editor；Editor 源码不进入 Player/AOT。
-Core 的 MetaGen 只处理底层原生能力；新增 UI C# 类型不参与原生反射生成。
+UI 运行时代码位于 `OrbedenCore.CSharp` 的 `UI/` 下，命名空间为 `Orbeden`；编辑器部分位于 `Orbeden.Editor` 的 `UI/` 下，命名空间为 `OrbedenEditor`。
+两者随 SDK 以程序集发布：游戏运行时、游戏脚本与 `<Game>.Editor` 引用它们，不编译任何 UI 源码。
+没有源码包、包版本合同与项目覆盖位置；游戏开发者派生与扩展控件，不改 UI 实现。
+UI 运行时不引用 `Orbeden.Editor`；编辑器源码不进入 Player/AOT。
+Core 的 MetaGen 只处理底层原生能力；UI 的 C# 类型不参与原生反射生成。
 
-新增 CoreCS/ManagedAssemblySession.cs：
+CoreCS/ManagedAssemblySession.cs：
 ```csharp
 public static Assembly? GetGameAssembly();
 public static Assembly? GetEditorAssembly();
@@ -179,6 +128,9 @@ Load 只允许在世界已分离后替换会话；编译失败不调用 Load，�
 加载失败保留场景字段并显示错误；不尝试运行部分注册成功的程序集。
 卸载顺序：停止帧→取消输入/IME→释放 UI 上下文→断开包装→清理编辑缓存/菜单→注销绑定→Unload。
 所有保存 Type、delegate、Component、Editor 实例的静态表必须在卸载路径清空。
+
+类型解析顺序为游戏程序集→`<Game>.Editor`→`OrbedenCore.CSharp`；UI 类型由第三级命中。
+原生侧与序列化只认 `managedTypeName` 字符串，不含程序集限定名，因此 UI 类型所在程序集与场景数据无关。
 
 # 关于UI对象与帧调度系统
 
@@ -212,16 +164,16 @@ public Canvas? GetCanvas();
 异常记录组件路径与方法；当前组件停止该帧操作，其他组件继续。
 卸载先撤销输入与缓存引用，再执行 OnUIDetached。
 
-新增 CoreCS/IManagedFrameSystem.cs：
+CoreCS/IManagedFrameSystem.cs：
 ```csharp
 void AttachWorld(ulong worldRevision, bool editorMode);
 void ProcessInput(float deltaTime);
 void PrepareRender(float deltaTime);
 void DetachWorld();
 ```
-ManagedFrameSystems.Register(string id, Func<IManagedFrameSystem> factory) 登记工厂。
-Unregister(string id) 仅在世界分离后执行；重复 id 报错，顺序为 id 的 ordinal 升序。
-UIRuntimeBootstrap 通过模块初始化注册 id="Orbeden.RetainedGUI"。
+工厂使用 ManagedFrameSystems.Register(id, factory)（会话层，随程序集卸载清空）或 RegisterBuiltin(id, factory)（常驻层）。
+UI 用常驻登记：`UIRuntimeBootstrap` 在引擎绑定初始化时登记 id="Orbeden.RetainedGUI"，模块初始化只执行一次，登记不能被会话清理带走。
+Unregister(string id) 仅在世界分离后执行；重复 id 报错，构造顺序为 id 的 ordinal 升序。
 UIWorldContext 实现接口；核心保留接口，不硬编码 UIWorldContext 类型。
 
 UIWorldContext 状态：
@@ -273,6 +225,7 @@ rect.size = S
 anchor 与 pivot 限于 [0,1]；写 min 不超过当前 max，写 max 不小于当前 min。
 sizeDelta 可为负；非有限浮点写入拒绝。
 pivot setter 不补偿位置；编辑器“保持矩形”操作一次修改 pivot 与 offset。
+offset 与 Transform 局部 X/Y 使用同一份平移，Z 使用 Transform 局部 Z；GetAnchoredPosition/SetAnchoredPosition 提供三维入口。
 
 Transform 作者位置与布局位置分开：最终 XY=Q+作者 localPosition.xy，Z 使用作者 localPosition.z。
 屏幕画布的直接子节点还要叠加画布根矩形的枢轴居中偏移（−pivot×根矩形尺寸）：根逻辑矩形从 {0,0} 起算，
@@ -287,13 +240,26 @@ C# 一次批量写派生位置，原生使用 DirtySuppressionScope；通知包�
 UI 节点的旋转/缩放影响渲染与命中，不用于计算布局期望包围盒。
 布局与普通子 Ens 共用解析后的 Transform 世界矩阵。
 
-编辑规则（版本 51）：SceneView 的 Rect 工具（T）修改 UILayout 的 offset 与 sizeDelta；Move/Rotate/Scale（W/E/R）修改 Transform。普通 UI 的最终位置是“父矩形中的锚点落点 + UILayout.position + Transform.localPosition”。未拉伸时 Width/Height 等于 sizeDelta；拉伸时矩形尺寸等于锚点跨度加 sizeDelta，Inspector 显示相应边距。localScale 在布局完成后缩放网格、文字及子树，不修改 Width/Height，也不会让文字按缩放后的宽度重新换行。常规排版保持 localPosition=(0,0,0)、localScale=(1,1,1)，用 Rect 调位置与尺寸；额外位移或缩放动画使用 Transform。父布局组驱动的子矩形应修改布局组或设置 ignoreLayout。Overlay 根 Canvas 的 Transform 只参与 SceneView 空间预览，PIE 的大小由 Canvas 缩放配置与视口决定；WorldSpace 根 Canvas 的 Transform 则决定真实世界位置和尺寸。
+**场景编辑规则**
+SceneView 的 Rect 工具（T）修改 UILayout 的 offset 与 sizeDelta；Move/Rotate/Scale（W/E/R）修改 Transform。
+普通 UI 的最终位置是“父矩形中的锚点落点 + UILayout.offset + Transform.localPosition”。
+未拉伸时 Width/Height 等于 sizeDelta；拉伸时矩形尺寸等于锚点跨度加 sizeDelta，Inspector 显示相应边距。
+localScale 在布局完成后缩放网格、文字及子树，不修改 Width/Height，也不会让文字按缩放后的宽度重新换行。
+常规排版保持 localPosition=(0,0,0)、localScale=(1,1,1)，用 Rect 调位置与尺寸；额外位移或缩放动画使用 Transform。
+父布局组驱动的子矩形应修改布局组或设置 ignoreLayout。
+Overlay 根 Canvas 的 Transform 只参与 SceneView 空间预览，PIE 的大小由 Canvas 缩放配置与视口决定；
+WorldSpace 根 Canvas 的 Transform 则决定真实世界位置和尺寸。
+活动 Canvas 边框常显，子 UI 边框只在选中时显示；共享手柄入口限制 UILayout 只能在 Rect 模式交互。
+点击场景时 UI 场景扩展按 Image/Text 的实际预览变换求射线和平面交点，再检查解析矩形与祖先遮罩；运行时 RaycastTarget 不参与编辑器选择。
+先过滤被更近 MeshRenderer 遮挡的 UI，再按 Ens 树深度优先选取更“叶子”的节点，同层级比较相机距离。
+离屏画布显示其空间边框，实际离屏图元不参与 SceneView 拾取。
 
-预览空间（版本 53）：Overlay 画布在场景中的大小由**画布根 Transform 的缩放**给出，新建画布写 0.01，与 WorldSpace 同刻度；预览矩阵只再按枢轴居中一次，不再另乘缩放。逻辑单位到场景世界单位的换算因此只有一个来源，UI 子节点的世界矩阵就等于它在场景里的绘制位置——W/E/R 手柄、双击聚焦（F）、选择包围盒与绘制三者对齐。居中偏移同时写进派生位置（见上），两边的偏移同源。旧项目的 Overlay 画布根缩放是 1，需在画布根上手工设为 0.01。根逻辑矩形仍为 min={0,0}、size=logicalSize，屏幕正交投影与字形光栅缩放仍不读根 Transform。
-
-默认字体（版本 51）：Text 与 TextField 的 Font 字段为空时，实际排版使用 `Builtin/Fonts/Default.otf`（Noto Sans SC Regular）。组件字段仍保留空值，默认资源按世界延迟加载并缓存；显式字体优先，输入框正文、占位文字、组合文字共用该规则。字体及 OFL 许可证随 Builtin 内容发布；旧项目需要同步新增 Fonts 目录并导入，Player cook 会收录字体资源。
-
-场景编辑（版本 52）：编辑器加载游戏程序集前检查 UI 包与运行时/Editor DLL 的更新时间，源码包更新后自动构建并重载；共享手柄入口也限制 UILayout 只能在 Rect 模式交互。活动 Canvas 边框常显，子 UI 边框只在选中时显示。点击场景时，源码包场景扩展按 Image/Text 的实际预览变换求射线和平面交点，再检查解析矩形与祖先遮罩；运行时 RaycastTarget 不参与编辑器选择。先过滤被更近 MeshRenderer 遮挡的 UI，再按 Ens 树深度优先选取更“叶子”的节点，同层级比较相机距离。离屏画布显示其空间边框，实际离屏图元不参与 SceneView 拾取。
+**预览空间**
+Overlay 画布在场景中的大小由画布根 Transform 的缩放给出，新建画布写 0.01，与 WorldSpace 同刻度；预览矩阵只再按枢轴居中一次，不再另乘缩放。
+逻辑单位到场景世界单位的换算因此只有一个来源，UI 子节点的世界矩阵就等于它在场景里的绘制位置——W/E/R 手柄、双击聚焦（F）、选择包围盒与绘制三者对齐。
+居中偏移同时写进派生位置（见上），两边的偏移同源。
+旧项目的 Overlay 画布根缩放是 1，需在画布根上手工设为 0.01。
+根逻辑矩形仍为 min={0,0}、size=logicalSize，屏幕正交投影与字形光栅缩放仍不读根 Transform。
 
 Canvas 枚举：CanvasRenderMode={Overlay=0,WorldSpace=1,Offscreen=2}。
 CanvasScaleMode={ConstantPixel=0,ReferenceResolution=1}。
@@ -370,8 +336,12 @@ public virtual float MeasureHeight(float availableWidth);
 ```
 默认 Raycast 判定解析矩形；材质/几何缓存分别标脏；不在每帧调用 PopulateMesh。
 
-实现约定（2026-10-04）：`SetVerticesDirty()` 只刷新几何与命中，自定义图形改变期望尺寸时另调 `SetLayoutDirty()`；内置 Text 内容与字号变化已同时标记布局。`SetMaterialDirty()` 只刷新最终绘制状态，修改器参数和动画变化后主动调用；设置图形颜色、材质或 Image 纹理会自动标记。最终状态始终从基础片段重算，静态帧复用；Material 纹理槽依赖仍每帧读取。组件扩展缓存使用集合版本，覆盖同数量替换、重排与启停；图形重建期间产生的新脏请求保留到下一轮。
+实现约定：`SetVerticesDirty()` 只刷新几何与命中，自定义图形改变期望尺寸时另调 `SetLayoutDirty()`；内置 Text 内容与字号变化已同时标记布局。
+`SetMaterialDirty()` 只刷新最终绘制状态，修改器参数和动画变化后主动调用；设置图形颜色、材质或 Image 纹理会自动标记。
+最终状态始终从基础片段重算，静态帧复用；Material 纹理槽依赖仍每帧读取。
+组件扩展缓存使用集合版本，覆盖同数量替换、重排与启停；图形重建期间产生的新脏请求保留到下一轮。
 派生图形可重写 Raycast 与网格生成；生命周期注册仍由 UIElement 实现。
+扩展入口为 IUIMeshModifier（`ModifyMesh(UIMeshBuilder)`）、IUIMaterialModifier 与 UIVisual 的 PopulateMesh 重写。
 
 UIMeshBuilder 为可复用 class，方法：
 ```csharp
@@ -471,9 +441,8 @@ ReadClipboard 返回所需 UTF-8 字节数，容量不足不部分写；字符�
 
 两套根 API 尾部追加 GetRetainedGuiApi 指针，根 abiVersion=3。
 Engine 指针槽总数 71，Game 总数 112；原有槽位不移动。
-（托管基础阶段给 EnsBind 追加了 GetDontSave/SetDontSave 两个槽，排在它后面的表各后移 2 位；
-这两处槽位是本阶段唯一的 ABI 变更，实施 RetainedGui 表时按当前值起算。）
 GetRetainedGuiApi 返回进程期稳定只读表；原生 UI context 生命周期独立。
+托管侧由 OrbedenCoreRuntime.RetainedGuiApi 保存该指针，RetainedGuiNative 保存类型化镜像并校验表版本与 structSize。
 SubmitCanvas 暂存本帧，EndFrame 原子发布；长度、索引、矩阵、裁剪栈全部校验成功才交换。
 提交失败停止该上下文当前帧绘制并清命中快照，不显示半帧。
 原生复制上传数据后返回；mesh 更新才上传顶点；无变化网格不重复上传。
@@ -483,6 +452,8 @@ DestroyContext 释放帧、网格、派生位置、视图快照和资源根，�
 首版在主线程提交与渲染；GPU 删除依托后端资源释放，不从终结器执行 GL 调用。
 
 # 关于字体与文字系统
+
+版本 60：FontAtlasCache 的共享实例跨世界保留，图集页及字形状态绑定当前 UI 上下文；进入和退出 PIE 都清理旧页并推进缓存版本。Text/TextField 检查缓存版本、图集纹理存活与临时失败状态后重排，字体图集失效时不绘制实心替代矩形。输入计数查询须提供 textBytes 输出指针，无文本输入不要求分配文本缓冲。PIE 世界重建只使运行时缓存失效，不改写世界文件。
 
 分工：Font/FontRasterizer 用 C++，UITextLayout/FontAtlasCache/Text 用 C#。
 原生职责为字体字节、字体面、glyphIndex、度量、kerning、轮廓光栅化；不执行换行或 Atlas 装箱。
@@ -497,7 +468,10 @@ Font 持久化 sourceBytes:List<uint8>、faceIndex:uint=0；字体元数据从�
 元数据为 familyName、styleName、unitsPerEm、ascender、descender、lineHeight。
 revision 为运行时 ulong，重新导入成功后递增；Font 不保存 FT_Face、Atlas 或 GPU 句柄。
 导入 .ttf/.otf/.ttc；越界 faceIndex 导入失败；Player 使用打包字节，不读系统字体。
-cooked 保存格式版本 1、faceIndex、字节长度与字节；先校验和解析，再替换资源。
+cooked 字体载荷版本 2 保存 faceIndex、rasterMode、atlasSize、distanceFieldSize、distanceFieldRange、字节长度与字节；先校验和解析，再替换资源。版本 1 载荷按默认导入设置读取。
+原始字体在 ProjectPanel 下展开为 Font 对象，与 PNG 展开为 Texture2D 一致；源文件 Inspector 显示 Objects 和 Import Settings。
+导入设置写入源文件旁的 .resinfo，Apply 重新导入并保持 Font 对象身份，推进 revision、刷新字体面及文字几何。
+字体仍属于外部原始格式，导入结果是 Font 对象；编辑器不新增 .orbfont 文件格式，Cooked 产物为 .orbo。
 FontRasterMode={Bitmap=0,SDF=1,MSDF=2}；Atlas 通道分别为 R8、R8、RGB8，均为线性。
 
 字形度量使用未 hint 字体单位；按 fontSize/unitsPerEm 缩放，三模式 advance 相同。
@@ -506,23 +480,32 @@ Bitmap 光栅字号取四舍五入并限于 [1,512]，留白 1 texel，处理正
 WorldSpace 的布局、Image/Text 网格、控件附加网格与文字排版均与摄像机无关。
 相机移动、增删与分辨率变化不重建 WorldSpace 几何；需要跨距离保持清晰时使用 SDF/MSDF，shader 按 UV 导数处理边缘。
 每台相机分别发布呈现快照，命中检测使用对应相机矩阵、视口和深度，不生成相机网格变体。
-SDF/MSDF 为 64 pixels/em、range=4、padding=6、edge angle=3 radians、seed=0。
+Font 导入设置默认 rasterMode=Bitmap、atlasSize=1024、distanceFieldSize=64、distanceFieldRange=4。
+atlasSize 支持 256/512/1024/2048/4096；distanceFieldSize 支持 [16,256] pixels/em；distanceFieldRange 支持 [1,32] texel。
+SDF/MSDF 从 Font 读取像素密度和 range，padding=ceil(range)+2、edge angle=3 radians、seed=0；Bitmap 按 Text 字号动态生成。
 空格只缓存度量，不分配 Atlas；空轮廓同样不生成像素。
 
 Atlas 键：fontObjectId、fontRevision、glyphIndex、rasterMode、bitmapPixelSize。
 SDF/MSDF 的 bitmapPixelSize=0；页面保存 pageId、generation、texture、row cursor、lastUsedFrame。
-普通页 1024×1024；逐行装箱，宽不足换行，高不足换页，不旋转、不移动已有字形。
+普通页边长由 Font.atlasSize 指定并限制到设备上限；字体对象及 revision 各自分配页面。逐行装箱，宽不足换行，高不足换页，不旋转、不移动已有字形。
 超大字形分配能容纳它的二次幂独立页；超设备上限使用缺字图形并记录错误。
 64 MiB 为软预算：先收集本帧全部视图字形并固定命中页，再生成冷字形。
 只驱逐未固定的 LRU 页；当前工作集超过预算允许超出，禁止本帧反复驱逐。
 页面回收推进 generation，依赖几何失效；GPU 资源待原生帧释放引用后销毁。
 新增字形只上传占用矩形；首版在主线程同步生成，不承诺冷缓存无耗时峰值。
+缓存为世界无关的常驻实例：换世界只换原生上下文，不重新光栅化；页纹理属核心侧资源，与程序集同生命周期。
 
 缺字：glyphIndex=0 时不查备用字体、不用 .notdef，生成统一空心方框。
 方框 advance=0.6em、宽=0.5em、高=0.8em、线宽=0.05em；Font=null 同样处理。
 方框由 C# 四条矩形组成，避免缺字仍依赖字体光栅化；行高使用 1em。
 
-Text 配置：font:Font?=null、text:string=""、fontSize:float=16、rasterMode=Bitmap。
+默认字体：Text 与 TextField 的 Font 字段为空时，实际排版使用 `Builtin/Fonts/Default.ttf//Font/Main`（Cubic 11／俐方體11號 1.500），默认以 Bitmap 导入。
+源文件路径为 `Builtin/Fonts/Default.ttf`，引用保存导入后的 Font 对象 Key。
+组件字段仍保留空值，默认资源按世界延迟加载并缓存；显式字体优先，输入框正文、占位文字、组合文字共用该规则。
+字体按依赖锁文件的固定提交与哈希还原，字节未修改；字体及完整 OFL 许可证随 Builtin 内容发布。
+旧项目需更新 Builtin/Fonts 并重新导入，Player cook 会收录字体资源。
+
+Text 配置：font:Font?=null、text:string=""、fontSize:float=16；rasterMode 与图集参数读取有效 Font，无组件级导入设置。
 wrap=false、lineSpacing=1；horizontalAlignment={Left,Center,Right} 默认 Left。
 verticalAlignment={Top,Center,Bottom} 默认 Top；fontSize≥1、lineSpacing≥0。
 C# 内部使用 string/Unicode 标量，缓存标量到 UTF-16 范围；桥接文本为 UTF-8。
@@ -726,7 +709,7 @@ SetSelectedIndex(int index,bool notify=true) 允许 -1；非空选择更新 labe
 外部点击关闭并消费该序列；Cancel 关闭恢复原有效焦点；改变 options 立即关闭。
 打开第二个 ComboBox 前关闭当前 Canvas 弹层；Open/Close 重复调用无副作用。
 
-TextField：text=""、font=null、fontSize=16、rasterMode=Bitmap、maxLength=0、readOnly=false。
+TextField：text=""、font=null、fontSize=16、maxLength=0、readOnly=false；字形模式及图集参数读取有效 Font。
 placeholder=""、textTint={1,1,1,1}、selectionTint={0.2,0.4,1,0.5}、caretTint={1,1,1,1}。
 maxLength 按 Unicode 标量计数，0 为无限制；SetText(string text,bool notify=true) 共用输入归一流程。
 支持方向、Home/End、Shift 选区、Backspace/Delete、Ctrl+A/C/X/V、Enter 提交。
@@ -745,8 +728,11 @@ UIEditor 包含 UICreationMenu、UILayoutEditor、CanvasEditor、MaskEditor、Fo
 另含 UIControlEditor、UIEventBindingEditor、UILayoutGizmos、UIPreviewController。
 UIPreviewPanel 位于 EditorCS/Panels，仅引用公共 IUIPreviewProvider。
 CustomEditor 注册支持 UI 派生类型，且使用统一 ManagedAssemblySession 的 Type。
-运行时包不直接引用 Editor 历史/面板类。
+UI 运行时不引用 Editor 的历史与面板类。
 
+接入方式：`UIEditorRegistration.Register()` 在引擎编辑器初始化时登记一次，创建菜单、字体资源检视、场景扩展与预览提供者都是常驻项，不随游戏程序集卸载。
+控件编辑器由 CustomEditorRegistry 扫描 `Orbeden.Editor` 时按 `[CustomEditor]` 自动接入；`RegisterBuiltins()` 同时登记核心程序集，UI 组件才能在按类型名解析时查到。
+Inspector 的可添加组件列表同时收集核心程序集与游戏程序集里可添加的托管脚本类型。
 创建菜单使用 EnsContextMenuRegistry；无所属 Canvas 时先创建 Overlay Canvas。
 | 菜单 | 根组件与子节点 | 默认尺寸 |
 |---|---|---|
@@ -801,458 +787,13 @@ Preview 输出注册为独立视图，隐藏后停止额外目标更新。
 所有原生 Object 派生类放 Runtime/Object；非 Object 服务不放该目录。
 新增函数提供简短中文 XML 说明；C++ 声明采用相同语义的紧邻中文注释。
 Generated、Bindings、API 文档通过生成器刷新，禁止手工修补生成结果。
-项目格式版本升为 37，BuildAndPackaging 记录 ABI、包覆盖、托管编辑上下文与 vector2。
-SDK 同时发布 GUI 源码、版本文件、内置 shader、第三方授权和接口文档。
-CoreCS 文档生成继续描述桥接；GUI 包的公开 API 从游戏编译输出与 XML 文档合并投影。
-投影按命名空间/完整类型名去重，文档只收录包源码类型和项目公开扩展。
-GUI 包改动不得触发 C++ 或原生 Binding 生成；首次基础接入仍需要构建引擎。
+SDK 随程序集发布 UI 能力：`OrbedenCore.CSharp.dll` 供游戏运行时与脚本引用，`Orbeden.Editor.dll` 供编辑器与 `<Game>.Editor` 引用；不再发布 UI 源码。
+UI 的公开 API 由 Core 的程序集与 XML 文档经 OrbedenDocGen 投影到 Docs/Manual/Api，按命名空间与完整类型名去重。
+改 UI 代码不触发 C++ 或原生 Binding 生成。
 
 统计项：Layout、TextLayout、GlyphRaster、AtlasUpload、Geometry、Clip、Input、EventDispatch、NativeSubmit、Draw。
 计数项：布局节点、几何重建、冷字形、上传字节、Atlas 字节、批次、裁剪目标峰值、深度回读。
 性能验收使用暖缓存、固定分辨率、无属性修改场景，连续采集 120 帧。
 布局重建/几何重建/冷字形/顶点上传须为零；帧描述和 draw 允许继续提交。
+连续重载 20 次确认会话可回收、菜单与回调无重复，UI 每次重载后仍工作。
 不以语言文件数量比例验收，以“新增控件不改原生”作为架构判据。
-每完成下列步骤并通过其检查立即勾选；系统全部通过后勾选路线图。
-
-# 详细步骤
-
-- [x] 托管基础：补齐 vector2 的反射、持久化、互操作与 Inspector。
-  修改 CoreCS/ComponentProxy.cs、ManagedScriptInterop.cs、ManagedScriptHostFields.cs。
-  修改 Native/Runtime/Reflection.h/.cpp、Runtime/Object/Script.cpp、Scripting/ScriptInterop.cpp。
-  新增 InteropValue.From(vector2)，值枚举尾部追加 Vector2，payload 前 8 字节写 x/y、剩余清零。
-  修改 MetaGen 的 BindingTypes/字段投影与 Inspector 对应分支，标量/数组都验证往返。
-
-- [x] 托管基础：实现 IManagedComponentLifecycle 与两阶段构造。
-  ScriptRuntime 新增 ConstructHost(IntPtr)、ApplyHostState(ScriptInstance)、AttachHost(ScriptInstance)。
-  Construct 只登记身份；Apply 恢复字段；Attach 统一通知；批量初始化按阶段遍历。
-  DestroyScript 先取消活动再 Detached；同一实例不重复通知，异常不阻止释放。
-
-- [x] 托管基础：修复精确实例引用与引用快照。
-  修改 Script.Native.ResolveReference 与 OrbedenNativeApi.cpp 的 ResolveScriptReference。
-  托管类型路径先定位宿主再取包装，禁止原生类型表查找 Orbeden.Button。
-  为未解析引用保留路径表；明确用户清空才丢弃，复制重映射同时更新该表。
-  在 WorldSerializer 与编辑器复制/Prefab 的引用重映射中覆盖 Ref 和 Ref 集合。
-
-- [x] 托管基础：实现字段原子事务与保存刷新。
-  ManagedTypeMetadataCache 新增 FlushHostFields(Script,IntPtr):void。
-  新增 ApplyHostFieldsTransaction(Script,IntPtr,IReadOnlyList<string>):void。
-  转换全部输入后赋值、Validate；异常回滚基线；最外层只发一次 FieldsChanged。
-  保存、复制、Prefab、Play/重载快照先 Flush，再调用原生序列化。
-
-- [x] 托管基础：统一组件约束。
-  InspectorAttributes 新增 ComponentConstraintAttribute，Ens 新增 ValidateComponentSet(IReadOnlyList<Type>,Type):void。
-  所有添加入口复用检查；加载/Undo 在全体恢复后检查；整 Ens 删除放行依赖。
-  为临时对象增加通用 Ens 的 DontSave 标志，世界序列化/复制/Prefab 排除该节点及子树。
-  DontSave 为运行时标志，不从场景文件恢复；删除父节点仍正常销毁临时子节点。
-
-- [x] 包与程序集：建立 Package 目录和版本合同。
-  新增 Orbeden.UI.targets、Package.version；修改两份 MetaGen targets/csproj 的 Compile 项。
-  原生 Binding 生成设置原生文件/导入 manifest/生成器版本增量输入。
-  记录原生源文件清单指纹以检测删除/改名；C# 文件不进入该指纹。
-  构建验证 SDK 包/覆盖包只能命中一个来源。
-
-- [x] 包与程序集：实现 ManagedAssemblySession。
-  按“GUI源码包与程序集”方法合同实现缓存、流加载、依赖解析和卸载。
-  移除 InspectorPanel/GameLoadContext 的独立所有权，改用同一会话。
-  ScriptRuntime.ResolveType 只查当前会话与 Core；禁止扫描历史 AppDomain 程序集。
-  清理 CustomEditor、菜单、属性、方法、工厂及绑定缓存后才 Unload。
-
-- [x] 对象与调度：增加托管帧系统合同及 UIWorldContext。
-  （含原生 context 订阅 World 结构/活动/Transform 通知、队列上限与 FullResync。）
-  （托管侧已完成：IManagedFrameSystem、ManagedFrameSystems、UIRuntimeBootstrap、UIWorldContext、UINode、
-  变更队列与 FullResync、布局重建与派生位置提交口。仍缺原生 context 订阅 World 结构/活动/Transform 通知，
-  它随 RetainedGuiApi 的 CreateContext/ReadChanges 一起落地。）
-  新增 IManagedFrameSystem、ManagedFrameSystems、UIRuntimeBootstrap、UIWorldContext、UINode。
-  工厂注册不创建世界对象；AttachWorld 后构造节点索引，DetachWorld 逆序释放。
-  UINode 父子关系来自 Ens；结构变化按 ReadChanges 更新，FullResync 重建索引。
-  原生 context 订阅 World 结构/活动/Transform 通知；每帧最多保留 65536 条，超出置 FullResync。
-
-- [x] 对象与调度：扩展 ScriptSystem 与跨域阶段。
-  新增 ScriptExecutionMode={Editor=0,Play=1}、Initialize(ScriptExecutionMode):bool。
-  新增 ProcessManagedInput(float32):void、PrepareManagedRender(float32):void。
-  新增 DispatchExternalCallbacks(const std::function<void()>&):void，以作用域恢复派发标志。
-  ScriptEntryPoints.initialize 改为 (void*,uint32)，尾部追加 processInput、prepareRender。
-  同步 GameModule、GameScriptRuntime、GameAotExports、EditorPlayMode、game_main 的绑定。
-
-- [x] 对象与调度：接入 Application 与编辑世界。
-  在 FixedUpdate 前处理 UI 输入；所有 LateUpdate 后、Render 消费前准备 UI。
-  非模拟与暂停路径仍执行 UI 两阶段；Editor 初始化只构造包装与帧系统。
-  退出 Play 释放实例后恢复编辑快照；重新附着编辑世界不重新加载程序集。
-  阶段退出应用删除/换世界，再检查代次；失效帧不能发布。
-  （Application::Update 里 ProcessManagedInput 排在 FixedUpdate 之前、PrepareManagedRender 排在
-  全部 LateUpdate 之后，两者都在暂停门控之外，脚本阶段只在 Editor 模式跳过输入路由。
-  ScriptRuntime 建完包装后按 worldRevision 附着帧系统，Editor 模式只保留包装与帧系统、
-  不跑游戏生命周期；Shutdown 先 DetachWorld 再断开包装，程序集由 ManagedAssemblySession 持有，
-  进出 Play 换的是世界实例。UIWorldContext 把 worldRevision 与托管会话代次绑进原生上下文句柄，
-  结构记录按代次过滤，换世界后失效的帧不会发布。）
-
-- [x] 对象与调度：实现 UIElement。
-  新增 UIElement.cs、UIDirtyFlags.cs；显式接口先维护索引，再调用扩展回调。
-  验证 Canvas 归属、布局链、static；错误子树停止输入和提交并保留配置。
-  OnUIDisabled 清捕获/焦点/临时可见性和派生位置；重新启用标全脏。
-
-- [x] 布局：实现 UILayout、UIRect、Canvas。
-  （GetOutputTexture 与 InjectPointer 分别依赖动态纹理与 UIPointerEvent，随渲染与输入阶段落地。）
-  按配置表生成字段和访问器；UILayout 新增 GetResolvedRect():UIRect。
-  Canvas 新增 GetOutputTexture():Texture2D?、InjectPointer(in UIPointerEvent):void。
-  解析尺寸先验证有限性，零目标不投影；屏幕与世界根分别按公式处理。
-  Setter 只标受影响类别，输出 texture 由 context 创建与持有。
-
-- [x] 布局：实现通用派生 Transform 位置。
-  Transform 增加 ownerToken、derivedPosition、hasDerivedPosition 非持久化字段。
-  新增 SetDerivedLocalPosition(uint64,const vector3&):bool、ClearDerivedLocalPosition(uint64):void。
-  新增 GetResolvedLocalPosition() const:const vector3&，矩阵计算改读此值。
-  ownerToken 非零且匹配才允许更新/清除；作者 Getter/序列化保持读取作者值。
-  批量 ApplyDerivedPositions 在 DirtySuppressionScope 中执行，并标识通知来源。
-
-- [x] 布局：实现 UILayoutRegistry 与三种布局类。
-  新增 MarkDirty(UILayout):void、Rebuild():void、Clear():void。
-  提升脏根并去重，四阶段遍历，最后批量提交位置；重建中新增请求放下一队列。
-  实现 UILayoutGroup 有效子缓存、LayoutBox 主/交叉轴公式和 GridBox 三约束。
-  N=0、零可用尺寸、负 sizeDelta、父驱动与 fit 冲突按正文规则处理。
-
-- [x] 图形：实现 UIVisual、UIMeshBuilder、Image、UIGraphicRegistry。
-  UIVisual 继承两个测量方法；缓存片段列表，Geometry 与 Material 分开脏集合。
-  内置网格顶点 tint 为白色，提交 tint 乘 UIVisual.tint 与控件状态色。
-  AddTriangle 验范围；SetTexture 切片段；PopulateMesh 失败清当前图形并记录错误。
-  Image 按 Simple/NineSlice 规则生成，验证小于边框总尺寸时无反向几何。
-
-- [x] 图形：实现 UIFrameBuilder 与 UIGeometryCache。
-  BeginFrame(ulong):void 重用容量；BuildCanvas(Canvas,in UIView):void 生成命令。
-  Submit():void 先传网格变更，再传全部画布，最后 EndFrame 原子发布。
-  缓存记录 meshId/revision 与页面 generation；移除图形提交 RemoveMeshes。
-  命中列表与绘制遍历同源，呈现完成才切换其可用帧号。
-
-- [x] 图形：实现 RetainedGuiTypes 与 RetainedGuiBridge/RetainedGuiNative。
-  （18 槽已就位并接入：CreateContext/DestroyContext/UpdateMeshes/RemoveMeshes/SubmitCanvas/EndFrame/
-  ReadViews/ApplyDerivedPositions/ReadChanges 全部可用；ReadInput/ConsumeInput/ReadDepth/QueryGlyphs/
-  RasterizeGlyphs/GetKerning/SetTextInput/ReadClipboard/WriteClipboard 按各自子系统的空集语义返回，
-  随平台输入、字体、渲染阶段接入实现。）
-  按 ABI 表实现 18 槽，Span 展开与结构布局严格一致。
-  验证 count 非负、加乘溢出、索引范围、矩阵索引、clip 配对、资源身份与代次。
-  句柄为高 32 位 generation/低 32 位 slot，0 无效，释放推进 generation。
-  两套根 API 尾追加 GetRetainedGuiApi，ABI=3，大小断言同步。
-  同步 OrbedenCoreRuntime 初始化和 Editor 入口校验，版本不符拒绝初始化。
-
-- [x] 字体：接入 FreeType/msdfgen 与 Font 资产。
-  （依赖由 Tools/OrbedenThirdParty 生成器产出，OrbedenCore 以库依赖链接。
-  已实现：Font 资产（字节 + faceIndex + 元数据 + revision）、FontRasterizer
-  （OpenFont/GetGlyphMetrics/GetKerning/RasterizeGlyph/ValidateFontBytes/ReleaseFont/Shutdown，
-  三种模式的 advance 一致、度量走未 hint 字体单位）、AssetPipeline 的 .ttf/.otf/.ttc 导入与 faceIndex
-  设置、CookedAssetSerializer 的字体载荷（版本 1，先校验再替换资源）、RetainedGuiApi 的
-  QueryGlyphs/RasterizeGlyphs/GetKerning 三槽。字节数组按引擎既有做法走 cooked 产物
-  （与 Texture2D::pixels 一致），不重复写进场景文件。）
-  新增 Font.h/.cpp、Runtime/Fonts/FontRasterizer.h/.cpp。
-  FontRasterizer 实现 OpenFont(Font&):bool、GetGlyphMetrics(Font&,uint32,FontGlyphMetrics&):bool。
-  实现 GetKerning(Font&,uint32,uint32):float32、RasterizeGlyph(Font&,uint32,FontRasterMode,uint32,FontGlyphBitmap&):bool。
-  实现 ReleaseFont(int32):void、Shutdown():void；revision 变化先释放旧字体面。
-  修改 AssetPipeline、CookedAssetSerializer、ResourceManager 的导入/打包/依赖分支。
-
-- [x] 字体：实现动态纹理与 Atlas。
-  （两侧都已完成：TextureAlphaMode、CreateDynamic/CreateRenderTarget、UpdateRegion（局部写同时更新
-  CPU 与 GPU 脏矩形）、ResizeRenderTarget、IsRenderTarget、GetAlphaMode、GetMaximumSize 并已生成托管绑定；
-  FontAtlasCache 已实现 BeginFrame、RequestGlyph、ResolveRequests、TryGetGlyph、EndFrame、Dispose。
-  键为 fontObjectId/fontRevision/glyphIndex/rasterMode/bitmapPixelSize，距离场模式 bitmapPixelSize 记 0。
-  普通页 1024×1024 逐行装箱（UIFontAtlasCursor，纯数学可单测），超大字形取能容纳它的二次幂独占页；
-  64 MiB 软预算在 EndFrame 按 LRU 回收未固定页，回收页多留一帧再释放纹理。
-  缓存按进程共享（FontAtlasCache.Shared），换世界只换原生上下文，不重新光栅化；
-  页纹理即托管侧资源根，程序集卸载时 Dispose。
-  Atlas 页的 UV 采用 v 轴朝上的约定，与 UIMeshBuilder 的 uvMin/uvMax 一致：
-  字形按内存行序（行 0 为顶部）自然装箱，UV 记 1 - row/height，因此 UI shader 采样时需按 t = 1 - v。）
-  Texture2D 新增 CreateDynamic(int32,int32,int32)、CreateRenderTarget(int32,int32)，返回 Texture2D*。
-  新增 UpdateRegion(int32 x,int32 y,int32 w,int32 h,const uint8* pixels,int32 rowStride):bool。
-  新增 ResizeRenderTarget(int32,int32):bool、IsRenderTarget() const:bool、GetAlphaMode() const:TextureAlphaMode。
-  新增 static GetMaximumSize():int32；指针数据用 ORBEDEN_BIND_BUFFER 映射 Span。
-  FontAtlasCache 实现 BeginFrame、RequestGlyph、ResolveRequests、TryGetGlyph、EndFrame、Dispose。
-  请求去重→固定缓存页→生成冷字形→装箱/局部上传→回收非固定 LRU 页。
-
-- [x] 字体：实现 UITextLayout 与 Text。
-  （UITextLayout 实现归一化、度量、断行、对齐与脱字符查询，度量通过 IUITextMetrics 注入，
-  因此换行与禁则规则可脱离原生宿主单测；FontAtlasCache 实现该接口，充当运行期的度量来源。
-  归一化：非法代理项替换 U+FFFD、CRLF/CR 归一 LF、制表符前进到四空格制表位；
-  断行：拉丁优先空白断点、超长词与汉字按标量断、行首禁“，。！？、；：）》】”、
-  行尾禁“（《【”，每行至少消费一个标量；行尾空白不计视觉宽度；对齐只平移不改变测量宽度。
-  字距落在后一个字形的原点上，缺字与控制字符清空前字形；缺字用统一空心方框，步进 0.6em。
-  Text 是 UIVisual：缓存布局（文本/字体/字号/模式/换行/行距/对齐/可用宽度任一变化才重排），
-  提交时按 Atlas 页分组输出四边形，记录用到的页代次，页回收后只重建依赖几何。
-  默认 raycastTarget 为 false。）
-
-- [x] 裁剪：实现 Mask、UIClipStack、UITextureAlphaCache。
-  （Mask 组件：mode/texture/uvMin/uvMax/hitTestThreshold（限于 [0,1]，默认 0.1），
-  ImageAlpha 拒绝渲染目标；GetDiagnostic 给出“缺纹理/无 CPU 像素”的诊断，检视面板直接读它，
-  不写进 UINode.ConfigurationError——那条路径会让整棵子树跳过布局。
-  UIClipStack 保存局部矩形、逆矩阵、UV 与阈值，Push(Mask)/PushRectangle(UILayout)/Pop/TestPoint 齐备；
-  累计覆盖率为各层乘积、每层累计值达到该层阈值才允许命中，奇异矩阵与空 Alpha 纹理按不可见处理。
-  层快照（UIClipSnapshot）被命中记录持有，输入阶段据此过滤命中点。
-  UITextureAlphaCache 按对象身份加内容版本失效（原生新增 Texture2D.revision/GetRevision），
-  双线性、边界外取零、按 t = 1 - v 取行，与 shader 的 UV 约定一致；R8 读 R、RGBA 读 A、RGB 视为全 1。
-  FrameBuilder 按入栈/出栈生成 PushRectangle/PushImageAlpha/Pop 命令，形状与 UV 由一条四边形网格携带，
-  形状内容比较后才推进版本，暖帧不重传顶点。
-  待渲染阶段：原生覆盖率池（Push 取目标清零→投影裁剪形状→写 parentCoverage*ownCoverage）、
-  分配失败跳过整段裁剪子树；ScrollBox 的 content 裁剪随控件阶段接入。）
-
-- [x] 渲染：实现 UIRenderer、UIShaderSources 与后端扩展。
-  （新增 Native/Runtime/Gui/UIRenderer.h/.cpp 与 UIShaderSources.h。
-  后端扩展：GpuVertexLayout::UI（位置/UV/顶点色，stride 36）、GpuRenderTargetFormat::R8、
-  BlendMode::PremultipliedAlpha（RGB 与 A 都走 ONE、ONE_MINUS_SRC_ALPHA）、
-  UploadTextureRegion（行距按通道数换算，保存并恢复 unpack 行距/对齐/跳过与纹理绑定）、
-  GpuTextureDesc.clampToEdge（UI 纹理必须夹边，越界不能绕回另一侧）。
-  着色器：图元两种 Alpha 语义与四种材质分支，距离场按 UV 导数与图集尺寸求 screenRange（下限 1）；
-  覆盖率 Pass 写 父覆盖率*本层覆盖率。
-  渲染器：网格按 revision 上传、连续两帧无人引用才释放；1×1 白纹理兜底；
-  覆盖率池按视口尺寸分类、每层一块 R8 目标、出栈恢复父覆盖率；分配失败跳过整段裁剪子树。
-  画布矩阵由托管侧算好放进提交：屏幕与离屏是逻辑像素到裁剪空间的正交矩阵，
-  世界空间提交本地到世界的变换，原生侧再乘相机投影。
-  RenderOffscreen 已在下一项补全。）
-
-- [x] 渲染：接入正常/无相机/编辑预览三条调用路径。
-  （三条路径都接进 RenderSystem：离屏先于相机、世界空间在相机输出 Pass 之前、
-  覆盖层在 ImGui 之前；无相机场景同样走离屏与覆盖层。
-  离屏输出做实：Texture2D 标记为渲染目标时由 GpuResourceManager 解析出颜色附件目标
-  （GpuRenderTargetID 存在 Texture2D 上，尺寸/版本变化先失效再延后释放附件），
-  RenderOffscreen 清透明黑后逐块画布绘制；没有命令的画布也提交一次空绘制用于清屏。
-  Canvas.GetOutputTexture 首次取用时按输出尺寸创建，resize 只换 GPU 附件、对象身份不变。
-  托管侧按输出纹理建依赖图做拓扑排序，卡住即整环判定：环内画布清透明且不画内容，
-  路径写进日志，非循环下游照常执行并采样到透明；自环同样按环处理。
-  屏幕画布的显示尺寸不再由托管侧猜窗口：渲染器每帧发布视图快照（ReadViews 已有槽位），
-  托管侧下一帧读取并写进画布视口，宿主用 SetCanvasViewport 显式设置过的画布不被覆盖。
-  深度回读：后端 ReadDepthPixel（只动读绑定），UIRenderer 记录每视图的深度来源与帧号，
-  经 RetainedGuiFrame::SetDepthReader 装进 ABI 层——ABI 不依赖渲染模块，帧号对不上就拒绝，
-  命中快照据此拿到“已呈现帧 + 对应深度”。渲染器还会作为函数指针的提供方被销毁前摘除。
-  编辑预览：RenderSystem::SetUIEditorPreviewTarget 让屏幕画布改画场景面板的离屏目标，
-  EditorScene::RefreshSceneViewTarget 按面板可见性设置或清除，Play 时自动回到主帧缓冲。
-  新增 Templates/Builtin/Shaders/ui_surface.orbshader：UIRenderer 优先按这个 Key 加载资产着色器
-  （Shader::passes[0] 的源码直接编译），读不到才退回内置源码，用户改这个文件即可改 UI 着色。
-  Templates 目录整体 xcopy 发布，因此它自动进入打包；内容版本迁移条目留给发布阶段。）
-  世界空间画布接通：托管侧按根节点 sizeDelta 解析尺寸（不参与分辨率缩放），
-  提交本地到世界的变换（画布节点的 Transform 缩放给出一单位折合多少世界单位），
-  原生侧再乘相机视图投影；发布的视图带 WorldSpaceCamera 标记与相机矩阵，
-  托管侧据此反投影命中射线。网格与字形不依赖相机，画布每帧只提交一份内容。
-  多相机：原生按 drawLayer 与相机 drawLayerMask 的位与结果筛选，并用各自矩阵绘制同一份网格；
-  每台相机发布一条带观察者标识的视图，仅供命中与场景深度读取。
-  屏幕画布的首帧视口由渲染器每帧报出的主显示目标尺寸引导：
-  没有它就会"没视口不提交、不提交没视图"地锁死（编辑器由预览显式设置视口，不走这条路）。）
-
-- [x] 输入：实现有序平台事件与消费状态。
-  （新增 Native/InputManager/InputEvent.h：一条有序事件，字段与 UIInputRecord 一一对应，
-  桥接层只做搬运；InputManager 新增 PushEvent/GetFrameEvents/MarkEventHandled、
-  SetRawKeyState/RawKey/RawKeyDown/RawKeyUp，KeyEnum 尾部追加 HOME/END/DELETE/ESCAPE。
-  sequence 由输入系统分配、单调递增且保留到达顺序，Down 与 Up 各自成条不折叠；
-  未消费的事件跨帧保留（上限 4096，超出丢最旧并报一次），BeginFrame 只清瞬时态。
-  原始键按平台键码单独记账，不受 UI 消费影响，供编辑器与输入模块查询。
-  消费语义：被消费的按下占有该键，消费抬起或取消放手；UI 放手时若物理键还按着，
-  转为“屏蔽至抬起”，游戏不会看到没有按下来源的持续态；失焦事件让全部占有放手。
-  占有只作用于 KeyEnum 按键（键盘与鼠标），手柄的 key 是另一套编号、不参与占有。
-  GlfwWindow 的回调补齐事件：按键（带原始键码与修饰位）、鼠标键、指针移动、滚轮、
-  字符提交（回调直接给码点，本地转 UTF-8，不从键码推字符）、失焦。
-  桥接层 ReadInput 从这条队列取记录并拼同帧 UTF-8 文本池，容量不足不部分写也不消费；
-  ConsumeInput 逐条 MarkEventHandled，占用状态由此生效。
-  这一项按设计属于“必须用 C++”的一类：回调发生在平台线程入口、状态要被 C++ 玩法代码
-  的 Input.Key 直接读取，策略与路由全部留给下一项的 C# 输入模块。
-  托管侧同步了 UIInputKind/UIInputDevice/UIPointerButton/UIGamepadKey/UIInputModifiers。）
-  GlfwWindow 接字符、滚轮、焦点；Windows 触摸过滤兼容鼠标；手柄仅上报状态。
-
-- [x] 输入：实现 WindowsTextInput、WindowsPointerInput、GamepadInput。
-  （新增 Platform/WindowsInputHook：统一窗口子类入口。一个窗口只能有一个替换过程，
-  文本与指针都登记在它上面，按登记顺序询问，没人认领才转给原窗口过程。
-  WindowsTextInput：Attach/Detach/SetActive/CancelComposition/SetCaretRect/SetTextSession/
-  ReadClipboard/WriteClipboard 齐备；WM_IME_* 翻译成组合开始/更新/提交/取消事件，
-  GCS_RESULTSTR 的内容记作“待回显”，随后同内容的 WM_IME_CHAR/WM_CHAR 被吞掉，
-  已提交内容不会重复上报；组合终止未提交即取消，失焦与 Detach 也发取消；
-  候选窗与组合窗按客户区逻辑坐标定位；剪贴板走 Unicode，UTF-8 转换遇到非法序列直接失败，
-  不截断标量，读失败不改调用方的文本。
-  WindowsPointerInput：WM_POINTER 的触摸与笔映射成 pointerId 从 1 开始的指针事件，
-  并吞掉系统为触摸合成的兼容鼠标消息（触摸期间与抬手后 120ms），避免一次触摸算两次；
-  摘除时给仍按着的指针补发取消。
-  GamepadInput：每帧轮询 GLFW 手柄，只上报状态——轴与键各一条 GamepadState，
-  死区 0.2、变化阈值过滤噪声，D-pad 与左摇杆合用两个轴；断连生成全部释放。
-  桥接层：SetTextInput 落到文本输入的会话/光标/活跃状态，ReadClipboard/WriteClipboard
-  直接调用平台实现；KeyEnum 追加 HOME/END/DEL/ESCAPE（Delete 与 windows.h 的宏同名，
-  退一格命名），GLFW 键表补齐对应映射。
-  注意：这些路径只做了编译与静态检查，输入法与触摸需要在真实窗口里手工验收。
-  这一项按设计属于“必须用 C++”的一类：窗口消息、输入法上下文与手柄轮询都是平台事实，
-  策略、捕获与命中全部留给下一项的 C# 输入模块。）
-
-- [x] 输入：实现 UIInputModule、StandardUIInputModule、UIInputRouter、UIRaycaster。
-  （全部为 C#。新增 UIControl 基类：interactable、targetVisual、四方向 navigation 引用、
-  四态颜色（乘进提交 tint，不改目标图形的持久化颜色）、十一组 public virtual 回调、
-  Focus()/HasFocus()、附加网格 PopulateOverlay + SetOverlayDirty（同节点图形之后、子节点之前绘制）。
-  UIRaycaster：只用最近一次成功呈现的快照；屏幕与离屏画布把窗口逻辑点按显示缩放换到画布像素、
-  再按画布缩放换到逻辑坐标并翻转 Y，裁剪层用同一份快照判定，随后在节点局部空间做 Raycast；
-  世界空间画布反投影相机射线（新增通用 4×4 求逆，投影矩阵不是仿射矩阵）、与图形平面求交，
-  交点转局部后判 Raycast 与裁剪，再与同呈现序号的场景深度比较（NDC z 取 (z+1)/2，
-  容差 1e-5，读不到深度就不允许命中）；深度同像素一次输入阶段只回读一次。
-  命中顺序：屏幕画布优先，视图内按绘制顺序逆序，取最上面的那个。
-  UIInputRouter：指针按下/移动/抬起/取消、捕获移交（先取消原目标）、拖动阈值 6 逻辑像素、
-  离开目标释放不算点击、滚轮从命中节点向祖先传播、同一控件只接受一个拖动指针、
-  失焦与销毁取消捕获且 Up 不恢复已取消的点击、回调后重查控件身份。
-  导航：显式引用优先，否则取方向半平面内 score=前向距离+2×垂直距离 的最小者，
-  距离相同按绘制顺序（按层与深度遍历收集，距离相同保留先出现的）。
-  UIPointerEvent/UIHitResult/UIPointerState/UINavigation/UIRawInputEvent 与 UIPointerPhase 按文档给出。
-  模块：UIInputModule 抽象类 + StandardUIInputModule 默认模块（手柄死区 0.25、
-  首次重复 0.4 秒、后续 0.1 秒、Submit/Cancel 取按下边沿），UIWorldContext.SetInputModule
-  先 Reset 旧模块与路由器再替换；ProcessInput 排空注入的指针事件后处理平台事件，
-  结束阶段把消费序列交给原生侧，UI 占有的键由此生效。
-  Canvas.InjectPointer 只对离屏画布生效，事件在下一输入阶段排空。
-  原生侧补齐视图快照：显示区域逻辑尺寸、视图像素原点与世界空间画布的相机矩阵
-  （KeyEnum 同时加入 MetaGen 的导出枚举，托管侧据此判定方向键）。
-  待下一项：控件事件（Clicked 等）与 UIEventDispatcher；ScrollBox 的“最近可处理该轴的容器”
-  要等控件阶段。）
-
-- [x] 事件：实现 UIEventDispatcher、UIEventBinding 与精确方法代理。
-  （全部为 C#。UIEventDispatcher：FIFO 队列，派发一条时先让源更新状态与视觉并走持久化行顺序，
-  再按开始派发时的订阅快照调用代码订阅；回调里产生的新事件入队尾，绝不递归；
-  回调增删订阅从下一条事件起生效，期间注销的订阅这一条仍然执行；
-  每次回调前重查源是否存活与代次是否相符，源失效即终止该源余下调用，单个监听器异常不阻断其它监听器；
-  单帧上限 4096，超出清余项并报错，被丢弃的事件会通知源（OnEventDiscarded）以便撤销一次性状态。
-  UIEventBinding：保存目标 Ens、目标组件类型名与方法名；解析用精确签名匹配
-  （无参或 bool/float/int/vector2/string 之一），不做隐式转换，解析失败只停用这一条并报错。
-  UIControl 增加持久化绑定列表与 RaiseEvent；事件源抽象成 IUIEventSource，
-  因此这套顺序语义可以脱离原生宿主用假源验证。
-  事件标识按文档给到 UIEventIds：Clicked=0、CheckedChanged=1、ValueChanged=2、
-  ScrollChanged=3、SelectionChanged=4、TextChanged=5、Submitted=6，载荷用同一个定长结构承载。
-  UIWorldContext 持有派发器，输入阶段结束时排空队列。
-  新增用例 EventDispatcherTests：FIFO、回调内入队不递归、订阅快照、异常隔离、
-  源失效终止余下调用、代次变化作废、单帧上限、丢弃通知。）
-  UIControl 新增 GetEventBindingCount():int、GetEventBinding(int):UIEventBinding。
-  InsertEventBinding(int,UIEventBinding)、SetEventBinding(int,UIEventBinding)、RemoveEventBinding(int) 返回 void。
-  ComponentProxy 新增 FromComponent(Component):ComponentProxy? 与 DescribeMethods(Component):IReadOnlyList<BindableMethod> 静态入口。
-  BindableMethod 保存 name:string、returnKind:InteropValueKind、parameterKinds:InteropValueKind[]。
-  复用缓存与实际实例句柄；AOT 不用 Reflection.Emit/Expression.Compile，保留需要反射的成员。
-  （已按此落地：UIControl 的五个按下标接口与 GetBindings/AddBinding/RemoveBinding 并存，
-  内部仍是同一个持久化列表。ComponentProxy.FromComponent 从脚本实例取运行期句柄
-  （原生组件包装没有句柄，返回空，那种情况用 Ens.GetNativeComponent）；
-  DescribeMethods 读 ManagedTypeMetadataCache 的类型元数据并按名字与参数个数排序。
-  UIEventBinding 的解析与调用改走这套元数据：签名匹配在编译期判定，
-  调用走 ComponentMethod 句柄而不是 MethodInfo.Invoke，运行期不做反射扫描。
-  控件检视面板的"方法"列据此换成下拉，目标解析不出来时才退回文本框。）
-
-- [x] 控件：实现 UIControl 与 Button/CheckBox/RadioButton。
-  （全部为 C#。UIControl 补齐事件路径：RaiseEvent 入派发器，派发时先更新状态与视觉、
-  再走持久化绑定、最后触发代码事件；离焦清按下状态。控件附加网格接进帧构建：
-  同节点图形之后、子节点之前绘制，独立片段号段与内容版本。状态色只改变提交时的状态乘子。
-  Button：同目标 Up（仍处于按下状态）或 Submit 发 Clicked；取消、禁用、离焦都清按下状态。
-  CheckBox：SetChecked 先更新值与标记可见性再排事件，同值不通知；
-  新增运行时可见性覆盖（只影响绘制与命中，不改组件启用状态），覆盖带来源、来源销毁即撤销。
-  RadioButton：groupRoot 为空取直接父、无父取画布根；选中时先更新全组标记，
-  再按层级顺序给其它项发 false、最后给自己发 true；点击已选项保持选中；代码可设为 false 使组为空；
-  配置里多项选中时保留配置、运行状态只让层级最前一项生效，不标脏场景。
-  分组不建持久索引：每次按当前树现算，父级变化（新增 OnUIReparented 钩子，由节点重新挂接时触发）
-  就把冲突再解一次，因此 reparent 不会留下过期登记；禁用与删除都会撤销视觉覆盖与捕获。
-  待下一项：Slider/ScrollBar/ScrollBox。）
-
-- [x] 控件：实现 Slider/ScrollBar/ScrollBox。
-  （全部为 C#。新增 UIRangeMath：Normalize/Denormalize/Clamp/RoundToWhole，
-  零区间归一为 0、还原取下界，整数模式中点远离零舍入。
-  UILayout 新增两种运行期覆盖：SetDrivenRect（收父级空间，替换解析结果）与
-  SetDrivenOffset（叠加在解析结果之上）；都由控件持有来源，摘除时撤销。
-  滑条与滚动条的拇指/填充用矩形覆盖驱动，滚动容器的内容用平移覆盖驱动，
-  因此反复驱动不会累积，也不写回子节点的锚点与尺寸配置。
-  Slider：缺 track/thumb 时保留值但禁用指针拖动；点击轨道直接跳转、拖动按指针位移取值；
-  导航步长为整数模式 1、否则区间长度的十分之一；同一时刻只接受一个拖动指针。
-  ScrollBar：value/pageSize 限于 [0,1]，pageSize=1 时值固定为 0；
-  点击拇指外侧按一页移动，拖动按 trackLength-thumbLength 换算。
-  ScrollBox：SetScrollOffset/AdvanceInertia/SynchronizeBars 齐备；
-  惯性每帧 offset += velocity*dt、velocity *= exp(-deceleration*dt)，到边界该轴速度归零、
-  绝对值小于 0.1 归零，dt≤0 不积分；pageSize = clamp(viewport/content,0,1)，内容为空取 1；
-  bar 与 offset 双向换算、内部同步带抑制标志，一次最终变化只发一次 ScrollChanged；
-  修改 bar 引用先退订旧引用再订阅新引用。
-  帧构建对滚动内容加一层矩形裁剪，只包围 content 子树，独立滚动条不受影响。
-  驱动矩形的空间约定：SetDrivenRect 收父级空间，解析时按 pivot 换算到节点局部空间。）
-
-- [x] 控件：实现 ComboBox 与 UIComboPopup。
-  （全部为 C#。公开 API 齐备：GetOptionCount/GetOption/InsertOption/SetOption/RemoveOption/
-  ClearOptions/Open/Close，越界抛 ArgumentOutOfRangeException，null 文本归一为空串。
-  选择语义：SetSelectedIndex 允许 -1；删除当前项后顶上来的接位、越界取最后一项、空表为 -1；
-  删除前面的项保持原条目（只前移下标）；选项一变立即关闭弹层。
-  弹层是同画布下的 DontSave 临时子树（根 + 滚动容器 + 内容 + 每项一个按钮），不创建嵌套画布；
-  默认向下展开，下方不足且上方更大就向上，最后夹紧画布根矩形。
-  Close 先按序号重建委托退订按钮事件，再销毁临时对象，最后把焦点还给仍可交互的源控件；
-  Open/Close 重复调用无副作用。每个画布同时只允许一个弹层，换世界与源控件停用/销毁时统一收起。
-  控件事件经派发器：RaiseEvent 入队、派发时先更新状态与视觉、再走持久化绑定、最后触发代码事件。）
-
-- [x] 控件：实现 TextField 与 UITextEditor。
-  （全部为 C#。UITextEditor 是纯逻辑编辑模型：对外一律用 Unicode 标量下标，
-  内部改动走 UTF-16 映射，任何操作都不切断代理对；归一化把 CRLF/CR/LF/Tab 变成空格、
-  非法代理项替换成 U+FFFD；最大长度按标量截断（超出时整块丢弃该标量，不切高位代理）；
-  SetSelection/MoveCaret/ReplaceSelection/DeleteBackward/DeleteForward/BeginComposition/
-  UpdateComposition/CommitComposition/CancelComposition 齐备，令牌不符的更新与提交忽略，
-  Commit 成功后令牌作废、重复提交忽略；只读允许选区与复制，拒绝改值、剪切与粘贴。
-  TextField：SetText 共用输入归一流程，同值不通知；占位文本仅在实际文本为空且没有组合时显示，
-  不参与选择与提交；绘制顺序为背景→选区→文本/组合→光标，全部被矩形内裁剪约束；
-  光标周期 1 秒、前半个周期可见，输入与移动都会重置；取得焦点时把会话令牌与光标矩形交给平台输入法，
-  离焦、停用、销毁时释放会话。
-  StandardUIInputModule 接管编辑按键（方向/Home/End/Shift 选区/Backspace/Delete/Ctrl+A/C/X/V/Enter）
-  与输入法事件（组合开始/更新/提交/取消按令牌驱动），被吃掉的序列确认消费；
-  组合期间回车交给输入法、不发 Submitted，非组合回车发一次。
-  新增用例 ControlLogicTests：归一化数学与文本编辑模型（标量映射、截断不切代理对、
-  组合令牌语义、只读规则）——其中"截断不切断代理对"当场抓到一个真 bug 并已修。
-  待编辑器阶段：创建菜单、属性编辑器、事件表。）
-
-- [x] 编辑器：实现创建菜单、属性编辑器、事件表与撤销公共入口。
-  UICreationMenu.Register():void；Create(EnsContext,UIWidgetKind):void。
-  UIWidgetKind 按创建菜单表的展开顺序从 0 赋值，CheckBox 与 RadioButton 各占一项。
-  创建与引用配置合为一条事务；失败全撤销；属性表不绕过 PropertyDocument。
-  新增菜单注销能力，程序集卸载移除其注册项，避免重复菜单与强引用泄漏。
-  （全部为 C#。创建菜单 13 项按展开顺序编号，CheckBox/RadioButton 各占一项：先建节点与
-  唯一名、再挂全部组件并配引用，失败按逆序删掉整批，成功才由 RecordAction 记一条撤销。
-  注销走 EnsContextMenuRegistry.Unregister/UnregisterAssembly/Clear，
-  UIEditorRegistration 在模块初始化时登记、在 ManagedAssemblySession 卸载处理器里摘除，
-  连续重载不会留下重复菜单项。属性表全部经 PropertyDocument 的 DrawProperty/CustomEditor，
-  自定义行之外的字段仍由默认检视面板绘制。事件表在 UIControlEditor 里：四列一行的
-  事件下拉/目标/目标组件/方法加删除，每行改动各记一条撤销，无效引用与无匹配签名只标出来、
-  不自动删除；添加绑定同样可撤销。撤销公共入口是 EditorPropertyHistory.RecordAction。）
-
-- [x] 编辑器：实现 UILayoutGizmos 与像素预览。
-  UILayoutGizmos.OnSceneGui() 以起始快照反算字段，驱动轴禁止编辑。
-  UIPreviewController 实现公共合同，UIPreviewPanel 通过注册表调用。
-  EditorGUI.DrawTexture 解析 Texture2D 对象身份，处理线性预乘纹理显示。
-  预览隐藏释放输入占有；调整分辨率使旧命中快照失效。
-  （UILayoutEditor.OnSceneGui → UILayoutGizmos.OnSceneGui：画矩形轮廓与四个角点手柄、
-  一个枢轴手柄。命中用 ImGui 条目而不是自算距离，拖住时活动条目会挡住场景拾取与相机操作；
-  拖动量先按按下时锁定的投影比例从屏幕位移换算回布局空间，再由起始快照反算
-  （ApplyCornerDelta 让被拖角跟着走、对角不动，尺寸与偏移一起改），中途绝不用中间值累加。
-  被驱动轴只提示 owner、不写字段；节点销毁或投影不可用时 Cancel 回基线且不记历史。
-  为这条路径新增了公共原语 EditorSceneHandles（ProjectPoint/Draw）与两个原生只读槽位
-  EditorGuiSetCursorScreenPos、EditorGizmoProjectPoint，编辑器 ABI 表因此升到 85 与 6 槽，
-  EditorManagedApi 随之到 168 槽。预览侧：UIPreviewController 实现 IUIPreviewProvider，
-  面板只经注册表调用；离屏画布返回它的输出纹理并在此出图，屏幕画布没有独立纹理时面板
-  说明像素在场景面板里。DrawTexture 由原生按运行时 ID 取 Texture2D 再问
-  RenderSystem::GetTextureId，线性预乘纹理在 ImGui 直通混合下偏暗，已在实现与面板上写明。
-  隐藏、关注入、失焦都调 CancelInput 收回指针；改分辨率 MarkAllInputDirty 使旧命中失效。
-  交互注入：面板在纹理上盖一层等大的不可见拖动区，按活动/悬停状态转发 Down/Move/Up/Scroll
-  （滚轮换号后交给 UI 约定的方向），开关经合同新增的 SetInputEnabled 同步给提供者，
-  显示尺寸取提供者的当前分辨率而不是输入框里还没应用的文本。）
-
-- [ ] 发布：更新工程、SDK、版本与文档。
-  所有新增原生文件加入 vcxproj/filters，链接字体库与 imm32/comctl32。
-  发布 GUI 包、shader、授权、API；生成器刷新绑定与元数据。
-  Version.h 设 37；更新 BuildAndPackaging、ProjectConventions、ScriptSystem。
-  验证覆盖包不被 SDK 刷新覆盖，纯 C# 修改不重跑原生工具链。
-
-- [ ] 验收：新增 Build/Tests/RetainedGUI.ManagedTests 的布局/生命周期用例。
-  （用例工程已建立，覆盖中心锚点、拉伸、pivot、负 sizeDelta、画布两种缩放、容器主轴与交叉轴、
-  三种网格约束、空网格、四边形缠绕、片段切分、九宫格三级缩放。
-  仍需真实世界的项——作者位移、驱动轴、布局不标脏场景、循环组件引用、禁用与整树删除、
-  无 Canvas 与非法嵌套、世界与会话代次切换——随各阶段补入。）
-  覆盖中心锚点、拉伸、pivot、作者位移、驱动轴、空网格、三网格约束、文字 fitHeight。
-  验证布局不改持久化字段、不标脏场景；循环组件引用在加载/复制后正确。
-  验证禁用、整树删除、无 Canvas、非法嵌套、世界与会话代次切换。
-
-- [ ] 验收：使用真实控件测试输入与事件。
-  覆盖同帧 Down/Up、触摸去重、两指针、ScrollBox 取消子 Button、失焦、手柄重复。
-  覆盖 IME 重复提交、代理项边界、选区替换限长、剪贴板归一与只读。
-  覆盖同类型两组件的精确事件目标、删除源/目标、换世界、异常、4096 上限。
-  运行 CLR 与 NativeAOT 同一组持久化事件断言。
-
-- [ ] 验收：新增字体与 GPU 集成用例。
-  字体验证三模式 advance、TTC 越界、cooked 往返、UV 稳定、页代次、无回退、热缓存。
-  GPU 实际出图并回读：无相机 Overlay、WorldSpace 遮挡、旋转裁剪、两层 0.5 Alpha 得到 0.25。
-  验证九宫格小尺寸、线性混合、预乘 Offscreen、依赖环、resize、多相机共享 WorldSpace 网格。
-  反复创建/销毁后 nativeContext、framebuffer、纹理引用计数回到基线。
-
-- [ ] 验收：完成 C# 扩展、重载与最终操作检查。
-  示例 RingGraphic:UIVisual、WrapBox:UILayoutGroup、RepeatButton:Button 只增加 C#。
-  三者完成挂载、编辑、保存、复制、Undo/Redo、热重载和 Player 构建。
-  连续重载 20 次确认会话可回收、菜单/回调无重复；暖缓存连续 120 帧满足统计判据。
-  最终在编辑器创建全部控件，使用鼠标、键盘、触摸、手柄、中文输入逐项验证。

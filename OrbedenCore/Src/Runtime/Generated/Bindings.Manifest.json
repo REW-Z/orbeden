@@ -1767,6 +1767,82 @@
           "Parameters": []
         },
         {
+          "Name": "fontRasterMode",
+          "Type": "FontRasterMode",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "fontAtlasSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "fontDistanceFieldSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "fontDistanceFieldRange",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Lookup",
           "Type": "AssetImportSettings",
           "Access": "public",
@@ -1868,6 +1944,41 @@
       "IsUnique": false,
       "IsFinal": false,
       "Members": [
+        {
+          "Name": "GetImportedObjectKey",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "sourceKey",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "objectType",
+              "Type": "Type*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "objectName",
+              "Type": "const std::string\u0026",
+              "DefaultValue": "\u0022Main\u0022"
+            }
+          ]
+        },
         {
           "Name": "SelectImporter",
           "Type": "AssetImporter",
@@ -12716,6 +12827,82 @@
           "Parameters": []
         },
         {
+          "Name": "rasterMode",
+          "Type": "FontRasterMode",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "atlasSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "distanceFieldSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "distanceFieldRange",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "familyName",
           "Type": "std::string",
           "Access": "public",
@@ -12866,6 +13053,46 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "ValidateImportSettings",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mode",
+              "Type": "FontRasterMode",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "atlasSize",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "distanceFieldSize",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "distanceFieldRange",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
         }
       ],
       "EnumValues": []
@@ -50238,6 +50465,36 @@
         },
         {
           "Name": "Load",
+          "Type": "Object*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "type",
+              "Type": "Type*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "key",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TryLoad",
           "Type": "Object*",
           "Access": "public",
           "IsMethod": true,

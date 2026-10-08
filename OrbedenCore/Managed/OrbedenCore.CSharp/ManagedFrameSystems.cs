@@ -6,10 +6,12 @@ namespace Orbeden;
 /// <summary>
 /// 托管帧系统的注册表。登记的是工厂，不创建任何世界对象；
 /// 世界附着时才按 id 的 ordinal 升序构造实例，分离时逆序释放。
+/// 工厂分两层：会话层随程序集卸载清空，常驻层由核心程序集登记、跨会话保留。
 /// </summary>
 public static class ManagedFrameSystems
 {
     private static readonly Dictionary<string, Func<IManagedFrameSystem>> factories = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> builtInIds = new(StringComparer.Ordinal);
     private static readonly List<KeyValuePair<string, IManagedFrameSystem>> active = [];
     private static ulong worldRevision;
 
@@ -29,10 +31,21 @@ public static class ManagedFrameSystems
         factories.Add(id, factory);
     }
 
+    /// <summary>
+    /// 登记常驻帧系统工厂。核心程序集的模块初始化只执行一次，登记必须跨会话保留，
+    /// 否则第一次程序集卸载后就再也无人登记，帧阶段从此空白。
+    /// </summary>
+    public static void RegisterBuiltin(string id, Func<IManagedFrameSystem> factory)
+    {
+        Register(id, factory);
+        builtInIds.Add(id);
+    }
+
     /// <summary>注销帧系统工厂；只允许在世界分离后执行，重复注销无副作用。</summary>
     public static void Unregister(string id)
     {
         if (string.IsNullOrEmpty(id) || !factories.Remove(id)) return;
+        builtInIds.Remove(id);
     }
 
     /// <summary>按 id 升序构造全部帧系统并附着世界。</summary>
@@ -96,11 +109,17 @@ public static class ManagedFrameSystems
         }
     }
 
-    /// <summary>程序集卸载前清空注册表；实例此时应已随世界分离释放。</summary>
+    /// <summary>程序集卸载前清空会话层注册；常驻登记与实例此时应已随世界分离释放。</summary>
     internal static void Clear()
     {
         DetachWorld();
-        factories.Clear();
+        //只撤销会话程序集登记的东西：常驻登记来自不会被卸载的核心程序集，清掉就再也回不来。
+        List<string> sessionIds = [];
+        foreach (string id in factories.Keys)
+        {
+            if (!builtInIds.Contains(id)) sessionIds.Add(id);
+        }
+        for (int index = 0; index < sessionIds.Count; ++index) factories.Remove(sessionIds[index]);
         worldRevision = 0;
     }
 

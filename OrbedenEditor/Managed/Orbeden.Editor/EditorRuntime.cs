@@ -75,6 +75,8 @@ public static class EditorRuntime
             EditorGUI.SetObjectFieldAssetProvider(EditorAssetCatalog.Instance);
             //内置组件编辑器在初始化成功后就可用，不依赖游戏程序集
             CustomEditorRegistry.RegisterBuiltins();
+            //UI 编辑器属于引擎，初始化时登记常驻项；重复初始化各自幂等
+            UIEditorRegistration.Register();
             return EditorPanelRegistry.Initialize(api.Panels) ? (byte)1 : (byte)0;
         }
         catch (Exception ex)
@@ -144,7 +146,12 @@ public static class EditorRuntime
     [UnmanagedCallersOnly]
     public static byte SaveProjectState()
     {
-        try { return EditorPanelRegistry.SavePendingChanges() ? (byte)1 : (byte)0; }
+        try
+        {
+            if (!EditorPanelRegistry.SavePendingChanges()) return 0;
+            ScriptRuntimeRegistry.FlushHostFields();
+            return 1;
+        }
         catch (Exception ex) { Console.Error.WriteLine($"Editor managed save failed: {ex}"); return 0; }
     }
 
@@ -195,6 +202,23 @@ public static class EditorRuntime
         //必须带上设置表：不传会让颜色空间、网格缩放、上轴这些导入设置退回语义推断
         try { EditorAssetsNative.ReimportAllAssets(EditorAssetCache.EncodeAllSettings()); }
         catch (Exception ex) { Console.Error.WriteLine($"Editor reimport all failed: {ex}"); }
+    }
+
+    /// <summary>导出源资源的导入设置表供 Player 打包使用。</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe int ReadAssetImportSettings(byte* output, int capacity)
+    {
+        try
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(EditorAssetCache.EncodeAllSettings());
+            if (output != null && capacity >= bytes.Length) bytes.CopyTo(new Span<byte>(output, capacity));
+            return bytes.Length;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Editor import settings export failed: {ex}");
+            return -1;
+        }
     }
 
     /// <summary>开始一次后台脚本构建；原生已完成工程准备与过期判断。</summary>

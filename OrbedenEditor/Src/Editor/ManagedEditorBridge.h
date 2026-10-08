@@ -44,6 +44,7 @@ private:
     void* RequestDeleteSelectedFunction = nullptr;
     void* RequestReimportSelectedFunction = nullptr;
     void* RequestReimportAllFunction = nullptr;
+    void* ReadAssetImportSettingsFunction = nullptr;
     void* RequestCopySelectedFunction = nullptr;
     void* RequestPasteSelectedFunction = nullptr;
     void* RequestToggleActiveSelectedFunction = nullptr;
@@ -100,6 +101,9 @@ public:
 
     //保存托管 Editor 暂存的项目数据。
     bool SaveProjectState();
+
+    //读取源资源的导入设置表
+    bool ReadAssetImportSettings(std::string& settingsTable);
 
     //撤销最近一次托管属性或组件事务。
     bool Undo();

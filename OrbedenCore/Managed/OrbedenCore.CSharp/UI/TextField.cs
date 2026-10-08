@@ -18,7 +18,6 @@ public class TextField : UIControl
     [SerializeField] private string text = string.Empty;
     [SerializeField] private Font? font;
     [SerializeField] private float fontSize = 16.0f;
-    [SerializeField] private FontRasterMode rasterMode = FontRasterMode.Bitmap;
     [SerializeField] private int maxLength;
     [SerializeField] private bool readOnly;
     [SerializeField] private string placeholder = string.Empty;
@@ -42,6 +41,9 @@ public class TextField : UIControl
     private float rasterScale = 1.0f;
     private float layoutRasterScale = 1.0f;
     private Font? layoutFont;
+    private ulong layoutFontRevision;
+    private ulong layoutAtlasRevision;
+    private readonly List<(UIGlyphEntry entry, uint generation)> glyphPages = [];
 
     //视图状态：光标闪烁计时与横向滚动。
     private float caretTimer;
@@ -73,7 +75,17 @@ public class TextField : UIControl
     public Font? GetFont() => font;
 
     /// <summary>获取实际排版字体；未指定时使用内置默认字体。</summary>
-    public Font? GetEffectiveFont() => font ?? UIWorldContext.Current?.GetDefaultFont();
+    public Font? GetEffectiveFont()
+    {
+        if (font is { IsAlive: true }) return font;
+        if (!ReferenceEquals(font, null)
+            && Script.ResolveReference(font.ResourceKey, typeof(Font)) is Font restored)
+        {
+            font = restored;
+            return restored;
+        }
+        return UIWorldContext.Current?.GetDefaultFont();
+    }
 
     /// <summary>设置字体。</summary>
     public void SetFont(Font? value)
@@ -97,17 +109,8 @@ public class TextField : UIControl
         SetOverlayDirty();
     }
 
-    /// <summary>光栅化模式。</summary>
-    public FontRasterMode GetRasterMode() => rasterMode;
-
-    /// <summary>设置光栅化模式。</summary>
-    public void SetRasterMode(FontRasterMode value)
-    {
-        if (rasterMode == value) return;
-        rasterMode = value;
-        layout = null;
-        SetOverlayDirty();
-    }
+    /// <summary>读取字体资源的光栅化模式。</summary>
+    public FontRasterMode GetRasterMode() => GetEffectiveFont()?.rasterMode ?? FontRasterMode.Bitmap;
 
     /// <summary>最大长度，按标量计数；0 为不限制。</summary>
     public int GetMaxLength() => maxLength;
@@ -328,9 +331,28 @@ public class TextField : UIControl
     /// <summary>输入框永远有附加内容：选区、文本与光标。</summary>
     protected override bool HasOverlay => true;
 
+    /// <summary>检查字体重导入与图集页回收。</summary>
+    protected override bool IsOverlayInvalidated()
+    {
+        Font? effectiveFont = GetEffectiveFont();
+        bool changed = !ReferenceEquals(layoutFont, effectiveFont)
+            || layoutFontRevision != (effectiveFont?.GetRevision() ?? 0)
+            || layoutAtlasRevision != FontAtlasCache.Shared.Revision;
+        if (layout != null)
+            foreach (UITextGlyph glyph in layout.glyphs) changed |= glyph.entry.NeedsRetry;
+        foreach ((UIGlyphEntry entry, uint generation) in glyphPages)
+        {
+            changed |= entry.PageGeneration != generation;
+            if (entry.PageGeneration == generation && IsUIActive()) FontAtlasCache.Shared.PinGlyph(entry);
+        }
+        if (changed) layout = null;
+        return changed;
+    }
+
     /// <summary>绘制：背景由同节点的图形负责，这里画选区、文本、组合与光标。</summary>
     protected override void PopulateOverlay(UIMeshBuilder mesh)
     {
+        glyphPages.Clear();
         UIRect rect = GetLayout()?.GetResolvedRect() ?? default;
         if (rect.Width <= 0.0f || rect.Height <= 0.0f) return;
         //所有内部图形都被这层矩形裁剪约束。
@@ -352,9 +374,12 @@ public class TextField : UIControl
     {
         string source = editor.GetText();
         Font? effectiveFont = GetEffectiveFont();
+        FontRasterMode rasterMode = GetRasterMode();
+        ulong revision = effectiveFont?.GetRevision() ?? 0;
         if (layout != null && layoutText == source && layoutFontSize == fontSize
             && layoutRasterMode == rasterMode && layoutRasterScale == rasterScale
-            && ReferenceEquals(layoutFont, effectiveFont))
+            && ReferenceEquals(layoutFont, effectiveFont) && layoutFontRevision == revision
+            && layoutAtlasRevision == FontAtlasCache.Shared.Revision)
         {
             return layout;
         }
@@ -366,6 +391,8 @@ public class TextField : UIControl
         layoutRasterMode = rasterMode;
         layoutRasterScale = rasterScale;
         layoutFont = effectiveFont;
+        layoutFontRevision = revision;
+        layoutAtlasRevision = FontAtlasCache.Shared.Revision;
         return layout;
     }
 
@@ -413,7 +440,7 @@ public class TextField : UIControl
         if (showPlaceholder && placeholder.Length != 0)
         {
             TextLayoutResult placeholderLayout = layoutBuilder.Layout(placeholder, GetEffectiveFont(), fontSize, 0.0f, false,
-                1.0f, rasterMode, UITextAlignment.Left, rasterScale);
+                1.0f, GetRasterMode(), UITextAlignment.Left, rasterScale);
             DrawGlyphs(mesh, placeholderLayout, origin, visible, tint with { a = tint.a * 0.5f });
             return;
         }
@@ -424,7 +451,7 @@ public class TextField : UIControl
         if (editor.HasComposition && editor.GetCompositionText().Length != 0)
         {
             TextLayoutResult composition = layoutBuilder.Layout(editor.GetCompositionText(), GetEffectiveFont(), fontSize,
-                0.0f, false, 1.0f, rasterMode, UITextAlignment.Left, rasterScale);
+                0.0f, false, 1.0f, GetRasterMode(), UITextAlignment.Left, rasterScale);
             vector2 caretOrigin = new(origin.x + CaretOffset(current), origin.y);
             DrawGlyphs(mesh, composition, caretOrigin, visible, tint);
         }
@@ -432,6 +459,7 @@ public class TextField : UIControl
 
     private void DrawGlyphs(UIMeshBuilder mesh, TextLayoutResult current, vector2 origin, UIRect visible, color tint)
     {
+        FontRasterMode rasterMode = GetRasterMode();
         UIMaterialKind kind = rasterMode switch
         {
             FontRasterMode.SDF => UIMaterialKind.SDF,
@@ -443,6 +471,7 @@ public class TextField : UIControl
         foreach (UITextGlyph glyph in current.glyphs)
         {
             if (!glyph.entry.HasPixels) continue;
+            glyphPages.Add((glyph.entry, glyph.entry.PageGeneration));
             vector2 pen = new(origin.x + glyph.position.x, origin.y + glyph.position.y);
             if (!glyph.entry.TryGetTargetRect(pen, current.fontSize, out UIRect target)) continue;
             if (!TryClip(target, visible, out UIRect clipped)) continue;
@@ -451,7 +480,7 @@ public class TextField : UIControl
             if (!started || !ReferenceEquals(lastTexture, glyph.entry.Texture))
             {
                 mesh.SetTexture(glyph.entry.Texture, kind);
-                if (rasterMode != FontRasterMode.Bitmap) mesh.SetDistanceRange(FontAtlasCache.DistanceFieldRange);
+                if (rasterMode != FontRasterMode.Bitmap) mesh.SetDistanceRange(GetEffectiveFont()?.distanceFieldRange ?? FontAtlasCache.DistanceFieldRange);
                 lastTexture = glyph.entry.Texture;
                 started = true;
             }

@@ -12,7 +12,6 @@ public class Text : UIVisual
     [SerializeField] private Font? font;
     [SerializeField] private string text = string.Empty;
     [SerializeField] private float fontSize = 16.0f;
-    [SerializeField] private FontRasterMode rasterMode = FontRasterMode.Bitmap;
     [SerializeField] private bool wrap;
     [SerializeField] private float lineSpacing = 1.0f;
     [SerializeField] private UITextAlignment horizontalAlignment = UITextAlignment.Left;
@@ -38,7 +37,17 @@ public class Text : UIVisual
     public Font? GetFont() => font;
 
     /// <summary>获取实际排版字体；未指定时使用内置默认字体。</summary>
-    public Font? GetEffectiveFont() => font ?? UIWorldContext.Current?.GetDefaultFont();
+    public Font? GetEffectiveFont()
+    {
+        if (font is { IsAlive: true }) return font;
+        if (!ReferenceEquals(font, null)
+            && Script.ResolveReference(font.ResourceKey, typeof(Font)) is Font restored)
+        {
+            font = restored;
+            return restored;
+        }
+        return UIWorldContext.Current?.GetDefaultFont();
+    }
 
     /// <summary>设置字体；字体换了必须重排。</summary>
     public void SetFont(Font? value)
@@ -72,16 +81,8 @@ public class Text : UIVisual
         InvalidateLayout();
     }
 
-    /// <summary>光栅化模式。</summary>
-    public FontRasterMode GetRasterMode() => rasterMode;
-
-    /// <summary>设置光栅化模式；换模式等于换字形缓存键。</summary>
-    public void SetRasterMode(FontRasterMode value)
-    {
-        if (rasterMode == value) return;
-        rasterMode = value;
-        InvalidateLayout();
-    }
+    /// <summary>读取字体资源的光栅化模式。</summary>
+    public FontRasterMode GetRasterMode() => GetEffectiveFont()?.rasterMode ?? FontRasterMode.Bitmap;
 
     /// <summary>是否自动换行。</summary>
     public bool GetWrap() => wrap;
@@ -160,12 +161,33 @@ public class Text : UIVisual
     //检查字形资源与画布光栅缩放
     protected internal override bool IsGeometryInvalidated()
     {
+        Font? effectiveFont = GetEffectiveFont();
+        if (layout != null && (!ReferenceEquals(layoutKey.Font, effectiveFont)
+            || layoutKey.FontRevision != (effectiveFont?.GetRevision() ?? 0)
+            || layoutKey.AtlasRevision != FontAtlasCache.Shared.Revision))
+        {
+            InvalidateLayout();
+            return true;
+        }
         float scale = UIWorldContext.Current?.GetRasterScale(GetCanvas()) ?? 1.0f;
         if (layout == null || !SameScale(layoutKey.RasterScale, scale)) return true;
 
+        foreach (UITextGlyph glyph in layout.glyphs)
+        {
+            if (!glyph.entry.NeedsRetry) continue;
+            layout = null;
+            return true;
+        }
+
         for (int index = 0; index < glyphPages.Count; ++index)
         {
-            if (glyphPages[index].entry.PageGeneration != glyphPages[index].generation) return true;
+            if (glyphPages[index].entry.PageGeneration == glyphPages[index].generation)
+            {
+                if (IsUIActive()) FontAtlasCache.Shared.PinGlyph(glyphPages[index].entry);
+                continue;
+            }
+            layout = null;
+            return true;
         }
         return false;
     }
@@ -198,7 +220,7 @@ public class Text : UIVisual
         {
             Texture2D? texture = pageOrder[pageIndex];
             mesh.SetTexture(texture, MaterialKind);
-            if (rasterMode != FontRasterMode.Bitmap) mesh.SetDistanceRange(FontAtlasCache.DistanceFieldRange);
+            if (GetRasterMode() != FontRasterMode.Bitmap) mesh.SetDistanceRange(GetEffectiveFont()?.distanceFieldRange ?? FontAtlasCache.DistanceFieldRange);
             color white = new(1.0f, 1.0f, 1.0f, 1.0f);
             bool flipY = texture != null && !texture.IsRenderTarget();
             foreach (UITextGlyph glyph in result.glyphs)
@@ -217,11 +239,12 @@ public class Text : UIVisual
     /// <summary>逐片段设置材质种类；纹理按页在 PopulateMesh 里切换。</summary>
     protected internal override void ModifyDrawState(ref UIDrawState state)
     {
+        if (state.materialKind == UIMaterialKind.ImageStraight) return;
         state.materialKind = MaterialKind;
-        if (rasterMode != FontRasterMode.Bitmap) state.distanceRange = FontAtlasCache.DistanceFieldRange;
+        if (GetRasterMode() != FontRasterMode.Bitmap) state.distanceRange = GetEffectiveFont()?.distanceFieldRange ?? FontAtlasCache.DistanceFieldRange;
     }
 
-    private UIMaterialKind MaterialKind => rasterMode switch
+    private UIMaterialKind MaterialKind => GetRasterMode() switch
     {
         FontRasterMode.SDF => UIMaterialKind.SDF,
         FontRasterMode.MSDF => UIMaterialKind.MSDF,
@@ -290,7 +313,9 @@ public class Text : UIVisual
     {
         float scale = float.IsFinite(rasterScale) && rasterScale > 0.0f ? rasterScale : 1.0f;
         Font? effectiveFont = GetEffectiveFont();
-        LayoutKey key = new(text, effectiveFont, width, fontSize, lineSpacing, rasterMode, wrap, horizontalAlignment, scale);
+        FontRasterMode rasterMode = GetRasterMode();
+        LayoutKey key = new(text, effectiveFont, effectiveFont?.GetRevision() ?? 0, FontAtlasCache.Shared.Revision,
+            width, fontSize, lineSpacing, rasterMode, wrap, horizontalAlignment, scale);
         if (layout != null && layoutKey.Equals(key)) return layout;
         layout = layoutBuilder.Layout(text, effectiveFont, fontSize, width, wrap,
             lineSpacing, rasterMode, horizontalAlignment, scale);
@@ -300,12 +325,12 @@ public class Text : UIVisual
 
     //一次排版的输入；缓存命中要求全部一致。
     private readonly record struct LayoutKey(
-        string Text, Font? Font, float Width, float FontSize, float LineSpacing,
+        string Text, Font? Font, ulong FontRevision, ulong AtlasRevision, float Width, float FontSize, float LineSpacing,
         FontRasterMode Mode, bool Wrap, UITextAlignment Alignment, float RasterScale);
 
     //测量只关心步进与行高，与光栅缩放无关，固定按 1 排版。
     private TextLayoutResult BuildLayout(float width, bool wrapEnabled) =>
-        layoutBuilder.Layout(text, GetEffectiveFont(), fontSize, width, wrapEnabled, lineSpacing, rasterMode,
+        layoutBuilder.Layout(text, GetEffectiveFont(), fontSize, width, wrapEnabled, lineSpacing, GetRasterMode(),
             horizontalAlignment);
 
     private void InvalidateLayout()

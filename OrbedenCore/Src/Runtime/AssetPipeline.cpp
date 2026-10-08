@@ -109,6 +109,33 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
             }
             else Log::Warning(("Unknown import setting value for faceIndex: " + value).c_str());
         }
+        else if (name == "rasterMode")
+        {
+            if (value == "Bitmap") settings.fontRasterMode = FontRasterMode::Bitmap;
+            else if (value == "SDF") settings.fontRasterMode = FontRasterMode::SDF;
+            else if (value == "MSDF") settings.fontRasterMode = FontRasterMode::MSDF;
+            else Log::Warning(("Unknown import setting value for rasterMode: " + value).c_str());
+        }
+        else if (name == "atlasSize" || name == "distanceFieldSize")
+        {
+            uint32 parsed = 0;
+            auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+            bool valid = result.ec == std::errc() && result.ptr == value.data() + value.size();
+            if (valid && name == "atlasSize" && Font::ValidateImportSettings(settings.fontRasterMode, parsed,
+                settings.fontDistanceFieldSize, settings.fontDistanceFieldRange)) settings.fontAtlasSize = parsed;
+            else if (valid && name == "distanceFieldSize" && Font::ValidateImportSettings(settings.fontRasterMode,
+                settings.fontAtlasSize, parsed, settings.fontDistanceFieldRange)) settings.fontDistanceFieldSize = parsed;
+            else Log::Warning(("Unknown import setting value for " + std::string(name) + ": " + value).c_str());
+        }
+        else if (name == "distanceFieldRange")
+        {
+            float32 parsed = 0.0f;
+            auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+            if (result.ec == std::errc() && result.ptr == value.data() + value.size()
+                && Font::ValidateImportSettings(settings.fontRasterMode, settings.fontAtlasSize, settings.fontDistanceFieldSize, parsed))
+                settings.fontDistanceFieldRange = parsed;
+            else Log::Warning(("Unknown import setting value for distanceFieldRange: " + value).c_str());
+        }
         //不认识的设置名直接跳过：表由编辑器写，多出来的项属于更高版本的编辑器
 
         if (end == table.size()) break;
@@ -1139,7 +1166,8 @@ namespace
         usize imageIndex = static_cast<usize>(cgltf_image_index(data, image));
         std::string fallbackName = "Texture_" + std::to_string(imageIndex);
         std::string imageName = image->name && image->name[0] ? image->name : fallbackName;
-        std::string textureKey = sourceKey + "//Texture/" + std::to_string(imageIndex) + "_" + SanitizeKeyName(imageName, fallbackName);
+        std::string textureKey = AssetPipeline::GetImportedObjectKey(sourceKey, Texture2D::StaticType(),
+            std::to_string(imageIndex) + "_" + SanitizeKeyName(imageName, fallbackName));
         Texture2D* texture = nullptr;
 
         if (image->buffer_view)
@@ -1276,7 +1304,7 @@ namespace
                 {
                     currentMaterialName = line.substr(7);
                     std::string keyName = SanitizeKeyName(currentMaterialName, "Material");
-                    currentMaterialKey = sourceKey + "//Material/" + keyName;
+                    currentMaterialKey = AssetPipeline::GetImportedObjectKey(sourceKey, Material::StaticType(), keyName);
                     currentMaterial = CreateImportedObject<Material>(currentMaterialKey);
                     if (!currentMaterial)
                     {
@@ -1328,7 +1356,8 @@ namespace
 
                     std::filesystem::path texturePath = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(textureFile);
                     std::string textureSuffix = command == "map_Kd" ? "_Diffuse" : "_Bump";
-                    std::string textureKey = sourceKey + "//Texture/" + SanitizeKeyName(currentMaterialName + textureSuffix, "Texture");
+                    std::string textureKey = AssetPipeline::GetImportedObjectKey(sourceKey, Texture2D::StaticType(),
+                        SanitizeKeyName(currentMaterialName + textureSuffix, "Texture"));
                     //漫反射贴图是颜色，凹凸贴图是数据。
                     const TextureColorSpace textureColorSpace = command == "map_Kd" ? TextureColorSpace::SRGB : TextureColorSpace::Linear;
                     //OBJ 的子贴图没有独立的设置文件，按语义推断
@@ -1406,7 +1435,8 @@ namespace
     {
         std::string fallbackName = "Material_" + std::to_string(materialIndex);
         std::string materialName = sourceMaterial->name && sourceMaterial->name[0] ? sourceMaterial->name : fallbackName;
-        std::string materialKey = sourceKey + "//Material/" + std::to_string(materialIndex) + "_" + SanitizeKeyName(materialName, fallbackName);
+        std::string materialKey = AssetPipeline::GetImportedObjectKey(sourceKey, Material::StaticType(),
+            std::to_string(materialIndex) + "_" + SanitizeKeyName(materialName, fallbackName));
         Material* material = CreateImportedObject<Material>(materialKey);
         if (!material)
         {
@@ -1487,7 +1517,7 @@ namespace
     //创建无显式材质primitive使用的默认材质
     MaterialImportInfo CreateDefaultGltfMaterial(const std::string& sourceKey, AssetCollection& collection)
     {
-        std::string materialKey = sourceKey + "//Material/Default";
+        std::string materialKey = AssetPipeline::GetImportedObjectKey(sourceKey, Material::StaticType(), "Default");
         Material* material = CreateImportedObject<Material>(materialKey);
         if (!material)
         {
@@ -1923,6 +1953,12 @@ void AssetCollection::AddError(const std::string& error)
     Log::Error(error.c_str());
 }
 
+//构造导入对象 Key
+std::string AssetPipeline::GetImportedObjectKey(const std::string& sourceKey, Type* objectType, const std::string& objectName)
+{
+    return ResourceManager::GetSourceKey(sourceKey) + "//" + objectType->GetName() + "/" + SanitizeKeyName(objectName, "Main");
+}
+
 //按主文件路径判断可用导入器
 AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
 {
@@ -2023,29 +2059,46 @@ AssetCollection AssetPipeline::Import_TEXT(std::string path)
 AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSettings& settings)
 {
     AssetCollection collection;
-    collection.sourceKey = ResourceManager::ToResourceKey(path);
+    collection.sourceKey = ResourceManager::GetSourceKey(path);
     List<uint8> bytes = LoadBytesOrError(collection.sourceKey, collection);
     if (!collection.Succeeded()) return collection;
 
-    Font* resource = CreateImportedObject<Font>(collection.sourceKey);
-    if (!resource)
+    //校验字节与导入参数
+    uint32 faceIndex = settings.hasFontFaceIndex ? settings.fontFaceIndex : 0;
+    if (!Font::ValidateImportSettings(settings.fontRasterMode, settings.fontAtlasSize,
+        settings.fontDistanceFieldSize, settings.fontDistanceFieldRange)
+        || !FontRasterizer::ValidateFontBytes(bytes, faceIndex))
     {
-        collection.AddError("Failed to create Font: " + collection.sourceKey);
+        collection.AddError("Invalid font data, face index or import settings: " + collection.sourceKey);
         return collection;
     }
 
+    std::string fontKey = GetImportedObjectKey(collection.sourceKey, Font::StaticType());
+    Font* resource = CreateImportedObject<Font>(fontKey);
+    if (!resource)
+    {
+        collection.AddError("Failed to create Font: " + fontKey);
+        return collection;
+    }
+
+    //释放旧字体面并更新导入对象
+    FontRasterizer::ReleaseFont(resource->GetObjectId());
     resource->sourceBytes = std::move(bytes);
-    resource->faceIndex = settings.hasFontFaceIndex ? settings.fontFaceIndex : 0;
+    resource->faceIndex = faceIndex;
+    resource->rasterMode = settings.fontRasterMode;
+    resource->atlasSize = settings.fontAtlasSize;
+    resource->distanceFieldSize = settings.fontDistanceFieldSize;
+    resource->distanceFieldRange = settings.fontDistanceFieldRange;
+    resource->BumpRevision();
 
     //导入时就打开一次：字体面下标越界或格式不支持时在这里失败，而不是等到运行时。
     if (!FontRasterizer::OpenFont(*resource))
     {
         collection.AddError("Font could not be opened (unsupported format or face index out of range): " + collection.sourceKey);
-        Object::DeleteInstance(resource);
         return collection;
     }
 
-    collection.AddObject(collection.sourceKey, resource, true);
+    collection.AddObject(fontKey, resource, true);
     return collection;
 }
 
@@ -2082,11 +2135,13 @@ AssetCollection AssetPipeline::Import_ORBSKY(std::string path)
     Texture2D* faces[6] = {};
     for (int32 face = 0; face < 6; ++face)
     {
-        if (keys[face].empty() || SelectImporter(keys[face]) != AssetImporter::Image)
+        std::string imageSourceKey = ResourceManager::GetSourceKey(keys[face]);
+        if (imageSourceKey.empty() || SelectImporter(imageSourceKey) != AssetImporter::Image)
         {
             collection.AddError("Skybox face must reference an image source: " + collection.sourceKey + ": " + names[face]);
             return collection;
         }
+        keys[face] = GetImportedObjectKey(imageSourceKey, Texture2D::StaticType());
         faces[face] = ResourceManager::Load<Texture2D>(keys[face]);
         Texture2D* texture = faces[face];
         if (!texture || texture->width <= 0 || texture->width != texture->height || texture->channels < 3 || texture->channels > 4
@@ -2155,18 +2210,22 @@ AssetCollection AssetPipeline::Import_ORBMAT(std::string path)
         ResourceManager::RegisterDependency(sourceKey, shaderKey);
     }
 
-    for (const MaterialTextureSlot& slot : material->textureSlots)
+    for (MaterialTextureSlot& slot : material->textureSlots)
     {
         std::string textureKey = slot.texture.GetInstanceId().GetPath();
         if (textureKey.empty()) continue;
 
-        if (!FileSystem::Exist(GetAssetFilePath(textureKey)))
+        std::string imageSourceKey = ResourceManager::GetSourceKey(textureKey);
+        textureKey = GetImportedObjectKey(imageSourceKey, Texture2D::StaticType());
+        if (!FileSystem::Exist(GetAssetFilePath(imageSourceKey)))
         {
             collection.AddError("Texture does not exist: " + textureKey);
             return collection;
         }
-        //贴图走图片导入器，Key 原样沿用文件里写的那一个
-        if (!ImportImageAsKey(textureKey, textureKey, collection, GetMaterialTextureSlotColorSpace(slot.name), {})) return collection;
+        //导入图片对象并写入规范 Key
+        Texture2D* texture = ImportImageAsKey(imageSourceKey, textureKey, collection, GetMaterialTextureSlotColorSpace(slot.name), {});
+        if (!texture) return collection;
+        slot.texture.Set(texture);
         ResourceManager::RegisterDependency(sourceKey, textureKey);
     }
 
@@ -2285,11 +2344,11 @@ AssetCollection AssetPipeline::Import_ORBSHADER(std::string path)
 AssetCollection AssetPipeline::Import_IMG(std::string path, const AssetImportSettings& settings)
 {
     AssetCollection collection;
-    std::string sourceKey = ResourceManager::ToResourceKey(path);
+    std::string sourceKey = ResourceManager::GetSourceKey(path);
     collection.sourceKey = sourceKey;
     //独立导入的图片无从判断用途，默认按最常见的颜色贴图处理；
     //资源旁的 .resinfo 里指定了 colorSpace 时以用户设置为准。
-    ImportImageAsKey(sourceKey, sourceKey, collection, TextureColorSpace::SRGB, settings);
+    ImportImageAsKey(sourceKey, GetImportedObjectKey(sourceKey, Texture2D::StaticType()), collection, TextureColorSpace::SRGB, settings);
     return collection;
 }
 
@@ -2380,7 +2439,7 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
         std::string meshId = data->meshes_count == 1
             ? "Main"
             : std::to_string(meshIndex) + "_" + SanitizeKeyName(meshName, fallbackName);
-        std::string meshKey = sourceKey + "//Mesh/" + meshId;
+        std::string meshKey = GetImportedObjectKey(sourceKey, Mesh::StaticType(), meshId);
         Mesh* mesh = CreateImportedObject<Mesh>(meshKey);
         if (!mesh)
         {
@@ -2455,7 +2514,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path, const AssetImportSet
     List<std::string> mtlFiles = FindMtlFiles(objPath);
     std::unordered_map<std::string, MaterialImportInfo> materials = ParseMtlFiles(sourceKey, mtlFiles, collection);
 
-    std::string meshKey = sourceKey + "//Mesh/Main";
+    std::string meshKey = GetImportedObjectKey(sourceKey, Mesh::StaticType());
     Mesh* mesh = CreateImportedObject<Mesh>(meshKey);
     if (!mesh)
     {

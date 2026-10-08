@@ -172,6 +172,7 @@
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\UI\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Editor\AssetInspection.h" />

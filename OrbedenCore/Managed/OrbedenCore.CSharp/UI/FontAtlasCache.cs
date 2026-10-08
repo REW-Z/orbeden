@@ -91,8 +91,9 @@ public sealed class UIGlyphEntry
     }
 
     /// <summary>缺字条目：字形下标为 0，度量按 em 折算到固定的 1000 单位。</summary>
-    internal static UIGlyphEntry CreateMissing() => new(default, 0, true, FontAtlasCache.MissingUnitsPerEm)
+    internal static UIGlyphEntry CreateMissing(bool needsRetry = false) => new(default, 0, true, FontAtlasCache.MissingUnitsPerEm)
     {
+        NeedsRetry = needsRetry,
         Advance = FontAtlasCache.MissingAdvanceEm * FontAtlasCache.MissingUnitsPerEm,
         Width = FontAtlasCache.MissingBoxWidthEm * FontAtlasCache.MissingUnitsPerEm,
         Height = FontAtlasCache.MissingBoxHeightEm * FontAtlasCache.MissingUnitsPerEm,
@@ -106,6 +107,9 @@ public sealed class UIGlyphEntry
 
     /// <summary>是否缺字。缺字时几何由控件画四条矩形组成的空心方框。</summary>
     public bool IsMissing { get; }
+
+    /// <summary>字形资源暂时不可用，下次准备渲染时重试。</summary>
+    public bool NeedsRetry { get; internal set; }
 
     /// <summary>度量单位；换算逻辑像素时用 fontSize/UnitsPerEm。</summary>
     public int UnitsPerEm { get; }
@@ -150,10 +154,10 @@ public sealed class UIGlyphEntry
     public Texture2D? Texture => page?.texture;
 
     /// <summary>所在 Atlas 页的代次；页被回收重用后推进，几何据此失效。</summary>
-    public uint PageGeneration => page?.generation ?? 0;
+    public uint PageGeneration => page?.texture is { IsAlive: true } ? page.generation : 0;
 
     /// <summary>是否有可绘制的像素。空格没有像素，只贡献步进；页只在纹理创建成功后才会存在。</summary>
-    public bool HasPixels => page != null && BitmapWidth > 0 && BitmapHeight > 0;
+    public bool HasPixels => page?.texture is { IsAlive: true } && BitmapWidth > 0 && BitmapHeight > 0;
 
     /// <summary>按字号求水平步进，逻辑像素。</summary>
     public float GetAdvance(float fontSize) => Advance * (fontSize / UnitsPerEm);
@@ -193,6 +197,8 @@ internal sealed class UIFontAtlasPage
     internal int width;
     internal int height;
     internal int channels;
+    internal int fontObjectId;
+    internal ulong fontRevision;
     internal long bytes;
     //写入游标：逐行装箱的位置。
     internal UIFontAtlasCursor cursor;
@@ -204,21 +210,21 @@ internal sealed class UIFontAtlasPage
 
 /// <summary>
 /// 动态字形 Atlas。只管装箱、上传与回收：度量与像素来自原生 FontRasterizer，排版在 UITextLayout。
-/// 缓存按进程共享，跨世界重载保留；页纹理由本类持有强引用，也就是托管侧的资源根，
-/// 不能指望原生侧自己保活。
+/// 缓存实例按进程共享，纹理页与字形状态按当前世界维护；上下文切换时清理并重建。
+/// 页纹理由本类持有强引用，原生 World 销毁时仍会失效。
 /// </summary>
 public sealed class FontAtlasCache : IDisposable, IUITextMetrics
 {
-    /// <summary>普通页边长。</summary>
+    /// <summary>字体未指定图集参数时的默认普通页边长。</summary>
     public const int PageSize = 1024;
 
     /// <summary>Atlas 字节软预算：超出后按 LRU 回收未被本帧固定的页。</summary>
     public const long ByteBudget = 64L * 1024 * 1024;
 
-    /// <summary>距离场光栅的固定像素密度，texel per em。</summary>
+    /// <summary>默认距离场像素密度，texel per em。</summary>
     public const int DistanceFieldPixelSize = 64;
 
-    /// <summary>距离场的取值范围，单位是 texel；与原生光栅化参数一致。</summary>
+    /// <summary>默认距离场取值范围，单位 texel。</summary>
     public const float DistanceFieldRange = 4.0f;
 
     /// <summary>位图投影字号的下限。</summary>
@@ -240,9 +246,10 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     private const int FallbackMaximumSize = 2048;
 
     private static FontAtlasCache? shared;
+    private static ulong sharedContext;
 
     /// <summary>进程共享的字形缓存。</summary>
-    public static FontAtlasCache Shared => shared ??= new FontAtlasCache();
+    public static FontAtlasCache Shared => shared ??= new FontAtlasCache { Context = sharedContext };
 
     private readonly Dictionary<UIGlyphKey, UIGlyphEntry> glyphs = [];
     //标量到字形下标的解析结果；0 表示该标量在字体里没有字形。
@@ -265,6 +272,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     private readonly UIGlyphDemand[] singleDemand = new UIGlyphDemand[1];
 
     private UIGlyphEntry? missingEntry;
+    private UIGlyphEntry? retryEntry;
+    private ulong context;
     private ulong frameCounter;
     private bool frameOpen;
     private bool disposed;
@@ -299,6 +308,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         internal UIGlyphKey key;
         internal UIGlyphResult metrics;
         internal int unitsPerEm;
+        internal Font font;
+        internal uint scalar;
     }
 
     private readonly struct RetiredPage
@@ -313,8 +324,20 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         }
     }
 
-    /// <summary>当前原生上下文句柄；为零时字形查询不可用，缺字方框是唯一结果。</summary>
-    public ulong Context { get; set; }
+    /// <summary>当前原生上下文句柄；切换时清理属于旧世界的图集缓存。</summary>
+    public ulong Context
+    {
+        get => context;
+        set
+        {
+            if (context == value) return;
+            ClearGlyphs();
+            context = value;
+        }
+    }
+
+    /// <summary>图集上下文版本，排版缓存据此检查世界切换。</summary>
+    public ulong Revision { get; private set; } = 1;
 
     /// <summary>常驻 Atlas 字节数。</summary>
     public long ResidentBytes { get; private set; }
@@ -332,6 +355,10 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         ++frameCounter;
         if (frameCounter == 0) frameCounter = 1;
         frameOpen = true;
+
+        //移除已被世界销毁的纹理页
+        for (int index = pages.Count - 1; index >= 0; --index)
+            if (pages[index].texture is not { IsAlive: true }) ReleasePage(pages[index]);
 
         //回收页多留一帧：上一次提交的几何可能还引用着它们的纹理。
         for (int index = retired.Count - 1; index >= 0; --index)
@@ -367,9 +394,10 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     /// <summary>按缓存键查询已经常驻的字形；命中会固定所在页。</summary>
     public bool TryGetGlyph(in UIGlyphKey key, out UIGlyphEntry entry)
     {
-        if (!disposed && glyphs.TryGetValue(key, out UIGlyphEntry? found))
+        if (!disposed && glyphs.TryGetValue(key, out UIGlyphEntry? found)
+            && (found.page == null || found.HasPixels))
         {
-            Touch(found);
+            PinGlyph(found);
             entry = found;
             return true;
         }
@@ -417,11 +445,28 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         }
     }
 
-    /// <summary>释放全部页与条目；共享实例在程序集卸载时调用。</summary>
+    /// <summary>释放全部页与条目；共享实例在下一次访问时重新建立。</summary>
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
+        ClearGlyphs();
+        if (ReferenceEquals(shared, this)) shared = null;
+    }
+
+    //清理世界所属的图集和字形状态
+    private void ClearGlyphs()
+    {
+        foreach (UIFontAtlasPage page in pages)
+        {
+            page.generation = NextGeneration();
+            page.texture = null;
+        }
+        foreach (RetiredPage item in retired)
+        {
+            item.page.generation = NextGeneration();
+            item.page.texture = null;
+        }
         pages.Clear();
         retired.Clear();
         glyphs.Clear();
@@ -432,13 +477,16 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         rasterSlots.Clear();
         ResidentBytes = 0;
         missingEntry = null;
+        retryEntry = null;
         frameOpen = false;
-        if (ReferenceEquals(shared, this)) shared = null;
+        ++Revision;
+        if (Revision == 0) Revision = 1;
     }
 
     /// <summary>写入共享实例的原生上下文；未接入时字形查询退化成缺字方框。</summary>
     internal static void SetSharedContext(ulong context)
     {
+        sharedContext = context;
         if (shared != null) shared.Context = context;
     }
 
@@ -471,6 +519,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
 
     //缺字条目的实例在整个缓存内共享。
     private UIGlyphEntry Missing => missingEntry ??= UIGlyphEntry.CreateMissing();
+    private UIGlyphEntry RetryMissing => retryEntry ??= UIGlyphEntry.CreateMissing(true);
 
     //位图模式取投影字号并夹紧到取值范围；距离场模式尺寸固定，键里记 0。
     private static int KeyPixelSize(FontRasterMode rasterMode, int pixelSize)
@@ -479,9 +528,9 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         return Math.Clamp(pixelSize, MinBitmapPixelSize, MaxBitmapPixelSize);
     }
 
-    //距离场模式的 texel 密度固定；位图模式就是投影像号。
-    private static int EntryPixelSize(FontRasterMode rasterMode, int pixelSize) =>
-        rasterMode == FontRasterMode.Bitmap ? KeyPixelSize(rasterMode, pixelSize) : DistanceFieldPixelSize;
+    //读取字形光栅密度
+    private static int EntryPixelSize(Font font, FontRasterMode rasterMode, int pixelSize) =>
+        rasterMode == FontRasterMode.Bitmap ? KeyPixelSize(rasterMode, pixelSize) : (int)font.distanceFieldSize;
 
     private static int ModeChannels(FontRasterMode rasterMode) =>
         rasterMode == FontRasterMode.MSDF ? 3 : 1;
@@ -528,8 +577,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
 
         if (!QueryMetrics(coldCount, out int metricsCount) || metricsCount < coldCount)
         {
-            //度量取不到时按缺字处理：排版继续，画成方框。
-            for (int index = 0; index < coldCount; ++index) entries[coldSlots[index]] = Missing;
+            //保留临时失败状态并在后续帧重试
+            for (int index = 0; index < coldCount; ++index) entries[coldSlots[index]] = RetryMissing;
             return;
         }
 
@@ -554,9 +603,10 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
             UIGlyphKey key = new(fontObjectId, revision, metrics.glyphIndex, demand.rasterMode,
                 KeyPixelSize(demand.rasterMode, demand.pixelSize));
             //批内可能有多个标量映射到同一字形：先查驻留表，再查批内表。
-            if (glyphs.TryGetValue(key, out UIGlyphEntry? resident))
+            if (glyphs.TryGetValue(key, out UIGlyphEntry? resident)
+                && (resident.page == null || resident.HasPixels))
             {
-                Touch(resident);
+                PinGlyph(resident);
                 entries[coldSlots[index]] = resident;
                 continue;
             }
@@ -574,6 +624,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
                 key = key,
                 metrics = metrics,
                 unitsPerEm = NormalizeUnits(demand.font.unitsPerEm),
+                font = demand.font,
+                scalar = demand.scalar,
             });
         }
 
@@ -600,7 +652,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         UIGlyphKey key = new(fontObjectId, revision, glyphIndex, demand.rasterMode,
             KeyPixelSize(demand.rasterMode, demand.pixelSize));
         if (!glyphs.TryGetValue(key, out UIGlyphEntry? found)) return false;
-        Touch(found);
+        if (found.page != null && !found.HasPixels) return false;
+        PinGlyph(found);
         entry = found;
         return true;
     }
@@ -609,10 +662,10 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         scalarGlyphs[new ScalarKey(fontObjectId, revision, scalar)] = glyphIndex;
 
     //命中即固定所在页：本帧不再回收，同时推进 LRU 时间戳。
-    private void Touch(UIGlyphEntry entry)
+    internal void PinGlyph(UIGlyphEntry entry)
     {
         UIFontAtlasPage? page = entry.page;
-        if (page == null) return;
+        if (page?.texture is not { IsAlive: true }) return;
         page.lastUsedFrame = frameCounter;
         page.pinnedFrame = frameCounter;
     }
@@ -660,6 +713,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
 
         EnsureBuffer(ref rasterRequests, pending.Count);
         EnsureBuffer(ref rasterResults, pending.Count);
+        rasterResults.AsSpan(0, pending.Count).Clear();
         rasterSlots.Clear();
         int count = 0;
         for (int index = 0; index < pending.Count; ++index)
@@ -670,7 +724,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
             rasterRequests[count] = new UIGlyphRequest
             {
                 fontObjectId = glyph.key.fontObjectId,
-                scalar = 0,
+                scalar = glyph.scalar,
                 glyphIndex = glyph.key.glyphIndex,
                 rasterMode = (uint)glyph.key.rasterMode,
                 pixelSize = (uint)glyph.key.bitmapPixelSize,
@@ -731,11 +785,11 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
                 BearingY = glyph.metrics.bearingY,
                 Width = glyph.metrics.width,
                 Height = glyph.metrics.height,
-                PixelSize = EntryPixelSize(glyph.key.rasterMode, glyph.key.bitmapPixelSize),
+                PixelSize = EntryPixelSize(glyph.font, glyph.key.rasterMode, glyph.key.bitmapPixelSize),
             };
 
             bool hasPixels = rendered && raster.bitmapWidth > 0 && raster.bitmapHeight > 0;
-            bool needsRetry = false;
+            bool needsRetry = rendered && !hasPixels;
             if (hasPixels)
             {
                 bool complete = (long)raster.byteOffset + raster.byteCount <= availableBytes;
@@ -744,7 +798,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
                 int x = 0;
                 int y = 0;
                 if (complete
-                    && TryPack(raster.bitmapWidth, raster.bitmapHeight, channels, out page, out x, out y)
+                    && TryPack(glyph.font, raster.bitmapWidth, raster.bitmapHeight, channels, out page, out x, out y)
                     && page != null
                     && page.texture != null
                     && page.texture.UpdateRegion(x, y, raster.bitmapWidth, raster.bitmapHeight,
@@ -771,6 +825,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
                 }
             }
 
+            entry.NeedsRetry = needsRetry;
             if (!needsRetry) glyphs[glyph.key] = entry;
             entries[glyph.entryIndex] = entry;
         }
@@ -780,7 +835,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     }
 
     //在页上分配一块区域：普通页逐行装箱，超大字形用能容纳它的二次幂独占页。
-    private bool TryPack(int width, int height, int channels, out UIFontAtlasPage? page, out int x, out int y)
+    private bool TryPack(Font font, int width, int height, int channels, out UIFontAtlasPage? page, out int x, out int y)
     {
         page = null;
         x = 0;
@@ -788,11 +843,15 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         if (width <= 0 || height <= 0) return false;
         if (width > MaximumTextureSize() || height > MaximumTextureSize()) return false;
 
-        if (width > PageSize || height > PageSize)
+        int pageSize = Math.Min((int)font.atlasSize, MaximumTextureSize());
+        int fontObjectId = font.GetObjectId();
+        ulong fontRevision = font.GetRevision();
+        if (width > pageSize || height > pageSize)
         {
             //超大字形独占一页：边长取能容纳它的二次幂，页内不再放别的字形。
-            int size = UIFontAtlasCursor.DedicatedPageSize(width, height, PageSize);
-            UIFontAtlasPage? dedicated = CreatePage(size, size, channels, true);
+            int size = UIFontAtlasCursor.DedicatedPageSize(width, height, pageSize);
+            if (size > MaximumTextureSize()) return false;
+            UIFontAtlasPage? dedicated = CreatePage(font, size, size, channels, true);
             if (dedicated == null) return false;
             x = 0;
             y = 0;
@@ -805,21 +864,22 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         for (int index = pages.Count - 1; index >= 0; --index)
         {
             UIFontAtlasPage candidate = pages[index];
-            if (candidate.dedicated || candidate.channels != channels) continue;
+            if (candidate.dedicated || candidate.channels != channels || candidate.width != pageSize
+                || candidate.fontObjectId != fontObjectId || candidate.fontRevision != fontRevision) continue;
             if (!candidate.cursor.TryAllocate(candidate.width, candidate.height, width, height, out x, out y))
                 continue;
             page = candidate;
             return true;
         }
 
-        UIFontAtlasPage? created = CreatePage(PageSize, PageSize, channels, false);
+        UIFontAtlasPage? created = CreatePage(font, pageSize, pageSize, channels, false);
         if (created == null) return false;
         if (!created.cursor.TryAllocate(created.width, created.height, width, height, out x, out y)) return false;
         page = created;
         return true;
     }
 
-    private UIFontAtlasPage? CreatePage(int width, int height, int channels, bool dedicated)
+    private UIFontAtlasPage? CreatePage(Font font, int width, int height, int channels, bool dedicated)
     {
         Texture2D? texture = Texture2D.CreateDynamic(width, height, channels);
         if (texture == null)
@@ -836,6 +896,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
             width = width,
             height = height,
             channels = channels,
+            fontObjectId = font.GetObjectId(),
+            fontRevision = font.GetRevision(),
             bytes = (long)width * height * channels,
             lastUsedFrame = frameCounter,
             pinnedFrame = frameCounter,

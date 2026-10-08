@@ -37,7 +37,6 @@ public static class UICreationMenu
     private const float TextPaddingX = 8.0f;
     private const float TextPaddingY = 4.0f;
 
-    private static readonly List<string> RegisteredLabels = [];
     private static bool registered;
 
     /// <summary>登记全部创建菜单项；重复调用无副作用。</summary>
@@ -49,21 +48,8 @@ public static class UICreationMenu
         foreach (UIWidgetKind kind in Enum.GetValues<UIWidgetKind>())
         {
             UIWidgetKind captured = kind;
-            string label = "UI/" + kind;
-            EnsContextMenuRegistry.Register(label, context => Create(context, captured));
-            RegisteredLabels.Add(label);
+            EnsContextMenuRegistry.Register("UI/" + kind, context => Create(context, captured));
         }
-        //程序集卸载时整批注销：面板与菜单都不该留住旧程序集的委托。
-        ManagedAssemblySession.RegisterUnloadHandler(Unregister);
-    }
-
-    /// <summary>注销全部创建菜单项；重复调用无副作用。</summary>
-    public static void Unregister()
-    {
-        if (!registered) return;
-        registered = false;
-        foreach (string label in RegisteredLabels) EnsContextMenuRegistry.Unregister(label);
-        RegisteredLabels.Clear();
     }
 
     /// <summary>

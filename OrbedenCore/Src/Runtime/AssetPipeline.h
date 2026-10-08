@@ -2,6 +2,7 @@
 
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Texture2D.h"
+#include "Runtime/Object/Font.h"
 
 #include <string>
 
@@ -40,6 +41,12 @@ public:
     //TTC 里的字体面下标；未指定时取 0。越界时导入失败。
     bool hasFontFaceIndex = false;
     uint32 fontFaceIndex = 0;
+
+    //字体字形表示与动态图集参数；未指定时沿用 Font 默认值。
+    FontRasterMode fontRasterMode = FontRasterMode::Bitmap;
+    uint32 fontAtlasSize = 1024;
+    uint32 fontDistanceFieldSize = 64;
+    float32 fontDistanceFieldRange = 4.0f;
 
     //从设置表里取出指定源文件的设置；首行是可选的版本头
     static AssetImportSettings Lookup(const std::string& table, const std::string& sourceKey);
@@ -92,6 +99,9 @@ enum class AssetImporter
 class AssetPipeline
 {
 public:
+    //构造导入对象 Key：源路径//类型/对象名；单对象默认使用 Main
+    static std::string GetImportedObjectKey(const std::string& sourceKey, Type* objectType, const std::string& objectName = "Main");
+
     //按主文件路径判断可用导入器，无对应导入器时返回 None
     static AssetImporter SelectImporter(const std::string& sourceKey);
 

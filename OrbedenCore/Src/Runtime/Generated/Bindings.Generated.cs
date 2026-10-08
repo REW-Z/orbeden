@@ -71,6 +71,14 @@ internal static unsafe class GeneratedBindingCodecs
     {
         return (global::Orbeden.EnsId)reader.Scalar<global::Orbeden.EnsId>();
     }
+    internal static void Write_FontRasterMode(NativeBindingWriter writer, global::Orbeden.FontRasterMode value)
+    {
+        writer.Scalar((uint)value);
+    }
+    internal static global::Orbeden.FontRasterMode Read_FontRasterMode(ref NativeBindingReader reader)
+    {
+        return (global::Orbeden.FontRasterMode)reader.Scalar<uint>();
+    }
     internal static void Write_InstanceDrawOptions(NativeBindingWriter writer, global::Orbeden.InstanceDrawOptions value)
     {
         Write_uint32(writer, value.@drawLayer);
@@ -1096,7 +1104,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.Object), "Object", 11880064706505753351UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Component), "Component", 3730866753121215061UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.Ens), "Ens", 6039789372024472840UL, (ens, pointer) => new global::Orbeden.Ens(pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 16482609640212011531UL, (ens, pointer) => new global::Orbeden.Font(pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Font), "Font", 8904294447050588615UL, (ens, pointer) => new global::Orbeden.Font(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.InstanceDrawList), "InstanceDrawList", 17629515747893046868UL, (ens, pointer) => new global::Orbeden.InstanceDrawList(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Material), "Material", 3298412916009026265UL, (ens, pointer) => new global::Orbeden.Material(pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Mesh), "Mesh", 10408349486667592532UL, (ens, pointer) => new global::Orbeden.Mesh(pointer));
@@ -1121,6 +1129,15 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.SphereCollider), "SphereCollider", 13173887832813750021UL, (ens, pointer) => new global::Orbeden.SphereCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.TriangleMeshCollider), "TriangleMeshCollider", 16886362217598776389UL, (ens, pointer) => new global::Orbeden.TriangleMeshCollider(ens!, pointer));
     }
+}
+}
+namespace Orbeden
+{
+public enum FontRasterMode : uint
+{
+    Bitmap = 0,
+    SDF = 1,
+    MSDF = 2,
 }
 }
 namespace Orbeden
@@ -1660,15 +1677,6 @@ public enum DrawStrategy : uint
 }
 namespace Orbeden
 {
-public enum FontRasterMode : uint
-{
-    Bitmap = 0,
-    SDF = 1,
-    MSDF = 2,
-}
-}
-namespace Orbeden
-{
 public enum KeyEnum : int
 {
     MOUSEL,
@@ -1888,18 +1896,63 @@ public unsafe partial class Font : global::Orbeden.Object
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
+    public uint @atlasSize
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (uint)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
     public float @descender
     {
         get
         {
         float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 5, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (float)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 6, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public float @distanceFieldRange
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 7, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 8, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public uint @distanceFieldSize
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 9, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (uint)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 10, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
@@ -1908,84 +1961,17 @@ public unsafe partial class Font : global::Orbeden.Object
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 11, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (uint)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 6, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 12, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }
     public string @familyName
-    {
-        get
-        {
-        NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 7, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        try
-        {
-            var reader = new NativeBindingReader(result.Span);
-            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
-        }
-        finally { NativeBindingRuntime.Release(result); }
-        }
-        set
-        {
-        var writer_value = new NativeBindingWriter();
-        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_value, @value);
-        byte[] bytes_value = writer_value.ToArray();
-        fixed (byte* pointer_value = bytes_value)
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 8, this);
-        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
-        }
-        }
-    }
-    public float @lineHeight
-    {
-        get
-        {
-        float result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 9, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (float)result;
-        }
-        set
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 10, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-        }
-    }
-    public byte[] @sourceBytes
-    {
-        get
-        {
-        NativeBindingBuffer result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 11, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        try
-        {
-            var reader = new NativeBindingReader(result.Span);
-            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_List_uint8_(ref reader); reader.Complete(); return decoded;
-        }
-        finally { NativeBindingRuntime.Release(result); }
-        }
-        set
-        {
-        var writer_value = new NativeBindingWriter();
-        global::Orbeden.GeneratedBindingCodecs.Write_List_uint8_(writer_value, @value);
-        byte[] bytes_value = writer_value.ToArray();
-        fixed (byte* pointer_value = bytes_value)
-        {
-        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 12, this);
-        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
-        }
-        }
-    }
-    public string @styleName
     {
         get
         {
@@ -2011,18 +1997,100 @@ public unsafe partial class Font : global::Orbeden.Object
         }
         }
     }
+    public float @lineHeight
+    {
+        get
+        {
+        float result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, float*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 15, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (float)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, float, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 16, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.FontRasterMode @rasterMode
+    {
+        get
+        {
+        uint result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 17, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.FontRasterMode)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 18, this);
+        NativeBindingRuntime.Check(callback(InstanceId, (uint)@value));
+        }
+    }
+    public byte[] @sourceBytes
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 19, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_List_uint8_(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_List_uint8_(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 20, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
+    public string @styleName
+    {
+        get
+        {
+        NativeBindingBuffer result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingBuffer*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 21, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        try
+        {
+            var reader = new NativeBindingReader(result.Span);
+            var decoded = global::Orbeden.GeneratedBindingCodecs.Read_std__string(ref reader); reader.Complete(); return decoded;
+        }
+        finally { NativeBindingRuntime.Release(result); }
+        }
+        set
+        {
+        var writer_value = new NativeBindingWriter();
+        global::Orbeden.GeneratedBindingCodecs.Write_std__string(writer_value, @value);
+        byte[] bytes_value = writer_value.ToArray();
+        fixed (byte* pointer_value = bytes_value)
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, NativeBindingSlice, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 22, this);
+        NativeBindingRuntime.Check(callback(InstanceId, new NativeBindingSlice(pointer_value, bytes_value.Length)));
+        }
+        }
+    }
     public uint @unitsPerEm
     {
         get
         {
         uint result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 15, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 23, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (uint)result;
         }
         set
         {
-        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 16, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, uint, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Font), 24, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
         }
     }

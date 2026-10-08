@@ -323,7 +323,8 @@ public class UIControl : UIElement, IUIEventSource,
         if (!HasOverlay) return null;
         overlayMesh ??= new UIMeshBuilder();
         float scale = UIWorldContext.Current?.GetRasterScale(GetCanvas()) ?? 1.0f;
-        if (!overlayDirty && overlayMesh.ViewScale == scale) return overlayMesh;
+        bool invalidated = IsOverlayInvalidated();
+        if (!overlayDirty && overlayMesh.ViewScale == scale && !invalidated) return overlayMesh;
 
         //重建附加网格
         overlayDirty = false;
@@ -346,6 +347,9 @@ public class UIControl : UIElement, IUIEventSource,
 
     /// <summary>本控件是否有附加内容；默认没有，派生控件重写它来声明。</summary>
     protected virtual bool HasOverlay => false;
+
+    /// <summary>检查附加网格引用的外部资源是否失效。</summary>
+    protected virtual bool IsOverlayInvalidated() => false;
 
     /// <summary>生成附加网格；派生控件在这里画文本、选区、光标一类的内容。</summary>
     protected virtual void PopulateOverlay(UIMeshBuilder mesh)

@@ -38,7 +38,7 @@ OrbedenThirdParty.csproj 是唯一工程。Program.cs 负责下载与还原，Li
 | Build/、obj/ | 编译中间文件 | 否 |
 | `../../OrbedenCore/Src/ThirdParty/` | 引擎使用的头文件与库 | 否 |
 | `../../OrbedenEditor/Src/ThirdParty/` | .NET 原生宿主头文件、导入库和 DLL | 否 |
-| `../../OrbedenEditor/Templates/Builtin/Fonts/Default.otf` | 默认 UI 字体 | 否 |
+| `../../OrbedenEditor/Templates/Builtin/Fonts/Default.ttf` | 默认 UI 字体 Cubic 11 | 否 |
 
 引擎库发布路径仍是 `<组件>/lib/WindowsX64/<Debug|Release>/`，头文件路径保持现有 include 契约。许可发布改为直接读取受 Git 跟踪的 licenses/，不依赖忽略目录里的副本。
 
@@ -57,7 +57,7 @@ OrbedenThirdParty.csproj 是唯一工程。Program.cs 负责下载与还原，Li
 | .NET native host | 10.0.9 | NuGet 官方 win-x64 / win-x86 host 包 |
 | Jinja2 / MarkupSafe | 3.1.6 / 3.0.3 | 仅用于运行 GLAD，不进入引擎 |
 | CPython embedded | 3.13.9，Windows x64 | 自动还原到 vendor/python-runtime，仅运行上游 GLAD 生成器 |
-| Noto Sans SC Regular | 锁文件固定提交 | 字体字节不修改，OFL-1.1 |
+| Cubic 11（俐方體11號） | 1.500，锁文件固定提交 | 字体字节不修改，OFL-1.1；默认 Bitmap 导入 |
 
 GLFW 的全局状态由 glfw3.dll 统一持有。ImGui 和 GLAD 按 dllexport 编译，由 OrbedenCore.dll 导出，编辑器从导入库引用；保留现有进程内共享状态的行为。运行时使用 /MDd 或 /MD。
 

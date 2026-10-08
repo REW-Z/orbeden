@@ -15,10 +15,7 @@
 
 namespace
 {
-    //距离场参数：每 em 的像素数、取值范围、四周留白、轮廓边着色角度与随机种子。
-    constexpr double DistanceFieldPixelsPerEm = 64.0;
-    constexpr double DistanceFieldRange = 4.0;
-    constexpr int32 DistanceFieldPadding = 6;
+    //距离场轮廓边着色角度与随机种子。
     constexpr double DistanceFieldEdgeAngle = 3.0;
     constexpr unsigned long long DistanceFieldSeed = 0;
 
@@ -163,21 +160,22 @@ namespace
         msdfgen::edgeColoringSimple(shape, DistanceFieldEdgeAngle, DistanceFieldSeed);
 
         uint32 unitsPerEm = font.unitsPerEm != 0 ? font.unitsPerEm : 1000;
-        double scale = DistanceFieldPixelsPerEm / static_cast<double>(unitsPerEm);
+        double scale = static_cast<double>(font.distanceFieldSize) / static_cast<double>(unitsPerEm);
+        int32 padding = static_cast<int32>(std::ceil(font.distanceFieldRange)) + 2;
         msdfgen::Shape::Bounds bounds = shape.getBounds();
 
         double width = (bounds.r - bounds.l) * scale;
         double height = (bounds.t - bounds.b) * scale;
-        int32 outputWidth = static_cast<int32>(std::ceil(width)) + DistanceFieldPadding * 2;
-        int32 outputHeight = static_cast<int32>(std::ceil(height)) + DistanceFieldPadding * 2;
+        int32 outputWidth = static_cast<int32>(std::ceil(width)) + padding * 2;
+        int32 outputHeight = static_cast<int32>(std::ceil(height)) + padding * 2;
         if (outputWidth <= 0 || outputHeight <= 0) return false;
 
         //留白换算回形状单位后写入平移，字形因此不会贴边。
         msdfgen::Vector2 translate(
-            DistanceFieldPadding / scale - bounds.l,
-            DistanceFieldPadding / scale - bounds.b);
+            padding / scale - bounds.l,
+            padding / scale - bounds.b);
         msdfgen::Vector2 scaleVector(scale, scale);
-        msdfgen::Range range(DistanceFieldRange);
+        msdfgen::Range range(font.distanceFieldRange);
 
         if (mode == FontRasterMode::MSDF)
         {
@@ -221,8 +219,8 @@ namespace
         //距离场按字形原点对齐：位图左下角相对原点的偏移是留白减去降部超出部分。
         bitmap.width = outputWidth;
         bitmap.height = outputHeight;
-        bitmap.originX = -DistanceFieldPadding;
-        bitmap.originY = static_cast<int32>(std::floor(bounds.b * scale)) - DistanceFieldPadding;
+        bitmap.originX = -padding;
+        bitmap.originY = static_cast<int32>(std::floor(bounds.b * scale)) - padding;
         bitmap.pixels = scratch.data();
         bitmap.byteCount = static_cast<int32>(scratch.size());
         return true;
@@ -302,6 +300,14 @@ namespace FontRasterizer
             return false;
         }
 
+        //校验字体面下标
+        if (font.faceIndex >= static_cast<uint32>(face->num_faces))
+        {
+            FT_Done_Face(face);
+            Log::Error("FontRasterizer: font face index out of range.");
+            return false;
+        }
+
         //元数据在字体单位下解析一次，供检视面板与缺字行高使用。
         font.familyName = face->family_name ? face->family_name : "";
         font.styleName = face->style_name ? face->style_name : "";
@@ -325,8 +331,9 @@ namespace FontRasterizer
             static_cast<FT_Long>(faceIndex), &face);
         if (error != 0 || !face) return false;
 
+        bool valid = faceIndex < static_cast<uint32>(face->num_faces);
         FT_Done_Face(face);
-        return true;
+        return valid;
     }
 
     bool GetGlyphMetrics(Font& font, uint32 scalar, FontGlyphMetrics& metrics)

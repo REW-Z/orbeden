@@ -140,6 +140,12 @@ public sealed class UIInputRouter
 
         bool hit = raycaster.Raycast(input, out UIHitResult result);
         UINode? hitNode = hit ? FindHitNode(result) : null;
+        if (input.pointerId == 0)
+        {
+            UpdateHover(input, hitNode);
+            state = GetPointerState(input.pointerId);
+            state.lastPosition = input.position;
+        }
 
         if (input.phase == UIPointerPhase.Down)
         {
@@ -147,6 +153,7 @@ public sealed class UIInputRouter
             state.dragging = false;
             state.pressPosition = input.position;
             state.button = input.button;
+            state.pressSequence = input.sequence;
 
             bool handled = TryCollectHandlers<IUIPointerDownHandler>(hitNode, out UIEventTarget target);
             state.downTarget = handled ? target : default;
@@ -159,17 +166,19 @@ public sealed class UIInputRouter
 
             if (handled)
             {
+                //提交按下状态后建立捕获
+                pointers[input.pointerId] = state;
                 if (target.control != null) target.control.Pressed = true;
                 Capture(input.pointerId, target);
-                InvokeHandlers<IUIPointerDownHandler>(input, static (handler, payload) => handler.OnPointerDown(payload));
+                SetFocus(target.control);
+                InvokeOnNode<IUIPointerDownHandler>(target, input, static (handler, payload) => handler.OnPointerDown(payload));
                 //回调可能销毁了节点，回写状态前重查一次身份。
                 if (!target.IsAlive) pointers.Remove(input.pointerId);
+                return;
             }
         }
         else if (input.phase == UIPointerPhase.Move)
         {
-            UpdateHover(input, hitNode);
-
             if (state.active && state.captureTarget.IsValid)
             {
                 if (!state.dragging
@@ -178,22 +187,31 @@ public sealed class UIInputRouter
                     state.dragging = true;
                 }
                 //拖出目标就不再算按住：释放时不会变成点击。
-                if (!state.dragging && hitNode == null || hitNode.Ens.id != state.captureTarget.ens.id)
+                UINode? hovered = hitNode;
+                while (hovered != null && !hovered.Ens.Equals(state.captureTarget.ens)) hovered = hovered.Parent;
+                if (state.dragging || hovered == null)
                 {
                     if (state.captureTarget.control != null) state.captureTarget.control.Pressed = false;
                 }
+                pointers[input.pointerId] = state;
                 InvokeOnNode<IUIPointerMoveHandler>(state.captureTarget, input,
                     static (handler, payload) => handler.OnPointerMove(payload));
+                return;
             }
             else if (TryCollectHandlers<IUIPointerMoveHandler>(hitNode, out _))
             {
+                pointers[input.pointerId] = state;
                 InvokeHandlers<IUIPointerMoveHandler>(input, static (handler, payload) => handler.OnPointerMove(payload));
+                return;
             }
         }
         else if (input.phase == UIPointerPhase.Up)
         {
             UIEventTarget captured = state.captureTarget;
             bool cancelled = cancelledSequences.Contains(state.pressSequence);
+            UINode? releasedOn = hitNode;
+            while (releasedOn != null && !releasedOn.Ens.Equals(captured.ens)) releasedOn = releasedOn.Parent;
+            if ((cancelled || state.dragging || releasedOn == null) && captured.control != null) captured.control.Pressed = false;
 
             //离开目标后释放不构成点击：只有没拖动、没被取消、且仍在原目标上才算。
             //按下状态在离开目标或拖动时就已清掉，控件据此自行决定算不算点击。
@@ -209,13 +227,13 @@ public sealed class UIInputRouter
                 ReleaseCapture(input.pointerId, cancel: false);
             }
 
+            if (!pointers.TryGetValue(input.pointerId, out state)) return;
             state.active = false;
             state.dragging = false;
             state.downTarget = default;
             state.consumed = false;
         }
 
-        if (input.phase == UIPointerPhase.Down) state.pressSequence = input.sequence;
         pointers[input.pointerId] = state;
     }
 
@@ -351,6 +369,11 @@ public sealed class UIInputRouter
         pointers.Clear();
         cancelledSequences.Clear();
         consumed.Clear();
+        if (hoveredNode is UIEventTarget hovered)
+        {
+            if (hovered.control != null) hovered.control.Hovered = false;
+            InvokeOnNode<IUIPointerExitHandler>(hovered, default, static (handler, payload) => handler.OnPointerExit(payload));
+        }
         hoveredNode = null;
         SetFocus(null);
     }
@@ -390,7 +413,6 @@ public sealed class UIInputRouter
         if (focus != null) ((IUICancelHandler)focus).OnCancel();
     }
 
-    //刷新悬停：触摸不产生悬停；离开的控件收到退出通知。
     //刷新悬停：触摸不产生悬停；换节点时先给旧节点发退出，再给新节点发进入。
     private void UpdateHover(in UIPointerEvent input, UINode? hitNode)
     {
@@ -398,7 +420,8 @@ public sealed class UIInputRouter
 
         bool hasEnter = TryCollectHandlers<IUIPointerEnterHandler>(hitNode, out UIEventTarget entered);
         UIEventTarget next = hasEnter ? entered : default;
-        if (hoveredNode.HasValue && hoveredNode.Value.ens.id == next.ens.id && !hasEnter == !hoveredNode.HasValue) return;
+        if (!hasEnter && !hoveredNode.HasValue) return;
+        if (hasEnter && hoveredNode is UIEventTarget current && current.ens.Equals(next.ens)) return;
 
         if (hoveredNode.HasValue)
         {
@@ -411,7 +434,7 @@ public sealed class UIInputRouter
         if (!hasEnter) return;
 
         next.control?.Hovered = true;
-        InvokeHandlers<IUIPointerEnterHandler>(input,
+        InvokeOnNode<IUIPointerEnterHandler>(next, input,
             static (handler, payload) => handler.OnPointerEnter(payload));
     }
 

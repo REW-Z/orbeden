@@ -153,6 +153,16 @@ public sealed class UILayoutEditor : ComponentEditor
             SetValue("offset", InteropValue.From(offset));
             SetValue("sizeDelta", InteropValue.From(size));
         }
+        EditorGUI.BeginDisabled(Targets.Count != 1);
+        float z = layout.GetAnchoredPosition().z;
+        if (EditorGUI.InputFloat("Position Z", ref z) && float.IsFinite(z))
+        {
+            gizmos.Begin(layout);
+            vector3 position = layout.GetAnchoredPosition();
+            layout.SetAnchoredPosition(new vector3(position.x, position.y, z));
+            gizmos.End("UI Position Z");
+        }
+        EditorGUI.EndDisabled();
         EditorGUI.EndDisabled();
         if (Targets.Count != 1) EditorGUI.TextWrapped("Presets and derived dimensions require one selection. Raw fields below support multiple selections.");
         if (layout.HasDrivenRect) EditorGUI.TextWrapped("Rectangle is driven by a layout group or control.");
@@ -222,11 +232,7 @@ public static class FontEditor
     private static readonly color glyphBoxColor = new(1.0f, 0.65f, 0.2f, 0.95f);
 
     /// <summary>登记字体的资源检视。</summary>
-    public static void Register()
-    {
-        EditorAssetInspectors.Register(nameof(Font), Draw);
-        ManagedAssemblySession.RegisterUnloadHandler(() => EditorAssetInspectors.Unregister(nameof(Font)));
-    }
+    public static void Register() => EditorAssetInspectors.Register(nameof(Font), Draw);
 
     /// <summary>绘制字体资源检视；key 是资源 Key。</summary>
     private static void Draw(string key, int objectId)

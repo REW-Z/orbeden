@@ -33,10 +33,12 @@ internal static class EditorEnvironmentSettings
     private static bool dirty;
     private static string status = string.Empty;
     private static Skybox? skybox;
+    private static string skyboxKey = string.Empty;
     private static bool skyboxEnabled;
     private static color ambientColor = new() { r = 0.34f, g = 0.37f, b = 0.42f, a = 1.0f };
     private static float ambientIntensity = 1.0f;
     private static Skybox? reflectionEnvironment;
+    private static string reflectionEnvironmentKey = string.Empty;
     private static float reflectionIntensity = 1.0f;
 
     //大气草稿：地心三个分量用文本承载，失焦时才解析，输入中途的半截数字不会写进草稿
@@ -78,6 +80,7 @@ internal static class EditorEnvironmentSettings
         {
             skybox = null;
             reflectionEnvironment = null;
+            skyboxKey = reflectionEnvironmentKey = string.Empty;
             skyboxEnabled = false;
             //读不到世界设置时的兜底，与 RenderSettings 的默认值保持一致
             ambientColor = new color { r = 0.34f, g = 0.37f, b = 0.42f, a = 1.0f };
@@ -99,6 +102,8 @@ internal static class EditorEnvironmentSettings
             return;
         }
 
+        skyboxKey = key;
+        reflectionEnvironmentKey = reflectionKey;
         skybox = string.IsNullOrEmpty(key) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), key) as Skybox;
         skyboxEnabled = enabled;
         reflectionEnvironment = string.IsNullOrEmpty(reflectionKey) ? null : EditorGUI.LoadObjectFieldAsset(typeof(Skybox), reflectionKey) as Skybox;
@@ -258,10 +263,10 @@ internal static class EditorEnvironmentSettings
         }
 
         EditorApplication.SetWorldRenderSettings(
-            skybox?.GetInstanceId() ?? string.Empty,
+            skyboxKey,
             skyboxEnabled,
             new Vector4(ambientColor.r, ambientColor.g, ambientColor.b, ambientColor.a), ambientIntensity,
-            reflectionEnvironment?.GetInstanceId() ?? string.Empty, reflectionIntensity, atmosphere);
+            reflectionEnvironmentKey, reflectionIntensity, atmosphere);
         dirty = false;
         status = string.Empty;
         fieldError = string.Empty;
@@ -278,11 +283,11 @@ internal static class EditorEnvironmentSettings
             EditorGUI.BeginDisabled(!EditorAssetsNative.CanModifyAssets());
             try
             {
-                Skybox? selected = skybox;
+                Orbeden.Object? selected = skybox;
                 if (EditorGUI.Checkbox("Skybox Enabled", ref skyboxEnabled)) dirty = true;
                 SkyMode selectedMode = skyMode;
                 if (DrawEnum("Sky Mode", ref selectedMode)) { skyMode = selectedMode; dirty = true; }
-                if (EditorGUI.ObjectField<Skybox>("Skybox", ref selected)) { skybox = selected; dirty = true; }
+                if (EditorGUI.ObjectField("Skybox", typeof(Skybox), ref selected, ref skyboxKey)) { skybox = selected as Skybox; dirty = true; }
                 //与 Inspector 的颜色字段共用同一个原语：RGB 与 Alpha 在同一行、带棋盘预览
                 if (GUI.ColorField("Ambient Color", ref ambientColor)) dirty = true;
                 if (EditorGUI.InputFloat("Ambient Intensity", ref ambientIntensity))
@@ -385,10 +390,10 @@ internal static class EditorEnvironmentSettings
                 }
 
                 EditorGUI.Separator();
-                Skybox? selectedReflection = reflectionEnvironment;
-                if (EditorGUI.ObjectField<Skybox>("Reflection Environment", ref selectedReflection))
+                Orbeden.Object? selectedReflection = reflectionEnvironment;
+                if (EditorGUI.ObjectField("Reflection Environment", typeof(Skybox), ref selectedReflection, ref reflectionEnvironmentKey))
                 {
-                    reflectionEnvironment = selectedReflection;
+                    reflectionEnvironment = selectedReflection as Skybox;
                     dirty = true;
                 }
                 if (EditorGUI.InputFloat("Reflection Intensity", ref reflectionIntensity))

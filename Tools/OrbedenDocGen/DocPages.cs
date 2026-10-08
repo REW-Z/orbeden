@@ -321,7 +321,7 @@ internal static class DocPages
             .OrderBy(member => SectionOrder(Section(member)))
             //枚举值按数值排，不按名字：序号本身是文档的一部分（有的枚举数值进批次键、进持久化载荷），
             //按名字排会把固定序号打乱，读者反查数值时对不上。非枚举值这一档恒为 null，不影响原有的名字序。
-            .ThenBy(member => member is FieldInfo { IsLiteral: true } field ? EnumValueKey(field) : (decimal?)null)
+            .ThenBy(member => member is FieldInfo field && IsEnumValue(field) ? EnumValueKey(field) : (decimal?)null)
             .ThenBy(MemberIdentity, StringComparer.Ordinal)
             .ThenBy(Arity);
     }
@@ -329,13 +329,15 @@ internal static class DocPages
     //底层类型可以是 uint/ulong，decimal 能精确表示全部合法的枚举底层类型，比较也是全序
     private static decimal EnumValueKey(FieldInfo field) => Convert.ToDecimal(field.GetRawConstantValue(), CultureInfo.InvariantCulture);
 
-    private static bool IsEnumValue(MemberInfo member) => member is FieldInfo { IsLiteral: true };
+    //const 字符串等普通常量也是 IsLiteral，只有声明在枚举里的才是枚举值。
+    private static bool IsEnumValue(MemberInfo member) =>
+        member is FieldInfo { IsLiteral: true } field && field.DeclaringType?.IsEnum == true;
 
     private static string Section(MemberInfo member) => member switch
     {
         ConstructorInfo => "构造函数",
         PropertyInfo => "属性",
-        FieldInfo { IsLiteral: true } => "枚举值",
+        FieldInfo { IsLiteral: true } field when IsEnumValue(field) => "枚举值",
         FieldInfo => "字段",
         MethodInfo { IsSpecialName: true } method when method.Name.StartsWith("op_", StringComparison.Ordinal) => "运算符",
         MethodInfo => "方法",

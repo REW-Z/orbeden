@@ -106,13 +106,15 @@ internal static class EditorObjectField
     {
         key ??= string.Empty;
         string currentKey = key;
+        bool missing = false;
         string name = key.Length == 0 ? "None" : EditorNativeComponents.GetReferenceLabel(key);
         if (name.Length == 0)
         {
             Type? type = FindType(declaredType);
             ObjectFieldOption? asset = type == null ? null
                 : EditorGUI.GetObjectFieldAssets(type).Where(option => option.ResourceKey == currentKey).Cast<ObjectFieldOption?>().FirstOrDefault();
-            name = asset?.DisplayName ?? "Missing: " + key;
+            missing = asset == null;
+            name = asset?.DisplayName ?? "Missing";
         }
         string shortType = declaredType[(declaredType.LastIndexOf('.') + 1)..];
         string popup = "Select " + shortType + "##reference_picker_" + label;
@@ -123,6 +125,7 @@ internal static class EditorObjectField
             EditorIconCatalog.ForReference(declaredType),
             name + " (" + shortType + ")",
             label);
+        if (missing && NativeEditorGUI.IsItemHovered()) EditorGUI.SetTooltip("Missing reference: " + key);
         //双击才定位：场景里的引用回到它所属的 Ens，资源引用跳到资源文件
         if (action == 4 && key.Length != 0)
         {

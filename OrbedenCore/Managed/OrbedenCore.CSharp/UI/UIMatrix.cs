@@ -42,13 +42,11 @@ internal static class UIMatrix
         return result;
     }
 
-    /// <summary>解析位置 = 锚点落点加作者位置；旋转与缩放取作者值。</summary>
+    /// <summary>使用布局合成位置，旋转与缩放取作者值。</summary>
     internal static matrix4x4 Local(UINode node)
     {
         Transform transform = Ens.FromId(node.Ens).Transform;
-        vector3 author = transform.GetLocalPosition();
-        vector2 anchor = node.Layout?.GetResolvedAnchorPoint() ?? new vector2(0.0f, 0.0f);
-        vector3 position = new(anchor.x + author.x, anchor.y + author.y, author.z);
+        vector3 position = node.Layout?.GetResolvedLocalPosition() ?? transform.GetLocalPosition();
         return matrix4x4.Trs(position, transform.GetLocalRotation(), transform.GetLocalScale());
     }
 

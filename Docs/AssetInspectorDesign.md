@@ -86,6 +86,16 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 
 ## 原生导入与后台调度
 
+Font、Texture2D、Mesh 和模型 Material 的导入对象统一通过 `AssetPipeline::GetImportedObjectKey` 生成 `<sourceKey>//<实际原生类型>/<对象名>`。单对象使用 Main，模型多对象使用已有名字或编号。字体和独立图片的源文件路径不再作为运行时对象 Key 注册。
+
+| 源文件 | 导入对象 Key |
+| --- | --- |
+| `Builtin/Fonts/Default.ttf` | `Builtin/Fonts/Default.ttf//Font/Main` |
+| `Images/example.png` | `Images/example.png//Texture2D/Main` |
+| `Meshes/example.obj` | `Meshes/example.obj//Mesh/Main` |
+
+ImportSettings 仍按源文件 Key 查询；`.orbo` 按完整对象 Key 写入和计算文件名。编辑器自有资源文件的主对象继续使用自身的 Key。
+
 新增 `AssetInspection`（Editor 原生辅助类）收集真实 AssetCollection，按 canonical Key 去重，只把当前源文件拥有的内部对象列为子项。外部依赖对象不冒充内部对象，但会写入本次缓存依赖图。重新导入直接取新集合，避免旧运行时对象残留导致清单出现已删除的子资源。
 
 编辑器增加 `--inspect-asset <ContentRoot> <sourceKey> <outputDirectory>` 工作进程入口，在创建窗口、Application 和 GPU 之前执行。大文件完整解析发生在独立进程中，不在 UI 线程创建大网格或纹理，也不并发修改主进程 Object 注册表。工作进程同时生成对象 `.orbo`、字段摘要和依赖清单。

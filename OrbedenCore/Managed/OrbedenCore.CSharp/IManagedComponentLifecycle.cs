@@ -6,6 +6,9 @@ namespace Orbeden;
 /// </summary>
 public interface IManagedComponentLifecycle
 {
+    /// <summary>序列化前同步运行时配置。</summary>
+    void OnComponentBeforeSerialize() { }
+
     /// <summary>全部宿主包装建立且本实例字段恢复后调用一次。</summary>
     void OnComponentAttached();
 

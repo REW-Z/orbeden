@@ -448,13 +448,17 @@ namespace
     }
 
     //字体载荷的格式版本；升级字节布局时递增。
-    constexpr uint32 FontPayloadVersion = 1;
+    constexpr uint32 FontPayloadVersion = 2;
 
-    //写入字体资源载荷：格式版本、字体面下标与字节
+    //写入字体资源载荷：格式版本、字体面下标、导入设置与字节
     bool WriteFont(BlobWriter& writer, Font* font)
     {
         writer.WriteValue(FontPayloadVersion);
         writer.WriteValue(font->faceIndex);
+        writer.WriteValue(font->rasterMode);
+        writer.WriteValue(font->atlasSize);
+        writer.WriteValue(font->distanceFieldSize);
+        writer.WriteValue(font->distanceFieldRange);
         writer.WriteArray(font->sourceBytes);
         return true;
     }
@@ -463,20 +467,34 @@ namespace
     bool ReadFont(BlobReader& reader, Font* font)
     {
         uint32 version = 0;
-        if (!reader.ReadValue(version) || version != FontPayloadVersion) return false;
+        if (!reader.ReadValue(version) || (version != 1 && version != FontPayloadVersion)) return false;
 
         uint32 faceIndex = 0;
         if (!reader.ReadValue(faceIndex)) return false;
+
+        //读取导入设置；旧载荷使用默认字体参数
+        FontRasterMode rasterMode = FontRasterMode::Bitmap;
+        uint32 atlasSize = 1024;
+        uint32 distanceFieldSize = 64;
+        float32 distanceFieldRange = 4.0f;
+        if (version >= 2 && (!reader.ReadValue(rasterMode) || !reader.ReadValue(atlasSize)
+            || !reader.ReadValue(distanceFieldSize) || !reader.ReadValue(distanceFieldRange))) return false;
+        if (!Font::ValidateImportSettings(rasterMode, atlasSize, distanceFieldSize, distanceFieldRange)) return false;
 
         List<uint8> bytes;
         if (!reader.ReadArray(bytes)) return false;
         if (!FontRasterizer::ValidateFontBytes(bytes, faceIndex)) return false;
 
+        FontRasterizer::ReleaseFont(font->GetObjectId());
         font->faceIndex = faceIndex;
+        font->rasterMode = rasterMode;
+        font->atlasSize = atlasSize;
+        font->distanceFieldSize = distanceFieldSize;
+        font->distanceFieldRange = distanceFieldRange;
         font->sourceBytes = std::move(bytes);
         //内容换了：字形与图集缓存按键里的 revision 失效。
         font->BumpRevision();
-        return true;
+        return FontRasterizer::OpenFont(*font);
     }
 
     //按资源类型写入载荷

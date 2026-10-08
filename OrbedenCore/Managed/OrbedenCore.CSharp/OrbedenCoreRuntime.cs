@@ -72,6 +72,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateNativeApiHeader(nativeApi, sizeof(OrbedenNativeApi));
         OrbedenNativeApi api = *(OrbedenNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
+        //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
+        UIRuntimeBootstrap.Register();
         InitializeEngineBindings(api);
         ScriptInteropDispatch.Initialize(api.ScriptInterop);
         Script.InitializeNativeApi(api.Script);
@@ -101,6 +103,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateNativeApiHeader(nativeApi, sizeof(OrbedenEngineNativeApi));
         OrbedenEngineNativeApi api = *(OrbedenEngineNativeApi*)nativeApi;
         RetainedGuiApi = api.GetRetainedGuiApi;
+        //原生表已就位，UI 才能接入并登记帧系统；早于世界附着。
+        UIRuntimeBootstrap.Register();
         InitializeEngineBindings(api);
     }
 

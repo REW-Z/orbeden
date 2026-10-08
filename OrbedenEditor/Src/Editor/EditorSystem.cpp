@@ -278,10 +278,8 @@ namespace
 
     //判断脚本源是否比程序集更新。脚本可以放在项目下任何目录，因此以项目根为扫描范围；
     //生成目录里的时间戳变化不代表脚本源变化，整棵子树直接跳过。
-    //SDK 包（Orbeden.UI 这类）的源码在项目之外，但同样编进游戏程序集，漏掉它就会一直用旧代码。
     bool IsProjectScriptBuildOutdated(const std::string& projectRoot,
-        const std::string& assemblyPath,
-        const std::string& packagesRoot)
+        const std::string& assemblyPath)
     {
         if (projectRoot.empty() || assemblyPath.empty()) return false;
         std::filesystem::path assembly = Utf8Path::FromUtf8(assemblyPath);
@@ -291,29 +289,20 @@ namespace
         std::filesystem::file_time_type assemblyTime = std::filesystem::last_write_time(assembly, error);
         if (error) return true;
 
-        //检查编辑扩展与运行时程序集是否同时更新
+        //编辑扩展与运行时程序集同批产出：缺了就说明这次构建不完整，按过期处理。
         std::filesystem::path editorAssembly = assembly.parent_path()
             / Utf8Path::FromUtf8(Utf8Path::ToUtf8(assembly.stem()) + ".Editor.dll");
-        if (std::filesystem::exists(editorAssembly))
-        {
-            std::filesystem::file_time_type editorTime = std::filesystem::last_write_time(editorAssembly, error);
-            if (error) return true;
-            assemblyTime = std::min(assemblyTime, editorTime);
-        }
-        else if (std::filesystem::is_directory(Utf8Path::FromUtf8(packagesRoot) / "Orbeden.UI/Editor")) return true;
+        if (!std::filesystem::exists(editorAssembly)) return true;
+        std::filesystem::file_time_type editorTime = std::filesystem::last_write_time(editorAssembly, error);
+        if (error) return true;
+        assemblyTime = std::min(assemblyTime, editorTime);
 
         //内容根之外都是构建生成物或工程文件，时间戳变化不代表脚本源变化。
         static const List<std::string> excludedPrefixes =
         {
             "Build/", "Lib/", "Legacy/", ".vs/", ".git/",
         };
-        if (HasNewerScriptSource(Utf8Path::FromUtf8(projectRoot), assemblyTime, excludedPrefixes)) return true;
-        if (packagesRoot.empty()) return false;
-
-        //包目录本身没有生成物，整棵树都要看。
-        std::filesystem::path packages = Utf8Path::FromUtf8(packagesRoot);
-        return std::filesystem::is_directory(packages)
-            && HasNewerScriptSource(packages, assemblyTime, {});
+        return HasNewerScriptSource(Utf8Path::FromUtf8(projectRoot), assemblyTime, excludedPrefixes);
     }
 
     bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
@@ -1065,7 +1054,7 @@ void EditorSystem::RequestRefresh()
     scriptBuildRunning = true;
     projectStatus = "Refreshing project...";
     managedBridge.RequestScriptBuild(csproj, true,
-        IsProjectScriptBuildOutdated(project.GetProjectRoot(), GetProjectGameAssemblyPath(), GetSdkPackagesRoot()));
+        IsProjectScriptBuildOutdated(project.GetProjectRoot(), GetProjectGameAssemblyPath()));
     RequestRepaint();
 }
 
@@ -1117,7 +1106,7 @@ void EditorSystem::ApplyCompletedScriptBuild()
         pendingPlayAfterScriptBuild = false;
         std::string assemblyPath = GetProjectGameAssemblyPath();
         if (result.succeeded && FileExists(assemblyPath)
-            && !IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath, GetSdkPackagesRoot()))
+            && !IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
         {
             StartPlayMode();
             return;
@@ -1328,7 +1317,7 @@ void EditorSystem::RequestPlay()
     }
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
-    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath, GetSdkPackagesRoot()))
+    if (!FileExists(assemblyPath) || IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
     {
         //脚本过期时同样排队，构建成功后由 ApplyCompletedScriptBuild 进 Play
         pendingPlayAfterScriptBuild = true;
@@ -1600,6 +1589,14 @@ bool EditorSystem::CookPlayerContent(std::string& error)
 {
     error.clear();
 
+    //读取项目资源的导入设置
+    std::string settingsTable;
+    if (!managedBridge.ReadAssetImportSettings(settingsTable))
+    {
+        error = "Asset import settings could not be read for packaging.";
+        return false;
+    }
+
     //导入会写进进程级资源表，先按打开项目的既有流程清空，结束后再从磁盘重建场景。
     if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
     {
@@ -1612,7 +1609,7 @@ bool EditorSystem::CookPlayerContent(std::string& error)
     PathDefines::SetContentRoot(project.GetContentRootPath());
 
     std::string cacheRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder);
-    bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error);
+    bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error, settingsTable);
 
     //cook 导入的全部资源都是一次性的，释放后由场景重载重新取用。
     ResourceManager::Shutdown();
@@ -1825,7 +1822,7 @@ bool EditorSystem::RefreshInspectorGameAssembly()
 
     std::string assemblyPath = GetProjectGameAssemblyPath();
     //加载游戏脚本前同步过期的 SDK 源码包
-    if (IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath, GetSdkPackagesRoot()))
+    if (IsProjectScriptBuildOutdated(project.GetProjectRoot(), assemblyPath))
     {
         ShutdownEditorScriptRuntime();
         managedBridge.UnloadGameAssembly();
@@ -1911,28 +1908,6 @@ std::string EditorSystem::FindRepositoryRoot() const
     }
 
     return std::string();
-}
-
-//SDK 包源码根，判定脚本是否过期时要一并扫描
-std::string EditorSystem::GetSdkPackagesRoot() const
-{
-    //优先使用项目声明的 SDK 来源
-    if (project.HasProject())
-    {
-        std::filesystem::path hint = Utf8Path::FromUtf8(project.GetProjectRoot()) / "Lib/OrbedenSdk.path";
-        std::string sdk = ReadTextFile(hint);
-        usize first = sdk.find_first_not_of(" \t\r\n");
-        usize last = sdk.find_last_not_of(" \t\r\n");
-        if (first != std::string::npos)
-        {
-            std::filesystem::path root = Utf8Path::FromUtf8(sdk.substr(first, last - first + 1));
-            if (root.is_relative()) root = hint.parent_path() / root;
-            if (std::filesystem::is_directory(root / "Packages")) return ToCleanPath(root / "Packages");
-        }
-    }
-    std::string repositoryRoot = FindRepositoryRoot();
-    if (repositoryRoot.empty()) return std::string();
-    return ToCleanPath(Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk/Packages");
 }
 
 std::string EditorSystem::FindRuntimeCSharpDll() const

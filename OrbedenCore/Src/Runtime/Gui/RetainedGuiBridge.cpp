@@ -440,7 +440,7 @@ namespace
             *textBytes = requiredBytes;
 
             //容量不足不部分写、也不消费：调用方按返回的所需条数扩容后重来。
-            if (output == nullptr || text == nullptr || capacity < required || textCapacity < requiredBytes)
+            if (output == nullptr || (requiredBytes > 0 && text == nullptr) || capacity < required || textCapacity < requiredBytes)
                 return required;
 
             int32 textOffset = 0;

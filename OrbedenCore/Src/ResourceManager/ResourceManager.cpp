@@ -1,6 +1,7 @@
 #include "ResourceManager/ResourceManager.h"
 
 #include "FileSystem/FileSystem.h"
+#include "FileSystem/PathDefines.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
@@ -83,10 +84,10 @@ namespace
     }
 
     //优先按打包产物加载，缺失或读取失败时返回 false
-    bool LoadCookedAsset(const std::string& resourceKey);
+    bool LoadCookedAsset(const std::string& resourceKey, bool reportErrors);
 
     //加载资源 Key 对应的资源记录
-    ResourceManager::ResourceRecord* LoadResourceRecord(Type* type, const std::string& key)
+    ResourceManager::ResourceRecord* LoadResourceRecord(Type* type, const std::string& key, bool reportErrors = true)
     {
         std::string resourceKey = ResourceManager::ToResourceKey(key);
         if (resourceKey.empty() || StartsWith(resourceKey, "world://") || StartsWith(resourceKey, "orphan://")) return nullptr;
@@ -95,9 +96,12 @@ namespace
         if (!record)
         {
             //打包产物按对象存放，用完整 Key 查找；缺失时回退到源文件导入，两者都没有才报错。
-            if (!LoadCookedAsset(resourceKey))
+            if (!LoadCookedAsset(resourceKey, reportErrors))
             {
-                AssetCollection collection = AssetPipeline::ImportSource(ResourceManager::GetSourceKey(resourceKey));
+                std::string sourceKey = ResourceManager::GetSourceKey(resourceKey);
+                if (!reportErrors && !FileSystem::Exist(PathDefines::GetContentFilePath(sourceKey))
+                    && AssetPipeline::SelectImporter(sourceKey) != AssetImporter::Glsl) return nullptr;
+                AssetCollection collection = AssetPipeline::ImportSource(sourceKey);
                 (void)collection;
             }
 
@@ -106,13 +110,13 @@ namespace
 
         if (!record)
         {
-            Log::Error(("Resource key is not registered: " + resourceKey).c_str());
+            if (reportErrors) Log::Error(("Resource key is not registered: " + resourceKey).c_str());
             return nullptr;
         }
 
         if (type && record->object && !record->object->Is(type))
         {
-            Log::Error(("Resource type mismatch: " + resourceKey).c_str());
+            if (reportErrors) Log::Error(("Resource type mismatch: " + resourceKey).c_str());
             return nullptr;
         }
 
@@ -120,7 +124,7 @@ namespace
     }
 
     //优先按打包产物加载，缺失或读取失败时返回 false
-    bool LoadCookedAsset(const std::string& resourceKey)
+    bool LoadCookedAsset(const std::string& resourceKey, bool reportErrors)
     {
         std::string blobPath = CookedAssetSerializer::GetBlobPath(resourceKey);
         if (!FileSystem::Exist(blobPath)) return false;
@@ -132,14 +136,16 @@ namespace
         bool loaded = CookedAssetSerializer::Read(blobPath, externalRefs, error);
         if (!loaded)
         {
-            Log::Error(error.c_str());
+            if (reportErrors) Log::Error(error.c_str());
+            else Log::Warning(error.c_str());
         }
         else
         {
             //补齐跨文件引用，与导入期的即时导入行为保持一致。
             for (const std::string& referenceKey : externalRefs)
             {
-                LoadResourceRecord(nullptr, referenceKey);
+                if (!LoadResourceRecord(nullptr, referenceKey, reportErrors) && !reportErrors)
+                    Log::Warning(("Unresolved cooked resource reference: " + resourceKey + " -> " + referenceKey).c_str());
             }
         }
 
@@ -164,6 +170,13 @@ void ResourceManager::OnShutdown()
 Object* ResourceManager::Load(Type* type, const std::string& key)
 {
     ResourceRecord* record = LoadResourceRecord(type, key);
+    return record ? record->object : nullptr;
+}
+
+//尝试加载字段引用
+Object* ResourceManager::TryLoad(Type* type, const std::string& key)
+{
+    ResourceRecord* record = LoadResourceRecord(type, key, false);
     return record ? record->object : nullptr;
 }
 

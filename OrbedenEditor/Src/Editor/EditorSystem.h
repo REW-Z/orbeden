@@ -250,8 +250,6 @@ private:
     std::string FindRepositoryRoot() const;
 
     //查找当前 Editor 可用的 OrbedenCore.CSharp.dll
-    //SDK 包源码根，判定脚本是否过期时要一并扫描
-    std::string GetSdkPackagesRoot() const;
 
     std::string FindRuntimeCSharpDll() const;
 

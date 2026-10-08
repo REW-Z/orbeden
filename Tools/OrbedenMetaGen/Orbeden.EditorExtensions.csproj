@@ -12,8 +12,6 @@
   <ItemGroup>
     <Using Include="$(GameBindingNamespace)" Alias="Native" Condition="'$(GameBindingNamespace)' != ''" />
     <Compile Include="$(GameContentRoot)/**/Editor/**/*.cs" />
-    <!--Orbeden.UI 包的编辑器源码；来源由 Orbeden.Bindings.targets 判定，这里只吃结果。-->
-    <Compile Include="$(GameEditorPackageRoot)/**/*.cs" Condition="'$(GameEditorPackageRoot)' != ''" />
     <Reference Include="$(GameAssemblyName)"><HintPath>$(GameAssemblyPath)</HintPath><Private>false</Private></Reference>
     <Reference Include="OrbedenCore.CSharp"><HintPath>$(GameRuntimeAssembly)</HintPath><Private>false</Private></Reference>
     <Reference Include="Orbeden.Editor"><HintPath>$(GameEditorAssembly)</HintPath><Private>false</Private></Reference>

@@ -33,9 +33,6 @@ public sealed class UIPreviewController : IUIPreviewProvider
     /// <summary>把控制器登记为当前提供者；重复调用无副作用。</summary>
     public static void Register() => UIPreviewRegistry.SetProvider(Shared);
 
-    /// <summary>注销提供者。</summary>
-    public static void Unregister() => UIPreviewRegistry.SetProvider(null);
-
     /// <summary>
     /// 预览纹理：离屏画布有自己的输出纹理，直接拿来显示；
     /// 屏幕画布画在窗口缓冲上，没有可取的纹理，面板会说明像素在场景面板里。

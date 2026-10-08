@@ -95,9 +95,10 @@ namespace
     }
 
     //导入一个源文件并把产生的每个对象写成独立产物
-    bool CookSourceKey(const std::string& sourceKey, const std::filesystem::path& outputRoot, List<std::string>& cookedKeys, std::string& error)
+    bool CookSourceKey(const std::string& sourceKey, const std::filesystem::path& outputRoot, List<std::string>& cookedKeys,
+        std::string& error, const std::string& settingsTable)
     {
-        AssetCollection collection = AssetPipeline::ImportSource(sourceKey);
+        AssetCollection collection = AssetPipeline::ImportSource(sourceKey, AssetImportSettings::Lookup(settingsTable, sourceKey));
         if (!collection.Succeeded())
         {
             error = "Asset import failed while packaging: " + sourceKey;
@@ -123,7 +124,8 @@ namespace
 }
 
 //把源内容根内的资源全部 cook 到输出目录
-bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::string& cookedOutputRoot, std::string& error)
+bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::string& cookedOutputRoot, std::string& error,
+    const std::string& settingsTable)
 {
     error.clear();
 
@@ -165,7 +167,7 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
     List<std::string> cookedKeys;
     for (const std::string& sourceKey : sourceKeys)
     {
-        if (!CookSourceKey(sourceKey, outputRoot, cookedKeys, error)) return false;
+        if (!CookSourceKey(sourceKey, outputRoot, cookedKeys, error, settingsTable)) return false;
     }
 
     std::filesystem::path indexPath = outputRoot / Utf8Path::FromUtf8(CookedAssetSerializer::IndexFileName);

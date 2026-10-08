@@ -248,6 +248,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
     <None Include="Managed\Orbeden.Editor\NativeEditorGUI.cs" />
     <None Include="Managed\Orbeden.Editor\Gizmos.cs" />
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\UI\**\*.cs" />
     <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj" />
     <None Include="Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" />
   </ItemGroup>

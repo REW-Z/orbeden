@@ -145,8 +145,12 @@ internal static partial class Program
                         CopyFile(file, Path.Combine(pattern == "*.h" ? Path.Combine(publish, "include") : Path.Combine(publish, "lib", arch), Path.GetFileName(file)));
                 }
             }
-            if (name == "noto-font")
-                CopyFile(Path.Combine(destination, "Default.otf"), Path.Combine(repository, "OrbedenEditor", "Templates", "Builtin", "Fonts", "Default.otf"));
+            if (name == "cubic-font")
+            {
+                string fonts = Path.Combine(repository, "OrbedenEditor", "Templates", "Builtin", "Fonts");
+                CopyFile(Path.Combine(destination, "Default.ttf"), Path.Combine(fonts, "Default.ttf"));
+                CopyFile(Path.Combine(root, "licenses", name, "OFL.txt"), Path.Combine(fonts, "OFL.txt"));
+            }
         }
 
         //运行上游 GLAD 生成器

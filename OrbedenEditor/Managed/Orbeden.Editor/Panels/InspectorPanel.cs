@@ -229,7 +229,20 @@ internal sealed class InspectorPanel : EditorPanel
         ++scriptAssemblyGeneration;
         refreshedManagedHosts.Clear();
 
+        //核心程序集常驻，其中的托管组件（UI 组件）不依赖游戏程序集是否加载成功。
+        CollectScriptTypes(typeof(Ens).Assembly);
+
         Assembly? gameAssembly = ManagedAssemblySession.GetGameAssembly();
+        if (gameAssembly != null)
+        {
+            CustomEditorRegistry.Register(gameAssembly);
+            Assembly? editorAssembly = ManagedAssemblySession.GetEditorAssembly();
+            if (editorAssembly != null) CustomEditorRegistry.Register(editorAssembly);
+            CollectScriptTypes(gameAssembly);
+        }
+        scriptTypes.Sort((left, right) =>
+            string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
+
         if (gameAssembly == null)
         {
             status = string.IsNullOrWhiteSpace(assemblyPath) || !File.Exists(assemblyPath)
@@ -237,19 +250,18 @@ internal sealed class InspectorPanel : EditorPanel
                 : "Game assembly load failed: " + Path.GetFileName(assemblyPath);
             return;
         }
+        status = $"Loaded: {Path.GetFileName(assemblyPath)}";
+    }
 
-        CustomEditorRegistry.Register(gameAssembly);
-        Assembly? editorAssembly = ManagedAssemblySession.GetEditorAssembly();
-        if (editorAssembly != null) CustomEditorRegistry.Register(editorAssembly);
-        foreach (Type type in GetLoadableTypes(gameAssembly))
+    //收集程序集里可添加的托管组件类型；核心与游戏程序集用同一套判据。
+    private void CollectScriptTypes(Assembly assembly)
+    {
+        foreach (Type type in GetLoadableTypes(assembly))
         {
             if (type.IsAbstract || !NativeBindingRuntime.IsManagedScript(type)) continue;
             if (type.GetConstructor([typeof(Ens)]) == null) continue;
             scriptTypes.Add(type);
         }
-        scriptTypes.Sort((left, right) =>
-            string.Compare(GetScriptTypeName(left), GetScriptTypeName(right), StringComparison.Ordinal));
-        status = $"Loaded: {Path.GetFileName(assemblyPath)}";
     }
 
     //清空类型缓存与组件选择状态；程序集由会话统一释放。

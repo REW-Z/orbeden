@@ -22,7 +22,7 @@ public sealed class UIControlEditor : ComponentEditor
         DrawProperty("interactable");
         DrawProperty("targetVisual");
         if (Target.Ens.GetComponent<TextField>() is TextField field && field.GetFont() == null)
-            EditorGUI.TextWrapped("Font is empty: using the built-in default font (Noto Sans SC).");
+            EditorGUI.TextWrapped("Font is empty: using the built-in default font (Cubic 11, Bitmap).");
         if (Target.Ens.GetComponent<Button>() is Button button)
         {
             if (button.GetTargetVisual() == null)

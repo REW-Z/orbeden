@@ -28,6 +28,9 @@ public:
     //加载资源对象
     static Object* Load(Type* type, const std::string& key);
 
+    //尝试加载字段引用；目标缺失或类型不符时返回空，由反序列化调用方报告
+    static Object* TryLoad(Type* type, const std::string& key);
+
     //加载资源对象
     template<typename T>
     static T* Load(const std::string& key)

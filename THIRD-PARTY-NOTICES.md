@@ -18,7 +18,7 @@ Orbeden 自有代码采用根 LICENSE 中的 MIT 许可。以下第三方组件�
 | GLAD 生成加载器 | 生成器 2.0.8 | (WTFPL OR CC0-1.0) AND Apache-2.0 | licenses/glad/ | 引擎、编辑器、游戏 |
 | khrplatform.h | 生成器内置版本 | Khronos MIT 式许可 | licenses/glad/KHRONOS.txt | 引擎、编辑器、游戏 |
 | .NET native host | 10.0.9，win-x64 / win-x86 | MIT 与包内第三方声明 | licenses/dotnet-win-x64/、licenses/dotnet-win-x86/ | 编辑器 |
-| Noto Sans SC Regular | 锁文件固定提交 | SIL OFL-1.1 | licenses/noto-font/OFL.txt | 内置 UI 字体 |
+| Cubic 11（俐方體11號） | 1.500，锁文件固定提交 | SIL OFL-1.1 | licenses/cubic-font/OFL.txt | 内置 UI 像素字体 |
 | GLAD 生成器 | 2.0.8 | MIT；规范另含 Apache-2.0 / Khronos 声明 | licenses/glad-generator/ | 构建工具 |
 | Jinja2 | 3.1.6 | BSD-3-Clause | licenses/jinja2/ | 构建工具 |
 | MarkupSafe | 3.0.3 | BSD-3-Clause | licenses/markupsafe/ | 构建工具 |

@@ -40,10 +40,9 @@ public sealed class TextEditor : ComponentEditor
             }
             EditorGUI.EndTable();
         }
-        DrawProperty("rasterMode");
         DrawProperty("raycastTarget");
         DrawProperty("material");
-        if (text.GetFont() == null) EditorGUI.TextWrapped("Font is empty: using the built-in default font (Noto Sans SC).");
+        if (text.GetFont() == null) EditorGUI.TextWrapped("Font is empty: using the built-in default font (Cubic 11, Bitmap).");
         if (text.GetWrap() && text.GetLayout()?.GetFitWidth() == true)
             EditorGUI.TextWrapped("Fit Width uses the unwrapped text width. Turn it off to wrap within a fixed width.");
     }

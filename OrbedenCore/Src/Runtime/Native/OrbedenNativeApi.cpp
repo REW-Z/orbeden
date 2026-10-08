@@ -200,7 +200,7 @@ namespace
         Object* object = Object::FindObject(StringId(path));
         if (!object && !managedType && !path.starts_with("world://"))
         {
-            if (Type* type = Object::FindType(nativeName)) object = ResourceManager::Load(type, path);
+            if (Type* type = Object::FindType(nativeName)) object = ResourceManager::TryLoad(type, path);
         }
         if (!object) return nullptr;
         //托管声明必须落到托管脚本宿主上；声明基类引用派生实例的精确类型判定由托管侧按包装完成。
