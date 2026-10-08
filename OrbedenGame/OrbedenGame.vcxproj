@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8B2F6D41-9C5A-4E7B-8A3D-1F6E2C9B7A50}</ProjectGuid>
+    <RootNamespace>OrbedenGame</RootNamespace>
+    <!--Player 工程位于 OrbedenGame/ 下，仓库根为上一级目录。-->
+    <OrbedenEngineRoot Condition="'$(OrbedenEngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</OrbedenEngineRoot>
+    <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
+    <OrbedenContentRoot>$(OrbedenProjectDir)\Content</OrbedenContentRoot>
+    <!--Player 只链接 SDK 预编译的 Core 静态库；缺失即报错，不回退到编译 Core 源码。-->
+    <OrbedenCoreStaticLib Condition="'$(OrbedenCoreStaticLib)' == ''">$(OrbedenEngineRoot)\OrbedenEditor\Sdk\Native\WindowsX64\$(Configuration)\OrbedenCoreStatic.lib</OrbedenCoreStaticLib>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v145</PlatformToolset>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <!--Player 产物归属于被打包的游戏项目，按项目目录隔离输出与中间文件。-->
+    <OutDir>$(OrbedenProjectDir)\Build\windows-x64\bin\</OutDir>
+    <IntDir>$(OrbedenProjectDir)\Build\windows-x64\obj\</IntDir>
+    <TargetName>OrbedenGame</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 /EHsc %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>WIN32;_CONSOLE;ORBEDEN_PLAYER;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;ORBEDEN_HAS_NATIVE_GAME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OrbedenEngineRoot)\OrbedenCore\Src;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\include;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\backends;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf;$(OrbedenEngineRoot)\OrbedenGame\Src;$(OrbedenProjectDir);$(OrbedenContentRoot);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>$(OrbedenCoreStaticLib);$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysX_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCommon_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXFoundation_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXExtensions_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXPvdSDK_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCooking_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXCharacterKinematic_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration)\PhysXVehicle_static_64.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3dll.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration)\imgui.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration)\glad.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration)\cgltf.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration)\stb.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration)\freetype.lib;$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration)\msdfgen-core.lib;$(OrbedenGameAotLib);opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;imm32.lib;version.lib;setupapi.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <!--同一 PostBuildEvent 里多个 Command 元数据会互相覆盖，改用 Copy 任务拷贝运行时依赖。-->
+    <PostBuildEvent>
+      <Command>echo Player runtime dependencies are copied by CopyAotRuntime.</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Src\game_main.cpp" />
+    <!--内容根下的游戏 C++ 源码全部进 Player；GameModule.cpp 由 Editor 的模块工程负责，不在这里编译。-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" />
+    <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
+    <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\*.cpp">
+      <ObjectFileName>$(IntDir)GameGenerated\%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClInclude Include="Src\*.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!--Player 不感知 Core 源码：SDK 缺少静态库时直接失败，不触发 Core 源码编译。-->
+  <Target Name="ValidateCoreStaticLibrary" BeforeTargets="ClCompile">
+    <Error Condition="!Exists('$(OrbedenCoreStaticLib)')" Text="Orbeden Core static library was not found: $(OrbedenCoreStaticLib). Build OrbedenCore (x64|$(Configuration)) to refresh the SDK; the Player links the prebuilt SDK library and never compiles Core sources." />
+  </Target>
+  <Target Name="CopyAotRuntime" AfterTargets="Build">
+    <Copy SourceFiles="$(OrbedenGameAotDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'$(OrbedenGameAotDll)' != ''" />
+    <!--第三方组件的署名与许可：静态链接的库要求随二进制一起分发 -->
+    <Copy SourceFiles="$(OrbedenEngineRoot)\LICENSE" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OrbedenEngineRoot)\THIRD-PARTY-NOTICES.md" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <!--GLFW 是动态库，Player 与编辑器都从同一份 glfw3.dll 走进程内单例状态-->
+    <Copy SourceFiles="$(OrbedenEngineRoot)\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <OrbedenPlayerLicenseFile Include="$(OrbedenEngineRoot)\Tools\OrbedenThirdParty\licenses\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="@(OrbedenPlayerLicenseFile->'$(OutDir)ThirdPartyLicenses/%(RecursiveDir)')" />
+    <Copy SourceFiles="@(OrbedenPlayerLicenseFile)" DestinationFiles="@(OrbedenPlayerLicenseFile->'$(OutDir)ThirdPartyLicenses/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

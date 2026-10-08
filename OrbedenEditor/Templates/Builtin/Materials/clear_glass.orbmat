@@ -1,0 +1,6 @@
+# clear_glass
+drawqueue Auto
+shader Builtin/Shaders/refraction.orbshader
+color u_TintColor 0.86 0.97 0.93 1
+float u_RefractionStrength 0.008
+float u_Opacity 1

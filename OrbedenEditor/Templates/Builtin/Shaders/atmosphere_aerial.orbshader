@@ -1,0 +1,77 @@
+--------queue Opaque
+
+--------geometry Standard
+--------expandedGeometry off
+
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+
+out vec2 v_Uv;
+
+void main()
+{
+    v_Uv = a_Position.xy * 0.5 + 0.5;
+    gl_Position = vec4(a_Position.xy, 0.0, 1.0);
+}
+
+--------frag
+#version 430 core
+
+in vec2 v_Uv;
+
+uniform mat4 u_AtmosphereInverseProjection;
+uniform mat4 u_AtmosphereCameraWorldRotation;
+uniform float u_AtmosphereCameraHeightKm;
+uniform vec3 u_AtmosphereCameraUp;
+uniform vec3 u_AtmosphereSunDirection;
+uniform vec4 u_AtmosphereSunRadiance;
+uniform float u_AtmosphereAerosolDensity;
+uniform float u_AtmosphereMaxDistanceKm;
+uniform vec4 u_AtmosphereAtlas;
+uniform int u_AtmosphereOutputKind;
+uniform int u_AtmosphereStepCount;
+#include "Builtin/atmosphere_common.orbinc"
+
+out vec4 FragColor;
+
+void main()
+{
+    //像素换算到所属距离层与层内节点
+    vec2 tileSize = u_AtmosphereAtlas.xy;
+    float columns = u_AtmosphereAtlas.w;
+    vec2 atlasSize = vec2(tileSize.x * columns, tileSize.y * (u_AtmosphereAtlas.z / columns));
+    vec2 pixel = v_Uv * atlasSize - 0.5;
+    vec2 tileIndex = floor(pixel / tileSize);
+    vec2 node = pixel - tileIndex * tileSize;
+    float layer = tileIndex.y * columns + tileIndex.x;
+
+    //第 0 层是零距离，散射与光学厚度都为零
+    if (layer < 0.5)
+    {
+        FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+
+    //节点还原成视线方向
+    vec2 uv = clamp(node / max(tileSize - 1.0, vec2(1.0)), 0.0, 1.0);
+    vec4 viewPosition = u_AtmosphereInverseProjection * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+    vec3 viewRay = normalize((u_AtmosphereCameraWorldRotation * viewPosition).xyz);
+
+    //距离层按指数分布铺开，最远一层等于上限
+    float distanceKm = u_AtmosphereMaxDistanceKm;
+    if (layer < u_AtmosphereAtlas.z - 1.0)
+    {
+        distanceKm = 0.01 * (exp(layer / (u_AtmosphereAtlas.z - 1.0) *
+            log(1.0 + u_AtmosphereMaxDistanceKm / 0.01)) - 1.0);
+    }
+
+    vec3 radiance = vec3(0.0);
+    vec3 tau = vec3(0.0);
+    IntegrateAtmosphere(u_AtmosphereCameraHeightKm, u_AtmosphereCameraUp, viewRay, distanceKm,
+        u_AtmosphereStepCount, u_AtmosphereOutputKind, u_AtmosphereAerosolDensity,
+        u_AtmosphereSunRadiance.rgb, u_AtmosphereSunDirection, radiance, tau);
+
+    FragColor = vec4(u_AtmosphereOutputKind == 0 ? radiance : tau, 1.0);
+}

@@ -1,0 +1,120 @@
+//自定义 UI 材质模板：复制这个文件、改名，再在图形或材质修改器里把它设给 UIVisual。
+//
+//保留参数由 UI 提交器写入，材质参数不能覆盖它们（同名会被原生侧跳过）：
+//  u_Model、u_ViewProjection   本地到裁剪空间的矩阵
+//  u_Texture、u_Tint           本片段的纹理与合成颜色
+//  u_MaterialKind              内置模式：0 直通、1 预乘、2 位图字形、3 SDF、4 MSDF
+//  u_DistanceRange             距离场取值范围
+//  u_Coverage、u_CoverageEnabled  软遮罩覆盖率与其开关
+//  u_ViewportSize、u_ViewportOrigin  视口尺寸与原点，用于把 gl_FragCoord 换算到视口内
+//
+//材质自己的纹理从纹理单元 2 开始绑（0 与 1 留给 UI 纹理和覆盖率），
+//颜色槽与浮点槽按 uniform 名字绑定，在材质资源上配置即可。
+//
+//三种画布模式共用这一份着色器：Overlay 与 Offscreen 的 u_Model 是正交投影到目标，
+//WorldSpace 的 u_Model 是画布节点到世界的变换，相机投影已经并进 u_ViewProjection。
+//软遮罩在 u_CoverageEnabled 为 1 时生效，自定义效果必须把它乘进最终 Alpha。
+
+--------queue Transparent
+
+--------vert
+#version 430 core
+//顶点属性：0 位置（画布本地）、1 UV、2 顶点色。UI 顶点布局固定，不能改。
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec2 a_Uv;
+layout(location = 2) in vec4 a_Tint;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+
+out vec2 v_Uv;
+out vec4 v_Tint;
+
+void main()
+{
+    v_Uv = a_Uv;
+    v_Tint = a_Tint;
+    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+}
+
+--------frag
+#version 430 core
+in vec2 v_Uv;
+in vec4 v_Tint;
+
+uniform sampler2D u_Texture;
+uniform sampler2D u_Coverage;
+uniform vec4 u_Tint;
+uniform vec3 u_ViewportSize;
+uniform vec3 u_ViewportOrigin;
+uniform float u_DistanceRange;
+uniform int u_MaterialKind;
+uniform int u_CoverageEnabled;
+
+//本模板的示例参数：在材质资源上按名字配置。
+//u_Grayscale 0..1 灰度强度，u_Dissolve 0..1 溶解阈值，u_DissolveEdge 溶解边缘宽度。
+uniform float u_Grayscale;
+uniform float u_Dissolve;
+uniform float u_DissolveEdge;
+uniform vec4 u_DissolveColor;
+
+out vec4 FragColor;
+
+//MSDF 的通道取中位数，SDF 直接取 R。
+float Median(vec3 value)
+{
+    return max(min(value.r, value.g), min(max(value.r, value.g), value.b));
+}
+
+//距离场覆盖率：把纹理值按屏幕空间取值范围还原成 0..1 的覆盖。
+float DistanceCoverage(float field)
+{
+    vec2 unitRange = vec2(u_DistanceRange) / vec2(textureSize(u_Texture, 0));
+    vec2 screenTexSize = vec2(1.0) / max(fwidth(v_Uv), vec2(1e-8));
+    float screenRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);
+    return clamp(screenRange * (field - 0.5) + 0.5, 0.0, 1.0);
+}
+
+//按内置模式取本片段的源色，直通与预乘的 Alpha 语义在这里分开。
+vec4 SampleSource()
+{
+    if (u_MaterialKind == 3) return vec4(1.0, 1.0, 1.0, DistanceCoverage(texture(u_Texture, v_Uv).r));
+    if (u_MaterialKind == 4) return vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));
+    vec4 sampled = texture(u_Texture, v_Uv);
+    return u_MaterialKind == 2 ? vec4(1.0, 1.0, 1.0, sampled.r) : sampled;
+}
+
+void main()
+{
+    vec4 source = SampleSource();
+    vec4 tint = u_Tint * v_Tint;
+
+    //软遮罩：没有裁剪层时覆盖率为 1，有的层由覆盖率池提供。
+    float coverage = 1.0;
+    if (u_CoverageEnabled == 1)
+    {
+        coverage = texture(u_Coverage, (gl_FragCoord.xy - u_ViewportOrigin.xy) / u_ViewportSize.xy).r;
+    }
+
+    //灰度：按亮度把颜色拉向灰阶。
+    float luma = dot(source.rgb, vec3(0.299, 0.587, 0.114));
+    source.rgb = mix(source.rgb, vec3(luma), clamp(u_Grayscale, 0.0, 1.0));
+
+    //溶解：低于阈值的像素丢弃，边缘带用 u_DissolveColor 描一圈。
+    float threshold = 1.0 - clamp(u_Dissolve, 0.0, 1.0);
+    float edge = max(u_DissolveEdge, 1e-4);
+    if (u_Dissolve > 0.0)
+    {
+        float noise = fract(sin(dot(v_Uv, vec2(12.9898, 78.233))) * 43758.5453);
+        if (noise < threshold) discard;
+        float edgeMix = smoothstep(threshold, threshold + edge, noise);
+        source = mix(vec4(u_DissolveColor.rgb, 1.0), source, edgeMix);
+    }
+
+    //合成：UI 输出一律预乘，直通纹理按覆盖率求预乘，预乘纹理不能再乘一次自身 Alpha。
+    float alpha = source.a * tint.a * coverage;
+    vec3 rgb = u_MaterialKind == 1
+        ? source.rgb * tint.rgb * tint.a * coverage
+        : source.rgb * tint.rgb * alpha;
+    FragColor = vec4(rgb, alpha);
+}

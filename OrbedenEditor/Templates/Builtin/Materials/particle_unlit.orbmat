@@ -1,0 +1,5 @@
+# particle_unlit
+drawqueue Auto
+shader Builtin/Shaders/particle_unlit.orbshader
+color u_DiffuseColor 1 1 1 1
+float u_Intensity 1

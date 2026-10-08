@@ -1,0 +1,11 @@
+# rain_glass
+drawqueue Auto
+shader Builtin/Shaders/rain_glass.orbshader
+color u_TintColor 0.86 0.94 0.98 1
+float u_TintStrength 0.12
+float u_DropletScale 13
+float u_FlowSpeed 0.65
+float u_RainAmount 0.72
+float u_TrailStrength 0.20
+float u_RefractionStrength 0.008
+float u_Opacity 1

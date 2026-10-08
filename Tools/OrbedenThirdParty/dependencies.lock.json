@@ -1,0 +1,308 @@
+{
+  "lockVersion": 1,
+  "packages": [
+    {
+      "name": "freetype",
+      "version": "2.14.3",
+      "repository": "https://github.com/freetype/freetype",
+      "revision": "0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "url": "https://codeload.github.com/freetype/freetype/zip/0a0221a1347e2f1e07c395263540026e9a0aa7c7",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "FTL",
+      "sha256": "a4c2b6f10c8c78013b410b1ed861485b1be413f424bf9a6f92aaba844e13c934",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.TXT",
+          "file": "LICENSE.TXT",
+          "sha256": "bd36c8b474855fa294c2ec5c184544478ef3720aad37d65a6296a4f264fd2d3b"
+        },
+        {
+          "source": "docs/FTL.TXT",
+          "file": "FTL.TXT",
+          "sha256": "5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f"
+        }
+      ]
+    },
+    {
+      "name": "msdfgen",
+      "version": "1.13",
+      "repository": "https://github.com/Chlumsky/msdfgen",
+      "revision": "1874bcf7d9624ccc85b4bc9a85d78116f690f35b",
+      "url": "https://codeload.github.com/Chlumsky/msdfgen/zip/1874bcf7d9624ccc85b4bc9a85d78116f690f35b",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "2cbdabe87f2263e68665f79da3a0c90a26fefb64cbc49fde6b3c406fb1590efa",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.txt",
+          "file": "LICENSE.txt",
+          "sha256": "32a94b25ad7072a78457d35019b32d73d2c265c806b0b76e9638fe800330bbe4"
+        }
+      ]
+    },
+    {
+      "name": "glfw",
+      "version": "3.4",
+      "repository": "https://github.com/glfw/glfw",
+      "revision": "7b6aead9fb88b3623e3b3725ebb42670cbe4c579",
+      "url": "https://codeload.github.com/glfw/glfw/zip/7b6aead9fb88b3623e3b3725ebb42670cbe4c579",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "Zlib",
+      "sha256": "699bf0b3d0bd422c0212263f30c4b6fc1ab4f67320824b27854f1e5c6949a2a0",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.md",
+          "file": "LICENSE.md",
+          "sha256": "149704059b5d0bf551637e50042dd4de9c2cae921021f6636298911e3a5f9462"
+        }
+      ]
+    },
+    {
+      "name": "imgui",
+      "version": "1.92.8",
+      "repository": "https://github.com/ocornut/imgui",
+      "revision": "8936b58fe26e8c3da834b8f60b06511d537b4c63",
+      "url": "https://codeload.github.com/ocornut/imgui/zip/8936b58fe26e8c3da834b8f60b06511d537b4c63",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "55d616240e72059a77b4744ce4c1a50e42e87cf2269301a477ce38d7b87253e5",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.txt",
+          "file": "LICENSE.txt",
+          "sha256": "173506a2d6f7fb67990d257fb2507f188690eca39060c39469ae7bef43aae2a3"
+        }
+      ]
+    },
+    {
+      "name": "glad-generator",
+      "version": "2.0.8",
+      "repository": "https://github.com/Dav1dde/glad",
+      "revision": "73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+      "url": "https://codeload.github.com/Dav1dde/glad/zip/73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "c6fe11176ef2dca44f0da370fabcd986e1d06320831950adc622d317d8a60e0a",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "file": "LICENSE",
+          "sha256": "cbb325cd4ac5bd06717ffa34a322b984f9d285e4c67c8ca1b7380d6ef08c2a77"
+        }
+      ]
+    },
+    {
+      "name": "cgltf",
+      "version": "1.15",
+      "repository": "https://github.com/jkuhlmann/cgltf",
+      "revision": "360db1a95480fe102ae9c69b27c5d101167ff5ba",
+      "url": "https://codeload.github.com/jkuhlmann/cgltf/zip/360db1a95480fe102ae9c69b27c5d101167ff5ba",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "ae52cc0ccb092793958735720e5b373b20463fefc36393e3e91c01e2287c8c6d",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "file": "LICENSE",
+          "sha256": "f619925f80ef862497aaf8e8155ef218fa6a2190055129523ca3df9119a9ba95"
+        }
+      ]
+    },
+    {
+      "name": "physx",
+      "version": "5.9.0",
+      "repository": "https://github.com/NVIDIA-Omniverse/PhysX",
+      "revision": "517a0073715120e114ee055b63b26c95e00d9039",
+      "url": "https://codeload.github.com/NVIDIA-Omniverse/PhysX/zip/517a0073715120e114ee055b63b26c95e00d9039",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "BSD-3-Clause",
+      "sha256": "b2f713bac94e2655614b1c8c34ba18750673d5d780fba19e0a23a21bda5695bb",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.md",
+          "file": "LICENSE.md",
+          "sha256": "eb3e67b17b48c56ef26d8bf6634c0837503fefc28a916f98d4f02272eda50011"
+        }
+      ],
+      "include": [
+        "LICENSE.md",
+        "physx/"
+      ]
+    },
+    {
+      "name": "stb",
+      "version": "stb_image 2.30",
+      "repository": "https://github.com/nothings/stb",
+      "revision": "013ac3beddff3dbffafd5177e7972067cd2b5083",
+      "url": "https://codeload.github.com/nothings/stb/zip/013ac3beddff3dbffafd5177e7972067cd2b5083",
+      "format": "zip",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "b7f476902bbef1b30f8ecc2d9d95c459c32302c8b559d09b589b5955463b7af8",
+      "licenseFiles": [
+        {
+          "source": "LICENSE",
+          "file": "LICENSE",
+          "sha256": "bebfe904b14301657e4e5d655c811d51fd31b97c455b9cc2d8600d6bac6cff63"
+        }
+      ]
+    },
+    {
+      "name": "jinja2",
+      "version": "3.1.6",
+      "url": "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz",
+      "format": "tar.gz",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "BSD-3-Clause",
+      "sha256": "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.txt",
+          "file": "LICENSE.txt",
+          "sha256": "3b49dcee4105eb37bac10faf1be260408fe85d252b8e9df2e0979fc1e094437b"
+        }
+      ]
+    },
+    {
+      "name": "markupsafe",
+      "version": "3.0.3",
+      "url": "https://files.pythonhosted.org/packages/7e/99/7690b6d4034fffd95959cbe0c02de8deb3098cc577c67bb6a24fe5d7caa7/markupsafe-3.0.3.tar.gz",
+      "format": "tar.gz",
+      "stripRoot": true,
+      "subdirectory": "",
+      "license": "BSD-3-Clause",
+      "sha256": "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.txt",
+          "file": "LICENSE.txt",
+          "sha256": "489a8e1108509ed98a37bb983e11e0f7e1d31f0bd8f99a79c8448e7ff37d07ea"
+        }
+      ]
+    },
+    {
+      "name": "dotnet-win-x64",
+      "version": "10.0.9",
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.host.win-x64/10.0.9/microsoft.netcore.app.host.win-x64.10.0.9.nupkg",
+      "format": "zip",
+      "stripRoot": false,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "ada058a0c6b20a56126a4cb8ba9f84af7ee8b447a4a3bbca21d5812761fdc82a",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.TXT",
+          "file": "LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+        },
+        {
+          "source": "THIRD-PARTY-NOTICES.TXT",
+          "file": "THIRD-PARTY-NOTICES.TXT",
+          "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21"
+        }
+      ]
+    },
+    {
+      "name": "dotnet-win-x86",
+      "version": "10.0.9",
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.host.win-x86/10.0.9/microsoft.netcore.app.host.win-x86.10.0.9.nupkg",
+      "format": "zip",
+      "stripRoot": false,
+      "subdirectory": "",
+      "license": "MIT",
+      "sha256": "6051e60ef5712b49c662acea4e8d508c170a2d5ef7673df484fd6b4548eb028a",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.TXT",
+          "file": "LICENSE.TXT",
+          "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+        },
+        {
+          "source": "THIRD-PARTY-NOTICES.TXT",
+          "file": "THIRD-PARTY-NOTICES.TXT",
+          "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21"
+        }
+      ]
+    },
+    {
+      "name": "noto-font",
+      "version": "Noto Sans SC Regular",
+      "repository": "https://github.com/notofonts/noto-cjk",
+      "revision": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf",
+      "format": "file",
+      "fileName": "Default.otf",
+      "stripRoot": false,
+      "subdirectory": "",
+      "license": "OFL-1.1",
+      "sha256": "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9",
+      "licenseFiles": [],
+      "licenseUrl": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE"
+    },
+    {
+      "name": "python-runtime",
+      "version": "3.13.9",
+      "url": "https://www.python.org/ftp/python/3.13.9/python-3.13.9-embed-amd64.zip",
+      "format": "zip",
+      "stripRoot": false,
+      "subdirectory": "",
+      "license": "PSF-2.0",
+      "sha256": "91d828c2da3a029b41699e918674a0cb379c02cf20dab9c501306885f837402a",
+      "licenseFiles": [
+        {
+          "source": "LICENSE.txt",
+          "file": "LICENSE.txt",
+          "sha256": "62bec384df47b0328307db41455ff6ea2559e5546b394ac69148561b21703120"
+        }
+      ]
+    }
+  ],
+  "glad": {
+    "api": "gl:core=4.3",
+    "extensions": [],
+    "loader": true,
+    "reproducible": true,
+    "license": "(WTFPL OR CC0-1.0) AND Apache-2.0",
+    "selectedLicense": "CC0-1.0 AND Apache-2.0"
+  },
+  "licenseSnapshots": {
+    "cgltf/LICENSE": "f619925f80ef862497aaf8e8155ef218fa6a2190055129523ca3df9119a9ba95",
+    "dotnet-win-x64/LICENSE.TXT": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+    "dotnet-win-x64/THIRD-PARTY-NOTICES.TXT": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+    "dotnet-win-x86/LICENSE.TXT": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+    "dotnet-win-x86/THIRD-PARTY-NOTICES.TXT": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+    "freetype/ADDITIONAL-NOTICES.txt": "ba6130dd976137194a10a635b6be69bad424d3cc301f24775c47dba38afc0458",
+    "freetype/FTL.TXT": "5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f",
+    "freetype/LICENSE.TXT": "bd36c8b474855fa294c2ec5c184544478ef3720aad37d65a6296a4f264fd2d3b",
+    "glad/CC0-1.0.txt": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+    "glad/KHRONOS.txt": "a4be3716671cb6dbc2ed80aa91bb6675eb01971147c77d7a62bee11f15b83c14",
+    "glad/LICENSE-APACHE-2.0.txt": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6",
+    "glad/LICENSE.md": "16f5a68bb20c9c04f3fab91de0e55e479c5d076fcacba457e58c15f146585670",
+    "glad-generator/LICENSE": "cbb325cd4ac5bd06717ffa34a322b984f9d285e4c67c8ca1b7380d6ef08c2a77",
+    "glfw/LICENSE.md": "149704059b5d0bf551637e50042dd4de9c2cae921021f6636298911e3a5f9462",
+    "imgui/LICENSE.txt": "173506a2d6f7fb67990d257fb2507f188690eca39060c39469ae7bef43aae2a3",
+    "jinja2/LICENSE.txt": "3b49dcee4105eb37bac10faf1be260408fe85d252b8e9df2e0979fc1e094437b",
+    "markupsafe/LICENSE.txt": "489a8e1108509ed98a37bb983e11e0f7e1d31f0bd8f99a79c8448e7ff37d07ea",
+    "msdfgen/LICENSE.txt": "32a94b25ad7072a78457d35019b32d73d2c265c806b0b76e9638fe800330bbe4",
+    "noto-font/OFL.txt": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+    "physx/LICENSE.md": "eb3e67b17b48c56ef26d8bf6634c0837503fefc28a916f98d4f02272eda50011",
+    "stb/LICENSE": "bebfe904b14301657e4e5d655c811d51fd31b97c455b9cc2d8600d6bac6cff63",
+    "python-runtime/LICENSE.txt": "62bec384df47b0328307db41455ff6ea2559e5546b394ac69148561b21703120"
+  }
+}

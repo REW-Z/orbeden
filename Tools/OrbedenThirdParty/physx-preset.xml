@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Orbeden 自用的 PhysX 生成预设。
+
+  与上游 vc17win64-cpu-only 的差别：
+  - PX_GENERATE_STATIC_LIBRARIES=True：引擎链接的是 PhysX_*_static_64.lib，不要 DLL 版。
+  - generator=ninja：本机只装了 VS18（2026），上游预设里的 Visual Studio 17 2022 生成器不可用；
+    ninja 由 VS 自带，配合 vcvars64 使用，与具体 VS 版本无关。
+  - 关掉 snippets 与 OmniPVD：引擎不用，省一半编译时间。
+-->
+<preset name="orbeden-vc17win64-static" comment="Orbeden: Windows x64 static libraries, CPU only, ninja generator">
+  <platform targetPlatform="win64" compiler="vc17" generator="ninja" />
+  <CMakeSwitches>
+    <cmakeSwitch name="PX_BUILDSNIPPETS" value="False" comment="引擎不用示例" />
+    <cmakeSwitch name="PX_BUILDPVDRUNTIME" value="False" comment="引擎不用 OmniPVD" />
+    <cmakeSwitch name="PX_GENERATE_STATIC_LIBRARIES" value="True" comment="只出静态库" />
+    <cmakeSwitch name="PX_GENERATE_GPU_PROJECTS" value="False" comment="CPU only" />
+    <cmakeSwitch name="PX_GENERATE_GPU_PROJECTS_ONLY" value="False" comment="CPU only" />
+    <cmakeSwitch name="NV_USE_STATIC_WINCRT" value="False" comment="/MD，与引擎一致" />
+    <cmakeSwitch name="NV_USE_DEBUG_WINCRT" value="True" comment="Debug 用 /MDd" />
+    <cmakeSwitch name="PX_FLOAT_POINT_PRECISE_MATH" value="False" comment="与上游默认一致" />
+  </CMakeSwitches>
+  <CMakeParams>
+    <cmakeParam name="CMAKE_INSTALL_PREFIX" value="install/orbeden" />
+  </CMakeParams>
+</preset>

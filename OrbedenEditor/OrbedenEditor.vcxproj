@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{3d2f40a3-67c9-4ee0-a524-36f4be99a9f2}</ProjectGuid>
+    <RootNamespace>OrbedenEditor</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OrbedenEditorNativePlatform Condition="'$(Platform)'=='x64'">WindowsX64</OrbedenEditorNativePlatform>
+    <OrbedenEditorNativePlatform Condition="'$(OrbedenEditorNativePlatform)'==''">WindowsX64</OrbedenEditorNativePlatform>
+    <OrbedenEditorCoreLibDir>$(ProjectDir)Sdk\Native\$(OrbedenEditorNativePlatform)\$(Configuration)\</OrbedenEditorCoreLibDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration)\glfw3.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64\nethost.dll" "$(TargetDir)"
+copy /Y "$(ProjectDir)Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" "$(TargetDir)"
+if not exist "$(TargetDir)Managed" mkdir "$(TargetDir)Managed"
+dotnet build "$(ProjectDir)Managed\Orbeden.Editor\Orbeden.Editor.csproj" -c "$(Configuration)" -o "$(TargetDir)Managed"
+if exist "$(TargetDir)Templates" rmdir /S /Q "$(TargetDir)Templates"
+xcopy /Y /E /I "$(ProjectDir)Templates" "$(TargetDir)Templates"
+if exist "$(TargetDir)Resources" rmdir /S /Q "$(TargetDir)Resources"
+xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Src\editor_main.cpp" />
+    <ClCompile Include="Src\Editor\NewProjectTemplate.cpp" />
+    <ClCompile Include="Src\Editor\EditorProject.cpp" />
+    <ClCompile Include="Src\Editor\EditorPlayMode.cpp" />
+    <ClCompile Include="Src\Editor\EditorScene.cpp" />
+    <ClCompile Include="Src\Editor\EditorGizmoHandles.cpp" />
+    <ClCompile Include="Src\Editor\EditorSceneGizmos.cpp" />
+    <ClCompile Include="Src\Editor\EditorSystem.cpp" />
+    <ClCompile Include="Src\Editor\EditorGUI.cpp" />
+    <ClCompile Include="Src\Editor\EditorIcons.cpp" />
+    <ClCompile Include="Src\Editor\EditorFloatingWindow.cpp" />
+    <ClCompile Include="Src\Editor\EditorClrHost.cpp" />
+    <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp" />
+    <ClCompile Include="Src\Editor\NativeGameModule.cpp" />
+    <ClCompile Include="Src\Editor\NewProjectGenerator.cpp" />
+    <ClCompile Include="Src\Editor\PlayerContentCooker.cpp" />
+    <ClCompile Include="Src\Editor\ProjectUpdate.cpp" />
+    <ClCompile Include="Src\Editor\PanelManager.cpp" />
+    <ClCompile Include="Src\Editor\Panels\**\*.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\NewProjectTemplate.h" />
+    <ClInclude Include="Src\Editor\EditorProject.h" />
+    <ClInclude Include="Src\Editor\EditorPlayMode.h" />
+    <ClInclude Include="Src\Editor\EditorScene.h" />
+    <ClInclude Include="Src\Editor\EditorGizmoAbi.h" />
+    <ClInclude Include="Src\Editor\EditorGizmoHandles.h" />
+    <ClInclude Include="Src\Editor\EditorSceneGizmos.h" />
+    <ClInclude Include="Src\Editor\EditorSystem.h" />
+    <ClInclude Include="Src\Editor\EditorGUI.h" />
+    <ClInclude Include="Src\Editor\EditorIcons.h" />
+    <ClInclude Include="Src\Editor\EditorFloatingWindow.h" />
+    <ClInclude Include="Src\Editor\EditorClrHost.h" />
+    <ClInclude Include="Src\Editor\EditorLayoutState.h" />
+    <ClInclude Include="Src\Editor\ManagedEditorBridge.h" />
+    <ClInclude Include="Src\Editor\NativeGameModule.h" />
+    <ClInclude Include="Src\Editor\PlayerContentCooker.h" />
+    <ClInclude Include="Src\Editor\NewProjectGenerator.h" />
+    <ClInclude Include="Src\Editor\ProjectUpdate.h" />
+    <ClInclude Include="Src\Editor\PanelManager.h" />
+    <ClInclude Include="Src\Editor\Panels\**\*.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Managed\Orbeden.Editor\EditorRuntime.cs" />
+    <None Include="Managed\Orbeden.Editor\EditorGUI.cs" />
+    <None Include="Managed\Orbeden.Editor\NativeEditorGUI.cs" />
+    <None Include="Managed\Orbeden.Editor\Gizmos.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj" />
+    <None Include="Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\AssetInspection.h" />
+    <ClCompile Include="Src\Editor\AssetInspection.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc">
+    </ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico">
+    </Image>
+  </ItemGroup>
+  <Target Name="CopyThirdPartyLicenses" AfterTargets="Build">
+    <!--第三方组件的署名与许可：静态链接的库要求随二进制一起分发-->
+    <Copy SourceFiles="$(ProjectDir)..\LICENSE" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\THIRD-PARTY-NOTICES.md" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <OrbedenEditorLicenseFile Include="$(ProjectDir)..\Tools\OrbedenThirdParty\licenses\**\*" />
+    </ItemGroup>
+    <MakeDir Directories="@(OrbedenEditorLicenseFile->'$(TargetDir)ThirdPartyLicenses/%(RecursiveDir)')" />
+    <Copy SourceFiles="@(OrbedenEditorLicenseFile)" DestinationFiles="@(OrbedenEditorLicenseFile->'$(TargetDir)ThirdPartyLicenses/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

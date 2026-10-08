@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>OrbedenCore.CSharp</AssemblyName>
+    <RootNamespace>Orbeden</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EditorSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenEditor\Sdk\Managed\OrbedenCore.CSharp\</EditorSdkOutputPath>
+    <GameSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenGame\Sdk\Managed\OrbedenCore.CSharp\</GameSdkOutputPath>
+    <OutputPath>$(EditorSdkOutputPath)</OutputPath>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <!--用户文档生成器读取这里产出的成员注释。CS1591 必须一起静音：生成的绑定文件里数百个公开成员没有注释。-->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS8981;CS1591</NoWarn>
+  </PropertyGroup>
+
+  <Target Name="CopyRuntimeSdkToGame" AfterTargets="Build">
+    <ItemGroup>
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.dll" />
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.pdb" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.pdb')" />
+      <RuntimeSdkFiles Include="$(TargetDir)OrbedenCore.CSharp.deps.json" Condition="Exists('$(TargetDir)OrbedenCore.CSharp.deps.json')" />
+    </ItemGroup>
+    <MakeDir Directories="$(GameSdkOutputPath)" />
+    <Copy SourceFiles="@(RuntimeSdkFiles)" DestinationFolder="$(GameSdkOutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+  <ItemGroup>
+    <InternalsVisibleTo Include="RetainedGUI.ManagedTests" />
+    <Compile Include="../../Src/Runtime/Generated/Bindings.Generated.cs" Link="Generated/Bindings.Generated.cs" />
+  </ItemGroup>
+  <Target Name="GenerateObjectBindings" BeforeTargets="BeforeCompile">
+    <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(MSBuildThisFileDirectory)..\..\Src&quot; &quot;$(MSBuildThisFileDirectory)..\..\Src\Runtime\Generated&quot; --bindings" />
+  </Target>
+</Project>

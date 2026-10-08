@@ -1,0 +1,96 @@
+//RetainedGUI 的图元着色器。UIRenderer 按这个 Key 优先加载本文件，
+//读不到时才退回引擎内置的同名源码（Native/Runtime/Gui/UIShaderSources.h）。
+//
+//它不是网格管线里的材质：UI 的顶点是 位置/UV/顶点色，由 UI 渲染器直接提交，
+//不参与几何 ABI、合批与材质属性。改这里的 uniform 名字必须同步改渲染器。
+//
+//顶点属性：0 位置（画布本地）、1 UV、2 顶点色。
+//输出一律是预乘颜色，混合是 RGB/A 都走 ONE、ONE_MINUS_SRC_ALPHA。
+
+--------queue Transparent
+
+--------vert
+#version 430 core
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec2 a_Uv;
+layout(location = 2) in vec4 a_Tint;
+
+uniform mat4 u_Model;
+uniform mat4 u_ViewProjection;
+
+out vec2 v_Uv;
+out vec4 v_Tint;
+
+void main()
+{
+    v_Uv = a_Uv;
+    v_Tint = a_Tint;
+    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);
+}
+
+--------frag
+#version 430 core
+in vec2 v_Uv;
+in vec4 v_Tint;
+
+uniform sampler2D u_Texture;
+uniform sampler2D u_Coverage;
+uniform vec4 u_Tint;
+//视口尺寸与原点：gl_FragCoord 相对帧缓冲原点，覆盖率按视口内的相对位置采样。
+uniform vec3 u_ViewportSize;
+uniform vec3 u_ViewportOrigin;
+uniform float u_DistanceRange;
+uniform int u_MaterialKind;
+//0 表示没有裁剪层，覆盖率恒为 1。
+uniform int u_CoverageEnabled;
+
+out vec4 FragColor;
+
+//MSDF 的通道取中位数，SDF 直接取 R。
+float Median(vec3 value)
+{
+    return max(min(value.r, value.g), min(max(value.r, value.g), value.b));
+}
+
+//距离场覆盖率：把纹理值按屏幕空间取值范围还原成 0..1 的覆盖。
+float DistanceCoverage(float field)
+{
+    vec2 unitRange = vec2(u_DistanceRange) / vec2(textureSize(u_Texture, 0));
+    vec2 screenTexSize = vec2(1.0) / max(fwidth(v_Uv), vec2(1e-8));
+    float screenRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);
+    return clamp(screenRange * (field - 0.5) + 0.5, 0.0, 1.0);
+}
+
+void main()
+{
+    vec4 tint = u_Tint * v_Tint;
+    float coverage = 1.0;
+    if (u_CoverageEnabled == 1)
+    {
+        coverage = texture(u_Coverage, (gl_FragCoord.xy - u_ViewportOrigin.xy) / u_ViewportSize.xy).r;
+    }
+
+    vec4 source;
+    //材质种类：0 直通图片、1 预乘图片、2 位图字形、3 SDF、4 MSDF。
+    if (u_MaterialKind == 3)
+    {
+        source = vec4(1.0, 1.0, 1.0, DistanceCoverage(texture(u_Texture, v_Uv).r));
+    }
+    else if (u_MaterialKind == 4)
+    {
+        source = vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));
+    }
+    else
+    {
+        //字形图集是 R8，取样后按白色处理。
+        vec4 sampled = texture(u_Texture, v_Uv);
+        source = u_MaterialKind == 2 ? vec4(1.0, 1.0, 1.0, sampled.r) : sampled;
+    }
+
+    //Alpha 语义：直通按覆盖率求预乘，预乘纹理不能再乘一次自身 Alpha。
+    float alpha = source.a * tint.a * coverage;
+    vec3 rgb = u_MaterialKind == 1
+        ? source.rgb * tint.rgb * tint.a * coverage
+        : source.rgb * tint.rgb * alpha;
+    FragColor = vec4(rgb, alpha);
+}

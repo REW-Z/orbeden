@@ -1,0 +1,492 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
+
+namespace Orbeden;
+
+/// <summary>托管侧 Ens 代理，Native Ens 本体由 World 唯一持有。</summary>
+public sealed partial class Ens : Object, IEquatable<Ens>
+{
+    /// <summary>空 Ens。</summary>
+    public static readonly Ens Null = new();
+
+
+    /// <summary>底层 EnsId。</summary>
+    public EnsId Id { get; }
+
+    //创建空 Ens 包装
+    private Ens() { Id = EnsId.Null; }
+
+    //连接具有独立 Object 身份的 Ens
+    internal Ens(IntPtr pointer) : base(pointer) { Id = GetId(); }
+
+    /// <summary>通过 EnsId 获取托管代理。</summary>
+    public static unsafe Ens FromId(EnsId id)
+    {
+        if (id.IsNull || !ensApiInitialized || ensApi.GetObjectId == null) return Null;
+        return NativeBindingRuntime.Wrap<Ens>(ensApi.GetObjectId(id)) ?? Null;
+    }
+
+    /// <summary>创建新的 Ens。</summary>
+    public static Ens Create(string name = "")
+    {
+        return FromId(CreateEns(name));
+    }
+
+    /// <summary>使用稳定 ID 创建新的 Ens。</summary>
+    public static Ens CreateWithStableId(string stableId, string name = "")
+    {
+        return FromId(CreateEnsWithStableId(stableId, name));
+    }
+
+    /// <summary>按稳定 ID 查找 Ens。</summary>
+    public static Ens Find(string stableId)
+    {
+        return FromId(FindEns(stableId));
+    }
+
+    /// <summary>判断 Ens 是否仍然有效。</summary>
+    public override bool IsValid => base.IsValid && IsEnsAlive(Id);
+
+    /// <summary>Ens 自身设置的激活状态。</summary>
+    public bool LocalActive
+    {
+        get => GetLocalActive(Id);
+        set => SetLocalActive(Id, value);
+    }
+
+    /// <summary>static 世界变换约束。置真要求祖先全为 static，置假要求没有 static 后代；
+    /// 模拟期间只读。写入失败时本属性静默保持原值，需要结果请用 TrySetStatic。</summary>
+    public bool Static
+    {
+        get => GetStatic(Id);
+        set => SetStatic(Id, value);
+    }
+
+    /// <summary>设置 static 约束并返回是否成功；失败时世界变换约束不变。</summary>
+    public bool TrySetStatic(bool value) => SetStatic(Id, value);
+
+    /// <summary>临时对象标志。置真后世界保存、复制与 Prefab 枚举跳过本节点及子树；
+    /// 这是运行时标志，不从场景文件恢复。</summary>
+    public bool DontSave
+    {
+        get => GetDontSave(Id);
+        set => SetDontSave(Id, value);
+    }
+
+    /// <summary>Ens 经父子层级计算后的实际激活状态。</summary>
+    public bool WorldActive => GetWorldActive(Id);
+
+    /// <summary>Ens 名称。</summary>
+    public string Name
+    {
+        get => GetName(Id);
+        set => SetName(Id, value);
+    }
+
+    /// <summary>销毁 Ens。</summary>
+    public bool Destroy()
+    {
+        return DestroyEns(Id);
+    }
+
+    /// <summary>取得已有的变换组件包装。</summary>
+    public Transform Transform => GetComponent<Transform>()!;
+
+    /// <summary>添加组件，并自动补齐其依赖。</summary>
+    public T? AddComponent<T>() where T : Component
+    {
+        Component? component = AddComponent(typeof(T));
+        return component as T;
+    }
+
+    /// <summary>获取最先挂载的指定类型组件。</summary>
+    public T? GetComponent<T>() where T : Component
+    {
+        T[] components = GetComponents<T>();
+        return components.Length != 0 ? components[0] : null;
+    }
+
+    /// <summary>获取指定类型的所有组件，顺序与挂载顺序一致。</summary>
+    public T[] GetComponents<T>() where T : Component
+    {
+        List<T> result = [];
+        foreach (Component component in GetNativeComponents(typeof(T)))
+        {
+            if (component is T value) result.Add(value);
+        }
+        return [.. result];
+    }
+
+    /// <summary>判断是否拥有指定类型组件。</summary>
+    public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
+
+    /// <summary>按完整原生类型名获取可反射读写和调用的 C++ 组件。</summary>
+    public ComponentProxy? GetNativeComponent(string nativeTypeName, int occurrence = 0)
+    {
+        return ScriptInteropDispatch.FindNative(Id, nativeTypeName, occurrence);
+    }
+
+    /// <summary>按完整托管类型名获取可反射读写和调用的 C# 脚本。</summary>
+    public ComponentProxy? GetManagedComponent(string fullTypeName, int occurrence = 0)
+    {
+        return ScriptInteropDispatch.FindManaged(Id, fullTypeName, occurrence);
+    }
+
+    /// <summary>按脚本类型获取可反射读写和调用的 C# 脚本。</summary>
+    public ComponentProxy? GetManagedComponent<T>(int occurrence = 0) where T : Script
+    {
+        if (!NativeBindingRuntime.IsManagedScript(typeof(T))) throw new ArgumentException("The requested type is a native Script binding.");
+        string? fullName = typeof(T).FullName;
+        return string.IsNullOrEmpty(fullName) ? null : GetManagedComponent(fullName, occurrence);
+    }
+
+    /// <summary>尝试获取组件包装。</summary>
+    public bool TryGetComponent<T>(out T? component) where T : Component
+    {
+        component = GetComponent<T>();
+        return component != null;
+    }
+
+    //按实际原生类型枚举，并合并托管宿主的具体包装。
+    private List<Component> GetNativeComponents(Type requestedType) => NativeBindingRuntime.GetComponents(Id, requestedType);
+
+    /// <summary>校验组件家族互斥：加入 addedType 后，同一 Ens 最多保留一个可赋值给各约束基类的组件。
+    /// 约束来自集合中任意组件（含派生类型）声明的 ComponentConstraintAttribute，违反时抛异常。</summary>
+    public void ValidateComponentSet(IReadOnlyList<Type> existingTypes, Type addedType)
+    {
+        List<Type> candidates = [.. existingTypes, addedType];
+        foreach (Type candidate in candidates)
+        {
+            foreach (ComponentConstraintAttribute constraint in candidate.GetCustomAttributes<ComponentConstraintAttribute>(true))
+            {
+                Type baseType = constraint.ExclusiveBaseType;
+                Type? first = null;
+                foreach (Type type in candidates)
+                {
+                    if (!baseType.IsAssignableFrom(type)) continue;
+                    if (first == null)
+                    {
+                        first = type;
+                        continue;
+                    }
+                    throw new InvalidOperationException(
+                        $"{baseType.Name} 在同一 Ens 上只能存在一个组件，{first.Name} 与 {type.Name} 互斥。");
+                }
+            }
+        }
+    }
+
+    //创建前执行家族互斥检查。已存在同类型的单实例组件会直接复用，不算新增，跳过检查。
+    private void ValidateComponentAddition(Type componentType)
+    {
+        List<Component> current = GetNativeComponents(typeof(Component));
+        bool returnsExisting = componentType.GetCustomAttribute<UniqueComponentAttribute>(true) != null
+            && current.Any(component => component.GetType() == componentType);
+        if (returnsExisting) return;
+        ValidateComponentSet([.. current.Select(component => component.GetType())], componentType);
+    }
+
+    //验证组件依赖图并生成创建顺序
+    private static void BuildComponentAddOrder(Type componentType, HashSet<Type> visiting, HashSet<Type> visited, List<Type> order)
+    {
+        if (!typeof(Component).IsAssignableFrom(componentType) || componentType.IsAbstract || !HasNativeFactory(componentType))
+        {
+            throw new InvalidOperationException($"无法通过 Ens 创建组件 {componentType.FullName}。");
+        }
+
+        if (!visiting.Add(componentType))
+        {
+            throw new InvalidOperationException($"组件依赖存在循环：{componentType.FullName}。");
+        }
+
+        foreach (DependsOnComponentAttribute dependency in componentType.GetCustomAttributes<DependsOnComponentAttribute>(true))
+        {
+            foreach (Type requiredType in dependency.ComponentTypes)
+            {
+                if (requiredType == null) throw new InvalidOperationException($"组件 {componentType.FullName} 包含空依赖。");
+                BuildComponentAddOrder(requiredType, visiting, visited, order);
+            }
+        }
+
+        visiting.Remove(componentType);
+        if (visited.Add(componentType)) order.Add(componentType);
+    }
+
+    //按规则添加原生组件
+    private Component? AddComponent(Type componentType)
+    {
+        List<Type> order = [];
+        BuildComponentAddOrder(componentType, [], [], order);
+        //互斥检查必须在任何创建之前完成，失败时不需要回滚已经建出来的依赖。
+        ValidateComponentAddition(componentType);
+
+        Component? requested = null;
+        List<Component> createdComponents = [];
+        try
+        {
+            foreach (Type type in order)
+            {
+                Component? existing = GetFirstNativeComponent(type);
+                bool isRequestedType = type == componentType;
+                if ((!isRequestedType || type.GetCustomAttribute<UniqueComponentAttribute>(true) != null) && existing != null)
+                {
+                    if (isRequestedType) requested = existing;
+                    continue;
+                }
+                Component? created = CreateNativeComponent(type);
+                if (created == null) throw new InvalidOperationException($"原生组件 {type.FullName} 创建失败。");
+                if (!ReferenceEquals(created, existing)) createdComponents.Add(created);
+                if (isRequestedType) requested = created;
+            }
+        }
+        catch
+        {
+            for (int index = createdComponents.Count - 1; index >= 0; --index)
+                Object.Destroy(createdComponents[index]);
+            throw;
+        }
+        return requested ?? GetFirstNativeComponent(componentType);
+    }
+
+    //获取指定原生组件的首个实例
+    private Component? GetFirstNativeComponent(Type componentType)
+    {
+        List<Component> components = GetNativeComponents(componentType);
+        return components.Count != 0 ? components[0] : null;
+    }
+
+    //生成类型与手写托管脚本使用不同的工厂。
+    private static bool HasNativeFactory(Type componentType) => NativeBindingRuntime.IsNativeType(componentType) || NativeBindingRuntime.IsManagedScript(componentType);
+
+    private Component? CreateNativeComponent(Type componentType)
+    {
+        return NativeBindingRuntime.IsManagedScript(componentType)
+            ? ScriptRuntime.AddManagedScript(Id, componentType)
+            : NativeBindingRuntime.AddComponent(Id, componentType);
+    }
+    /// <summary>判断两个 Ens 是否相同。</summary>
+    public bool Equals(Ens? other)
+    {
+        return other != null && Id.Equals(other.Id);
+    }
+
+    /// <summary>判断两个 Ens 是否相同。</summary>
+    public override bool Equals(object? obj)
+    {
+        return obj is Ens other && Equals(other);
+    }
+
+    /// <summary>获取哈希值。</summary>
+    public override int GetHashCode()
+    {
+        return Id.GetHashCode();
+    }
+}
+
+#pragma warning disable CS0649
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal unsafe struct EnsBindApi
+{
+    public delegate* unmanaged[Cdecl]<EnsId, byte> IsAlive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetLocalActive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetWorldActive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetLocalActive;
+    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, int> GetName;
+    public delegate* unmanaged[Cdecl]<EnsId, byte*, int, void> SetName;
+    public delegate* unmanaged[Cdecl]<EnsId, int> GetObjectId;
+    //追加槽必须留在末尾：这张表按位置对应 C++ 结构
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetStatic;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, byte> SetStatic;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> GetDontSave;
+    public delegate* unmanaged[Cdecl]<EnsId, byte, void> SetDontSave;
+}
+#pragma warning restore CS0649
+
+#pragma warning disable CS0649
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal unsafe struct WorldBindApi
+{
+    public delegate* unmanaged[Cdecl]<byte*, int, EnsId> CreateEns;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, EnsId> CreateEnsWithStableId;
+    public delegate* unmanaged[Cdecl]<byte*, int, EnsId> FindEns;
+    public delegate* unmanaged[Cdecl]<EnsId, byte> DestroyEns;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte, ulong> LoadWorld;
+    public delegate* unmanaged[Cdecl]<ulong, int> GetWorldLoadState;
+    public delegate* unmanaged[Cdecl]<ulong, byte*, int, int> GetWorldLoadError;
+}
+#pragma warning restore CS0649
+
+public sealed unsafe partial class Ens
+{
+    private static EnsBindApi ensApi;
+    private static bool ensApiInitialized;
+
+    //保存 C++ 传入的 Ens 函数表
+    internal static void InitializeEnsNativeApi(EnsBindApi value)
+    {
+        ensApi = value;
+        ensApiInitialized = ensApi.IsAlive != null;
+    }
+
+    //判断 Ens 是否有效
+    internal static bool IsEnsAlive(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.IsAlive != null && ensApi.IsAlive(ens) != 0;
+    }
+
+    //读取 Ens 的临时对象标志
+    internal static bool GetDontSave(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetDontSave != null && ensApi.GetDontSave(ens) != 0;
+    }
+
+    //设置 Ens 的临时对象标志
+    internal static void SetDontSave(EnsId ens, bool value)
+    {
+        if (ensApiInitialized && ensApi.SetDontSave != null) ensApi.SetDontSave(ens, value ? (byte)1 : (byte)0);
+    }
+
+    //读取 Ens 的 localActive
+    internal static bool GetLocalActive(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetLocalActive != null && ensApi.GetLocalActive(ens) != 0;
+    }
+
+    //读取 Ens 的 worldActive
+    internal static bool GetWorldActive(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetWorldActive != null && ensApi.GetWorldActive(ens) != 0;
+    }
+
+    //设置 Ens 的 localActive
+    internal static bool GetStatic(EnsId ens)
+    {
+        return ensApiInitialized && ensApi.GetStatic != null && ensApi.GetStatic(ens) != 0;
+    }
+
+    internal static bool SetStatic(EnsId ens, bool value)
+    {
+        return ensApiInitialized && ensApi.SetStatic != null && ensApi.SetStatic(ens, value ? (byte)1 : (byte)0) != 0;
+    }
+
+    internal static void SetLocalActive(EnsId ens, bool active)
+    {
+        if (ensApiInitialized && ensApi.SetLocalActive != null) ensApi.SetLocalActive(ens, active ? (byte)1 : (byte)0);
+    }
+
+    //读取 Ens 名称
+    internal static string GetName(EnsId ens)
+    {
+        if (!ensApiInitialized || ensApi.GetName == null) return string.Empty;
+
+        int requiredBytes = ensApi.GetName(ens, null, 0);
+        if (requiredBytes <= 0) return string.Empty;
+
+        Span<byte> bytes = requiredBytes <= 1024 ? stackalloc byte[requiredBytes] : new byte[requiredBytes];
+        fixed (byte* pointer = bytes)
+        {
+            int actualBytes = ensApi.GetName(ens, pointer, requiredBytes);
+            int length = Math.Clamp(actualBytes, 0, requiredBytes);
+            return Encoding.UTF8.GetString(bytes[..length]);
+        }
+    }
+
+    //写入 Ens 名称
+    internal static void SetName(EnsId ens, string? name)
+    {
+        if (!ensApiInitialized || ensApi.SetName == null) return;
+
+        string value = name ?? string.Empty;
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        if (byteCount <= 0)
+        {
+            ensApi.SetName(ens, null, 0);
+            return;
+        }
+
+        Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[byteCount] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        fixed (byte* pointer = bytes)
+        {
+            ensApi.SetName(ens, pointer, byteCount);
+        }
+    }
+
+}
+
+public sealed unsafe partial class Ens
+{
+    private static WorldBindApi worldApi;
+    private static bool worldApiInitialized;
+
+    //保存 C++ 传入的 World 函数表
+    internal static void InitializeWorldNativeApi(WorldBindApi value)
+    {
+        worldApi = value;
+        World.InitializeNativeApi(value);
+        worldApiInitialized = worldApi.CreateEns != null;
+    }
+
+    //创建 Ens
+    internal static EnsId CreateEns(string? name)
+    {
+        if (!worldApiInitialized || worldApi.CreateEns == null) return EnsId.Null;
+
+        string value = name ?? string.Empty;
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+
+        fixed (byte* pointer = bytes)
+        {
+            return worldApi.CreateEns(pointer, byteCount);
+        }
+    }
+
+    //使用稳定 ID 创建 Ens
+    internal static EnsId CreateEnsWithStableId(string? stableId, string? name)
+    {
+        if (!worldApiInitialized || worldApi.CreateEnsWithStableId == null) return EnsId.Null;
+
+        string stableValue = stableId ?? string.Empty;
+        string nameValue = name ?? string.Empty;
+        int stableBytesCount = Encoding.UTF8.GetByteCount(stableValue);
+        int nameBytesCount = Encoding.UTF8.GetByteCount(nameValue);
+        Span<byte> stableBytes = stableBytesCount <= 1024 ? stackalloc byte[Math.Max(stableBytesCount, 1)] : new byte[stableBytesCount];
+        Span<byte> nameBytes = nameBytesCount <= 1024 ? stackalloc byte[Math.Max(nameBytesCount, 1)] : new byte[nameBytesCount];
+        Encoding.UTF8.GetBytes(stableValue.AsSpan(), stableBytes);
+        Encoding.UTF8.GetBytes(nameValue.AsSpan(), nameBytes);
+
+        fixed (byte* stablePointer = stableBytes)
+        fixed (byte* namePointer = nameBytes)
+        {
+            return worldApi.CreateEnsWithStableId(stablePointer, stableBytesCount, namePointer, nameBytesCount);
+        }
+    }
+
+    //按稳定 ID 查找 Ens
+    internal static EnsId FindEns(string? stableId)
+    {
+        if (!worldApiInitialized || worldApi.FindEns == null) return EnsId.Null;
+
+        string value = stableId ?? string.Empty;
+        int byteCount = Encoding.UTF8.GetByteCount(value);
+        Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
+        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+
+        fixed (byte* pointer = bytes)
+        {
+            return worldApi.FindEns(pointer, byteCount);
+        }
+    }
+
+    //销毁 Ens
+    internal static bool DestroyEns(EnsId ens)
+    {
+        return worldApiInitialized && worldApi.DestroyEns != null && worldApi.DestroyEns(ens) != 0;
+    }
+}

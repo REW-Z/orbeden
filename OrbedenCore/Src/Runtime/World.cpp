@@ -1,0 +1,1034 @@
+#include "Runtime/World.h"
+
+#include "Memory/MemoryManager.h"
+#include "ResourceManager/ResourceManager.h"
+#include "Runtime/Object/Transform.h"
+#include "Scripting/ScriptSystem.h"
+
+#include <algorithm>
+#include <cassert>
+
+namespace
+{
+    //获取当前活动世界指针
+    World*& GetCurrentWorldStorage()
+    {
+        static World* currentWorld = nullptr;
+        return currentWorld;
+    }
+}
+
+//查找组件稀疏集
+ComponentStorage* World::FindComponentStorage(Type* type) const
+{
+    if (!type || type->GetId() >= componentStorages.size()) return nullptr;
+
+    ComponentStorage* storage = componentStorages[type->GetId()];
+    return storage && storage->GetType() == type ? storage : nullptr;
+}
+
+//获取或创建组件稀疏集
+ComponentStorage* World::GetOrCreateComponentStorage(Type* type)
+{
+    if (!type || !type->Is(Component::StaticType())) return nullptr;
+
+    TypeRuntimeId typeRuntimeId = type->GetId();
+    if (typeRuntimeId >= componentStorages.size())
+    {
+        componentStorages.resize(static_cast<usize>(typeRuntimeId) + 1, nullptr);
+    }
+
+    ComponentStorage*& storage = componentStorages[typeRuntimeId];
+    if (storage && storage->GetType() != type)
+    {
+        //模块重载复用类型槽位时旧存储应已在卸载时清空；防御性重建空存储。
+        assert(storage->GetCount() == 0);
+        DELETE(storage);
+    }
+
+    if (!storage)
+    {
+        storage = NEW(ComponentStorage)ComponentStorage(this, type);
+    }
+
+    return storage;
+}
+
+//生成Ens对象ID
+std::string World::AllocateEnsObjectPath()
+{
+    std::string instancePath;
+    do
+    {
+        instancePath = "world://ens/" + Object::GenerateUuidText();
+    } while (Object::FindObject(StringId(instancePath)));
+
+    return instancePath;
+}
+
+//生成未命名Ens的名称
+std::string World::GetEnsName(const std::string& name) const
+{
+    if (!name.empty()) return name;
+
+    auto nameExists = [this](const std::string& value)
+        {
+            for (Ens* ens : liveEns)
+            {
+                if (ens && ens->alive && ens->name == value) return true;
+            }
+
+            return false;
+        };
+
+    constexpr const char* baseName = "Unnamed";
+    if (!nameExists(baseName)) return baseName;
+
+    uint32 index = 1;
+    std::string resolvedName;
+    do
+    {
+        resolvedName = std::string(baseName) + "(" + std::to_string(index++) + ")";
+    } while (nameExists(resolvedName));
+
+    return resolvedName;
+}
+
+//生成世界运行时对象ID
+std::string World::AllocateRuntimeObjectPath(Type* type)
+{
+    return Object::CreateRuntimeInstancePath("world://runtime", type);
+}
+
+//接收世界拥有的运行时对象
+bool World::AddOwnedObject(Object* object)
+{
+    if (!object) return false;
+    if (object->GetWorld() != this) return false;
+    if (object->GetOwnership() != Object::Ownership::WorldOwned) return false;
+    if (object->Is(Component::StaticType())) return false;
+    if (std::find(ownedObjects.begin(), ownedObjects.end(), object) != ownedObjects.end()) return true;
+
+    ownedObjects.push_back(object);
+    return true;
+}
+
+//摘除世界拥有的运行时对象
+bool World::RemoveOwnedObject(Object* object)
+{
+    auto it = std::find(ownedObjects.begin(), ownedObjects.end(), object);
+    if (it == ownedObjects.end()) return false;
+
+    ownedObjects.erase(it);
+    return true;
+}
+
+//设置 Ens 的 localActive 并传播层级状态
+void World::SetEnsLocalActive(EnsId ens, bool active)
+{
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns || storedEns->localActive == active) return;
+
+    storedEns->localActive = active;
+    SetDirty();
+    RefreshEnsWorldActive(ens);
+}
+
+//刷新指定 Ens 子树的 worldActive
+void World::RefreshEnsWorldActive(EnsId ens)
+{
+    Ens* storedEns = GetEns(ens);
+    Transform* transform = GetTransform(ens);
+    if (!storedEns || !transform) return;
+
+    Ens* parent = GetEns(transform->parent);
+    bool active = !preparing && storedEns->localActive && (!parent || parent->worldActive);
+    if (storedEns->worldActive != active)
+    {
+        storedEns->worldActive = active;
+
+        List<Component*> componentInstances = storedEns->componentInstances;
+        for (Component* component : componentInstances)
+        {
+            if (component) component->OnWorldActiveChanged(active);
+        }
+
+        List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+        for (IWorldLifecycleListener* listener : listeners)
+        {
+            if (listener) listener->OnEnsWorldActiveChanged(ens, active);
+        }
+    }
+
+    EnsId child = transform->firstChild;
+    while (!child.IsNull())
+    {
+        Transform* childTransform = GetTransform(child);
+        EnsId nextChild = childTransform ? childTransform->next : EnsId();
+        RefreshEnsWorldActive(child);
+        child = nextChild;
+    }
+}
+
+//注册 Ens 生命周期监听器
+void World::AddLifecycleListener(IWorldLifecycleListener* listener)
+{
+    if (!listener) return;
+    if (std::find(lifecycleListeners.begin(), lifecycleListeners.end(), listener) != lifecycleListeners.end()) return;
+    lifecycleListeners.push_back(listener);
+}
+
+//注销 Ens 生命周期监听器
+void World::RemoveLifecycleListener(IWorldLifecycleListener* listener)
+{
+    lifecycleListeners.erase(std::remove(lifecycleListeners.begin(), lifecycleListeners.end(), listener), lifecycleListeners.end());
+}
+
+//获取当前活动世界
+World* World::CurrentWorld()
+{
+    return GetCurrentWorldStorage();
+}
+
+//设置当前活动世界
+void World::SetCurrentWorld(World* world)
+{
+    GetCurrentWorldStorage() = world;
+}
+
+//注册变换监听器
+void World::AddTransformListener(ITransformListener* listener)
+{
+    if (!listener) return;
+    if (std::find(transformListeners.begin(), transformListeners.end(), listener) != transformListeners.end()) return;
+
+    transformListeners.push_back(listener);
+}
+
+//注销变换监听器
+void World::RemoveTransformListener(ITransformListener* listener)
+{
+    auto it = std::find(transformListeners.begin(), transformListeners.end(), listener);
+    if (it != transformListeners.end()) transformListeners.erase(it);
+}
+
+//标记场景内容已有改动
+void World::SetDirty()
+{
+    if (IsDirtySuppressed()) return;
+    dirty = true;
+}
+
+//退出脏标记抑制区
+void World::EndDirtySuppression()
+{
+    if (dirtySuppressionDepth > 0) --dirtySuppressionDepth;
+}
+
+//批量写入布局派生的本地位置
+int32 World::ApplyDerivedPositions(uint64 owner, std::span<const UIDerivedPosition> positions)
+{
+    if (owner == 0 || positions.empty()) return 0;
+
+    //整批在同一个脏抑制区内完成：布局重建每帧都会写，逐条标脏会让场景一直显示未保存。
+    DirtySuppressionScope suppression(*this);
+    int32 accepted = 0;
+    for (const UIDerivedPosition& entry : positions)
+    {
+        Transform* transform = GetTransform(entry.ens);
+        if (!transform) continue;
+        if (entry.clear != 0)
+        {
+            transform->ClearDerivedLocalPosition(owner);
+            ++accepted;
+            continue;
+        }
+        if (transform->SetDerivedLocalPosition(owner, entry.position)) ++accepted;
+    }
+    return accepted;
+}
+
+//向生命周期监听器广播一次父级变化
+void World::NotifyEnsReparented(EnsId ens, EnsId parent)
+{
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsReparented(ens, parent);
+    }
+}
+
+//通知指定节点及其子树的世界变换失效
+void World::NotifyTransformChanged(EnsId ens, TransformChangeSource source)
+{
+    Transform* transform = GetTransform(ens);
+    if (!transform) return;
+
+    //作者写入算场景内容改动，手柄、脚本与 Inspector 都汇到这里；
+    //派生写入来自布局驱动，每次重建都会发生，标脏会让场景永远处于未保存状态。
+    if (source != TransformChangeSource::Derived) SetDirty();
+    transform->transformDirty = true;
+    for (ITransformListener* listener : transformListeners)
+    {
+        if (listener) listener->OnTransformChanged(*this, ens, source);
+    }
+}
+
+//创建世界并向对象运行时注册，使模块卸载能清空本世界的空组件存储
+World::World()
+{
+    Object::RegisterWorld(this);
+}
+
+//销毁世界及其运行时对象
+World::~World()
+{
+    Object::UnregisterWorld(this);
+    Clear();
+
+    if (CurrentWorld() == this)
+    {
+        SetCurrentWorld(nullptr);
+    }
+}
+
+//清空世界运行时对象
+void World::Clear()
+{
+    while (!liveEns.empty())
+    {
+        DestroyEns(liveEns.back()->GetId());
+    }
+
+    //再销毁独立世界对象
+    while (!ownedObjects.empty())
+    {
+        Object* object = ownedObjects.back();
+        ownedObjects.pop_back();
+        object->SetWorld(nullptr);
+        object->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(object);
+    }
+
+    //所有Ens销毁后释放空的组件稀疏集
+    for (ComponentStorage*& storage : componentStorages)
+    {
+        assert(!storage || storage->GetCount() == 0);
+        DELETE(storage);
+    }
+
+    //保留空槽位的版本，防止 World 重载后旧 EnsId 重新命中新实体。
+    liveEns.clear();
+    componentStorages.clear();
+    renderSettings = RenderSettings();
+
+    //内容已整体失效，渲染侧缓存的指针与矩阵都必须重新绑定
+    ++contentRevision;
+    SetDirty();
+}
+
+//复制句柄版本并隔离准备中的实体
+void World::PrepareReplacement(const World& source)
+{
+    assert(liveEns.empty());
+    preparing = true;
+    ensSlots.resize(source.ensSlots.size());
+    for (uint32 index = 0; index < ensSlots.size(); ++index)
+    {
+        ensSlots[index].version = source.ensSlots[index].version;
+        freeEnsIds.push_back(index);
+    }
+}
+
+//接收准备完成的世界内容并激活组件
+void World::CommitReplacement(World& prepared)
+{
+    assert(prepared.preparing);
+    Clear();
+    ensSlots.swap(prepared.ensSlots);
+    liveEns.swap(prepared.liveEns);
+    freeEnsIds.swap(prepared.freeEnsIds);
+    componentStorages.swap(prepared.componentStorages);
+    ownedObjects.swap(prepared.ownedObjects);
+    renderSettings = prepared.renderSettings;
+
+    //更新容器归属与稳定身份
+    for (ComponentStorage* storage : componentStorages)
+        if (storage) storage->ownerWorld = this;
+    for (Ens* ens : liveEns)
+    {
+        ens->SetWorld(this);
+        for (Component* component : ens->componentInstances) component->SetWorld(this);
+    }
+    for (Object* object : ownedObjects) object->SetWorld(this);
+    for (const auto& entry : prepared.preparedObjectPaths)
+        entry.first->ChangeInstancePath(entry.second);
+    prepared.preparedObjectPaths.clear();
+
+    //激活完整层级后挂载组件
+    for (Ens* ens : liveEns)
+    {
+        bool active = ens->localActive;
+        for (Ens* parent = GetParent(ens->ens); parent; parent = GetParent(parent->ens))
+            active = active && parent->localActive;
+        ens->worldActive = active;
+    }
+    List<int32> components;
+    for (Ens* ens : liveEns)
+        for (Component* component : ens->componentInstances) components.push_back(component->GetObjectId());
+    for (int32 id : components)
+    {
+        Object* object = Object::FindObjectById(id);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (component && component->GetWorld() == this) component->OnAttach();
+    }
+
+    //内容已整体替换为磁盘上的场景，与文件一致
+    dirty = false;
+}
+
+//创建Ens
+Ens* World::CreateEns(const std::string& name)
+{
+    return CreateEnsInternal(GetEnsName(name), AllocateEnsObjectPath());
+}
+
+//使用稳定ID创建Ens
+Ens* World::CreateEnsWithStableId(const std::string& stableId, const std::string& name)
+{
+    if (stableId.empty()) return CreateEns(name);
+    if (Object::FindObject(StringId(stableId))) return nullptr;
+
+    return CreateEnsInternal(GetEnsName(name), stableId);
+}
+
+//使用指定稳定ID创建Ens
+Ens* World::CreateEnsInternal(const std::string& name, const std::string& stableId)
+{
+    //分配Ens句柄
+    EnsId value;
+    EnsSlot* slot = nullptr;
+    Ens* storedEns = nullptr;
+    if (!freeEnsIds.empty())
+    {
+        value.id = freeEnsIds.back();
+        freeEnsIds.pop_back();
+
+        slot = &ensSlots[value.id];
+        value.version = slot->version + 1;
+        if (value.version == 0) value.version = 1;
+        slot->version = value.version;
+    }
+    else
+    {
+        value.id = static_cast<uint32>(ensSlots.size());
+        value.version = 1;
+        ensSlots.push_back(EnsSlot());
+        slot = &ensSlots.back();
+        slot->version = value.version;
+    }
+
+    storedEns = static_cast<Ens*>(Object::CreateRawInstance(Ens::StaticType(), stableId));
+    if (!storedEns)
+    {
+        freeEnsIds.push_back(value.id);
+        return nullptr;
+    }
+    storedEns->SetWorld(this);
+    storedEns->SetOwnership(Object::Ownership::WorldOwned);
+    storedEns->ens = value;
+    storedEns->alive = true;
+    storedEns->worldActive = !preparing;
+    slot->value = storedEns;
+    slot->denseIndex = static_cast<uint32>(liveEns.size());
+    liveEns.push_back(storedEns);
+
+    ComponentStorage* transformStorage = GetOrCreateComponentStorage(Transform::StaticType());
+    Component* transformComponent = transformStorage ? transformStorage->Create(value, Object::CreateRuntimeInstancePath(stableId, Transform::StaticType())) : nullptr;
+    Transform* transform = transformComponent ? transformComponent->Cast<Transform>() : nullptr;
+    if (!transform)
+    {
+        storedEns->alive = false;
+        liveEns.pop_back();
+        slot->value = nullptr;
+        slot->denseIndex = EnsId::InvalidId;
+        storedEns->SetWorld(nullptr);
+        storedEns->SetOwnership(Object::Ownership::None);
+        Object::DestroyDetachedInstance(storedEns);
+        freeEnsIds.push_back(value.id);
+        return nullptr;
+    }
+
+    storedEns->name = name;
+    storedEns->AddComponentInstance(transform);
+    NotifyTransformChanged(value);
+
+    //结构订阅者在节点完整之后才收到通知，此时组件与变换都已就绪。
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsCreated(value);
+    }
+    return storedEns;
+}
+
+//销毁Ens
+bool World::DestroyEns(EnsId ens)
+{
+    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end()) return true;
+    for (int32 objectId : removingComponents)
+    {
+        Object* object = Object::FindObjectById(objectId);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (component && component->GetEnsId() == ens)
+        {
+            if (std::find(pendingEnsDestructions.begin(), pendingEnsDestructions.end(), ens) == pendingEnsDestructions.end())
+                pendingEnsDestructions.push_back(ens);
+            return true;
+        }
+    }
+    if (ScriptSystem* scripts = ScriptSystem::Current())
+    {
+        if (!preparing && scripts->DeferEnsDestruction(ens)) return true;
+    }
+
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns) return false;
+
+    Transform* transform = GetTransform(ens);
+    if (!transform) return false;
+
+    //停用待销毁 Ens
+    destroyingEns.push_back(ens);
+    SetEnsLocalActive(ens, false);
+
+    //解除子级关系。内部拆链不走 SetParent，不受 static 移动限制
+    EnsId child = transform->firstChild;
+    while (!child.IsNull())
+    {
+        Transform* childTransform = GetTransform(child);
+        EnsId nextChild = childTransform ? childTransform->next : EnsId();
+        UnlinkEns(child);
+        NotifyTransformChanged(child);
+        RefreshEnsWorldActive(child);
+        child = nextChild;
+    }
+
+    //解除父级关系
+    UnlinkEns(ens);
+
+    //销毁额外组件实例
+    List<int32> componentIds;
+    for (Component* component : storedEns->componentInstances)
+        if (component && component != transform) componentIds.push_back(component->GetObjectId());
+    for (int32 objectId : componentIds)
+    {
+        Object* object = Object::FindObjectById(objectId);
+        Component* component = object ? object->Cast<Component>() : nullptr;
+        if (component && component != transform)
+        {
+            RemoveComponent(component);
+        }
+    }
+
+    List<IWorldLifecycleListener*> listeners = lifecycleListeners;
+    for (IWorldLifecycleListener* listener : listeners)
+    {
+        if (listener) listener->OnEnsDestroyed(ens);
+    }
+
+    //注销并销毁变换组件
+    ComponentStorage* transformStorage = FindComponentStorage(Transform::StaticType());
+    Component* removedTransform = transformStorage ? transformStorage->Remove(transform) : nullptr;
+    assert(removedTransform == transform);
+    storedEns->RemoveComponentInstance(transform);
+    transform->SetEnsId(EnsId());
+    transform->SetWorld(nullptr);
+    transform->SetOwnership(Object::Ownership::None);
+    bool transformDeleted = Object::DestroyDetachedInstance(transform);
+    assert(transformDeleted);
+
+    storedEns->alive = false;
+    destroyingEns.erase(std::remove(destroyingEns.begin(), destroyingEns.end(), ens), destroyingEns.end());
+
+    EnsSlot& slot = ensSlots[ens.id];
+    assert(slot.denseIndex < liveEns.size());
+    assert(liveEns[slot.denseIndex] == storedEns);
+
+    //移除 Ens 存活记录
+    Ens* movedEns = liveEns.back();
+    liveEns[slot.denseIndex] = movedEns;
+    liveEns.pop_back();
+    if (movedEns != storedEns)
+    {
+        ensSlots[movedEns->GetId().id].denseIndex = slot.denseIndex;
+    }
+
+    slot.value = nullptr;
+    slot.denseIndex = EnsId::InvalidId;
+    storedEns->SetWorld(nullptr);
+    storedEns->SetOwnership(Object::Ownership::None);
+    Object::DestroyDetachedInstance(storedEns);
+
+    SetDirty();
+    freeEnsIds.push_back(ens.id);
+    return true;
+}
+
+//获取World持有的唯一Ens实例
+Ens* World::GetEns(EnsId ens)
+{
+    if (ens.IsNull()) return nullptr;
+    if (ens.id >= ensSlots.size()) return nullptr;
+
+    EnsSlot& slot = ensSlots[ens.id];
+    if (!slot.value) return nullptr;
+    if (slot.version != ens.version) return nullptr;
+    if (!slot.value->alive) return nullptr;
+
+    return slot.value;
+}
+
+//获取World持有的唯一Ens实例
+const Ens* World::GetEns(EnsId ens) const
+{
+    return const_cast<World*>(this)->GetEns(ens);
+}
+
+//判断Ens是否存活
+bool World::IsAlive(EnsId ens) const
+{
+    return GetEns(ens) != nullptr;
+}
+
+//获取变换组件
+Transform* World::GetTransform(EnsId ens) const
+{
+    if (!IsAlive(ens)) return nullptr;
+
+    ComponentStorage* storage = FindComponentStorage(Transform::StaticType());
+    Component* component = storage ? storage->Get(ens) : nullptr;
+    return component ? component->Cast<Transform>() : nullptr;
+}
+
+//读取 Ens 的 static 约束
+bool World::GetEnsStatic(EnsId ens) const
+{
+    const Ens* value = GetEns(ens);
+    return value && value->isStatic;
+}
+
+//判断世界变换此刻是否允许变化
+bool World::CanChangeTransform(EnsId ens) const
+{
+    //编辑态任意变换；模拟期间只有非 static 的 Ens 能动
+    if (!runtimeActive) return true;
+    const Ens* value = GetEns(ens);
+    return value && !value->isStatic;
+}
+
+//子树里是否存在 static 的 Ens
+bool World::HasStaticDescendant(EnsId ens) const
+{
+    Transform* transform = GetTransform(ens);
+    if (!transform) return false;
+
+    for (EnsId child = transform->firstChild; !child.IsNull();)
+    {
+        const Ens* childEns = GetEns(child);
+        if (childEns && childEns->isStatic) return true;
+
+        Transform* childTransform = GetTransform(child);
+        if (childTransform && HasStaticDescendant(child)) return true;
+        child = childTransform ? childTransform->next : EnsId();
+    }
+
+    return false;
+}
+
+//设置 Ens 的 static 约束
+bool World::SetEnsStatic(EnsId ens, bool value, std::string& outError)
+{
+    outError.clear();
+    Ens* target = GetEns(ens);
+    if (!target)
+    {
+        outError = "The Ens is not valid.";
+        return false;
+    }
+
+    //运行时 static 标记只读，暂停也不解除
+    if (runtimeActive)
+    {
+        outError = "The static flag cannot be changed while the world is simulating.";
+        return false;
+    }
+
+    if (target->isStatic == value) return true;
+
+    //内容准备阶段允许直接恢复序列化数据，层级约束由整棵树读完后的校验统一负责
+    if (preparing)
+    {
+        target->isStatic = value;
+        return true;
+    }
+
+    if (value)
+    {
+        //置真要求所有祖先已经是 static，不隐式修改父级
+        Transform* transform = GetTransform(ens);
+        for (EnsId ancestor = transform ? transform->parent : EnsId(); !ancestor.IsNull();)
+        {
+            Ens* ancestorEns = GetEns(ancestor);
+            if (!ancestorEns || !ancestorEns->isStatic)
+            {
+                outError = "Every ancestor of a static Ens must be static.";
+                return false;
+            }
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+    else if (HasStaticDescendant(ens))
+    {
+        //置假要求没有 static 后代；多选事务由调用方整体预检
+        outError = "A static Ens cannot have static descendants.";
+        return false;
+    }
+
+    target->isStatic = value;
+    SetDirty();
+    return true;
+}
+
+//校验 static 层级与物理约束
+bool World::ValidateStaticConstraints(EnsId& outEns, std::string& outError) const
+{
+    outEns = EnsId();
+    outError.clear();
+
+    for (const Ens* ens : liveEns)
+    {
+        if (!ens || !ens->isStatic) continue;
+
+        //static 的 Ens 必须挂在全 static 的祖先链下
+        Transform* transform = GetTransform(ens->GetId());
+        for (EnsId ancestor = transform ? transform->parent : EnsId(); !ancestor.IsNull();)
+        {
+            const Ens* ancestorEns = GetEns(ancestor);
+            if (!ancestorEns || !ancestorEns->isStatic)
+            {
+                outEns = ens->GetId();
+                outError = "A static Ens is parented under a non-static ancestor.";
+                return false;
+            }
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+
+    return true;
+}
+
+//把 Ens 从当前父级摘下来，只动层级数据
+void World::UnlinkEns(EnsId child)
+{
+    Transform* transform = GetTransform(child);
+    if (!transform) return;
+
+    Transform* oldParent = GetTransform(transform->parent);
+    Transform* previous = GetTransform(transform->prev);
+    Transform* next = GetTransform(transform->next);
+
+    if (oldParent && oldParent->firstChild == child) oldParent->firstChild = transform->next;
+    if (oldParent && oldParent->lastChild == child) oldParent->lastChild = transform->prev;
+    if (previous) previous->next = transform->next;
+    if (next) next->prev = transform->prev;
+
+    transform->parent = EnsId();
+    transform->prev = EnsId();
+    transform->next = EnsId();
+}
+
+//设置父级
+void World::SetParent(EnsId child, EnsId parent)
+{
+    Transform* transform = GetTransform(child);
+    if (!transform) return;
+    if (child == parent) return;
+    if (!parent.IsNull() && !IsAlive(parent)) return;
+
+    //检查父级循环
+    EnsId current = parent;
+    while (!current.IsNull())
+    {
+        if (current == child) return;
+
+        Transform* currentTransform = GetTransform(current);
+        current = currentTransform ? currentTransform->parent : EnsId();
+    }
+
+    //static 子树的重挂约束：模拟期间禁止移动，编辑态只允许挂到祖先全是 static 的位置
+    Ens* childEns = GetEns(child);
+    if (childEns && childEns->isStatic)
+    {
+        if (runtimeActive) return;
+
+        for (EnsId ancestor = parent; !ancestor.IsNull();)
+        {
+            Ens* parentEns = GetEns(ancestor);
+            if (!parentEns || !parentEns->isStatic) return;
+
+            Transform* ancestorTransform = GetTransform(ancestor);
+            ancestor = ancestorTransform ? ancestorTransform->parent : EnsId();
+        }
+    }
+
+    //从旧父级摘除
+    UnlinkEns(child);
+
+    if (parent.IsNull())
+    {
+        NotifyTransformChanged(child);
+        RefreshEnsWorldActive(child);
+        NotifyEnsReparented(child, EnsId());
+        return;
+    }
+
+    //挂到新父级末尾
+    Transform* parentTransform = GetTransform(parent);
+    if (!parentTransform)
+    {
+        //父级已失效，节点此刻挂在根下，层级数据同样变了
+        SetDirty();
+        return;
+    }
+
+    Transform* lastChild = GetTransform(parentTransform->lastChild);
+    transform->parent = parent;
+    transform->prev = parentTransform->lastChild;
+
+    if (lastChild)
+    {
+        lastChild->next = child;
+    }
+    else
+    {
+        parentTransform->firstChild = child;
+    }
+
+    parentTransform->lastChild = child;
+    NotifyTransformChanged(child);
+    RefreshEnsWorldActive(child);
+    NotifyEnsReparented(child, parent);
+}
+
+//移动 Ens 到指定同级位置
+bool World::MoveEns(EnsId child, EnsId parent, EnsId beforeSibling)
+{
+    Transform* transform = GetTransform(child);
+    if (!transform || child == parent || child == beforeSibling) return false;
+    if (!parent.IsNull() && !IsAlive(parent)) return false;
+
+    //验证同层插入目标
+    if (!beforeSibling.IsNull())
+    {
+        Transform* beforeTransform = GetTransform(beforeSibling);
+        if (!beforeTransform || beforeTransform->parent != parent) return false;
+    }
+
+    //验证目标父级
+    EnsId current = parent;
+    while (!current.IsNull())
+    {
+        if (current == child) return false;
+        Transform* currentTransform = GetTransform(current);
+        current = currentTransform ? currentTransform->parent : EnsId();
+    }
+
+    SetParent(child, parent);
+    transform = GetTransform(child);
+    if (!transform || transform->parent != parent) return false;
+
+    //获取根节点插入位置
+    if (parent.IsNull())
+    {
+        Ens* childEns = GetEns(child);
+        Ens* beforeEns = beforeSibling.IsNull() ? nullptr : GetEns(beforeSibling);
+        auto childIt = std::find(liveEns.begin(), liveEns.end(), childEns);
+        if (childIt == liveEns.end()) return false;
+
+        liveEns.erase(childIt);
+        auto beforeIt = beforeEns ? std::find(liveEns.begin(), liveEns.end(), beforeEns) : liveEns.end();
+        liveEns.insert(beforeIt, childEns);
+        for (usize index = 0; index < liveEns.size(); ++index)
+        {
+            ensSlots[liveEns[index]->GetId().id].denseIndex = static_cast<uint32>(index);
+        }
+        //同级重排不经过变换通知，写入的场景节点顺序已经变了
+        SetDirty();
+        return true;
+    }
+
+    //处理空插入目标
+    SetDirty();
+    if (beforeSibling.IsNull()) return true;
+
+    Transform* parentTransform = GetTransform(parent);
+    Transform* beforeTransform = GetTransform(beforeSibling);
+    Transform* previous = GetTransform(transform->prev);
+    if (!parentTransform || !beforeTransform) return false;
+
+    //调整同级节点顺序
+    if (previous) previous->next = EnsId();
+    parentTransform->lastChild = transform->prev;
+
+    Transform* beforePrevious = GetTransform(beforeTransform->prev);
+    transform->prev = beforeTransform->prev;
+    transform->next = beforeSibling;
+    beforeTransform->prev = child;
+    if (beforePrevious) beforePrevious->next = child;
+    else parentTransform->firstChild = child;
+    return true;
+}
+
+//获取父级
+Ens* World::GetParent(EnsId child) const
+{
+    Transform* transform = GetTransform(child);
+    return transform ? const_cast<World*>(this)->GetEns(transform->parent) : nullptr;
+}
+
+//添加组件
+Component* World::AddComponent(EnsId ens, Type* type)
+{
+    Transform* transform = GetTransform(ens);
+    if (!transform || !type || !type->Is(Component::StaticType())) return nullptr;
+    if (type == Transform::StaticType()) return transform;
+
+    Component* oldComponent = GetComponent(ens, type);
+    if (oldComponent) return oldComponent;
+
+    return AddComponentInstance(ens, type);
+}
+
+//添加同类型的独立组件实例
+Component* World::AddComponentInstance(EnsId ens, Type* type, const std::string& stablePath)
+{
+    if (std::find(destroyingEns.begin(), destroyingEns.end(), ens) != destroyingEns.end()) return nullptr;
+    Transform* transform = GetTransform(ens);
+    if (!transform || !type || !type->Is(Component::StaticType()) || !type->CanCreateObject()) return nullptr;
+    if (type == Transform::StaticType()) return transform;
+
+    Ens* storedEns = GetEns(ens);
+    if (!storedEns) return nullptr;
+
+    //创建并注册组件
+    std::string instancePath = stablePath.empty()
+        ? Object::CreateRuntimeInstancePath(storedEns->GetInstanceId().GetPath(), type) : stablePath;
+    if (Object::FindObject(StringId(instancePath))) return nullptr;
+    ComponentStorage* storage = GetOrCreateComponentStorage(type);
+    Component* component = storage ? storage->Create(ens, instancePath) : nullptr;
+    if (!component) return nullptr;
+
+    storedEns->AddComponentInstance(component);
+    SetDirty();
+    if (!preparing) component->OnAttach();
+    return component;
+}
+
+//获取组件
+Component* World::GetComponent(EnsId ens, Type* type) const
+{
+    if (!type || !IsAlive(ens)) return nullptr;
+    Ens* owner = const_cast<World*>(this)->GetEns(ens);
+    for (Component* component : owner->GetComponents())
+        if (component && component->GetType() == type) return component;
+    return nullptr;
+}
+
+//获取指定类型的全部组件实例
+void World::GetComponentInstances(EnsId ens, Type* type, List<Component*>& output) const
+{
+    output.clear();
+    Ens* owner = const_cast<World*>(this)->GetEns(ens);
+    if (!type || !owner) return;
+    for (Component* component : owner->GetComponents())
+        if (component && component->GetType() == type) output.push_back(component);
+}
+
+//移除组件
+bool World::RemoveComponent(EnsId ens, Type* type)
+{
+    Component* component = GetComponent(ens, type);
+    return RemoveComponent(component);
+}
+
+//移除指定组件实例
+bool World::RemoveComponent(Component* component)
+{
+    if (!component) return false;
+    int32 objectId = component->GetObjectId();
+    if (std::find(removingComponents.begin(), removingComponents.end(), objectId) != removingComponents.end()) return true;
+    if (ScriptSystem* scripts = ScriptSystem::Current())
+    {
+        if (!preparing && scripts->DeferComponentRemoval(component)) return true;
+    }
+
+    if (!component) return false;
+    if (component->GetWorld() != this) return false;
+    EnsId ens = component->GetEnsId();
+    Transform* transform = GetTransform(ens);
+    if (!transform || component == transform) return false;
+
+    ComponentStorage* storage = FindComponentStorage(component->GetType());
+    if (!storage) return false;
+
+    //执行组件卸载回调
+    removingComponents.push_back(objectId);
+    if (!preparing) component->OnDetach();
+
+    //移除组件索引和对象
+    Component* removedComponent = storage->Remove(component);
+    removingComponents.erase(std::remove(removingComponents.begin(), removingComponents.end(), objectId), removingComponents.end());
+    if (removedComponent != component) return false;
+
+    Ens* storedEns = GetEns(ens);
+    if (storedEns) storedEns->RemoveComponentInstance(component);
+    component->SetEnsId(EnsId());
+    component->SetWorld(nullptr);
+    component->SetOwnership(Object::Ownership::None);
+    bool deleted = Object::DestroyDetachedInstance(component);
+    assert(deleted);
+    SetDirty();
+    if (removingComponents.empty())
+    {
+        List<EnsId> pending;
+        pending.swap(pendingEnsDestructions);
+        for (EnsId id : pending) DestroyEns(id);
+    }
+    return deleted;
+}
+
+//按稳定ID查找Ens
+Ens* World::FindEns(const StringId& id) const
+{
+    Object* object = Object::FindObject(id);
+    Ens* ens = object ? object->Cast<Ens>() : nullptr;
+    return ens && ens->GetWorld() == this && ens->IsValid() ? ens : nullptr;
+}
+
+//遍历所有存活的Ens
+void World::VisitEns(EnsVisitorFunction visitor, void* userData) const
+{
+    if (!visitor) return;
+
+    for (Ens* ens : liveEns)
+    {
+        if (!ens || !ens->alive) continue;
+
+        visitor(ens, userData);
+    }
+}

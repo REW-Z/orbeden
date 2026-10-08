@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{b12e5123-bd9c-4d91-a1ba-879726128c33}</ProjectGuid>
+    <RootNamespace>OrbedenCore</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <!-- 自动导出通过扫描 .obj 生成 .def；CMake __create_def 无法读取 /GL LTCG 对象。 -->
+    <!-- Player 的静态 Core 由本工程归档同一批 obj（ArchiveCoreStaticLibrary），因此同样关闭 LTCG。 -->
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OrbedenCoreNativePlatform Condition="'$(Platform)'=='x64'">WindowsX64</OrbedenCoreNativePlatform>
+    <OrbedenCoreNativePlatform Condition="'$(Platform)'=='Win32'">WindowsX86</OrbedenCoreNativePlatform>
+    <OrbedenCoreNativePlatform Condition="'$(OrbedenCoreNativePlatform)'==''">$(Platform)</OrbedenCoreNativePlatform>
+    <OrbedenCoreOutputDir Condition="'$(OrbedenCoreOutputDir)' == ''">$(ProjectDir)..\OrbedenEditor\Sdk\Native\$(OrbedenCoreNativePlatform)\$(Configuration)\</OrbedenCoreOutputDir>
+    <OrbedenEditorSdkDir>$(ProjectDir)..\OrbedenEditor\Sdk\</OrbedenEditorSdkDir>
+    <OrbedenNativeSdkIncludeDir>$(OrbedenEditorSdkDir)Native\Include\</OrbedenNativeSdkIncludeDir>
+    <OrbedenNativeSdkDir>$(OrbedenEditorSdkDir)Native\</OrbedenNativeSdkDir>
+    <OrbedenSharedSdkDir>$(OrbedenEditorSdkDir)Shared\</OrbedenSharedSdkDir>
+    <OrbedenSharedBuildDir>$(ProjectDir)..\OrbedenEditor\Templates\Shared\</OrbedenSharedBuildDir>
+    <OrbedenMetaGenSdkDir>$(OrbedenEditorSdkDir)Tools\OrbedenMetaGen\</OrbedenMetaGenSdkDir>
+    <OrbedenPackagesSdkDir>$(OrbedenEditorSdkDir)Packages\</OrbedenPackagesSdkDir>
+    <OrbedenUIPackageSourceDir>$(ProjectDir)Managed\Orbeden.UI\</OrbedenUIPackageSourceDir>
+    <OutDir>$(OrbedenCoreOutputDir)</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalOptions>/FS /utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;GLFW_DLL;PX_PHYSX_STATIC_LIB;DISABLE_CUDA_PHYSX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)/Src/ThirdParty/PhysX/include;$(ProjectDir)/Src/ThirdParty/glfw/include;$(ProjectDir)/Src/ThirdParty/glad/include;$(ProjectDir)/Src/ThirdParty/imgui;$(ProjectDir)/Src/ThirdParty/imgui/backends;$(ProjectDir)/Src/ThirdParty/cgltf;$(ProjectDir)/Src/ThirdParty/freetype/include;$(ProjectDir)/Src/ThirdParty/msdfgen/include;$(ProjectDir)/Src</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;imgui.lib;glad.lib;cgltf.lib;stb.lib;freetype.lib;msdfgen-core.lib;opengl32.lib;gdi32.lib;user32.lib;imm32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>$(IntDir)OrbedenCore.exports.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <!--
+    第三方库不挂在本工程的构建链上：由 Tools/OrbedenThirdParty 手动生成，把 include 与 lib
+    发布到 Src/ThirdParty/ 后本工程只按库依赖引用。换第三方版本或改编译选项时才需要跑它。
+  -->
+  <ItemGroup>
+    <ClInclude Include="Src\Application.h" />
+    <ClInclude Include="Src\Defines\Version.h" />
+    <ClInclude Include="Src\Defines\types.h" />
+    <ClInclude Include="Src\FileSystem\FileSystem.h" />
+    <ClInclude Include="Src\FileSystem\Utf8Path.h" />
+    <ClInclude Include="Src\Log\Log.h" />
+    <ClInclude Include="Src\Memory\MemoryManager.h" />
+    <ClInclude Include="Src\Runtime\Object\CharacterController.h" />
+    <ClInclude Include="Src\Runtime\Object\Collider.h" />
+    <ClInclude Include="Src\Runtime\Object\HeightField.h" />
+    <ClInclude Include="Src\Runtime\Object\InstanceDrawList.h" />
+    <ClInclude Include="Src\Runtime\Object\ParticleSystem.h" />
+    <ClInclude Include="Src\Physics\PhysicsReflection.h" />
+    <ClInclude Include="Src\Physics\PhysicsSystem.h" />
+    <ClInclude Include="Src\Physics\PhysicsTypes.h" />
+    <ClInclude Include="Src\Runtime\Object\RigidBody.h" />
+    <ClInclude Include="Src\Runtime\Object\WheelCollider.h" />
+    <ClInclude Include="Src\Platform\DynamicLibrary.h" />
+    <ClInclude Include="Src\Platform\ExecutablePath.h" />
+    <ClInclude Include="Src\Platform\GamepadInput.h" />
+    <ClInclude Include="Src\Platform\GlfwWindow.h" />
+    <ClInclude Include="Src\Platform\WindowsInputHook.h" />
+    <ClInclude Include="Src\Platform\WindowsPointerInput.h" />
+    <ClInclude Include="Src\Platform\WindowsTextInput.h" />
+    <ClInclude Include="Src\InputManager\InputEvent.h" />
+    <ClInclude Include="Src\InputManager\InputManager.h" />
+    <ClInclude Include="Src\Platform\Window.h" />
+    <ClInclude Include="Src\Rendering\Backend\GpuResourceIDs.h" />
+    <ClInclude Include="Src\Rendering\Backend\OpenGLContext.h" />
+    <ClInclude Include="Src\Rendering\Backend\OpenGLRenderBackend.h" />
+    <ClInclude Include="Src\Rendering\Backend\RenderBackend.h" />
+    <ClInclude Include="Src\Rendering\ShadowCascadeBuilder.h" />
+    <ClInclude Include="Src\Rendering\AtmosphereRenderer.h" />
+    <ClInclude Include="Src\Rendering\CascadedShadowMap.h" />
+    <ClInclude Include="Src\Rendering\ColorSpace.h" />
+    <ClInclude Include="Src\Rendering\DrawBatchBuilder.h" />
+    <ClInclude Include="Src\Rendering\ForwardPipeline.h" />
+    <ClInclude Include="Src\Rendering\FullscreenQuad.h" />
+    <ClInclude Include="Src\Rendering\GeometryExpander.h" />
+    <ClInclude Include="Src\Rendering\GpuResourceManager.h" />
+    <ClInclude Include="Src\Rendering\ImGuiLayer.h" />
+    <ClInclude Include="Src\Rendering\OutputPass.h" />
+    <ClInclude Include="Src\Rendering\ParticleRenderer.h" />
+    <ClInclude Include="Src\Rendering\RenderItemSorter.h" />
+    <ClInclude Include="Src\Rendering\RenderMath.h" />
+    <ClInclude Include="Src\Rendering\StaticBatchCache.h" />
+    <ClInclude Include="Src\Rendering\RenderScene.h" />
+    <ClInclude Include="Src\Rendering\RenderSystem.h" />
+    <ClInclude Include="Src\Scripting\ScriptSystem.h" />
+    <ClInclude Include="Src\Scripting\ScriptInterop.h" />
+    <ClInclude Include="Src\Runtime\Object\Script.h" />
+    <ClInclude Include="Src\Scripting\NativeGameModule.h" />
+    <ClInclude Include="Src\Rendering\RenderTypes.h" />
+    <ClInclude Include="Src\Rendering\SceneCuller.h" />
+    <ClInclude Include="Src\Rendering\TransformCache.h" />
+    <ClInclude Include="Src\Runtime\AssetPipeline.h" />
+    <ClInclude Include="Src\Runtime\CookedAssetSerializer.h" />
+    <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
+    <ClInclude Include="Src\Runtime\Native\OrbedenEngineNativeApi.h" />
+    <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
+    <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h" />
+    <ClInclude Include="Src\Runtime\Native\RuntimeResourceBinds.h" />
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiBridge.h" />
+    <ClInclude Include="Src\Runtime\Gui\RetainedGuiTypes.h" />
+    <ClInclude Include="Src\Runtime\Gui\UIRenderer.h" />
+    <ClInclude Include="Src\Runtime\Gui\UIShaderSources.h" />
+    <ClInclude Include="Src\Runtime\Gui\RuntimeGuiBridge.h" />
+    <ClInclude Include="Src\Runtime\Object\Camera.h" />
+    <ClInclude Include="Src\Runtime\Object\Component.h" />
+    <ClInclude Include="Src\Runtime\Object\DirectionalLight.h" />
+    <ClInclude Include="Src\Runtime\ComponentStorage.h" />
+    <ClInclude Include="Src\Runtime\Object\Ens.h" />
+    <ClInclude Include="Src\Runtime\EnsId.h" />
+    <ClInclude Include="Src\Runtime\EngineTypes.h" />
+    <ClInclude Include="Src\Runtime\ITransformListener.h" />
+    <ClInclude Include="Src\Runtime\Object\Object.h" />
+    <ClInclude Include="Src\FileSystem\PathDefines.h" />
+    <ClInclude Include="Src\Runtime\Reflection.h" />
+    <ClInclude Include="Src\Profiler\Profiler.h" />
+    <ClInclude Include="Src\Runtime\AtmosphereSettings.h" />
+    <ClInclude Include="Src\Runtime\RenderSettings.h" />
+    <ClInclude Include="Src\ResourceManager\ResourceManager.h" />
+    <ClInclude Include="Src\Runtime\Object\Material.h" />
+    <ClInclude Include="Src\Runtime\Object\Font.h" />
+    <ClInclude Include="Src\Runtime\Object\Shader.h" />
+    <ClInclude Include="Src\Runtime\Object\Mesh.h" />
+    <ClInclude Include="Src\Runtime\Object\Skybox.h" />
+    <ClInclude Include="Src\Runtime\Object\TextResource.h" />
+    <ClInclude Include="Src\Runtime\Fonts\FontRasterizer.h" />
+    <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
+    <ClInclude Include="Src\Runtime\Object\Transform.h" />
+    <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
+    <ClInclude Include="Src\ThirdParty\glad\include\KHR\khrplatform.h" />
+    <ClInclude Include="Src\ThirdParty\glad\include\glad\gl.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\backends\imgui_impl_opengl3.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imconfig.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imgui.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imgui_internal.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_textedit.h" />
+    <ClInclude Include="Src\ThirdParty\imgui\imstb_truetype.h" />
+    <ClInclude Include="Src\ThirdParty\stb\stb_image.h" />
+    <ClInclude Include="Src\ThirdParty\cgltf\cgltf.h" />
+    <ClInclude Include="Src\Runtime\World.h" />
+    <ClInclude Include="Src\Runtime\WorldSerializer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Src\Application.cpp" />
+    <ClCompile Include="Src\FileSystem\FileSystem.cpp" />
+    <ClCompile Include="Src\Log\Log.cpp" />
+    <ClCompile Include="Src\Memory\MemoryManager.cpp" />
+    <ClCompile Include="Src\Runtime\Object\CharacterController.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Collider.cpp" />
+    <ClCompile Include="Src\Runtime\Object\HeightField.cpp" />
+    <ClCompile Include="Src\Runtime\Object\InstanceDrawList.cpp" />
+    <ClCompile Include="Src\Runtime\Object\ParticleSystem.cpp" />
+    <ClCompile Include="Src\Physics\PhysicsReflection.cpp" />
+    <ClCompile Include="Src\Physics\PhysicsSystem.cpp" />
+    <ClCompile Include="Src\Runtime\Object\RigidBody.cpp" />
+    <ClCompile Include="Src\Runtime\Object\WheelCollider.cpp" />
+    <ClCompile Include="Src\Platform\DynamicLibrary.cpp" />
+    <ClCompile Include="Src\Platform\ExecutablePath.cpp" />
+    <ClCompile Include="Src\Platform\GamepadInput.cpp" />
+    <ClCompile Include="Src\Platform\GlfwWindow.cpp" />
+    <ClCompile Include="Src\Platform\WindowsInputHook.cpp" />
+    <ClCompile Include="Src\Platform\WindowsPointerInput.cpp" />
+    <ClCompile Include="Src\Platform\WindowsTextInput.cpp" />
+    <ClCompile Include="Src\InputManager\InputManager.cpp" />
+    <ClCompile Include="Src\Rendering\Backend\OpenGLContext.cpp" />
+    <ClCompile Include="Src\Rendering\Backend\OpenGLRenderBackend.cpp" />
+    <ClCompile Include="Src\Rendering\ShadowCascadeBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\AtmosphereRenderer.cpp" />
+    <ClCompile Include="Src\Rendering\CascadedShadowMap.cpp" />
+    <ClCompile Include="Src\Rendering\DrawBatchBuilder.cpp" />
+    <ClCompile Include="Src\Rendering\ForwardPipeline.cpp" />
+    <ClCompile Include="Src\Rendering\FullscreenQuad.cpp" />
+    <ClCompile Include="Src\Rendering\GeometryExpander.cpp" />
+    <ClCompile Include="Src\Rendering\GpuResourceManager.cpp" />
+    <ClCompile Include="Src\Rendering\ImGuiLayer.cpp" />
+    <ClCompile Include="Src\Rendering\OutputPass.cpp" />
+    <ClCompile Include="Src\Rendering\ParticleRenderer.cpp" />
+    <ClCompile Include="Src\Rendering\RenderItemSorter.cpp" />
+    <ClCompile Include="Src\Rendering\RenderMath.cpp" />
+    <ClCompile Include="Src\Rendering\StaticBatchCache.cpp" />
+    <ClCompile Include="Src\Rendering\RenderScene.cpp" />
+    <ClCompile Include="Src\Rendering\RenderSystem.cpp" />
+    <ClCompile Include="Src\Scripting\ScriptSystem.cpp" />
+    <ClCompile Include="Src\Scripting\ScriptInterop.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Script.cpp" />
+    <ClCompile Include="Src\Rendering\SceneCuller.cpp" />
+    <ClCompile Include="Src\Rendering\TransformCache.cpp" />
+    <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
+    <ClCompile Include="Src\Runtime\CookedAssetSerializer.cpp" />
+    <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
+    <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
+    <ClCompile Include="Src\Runtime\Native\RuntimeResourceBinds.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\RetainedGuiBridge.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\UIRenderer.cpp" />
+    <ClCompile Include="Src\Runtime\Gui\RuntimeGuiBridge.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Camera.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Component.cpp" />
+    <ClCompile Include="Src\Runtime\Object\DirectionalLight.cpp" />
+    <ClCompile Include="Src\Runtime\ComponentStorage.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Ens.cpp" />
+    <ClCompile Include="Src\Runtime\EnsId.cpp" />
+    <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp" />
+    <ClCompile Include="Src\Runtime\Generated\Bindings.Generated.cpp" />
+    <ClCompile Include="Src\Runtime\Particles\ParticleSettings.cpp" />
+    <ClCompile Include="Src\Runtime\Particles\ParticleSimulationSystem.cpp" />
+    <ClCompile Include="Src\Runtime\Native\NativeBindings.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Object.cpp" />
+    <ClCompile Include="Src\FileSystem\PathDefines.cpp" />
+    <ClCompile Include="Src\Runtime\Reflection.cpp" />
+    <ClCompile Include="Src\Profiler\Profiler.cpp" />
+    <ClCompile Include="Src\ResourceManager\ResourceManager.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Material.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Font.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Shader.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Mesh.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
+    <ClCompile Include="Src\Runtime\Object\TextResource.cpp" />
+    <ClCompile Include="Src\Runtime\Fonts\FontRasterizer.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
+    <ClCompile Include="Src\Runtime\Object\Transform.cpp" />
+    <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />
+    <ClCompile Include="Src\Runtime\World.cpp" />
+    <ClCompile Include="Src\Runtime\WorldSerializer.cpp" />
+  </ItemGroup>
+  <Target Name="GenerateOrbedenCoreExportDefinition" BeforeTargets="Link" Condition="'$(Platform)'=='x64'">
+    <ItemGroup>
+      <OrbedenCoreObjectFiles Include="@(ClCompile->'$(IntDir)%(Filename).obj')" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntDir)OrbedenCore.objects.txt" Lines="@(OrbedenCoreObjectFiles)" Overwrite="true" />
+    <Exec Command="&quot;$(VSInstallDir)Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe&quot; -E __create_def &quot;$(IntDir)OrbedenCore.exports.def&quot; &quot;$(IntDir)OrbedenCore.objects.txt&quot;" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="GenerateObjectBindings" BeforeTargets="ClCompile">
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src&quot; &quot;$(ProjectDir)Src\Runtime\Generated&quot; --bindings --docs &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot;" UseUtf8Encoding="Always" />
+  </Target>
+  <Target Name="BuildCoreCSharpSdk" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <Exec Command="dotnet build &quot;$(ProjectDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.csproj&quot; -c &quot;$(Configuration)&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+  </Target>
+  <Target Name="PublishNativeGameSdk" AfterTargets="Build" DependsOnTargets="GenerateUserDocumentation" Condition="'$(Platform)'=='x64'">
+    <ItemGroup>
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.h" />
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.hpp" />
+      <OrbedenNativeSdkHeader Include="$(ProjectDir)Src\**\*.inl" />
+    </ItemGroup>
+    <!--头文件发布只拷不删，改名或移动后的旧头会残留在 SDK 里被游戏工程误用；发布前先清空。-->
+    <RemoveDir Directories="$(OrbedenNativeSdkIncludeDir)" />
+    <MakeDir Directories="$(OrbedenNativeSdkIncludeDir);$(OrbedenMetaGenSdkDir);$(OrbedenSharedSdkDir);$(OrbedenEditorSdkDir)Manual;$(OrbedenPackagesSdkDir)Orbeden.UI\" />
+    <!--GUI 源码包：SDK 里是只读基线，项目内的 Packages/Orbeden.UI 会整体覆盖它。-->
+    <ItemGroup>
+      <OrbedenUIPackageFile Include="$(OrbedenUIPackageSourceDir)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OrbedenUIPackageFile)" DestinationFiles="@(OrbedenUIPackageFile->'$(OrbedenPackagesSdkDir)Orbeden.UI\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Src\Runtime\Generated\Bindings.Manifest.json" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <!--第三方组件的署名与许可：引擎静态链接的库要求随二进制产物分发，游戏工程从这里取。-->
+    <ItemGroup>
+      <OrbedenThirdPartyLicenseFile Include="$(ProjectDir)..\Tools\OrbedenThirdParty\licenses\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="$(ProjectDir)..\LICENSE" DestinationFiles="$(OrbedenEditorSdkDir)LICENSE" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)../THIRD-PARTY-NOTICES.md" DestinationFiles="$(OrbedenEditorSdkDir)THIRD-PARTY-NOTICES.md" SkipUnchangedFiles="true" />
+    <!--按库分目录：多份 LICENSE.txt / LICENSE.md 同名，平铺会互相覆盖-->
+    <MakeDir Directories="@(OrbedenThirdPartyLicenseFile->'$(OrbedenEditorSdkDir)ThirdPartyLicenses/%(RecursiveDir)')" />
+    <Copy SourceFiles="@(OrbedenThirdPartyLicenseFile)" DestinationFiles="@(OrbedenThirdPartyLicenseFile->'$(OrbedenEditorSdkDir)ThirdPartyLicenses/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+
+
+
+
+    <!--游戏工程的原生构建契约：唯一来源是 Templates/Shared/，工程内不再保留副本。-->
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.props" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)Orbeden.Native.targets" DestinationFolder="$(OrbedenNativeSdkDir)" SkipUnchangedFiles="true" />
+    <!--固定的桥接源码：游戏模块导出层与 NativeAOT 导出层，由各游戏工程直接引用，不再是项目文件。-->
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)GameModule.cpp" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(OrbedenSharedBuildDir)GameAotExports.cs" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.EditorExtensions.csproj" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(OrbedenNativeSdkHeader)" DestinationFiles="@(OrbedenNativeSdkHeader->'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <!--用户手册：镜像 Docs/Manual（含生成的 Api/），游戏工程构建时从这里刷新进工程。-->
+    <ItemGroup>
+      <OrbedenManualFile Include="$(ProjectDir)..\Docs\Manual\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OrbedenManualFile)" DestinationFiles="@(OrbedenManualFile->'$(OrbedenEditorSdkDir)Manual\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Exec Command="dotnet publish &quot;$(ProjectDir)..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c &quot;$(Configuration)&quot; --no-self-contained -o &quot;$(OrbedenMetaGenSdkDir)&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+  </Target>
+  <!--用户文档：必须在 C# 程序集之后（要反射托管层），且在 SDK 发布之前（Sdk/Manual 由发布步骤拷贝）。-->
+  <Target Name="GenerateUserDocumentation" AfterTargets="BuildCoreCSharpSdk" Condition="'$(Platform)'=='x64' and '$(OrbedenSkipDocs)' != 'true'">
+    <Exec Command="dotnet run --project &quot;$(ProjectDir)..\Tools\OrbedenDocGen\OrbedenDocGen.csproj&quot; -c $(Configuration) -- &quot;$(ProjectDir)Src\Runtime\Generated\ApiDocs.json&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll&quot; &quot;$(OrbedenEditorSdkDir)Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.xml&quot; &quot;$(ProjectDir)..\Docs\Manual\Api&quot;" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+  </Target>
+  <!--Player 用静态库由同一批 obj 归档：DLL 与静态库共享一次编译，不重复编译 Core 源码。-->
+  <Target Name="ArchiveCoreStaticLibrary" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <PropertyGroup>
+      <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == '' and Exists('$(VCToolsInstallDir)bin\HostX64\x64\lib.exe')">$(VCToolsInstallDir)bin\HostX64\x64\</OrbedenLibToolDir>
+      <OrbedenLibToolDir Condition="'$(OrbedenLibToolDir)' == ''">$(VCToolsInstallDir)bin\HostX86\x64\</OrbedenLibToolDir>
+    </PropertyGroup>
+    <!--按本工程的源文件表推导 obj，不能扫中间目录：改名或合并文件后残留的旧 obj 会被一起打进静态库。-->
+    <ItemGroup>
+      <OrbedenCoreArchiveObject Include="@(ClCompile->'$(IntDir)%(Filename).obj')" />
+    </ItemGroup>
+    <Error Condition="'@(OrbedenCoreArchiveObject)' == ''" Text="No Core object files were found in $(IntDir); the Player static library cannot be archived." />
+    <WriteLinesToFile File="$(IntDir)OrbedenCoreStatic.rsp" Lines="@(OrbedenCoreArchiveObject->'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(OrbedenLibToolDir)lib.exe&quot; /NOLOGO /OUT:&quot;$(OrbedenCoreOutputDir)OrbedenCoreStatic.lib&quot; @&quot;$(IntDir)OrbedenCoreStatic.rsp&quot;" />
+  </Target>
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Runtime\LayerSettings.h" />
+    <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
+    <ClInclude Include="Src\Runtime\Particles\ParticleSettings.h" />
+    <ClInclude Include="Src\Runtime\Particles\ParticleSimulationSystem.h" />
+    <ClInclude Include="Src\Runtime\DisplaySettings.h" />
+    <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
+  </ItemGroup>
+</Project>

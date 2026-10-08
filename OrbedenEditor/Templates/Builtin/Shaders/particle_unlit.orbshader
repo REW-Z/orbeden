@@ -1,0 +1,67 @@
+--------queue Transparent
+
+--------geometry Particle
+
+--------vert
+#version 430 core
+
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+layout(location = 3) in vec3 a_Tangent;
+
+uniform mat4 u_ViewProjection;
+#include "Builtin/geometry_input.orbinc"
+
+out vec2 v_TexCoord;
+out vec4 v_Tint;
+out vec3 v_WorldPosition;
+
+void main()
+{
+    //展开顶点已经是世界空间，图集变换也已在 CPU 完成，三条路径共用这一条公式
+    v_TexCoord = OrbedenGetUv(a_TexCoord);
+    v_Tint = OrbedenGetTint();
+    v_WorldPosition = (OrbedenGetModel() * vec4(a_Position, 1.0)).xyz;
+    gl_Position = u_ViewProjection * vec4(v_WorldPosition, 1.0);
+}
+
+--------frag
+#version 430 core
+
+in vec2 v_TexCoord;
+in vec4 v_Tint;
+in vec3 v_WorldPosition;
+
+uniform vec3 u_CameraPosition;
+uniform bool u_HasDiffuseTexture;
+uniform sampler2D u_DiffuseTexture;
+uniform vec4 u_DiffuseColor;
+uniform float u_Intensity;
+uniform bool u_AtmosphereAdditive;
+#include "Builtin/atmosphere_sampling.orbinc"
+
+out vec4 FragColor;
+
+void main()
+{
+    //着色器工作在线性空间：贴图由 sRGB 纹理格式解码，材质颜色由绑定层转成线性
+    vec4 sampled = vec4(1.0);
+    if (u_HasDiffuseTexture)
+    {
+        sampled = texture(u_DiffuseTexture, v_TexCoord);
+    }
+
+    //直通 Alpha 输出，不预先乘到 RGB，避免 SRC_ALPHA 二次相乘
+    vec3 color = sampled.rgb * max(u_DiffuseColor.rgb, vec3(0.0)) * v_Tint.rgb * max(u_Intensity, 0.0);
+    float alpha = sampled.a * u_DiffuseColor.a * v_Tint.a;
+
+    //加性混合只吃消光，叠上散射会整片发灰
+    AtmosphereSample aerial = SampleSurfaceAerial(v_WorldPosition, GetAtmosphereScreenUv());
+    AtmosphereSample fog = SampleSurfaceDenseFog(v_WorldPosition);
+    //浓雾叠在空气透视外层：空气的散射也被浓雾吸收，浓雾的散射不再被空气吸收
+    color *= aerial.transmittance * fog.transmittance;
+    if (!u_AtmosphereAdditive) color += aerial.radiance * fog.transmittance + fog.radiance;
+
+    FragColor = vec4(color, alpha);
+}

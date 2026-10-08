@@ -1,0 +1,240 @@
+#include "Runtime/Object/Ens.h"
+
+#include "Runtime/Object/Transform.h"
+#include "Runtime/World.h"
+#include "Runtime/Object/Script.h"
+#include "Scripting/ScriptInterop.h"
+#include "Scripting/ScriptSystem.h"
+
+#include <algorithm>
+#include <cassert>
+
+OBJECT_TYPE_IMPLEMENT(Ens, Object)
+
+//记录组件类型
+void Ens::AddComponentType(Type* type)
+{
+    if (!type) return;
+    if (HasComponentType(type)) return;
+
+    componentTypes.push_back(type->GetId());
+    componentMask |= type->GetMask();
+}
+
+//移除组件类型
+void Ens::RemoveComponentType(Type* type)
+{
+    if (!type) return;
+
+    componentTypes.erase(std::remove(componentTypes.begin(), componentTypes.end(), type->GetId()), componentTypes.end());
+    componentMask &= ~type->GetMask();
+}
+
+//判断是否记录了组件类型
+bool Ens::HasComponentType(Type* type) const
+{
+    if (!type) return false;
+    if ((componentMask & type->GetMask()) == 0) return false;
+
+    return std::find(componentTypes.begin(), componentTypes.end(), type->GetId()) != componentTypes.end();
+}
+
+//销毁Ens
+void Ens::Destroy()
+{
+    if (!GetWorld()) return;
+    GetWorld()->DestroyEns(ens);
+}
+
+//判断是否有效
+bool Ens::IsValid() const
+{
+    return alive && GetWorld() && GetWorld()->GetEns(ens) == this;
+}
+
+//获取底层ID
+EnsId Ens::GetId() const
+{
+    return ens;
+}
+
+//获取变换组件
+Transform* Ens::Transform() const
+{
+    return GetWorld() ? GetWorld()->GetTransform(ens) : nullptr;
+}
+
+//获取名称
+const std::string& Ens::GetName() const
+{
+    return name;
+}
+
+//设置名称
+void Ens::SetName(const std::string& name)
+{
+    this->name = name;
+    if (World* world = GetWorld()) world->SetDirty();
+}
+
+//记录一个已挂载组件实例
+void Ens::AddComponentInstance(Component* component)
+{
+    if (!component) return;
+    componentInstances.push_back(component);
+    AddComponentType(component->GetType());
+}
+
+//移除一个已挂载组件实例
+void Ens::RemoveComponentInstance(Component* component)
+{
+    if (!component) return;
+    componentInstances.erase(std::remove(componentInstances.begin(), componentInstances.end(), component), componentInstances.end());
+
+    Type* type = component->GetType();
+    bool hasSameType = std::any_of(componentInstances.begin(), componentInstances.end(), [type](Component* value)
+        {
+            return value && value->GetType() == type;
+        });
+    if (!hasSameType) RemoveComponentType(type);
+}
+
+//获取自身激活状态
+bool Ens::GetLocalActive() const
+{
+    return localActive;
+}
+
+//获取层级计算后的激活状态
+bool Ens::GetWorldActive() const
+{
+    return worldActive;
+}
+
+//设置自身激活状态
+void Ens::SetLocalActive(bool value)
+{
+    if (!GetWorld()) return;
+    GetWorld()->SetEnsLocalActive(ens, value);
+}
+
+//读取 static 世界变换约束
+bool Ens::GetStatic() const
+{
+    return isStatic;
+}
+
+//设置 static 约束
+bool Ens::SetStatic(bool value)
+{
+    staticError.clear();
+    World* world = GetWorld();
+    if (!world)
+    {
+        staticError = "The Ens is not attached to a world.";
+        return false;
+    }
+
+    return world->SetEnsStatic(ens, value, staticError);
+}
+
+//读取最近一次 static 设置的失败原因
+const std::string& Ens::GetStaticError() const
+{
+    return staticError;
+}
+
+//读取临时对象标志
+bool Ens::GetDontSave() const
+{
+    return dontSave;
+}
+
+//设置临时对象标志
+void Ens::SetDontSave(bool value)
+{
+    dontSave = value;
+}
+
+//设置父级
+void Ens::SetParent(Ens* parent)
+{
+    if (!GetWorld()) return;
+    if (parent && parent->GetWorld() != GetWorld()) return;
+    GetWorld()->SetParent(ens, parent ? parent->GetId() : EnsId());
+}
+
+//获取父级
+Ens* Ens::GetParent() const
+{
+    return GetWorld() ? GetWorld()->GetParent(ens) : nullptr;
+}
+
+//添加组件
+Component* Ens::AddComponent(Type* type)
+{
+    return GetWorld() ? GetWorld()->AddComponent(ens, type) : nullptr;
+}
+
+//添加同类型的独立组件实例
+Component* Ens::AddComponentInstance(Type* type)
+{
+    return GetWorld() ? GetWorld()->AddComponentInstance(ens, type) : nullptr;
+}
+
+//获取组件
+Component* Ens::GetComponent(Type* type) const
+{
+    return GetWorld() ? GetWorld()->GetComponent(ens, type) : nullptr;
+}
+
+//获取指定类型的全部组件实例
+void Ens::GetComponentInstances(Type* type, List<Component*>& output) const
+{
+    output.clear();
+    if (GetWorld()) GetWorld()->GetComponentInstances(ens, type, output);
+}
+
+//移除组件
+bool Ens::RemoveComponent(Type* type)
+{
+    return GetWorld() ? GetWorld()->RemoveComponent(ens, type) : false;
+}
+
+//移除指定组件实例
+bool Ens::RemoveComponent(Component* component)
+{
+    return GetWorld() ? GetWorld()->RemoveComponent(component) : false;
+}
+
+//判断是否拥有组件
+bool Ens::HasComponent(Type* type) const
+{
+    return HasComponentType(type);
+}
+
+//获取组件类型列表
+const List<TypeRuntimeId>& Ens::GetComponentTypes() const
+{
+    return componentTypes;
+}
+
+//获取按挂载顺序排列的所有组件实例
+const List<Component*>& Ens::GetComponents() const
+{
+    return componentInstances;
+}
+
+bool Ens::MoveComponent(Component* component, int32 index)
+{
+    auto found = std::find(componentInstances.begin(), componentInstances.end(), component);
+    if (found == componentInstances.end() || index < 0 || index >= static_cast<int32>(componentInstances.size())) return false;
+    componentInstances.erase(found);
+    componentInstances.insert(componentInstances.begin() + index, component);
+    if (Script* script = component->Cast<Script>())
+    {
+        if (script->IsManagedHost()) ScriptInterop::NotifyManagedHostAttached(script);
+        else if (ScriptSystem* system = ScriptSystem::Current()) system->RefreshNativeScript(script);
+    }
+    return true;
+}

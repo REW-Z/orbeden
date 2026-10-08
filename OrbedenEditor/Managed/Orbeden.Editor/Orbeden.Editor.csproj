@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Orbeden.Editor</AssemblyName>
+    <RootNamespace>OrbedenEditor</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="OrbedenCore.CSharp">
+      <HintPath>..\..\Sdk\Managed\OrbedenCore.CSharp\OrbedenCore.CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 游戏项目模板的 C# 源码不属于 Editor 程序集，明确排除编译。 -->
+  <ItemGroup>
+    <Compile Remove="..\..\Templates\**\*.cs" />
+  </ItemGroup>
+  <Target Name="PublishCustomEditorSdk" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildThisFileDirectory)..\..\Sdk\Managed\Orbeden.Editor\" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

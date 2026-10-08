@@ -1,0 +1,116 @@
+--------frag
+//贴地浓雾：密度沿高度剖面变化，光学厚度按路径解析积分。
+//与球形薄霾分开配置，近距浓雾不依赖面向远景的稀疏查找表。
+//宿主 Shader 需要声明 uniform float u_AtmosphereCameraHeightKm; 与 uniform vec3 u_AtmosphereCameraUp;
+//
+//高度按平地近似沿射线线性变化：h(s) = 相机高度 + mu * s。介质的尺度（能见度几十米到几公里、
+//雾顶几十米到几公里）远小于地球半径 6371 km，两者的差别只在"相机高于雾顶并俯视远处"时才可见，
+//层内视线在 200 km 以内不可分辨。换来的是整个剖面都有初等原函数：逐像素只剩一次函数求值，
+//没有求积、没有边界求交，代码量降到原来的百分之几——这一条是性能要求，不是精度取舍。
+
+uniform int u_AtmosphereDenseFogEnabled;
+//满密度区的消光系数，每 km，由 CPU 按 MOR 从能见度换算
+uniform float u_AtmosphereDenseFogExtinction;
+//散射亮度，取环境光与主光之和
+uniform vec4 u_AtmosphereDenseFogScattering;
+//(雾顶高度 km, 预留, 预留, 参考球半径 km)
+uniform vec4 u_AtmosphereDenseFogProfile;
+//雾顶衰减尺度 km，名义顶部保留稀薄尾部
+uniform float u_AtmosphereDenseFogTopFade;
+//密度模型：0 高度雾（读雾顶与衰减尺度），1 距离雾（只用距离，上面的剖面参数不参与）
+uniform int u_AtmosphereDenseFogMode;
+
+//高度剖面：雾层没有底面，雾顶以下一直是满密度，只在雾顶平滑降至 5%，再延伸指数尾部。
+//尾部为 0.05 * (1 + t) * exp(-t)，与层内渐变在顶部具有相同的一阶导数。
+float EvaluateFogProfile(float height, float top, float topFade)
+{
+    if (height > top + 24.0 * topFade) return 0.0;
+    if (topFade <= 0.0 || height <= top - topFade) return 1.0;
+
+    if (height <= top)
+    {
+        float t = (height - (top - topFade)) / topFade;
+        return 1.0 - 0.95 * t * t * (3.0 - 2.0 * t);
+    }
+
+    float t = (height - top) / topFade;
+    return 0.05 * (1.0 + t) * exp(-t);
+}
+
+//剖面的全局原函数：从负无穷高度积到 height 的密度累计量。
+//分段积分取连续常数，在 h = top-fade、top、top+24*topFade 三处都与上一段等值，函数全域连续：
+//   恒为 1      ∫dh = h
+//   smoothstep  ∫(1 - 0.95*t^2*(3 - 2t))dh = h - 0.95*fade*(t^3 - 0.5*t^4)
+//   指数尾部    ∫0.05*(1 + u)*exp(-u)dh = -0.05*fade*((u + 2)*exp(-u))
+float EvaluateFogProfileIntegral(float height, float top, float topFade)
+{
+    //衰减尺度为零是硬顶：满密度一直保持到雾顶，原函数是折线
+    if (topFade <= 0.0) return min(height, top);
+
+    float base = top - topFade;
+    if (height <= base) return height;
+
+    if (height <= top)
+    {
+        float t = (height - base) / topFade;
+        return base + topFade * (t - 0.95 * t * t * t + 0.475 * t * t * t * t);
+    }
+
+    //雾顶处的值：base + topFade * (1 - 0.95 + 0.475) = top - 0.475 * topFade
+    float capped = min(height, top + 24.0 * topFade);
+    float u = (capped - top) / topFade;
+    return (top - 0.475 * topFade) + 0.05 * topFade * (2.0 - (u + 2.0) * exp(-u));
+}
+
+//射线在浓雾里的路径长度，单位 km。mu 是射线方向在竖直方向上的分量。
+float SampleDenseFogPathLength(float cameraHeight, float mu, float distance, float top, float topFade)
+{
+    //距离雾：密度与高度无关，路径长度就是距离本身。
+    //同一帧里画面各处的浓度一样，换不来"谷地被埋、山脊露出"，但也不需要任何高度参数。
+    if (u_AtmosphereDenseFogMode == 1) return distance;
+
+    float ceiling = top + 24.0 * topFade;
+
+    //水平射线：高度沿射线不变，密度是常量。必须先判这一支，否则下面的原函数相减是 0/0
+    if (abs(mu) * distance < max(0.05 * topFade, 1e-6))
+    {
+        return cameraHeight <= ceiling ? EvaluateFogProfile(cameraHeight, top, topFade) * distance : 0.0;
+    }
+
+    //路径在高度轴上的两端；高于尾带截断高度的那部分不产生密度
+    float heightEnd = cameraHeight + mu * distance;
+    float low = min(cameraHeight, heightEnd);
+    float high = min(max(cameraHeight, heightEnd), ceiling);
+    if (high <= low) return 0.0;
+
+    float inverseSlope = 1.0 / abs(mu);
+    float span = high - low;
+
+    //区间过短时原函数相减会丢有效位，退回中点密度乘长度
+    if (span < max(0.05 * topFade, 1e-6))
+    {
+        return 0.5 * (EvaluateFogProfile(low, top, topFade) + EvaluateFogProfile(high, top, topFade)) * span * inverseSlope;
+    }
+
+    return (EvaluateFogProfileIntegral(high, top, topFade) - EvaluateFogProfileIntegral(low, top, topFade)) * inverseSlope;
+}
+
+//查询浓雾：距离以 km 计，返回透光率与散射亮度。
+//需要分段合成的宿主可以用 SampleDenseFogPathLength 直接取路径长度。
+void SampleDenseFog(float cameraHeightKm, vec3 cameraUp, vec3 ray, float distanceKm,
+    out vec3 transmittance, out vec3 radiance)
+{
+    transmittance = vec3(1.0);
+    radiance = vec3(0.0);
+    if (u_AtmosphereDenseFogEnabled == 0 || u_AtmosphereDenseFogExtinction <= 0.0) return;
+    if (distanceKm <= 0.0) return;
+
+    float top = u_AtmosphereDenseFogProfile.x;
+    float topFade = clamp(u_AtmosphereDenseFogTopFade, 0.0, max(top, 0.0));
+    float pathLength = SampleDenseFogPathLength(cameraHeightKm, dot(cameraUp, ray), distanceKm, top, topFade);
+    if (pathLength <= 0.0) return;
+
+    //消光沿路径积分；散射按环境光与主光的照明近似，随消光同步增长
+    transmittance = vec3(exp(-u_AtmosphereDenseFogExtinction * pathLength));
+    radiance = u_AtmosphereDenseFogScattering.rgb * (vec3(1.0) - transmittance);
+}

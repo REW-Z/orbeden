@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+    <Platforms>AnyCPU;x64</Platforms>
+    <ThirdPartyDotNet Condition="'$(ThirdPartyDotNet)' == ''">dotnet</ThirdPartyDotNet>
+    <ThirdPartyBuildLibraries Condition="'$(ThirdPartyBuildLibraries)' == ''">true</ThirdPartyBuildLibraries>
+    <ThirdPartyOfflineArgument Condition="'$(ThirdPartyOffline)' == 'true'">--offline</ThirdPartyOfflineArgument>
+    <ThirdPartyVsInstallArgument Condition="'$(VSInstallDir)' != ''">--vs-install &quot;$(VSInstallDir).&quot;</ThirdPartyVsInstallArgument>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs;LibraryBuild.cs" />
+    <None Include="dependencies.lock.json;CMakeLists.txt;physx-build.bat;physx-preset.xml;README.md;BuildAdapters\**\*;licenses\**\*" />
+  </ItemGroup>
+  <!--在 VS 中生成工程时直接构建第三方库-->
+  <Target Name="BuildThirdPartyLibraries" AfterTargets="Build"
+          Condition="'$(ThirdPartyBuildLibraries)' == 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="&quot;$(ThirdPartyDotNet)&quot; &quot;$(TargetPath)&quot; build --configuration $(Configuration) $(ThirdPartyOfflineArgument) $(ThirdPartyVsInstallArgument)"
+          WorkingDirectory="$(MSBuildProjectDirectory)" UseUtf8Encoding="Always" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
+  </Target>
+  <!--清理当前配置的第三方编译目录-->
+  <Target Name="CleanThirdPartyLibraries" AfterTargets="Clean"
+          Condition="'$(ThirdPartyBuildLibraries)' == 'true' and '$(DesignTimeBuild)' != 'true' and ('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Release')">
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\Build\cmake\$(Configuration);$(MSBuildProjectDirectory)\Build\lib\$(Configuration)" />
+    <Delete Files="$(MSBuildProjectDirectory)\Build\completed-$(Configuration).json" />
+  </Target>
+</Project>

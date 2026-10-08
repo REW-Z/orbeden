@@ -1,0 +1,999 @@
+#include "Editor/EditorProject.h"
+
+#include "Application.h"
+#include "Editor/ProjectLayout.h"
+#include "FileSystem/PathDefines.h"
+#include "FileSystem/Utf8Path.h"
+#include "Log/Log.h"
+#include "Rendering/RenderSystem.h"
+#include "ResourceManager/ResourceManager.h"
+#include "Runtime/WorldSerializer.h"
+
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+
+namespace
+{
+    std::string ToCleanPath(const std::filesystem::path& path)
+    {
+        return Utf8Path::ToUtf8(path.lexically_normal());
+    }
+
+    //二进制读写：.oeproj 要逐字节保持原样，文本模式会把已有 CRLF 再转一次。
+    std::string ReadTextFile(const std::filesystem::path& path)
+    {
+        std::ifstream input(path, std::ios::in | std::ios::binary);
+        std::ostringstream output;
+        output << input.rdbuf();
+        return output.str();
+    }
+
+    //写入文本文件。
+    bool WriteTextFile(const std::filesystem::path& path, const std::string& text)
+    {
+        std::ofstream output(path, std::ios::out | std::ios::trunc | std::ios::binary);
+        if (!output) return false;
+
+        output << text;
+        return true;
+    }
+
+    //转义 XML 属性文本。
+    std::string EscapeXml(const std::string& text)
+    {
+        std::string result;
+        result.reserve(text.size());
+        for (char ch : text)
+        {
+            if (ch == '&') result += "&amp;";
+            else if (ch == '<') result += "&lt;";
+            else if (ch == '>') result += "&gt;";
+            else if (ch == '"') result += "&quot;";
+            else if (ch == '\'') result += "&apos;";
+            else result += ch;
+        }
+
+        return result;
+    }
+
+    //转换浮点数为紧凑文本。
+    std::string ToFloatText(float32 value)
+    {
+        std::ostringstream output;
+        output << std::setprecision(6) << value;
+        return output.str();
+    }
+
+    std::string GetAttribute(const std::string& text, const std::string& name)
+    {
+        std::string pattern = name + "=";
+        std::size_t position = text.find(pattern);
+        if (position == std::string::npos) return std::string();
+
+        position += pattern.size();
+        while (position < text.size() && std::isspace(static_cast<unsigned char>(text[position])))
+        {
+            position++;
+        }
+
+        if (position >= text.size() || (text[position] != '"' && text[position] != '\'')) return std::string();
+        char quote = text[position++];
+        std::size_t valueStart = position;
+        while (position < text.size() && text[position] != quote)
+        {
+            position++;
+        }
+
+        return position < text.size() ? text.substr(valueStart, position - valueStart) : std::string();
+    }
+
+    //判断 XML 片段是否包含属性。
+    bool HasAttribute(const std::string& text, const std::string& name)
+    {
+        return text.find(name + "=") != std::string::npos;
+    }
+
+    //读取浮点属性。
+    float32 GetFloatAttribute(const std::string& text, const std::string& name, float32 defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        char* end = nullptr;
+        float result = std::strtof(value.c_str(), &end);
+        return end != value.c_str() ? result : defaultValue;
+    }
+
+    //读取布尔属性。
+    bool GetBoolAttribute(const std::string& text, const std::string& name, bool defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        return value == "true" || value == "1";
+    }
+
+    //读取整数属性。
+    int32 GetIntAttribute(const std::string& text, const std::string& name, int32 defaultValue)
+    {
+        std::string value = GetAttribute(text, name);
+        if (value.empty()) return defaultValue;
+
+        char* end = nullptr;
+        long result = std::strtol(value.c_str(), &end, 10);
+        return end != value.c_str() ? static_cast<int32>(result) : defaultValue;
+    }
+
+    //定位根标签 <OrbedenProject ...> 的范围，outTagEnd 指向右尖括号。
+    //属性读写必须限定在根标签内：GetAttribute 是整段文本的子串匹配，
+    //在整个文件里找 "name=" 会命中 filename= 之类的后缀。
+    bool FindProjectRootTag(const std::string& content, std::size_t& outTagStart, std::size_t& outTagEnd)
+    {
+        std::size_t tagStart = content.find("<OrbedenProject");
+        if (tagStart == std::string::npos) return false;
+
+        std::size_t tagEnd = content.find('>', tagStart);
+        if (tagEnd == std::string::npos) return false;
+
+        outTagStart = tagStart;
+        outTagEnd = tagEnd;
+        return true;
+    }
+
+    //在根标签文本内删除属性，连同它前面的空白。
+    bool RemoveRootAttribute(std::string& rootTag, const std::string& name)
+    {
+        std::string pattern = name + "=";
+        std::size_t position = rootTag.find(pattern);
+        if (position == std::string::npos) return true;
+
+        std::size_t attributeStart = position;
+        while (attributeStart > 0 && std::isspace(static_cast<unsigned char>(rootTag[attributeStart - 1])))
+        {
+            attributeStart--;
+        }
+
+        std::size_t valueStart = position + pattern.size();
+        while (valueStart < rootTag.size() && std::isspace(static_cast<unsigned char>(rootTag[valueStart])))
+        {
+            valueStart++;
+        }
+
+        if (valueStart >= rootTag.size() || (rootTag[valueStart] != '"' && rootTag[valueStart] != '\'')) return false;
+        char quote = rootTag[valueStart];
+        std::size_t valueEnd = rootTag.find(quote, valueStart + 1);
+        if (valueEnd == std::string::npos) return false;
+
+        rootTag.erase(attributeStart, valueEnd + 1 - attributeStart);
+        return true;
+    }
+
+    //在根标签文本内写入属性：已存在则替换值，否则在标签结束前追加。
+    bool SetRootAttributeValue(std::string& rootTag, const std::string& name, const std::string& value)
+    {
+        std::string pattern = name + "=";
+        std::size_t position = rootTag.find(pattern);
+        if (position != std::string::npos)
+        {
+            std::size_t quotePosition = position + pattern.size();
+            while (quotePosition < rootTag.size() && std::isspace(static_cast<unsigned char>(rootTag[quotePosition])))
+            {
+                quotePosition++;
+            }
+
+            if (quotePosition >= rootTag.size() || (rootTag[quotePosition] != '"' && rootTag[quotePosition] != '\'')) return false;
+            char quote = rootTag[quotePosition];
+            std::size_t valueStart = quotePosition + 1;
+            std::size_t valueEnd = rootTag.find(quote, valueStart);
+            if (valueEnd == std::string::npos) return false;
+
+            rootTag.replace(valueStart, valueEnd - valueStart, EscapeXml(value));
+            return true;
+        }
+
+        //属性不存在：插到标签结束前，自闭合的 '/' 之外。
+        std::size_t insertPosition = rootTag.size() - 1;
+        if (insertPosition > 0 && rootTag[insertPosition - 1] == '/') insertPosition--;
+        while (insertPosition > 0 && std::isspace(static_cast<unsigned char>(rootTag[insertPosition - 1])))
+        {
+            insertPosition--;
+        }
+
+        rootTag.insert(insertPosition, " " + name + "=\"" + EscapeXml(value) + "\"");
+        return true;
+    }
+
+    //写入文本文件：先写临时文件再改名，避免中断时留下截断的半份 XML。
+    bool WriteTextFileAtomic(const std::filesystem::path& path, const std::string& text)
+    {
+        std::filesystem::path temporary = path;
+        temporary += ".tmp";
+
+        {
+            std::ofstream output(temporary, std::ios::out | std::ios::trunc | std::ios::binary);
+            if (!output) return false;
+
+            output << text;
+            if (!output) return false;
+        }
+
+        std::error_code error;
+        std::filesystem::rename(temporary, path, error);
+        if (error)
+        {
+            std::filesystem::remove(temporary, error);
+            return false;
+        }
+
+        return true;
+    }
+
+    //读取编辑器布局块。
+    void ReadEditorLayout(const std::string& content, EditorLayoutState& layout)
+    {
+        layout = EditorLayoutState();
+
+        std::size_t layoutStart = content.find("<EditorLayout");
+        if (layoutStart == std::string::npos) return;
+
+        std::size_t layoutEnd = content.find("</EditorLayout>", layoutStart);
+        if (layoutEnd == std::string::npos) return;
+
+        std::string block = content.substr(layoutStart, layoutEnd - layoutStart);
+        std::size_t layoutTokenEnd = block.find('>');
+        if (layoutTokenEnd != std::string::npos)
+        {
+            std::string layoutToken = block.substr(0, layoutTokenEnd + 1);
+            layout.dockRoot = GetIntAttribute(layoutToken, "dockRoot", -1);
+        }
+
+        //读取面板布局。
+        std::size_t panelPosition = 0;
+        while ((panelPosition = block.find("<Panel", panelPosition)) != std::string::npos)
+        {
+            std::size_t panelEnd = block.find('>', panelPosition);
+            if (panelEnd == std::string::npos) break;
+
+            std::string panelToken = block.substr(panelPosition, panelEnd - panelPosition + 1);
+            EditorPanelState panel;
+            panel.id = GetAttribute(panelToken, "id");
+            panel.visible = GetBoolAttribute(panelToken, "visible", true);
+            panel.floatingWindow = GetBoolAttribute(panelToken, "floating", false);
+            panel.hasPosition = HasAttribute(panelToken, "x") && HasAttribute(panelToken, "y");
+            panel.hasSize = HasAttribute(panelToken, "width") && HasAttribute(panelToken, "height");
+            panel.position.x = GetFloatAttribute(panelToken, "x", 0.0f);
+            panel.position.y = GetFloatAttribute(panelToken, "y", 0.0f);
+            panel.size.x = GetFloatAttribute(panelToken, "width", 0.0f);
+            panel.size.y = GetFloatAttribute(panelToken, "height", 0.0f);
+            panel.dockNode = GetIntAttribute(panelToken, "dockNode", -1);
+            panel.returnDockNode = GetIntAttribute(panelToken, "returnDockNode", -1);
+            if (!panel.id.empty())
+            {
+                layout.panels.push_back(panel);
+            }
+
+            panelPosition = panelEnd + 1;
+        }
+
+        //读取停靠树。
+        std::size_t dockPosition = 0;
+        while ((dockPosition = block.find("<DockNode", dockPosition)) != std::string::npos)
+        {
+            std::size_t dockEnd = block.find('>', dockPosition);
+            if (dockEnd == std::string::npos) break;
+
+            std::string dockToken = block.substr(dockPosition, dockEnd - dockPosition + 1);
+            EditorDockNodeState node;
+            node.id = GetIntAttribute(dockToken, "id", 0);
+            node.firstChild = GetIntAttribute(dockToken, "first", -1);
+            node.secondChild = GetIntAttribute(dockToken, "second", -1);
+            node.vertical = GetBoolAttribute(dockToken, "vertical", true);
+            node.ratio = GetFloatAttribute(dockToken, "ratio", 0.5f);
+            node.workspace = GetBoolAttribute(dockToken, "workspace", false);
+            node.activePanel = GetAttribute(dockToken, "active");
+            if (node.id > 0) layout.dockNodes.push_back(node);
+            dockPosition = dockEnd + 1;
+        }
+
+        //读取编辑器相机布局。
+        std::size_t cameraPosition = block.find("<EditorCamera");
+        if (cameraPosition != std::string::npos)
+        {
+            std::size_t cameraEnd = block.find('>', cameraPosition);
+            if (cameraEnd != std::string::npos)
+            {
+                std::string cameraToken = block.substr(cameraPosition, cameraEnd - cameraPosition + 1);
+                layout.editorCamera.hasValue = true;
+                layout.editorCamera.position.x = GetFloatAttribute(cameraToken, "x", layout.editorCamera.position.x);
+                layout.editorCamera.position.y = GetFloatAttribute(cameraToken, "y", layout.editorCamera.position.y);
+                layout.editorCamera.position.z = GetFloatAttribute(cameraToken, "z", layout.editorCamera.position.z);
+                layout.editorCamera.yaw = GetFloatAttribute(cameraToken, "yaw", layout.editorCamera.yaw);
+                layout.editorCamera.pitch = GetFloatAttribute(cameraToken, "pitch", layout.editorCamera.pitch);
+                //focus 是后加的属性，旧项目里没有，走结构体默认值
+                layout.editorCamera.focusDistance = GetFloatAttribute(cameraToken, "focus",
+                    layout.editorCamera.focusDistance);
+            }
+        }
+    }
+
+    //移除旧编辑器布局块。
+    std::string RemoveEditorLayoutBlock(std::string content)
+    {
+        std::size_t layoutStart = content.find("<EditorLayout");
+        if (layoutStart == std::string::npos) return content;
+
+        std::size_t eraseStart = layoutStart;
+        while (eraseStart > 0 && (content[eraseStart - 1] == ' ' || content[eraseStart - 1] == '\t'))
+        {
+            eraseStart--;
+        }
+        if (eraseStart > 0 && content[eraseStart - 1] == '\n')
+        {
+            eraseStart--;
+            if (eraseStart > 0 && content[eraseStart - 1] == '\r')
+            {
+                eraseStart--;
+            }
+        }
+
+        std::size_t layoutEnd = content.find("</EditorLayout>", layoutStart);
+        if (layoutEnd != std::string::npos)
+        {
+            layoutEnd += std::strlen("</EditorLayout>");
+        }
+        else
+        {
+            layoutEnd = content.find('>', layoutStart);
+            if (layoutEnd == std::string::npos) return content;
+            layoutEnd++;
+        }
+
+        while (layoutEnd < content.size() && (content[layoutEnd] == '\r' || content[layoutEnd] == '\n'))
+        {
+            layoutEnd++;
+        }
+
+        content.erase(eraseStart, layoutEnd - eraseStart);
+        return content;
+    }
+
+    //写出编辑器布局块文本。
+    std::string BuildEditorLayoutBlock(const EditorLayoutState& layout)
+    {
+        std::ostringstream output;
+        output << "    <EditorLayout dockRoot=\"" << layout.dockRoot << "\">\n";
+        for (const EditorPanelState& panel : layout.panels)
+        {
+            output << "        <Panel id=\"" << EscapeXml(panel.id)
+                << "\" visible=\"" << (panel.visible ? "true" : "false")
+                << "\" floating=\"" << (panel.floatingWindow ? "true" : "false")
+                << "\" x=\"" << ToFloatText(panel.position.x)
+                << "\" y=\"" << ToFloatText(panel.position.y)
+                << "\" width=\"" << ToFloatText(panel.size.x)
+                << "\" height=\"" << ToFloatText(panel.size.y)
+                << "\" dockNode=\"" << panel.dockNode
+                << "\" returnDockNode=\"" << panel.returnDockNode
+                << "\" />\n";
+        }
+
+        for (const EditorDockNodeState& node : layout.dockNodes)
+        {
+            output << "        <DockNode id=\"" << node.id
+                << "\" first=\"" << node.firstChild
+                << "\" second=\"" << node.secondChild
+                << "\" vertical=\"" << (node.vertical ? "true" : "false")
+                << "\" ratio=\"" << ToFloatText(node.ratio)
+                << "\" workspace=\"" << (node.workspace ? "true" : "false")
+                << "\" active=\"" << EscapeXml(node.activePanel)
+                << "\" />\n";
+        }
+
+        if (layout.editorCamera.hasValue)
+        {
+            output << "        <EditorCamera x=\"" << ToFloatText(layout.editorCamera.position.x)
+                << "\" y=\"" << ToFloatText(layout.editorCamera.position.y)
+                << "\" z=\"" << ToFloatText(layout.editorCamera.position.z)
+                << "\" yaw=\"" << ToFloatText(layout.editorCamera.yaw)
+                << "\" pitch=\"" << ToFloatText(layout.editorCamera.pitch)
+                << "\" focus=\"" << ToFloatText(layout.editorCamera.focusDistance)
+                << "\" />\n";
+        }
+
+        output << "    </EditorLayout>\n";
+        return output.str();
+    }
+
+    //写入编辑器布局到项目文件。
+    bool WriteEditorLayoutToProjectFile(const std::filesystem::path& projectFile, const EditorLayoutState& layout)
+    {
+        std::string content = RemoveEditorLayoutBlock(ReadTextFile(projectFile));
+        std::size_t rootStart = content.find("<OrbedenProject");
+        if (rootStart == std::string::npos) return false;
+
+        std::size_t rootEnd = content.find('>', rootStart);
+        if (rootEnd == std::string::npos) return false;
+
+        std::size_t lastRootChar = rootEnd;
+        while (lastRootChar > rootStart && std::isspace(static_cast<unsigned char>(content[lastRootChar - 1])))
+        {
+            lastRootChar--;
+        }
+
+        std::string layoutBlock = BuildEditorLayoutBlock(layout);
+        bool selfClosing = lastRootChar > rootStart && content[lastRootChar - 1] == '/';
+        if (selfClosing)
+        {
+            content.erase(lastRootChar - 1, 1);
+            rootEnd--;
+            std::size_t insertPosition = rootEnd + 1;
+            while (insertPosition < content.size() && (content[insertPosition] == '\r' || content[insertPosition] == '\n'))
+            {
+                content.erase(insertPosition, 1);
+            }
+
+            content.insert(insertPosition, "\n" + layoutBlock + "</OrbedenProject>\n");
+            return WriteTextFile(projectFile, content);
+        }
+
+        std::size_t closePosition = content.rfind("</OrbedenProject>");
+        if (closePosition == std::string::npos) return false;
+
+        std::string insertText = layoutBlock;
+        if (closePosition > 0 && content[closePosition - 1] != '\n')
+        {
+            insertText = "\n" + insertText;
+        }
+
+        content.insert(closePosition, insertText);
+        return WriteTextFile(projectFile, content);
+    }
+
+    //项目名的唯一真源是 .oeproj 的文件基名：csproj、vcxproj 与模块 DLL 名都从它推导，
+    //项目目录改名因此不影响任何东西。name 属性只作为旧项目的一次性回退读入。
+    std::string DeriveProjectName(const std::filesystem::path& filePath, const std::string& rootTag)
+    {
+        std::string name = Utf8Path::ToUtf8(filePath.stem());
+        if (name.empty()) name = GetAttribute(rootTag, "name");
+        if (name.empty()) name = Utf8Path::ToUtf8(filePath.parent_path().filename());
+        return name;
+    }
+
+    std::string FindProjectFileInFolder(const std::filesystem::path& folder)
+    {
+        if (!std::filesystem::is_directory(folder)) return std::string();
+
+        std::string expectedName = Utf8Path::ToUtf8(folder.filename()) + ".oeproj";
+        std::filesystem::path expected = folder / Utf8Path::FromUtf8(expectedName);
+        if (std::filesystem::exists(expected)) return ToCleanPath(expected);
+
+        std::error_code error;
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(folder, error))
+        {
+            if (error) break;
+            if (!entry.is_regular_file()) continue;
+            if (entry.path().extension() == ".oeproj")
+            {
+                return ToCleanPath(entry.path());
+            }
+        }
+
+        return std::string();
+    }
+}
+
+EditorProject::EditorProject(Application& application)
+    : app(application)
+{
+}
+
+//只读探测项目版本，不改变任何编辑器状态，供加载前的版本比对使用。
+bool EditorProject::ProbeProjectFile(const std::string& projectFile, ProjectVersionProbe& outProbe, std::string& outError)
+{
+    outProbe = ProjectVersionProbe();
+    outError.clear();
+
+    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    if (!std::filesystem::exists(filePath))
+    {
+        outError = "Project file does not exist: " + projectFile;
+        return false;
+    }
+
+    std::string content = ReadTextFile(filePath);
+    std::size_t tagStart = 0;
+    std::size_t tagEnd = 0;
+    if (!FindProjectRootTag(content, tagStart, tagEnd))
+    {
+        outError = "Project file is missing the OrbedenProject element: " + projectFile;
+        return false;
+    }
+
+    //早期项目没有 version 属性，按最早版本处理。
+    std::string rootTag = content.substr(tagStart, tagEnd - tagStart + 1);
+    outProbe.storedVersion = static_cast<uint32>(GetIntAttribute(rootTag, "version", 0));
+    outProbe.projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
+    outProbe.projectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
+    outProbe.projectName = DeriveProjectName(filePath, rootTag);
+    if (outProbe.storedVersion == OrbedenProjectVersion)
+    {
+        outProbe.status = ProjectVersionStatus::Current;
+    }
+    else
+    {
+        outProbe.status = outProbe.storedVersion < OrbedenProjectVersion
+            ? ProjectVersionStatus::Outdated
+            : ProjectVersionStatus::Newer;
+    }
+
+    return true;
+}
+
+bool EditorProject::ProbeProjectFolder(const std::string& folder, ProjectVersionProbe& outProbe, std::string& outError)
+{
+    std::string projectFile = FindProjectFileInFolder(Utf8Path::FromUtf8(folder));
+    if (projectFile.empty())
+    {
+        outProbe = ProjectVersionProbe();
+        outError = "Project folder does not contain a .oeproj file: " + folder;
+        return false;
+    }
+
+    return ProbeProjectFile(projectFile, outProbe, outError);
+}
+
+//写入项目版本号。写成功代表一次更新完成，因此必须在其它步骤全部成功后才调用。
+bool EditorProject::WriteProjectVersion(const std::string& projectFile, uint32 version, std::string& outError)
+{
+    return UpdateProjectRootAttributes(projectFile,
+        { std::make_pair(std::string("version"), std::to_string(version)) },
+        {},
+        outError);
+}
+
+//一次读改写里增删若干根标签属性
+bool EditorProject::UpdateProjectRootAttributes(const std::string& projectFile,
+    const List<std::pair<std::string, std::string>>& attributes,
+    const List<std::string>& removedAttributes,
+    std::string& outError)
+{
+    outError.clear();
+
+    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    if (!std::filesystem::exists(filePath))
+    {
+        outError = "Project file does not exist: " + projectFile;
+        return false;
+    }
+
+    std::string content = ReadTextFile(filePath);
+    std::size_t tagStart = 0;
+    std::size_t tagEnd = 0;
+    if (!FindProjectRootTag(content, tagStart, tagEnd))
+    {
+        outError = "Project file is missing the OrbedenProject element: " + projectFile;
+        return false;
+    }
+
+    std::string rootTag = content.substr(tagStart, tagEnd - tagStart + 1);
+    for (const std::string& name : removedAttributes)
+    {
+        if (!RemoveRootAttribute(rootTag, name))
+        {
+            outError = "Project file root element could not be updated: " + projectFile;
+            return false;
+        }
+    }
+    for (const std::pair<std::string, std::string>& attribute : attributes)
+    {
+        if (!SetRootAttributeValue(rootTag, attribute.first, attribute.second))
+        {
+            outError = "Project file root element could not be updated: " + projectFile;
+            return false;
+        }
+    }
+
+    content.replace(tagStart, tagEnd - tagStart + 1, rootTag);
+    if (!WriteTextFileAtomic(filePath, content))
+    {
+        outError = "Project file write failed: " + projectFile;
+        return false;
+    }
+
+    return true;
+}
+
+bool EditorProject::LoadProjectFolder(const std::string& folder)
+{
+    std::string projectFile = FindProjectFileInFolder(Utf8Path::FromUtf8(folder));
+    if (projectFile.empty())
+    {
+        lastError = "Project folder does not contain a .oeproj file: " + folder;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    return LoadProjectFile(projectFile);
+}
+
+bool EditorProject::LoadProjectFile(const std::string& projectFile)
+{
+    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    if (!std::filesystem::exists(filePath))
+    {
+        lastError = "Project file does not exist: " + projectFile;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    std::string content = ReadTextFile(filePath);
+    std::size_t tagStart = 0;
+    std::size_t tagEnd = 0;
+    if (!FindProjectRootTag(content, tagStart, tagEnd))
+    {
+        lastError = "Project file is missing the OrbedenProject element: " + projectFile;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    //属性只在根标签内取：整个文件里搜 "name=" 会命中 filename= 这类后缀。
+    std::string rootTag = content.substr(tagStart, tagEnd - tagStart + 1);
+    std::string parsedName = DeriveProjectName(filePath, rootTag);
+    std::string parsedStartupWorld = GetAttribute(rootTag, "startupWorld");
+    std::string parsedLastWorld = GetAttribute(rootTag, "lastWorld");
+    EditorLayoutState parsedLayout;
+    ReadEditorLayout(content, parsedLayout);
+    if (parsedStartupWorld.empty())
+    {
+        lastError = "Project file is missing startupWorld: " + projectFile;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    std::string parsedProjectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
+    std::filesystem::path contentRoot = Utf8Path::FromUtf8(parsedProjectRoot) / ProjectLayout::ContentFolder;
+    //两个 Key 都相对内容根，场景放在内容根内任何目录都能加载。
+    //编辑器回到上次编辑的场景；它已经被删或被改名时退回启动场景，
+    //老项目没有 lastWorld 属性，同样走这条回退。
+    std::string openedWorld = parsedStartupWorld;
+    if (!parsedLastWorld.empty() && std::filesystem::is_regular_file(contentRoot / Utf8Path::FromUtf8(parsedLastWorld)))
+    {
+        openedWorld = parsedLastWorld;
+    }
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    if (renderSystem)
+    {
+        renderSystem->InvalidateResourceCaches();
+    }
+
+    //只落项目身份与内容根，不加载世界：场景里的项目原生组件要等原生模块装载之后才注册，
+    //加载顺序反了这些组件会缺席（之后保存还会把它们丢掉）。调用方在模块就绪后调 ReloadWorld。
+    app.GetWorld().Clear();
+    ResourceManager::Shutdown();
+    PathDefines::SetContentRoot(ToCleanPath(contentRoot));
+    //内容根换成项目之后重建 UI 着色器程序：项目里的 ui_surface.orbshader 这样才会生效。
+    if (renderSystem) renderSystem->GetUIRenderer().InvalidateShaderPrograms();
+
+    projectRoot = parsedProjectRoot;
+    projectName = parsedName;
+    startupWorld = parsedStartupWorld;
+    //lastWorld 保留文件里记的原值；currentWorld 是本次实际打开的场景，两者在回退时不同。
+    lastWorld = parsedLastWorld;
+    currentWorld = openedWorld;
+    projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
+    editorLayout = parsedLayout;
+    lastError.clear();
+    worldLoaded = false;
+
+    Log::Info(("Project loaded: " + projectName).c_str());
+    return true;
+}
+
+bool EditorProject::SaveWorld()
+{
+    if (!HasProject())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+    if (!worldLoaded)
+    {
+        lastError = "Startup world is waiting for Native scripts and cannot be saved until Build Game C++ succeeds.";
+        Log::Warning(lastError.c_str());
+        return false;
+    }
+
+    std::string worldPath = GetWorldPath();
+    if (worldPath.empty())
+    {
+        lastError = "Project startup world is empty.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    if (!app.SaveWorld(worldPath))
+    {
+        lastError = "World save failed: " + worldPath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    lastError.clear();
+    Log::Info(("World saved: " + worldPath).c_str());
+    return true;
+}
+
+//重新读取当前场景
+bool EditorProject::ReloadWorld()
+{
+    if (!HasProject())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    if (currentWorld.empty())
+    {
+        lastError = "Project world is empty.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    return OpenWorld(currentWorld);
+}
+
+//切换到项目内的另一个场景并加载
+bool EditorProject::OpenWorld(const std::string& relativePath)
+{
+    if (!HasProject())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+    if (relativePath.empty())
+    {
+        lastError = "World path is empty.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    std::filesystem::path relative = Utf8Path::FromUtf8(relativePath).lexically_normal();
+    if (relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".world")
+    {
+        lastError = "Expected a Content-relative .world key.";
+        return false;
+    }
+
+    std::string worldPath = ToCleanPath(Utf8Path::FromUtf8(GetContentRootPath()) / Utf8Path::FromUtf8(relativePath));
+    if (!std::filesystem::exists(Utf8Path::FromUtf8(worldPath)))
+    {
+        lastError = "World does not exist: " + relativePath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    app.CancelWorldLoad();
+
+    if (!app.LoadWorld(worldPath))
+    {
+        //加载失败时不改当前场景记录，避免下次保存写到没打开的路径上。
+        lastError = "World load failed: " + worldPath;
+        const std::string& unregisteredType = WorldSerializer::GetLastUnregisteredComponentType();
+        if (!unregisteredType.empty())
+            lastError += " Native component '" + unregisteredType + "' is not registered yet.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    currentWorld = ToCleanPath(Utf8Path::FromUtf8(relativePath));
+    worldLoaded = true;
+    lastError.clear();
+
+    //记下最后编辑的场景，下次打开项目回到它。写不进去不算切换失败——
+    //场景已经加载好了，只是下次不会回到这里。
+    if (currentWorld != lastWorld)
+    {
+        if (UpdateProjectRootAttributes(projectFilePath, { { "lastWorld", currentWorld } }, {}, lastError))
+        {
+            lastWorld = currentWorld;
+            lastError.clear();
+        }
+        else
+        {
+            Log::Warning(lastError.c_str());
+            lastError.clear();
+        }
+    }
+
+    Log::Info(("World opened: " + worldPath).c_str());
+    return true;
+}
+
+//获取启动 World 的资源 Key
+const std::string& EditorProject::GetStartupWorldKey() const
+{
+    return startupWorld;
+}
+
+//设置并持久化启动 World
+bool EditorProject::SetStartupWorld(const std::string& key)
+{
+    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    if (!HasProject() || relative.empty() || relative.has_root_path()
+        || *relative.begin() == ".." || relative.extension() != ".world"
+        || !std::filesystem::is_regular_file(Utf8Path::FromUtf8(GetContentRootPath()) / relative))
+    {
+        lastError = "Expected an existing Content-relative .world key.";
+        return false;
+    }
+    std::string cleaned = ToCleanPath(relative);
+    if (!UpdateProjectRootAttributes(projectFilePath, { { "startupWorld", cleaned } }, {}, lastError)) return false;
+    startupWorld = cleaned;
+    return true;
+}
+
+//同步资产移动后的 World 配置引用
+bool EditorProject::RemapWorldKeys(const std::string& oldKey, const std::string& newKey, bool prefix)
+{
+    auto mapKey = [&](const std::string& key)
+    {
+        bool matches = key == oldKey || (prefix && key.starts_with(oldKey + "/"));
+        return !matches ? key : newKey.empty() ? std::string() : newKey + key.substr(oldKey.size());
+    };
+    std::string startup = mapKey(startupWorld);
+    if (startup.empty())
+    {
+        lastError = "Select another startup World before deleting this asset.";
+        return false;
+    }
+    std::string last = mapKey(lastWorld);
+
+    List<std::pair<std::string, std::string>> attributes;
+    List<std::string> removed;
+    if (startup != startupWorld) attributes.emplace_back("startupWorld", startup);
+    //上次编辑的场景跟着一起改；被删掉时直接去掉这个属性，下次打开退回启动场景
+    if (last != lastWorld)
+    {
+        if (last.empty()) removed.emplace_back("lastWorld");
+        else attributes.emplace_back("lastWorld", last);
+    }
+
+    if ((!attributes.empty() || !removed.empty())
+        && !UpdateProjectRootAttributes(projectFilePath, attributes, removed, lastError)) return false;
+
+    startupWorld = startup;
+    lastWorld = last;
+    currentWorld = mapKey(currentWorld);
+    if (currentWorld.empty()) worldLoaded = false;
+    lastError.clear();
+    return true;
+}
+
+//创建带默认渲染设置的空 World
+bool EditorProject::CreateWorld(const std::string& key)
+{
+    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    if (!HasProject() || relative.empty() || relative.has_root_path()
+        || *relative.begin() == ".." || relative.extension() != ".world")
+    {
+        lastError = "Expected a Content-relative .world key.";
+        return false;
+    }
+    std::filesystem::path destination = Utf8Path::FromUtf8(GetContentRootPath()) / relative;
+    if (std::filesystem::exists(destination) || !std::filesystem::is_directory(destination.parent_path()))
+    {
+        lastError = "World already exists or its folder is missing.";
+        return false;
+    }
+    World empty;
+    if (!WorldSerializer::SaveXml(empty, Utf8Path::ToUtf8(destination)))
+    {
+        lastError = "Cannot write World: " + key;
+        return false;
+    }
+    lastError.clear();
+    return true;
+}
+
+//判断当前场景是否已经完整加载到内存。
+bool EditorProject::IsWorldLoaded() const
+{
+    return worldLoaded;
+}
+
+//获取当前场景相对项目根的 Key
+const std::string& EditorProject::GetCurrentWorldKey() const
+{
+    return currentWorld;
+}
+
+//标记内存 World 已清空，保存必须等待磁盘重载。
+void EditorProject::MarkWorldPendingReload()
+{
+    worldLoaded = false;
+}
+
+//保存编辑器布局状态到项目文件
+bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
+{
+    if (!HasProject() || projectFilePath.empty())
+    {
+        lastError = "No project is open.";
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    if (!WriteEditorLayoutToProjectFile(Utf8Path::FromUtf8(projectFilePath), layout))
+    {
+        lastError = "Editor layout save failed: " + projectFilePath;
+        Log::Error(lastError.c_str());
+        return false;
+    }
+
+    editorLayout = layout;
+    lastError.clear();
+    return true;
+}
+
+//获取编辑器布局状态
+const EditorLayoutState& EditorProject::GetEditorLayout() const
+{
+    return editorLayout;
+}
+
+const std::string& EditorProject::GetProjectRoot() const
+{
+    return projectRoot;
+}
+
+const std::string& EditorProject::GetProjectName() const
+{
+    return projectName;
+}
+
+std::string EditorProject::GetContentRootPath() const
+{
+    if (projectRoot.empty()) return std::string();
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::ContentFolder);
+}
+
+std::string EditorProject::GetManagedRootPath() const
+{
+    if (projectRoot.empty()) return std::string();
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::ManagedFolder);
+}
+
+std::string EditorProject::GetNativeBuildPath() const
+{
+    if (projectRoot.empty()) return std::string();
+    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::NativeBuildFolder);
+}
+
+std::string EditorProject::GetWorldPath() const
+{
+    if (projectRoot.empty() || currentWorld.empty()) return std::string();
+    return ToCleanPath(Utf8Path::FromUtf8(GetContentRootPath()) / Utf8Path::FromUtf8(currentWorld));
+}
+
+//获取项目文件完整路径
+const std::string& EditorProject::GetProjectFilePath() const
+{
+    return projectFilePath;
+}
+
+const std::string& EditorProject::GetLastError() const
+{
+    return lastError;
+}
+
+bool EditorProject::HasProject() const
+{
+    return !projectRoot.empty();
+}

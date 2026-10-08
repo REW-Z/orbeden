@@ -1,0 +1,7 @@
+# 六面图像按 OpenGL +X/-X/+Y/-Y/+Z/-Z 排列，引用相对内容根
+right "Builtin/Skyboxes/SoftDaylight/right.png"
+left "Builtin/Skyboxes/SoftDaylight/left.png"
+top "Builtin/Skyboxes/SoftDaylight/top.png"
+bottom "Builtin/Skyboxes/SoftDaylight/bottom.png"
+front "Builtin/Skyboxes/SoftDaylight/front.png"
+back "Builtin/Skyboxes/SoftDaylight/back.png"

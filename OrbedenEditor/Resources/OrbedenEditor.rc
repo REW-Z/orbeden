@@ -1,0 +1,2 @@
+// GLFW uses this named resource for main and floating window icons.
+GLFW_ICON ICON "Brand/Orbeden.ico"

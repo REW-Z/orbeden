@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Src\editor_main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorSceneGizmos.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\NewProjectTemplate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorProject.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorPlayMode.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorScene.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorSystem.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorGUI.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorIcons.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorFloatingWindow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorClrHost.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\ManagedEditorBridge.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\NewProjectGenerator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\PlayerContentCooker.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\ProjectUpdate.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\PanelManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\Panels\**\*.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\EditorGizmoHandles.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Editor\NativeGameModule.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\NewProjectTemplate.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorSceneGizmos.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorProject.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorPlayMode.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorScene.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorSystem.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGUI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorIcons.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorFloatingWindow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorClrHost.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorLayoutState.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ManagedEditorBridge.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\NewProjectGenerator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\PlayerContentCooker.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\ProjectUpdate.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\PanelManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\Panels\**\*.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGizmoAbi.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\EditorGizmoHandles.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\NativeGameModule.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Src\Editor\Panels\**\*.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Managed\Orbeden.Editor\EditorRuntime.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\EditorGUI.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\NativeEditorGUI.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Gizmos.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Orbeden.Editor.csproj">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\OrbedenEditor.runtimeconfig.json">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+    <None Include="Managed\Orbeden.Editor\Panels\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Editor\AssetInspection.h" />
+    <ClCompile Include="Src\Editor\AssetInspection.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\OrbedenEditor.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+    <Image Include="Resources\Brand\Orbeden.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

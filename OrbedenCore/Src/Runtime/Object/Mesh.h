@@ -1,0 +1,121 @@
+#pragma once
+
+#include "Rendering/RenderTypes.h"
+#include "Runtime/EngineTypes.h"
+#include "Runtime/Object/Object.h"
+#include "Runtime/Object/Material.h"
+
+#include <string>
+
+struct GpuMesh;
+class GpuResourceManager;
+
+//网格数据变更的独立消费方
+enum class MeshDirtyFlags : uint32
+{
+    None = 0,
+    Gpu = 1u << 0,
+    Bounds = 1u << 1,
+    Render = 1u << 2,
+    Physics = 1u << 3,
+    Editor = 1u << 4,
+    All = (1u << 5) - 1u,
+};
+
+constexpr MeshDirtyFlags operator|(MeshDirtyFlags left, MeshDirtyFlags right)
+{
+    return static_cast<MeshDirtyFlags>(static_cast<uint32>(left) | static_cast<uint32>(right));
+}
+
+//子网格：只描述几何区间，材质由渲染器按槽位提供
+struct SubMesh
+{
+public:
+    std::string name;
+    uint32 indexStart = 0;
+    uint32 indexCount = 0;
+};
+
+//CPU网格资源
+class Mesh : public Object
+{
+    OBJECT_TYPE_DECLARE(Mesh)
+
+private:
+    friend class GpuResourceManager;
+
+    //GPU 网格由资源管理器持有。
+    GpuMesh* gpuMesh = nullptr;
+    mutable uint32 dirtyFlags = static_cast<uint32>(MeshDirtyFlags::All);
+    //顶点或索引内容每次变更都递增，静态几何缓存据此判断要不要重建展开结果
+    uint64 contentVersion = 1;
+    mutable bounds3 localBounds;
+
+public:
+    std::string name;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexPositions)
+    List<vector3> vertices;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexTexcoords)
+    List<vector2> texcoords;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexNormals)
+    List<vector3> normals;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetVertexTangents)
+    List<vector3> tangents;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetIndexData)
+    List<uint32> indices;
+    ORBEDEN_BIND_ACCESSORS(Direct, SetSubMeshes)
+    List<SubMesh> subMeshes;
+
+    //获取按脏标记缓存的本地包围盒
+    const bounds3& GetLocalBounds() const;
+
+    //判断指定消费方是否需要刷新
+    bool IsDirty(MeshDirtyFlags flags) const;
+
+    //读取内容版本，几何数据变更时递增；静态几何缓存据此判断要不要重建
+    uint64 GetContentVersion() const { return contentVersion; }
+
+    //标记指定消费方需要刷新
+    void MarkDirty(MeshDirtyFlags flags);
+
+    //清除指定消费方的刷新标记
+    void ClearDirty(MeshDirtyFlags flags);
+
+    //标记所有消费方需要刷新
+    void MarkDirty();
+
+    //清空所有几何数据
+    void ClearGeometry();
+
+    //写入顶点位置
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetVertexPositions(const vector3* data, int32 count);
+
+    //写入顶点法线
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetVertexNormals(const vector3* data, int32 count);
+
+    //写入顶点 UV
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetVertexTexcoords(const vector2* data, int32 count);
+
+    //写入顶点切线
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetVertexTangents(const vector3* data, int32 count);
+
+    //写入索引数据
+    ORBEDEN_BIND_BUFFER(data, count)
+    bool SetIndexData(const uint32* data, int32 count);
+
+    //调整子网格数量
+    bool ResizeSubMeshes(int32 count);
+
+    //替换子网格快照并通知所有数据消费方。
+    bool SetSubMeshes(const List<SubMesh>& value);
+
+    //配置子网格
+    bool ConfigureSubMesh(int32 index, const std::string& subMeshName, uint32 indexStart, uint32 indexCount);
+
+    //根据三角形索引重新计算法线
+    bool RefreshNormals();
+};

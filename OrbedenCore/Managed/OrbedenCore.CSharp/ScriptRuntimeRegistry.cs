@@ -1,0 +1,151 @@
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Orbeden;
+
+/// <summary>记录当前托管运行态脚本实例，供 Editor CLR Inspector 查询。</summary>
+public static class ScriptRuntimeRegistry
+{
+    private static readonly Dictionary<EnsId, List<Script>> scriptsByEns = [];
+    private static readonly Dictionary<Script, ulong> slotsByScript = new(ReferenceEqualityComparer.Instance);
+    private static readonly Dictionary<ulong, Script> scriptsBySlot = [];
+    private static uint generation = 1;
+    private static readonly Dictionary<EnsId, ulong> revisions = [];
+    private static ulong nextRevision;
+
+    /// <summary>读取组件集合版本，覆盖增删、顺序、启停与 Inspector 字段事务。</summary>
+    public static ulong GetScriptRevision(EnsId ens) => revisions.GetValueOrDefault(ens);
+
+    /// <summary>更新指定节点的组件版本。</summary>
+    internal static void InvalidateScripts(EnsId ens)
+    {
+        if (++nextRevision == 0) ++nextRevision;
+        revisions[ens] = nextRevision;
+    }
+
+    /// <summary>注册脚本实例。</summary>
+    internal static void Register(Script script)
+    {
+        if (script.EnsId.IsNull) return;
+
+        if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts))
+        {
+            scripts = [];
+            scriptsByEns.Add(script.EnsId, scripts);
+        }
+
+        if (!scripts.Contains(script))
+        {
+            scripts.Add(script);
+            InvalidateScripts(script.EnsId);
+        }
+        if (!slotsByScript.ContainsKey(script))
+        {
+            ulong slot = unchecked((uint)script.InstanceId);
+            if (slot == 0 || scriptsBySlot.ContainsKey(slot)) return;
+            slotsByScript.Add(script, slot);
+            scriptsBySlot.Add(slot, script);
+        }
+    }
+
+    /// <summary>注销脚本实例。</summary>
+    internal static void Unregister(Script script)
+    {
+        if (script.EnsId.IsNull) return;
+        if (!scriptsByEns.TryGetValue(script.EnsId, out List<Script>? scripts)) return;
+
+        scripts.Remove(script);
+        InvalidateScripts(script.EnsId);
+        if (scripts.Count == 0)
+        {
+            scriptsByEns.Remove(script.EnsId);
+            revisions.Remove(script.EnsId);
+        }
+        if (slotsByScript.Remove(script, out ulong slot)) scriptsBySlot.Remove(slot);
+    }
+
+    /// <summary>清空所有运行态脚本实例记录。</summary>
+    public static void Clear()
+    {
+        scriptsByEns.Clear();
+        slotsByScript.Clear();
+        scriptsBySlot.Clear();
+        revisions.Clear();
+        ++generation;
+        if (generation == 0) generation = 1;
+    }
+
+    internal static bool TryGetHandle(Script script, out ComponentHandle handle)
+    {
+        if (slotsByScript.TryGetValue(script, out ulong slot))
+        {
+            handle = new ComponentHandle(ComponentDomain.Managed, generation, slot);
+            return true;
+        }
+        handle = default;
+        return false;
+    }
+
+    internal static bool TryResolve(ComponentHandle handle, [NotNullWhen(true)] out Script? script)
+    {
+        if (handle.Domain == ComponentDomain.Managed && handle.Generation == generation && scriptsBySlot.TryGetValue(handle.Slot, out script)) return true;
+        script = null;
+        return false;
+    }
+
+    /// <summary>创建具有独立原生组件身份的 C# 脚本。</summary>
+    public static T? AddScript<T>(EnsId ens) where T : Script
+    {
+        //与 Ens.AddComponent 共用同一套家族互斥检查，避免绕过约束的第二个入口。
+        Ens owner = Ens.FromId(ens);
+        if (!owner.IsValid) return null;
+        List<Type> existing = [];
+        foreach (Script script in GetScripts(ens)) existing.Add(script.GetType());
+        foreach (Component component in owner.GetComponents<Component>())
+            if (component is not Script) existing.Add(component.GetType());
+        owner.ValidateComponentSet(existing, typeof(T));
+        return ScriptRuntime.AddManagedScript(ens, typeof(T)) as T;
+    }
+
+    /// <summary>移除 C# 脚本及其原生宿主；已启动实例只执行一次 End。</summary>
+    public static bool RemoveScript(Script script)
+    {
+        return ScriptRuntime.RemoveManagedScript(script);
+    }
+
+    /// <summary>本 Ens 上的托管组件数量。</summary>
+    public static int GetScriptCount(EnsId ens) =>
+        scriptsByEns.TryGetValue(ens, out List<Script>? scripts) ? scripts.Count : 0;
+
+    /// <summary>获取指定 Ens 上的运行态脚本实例。</summary>
+    public static IReadOnlyList<Script> GetScripts(EnsId ens)
+    {
+        if (!scriptsByEns.TryGetValue(ens, out List<Script>? scripts)) return [];
+        List<Script> ordered = [];
+        foreach (IntPtr host in Script.GetManagedHosts())
+        {
+            int id = Object.GetInstanceId(host);
+            if (scriptsBySlot.TryGetValue(unchecked((uint)id), out Script? script) && script.EnsId.Equals(ens))
+                ordered.Add(script);
+        }
+        return ordered;
+    }
+
+    /// <summary>把全部活脚本的运行时值刷回原生宿主字段表；保存、复制、Prefab 与进入 Play 前调用。</summary>
+    public static void FlushHostFields()
+    {
+        ScriptRuntime.FlushHostFields();
+    }
+
+    /// <summary>获取当前所有运行态脚本实例快照。</summary>
+    public static IReadOnlyList<Script> GetAllScripts()
+    {
+        List<Script> result = [];
+        foreach (List<Script> scripts in scriptsByEns.Values)
+        {
+            result.AddRange(scripts);
+        }
+
+        return result;
+    }
+}

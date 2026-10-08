@@ -1,0 +1,1051 @@
+#include "Rendering/GpuResourceManager.h"
+
+
+#include <cctype>
+
+namespace
+{
+    //UTF-8 BOM 长度
+    constexpr usize BomLength = 3;
+    //#version 关键字的长度
+    constexpr usize VersionKeywordLength = 8;
+
+    //把注释内容替换成空格，长度与换行位置保持不变，
+    //这样在掩码文本上做查找既能跳过注释里的关键字，又能拿到原始偏移。
+    std::string MaskComments(const std::string& source)
+    {
+        std::string masked = source;
+        bool inLineComment = false;
+        bool inBlockComment = false;
+
+        for (usize index = 0; index < masked.size(); ++index)
+        {
+            char ch = masked[index];
+            char next = index + 1 < masked.size() ? masked[index + 1] : '\0';
+
+            if (inLineComment)
+            {
+                if (ch == '\n')
+                {
+                    inLineComment = false;
+                    continue;
+                }
+
+                masked[index] = ' ';
+                continue;
+            }
+
+            if (inBlockComment)
+            {
+                if (ch == '*' && next == '/')
+                {
+                    inBlockComment = false;
+                    masked[index] = ' ';
+                    masked[index + 1] = ' ';
+                    ++index;
+                    continue;
+                }
+
+                if (ch != '\n') masked[index] = ' ';
+                continue;
+            }
+
+            if (ch == '/' && next == '/')
+            {
+                inLineComment = true;
+                masked[index] = ' ';
+                masked[index + 1] = ' ';
+                ++index;
+                continue;
+            }
+
+            if (ch == '/' && next == '*')
+            {
+                inBlockComment = true;
+                masked[index] = ' ';
+                masked[index + 1] = ' ';
+                ++index;
+                continue;
+            }
+        }
+
+        return masked;
+    }
+
+    //跳过源开头的 UTF-8 BOM，返回第一条有效字符的位置
+    usize SkipByteOrderMark(const std::string& source)
+    {
+        if (source.size() >= BomLength &&
+            static_cast<uint8>(source[0]) == 0xEF &&
+            static_cast<uint8>(source[1]) == 0xBB &&
+            static_cast<uint8>(source[2]) == 0xBF)
+        {
+            return BomLength;
+        }
+
+        return 0;
+    }
+
+    //定位必须是第一条有效指令的 #version，前面只允许空白
+    usize FindVersionDirective(const std::string& masked, usize start, std::string& error)
+    {
+        for (usize index = start; index < masked.size(); ++index)
+        {
+            if (std::isspace(static_cast<unsigned char>(masked[index]))) continue;
+
+            if (masked.compare(index, VersionKeywordLength, "#version") == 0) return index;
+
+            error = "#version must be the first directive";
+            return std::string::npos;
+        }
+
+        error = "the source does not start with #version";
+        return std::string::npos;
+    }
+
+    //统计指定位置之前出现过的换行数量
+    usize CountLinesBefore(const std::string& source, usize position)
+    {
+        usize lines = 0;
+        for (usize index = 0; index < position; ++index)
+        {
+            if (source[index] == '\n') ++lines;
+        }
+
+        return lines;
+    }
+}
+
+static bool BuildGeometrySource(const std::string& source, GeometryMode mode, std::string& output, std::string& error)
+{
+    output.clear();
+    error.clear();
+
+    std::string masked = MaskComments(source);
+    usize start = SkipByteOrderMark(source);
+    usize versionIndex = FindVersionDirective(masked, start, error);
+    if (versionIndex == std::string::npos) return false;
+
+    //同一份源码只允许一条 #version，后续出现的会与注入内容争夺第一条指令的位置
+    if (masked.find("#version", versionIndex + VersionKeywordLength) != std::string::npos)
+    {
+        error = "the source declares #version more than once";
+        return false;
+    }
+
+    usize versionLineEnd = source.find('\n', versionIndex);
+    usize bodyStart = versionLineEnd == std::string::npos ? source.size() : versionLineEnd + 1;
+    //#version 所在行的行号从 1 起算，恢复行号后紧随其后的仍是原文件的下一行
+    usize nextLineNumber = CountLinesBefore(source, versionIndex) + 2;
+
+    output.reserve(source.size() + 64);
+    if (versionLineEnd == std::string::npos)
+    {
+        //#version 是最后一行，补一个换行让注入的两行各自独立
+        output.append(source, 0, source.size());
+        output += '\n';
+    }
+    else
+    {
+        output.append(source, 0, bodyStart);
+    }
+
+    output += "#define ORBEDEN_GEOMETRY_MODE ";
+    output += std::to_string(static_cast<uint32>(mode));
+    output += '\n';
+    output += "#line ";
+    output += std::to_string(nextLineNumber);
+    output += '\n';
+    output.append(source, bodyStart, std::string::npos);
+    return true;
+}
+
+#include "Rendering/GpuResourceManager.h"
+
+#include "Log/Log.h"
+#include "Rendering/ColorSpace.h"
+
+
+#include <cassert>
+#include <utility>
+
+namespace
+{
+    constexpr uint32 VertexFloatCount = 11;
+    constexpr uint32 VertexStride = VertexFloatCount * sizeof(float32);
+    constexpr usize InvalidStorageIndex = static_cast<usize>(-1);
+
+    //判断字符串前缀
+    bool StartsWith(const std::string& text, const std::string& prefix)
+    {
+        return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
+    }
+
+    //判断字符串后缀
+    bool EndsWith(const std::string& text, const std::string& suffix)
+    {
+        return text.size() >= suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
+
+    //生成纹理启用 Uniform 名
+    std::string CreateTexturePresenceUniformName(const std::string& textureUniformName)
+    {
+        std::string name = textureUniformName;
+        if (StartsWith(name, "u_")) name.erase(0, 2);
+        if (EndsWith(name, "Texture")) name.erase(name.size() - 7);
+        return "u_Has" + name + "Texture";
+    }
+
+    //释放 GPU Mesh 句柄：先释放两份顶点输入，再释放它们引用的缓冲
+    void DeleteGpuResource(RenderBackend* backend, GpuMesh& mesh)
+    {
+        if (backend)
+        {
+            backend->DeleteVertexInput(mesh.vertexInput);
+            backend->DeleteVertexInput(mesh.instancedVertexInput);
+            backend->DeleteVertexBuffer(mesh.vertexBuffer);
+            backend->DeleteIndexBuffer(mesh.indexBuffer);
+        }
+
+        mesh.vertexInput = GpuVertexInputID();
+        mesh.instancedVertexInput = GpuVertexInputID();
+        mesh.vertexBuffer = GpuVertexBufferID();
+        mesh.indexBuffer = GpuIndexBufferID();
+        mesh.indexCount = 0;
+    }
+
+    //释放 GPU 纹理句柄
+    void DeleteGpuResource(RenderBackend* backend, GpuTextureID& texture)
+    {
+        if (backend) backend->DeleteTexture(texture);
+        texture = GpuTextureID();
+    }
+
+    //释放 GPU 渲染目标句柄；颜色纹理由目标持有，一并销毁
+    void DeleteGpuResource(RenderBackend* backend, GpuRenderTargetID& target)
+    {
+        if (backend) backend->DeleteRenderTarget(target);
+        target = GpuRenderTargetID();
+    }
+
+    //释放 GPU 天空盒句柄
+    void DeleteGpuResource(RenderBackend* backend, GpuCubeTextureID& skybox)
+    {
+        if (backend) backend->DeleteCubeTexture(skybox);
+        skybox = GpuCubeTextureID();
+    }
+
+    //释放 GPU Shader 句柄，四个几何变体各自持有 program
+    void DeleteGpuResource(RenderBackend* backend, GpuShader& shader)
+    {
+        if (backend)
+        {
+            for (GpuShaderPass& pass : shader.passes)
+            {
+                backend->DeleteShaderProgram(pass.shaderProgram);
+                backend->DeleteShaderProgram(pass.instancedProgram);
+                backend->DeleteShaderProgram(pass.expandedProgram);
+                backend->DeleteShaderProgram(pass.trailInstancedProgram);
+            }
+        }
+
+        shader.passes.clear();
+    }
+
+    //清空材质解析缓存
+    void DeleteGpuResource(RenderBackend*, GpuMaterial& material)
+    {
+        material.shader = nullptr;
+        material.sourceShader = nullptr;
+        material.textureBindings.clear();
+        material.colorBindings.clear();
+        material.floatBindings.clear();
+    }
+
+    //注册活动 GPU 包装对象
+    template<typename T>
+    T* AddGpuResource(List<std::unique_ptr<T>>& resources, std::unique_ptr<T> resource)
+    {
+        resource->storageIndex = resources.size();
+        T* result = resource.get();
+        resources.push_back(std::move(resource));
+        return result;
+    }
+
+    //注销活动 GPU 包装对象
+    template<typename T>
+    std::unique_ptr<T> TakeGpuResource(List<std::unique_ptr<T>>& resources, T* resource)
+    {
+        assert(resource);
+        usize index = resource->storageIndex;
+        assert(index < resources.size());
+        assert(resources[index].get() == resource);
+
+        usize lastIndex = resources.size() - 1;
+        std::unique_ptr<T> result = std::move(resources[index]);
+        if (index != lastIndex)
+        {
+            resources[index] = std::move(resources[lastIndex]);
+            resources[index]->storageIndex = index;
+        }
+
+        resources.pop_back();
+        result->storageIndex = InvalidStorageIndex;
+        return result;
+    }
+
+    //释放一组管理器拥有的 GPU 包装对象
+    template<typename T>
+    void DeleteGpuResources(RenderBackend* backend, List<std::unique_ptr<T>>& resources)
+    {
+        for (std::unique_ptr<T>& resource : resources)
+        {
+            if (resource) DeleteGpuResource(backend, *resource);
+        }
+        resources.clear();
+    }
+
+    //上传 Mesh GPU 数据
+    bool UploadMesh(RenderBackend* backend, Mesh* mesh, GpuMesh& uploaded)
+    {
+        if (mesh->vertices.empty() || mesh->indices.empty())
+        {
+            Log::Error("GpuResourceManager mesh upload failed: mesh has no vertices or indices.");
+            return false;
+        }
+
+        //打包交错顶点数据
+        List<float32> vertexData;
+        vertexData.resize(mesh->vertices.size() * VertexFloatCount);
+        for (usize index = 0; index < mesh->vertices.size(); ++index)
+        {
+            const vector3& position = mesh->vertices[index];
+            vector3 normal = index < mesh->normals.size() ? mesh->normals[index] : vector3();
+            vector2 texcoord = index < mesh->texcoords.size() ? mesh->texcoords[index] : vector2();
+            vector3 tangent = index < mesh->tangents.size() ? mesh->tangents[index] : vector3();
+
+            usize offset = index * VertexFloatCount;
+            vertexData[offset + 0] = position.x;
+            vertexData[offset + 1] = position.y;
+            vertexData[offset + 2] = position.z;
+            vertexData[offset + 3] = normal.x;
+            vertexData[offset + 4] = normal.y;
+            vertexData[offset + 5] = normal.z;
+            vertexData[offset + 6] = texcoord.x;
+            vertexData[offset + 7] = texcoord.y;
+            vertexData[offset + 8] = tangent.x;
+            vertexData[offset + 9] = tangent.y;
+            vertexData[offset + 10] = tangent.z;
+        }
+
+        GpuBufferDesc vertexBufferDesc;
+        vertexBufferDesc.data = vertexData.data();
+        vertexBufferDesc.size = vertexData.size() * sizeof(float32);
+
+        GpuBufferDesc indexBufferDesc;
+        indexBufferDesc.data = mesh->indices.data();
+        indexBufferDesc.size = mesh->indices.size() * sizeof(uint32);
+
+        uploaded.vertexBuffer = backend->CreateVertexBuffer(vertexBufferDesc);
+        uploaded.indexBuffer = backend->CreateIndexBuffer(indexBufferDesc);
+        uploaded.indexCount = static_cast<uint32>(mesh->indices.size());
+
+        GpuVertexInputDesc vertexInputDesc;
+        vertexInputDesc.vertexBuffer = uploaded.vertexBuffer;
+        vertexInputDesc.indexBuffer = uploaded.indexBuffer;
+        vertexInputDesc.stride = VertexStride;
+        if (uploaded.vertexBuffer.IsValid() && uploaded.indexBuffer.IsValid())
+        {
+            uploaded.vertexInput = backend->CreateVertexInput(vertexInputDesc);
+            //实例绘制的顶点输入与普通顶点输入共用缓冲，实例属性在提交时补上。
+            vertexInputDesc.layout = GpuVertexLayout::InstancedMesh;
+            uploaded.instancedVertexInput = backend->CreateVertexInput(vertexInputDesc);
+        }
+
+        if (uploaded.IsValid()) return true;
+
+        DeleteGpuResource(backend, uploaded);
+        Log::Error("GpuResourceManager mesh upload failed: backend returned invalid mesh handles.");
+        return false;
+    }
+
+    //编译一个几何变体，源码按模式注入宏后交给后端
+    bool CompileGeometryVariant(RenderBackend* backend, const ShaderPass& sourcePass, const std::string& shaderName,
+        GeometryMode mode, GpuShaderProgramID& program)
+    {
+        std::string vertexSource;
+        std::string fragmentSource;
+        std::string error;
+        if (!BuildGeometrySource(sourcePass.vertexSource, mode, vertexSource, error) ||
+            !BuildGeometrySource(sourcePass.fragmentSource, mode, fragmentSource, error))
+        {
+            Log::Error(("GpuResourceManager shader variant build failed: " + shaderName + " pass " + sourcePass.name +
+                " geometry " + std::to_string(static_cast<uint32>(mode)) + ": " + error).c_str());
+            return false;
+        }
+
+        GpuShaderProgramDesc desc;
+        desc.vertexSource = vertexSource.c_str();
+        desc.fragmentSource = fragmentSource.c_str();
+        program = backend->CreateShaderProgram(desc);
+        if (program.IsValid()) return true;
+
+        Log::Error(("GpuResourceManager shader variant compile failed: " + shaderName + " pass " + sourcePass.name +
+            " geometry " + std::to_string(static_cast<uint32>(mode))).c_str());
+        return false;
+    }
+
+    //几何 ABI 入口函数名。include 在导入时已经展开进顶点源码，出现它就说明这个 Pass 按 ABI 取世界矩阵。
+    constexpr const char* GeometryAbiEntryPoint = "OrbedenGetModel";
+
+    //判断一个 Pass 的顶点阶段是否接入几何 ABI。未接入的旧 Shader 只会编译单绘制变体，
+    //否则实例与展开变体虽然能编译通过（注入的宏对它无效），运行时却拿不到世界矩阵。
+    bool PassUsesGeometryAbi(const ShaderPass& pass)
+    {
+        return pass.vertexSource.find(GeometryAbiEntryPoint) != std::string::npos;
+    }
+
+    //编译 Shader Pass。契约声明支持的变体必须全部成功，任一失败让整个 Shader 上传失败。
+    bool UploadShader(RenderBackend* backend, Shader* shader, GpuShader& uploaded)
+    {
+        for (const ShaderPass& sourcePass : shader->passes)
+        {
+            GpuShaderPass pass;
+            pass.name = sourcePass.name;
+            pass.state = sourcePass.state;
+            pass.geometryContract = sourcePass.geometryContract;
+            pass.supportsExpandedGeometry = sourcePass.supportsExpandedGeometry;
+            pass.usesGeometryAbi = PassUsesGeometryAbi(sourcePass);
+
+            //单绘制变体是唯一必需项；接入几何 ABI 的 Pass 才继续编译实例、展开与拖尾变体
+            bool compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Uniform, pass.shaderProgram);
+            if (compiled && pass.usesGeometryAbi)
+            {
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Instanced, pass.instancedProgram);
+            }
+            //展开变体按开关编译：关闭它的 Shader 依赖模型空间顶点，不参与合批
+            if (compiled && pass.usesGeometryAbi && sourcePass.supportsExpandedGeometry)
+            {
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::Expanded, pass.expandedProgram);
+            }
+            if (compiled && pass.usesGeometryAbi && sourcePass.geometryContract == ShaderGeometryContract::Particle)
+            {
+                compiled = CompileGeometryVariant(backend, sourcePass, shader->name, GeometryMode::TrailInstanced, pass.trailInstancedProgram);
+            }
+
+            //失败的 Pass 也入列，交给统一的释放路径回收已经编译成功的变体。
+            uploaded.passes.push_back(pass);
+            if (!compiled) break;
+        }
+
+        if (uploaded.IsValid()) return true;
+
+        DeleteGpuResource(backend, uploaded);
+        Log::Error("GpuResourceManager shader upload failed.");
+        return false;
+    }
+}
+
+//注销对象事件并释放仍由管理器持有的 GPU 资源
+GpuResourceManager::~GpuResourceManager()
+{
+    Shutdown();
+}
+
+void GpuResourceManager::Initialize(RenderBackend* renderBackend)
+{
+    backend = renderBackend;
+    Object::AddDestroyListener(this);
+}
+
+void GpuResourceManager::InvalidateCaches()
+{
+    //断开材质资源依赖
+    for (std::unique_ptr<GpuMaterial>& material : materials)
+    {
+        if (material->source) material->source->gpuMaterial = nullptr;
+        material->source = nullptr;
+    }
+    DeleteGpuResources(backend, materials);
+    DeleteGpuResources(backend, pendingMaterials);
+
+    //释放 Mesh GPU 资源
+    for (std::unique_ptr<GpuMesh>& mesh : meshes)
+    {
+        if (mesh->source) mesh->source->gpuMesh = nullptr;
+        mesh->source = nullptr;
+    }
+    DeleteGpuResources(backend, meshes);
+    DeleteGpuResources(backend, pendingMeshes);
+
+    //释放 Texture2D GPU 资源：渲染目标纹理释放附件目标，普通纹理释放纹理本体。
+    for (Texture2D* texture : textures)
+    {
+        if (!texture) continue;
+        if (texture->renderTarget && texture->gpuRenderTarget.IsValid())
+            DeleteGpuResource(backend, texture->gpuRenderTarget);
+        else
+            DeleteGpuResource(backend, texture->gpuTexture);
+        texture->gpuRenderTarget = GpuRenderTargetID();
+        texture->gpuTexture = GpuTextureID();
+        texture->gpuTextureStorageIndex = -1;
+    }
+    textures.clear();
+    for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
+    pendingTextures.clear();
+    for (GpuRenderTargetID& target : pendingRenderTargets) DeleteGpuResource(backend, target);
+    pendingRenderTargets.clear();
+
+    //释放 Skybox GPU 资源
+    for (Skybox* skybox : skyboxes)
+    {
+        if (!skybox) continue;
+        DeleteGpuResource(backend, skybox->gpuSkybox);
+        skybox->gpuSkyboxStorageIndex = -1;
+    }
+    skyboxes.clear();
+    for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
+    pendingSkyboxes.clear();
+
+    //释放 Shader GPU 资源
+    for (std::unique_ptr<GpuShader>& shader : shaders)
+    {
+        if (shader->source) shader->source->gpuShader = nullptr;
+        shader->source = nullptr;
+    }
+    DeleteGpuResources(backend, shaders);
+    DeleteGpuResources(backend, pendingShaders);
+}
+
+void GpuResourceManager::Shutdown()
+{
+    Object::RemoveDestroyListener(this);
+    InvalidateCaches();
+    backend = nullptr;
+}
+
+const GpuMesh* GpuResourceManager::GetMesh(Mesh* mesh)
+{
+    if (!backend || !mesh) return nullptr;
+
+    //读取 Mesh GPU 缓存
+    GpuMesh* gpuMesh = mesh->gpuMesh;
+    if (gpuMesh && !mesh->IsDirty(MeshDirtyFlags::Gpu)) return gpuMesh;
+
+    //刷新脏 Mesh 缓存
+    if (gpuMesh) DeleteGpuResource(backend, *gpuMesh);
+
+    GpuMesh uploaded;
+    if (!UploadMesh(backend, mesh, uploaded))
+    {
+        mesh->MarkDirty(MeshDirtyFlags::Gpu);
+        return nullptr;
+    }
+
+    if (!gpuMesh)
+    {
+        std::unique_ptr<GpuMesh> resource = std::make_unique<GpuMesh>();
+        resource->source = mesh;
+        gpuMesh = AddGpuResource(meshes, std::move(resource));
+        mesh->gpuMesh = gpuMesh;
+    }
+
+    gpuMesh->vertexInput = uploaded.vertexInput;
+    gpuMesh->instancedVertexInput = uploaded.instancedVertexInput;
+    gpuMesh->vertexBuffer = uploaded.vertexBuffer;
+    gpuMesh->indexBuffer = uploaded.indexBuffer;
+    gpuMesh->indexCount = uploaded.indexCount;
+    mesh->ClearDirty(MeshDirtyFlags::Gpu);
+    return gpuMesh;
+}
+
+GpuTextureID GpuResourceManager::GetTexture(Texture2D* texture)
+{
+    if (!backend || !texture) return GpuTextureID();
+
+    //渲染目标纹理没有 CPU 像素可上传，它的颜色纹理由附件目标提供。
+    if (texture->renderTarget)
+    {
+        GpuRenderTargetID target = GetTextureRenderTarget(texture);
+        return target.IsValid() ? texture->gpuTexture : GpuTextureID();
+    }
+
+    //读取 Texture2D GPU 缓存
+    if (texture->gpuTexture.IsValid() && !texture->IsDirty()) return texture->gpuTexture;
+
+    //重新导入过的纹理要先摘掉旧句柄，否则会重复登记进追踪表
+    if (texture->gpuTexture.IsValid()) QueueTextureRelease(texture);
+
+    GpuTextureDesc textureDesc;
+    textureDesc.width = texture->width;
+    textureDesc.height = texture->height;
+    textureDesc.channels = texture->channels;
+    textureDesc.pixels = texture->pixels.empty() ? nullptr : texture->pixels.data();
+    textureDesc.srgb = texture->colorSpace == TextureColorSpace::SRGB;
+
+    GpuTextureID textureID = backend->CreateTexture(textureDesc);
+    if (!textureID.IsValid())
+    {
+        Log::Error("GpuResourceManager texture upload failed.");
+        return GpuTextureID();
+    }
+
+    assert(texture->gpuTextureStorageIndex < 0);
+    texture->gpuTexture = textureID;
+    texture->gpuTextureStorageIndex = static_cast<int32>(textures.size());
+    textures.push_back(texture);
+    texture->ClearDirty();
+    return textureID;
+}
+
+//渲染目标纹理的附件目标：尺寸或内容版本变化时重建，Texture2D 对象身份不变，
+//换掉的是它背后的 GPU 资源，依赖方按 revision 判断是否要重新取样。
+GpuRenderTargetID GpuResourceManager::GetTextureRenderTarget(Texture2D* texture)
+{
+    if (!backend || !texture || !texture->IsRenderTarget()) return GpuRenderTargetID();
+    if (texture->gpuRenderTarget.IsValid() && !texture->IsDirty()) return texture->gpuRenderTarget;
+
+    //先失效再释放：旧附件推到下一帧的释放点，本帧不留下悬空句柄。
+    if (texture->gpuRenderTarget.IsValid()) QueueRenderTargetRelease(texture);
+
+    GpuRenderTargetDesc desc;
+    desc.width = texture->width;
+    desc.height = texture->height;
+    desc.colorOnly = true;
+    desc.format = GpuRenderTargetFormat::RGBA8;
+    GpuRenderTargetID target = backend->CreateRenderTarget(desc);
+    if (!target.IsValid())
+    {
+        Log::Error("GpuResourceManager render target creation failed.");
+        return GpuRenderTargetID();
+    }
+
+    texture->gpuRenderTarget = target;
+    texture->gpuTexture = backend->GetRenderTargetColorTexture(target);
+    texture->ClearDirty();
+    //登记进纹理表，随对象销毁与缓存失效一起维护。
+    if (texture->gpuTextureStorageIndex < 0)
+    {
+        texture->gpuTextureStorageIndex = static_cast<int32>(textures.size());
+        textures.push_back(texture);
+    }
+    return target;
+}
+
+GpuCubeTextureID GpuResourceManager::GetSkybox(Skybox* skybox)
+{
+    if (!backend || !skybox) return GpuCubeTextureID();
+
+    //读取 Skybox GPU 缓存
+    if (skybox->gpuSkybox.IsValid()) return skybox->gpuSkybox;
+
+    Texture2D* faces[6] =
+    {
+        skybox->right.Get(),
+        skybox->left.Get(),
+        skybox->top.Get(),
+        skybox->bottom.Get(),
+        skybox->front.Get(),
+        skybox->back.Get(),
+    };
+
+    Texture2D* firstFace = faces[0];
+    if (!firstFace || firstFace->pixels.empty())
+    {
+        Log::Error("GpuResourceManager skybox upload failed: first face is missing.");
+        return GpuCubeTextureID();
+    }
+
+    GpuCubeTextureDesc desc;
+    desc.width = firstFace->width;
+    desc.height = firstFace->height;
+    desc.channels = firstFace->channels;
+    desc.srgb = firstFace->colorSpace == TextureColorSpace::SRGB;
+    desc.generateMipmaps = true;
+    for (uint32 face = 0; face < 6; ++face)
+    {
+        Texture2D* texture = faces[face];
+        if (!texture || texture->width != desc.width || texture->height != desc.height || texture->channels != desc.channels || texture->pixels.empty())
+        {
+            Log::Error("GpuResourceManager skybox upload failed: faces must share size and format.");
+            return GpuCubeTextureID();
+        }
+
+        //六个面共用一张 cube 纹理，颜色空间不一致就无法用一个内部格式表达。
+        if ((texture->colorSpace == TextureColorSpace::SRGB) != desc.srgb)
+        {
+            Log::Error("GpuResourceManager skybox upload failed: faces must share color space.");
+            return GpuCubeTextureID();
+        }
+
+        desc.faces[face] = texture->pixels.data();
+    }
+
+    GpuCubeTextureID cubeTexture = backend->CreateCubeTexture(desc);
+    if (!cubeTexture.IsValid())
+    {
+        Log::Error("GpuResourceManager skybox upload failed.");
+        return GpuCubeTextureID();
+    }
+
+    assert(skybox->gpuSkyboxStorageIndex < 0);
+    skybox->gpuSkybox = cubeTexture;
+    skybox->gpuSkyboxStorageIndex = static_cast<int32>(skyboxes.size());
+    skyboxes.push_back(skybox);
+    return cubeTexture;
+}
+
+//获取环境反射采样数据
+GpuEnvironmentReflection GpuResourceManager::GetEnvironmentReflection(Skybox* environment, float32 intensity)
+{
+    GpuEnvironmentReflection reflection;
+    if (!environment || !(intensity > 0.0f)) return reflection;
+    reflection.texture = GetSkybox(environment);
+    if (!reflection.texture.IsValid()) return reflection;
+    for (int32 size = environment->right.Get()->width; size > 1; size /= 2) reflection.maxLod += 1.0f;
+    reflection.intensity = intensity;
+    return reflection;
+}
+
+const GpuShader* GpuResourceManager::GetShader(Shader* shader)
+{
+    if (!backend || !shader) return nullptr;
+
+    //读取 Shader GPU 缓存
+    GpuShader* gpuShader = shader->gpuShader;
+    if (gpuShader && !shader->IsDirty()) return gpuShader;
+
+    //刷新 Shader GPU 缓存
+    if (gpuShader)
+    {
+        MarkMaterialsUsingShaderDirty(shader);
+        DeleteGpuResource(backend, *gpuShader);
+    }
+
+    GpuShader uploaded;
+    if (!UploadShader(backend, shader, uploaded))
+    {
+        shader->MarkDirty();
+        return nullptr;
+    }
+
+    if (!gpuShader)
+    {
+        std::unique_ptr<GpuShader> resource = std::make_unique<GpuShader>();
+        resource->source = shader;
+        gpuShader = AddGpuResource(shaders, std::move(resource));
+        shader->gpuShader = gpuShader;
+    }
+
+    gpuShader->passes = std::move(uploaded.passes);
+    shader->ClearDirty();
+    return gpuShader;
+}
+
+const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
+{
+    if (!backend || !material) return nullptr;
+
+    //读取材质 GPU 缓存
+    GpuMaterial* gpuMaterial = material->gpuMaterial;
+    if (gpuMaterial
+        && !material->IsDirty()
+        && gpuMaterial->sourceShader
+        && !gpuMaterial->sourceShader->IsDirty())
+    {
+        return gpuMaterial;
+    }
+
+    //处理 Shader 上传失败
+    material->MarkDirty();
+
+    //清空材质 GPU 缓存
+    if (gpuMaterial) DeleteGpuResource(backend, *gpuMaterial);
+
+    Shader* shader = material->shader.Get();
+    if (!shader)
+    {
+        Log::Error("GpuResourceManager material upload failed: shader is missing.");
+        return nullptr;
+    }
+
+    const GpuShader* gpuShader = GetShader(shader);
+    if (!gpuShader) return nullptr;
+
+    //刷新 Shader 依赖材质
+    gpuMaterial = material->gpuMaterial;
+
+    GpuMaterial uploaded;
+    uploaded.shader = gpuShader;
+    uploaded.sourceShader = shader;
+
+    //解析材质纹理引用
+    for (const ShaderTextureSlot& slot : shader->textureSlots)
+    {
+        if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
+
+        GpuMaterialTextureBinding binding;
+        binding.uniformName = slot.name;
+        binding.presenceUniformName = CreateTexturePresenceUniformName(slot.name);
+        Texture2D* texture = material->GetTexture(slot.name);
+        binding.sourceTexture = texture;
+        if (texture)
+        {
+            binding.texture = GetTexture(texture);
+            binding.hasTexture = binding.texture.IsValid();
+        }
+        else if (material->HasTexture(slot.name))
+        {
+            Log::Error(("GpuResourceManager material texture skipped: texture is missing for " + slot.name).c_str());
+        }
+
+        uploaded.textureBindings.push_back(binding);
+    }
+
+    for (const ShaderColorSlot& slot : shader->colorSlots)
+    {
+        GpuMaterialColorBinding binding;
+        binding.uniformName = slot.name;
+        //材质与 .orbmat 里的颜色是 sRGB 语义（和检视面板一致），送 GPU 前转到线性。
+        //这是材质颜色的唯一转换点，着色器不再做任何颜色空间处理。
+        binding.value = ColorSpace::SrgbToLinear(material->GetColor(slot.name, slot.defaultValue));
+        uploaded.colorBindings.push_back(binding);
+    }
+
+    for (const ShaderFloatSlot& slot : shader->floatSlots)
+    {
+        GpuMaterialFloatBinding binding;
+        binding.uniformName = slot.name;
+        binding.value = material->GetFloat(slot.name, slot.defaultValue);
+        uploaded.floatBindings.push_back(binding);
+    }
+
+    if (!gpuMaterial)
+    {
+        std::unique_ptr<GpuMaterial> resource = std::make_unique<GpuMaterial>();
+        resource->source = material;
+        gpuMaterial = AddGpuResource(materials, std::move(resource));
+        material->gpuMaterial = gpuMaterial;
+    }
+
+    gpuMaterial->shader = uploaded.shader;
+    gpuMaterial->sourceShader = uploaded.sourceShader;
+    gpuMaterial->textureBindings = std::move(uploaded.textureBindings);
+    gpuMaterial->colorBindings = std::move(uploaded.colorBindings);
+    gpuMaterial->floatBindings = std::move(uploaded.floatBindings);
+    material->ClearDirty();
+    return gpuMaterial;
+}
+
+void GpuResourceManager::MarkMaterialsUsingShaderDirty(Shader* shader)
+{
+    for (const std::unique_ptr<GpuMaterial>& material : materials)
+    {
+        if (material->sourceShader == shader && material->source)
+        {
+            material->source->MarkDirty();
+        }
+    }
+}
+
+void GpuResourceManager::InvalidateMaterialsUsingShader(Shader* shader)
+{
+    usize index = 0;
+    while (index < materials.size())
+    {
+        GpuMaterial* material = materials[index].get();
+        if (material->sourceShader != shader)
+        {
+            ++index;
+            continue;
+        }
+
+        assert(material->source);
+        QueueMaterialRelease(material->source);
+    }
+}
+
+void GpuResourceManager::InvalidateMaterialsUsingTexture(Texture2D* texture)
+{
+    usize index = 0;
+    while (index < materials.size())
+    {
+        GpuMaterial* material = materials[index].get();
+        bool usesTexture = false;
+        for (const GpuMaterialTextureBinding& binding : material->textureBindings)
+        {
+            if (binding.sourceTexture == texture)
+            {
+                usesTexture = true;
+                break;
+            }
+        }
+
+        if (!usesTexture)
+        {
+            ++index;
+            continue;
+        }
+
+        assert(material->source);
+        QueueMaterialRelease(material->source);
+    }
+}
+
+void GpuResourceManager::QueueMeshRelease(Mesh* mesh)
+{
+    if (!mesh || !mesh->gpuMesh) return;
+
+    GpuMesh* resource = mesh->gpuMesh;
+    mesh->gpuMesh = nullptr;
+    resource->source = nullptr;
+    pendingMeshes.push_back(TakeGpuResource(meshes, resource));
+}
+
+void GpuResourceManager::QueueShaderRelease(Shader* shader)
+{
+    if (!shader || !shader->gpuShader) return;
+
+    GpuShader* resource = shader->gpuShader;
+    shader->gpuShader = nullptr;
+    resource->source = nullptr;
+    pendingShaders.push_back(TakeGpuResource(shaders, resource));
+}
+
+void GpuResourceManager::QueueMaterialRelease(Material* material)
+{
+    if (!material || !material->gpuMaterial) return;
+
+    GpuMaterial* resource = material->gpuMaterial;
+    material->gpuMaterial = nullptr;
+    resource->source = nullptr;
+    pendingMaterials.push_back(TakeGpuResource(materials, resource));
+}
+
+//渲染目标纹理的释放是先用后放：立刻失效句柄，真正的删除推到下一帧的释放点，
+//避免同一帧里已经提交的绘制还引用着即将消失的附件。
+void GpuResourceManager::QueueRenderTargetRelease(Texture2D* texture)
+{
+    if (!texture) return;
+
+    if (texture->gpuRenderTarget.IsValid()) pendingRenderTargets.push_back(texture->gpuRenderTarget);
+    texture->gpuRenderTarget = GpuRenderTargetID();
+    //颜色纹理随目标一起销毁，句柄当场作废。
+    texture->gpuTexture = GpuTextureID();
+
+    int32 index = texture->gpuTextureStorageIndex;
+    if (index < 0 || static_cast<usize>(index) >= textures.size() || textures[index] != texture) return;
+
+    int32 lastIndex = static_cast<int32>(textures.size() - 1);
+    if (index != lastIndex)
+    {
+        Texture2D* moved = textures[lastIndex];
+        textures[index] = moved;
+        moved->gpuTextureStorageIndex = index;
+    }
+    textures.pop_back();
+    texture->gpuTextureStorageIndex = -1;
+}
+
+void GpuResourceManager::QueueTextureRelease(Texture2D* texture)
+{
+    if (!texture || !texture->gpuTexture.IsValid()) return;
+    //渲染目标纹理的 GPU 资源是附件目标，不是可上传的纹理。
+    if (texture->renderTarget)
+    {
+        QueueRenderTargetRelease(texture);
+        return;
+    }
+
+    int32 index = texture->gpuTextureStorageIndex;
+    assert(index >= 0 && static_cast<usize>(index) < textures.size());
+    assert(textures[index] == texture);
+
+    pendingTextures.push_back(texture->gpuTexture);
+    int32 lastIndex = static_cast<int32>(textures.size() - 1);
+    if (index != lastIndex)
+    {
+        Texture2D* moved = textures[lastIndex];
+        textures[index] = moved;
+        moved->gpuTextureStorageIndex = index;
+    }
+    textures.pop_back();
+
+    texture->gpuTexture = GpuTextureID();
+    texture->gpuTextureStorageIndex = -1;
+}
+
+void GpuResourceManager::QueueSkyboxRelease(Skybox* skybox)
+{
+    if (!skybox || !skybox->gpuSkybox.IsValid()) return;
+
+    int32 index = skybox->gpuSkyboxStorageIndex;
+    assert(index >= 0 && static_cast<usize>(index) < skyboxes.size());
+    assert(skyboxes[index] == skybox);
+
+    pendingSkyboxes.push_back(skybox->gpuSkybox);
+    int32 lastIndex = static_cast<int32>(skyboxes.size() - 1);
+    if (index != lastIndex)
+    {
+        Skybox* moved = skyboxes[lastIndex];
+        skyboxes[index] = moved;
+        moved->gpuSkyboxStorageIndex = index;
+    }
+    skyboxes.pop_back();
+
+    skybox->gpuSkybox = GpuCubeTextureID();
+    skybox->gpuSkyboxStorageIndex = -1;
+}
+
+//记录即将销毁的渲染资源对象
+void GpuResourceManager::OnObjectDestroyed(Object* object)
+{
+    if (!backend || !object) return;
+
+    if (object->Is(Material::StaticType()))
+    {
+        QueueMaterialRelease(static_cast<Material*>(object));
+    }
+    else if (object->Is(Mesh::StaticType()))
+    {
+        QueueMeshRelease(static_cast<Mesh*>(object));
+    }
+    else if (object->Is(Texture2D::StaticType()))
+    {
+        Texture2D* texture = static_cast<Texture2D*>(object);
+        InvalidateMaterialsUsingTexture(texture);
+        QueueTextureRelease(texture);
+    }
+    else if (object->Is(Skybox::StaticType()))
+    {
+        QueueSkyboxRelease(static_cast<Skybox*>(object));
+    }
+    else if (object->Is(Shader::StaticType()))
+    {
+        Shader* shader = static_cast<Shader*>(object);
+        InvalidateMaterialsUsingShader(shader);
+        QueueShaderRelease(shader);
+    }
+}
+
+//释放对象销毁事件对应的 GPU 缓存
+void GpuResourceManager::ReleaseDestroyedResources()
+{
+    if (!backend) return;
+
+    //释放销毁对象的 GPU 资源
+    DeleteGpuResources(backend, pendingMaterials);
+    DeleteGpuResources(backend, pendingMeshes);
+
+    for (GpuTextureID& texture : pendingTextures) DeleteGpuResource(backend, texture);
+    pendingTextures.clear();
+
+    //附件目标自带颜色纹理，删除目标即释放两者。
+    for (GpuRenderTargetID& target : pendingRenderTargets) DeleteGpuResource(backend, target);
+    pendingRenderTargets.clear();
+
+    for (GpuCubeTextureID& skybox : pendingSkyboxes) DeleteGpuResource(backend, skybox);
+    pendingSkyboxes.clear();
+
+    DeleteGpuResources(backend, pendingShaders);
+}
