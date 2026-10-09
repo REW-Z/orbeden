@@ -1246,6 +1246,7 @@ namespace
         case F::UInt64: return V::UInt64;
         case F::Float32: return V::Float32;
         case F::String: return V::String;
+        case F::OrbEvent: return V::String;
         case F::StringId: case F::ObjectRef: return V::StringId;
         case F::Vector2: return V::Vector2;
         case F::Vector3: return V::Vector3;

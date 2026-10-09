@@ -22,7 +22,7 @@ public class ScrollBox : UIControl
     [SerializeField] private float deceleration = 10.0f;
 
     /// <summary>滚动偏移变化。派发时触发；同值不通知。</summary>
-    public event Action<vector2>? ScrollChanged;
+    public OrbEvent<vector2> ScrollChanged = new();
 
     //惯性速度；触摸释放时接手最近位移。
     private vector2 velocity;
@@ -57,9 +57,9 @@ public class ScrollBox : UIControl
     public void SetHorizontalBar(ScrollBar? value)
     {
         if (ReferenceEquals(horizontalBar, value)) return;
-        if (horizontalBar != null) horizontalBar.ValueChanged -= OnHorizontalBarChanged;
+        if (horizontalBar != null) horizontalBar.ValueChanged.Unsubscribe(OnHorizontalBarChanged);
         horizontalBar = value;
-        if (horizontalBar != null) horizontalBar.ValueChanged += OnHorizontalBarChanged;
+        if (horizontalBar != null) horizontalBar.ValueChanged.Subscribe(OnHorizontalBarChanged);
         SynchronizeBars();
     }
 
@@ -70,9 +70,9 @@ public class ScrollBox : UIControl
     public void SetVerticalBar(ScrollBar? value)
     {
         if (ReferenceEquals(verticalBar, value)) return;
-        if (verticalBar != null) verticalBar.ValueChanged -= OnVerticalBarChanged;
+        if (verticalBar != null) verticalBar.ValueChanged.Unsubscribe(OnVerticalBarChanged);
         verticalBar = value;
-        if (verticalBar != null) verticalBar.ValueChanged += OnVerticalBarChanged;
+        if (verticalBar != null) verticalBar.ValueChanged.Subscribe(OnVerticalBarChanged);
         SynchronizeBars();
     }
 
@@ -230,16 +230,16 @@ public class ScrollBox : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.ScrollChanged) ScrollChanged?.Invoke(payload.point);
+        if (eventId == UIEventIds.ScrollChanged) ScrollChanged.Dispatch(payload.point);
     }
 
     /// <summary>控件摘除：退订滚动条并撤销内容上的平移覆盖。</summary>
     protected override void OnUIDetached()
     {
-        if (horizontalBar != null) horizontalBar.ValueChanged -= OnHorizontalBarChanged;
-        if (verticalBar != null) verticalBar.ValueChanged -= OnVerticalBarChanged;
+        if (horizontalBar != null) horizontalBar.ValueChanged.Unsubscribe(OnHorizontalBarChanged);
+        if (verticalBar != null) verticalBar.ValueChanged.Unsubscribe(OnVerticalBarChanged);
         content?.ClearDrivenOffset(this);
     }
 

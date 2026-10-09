@@ -648,18 +648,17 @@ UI 事件统一进 FIFO；每事件先更新状态/视觉，再持久化行顺�
 回调生成新事件入队尾，不递归派发；单帧上限 4096，超限清余项并报错。
 代码事件监听器在开始派发时快照；回调增删订阅从下一事件生效。
 回调前验证源、目标与代次；删除源终止该源余下调用；单监听器异常不阻断其他有效目标。
-持久化 UIEventBinding={int eventId,EnsId target,string targetType,string method,bool enabled}。
-宿主字段表只认标量与引用，绑定落盘为五列并列数组 bindingEvents/bindingTargets/bindingTypes/bindingMethods/bindingEnabled，
-长度必须相同；序列化前摊平、首次触碰绑定表时按列重建，保存、复制、Prefab 与进入 Play 都经 FlushHostFields。
+控件事件使用 OrbEvent 字段，持久化调用配置由 OrbEventCall 保存目标稳定键、语言域、组件类型、实例序号、方法、启用状态与传参方式。
+事件字段直接进入宿主字段表，保存、复制、Prefab 与进入 Play 都经 FlushHostFields；复制和实例化时重映射事件内的目标键。
 目标方法为 public 实例 void，无参数或精确匹配事件参数；禁止猜重载和隐式数值转换。
-方法解析缓存绑定精确 ComponentHandle+generation，不按“该类型第一个实例”调用。
-无效目标/方法保留配置并标红，运行时跳过且每次绑定代次只记录一次错误。
+方法调用使用精确参数签名和同类型实例序号，跨语言调用复用 ComponentProxy 的代次检查。
+无效目标/方法保留配置并提示，运行时跳过当前调用并记录错误；完整格式与接口见 [OrbEvent](OrbEvent.md)。
 
 # 关于控件系统
 
-UIControl 配置：interactable=true、targetVisual:UIVisual?=null、四方向 navigation:UIControl?=null。
+UIControl 配置：interactable=true、四方向 navigation:UIControl?=null。Button 通过 DependsOnComponent 声明同节点 Image 依赖。
 状态色 normal={1,1,1,1}、hover={0.9,0.9,0.9,1}、pressed={0.7,0.7,0.7,1}、disabled={0.5,0.5,0.5,0.5}。
-状态色乘入提交时 tint，不改 targetVisual 持久化颜色。
+状态色乘入同节点图形提交时的 tint，不改图形持久化颜色；Button 固定使用同节点的 Image。
 UIControl 扩展方法全部 public virtual，默认无操作；bool 默认 false：
 ```csharp
 void OnPointerEnter(in UIPointerEvent input);
@@ -682,12 +681,12 @@ UINavigation={Up=0,Down=1,Left=2,Right=3}；路由统一维护 pressed/hover/foc
 
 | 控件 | 代码事件 | eventId |
 |---|---|---|
-| Button | event Action? Clicked | 0 |
-| CheckBox、RadioButton | event Action<bool>? CheckedChanged | 1 |
-| Slider、ScrollBar | event Action<float>? ValueChanged | 2 |
-| ScrollBox | event Action<vector2>? ScrollChanged | 3 |
-| ComboBox | event Action<int>? SelectionChanged | 4 |
-| TextField | event Action<string>? TextChanged、Submitted | 5、6 |
+| Button | OrbEvent ClickEvent | 0 |
+| CheckBox、RadioButton | OrbEvent<bool> CheckedChanged | 1 |
+| Slider、ScrollBar | OrbEvent<float> ValueChanged | 2 |
+| ScrollBox | OrbEvent<vector2> ScrollChanged | 3 |
+| ComboBox | OrbEvent<int> SelectionChanged | 4 |
+| TextField | OrbEvent<string> TextChanged、Submitted | 5、6 |
 
 Button：有效同目标 Up 或 Submit 发 Clicked；Cancel/禁用/离焦清按下状态。
 CheckBox：isChecked=false、checkmark:UIVisual?=null。
@@ -750,7 +749,7 @@ placeholder 仅在实际文本为空且没有组合时显示，不参与选择�
 # 关于UI编辑器系统
 
 UIEditor 包含 UICreationMenu、UILayoutEditor、CanvasEditor、MaskEditor、FontEditor。
-另含 UIControlEditor、UIEventBindingEditor、UILayoutGizmos、UIPreviewController。
+另含 UIControlEditor、OrbEventEditor、UILayoutGizmos、UIPreviewController。
 UIPreviewPanel 位于 EditorCS/Panels，仅引用公共 IUIPreviewProvider。
 CustomEditor 注册支持 UI 派生类型，且使用统一 ManagedAssemblySession 的 Type。
 UI 运行时不引用 Editor 的历史与面板类。

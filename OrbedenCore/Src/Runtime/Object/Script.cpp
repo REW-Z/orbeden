@@ -260,6 +260,7 @@ bool Script::RemoveManagedField(const std::string& name)
 
 Reflection::FieldKind Script::GetManagedFieldKind(const std::string& typeName)
 {
+    if (typeName == "OrbEvent") return Reflection::FieldKind::OrbEvent;
     if ((typeName.starts_with("Array<") || typeName.starts_with("List<")) && typeName.ends_with('>'))
         return Reflection::FieldKind::Array;
     if (typeName == "bool") return Reflection::FieldKind::Bool;

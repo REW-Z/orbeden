@@ -16,7 +16,7 @@ public class ScrollBar : UIControl
     [SerializeField] private UILayout? thumb;
 
     /// <summary>值变化。派发时触发；同值不通知。</summary>
-    public event Action<float>? ValueChanged;
+    public OrbEvent<float> ValueChanged = new();
 
     private uint dragPointerId = uint.MaxValue;
     //拖动起点：按下时的指针位置、值，以及当时的可用行程。
@@ -171,9 +171,9 @@ public class ScrollBar : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.ValueChanged) ValueChanged?.Invoke(payload.value);
+        if (eventId == UIEventIds.ValueChanged) ValueChanged.Dispatch(payload.value);
     }
 
     /// <summary>控件摘除：撤销驱动过的拇指矩形。</summary>

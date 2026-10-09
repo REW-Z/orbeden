@@ -13,7 +13,6 @@ public class UIControl : UIElement, IUIEventSource,
     IUIScrollHandler, IUINavigationHandler, IUISubmitHandler, IUICancelHandler, IUIFocusHandler
 {
     [SerializeField] private bool interactable = true;
-    [SerializeField] private UIVisual? targetVisual;
     [SerializeField] private UIControl? navigationUp;
     [SerializeField] private UIControl? navigationDown;
     [SerializeField] private UIControl? navigationLeft;
@@ -23,17 +22,6 @@ public class UIControl : UIElement, IUIEventSource,
     [SerializeField] private color hoverColor = new(0.9f, 0.9f, 0.9f, 1.0f);
     [SerializeField] private color pressedColor = new(0.7f, 0.7f, 0.7f, 1.0f);
     [SerializeField] private color disabledColor = new(0.5f, 0.5f, 0.5f, 0.5f);
-
-    //持久化的事件绑定；派发时按这里的行顺序先于代码订阅执行。
-    [SerializeField] private List<UIEventBinding> bindings = [];
-
-    //绑定落盘用的五列并列宿主字段：宿主字段表只认标量与引用，对象列表进不去。
-    //列长必须一致，顺序就是派发顺序；[HideInEditor] 只挡检视面板，不挡序列化。
-    [HideInEditor, SerializeField] private List<int> bindingEvents = [];
-    [HideInEditor, SerializeField] private List<EnsId> bindingTargets = [];
-    [HideInEditor, SerializeField] private List<string> bindingTypes = [];
-    [HideInEditor, SerializeField] private List<string> bindingMethods = [];
-    [HideInEditor, SerializeField] private List<bool> bindingEnabled = [];
 
     //由路由器维护的运行时状态，不持久化。
     private bool hovered;
@@ -48,129 +36,6 @@ public class UIControl : UIElement, IUIEventSource,
     {
     }
 
-    /// <summary>持久化的事件绑定列表。返回的是内部列表，遍历期间不要增删。</summary>
-    public List<UIEventBinding> GetBindings()
-    {
-        EnsureBindingsMaterialized();
-        return bindings;
-    }
-
-    /// <summary>绑定条数。</summary>
-    public int GetEventBindingCount()
-    {
-        EnsureBindingsMaterialized();
-        return bindings.Count;
-    }
-
-    /// <summary>按下标取一条绑定；越界返回空。</summary>
-    public UIEventBinding? GetEventBinding(int index)
-    {
-        EnsureBindingsMaterialized();
-        return index >= 0 && index < bindings.Count ? bindings[index] : null;
-    }
-
-    /// <summary>在下标处插入一条绑定；越界时夹到表尾。</summary>
-    public void InsertEventBinding(int index, UIEventBinding binding)
-    {
-        ArgumentNullException.ThrowIfNull(binding);
-        EnsureBindingsMaterialized();
-        bindings.Insert(Math.Clamp(index, 0, bindings.Count), binding);
-    }
-
-    /// <summary>替换下标处的绑定；越界时忽略。</summary>
-    public void SetEventBinding(int index, UIEventBinding binding)
-    {
-        ArgumentNullException.ThrowIfNull(binding);
-        EnsureBindingsMaterialized();
-        if (index < 0 || index >= bindings.Count) return;
-        bindings[index] = binding;
-    }
-
-    /// <summary>按下标移除一条绑定；越界时忽略。</summary>
-    public void RemoveEventBinding(int index)
-    {
-        EnsureBindingsMaterialized();
-        if (index < 0 || index >= bindings.Count) return;
-        bindings.RemoveAt(index);
-    }
-
-    /// <summary>加一条事件绑定并返回它。</summary>
-    public UIEventBinding AddBinding()
-    {
-        EnsureBindingsMaterialized();
-        UIEventBinding binding = new();
-        bindings.Add(binding);
-        return binding;
-    }
-
-    /// <summary>移除一条绑定。</summary>
-    public void RemoveBinding(UIEventBinding binding)
-    {
-        EnsureBindingsMaterialized();
-        bindings.Remove(binding);
-    }
-
-    /// <summary>序列化前把运行时绑定摊平成五列；保存、复制、Prefab 与进 Play 都经这条边界。</summary>
-    protected override void OnUIBeforeSerialize() => FlattenBindingsIntoColumns();
-
-    //五列只在场景加载时写入一次，所以绑定表按需物化：第一次触碰时按列重建，之后一律以 bindings 为准。
-    //不放在 OnUIAttached 那个扩展点上：派生控件覆写它时按基类约定不必调 base，重建会被整条跳过。
-    private bool bindingsMaterialized;
-
-    private void EnsureBindingsMaterialized()
-    {
-        if (bindingsMaterialized) return;
-        bindingsMaterialized = true;
-        RebuildBindingsFromColumns();
-    }
-
-    //摊平：列顺序即派发顺序，不能重排。先物化一次，否则从没打开过检视面板的场景会被空表抹掉。
-    private void FlattenBindingsIntoColumns()
-    {
-        EnsureBindingsMaterialized();
-        bindingEvents.Clear();
-        bindingTargets.Clear();
-        bindingTypes.Clear();
-        bindingMethods.Clear();
-        bindingEnabled.Clear();
-        foreach (UIEventBinding binding in bindings)
-        {
-            if (binding == null) continue;
-            bindingEvents.Add(binding.GetEventId());
-            bindingTargets.Add(binding.GetTarget());
-            bindingTypes.Add(binding.GetTargetType());
-            bindingMethods.Add(binding.GetMethod());
-            bindingEnabled.Add(binding.IsEnabled());
-        }
-    }
-
-    //重建：列长不一致时只取最短的公共部分，宁可丢尾也不构造半条绑定。
-    private void RebuildBindingsFromColumns()
-    {
-        int count = bindingEvents.Count;
-        if (bindingTargets.Count != count || bindingTypes.Count != count
-            || bindingMethods.Count != count || bindingEnabled.Count != count)
-        {
-            count = Math.Min(count, Math.Min(bindingTargets.Count, Math.Min(bindingTypes.Count,
-                Math.Min(bindingMethods.Count, bindingEnabled.Count))));
-            Console.Error.WriteLine(
-                $"UIControl({EnsId.id}:{EnsId.version}): event binding columns differ in length; loading the first {count}.");
-        }
-        if (count == 0) return;
-
-        bindings.Clear();
-        for (int index = 0; index < count; ++index)
-        {
-            UIEventBinding binding = new();
-            binding.SetEventId(bindingEvents[index]);
-            binding.SetTarget(bindingTargets[index]);
-            binding.SetTargetType(bindingTypes[index]);
-            binding.SetMethod(bindingMethods[index]);
-            binding.SetEnabled(bindingEnabled[index]);
-            bindings.Add(binding);
-        }
-    }
-
     /// <summary>
     /// 触发一条控件事件：入队之后由派发器按 FIFO 处理，
     /// 回调里再触发的事件排到队尾，不会递归。
@@ -181,40 +46,28 @@ public class UIControl : UIElement, IUIEventSource,
     }
 
     /// <summary>事件派发到本控件时的第一步：更新状态与视觉，再走绑定。</summary>
-    internal void OnEvent(in UIEvent entry)
+    internal void OnEvent(in UIQueuedEvent entry)
     {
         OnEventRaised(entry.eventId, entry.payload);
 
-        //持久化行顺序先于代码订阅；顺序由列表本身给出。
-        EnsureBindingsMaterialized();
-        for (int index = 0; index < bindings.Count; ++index)
-        {
-            UIEventBinding binding = bindings[index];
-            //只跑监听本事件的绑定。
-            if (!binding.IsEnabled() || binding.GetEventId() != entry.eventId) continue;
-            if (!binding.Compile()) continue;
-            binding.Invoke(entry);
-        }
-
-        //最后是代码事件：它和派发器的代码订阅都属于"代码订阅"这一层。
-        RaiseCodeEvent(entry.eventId, entry.payload);
+        DispatchEvent(entry.eventId, entry.payload);
     }
 
-    /// <summary>控件的代码事件；在持久化绑定之后触发，派生控件在这里触发自己的 event。</summary>
-    protected virtual void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    /// <summary>派发控件的 OrbEvent，持久化调用先于运行时订阅执行。</summary>
+    protected virtual void DispatchEvent(int eventId, in UIEventPayload payload)
     {
     }
 
     /// <summary>事件在队列里被丢弃时调用；派生控件据此撤销"已触发"之类的一次性状态。</summary>
-    internal void OnEventDiscarded(in UIEvent entry)
+    internal void OnEventDiscarded(in UIQueuedEvent entry)
     {
         OnEventDropped(entry.eventId);
     }
 
     //接口实现：派发器只通过这些入口触达控件，显式实现避免占用公开成员名。
-    void IUIEventSource.OnEvent(in UIEvent entry) => OnEvent(entry);
+    void IUIEventSource.OnEvent(in UIQueuedEvent entry) => OnEvent(entry);
 
-    void IUIEventSource.OnEventDiscarded(in UIEvent entry) => OnEventDiscarded(entry);
+    void IUIEventSource.OnEventDiscarded(in UIQueuedEvent entry) => OnEventDiscarded(entry);
 
     /// <summary>控件自己的事件处理：更新内部状态与视觉。默认无操作。</summary>
     protected virtual void OnEventRaised(int eventId, in UIEventPayload payload)
@@ -239,17 +92,6 @@ public class UIControl : UIElement, IUIEventSource,
             hovered = false;
             pressed = false;
         }
-        RefreshVisualState();
-    }
-
-    /// <summary>状态色作用的图形；为空时取同节点上的第一个图形。</summary>
-    public UIVisual? GetTargetVisual() => targetVisual ?? GetNodeVisual();
-
-    /// <summary>设置状态色作用的图形。</summary>
-    public void SetTargetVisual(UIVisual? value)
-    {
-        if (ReferenceEquals(targetVisual, value)) return;
-        targetVisual = value;
         RefreshVisualState();
     }
 
@@ -454,7 +296,8 @@ public class UIControl : UIElement, IUIEventSource,
     //状态色 = 禁用 ? disabled : 按下 ? pressed : 悬停 ? hover : normal。
     internal void RefreshVisualState()
     {
-        UIVisual? visual = GetTargetVisual();
+        UINode? node = UIWorldContext.Current?.FindNode(EnsId);
+        UIVisual? visual = this is Button ? node?.GetElement<Image>() : node?.Visual;
         if (visual == null) return;
 
         color state = !CanInteract() ? disabledColor
@@ -464,5 +307,4 @@ public class UIControl : UIElement, IUIEventSource,
         visual.SetStateMultiplier(state);
     }
 
-    private UIVisual? GetNodeVisual() => UIWorldContext.Current?.FindNode(EnsId)?.Visual;
 }

@@ -64,7 +64,7 @@ internal static partial class ManagedTypeMetadataCache
             || valueType.IsEnum && Enum.GetUnderlyingType(valueType) == typeof(uint)) kind = InteropValueKind.UInt32;
         else if (valueType == typeof(ulong)) kind = InteropValueKind.UInt64;
         else if (valueType == typeof(float)) kind = InteropValueKind.Float32;
-        else if (valueType == typeof(string)) kind = InteropValueKind.String;
+        else if (valueType == typeof(string) || typeof(OrbEvent).IsAssignableFrom(valueType)) kind = InteropValueKind.String;
         else if (valueType == typeof(vector2)) kind = InteropValueKind.Vector2;
         else if (valueType == typeof(vector3)) kind = InteropValueKind.Vector3;
         else if (valueType == typeof(color)) kind = InteropValueKind.Color;
@@ -72,7 +72,7 @@ internal static partial class ManagedTypeMetadataCache
         else if (valueType == typeof(EnsId)) kind = InteropValueKind.EnsId;
         else if (typeof(Object).IsAssignableFrom(valueType)) kind = InteropValueKind.Object;
         else if (GetCollectionElementType(valueType) is Type element && TryGetKind(element, out var elementKind)
-            && elementKind != InteropValueKind.Array) kind = InteropValueKind.Array;
+            && elementKind != InteropValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(element)) kind = InteropValueKind.Array;
         else
         {
             kind = InteropValueKind.Empty;
@@ -90,6 +90,7 @@ internal static partial class ManagedTypeMetadataCache
         }
 
         //集合由宿主持久化入口处理，不能装成只携带单个标量的代理值。
+        if (input is OrbEvent eventValue) { value = InteropValue.From(eventValue.Serialize()); return true; }
         if (kind == InteropValueKind.Array) { value = default; return false; }
 
         if (input == null)
@@ -122,6 +123,18 @@ internal static partial class ManagedTypeMetadataCache
         result = null;
         if (!TryGetKind(targetType, out InteropValueKind expected) || expected != value.Kind) return false;
         Type valueType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        if (typeof(OrbEvent).IsAssignableFrom(valueType))
+        {
+            if (!value.TryGet(out string text)) return false;
+            try
+            {
+                OrbEvent eventValue = valueType == typeof(OrbEvent) ? OrbEvent.Parse(text) : (OrbEvent)Activator.CreateInstance(valueType)!;
+                if (!eventValue.Deserialize(text)) return false;
+                result = eventValue;
+                return true;
+            }
+            catch (Exception exception) when (exception is ArgumentException or FormatException or OverflowException) { return false; }
+        }
         if (valueType.IsEnum)
         {
             if (expected == InteropValueKind.Int32 && value.TryGet(out int signed))
@@ -181,7 +194,14 @@ internal static partial class ManagedTypeMetadataCache
                     Kind = kind,
                     InspectorVisible = field.GetCustomAttribute<HideInEditorAttribute>() == null,
                     Getter = script => field.GetValue(script),
-                    Setter = (script, value) => field.SetValue(script, value),
+                    Setter = (script, value) =>
+                    {
+                        if (field.GetValue(script) is OrbEvent current && value is OrbEvent incoming)
+                        {
+                            if (!current.Deserialize(incoming.Serialize())) throw new ArgumentException("OrbEvent signature mismatch.");
+                        }
+                        else field.SetValue(script, value);
+                    },
                 };
                 metadata.Fields[field.Name] = entry;
             }
@@ -217,7 +237,8 @@ internal static partial class ManagedTypeMetadataCache
             for (int index = 0; index < parameters.Length; ++index)
             {
                 parameterTypes[index] = parameters[index].ParameterType;
-                if (!TryGetKind(parameterTypes[index], out kinds[index]) || kinds[index] == InteropValueKind.Array)
+                if (!TryGetKind(parameterTypes[index], out kinds[index]) || kinds[index] == InteropValueKind.Array
+                    || typeof(OrbEvent).IsAssignableFrom(parameterTypes[index]))
                 {
                     supported = false;
                     break;
@@ -242,7 +263,7 @@ internal static partial class ManagedTypeMetadataCache
             kind = InteropValueKind.Empty;
             return true;
         }
-        return TryGetKind(type, out kind) && kind != InteropValueKind.Array;
+        return TryGetKind(type, out kind) && kind != InteropValueKind.Array && !typeof(OrbEvent).IsAssignableFrom(type);
     }
 
     private static bool TryParseSerialized(InteropValueKind kind, string text, out InteropValue value)

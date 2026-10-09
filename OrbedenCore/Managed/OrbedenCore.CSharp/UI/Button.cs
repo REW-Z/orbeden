@@ -6,10 +6,11 @@ namespace Orbeden;
 /// 按钮。指针在同目标上抬起，或拿到焦点后提交，都算一次点击。
 /// 点击事件统一进派发器：持久化绑定先执行，随后才是代码事件与代码订阅。
 /// </summary>
+[DependsOnComponent(typeof(Image))]
 public class Button : UIControl
 {
     /// <summary>点击。派发时触发，不在指针回调里直接触发。</summary>
-    public event Action? Clicked;
+    public OrbEvent ClickEvent = new();
 
     /// <summary>创建按钮组件包装。</summary>
     public Button(Ens ens) : base(ens)
@@ -27,9 +28,9 @@ public class Button : UIControl
     public override void OnSubmit() => RaiseClicked();
 
     /// <summary>代码事件在派发时触发，与绑定、代码订阅共用同一次派发顺序。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.Clicked) Clicked?.Invoke();
+        if (eventId == UIEventIds.Clicked) ClickEvent.Dispatch();
     }
 
     private void RaiseClicked() => RaiseEvent(UIEventIds.Clicked, default);

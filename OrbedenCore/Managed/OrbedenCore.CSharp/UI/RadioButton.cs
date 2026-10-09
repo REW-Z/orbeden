@@ -15,7 +15,7 @@ public class RadioButton : UIControl
     [SerializeField] private EnsId groupRoot;
 
     /// <summary>勾选状态变化。派发时触发；同值不通知。</summary>
-    public event Action<bool>? CheckedChanged;
+    public OrbEvent<bool> CheckedChanged = new();
 
     /// <summary>创建单选框组件包装。</summary>
     public RadioButton(Ens ens) : base(ens)
@@ -103,9 +103,9 @@ public class RadioButton : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.CheckedChanged) CheckedChanged?.Invoke(payload.flagged);
+        if (eventId == UIEventIds.CheckedChanged) CheckedChanged.Dispatch(payload.flagged);
     }
 
     /// <summary>组件挂载：多项选中时保留配置、只让层级最前的一项生效。</summary>

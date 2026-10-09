@@ -65,7 +65,7 @@ public sealed class UIComboPopup
         {
             Button button = optionButtons[index];
             int captured = index;
-            button.Clicked -= MakeHandler(captured);
+            button.ClickEvent.Unsubscribe(MakeHandler(captured));
         }
         optionButtons.Clear();
         optionTexts.Clear();
@@ -159,7 +159,7 @@ public sealed class UIComboPopup
         Button? button = node.AddComponent<Button>();
         if (button == null) return;
         //按序号绑定：退订时按同样方式重建委托，才能摘干净。
-        button.Clicked += MakeHandler(index);
+        button.ClickEvent.Subscribe(MakeHandler(index));
         optionButtons.Add(button);
         optionTexts.Add(text);
     }

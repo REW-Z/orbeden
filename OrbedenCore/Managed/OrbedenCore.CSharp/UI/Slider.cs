@@ -29,7 +29,7 @@ public class Slider : UIControl
     [SerializeField] private UILayout? fill;
 
     /// <summary>值变化。派发时触发；同值不通知。</summary>
-    public event Action<float>? ValueChanged;
+    public OrbEvent<float> ValueChanged = new();
 
     private uint dragPointerId = uint.MaxValue;
 
@@ -169,9 +169,9 @@ public class Slider : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.ValueChanged) ValueChanged?.Invoke(payload.value);
+        if (eventId == UIEventIds.ValueChanged) ValueChanged.Dispatch(payload.value);
     }
 
     /// <summary>控件摘除：撤销驱动过的矩形。</summary>

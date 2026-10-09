@@ -254,8 +254,7 @@ public static class UICreationMenu
     {
         Ens root = CreateNode(parent, "Button", created);
         UILayout? layout = root.AddComponent<UILayout>();
-        root.AddComponent<Image>();
-        Button? button = root.AddComponent<Button>();
+        root.AddComponent<Button>();
 
         //子文本：双轴拉伸、留出边距。
         Ens label = CreateNode(root, "Text", created);
@@ -267,7 +266,6 @@ public static class UICreationMenu
             StretchChild(labelLayout, TextPaddingX, TextPaddingY);
             labelText?.SetText("Button");
             labelText?.SetRaycastTarget(false);
-            button?.SetTargetVisual(root.GetComponent<Image>());
         });
     }
 

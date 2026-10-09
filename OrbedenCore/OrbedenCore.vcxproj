@@ -233,6 +233,7 @@
     <ClInclude Include="Src\Runtime\Object\Object.h" />
     <ClInclude Include="Src\FileSystem\PathDefines.h" />
     <ClInclude Include="Src\Runtime\Reflection.h" />
+    <ClInclude Include="Src\Runtime\OrbEvent.h" />
     <ClInclude Include="Src\Profiler\Profiler.h" />
     <ClInclude Include="Src\Runtime\AtmosphereSettings.h" />
     <ClInclude Include="Src\Runtime\RenderSettings.h" />
@@ -331,6 +332,7 @@
     <ClCompile Include="Src\Runtime\Object\Object.cpp" />
     <ClCompile Include="Src\FileSystem\PathDefines.cpp" />
     <ClCompile Include="Src\Runtime\Reflection.cpp" />
+    <ClCompile Include="Src\Runtime\OrbEvent.cpp" />
     <ClCompile Include="Src\Profiler\Profiler.cpp" />
     <ClCompile Include="Src\ResourceManager\ResourceManager.cpp" />
     <ClCompile Include="Src\Runtime\Object\Material.cpp" />

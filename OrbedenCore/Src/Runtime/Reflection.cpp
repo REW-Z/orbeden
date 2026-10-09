@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "Runtime/Reflection.h"
+#include "Runtime/OrbEvent.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/World.h"
 
@@ -347,6 +348,15 @@ namespace Reflection
         }
         case FieldKind::String:
         {
+            value = Value(text);
+            return true;
+        }
+        case FieldKind::OrbEvent:
+        {
+            List<ValueKind> signature;
+            if (!OrbEvent::ReadSignature(text, signature)) return false;
+            OrbEvent event(std::move(signature));
+            if (!event.Deserialize(text)) return false;
             value = Value(text);
             return true;
         }

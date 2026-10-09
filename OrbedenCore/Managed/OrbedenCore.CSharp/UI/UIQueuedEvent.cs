@@ -1,9 +1,9 @@
 namespace Orbeden;
 
-/// <summary>控件事件的标识；数值是持久化合同的一部分，只能追加。</summary>
+/// <summary>控件队列消息的标识。</summary>
 public static class UIEventIds
 {
-    /// <summary>Button.Clicked。</summary>
+    /// <summary>Button.ClickEvent。</summary>
     public const int Clicked = 0;
 
     /// <summary>CheckBox/RadioButton.CheckedChanged，值在 flagged 里。</summary>
@@ -113,14 +113,14 @@ public interface IUIEventSource
     EnsId EnsId { get; }
 
     /// <summary>派发到本源时的第一步。</summary>
-    void OnEvent(in UIEvent entry);
+    void OnEvent(in UIQueuedEvent entry);
 
     /// <summary>事件在队列里被丢弃时调用。</summary>
-    void OnEventDiscarded(in UIEvent entry);
+    void OnEventDiscarded(in UIQueuedEvent entry);
 }
 
 /// <summary>一条 UI 事件。源与目标的代次在入队时记下，派发前逐一核对。</summary>
-public readonly struct UIEvent
+public readonly struct UIQueuedEvent
 {
     /// <summary>入队序号；同帧内单调递增，保留入队顺序。</summary>
     public readonly ulong sequence;
@@ -141,7 +141,7 @@ public readonly struct UIEvent
     public readonly UIEventPayload payload;
 
     /// <summary>创建一条事件。</summary>
-    public UIEvent(ulong sequence, IUIEventSource source, in UIEventPayload payload, int eventId, in EnsId target)
+    public UIQueuedEvent(ulong sequence, IUIEventSource source, in UIEventPayload payload, int eventId, in EnsId target)
     {
         this.sequence = sequence;
         this.source = source;

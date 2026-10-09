@@ -4,7 +4,7 @@ namespace OrbedenMetaGen;
 
 internal sealed record BindingValue(string Kind, string Cpp, string Managed, string WireCpp, string WireManaged, CppType? Declaration = null, BindingValue? Element = null)
 {
-    internal bool IsEncoded => Kind is "string" or "array" or "record" or "recordptr";
+    internal bool IsEncoded => Kind is "string" or "array" or "record" or "recordptr" or "event";
     internal string Key => Regex.Replace(Cpp, @"\W", "_");
 }
 
@@ -30,12 +30,14 @@ internal sealed class BindingTypes(BindingModel model)
             return Remember(new(type == "bool" ? "bool" : "scalar", type, type == "bool" ? "bool" : scalar.Cs, scalar.Cpp, scalar.Cs));
         if (Builtins.Contains(type)) return Remember(new("builtin", type, "global::Orbeden." + type, type, "global::Orbeden." + type));
         if (type is "std::string" or "StringId") return Remember(new("string", type, "string", "NativeBindingSlice", "NativeBindingSlice"));
+        if (type == "OrbEvent") return Remember(new("event", type, "global::Orbeden.OrbEvent", "NativeBindingSlice", "NativeBindingSlice"));
         foreach (string prefix in new[] { "List<", "std::vector<", "std::array<" })
         {
             if (!type.StartsWith(prefix, StringComparison.Ordinal) || !type.EndsWith('>')) continue;
             string elementType = type[prefix.Length..^1];
             if (prefix == "std::array<") elementType = elementType[..elementType.LastIndexOf(',')];
             BindingValue element = Resolve(elementType, owner);
+            if (element.Kind == "event") throw new InvalidDataException("OrbEvent must be declared as an individual field");
             return Remember(new("array", type, element.Managed + "[]", "NativeBindingSlice", "NativeBindingSlice", Element: element));
         }
         bool reference = type.StartsWith("Ref<", StringComparison.Ordinal) && type.EndsWith('>');

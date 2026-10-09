@@ -262,7 +262,8 @@ public sealed class PropertyDocument
             _ when nativeType.EndsWith("Collider", StringComparison.Ordinal) => ["isTrigger", "center", "halfExtents", "radius", "halfHeight", "mesh", "staticFriction", "dynamicFriction", "restitution", "collisionLayer", "collisionMask"],
             _ => [],
         };
-        drawProperties = properties.OrderBy(property =>
+        //把事件编辑区排在普通属性之后
+        drawProperties = properties.OrderBy(property => property.TypeName == "OrbEvent" ? 1 : 0).ThenBy(property =>
         {
             int index = Array.IndexOf(order, property.Name);
             if (index >= 0) return index * 10;

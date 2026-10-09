@@ -26,10 +26,10 @@ public class TextField : UIControl
     [SerializeField] private color caretTint = new(1.0f, 1.0f, 1.0f, 1.0f);
 
     /// <summary>文本变化。派发时触发；同值不通知。</summary>
-    public event Action<string>? TextChanged;
+    public OrbEvent<string> TextChanged = new();
 
     /// <summary>提交（回车）。派发时触发。</summary>
-    public event Action<string>? Submitted;
+    public OrbEvent<string> Submitted = new();
 
     private readonly UITextEditor editor = new();
     private readonly UITextLayout layoutBuilder = new(FontAtlasCache.Shared);
@@ -646,10 +646,10 @@ public class TextField : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.TextChanged) TextChanged?.Invoke(payload.text ?? string.Empty);
-        else if (eventId == UIEventIds.Submitted) Submitted?.Invoke(payload.text ?? string.Empty);
+        if (eventId == UIEventIds.TextChanged) TextChanged.Dispatch(payload.text ?? string.Empty);
+        else if (eventId == UIEventIds.Submitted) Submitted.Dispatch(payload.text ?? string.Empty);
     }
 
     /// <summary>提交一次：非组合状态下才发 Submitted。</summary>

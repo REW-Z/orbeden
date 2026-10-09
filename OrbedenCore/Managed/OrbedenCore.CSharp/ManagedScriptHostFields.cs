@@ -93,7 +93,8 @@ internal static partial class ManagedTypeMetadataCache
             if (!stored.TryGetValue(name, out ManagedHostField value)) continue;
             if (!TryReadHostValue(script, field, value, out object? applied)) continue;
             fields.Add(field);
-            baseline.Add(field.Getter(script));
+            object? previous = field.Getter(script);
+            baseline.Add(previous is OrbEvent previousEvent ? OrbEvent.Parse(previousEvent.Serialize()) : previous);
             converted.Add(applied);
         }
 
@@ -138,6 +139,8 @@ internal static partial class ManagedTypeMetadataCache
     internal static bool WriteHostField(Script script, IntPtr host, ManagedFieldMetadata field, bool explicitEdit = false)
     {
         if (field.Name == "enabled") return true;
+        if (field.Getter(script) is OrbEvent eventValue)
+            return Script.WriteHostField(host, field.Name, "OrbEvent", eventValue.Serialize(), field.InspectorVisible);
         if (field.Kind == InteropValueKind.Array)
         {
             Type element = GetCollectionElementType(field.FieldType)!;
@@ -251,6 +254,15 @@ internal static partial class ManagedTypeMetadataCache
     /// <summary>区分持久化引用和只用于互操作的运行时 ObjectId。</summary>
     private static bool TryReadHostValue(Script script, ManagedFieldMetadata field, ManagedHostField stored, out object? result)
     {
+        if (typeof(OrbEvent).IsAssignableFrom(field.FieldType))
+        {
+            result = null;
+            if (stored.TypeName != "OrbEvent" || field.Getter(script) is not OrbEvent current) return false;
+            OrbEvent parsed = new(current.ParameterKinds.ToArray());
+            if (!parsed.Deserialize(stored.Value)) return false;
+            result = parsed;
+            return true;
+        }
         if (field.Kind == InteropValueKind.Array)
         {
             result = null;

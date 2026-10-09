@@ -155,6 +155,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         output.AppendLine($"void Write_{value.Key}(NativeBindingWriter& writer, {value.Cpp} const& value)\n{{");
         switch (value.Kind)
         {
+            case "event": output.AppendLine("    writer.Text(value.Serialize());"); break;
             case "string": output.AppendLine($"    writer.Text(value{(value.Cpp == "StringId" ? ".GetPath()" : "")});"); break;
             case "array": output.AppendLine($"    writer.Scalar(static_cast<int32>(value.size()));\n    for (const auto& item : value) Write_{value.Element!.Key}(writer, item);"); break;
             case "record":
@@ -171,6 +172,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         output.AppendLine($"{value.Cpp} Read_{value.Key}(NativeBindingReader& reader)\n{{");
         switch (value.Kind)
         {
+            case "event": output.AppendLine("    auto text = reader.Text(); List<Reflection::ValueKind> signature;\n    if (!OrbEvent::ReadSignature(text, signature)) throw NativeBindingError(NativeBindingStatus::InvalidArgument, \"Invalid OrbEvent\");\n    OrbEvent value(std::move(signature));\n    if (!value.Deserialize(text)) throw NativeBindingError(NativeBindingStatus::InvalidArgument, \"Invalid OrbEvent\");\n    return value;"); break;
             case "string": output.AppendLine($"    return {value.Cpp}(reader.Text());"); break;
             case "array":
                 if (value.Cpp.StartsWith("std::array<"))
@@ -303,6 +305,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         output.AppendLine($"    internal static void Write_{value.Key}(NativeBindingWriter writer, {value.Managed} value)\n    {{");
         switch (value.Kind)
         {
+            case "event": output.AppendLine("        writer.Text(value.Serialize());"); break;
             case "string": output.AppendLine("        writer.Text(value);"); break;
             case "array": output.AppendLine($"        ArgumentNullException.ThrowIfNull(value); writer.Scalar(value.Length);\n        foreach (var item in value) Write_{value.Element!.Key}(writer, item);"); break;
             case "record":
@@ -317,6 +320,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         output.AppendLine($"    internal static {value.Managed} Read_{value.Key}(ref NativeBindingReader reader)\n    {{");
         switch (value.Kind)
         {
+            case "event": output.AppendLine("        return global::Orbeden.OrbEvent.Parse(reader.Text());"); break;
             case "string": output.AppendLine("        return reader.Text();"); break;
             case "array": output.AppendLine($"        int length = reader.Count(); var value = new {value.Element!.Managed.TrimEnd('?')}[length];\n        for (int index = 0; index < length; ++index) value[index] = Read_{value.Element.Key}(ref reader);\n        return value;"); break;
             case "record":

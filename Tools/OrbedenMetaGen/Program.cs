@@ -396,7 +396,7 @@ static FieldKindInfo? GetFieldKind(string type)
 {
     string? element = GetArrayElementType(type);
     if (element != null && !IsReferenceListType(NormalizeValueType(type)))
-        return GetFieldKind(element) is { CppName: not "Reflection::FieldKind::Array" and not "Reflection::FieldKind::ObjectRefList" }
+        return GetFieldKind(element) is { CppName: not "Reflection::FieldKind::Array" and not "Reflection::FieldKind::ObjectRefList" and not "Reflection::FieldKind::OrbEvent" }
             ? new FieldKindInfo("Reflection::FieldKind::Array") : null;
     string normalizedType = NormalizeValueType(type);
     if (IsReferenceListType(normalizedType))
@@ -418,6 +418,7 @@ static FieldKindInfo? GetFieldKind(string type)
         "uint64" => new FieldKindInfo("Reflection::FieldKind::UInt64"),
         "float32" => new FieldKindInfo("Reflection::FieldKind::Float32"),
         "std::string" => new FieldKindInfo("Reflection::FieldKind::String"),
+        "OrbEvent" => new FieldKindInfo("Reflection::FieldKind::OrbEvent"),
         "StringId" => new FieldKindInfo("Reflection::FieldKind::StringId"),
         "vector2" => new FieldKindInfo("Reflection::FieldKind::Vector2"),
         "vector3" => new FieldKindInfo("Reflection::FieldKind::Vector3"),

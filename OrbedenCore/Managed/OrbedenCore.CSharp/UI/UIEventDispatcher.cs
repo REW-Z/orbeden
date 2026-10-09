@@ -15,9 +15,9 @@ public sealed class UIEventDispatcher
     public const int MaxEventsPerFrame = 4096;
 
     //一条代码订阅。
-    private readonly record struct Subscription(IUIEventSource Source, int EventId, Action<UIEvent> Handler);
+    private readonly record struct Subscription(IUIEventSource Source, int EventId, Action<UIQueuedEvent> Handler);
 
-    private readonly Queue<UIEvent> queue = new();
+    private readonly Queue<UIQueuedEvent> queue = new();
     private readonly List<Subscription> subscriptions = [];
     //派发时用的订阅快照；复制之后回调里的增删不影响这一条事件。
     private readonly List<Subscription> snapshot = [];
@@ -34,12 +34,12 @@ public sealed class UIEventDispatcher
     public void BeginFrame() => dispatchedThisFrame = 0;
 
     /// <summary>把一条事件排到队尾。</summary>
-    public void Enqueue(in UIEvent value)
+    public void Enqueue(in UIQueuedEvent value)
     {
-        UIEvent entry = value;
+        UIQueuedEvent entry = value;
         if (entry.sequence == 0)
         {
-            entry = new UIEvent(nextSequence, value.source, value.payload, value.eventId, value.target);
+            entry = new UIQueuedEvent(nextSequence, value.source, value.payload, value.eventId, value.target);
         }
         if (nextSequence == ulong.MaxValue) nextSequence = 1;
         else ++nextSequence;
@@ -51,11 +51,11 @@ public sealed class UIEventDispatcher
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.IsAlive) return;
-        Enqueue(new UIEvent(0, source, payload, eventId, target));
+        Enqueue(new UIQueuedEvent(0, source, payload, eventId, target));
     }
 
     /// <summary>登记一条代码订阅；重复登记同一条无副作用。</summary>
-    public void Subscribe(IUIEventSource source, int eventId, Action<UIEvent> handler)
+    public void Subscribe(IUIEventSource source, int eventId, Action<UIQueuedEvent> handler)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(handler);
@@ -68,7 +68,7 @@ public sealed class UIEventDispatcher
     }
 
     /// <summary>注销一条代码订阅。</summary>
-    public void Unsubscribe(IUIEventSource source, int eventId, Action<UIEvent> handler)
+    public void Unsubscribe(IUIEventSource source, int eventId, Action<UIQueuedEvent> handler)
     {
         for (int index = 0; index < subscriptions.Count; ++index)
         {
@@ -92,7 +92,7 @@ public sealed class UIEventDispatcher
     /// <summary>清空队列与全部订阅；世界切换时调用。</summary>
     public void Reset()
     {
-        foreach (UIEvent entry in queue) entry.source.OnEventDiscarded(entry);
+        foreach (UIQueuedEvent entry in queue) entry.source.OnEventDiscarded(entry);
         queue.Clear();
         subscriptions.Clear();
         snapshot.Clear();
@@ -111,19 +111,19 @@ public sealed class UIEventDispatcher
                 //超限：丢弃余项并报错，正在排队的回调结果不再生效。
                 Console.Error.WriteLine(
                     $"UIEventDispatcher: 单帧事件超过 {MaxEventsPerFrame} 条，余下的 {queue.Count} 条被丢弃。");
-                foreach (UIEvent entry in queue) entry.source.OnEventDiscarded(entry);
+                foreach (UIQueuedEvent entry in queue) entry.source.OnEventDiscarded(entry);
                 queue.Clear();
                 return;
             }
 
-            UIEvent current = queue.Dequeue();
+            UIQueuedEvent current = queue.Dequeue();
             ++dispatchedThisFrame;
             DispatchOne(current);
         }
     }
 
     //派发一条：源自己先更新，再走持久化绑定，最后走代码订阅。
-    private void DispatchOne(in UIEvent entry)
+    private void DispatchOne(in UIQueuedEvent entry)
     {
         if (!entry.HasValidSource())
         {
@@ -149,7 +149,7 @@ public sealed class UIEventDispatcher
     }
 
     //单个监听器的异常不阻断其他监听器。
-    private static void Invoke(Action<UIEvent> handler, in UIEvent entry)
+    private static void Invoke(Action<UIQueuedEvent> handler, in UIQueuedEvent entry)
     {
         try
         {

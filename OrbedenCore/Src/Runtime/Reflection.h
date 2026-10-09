@@ -11,6 +11,8 @@
 #include "Runtime/Object/Object.h"
 #include "Runtime/EnsId.h"
 
+class OrbEvent;
+
 namespace Reflection
 {
     //反射值的运行时类型
@@ -53,6 +55,7 @@ namespace Reflection
         EnsId,
         Array,
         Vector2,
+        OrbEvent,
     };
 
     //反射调用使用的轻量值容器
@@ -160,6 +163,15 @@ namespace Reflection
     };
 
     //旧对象引用列表的分隔符，读取已有场景时仍然识别。
+    //读取事件的持久化文本值
+    Value ToValue(const OrbEvent& value);
+    //从持久化文本写入事件配置
+    bool SetFromValue(OrbEvent& target, const Value& value);
+    //序列化事件配置
+    std::string ToXmlValue(const OrbEvent& value);
+    //读取事件配置
+    bool SetFromXmlValue(OrbEvent& target, const std::string& text);
+
     constexpr char ReferenceListSeparator = '|';
 
     /// <summary>按 UTF-8 字节长度编码数组元素，保留空值、分隔符和 Unicode。</summary>

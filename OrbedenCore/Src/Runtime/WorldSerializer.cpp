@@ -14,6 +14,7 @@
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
+#include "Runtime/OrbEvent.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/Script.h"
@@ -1118,6 +1119,15 @@ namespace
             {
                 std::string value = attribute.second;
                 const std::string& fieldType = GetAttribute(token, "type");
+                if (token.name == "Field" && attribute.first == "value" && fieldType == "OrbEvent")
+                {
+                    if (!OrbEvent::RemapTargets(value, [&](const std::string& key)
+                        {
+                            auto found = paths.find(key);
+                            if (found != paths.end()) return found->second;
+                            return clearExternal && IsWorldObjectRef(key) ? std::string() : key;
+                        })) throw std::runtime_error("Invalid OrbEvent field");
+                }
                 bool arrayReference = token.name == "Field" && attribute.first == "value"
                     && (fieldType.find("<Ref<") != std::string::npos || fieldType.find("<EnsId") != std::string::npos);
                 if (arrayReference)

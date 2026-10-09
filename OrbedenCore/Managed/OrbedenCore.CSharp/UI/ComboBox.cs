@@ -16,7 +16,7 @@ public class ComboBox : UIControl
     [SerializeField] private float itemHeight = 30.0f;
 
     /// <summary>选中项变化。派发时触发；同值不通知。</summary>
-    public event Action<int>? SelectionChanged;
+    public OrbEvent<int> SelectionChanged = new();
 
     private UIComboPopup? popup;
 
@@ -199,9 +199,9 @@ public class ComboBox : UIControl
     }
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.SelectionChanged) SelectionChanged?.Invoke(payload.index);
+        if (eventId == UIEventIds.SelectionChanged) SelectionChanged.Dispatch(payload.index);
     }
 
     /// <summary>控件停用或摘除：收起弹层，别把临时子树留在场上。</summary>

@@ -12,7 +12,7 @@ public class CheckBox : UIControl
     [SerializeField] private UIVisual? checkmark;
 
     /// <summary>勾选状态变化。派发时触发；同值不通知。</summary>
-    public event Action<bool>? CheckedChanged;
+    public OrbEvent<bool> CheckedChanged = new();
 
     /// <summary>创建复选框组件包装。</summary>
     public CheckBox(Ens ens) : base(ens)
@@ -58,9 +58,9 @@ public class CheckBox : UIControl
     public override void OnSubmit() => Toggle();
 
     /// <summary>代码事件在派发时触发。</summary>
-    protected override void RaiseCodeEvent(int eventId, in UIEventPayload payload)
+    protected override void DispatchEvent(int eventId, in UIEventPayload payload)
     {
-        if (eventId == UIEventIds.CheckedChanged) CheckedChanged?.Invoke(payload.flagged);
+        if (eventId == UIEventIds.CheckedChanged) CheckedChanged.Dispatch(payload.flagged);
     }
 
     /// <summary>组件停用：撤销标记上的可见性覆盖，并放开本控件持有的捕获与焦点。</summary>

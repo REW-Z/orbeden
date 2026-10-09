@@ -1052,6 +1052,7 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制单个属性并返回用户提交的新值。
     private static bool TryDrawProperty(string label, PropertyValue property, out InteropValue value)
     {
+        if (property.TypeName == "OrbEvent") return OrbEventEditor.Draw(label, property, out value);
         value = property.Value;
         //枚举字段只画下拉框：选项在属性快照重建时解析好，画过就不再走数值控件。
         if (property.Kind is InteropValueKind.Int32 or InteropValueKind.UInt32

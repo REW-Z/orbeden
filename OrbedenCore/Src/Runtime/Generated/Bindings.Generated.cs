@@ -1119,7 +1119,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.HeightField), "HeightField", 12049277348369327740UL, (ens, pointer) => new global::Orbeden.HeightField(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.ParticleSystem), "ParticleSystem", 2275182644830314560UL, (ens, pointer) => new global::Orbeden.ParticleSystem(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 11196905937671424513UL, null);
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4622765495942406386UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 485817780930741050UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 13157070993901949905UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 13396853297441896464UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
@@ -1663,6 +1663,7 @@ public enum FieldKind : int
     EnsId,
     Array,
     Vector2,
+    OrbEvent,
 }
 }
 namespace Orbeden

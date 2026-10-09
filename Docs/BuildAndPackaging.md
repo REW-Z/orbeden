@@ -503,6 +503,10 @@ MyGame/
 
 ### 引擎更新与项目同步
 
+版本 66：移除 UIControl 的 targetVisual 字段及读写接口，Button 通过 DependsOnComponent 声明同节点 Image 依赖，状态颜色直接作用于该 Image。按钮点击事件命名为 ClickEvent，事件字段排在 Inspector 普通属性之后；OrbEvent 的语言域、组件类型、实例序号和方法合并为 Function 下拉项，按所选方法签名自动配置参数传递。需重建 Core、Editor、更新游戏 SDK 并重建游戏；脚本中的按钮订阅改用 ClickEvent，不自动修改已有场景内容。
+
+版本 65：新增原生与托管 OrbEvent，支持精确参数签名、跨语言持久化调用、运行时订阅及场景引用重映射。控件事件改为 OrbEvent 字段；旧绑定类及五列绑定数组删除。Inspector 使用统一属性事务编辑持久化调用。需重建 Core、Editor、MetaGen，更新游戏 SDK、修改事件订阅为 Subscribe/Unsubscribe 并重建游戏与发布产物。已有场景的旧事件绑定需要在新事件字段中重新配置，项目更新不自动迁移内容；无需重置 Builtin。
+
 版本 64：引擎自有字符串编解码集中到 InteropText。CoreCS 的 `Interop/InteropText.cs` 统一 UTF-8 字节计数、独立数组编码、写入现有缓冲、字节区域和原生指针解码、结束零文本读写，以及文件 BOM/错误策略配置。运行时、编辑器、脚本及属性绑定、GUI、日志、资源、序列化、导入指纹和文件编码配置均改为调用统一入口；MetaGen、DocGen 链接同一源文件并启用 unsafe，不新增引擎运行时程序集依赖。原生 `Runtime/Native/InteropText.h/.cpp` 统一文件系统路径、系统宽字符、Windows 严格转码及字符事件/字体预设的 UTF-8 编码；删除旧 `FileSystem/Utf8Path.h` 和局部转码函数，保留原生路径分隔符与通用正斜杠两种用途。C# 仍按原有规则替换非法字符，Windows 输入与剪贴板仍严格拒绝非法序列，BOM、字节长度、零终止、缓冲所有权和原生 ABI 不变。不加入映射表或 LRU；GuiContent 的内容复用继续保留。RetainedGUI 的 Unicode 标量解析、排版、字形及网格绘制不改为 UTF-8 字符串传输，文本输入与剪贴板仅在事件边界调用 InteropText。原生 SDK 如引用旧 Utf8Path 头文件，需要改用 Runtime/Native/InteropText.h 及 PathFromUtf8/PathToUtf8；需重建 Core、Editor、两个工具，更新游戏 SDK 并重建游戏及发布产物。仅进行了源码扫描、差异检查和工程 XML/链接路径检查，未编译、运行测试或性能采样，不新增测试代码。
 
 版本 63：优化 RetainedGUI 文本解析和控件排版复用。UITextLayout 仅在源文本变化时解析 Unicode 标量与 UTF-16 索引；正常文本直接复用源字符串，CRLF 和非法代理项使用可复用字符缓冲处理，移除逐字符临时字符串，单次排版的断行与定位复用字距查询。TextField 的占位与 IME 组合文本分别缓存排版，检查字体、图集版本及字形驻留后复用。即时 GUI 新增由调用方持有的 GuiContent，其 Text 变化时准备 UTF-8，GUI/EditorGUI 的相应重载绘制时只借用已有字节；状态栏在 Print 或日志序号变化时更新内容；进度显示在 Begin/Report 或显示秒数变化时更新文案，同一内容的测量与裁剪绘制借用相同字节，固定弹窗与按钮身份在初始化时准备。没有全局编码/解码缓存、LRU、锁、缓存计数或编辑器友元扩展；实体名称、属性快照、引用查询、序列化和原字符串 GUI 接口保持原路径。未变化且使用 GuiContent 重载的绘制不执行 UTF-16/UTF-8 转换；原字符串接口仍按调用转码，新输入及内容变化仍需处理，原生即时 GUI 内部仍解析 UTF-8 字形。原生函数表和场景格式不变；需重建 Core、Editor，更新游戏 SDK 并重建游戏。未执行编译、测试或性能采样，不新增测试代码。

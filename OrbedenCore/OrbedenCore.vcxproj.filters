@@ -60,6 +60,7 @@
     <ClInclude Include="Src\Runtime\World.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Src\Runtime\OrbEvent.h"><Filter>头文件</Filter></ClInclude>
     <ClInclude Include="Src\Runtime\Reflection.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -350,6 +351,7 @@
     <ClCompile Include="Src\Runtime\Generated\Reflection.Generated.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Runtime\OrbEvent.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="Src\Runtime\Reflection.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
