@@ -24,16 +24,16 @@ public static class UIEventIds
     /// <summary>TextField.Submitted，值在 text 里。</summary>
     public const int Submitted = 6;
 
-    //按事件标识给出稳定名字；编辑器的事件表用它。
-    private static readonly (int Id, string Name)[] Entries =
+    //按事件标识给出稳定名字与载荷种类；编辑器的事件表用它们挑可绑定的方法。
+    private static readonly (int Id, string Name, InteropValueKind Payload)[] Entries =
     [
-        (Clicked, nameof(Clicked)),
-        (CheckedChanged, nameof(CheckedChanged)),
-        (ValueChanged, nameof(ValueChanged)),
-        (ScrollChanged, nameof(ScrollChanged)),
-        (SelectionChanged, nameof(SelectionChanged)),
-        (TextChanged, nameof(TextChanged)),
-        (Submitted, nameof(Submitted)),
+        (Clicked, nameof(Clicked), InteropValueKind.Empty),
+        (CheckedChanged, nameof(CheckedChanged), InteropValueKind.Bool),
+        (ValueChanged, nameof(ValueChanged), InteropValueKind.Float32),
+        (ScrollChanged, nameof(ScrollChanged), InteropValueKind.Vector2),
+        (SelectionChanged, nameof(SelectionChanged), InteropValueKind.Int32),
+        (TextChanged, nameof(TextChanged), InteropValueKind.String),
+        (Submitted, nameof(Submitted), InteropValueKind.String),
     ];
 
     /// <summary>事件标识的数量。</summary>
@@ -45,11 +45,21 @@ public static class UIEventIds
     /// <summary>取事件标识的显示名；未知标识返回整数字符串。</summary>
     public static string GetName(int eventId)
     {
-        foreach ((int id, string name) in Entries)
+        foreach ((int id, string name, _) in Entries)
         {
             if (id == eventId) return name;
         }
         return eventId.ToString();
+    }
+
+    /// <summary>取事件载荷的种类；没有载荷（如 Clicked）与未知标识都返回 Empty。</summary>
+    public static InteropValueKind GetPayloadKind(int eventId)
+    {
+        foreach ((int id, _, InteropValueKind payload) in Entries)
+        {
+            if (id == eventId) return payload;
+        }
+        return InteropValueKind.Empty;
     }
 }
 

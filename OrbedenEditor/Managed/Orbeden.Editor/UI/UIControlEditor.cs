@@ -189,7 +189,7 @@ public sealed class UIControlEditor : ComponentEditor
             break;
         case 1:
         case 3:
-            CollectFunctionChoices(binding.GetTarget());
+            CollectFunctionChoices(binding);
             functionSearch = string.Empty;
             NativeEditorGUI.OpenPopup("ui_function_picker");
             break;
@@ -199,6 +199,9 @@ public sealed class UIControlEditor : ComponentEditor
         try
         {
             EditorGUI.InputText("Search##ui_function_search", ref functionSearch);
+            //把事件带的载荷写出来：列表里只剩下能接住它的方法，作者得知道接的是哪一种。
+            InteropValueKind payload = UIEventIds.GetPayloadKind(binding.GetEventId());
+            EditorGUI.Label($"{UIEventIds.GetName(binding.GetEventId())} payload: {PayloadName(payload)}");
             float width = 440;
             bool visible = NativeEditorGUI.BeginChild("##ui_function_choices", ref width, 300);
             try
@@ -242,13 +245,14 @@ public sealed class UIControlEditor : ComponentEditor
     private static bool MatchesSearch(FunctionChoice choice) =>
         choice.Text.Contains(functionSearch, StringComparison.OrdinalIgnoreCase);
 
-    //按目标节点重建候选：只收托管脚本。C++ 脚本没有托管宿主句柄，
-    //ComponentProxy.FromComponent 返回空（ComponentProxy.cs），列出来运行期也调不动。
-    private static void CollectFunctionChoices(EnsId target)
+    //按目标节点重建候选：只收托管脚本，且方法的参数种类必须与事件载荷一致。
+    //C++ 脚本没有托管宿主句柄，ComponentProxy.FromComponent 返回空（ComponentProxy.cs），列出来运行期也调不动。
+    private static void CollectFunctionChoices(UIEventBinding binding)
     {
         functionChoices.Clear();
-        Ens owner = Ens.FromId(target);
+        Ens owner = Ens.FromId(binding.GetTarget());
         if (!owner.IsValid) return;
+        InteropValueKind payload = UIEventIds.GetPayloadKind(binding.GetEventId());
 
         List<string> visitedTypes = [];
         foreach (Script script in owner.GetComponents<Script>())
@@ -262,45 +266,62 @@ public sealed class UIControlEditor : ComponentEditor
             List<string> visitedMethods = [];
             foreach (BindableMethod candidate in ComponentProxy.DescribeMethods(script))
             {
-                //重载只留一个：运行期按名字匹配、不看参数种类，列出重载等于给出运行期区分不了的选项。
-                //DescribeMethods 按名字与参数个数排序，第一个匹配的正是运行期会选中的那个。
+                //重名只留一个，而且是运行期真的会调到的那个：DescribeMethods 按名字与参数个数排序，
+                //第一个签名合格的正是运行期取的那个；它接的参数与载荷对不上，整个名字都不列。
                 if (!IsBindableMethod(candidate) || visitedMethods.Contains(candidate.Name)) continue;
                 visitedMethods.Add(candidate.Name);
-                //带参数的把参数种类写出来：那个参数由事件载荷按种类灌进去，作者得知道要接的是哪一种。
-                string label = candidate.ParameterKinds.Count == 0
-                    ? candidate.Name : $"{candidate.Name}({candidate.ParameterKinds[0]})";
-                functionChoices.Add(new FunctionChoice(group, $"{group} / {label}", typeName, candidate.Name));
+                if (!MatchesPayload(candidate, payload)) continue;
+                functionChoices.Add(new FunctionChoice(group, $"{group} / {Signature(candidate)}", typeName, candidate.Name));
             }
         }
     }
 
-    //字段显示名与运行期解析一致：先按类型全名精确匹配，否则在目标的脚本里找第一个带该方法的。
+    //无参方法任何事件都能接；带参数的必须与事件载荷同种类，否则调用时只会拿到默认值。
+    private static bool MatchesPayload(BindableMethod method, InteropValueKind payload) =>
+        method.ParameterKinds.Count == 0 || method.ParameterKinds[0] == payload;
+
+    //方法签名在界面上的写法：带参数的把种类写出来，作者得知道要接的是哪一种。
+    private static string Signature(BindableMethod method) =>
+        method.ParameterKinds.Count == 0 ? method.Name : $"{method.Name}({method.ParameterKinds[0]})";
+
+    //字段显示名与运行期解析一致：按类型全名匹配脚本，再按名字取第一个签名合格的重载。
     private static string DescribeFunction(UIEventBinding binding, string method)
     {
+        if (TryFindBoundMethod(binding, out Script? script, out BindableMethod found))
+            return $"[C#] {ShortName(script!.GetType().FullName ?? string.Empty)} / {Signature(found)}";
         string typeName = binding.GetTargetType();
         string fallback = typeName.Length == 0 ? method : $"[C#] {ShortName(typeName)} / {method}";
-        Ens owner = Ens.FromId(binding.GetTarget());
-        if (!owner.IsValid) return fallback + " (missing)";
-
-        foreach (Script script in owner.GetComponents<Script>())
-        {
-            if (script == null) continue;
-            string scriptType = script.GetType().FullName ?? string.Empty;
-            if (typeName.Length != 0 && scriptType != typeName) continue;
-            if (!HasBindableMethod(script, method)) continue;
-            return $"[C#] {ShortName(scriptType)} / {method}";
-        }
         return fallback + " (missing)";
     }
 
-    private static bool HasBindableMethod(Script script, string method)
+    //取运行期会选中的那个方法：先按类型全名匹配脚本，再按名字取第一个签名合格的重载。
+    private static bool TryFindBoundMethod(UIEventBinding binding, out Script? script, out BindableMethod method)
     {
-        foreach (BindableMethod candidate in ComponentProxy.DescribeMethods(script))
+        script = null;
+        method = default;
+        string name = binding.GetMethod();
+        if (name.Length == 0) return false;
+
+        string typeName = binding.GetTargetType();
+        Ens owner = Ens.FromId(binding.GetTarget());
+        if (!owner.IsValid) return false;
+        foreach (Script candidate in owner.GetComponents<Script>())
         {
-            if (candidate.Name == method && IsBindableMethod(candidate)) return true;
+            if (candidate == null) continue;
+            if (typeName.Length != 0 && (candidate.GetType().FullName ?? string.Empty) != typeName) continue;
+            foreach (BindableMethod match in ComponentProxy.DescribeMethods(candidate))
+            {
+                if (match.Name != name || !IsBindableMethod(match)) continue;
+                script = candidate;
+                method = match;
+                return true;
+            }
         }
         return false;
     }
+
+    private static string PayloadName(InteropValueKind kind) =>
+        kind == InteropValueKind.Empty ? "none" : kind.ToString();
 
     //能当事件回调的方法：返回空、参数不超过一个且是载荷支持的种类。
     private static bool IsBindableMethod(BindableMethod method)
@@ -370,6 +391,17 @@ public sealed class UIControlEditor : ComponentEditor
         if (target.IsNull) return "No target node set.";
         if (!Ens.FromId(target).IsValid) return "Target node no longer exists.";
         if (binding.GetMethod().Length == 0) return "No function set.";
-        return binding.IsResolvable() ? null : "No method on the target matches the signature.";
+        if (!binding.IsResolvable()) return "No method on the target matches the signature.";
+        return DescribeParameterMismatch(binding);
+    }
+
+    //参数种类必须与事件载荷一致：不一致时那个参数只会拿到默认值，等于绑错了。换事件后也会在这里报出来。
+    private static string? DescribeParameterMismatch(UIEventBinding binding)
+    {
+        if (!TryFindBoundMethod(binding, out _, out BindableMethod method) || method.ParameterKinds.Count == 0) return null;
+        InteropValueKind parameter = method.ParameterKinds[0];
+        InteropValueKind payload = UIEventIds.GetPayloadKind(binding.GetEventId());
+        if (parameter == payload) return null;
+        return $"Function takes {parameter}, but {UIEventIds.GetName(binding.GetEventId())} carries {PayloadName(payload)}.";
     }
 }

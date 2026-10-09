@@ -151,8 +151,13 @@ public sealed class UIEventBinding
 
         try
         {
-            if (parameterKind == InteropValueKind.Empty) return compiled.Invoke([], out _) == InteropStatus.Ok;
-            return compiled.Invoke([ConvertParameter(parameterKind, entry)], out _) == InteropStatus.Ok;
+            InteropStatus status = parameterKind == InteropValueKind.Empty
+                ? compiled.Invoke([], out _)
+                : compiled.Invoke([ConvertParameter(parameterKind, entry)], out _);
+            //调用侧的失败也要报出来：只返回假的话，绑不上和调不动在面板上长得一模一样。
+            if (status != InteropStatus.Ok)
+                Console.Error.WriteLine($"UIEventBinding: 调用 '{method}' 失败（{status}）。");
+            return status == InteropStatus.Ok;
         }
         catch (Exception exception)
         {

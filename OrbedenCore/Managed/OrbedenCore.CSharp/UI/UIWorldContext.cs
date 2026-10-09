@@ -158,8 +158,8 @@ public sealed class UIWorldContext : IManagedFrameSystem
     /// <summary>持有文本输入的控件；没有时为空。</summary>
     internal TextField? TextFocus => textFocus;
 
-    /// <summary>事件派发器；控件事件统一从这里进 FIFO。</summary>
-    public UIEventDispatcher EventDispatcher { get; } = new();
+    /// <summary>事件派发器；控件事件统一从这里进 FIFO。必须是本上下文每帧排空的那一个。</summary>
+    public UIEventDispatcher EventDispatcher => eventDispatcher;
 
     /// <summary>输入路由器；控件与模块都通过它交互。</summary>
     public UIInputRouter InputRouter => inputRouter;

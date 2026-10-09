@@ -129,11 +129,17 @@ public sealed class UIInputRouter
             ProcessScroll(input);
             return;
         case UIPointerPhase.Cancel:
+            Consume(input.sequence);
             CancelPointer(input.pointerId, input);
             return;
         default:
             break;
         }
+
+        //移动与抬起是纯瞬态：处理过就消费。原生队列按消费删除，漏消费会让这段历史每帧重放，
+        //重放的旧移动会被当成拖动清掉按下状态，点击就永远等不到抬起。
+        //按下不在这里消费：没被图形挡住时不消费，键占有（屏蔽游戏输入）只发生在 UI 真的接手时。
+        if (input.phase is UIPointerPhase.Move or UIPointerPhase.Up) Consume(input.sequence);
 
         pointers.TryGetValue(input.pointerId, out UIPointerState state);
         state.lastPosition = input.position;
@@ -240,8 +246,9 @@ public sealed class UIInputRouter
     /// <summary>滚轮：从命中节点向祖先传播，没人处理就交最近的可滚动容器。</summary>
     public void ProcessScroll(in UIPointerEvent input)
     {
-        if (!raycaster.Raycast(input, out UIHitResult result)) return;
+        //滚轮同样是瞬态，命中与否都算处理过。
         Consume(input.sequence);
+        if (!raycaster.Raycast(input, out UIHitResult result)) return;
 
         //从命中节点向祖先找滚轮处理者；同一节点按组件顺序，直到有人消费。
         for (UINode? current = FindHitNode(result); current != null; current = current.Parent)
