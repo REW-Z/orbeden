@@ -27,9 +27,16 @@ internal static class EditorProgress
     private const float StatusBarBarMinWidth = 64.0f;
 
     private static readonly EditorRectPrimitive[] rects = new EditorRectPrimitive[4];
-
-    private static string title = string.Empty;
+    private static readonly GuiContent title = new();
     private static string detail = string.Empty;
+    private static readonly GuiContent statusLabel = new();
+    private static readonly GuiContent clock = new();
+    private static readonly GuiContent modalDetail = new();
+    private static readonly GuiContent modalTitle = new(ModalId);
+    private static readonly GuiContent barId = new("##editor_progress_bar");
+    private static readonly GuiContent cancelLabel = new("Cancel##editor_progress_cancel");
+    private static readonly GuiContent backgroundLabel = new("Run in Background##editor_progress_background");
+    private static long displayedSeconds = -1;
     private static float ratio = -1.0f;
     private static EditorProgressSurface surface = EditorProgressSurface.StatusBar;
     private static bool active;
@@ -42,13 +49,16 @@ internal static class EditorProgress
     internal static void Begin(string taskTitle, string taskDetail, EditorProgressSurface taskSurface,
         bool taskCanCancel, Action? cancelAction)
     {
-        title = taskTitle;
+        title.Text = taskTitle;
         detail = taskDetail;
+        statusLabel.Text = title.Text + "  ·  " + detail;
         ratio = -1.0f;
         surface = taskSurface;
         canCancel = taskCanCancel;
         onCancel = cancelAction;
         startedAt = DateTime.UtcNow;
+        displayedSeconds = -1;
+        RefreshClockContent();
         active = true;
         //不在这里开弹窗：任务在同一帧内结束时不至于闪一下
         modalOpenRequested = taskSurface == EditorProgressSurface.Modal;
@@ -57,7 +67,12 @@ internal static class EditorProgress
     /// <summary>更新阶段文案；ratio 传非负数才转成确定进度，传负数保持不确定进度。</summary>
     internal static void Report(string taskDetail, float taskRatio = -1.0f)
     {
-        detail = taskDetail;
+        if (detail != taskDetail)
+        {
+            detail = taskDetail;
+            statusLabel.Text = title.Text + "  ·  " + detail;
+            if (surface == EditorProgressSurface.Modal) modalDetail.Text = detail + "   " + clock.Text;
+        }
         if (taskRatio >= 0.0f) ratio = Math.Clamp(taskRatio, 0.0f, 1.0f);
     }
 
@@ -79,11 +94,10 @@ internal static class EditorProgress
         vector2 available = NativeEditorGUI.GetContentRegionAvail();
         if (available.x <= 0.0f || available.y <= 0.0f) return true;
 
-        string label = title + "  ·  " + detail;
-        string clock = FormatElapsed();
+        RefreshClockContent();
         //CalcButtonWidth 含按钮内边距，作为纯文本宽度要先减掉两侧内边距
         float padding = EditorTheme.Current.FramePaddingX * 2.0f;
-        float labelWidth = Math.Max(NativeEditorGUI.CalcButtonWidth(label) - padding, 1.0f);
+        float labelWidth = Math.Max(NativeEditorGUI.CalcButtonWidth(statusLabel) - padding, 1.0f);
         float clockWidth = Math.Max(NativeEditorGUI.CalcButtonWidth(clock) - padding, 1.0f);
 
         //进度条占满文案与时长之间剩下的宽度，放不下就只显示文案
@@ -98,7 +112,7 @@ internal static class EditorProgress
         }
 
         NativeEditorGUI.DrawTextClipped(origin, new vector2(origin.x + labelWidth, origin.y + available.y),
-            origin, EditorTheme.Current.Text, label);
+            origin, EditorTheme.Current.Text, statusLabel);
         return true;
     }
 
@@ -111,7 +125,7 @@ internal static class EditorProgress
             modalOpenRequested = false;
         }
 
-        if (!NativeEditorGUI.BeginDialog(ModalId, ModalWidth)) return;
+        if (!NativeEditorGUI.BeginDialog(modalTitle, ModalWidth)) return;
 
         try
         {
@@ -129,18 +143,19 @@ internal static class EditorProgress
     //绘制模态正文：标题、阶段文案与时长、进度条、取消与转后台
     private static void DrawModalBody()
     {
+        RefreshClockContent();
         EditorGUI.Label(title);
-        EditorGUI.Label(detail + "   " + FormatElapsed());
+        EditorGUI.Label(modalDetail);
         EditorGUI.Separator();
 
         vector2 origin = NativeEditorGUI.GetCursorScreenPos();
         vector2 available = NativeEditorGUI.GetContentRegionAvail();
         float width = Math.Max(available.x, 1.0f);
-        NativeEditorGUI.InvisibleButton("##editor_progress_bar", new vector2(width, ModalBarHeight));
+        NativeEditorGUI.InvisibleButton(barId, new vector2(width, ModalBarHeight));
         DrawBar(origin, width, ModalBarHeight);
 
         EditorGUI.Separator();
-        if (canCancel && EditorGUI.Button("Cancel##editor_progress_cancel"))
+        if (canCancel && EditorGUI.Button(cancelLabel))
         {
             //先收起弹窗再执行动作，动作里再弹窗也不会被自己顶掉
             Action? action = onCancel;
@@ -149,7 +164,7 @@ internal static class EditorProgress
             return;
         }
         if (canCancel) EditorGUI.SameLine();
-        if (EditorGUI.Button("Run in Background##editor_progress_background"))
+        if (EditorGUI.Button(backgroundLabel))
         {
             surface = EditorProgressSurface.StatusBar;
             NativeEditorGUI.ClosePopup();
@@ -182,10 +197,14 @@ internal static class EditorProgress
         return 0.15f + 0.7f * (t < 0.5f ? t * 2.0f : (1.0f - t) * 2.0f);
     }
 
-    //已用时长，格式 mm:ss
-    private static string FormatElapsed()
+    //更新变化后的显示秒数与模态文案
+    private static void RefreshClockContent()
     {
         TimeSpan elapsed = DateTime.UtcNow - startedAt;
-        return $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
+        long seconds = (long)elapsed.TotalSeconds;
+        if (seconds == displayedSeconds) return;
+        displayedSeconds = seconds;
+        clock.Text = $"{(int)elapsed.TotalMinutes:00}:{elapsed.Seconds:00}";
+        if (surface == EditorProgressSurface.Modal) modalDetail.Text = detail + "   " + clock.Text;
     }
 }

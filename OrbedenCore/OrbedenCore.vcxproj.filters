@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="源文件">
@@ -28,9 +28,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\FileSystem\FileSystem.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Src\FileSystem\Utf8Path.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Src\Log\Log.h">
@@ -554,6 +551,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Src\Runtime\LayerSettings.h" />
+    <ClInclude Include="Src\Runtime\Native\InteropText.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Runtime\Native\InteropText.cpp"><Filter>源文件</Filter></ClCompile>
     <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
     <ClInclude Include="Src\Runtime\DisplaySettings.h" />
     <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />

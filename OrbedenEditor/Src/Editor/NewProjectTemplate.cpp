@@ -1,7 +1,7 @@
 #include "Editor/NewProjectTemplate.h"
 
 #include "Editor/ProjectLayout.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
 #include <cctype>
@@ -20,7 +20,7 @@ namespace
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     /// <summary>仅已知文本格式忽略行尾差异，其余资源按原始字节比较。</summary>
@@ -33,7 +33,7 @@ namespace
             ".obj", ".mtl", ".orbshader", ".orbinc", ".glsl", ".vert", ".frag",
         };
 
-        std::string extension = Utf8Path::ToUtf8(path.extension());
+        std::string extension = InteropText::PathToUtf8(path.extension());
         for (char& character : extension) character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
         return TextExtensions.count(extension) != 0;
     }
@@ -138,10 +138,10 @@ namespace
     std::filesystem::path MapTemplateFileName(const std::filesystem::path& relativePath, const std::string& projectName)
     {
         //工程文件直接放在项目根，只有这几个名字随项目名变化。
-        std::string fileName = Utf8Path::ToUtf8(relativePath);
-        if (fileName == "Project.oeproj") return Utf8Path::FromUtf8(projectName + ".oeproj");
-        if (fileName == "Project.csproj") return Utf8Path::FromUtf8(projectName + ".csproj");
-        if (fileName == "GameNative.vcxproj") return Utf8Path::FromUtf8(projectName + "Native.vcxproj");
+        std::string fileName = InteropText::PathToUtf8(relativePath);
+        if (fileName == "Project.oeproj") return InteropText::PathFromUtf8(projectName + ".oeproj");
+        if (fileName == "Project.csproj") return InteropText::PathFromUtf8(projectName + ".csproj");
+        if (fileName == "GameNative.vcxproj") return InteropText::PathFromUtf8(projectName + "Native.vcxproj");
         return relativePath;
     }
 }
@@ -157,7 +157,7 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
 {
     outError.clear();
 
-    std::filesystem::path sourceRoot = Utf8Path::FromUtf8(sourceDirectory);
+    std::filesystem::path sourceRoot = InteropText::PathFromUtf8(sourceDirectory);
     if (!std::filesystem::is_directory(sourceRoot))
     {
         outError = "Template directory was not found: " + ToCleanPath(sourceRoot);
@@ -165,7 +165,7 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
         return false;
     }
 
-    std::filesystem::path targetRoot = Utf8Path::FromUtf8(targetDirectory);
+    std::filesystem::path targetRoot = InteropText::PathFromUtf8(targetDirectory);
     std::error_code error;
     bool succeeded = true;
     std::filesystem::recursive_directory_iterator iterator(sourceRoot, error);
@@ -216,7 +216,7 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
     outError.clear();
     outReport = MirrorReport();
 
-    std::filesystem::path sourceRoot = Utf8Path::FromUtf8(sourceDirectory);
+    std::filesystem::path sourceRoot = InteropText::PathFromUtf8(sourceDirectory);
     if (!std::filesystem::is_directory(sourceRoot))
     {
         outError = "Mirror source directory was not found: " + ToCleanPath(sourceRoot);
@@ -224,7 +224,7 @@ bool NewProjectTemplate::MirrorTree(const std::string& sourceDirectory,
         return false;
     }
 
-    std::filesystem::path targetRoot = std::filesystem::weakly_canonical(Utf8Path::FromUtf8(targetDirectory));
+    std::filesystem::path targetRoot = std::filesystem::weakly_canonical(InteropText::PathFromUtf8(targetDirectory));
     sourceRoot = std::filesystem::canonical(sourceRoot);
     for (const auto& roots : { std::make_pair(sourceRoot, targetRoot), std::make_pair(targetRoot, sourceRoot) })
     {
@@ -353,7 +353,7 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
 {
     outError.clear();
 
-    std::filesystem::path root = Utf8Path::FromUtf8(templateRoot);
+    std::filesystem::path root = InteropText::PathFromUtf8(templateRoot);
     if (!std::filesystem::is_directory(root))
     {
         outError = "Project template directory was not found: " + ToCleanPath(root);
@@ -361,7 +361,7 @@ bool NewProjectTemplate::GenerateProjectFiles(const std::string& projectRoot,
         return false;
     }
 
-    std::filesystem::path projectRootPath = Utf8Path::FromUtf8(projectRoot);
+    std::filesystem::path projectRootPath = InteropText::PathFromUtf8(projectRoot);
     if (!CopyTemplateTree(ToCleanPath(root / ProjectFolder), projectRoot, projectName, outError)) return false;
 
     //Builtin 是默认着色器、材质与基础网格，示例内容引用它，两者一起铺。

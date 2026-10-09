@@ -1,3 +1,4 @@
+using Orbeden;
 using System;
 using System.Runtime.InteropServices;
 
@@ -40,7 +41,7 @@ internal static unsafe class EditorAssetReimportNative
         }
 
         List<string> sources = [];
-        foreach (string key in System.Text.Encoding.UTF8.GetString(bytes).Split('\0'))
+        foreach (string key in InteropText.DecodeUtf8(bytes).Split('\0'))
         {
             if (key.Length != 0) sources.Add(key);
         }

@@ -43,6 +43,12 @@ public class TextField : UIControl
     private Font? layoutFont;
     private ulong layoutFontRevision;
     private ulong layoutAtlasRevision;
+    private TextLayoutResult? placeholderLayout;
+    private TextLayoutResult? compositionLayout;
+    private AuxiliaryLayoutKey placeholderLayoutKey;
+    private AuxiliaryLayoutKey compositionLayoutKey;
+    private readonly record struct AuxiliaryLayoutKey(string Text, Font? Font, ulong FontRevision, ulong AtlasRevision,
+        float FontSize, FontRasterMode RasterMode, float RasterScale);
     private readonly List<(UIGlyphEntry entry, uint generation)> glyphPages = [];
     private bool overlayGlyphsNeedRetry;
 
@@ -442,9 +448,8 @@ public class TextField : UIControl
 
         if (showPlaceholder && placeholder.Length != 0)
         {
-            TextLayoutResult placeholderLayout = layoutBuilder.Layout(placeholder, GetEffectiveFont(), fontSize, 0.0f, false,
-                1.0f, GetRasterMode(), UITextAlignment.Left, rasterScale);
-            DrawGlyphs(mesh, placeholderLayout, origin, visible, tint with { a = tint.a * 0.5f });
+            TextLayoutResult displayed = GetAuxiliaryLayout(placeholder, ref placeholderLayout, ref placeholderLayoutKey);
+            DrawGlyphs(mesh, displayed, origin, visible, tint with { a = tint.a * 0.5f });
             return;
         }
 
@@ -453,13 +458,37 @@ public class TextField : UIControl
         //组合文本画在光标处，用下划线区分：这里只画文字，样式由上层决定。
         if (editor.HasComposition && editor.GetCompositionText().Length != 0)
         {
-            TextLayoutResult composition = layoutBuilder.Layout(editor.GetCompositionText(), GetEffectiveFont(), fontSize,
-                0.0f, false, 1.0f, GetRasterMode(), UITextAlignment.Left, rasterScale);
+            TextLayoutResult composition = GetAuxiliaryLayout(editor.GetCompositionText(), ref compositionLayout, ref compositionLayoutKey);
             vector2 caretOrigin = new(origin.x + CaretOffset(current), origin.y);
             DrawGlyphs(mesh, composition, caretOrigin, visible, tint);
         }
     }
 
+    //复用占位文字和组合文字的排版并检查图集存活
+    private TextLayoutResult GetAuxiliaryLayout(string source, ref TextLayoutResult? cached, ref AuxiliaryLayoutKey cachedKey)
+    {
+        Font? effectiveFont = GetEffectiveFont();
+        AuxiliaryLayoutKey key = new(source, effectiveFont, effectiveFont?.GetRevision() ?? 0, FontAtlasCache.Shared.Revision,
+            fontSize, GetRasterMode(), rasterScale);
+        bool valid = cached != null && cachedKey == key;
+        if (valid)
+        {
+            foreach (UITextGlyph glyph in cached!.glyphs)
+            {
+                UIGlyphEntry entry = glyph.entry;
+                if (entry.NeedsRetry || (entry.page != null
+                    && (!FontAtlasCache.Shared.TryGetGlyph(entry.Key, out UIGlyphEntry resident) || !ReferenceEquals(entry, resident))))
+                { valid = false; break; }
+            }
+        }
+        if (valid) return cached!;
+        cached = layoutBuilder.Layout(source, effectiveFont, fontSize, 0.0f, false, 1.0f,
+            key.RasterMode, UITextAlignment.Left, rasterScale);
+        cachedKey = key;
+        return cached;
+    }
+
+    //提交字形的图集与裁剪区域
     private void DrawGlyphs(UIMeshBuilder mesh, TextLayoutResult current, vector2 origin, UIRect visible, color tint)
     {
         FontRasterMode rasterMode = GetRasterMode();
@@ -591,7 +620,7 @@ public class TextField : UIControl
         byte[] buffer = new byte[required];
         int written = bridge.ReadClipboard(buffer);
         if (written <= 0 || written > buffer.Length) return false;
-        value = System.Text.Encoding.UTF8.GetString(buffer, 0, written);
+        value = InteropText.DecodeUtf8(buffer, 0, written);
         return true;
     }
 
@@ -599,7 +628,7 @@ public class TextField : UIControl
     {
         RetainedGuiBridge? bridge = UIWorldContext.Current?.NativeBridge;
         if (bridge == null) return false;
-        return bridge.WriteClipboard(System.Text.Encoding.UTF8.GetBytes(value));
+        return bridge.WriteClipboard(InteropText.EncodeUtf8(value));
     }
 
     private void ResetCaretBlink()

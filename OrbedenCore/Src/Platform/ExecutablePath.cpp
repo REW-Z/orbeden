@@ -1,7 +1,7 @@
 #include "Platform/ExecutablePath.h"
 
 #include "Defines/types.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 
 #include <system_error>
 
@@ -55,7 +55,7 @@ namespace
     {
         if (executablePath.empty()) return std::filesystem::current_path();
 
-        std::filesystem::path path = std::filesystem::absolute(Utf8Path::FromUtf8(executablePath));
+        std::filesystem::path path = std::filesystem::absolute(InteropText::PathFromUtf8(executablePath));
         return path.has_parent_path() ? path.parent_path() : std::filesystem::current_path();
     }
 }

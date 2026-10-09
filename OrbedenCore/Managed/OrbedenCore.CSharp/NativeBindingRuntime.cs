@@ -106,7 +106,7 @@ public static unsafe class NativeBindingRuntime
         }
         IntPtr pointer = api.GetObjectPointer(objectId);
         if (pointer == IntPtr.Zero) return null;
-        string? name = Marshal.PtrToStringUTF8((IntPtr)api.GetObjectTypeName(objectId));
+        string? name = InteropText.ReadUtf8Terminated((IntPtr)api.GetObjectTypeName(objectId));
         if (name == "Script") return ScriptRuntime.GetOrCreateHost(pointer);
         if (name == null || !names.TryGetValue(name, out Entry? entry) || entry.Factory == null)
             throw new TypeLoadException($"No generated wrapper factory for native type '{name}'.");
@@ -155,7 +155,7 @@ public static unsafe class NativeBindingRuntime
     }
     internal static T? Load<T>(string key) where T : Object
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         uint typeId = Resolve(typeof(T)).TypeId;
         fixed (byte* pointer = bytes) return Wrap<T>(api.LoadResource(typeId, pointer, bytes.Length));
     }
@@ -192,7 +192,7 @@ public static unsafe class NativeBindingRuntime
         if (!types.TryGetValue(type, out Entry? entry)) throw new TypeLoadException($"No generated binding for {type}.");
         uint generation = Generation;
         if (entry.Generation == generation) return entry;
-        byte[] name = Encoding.UTF8.GetBytes(entry.Name);
+        byte[] name = InteropText.EncodeUtf8(entry.Name);
         uint id; void** functions;
         fixed (byte* pointer = name) Check(api.ResolveType(pointer, name.Length, entry.Signature, &id, &functions));
         entry.TypeId = id; entry.Functions = functions; entry.Generation = generation; return entry;

@@ -14,7 +14,7 @@
 
 #include "FileSystem/FileSystem.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Runtime/AssetPipeline.h"
 #include "ResourceManager/ResourceManager.h"
@@ -281,7 +281,7 @@ namespace
     //整理文件路径。
     std::string ToCleanPath(const std::string& path)
     {
-        return ResourceManager::ToResourceKey(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).lexically_normal()));
+        return ResourceManager::ToResourceKey(InteropText::PathToUtf8(InteropText::PathFromUtf8(path).lexically_normal()));
     }
 
     //解析资源磁盘路径
@@ -298,7 +298,7 @@ namespace
     //获取扩展名小写文本
     std::string GetLowerExtension(const std::string& path)
     {
-        return ToLower(Utf8Path::ToUtf8(Utf8Path::FromUtf8(path).extension()));
+        return ToLower(InteropText::PathToUtf8(InteropText::PathFromUtf8(path).extension()));
     }
 
     //生成可读且稳定的Key片段
@@ -430,8 +430,8 @@ namespace
         //内容根相对优先，但只认磁盘上确实命中的，避免把 "Builtin/x.orbinc" 这类真正的相对引用误判成根相对。
         if (FileSystem::Exist(GetAssetFilePath(includeKey))) return includeKey;
 
-        std::filesystem::path parent = Utf8Path::FromUtf8(sourceKey).parent_path();
-        return Utf8Path::ToUtf8((parent / Utf8Path::FromUtf8(includeKey)).lexically_normal());
+        std::filesystem::path parent = InteropText::PathFromUtf8(sourceKey).parent_path();
+        return InteropText::PathToUtf8((parent / InteropText::PathFromUtf8(includeKey)).lexically_normal());
     }
 
     //从 include 文本中提取当前分段可见的源码
@@ -1042,10 +1042,10 @@ namespace
 
         std::string decodedUri = uri;
         decodedUri.resize(cgltf_decode_uri(decodedUri.data()));
-        std::filesystem::path uriPath = Utf8Path::FromUtf8(decodedUri);
-        if (uriPath.is_absolute()) return Utf8Path::ToUtf8(uriPath.lexically_normal());
+        std::filesystem::path uriPath = InteropText::PathFromUtf8(decodedUri);
+        if (uriPath.is_absolute()) return InteropText::PathToUtf8(uriPath.lexically_normal());
 
-        return Utf8Path::ToUtf8((Utf8Path::FromUtf8(sourcePath).parent_path() / uriPath).lexically_normal());
+        return InteropText::PathToUtf8((InteropText::PathFromUtf8(sourcePath).parent_path() / uriPath).lexically_normal());
     }
 
     //解码图片data URI中的Base64内容
@@ -1226,7 +1226,7 @@ namespace
         }
 
         collection.AddSourceFile(filePath);
-        std::ifstream input(Utf8Path::FromUtf8(filePath), std::ios::binary);
+        std::ifstream input(InteropText::PathFromUtf8(filePath), std::ios::binary);
         if (!input)
         {
             collection.AddError("File could not be opened: " + path);
@@ -1260,7 +1260,7 @@ namespace
     List<std::string> FindMtlFiles(const std::string& objPath)
     {
         List<std::string> files;
-        std::ifstream input(Utf8Path::FromUtf8(objPath));
+        std::ifstream input(InteropText::PathFromUtf8(objPath));
         std::string directory = Path::GetDirectory(objPath);
         std::string line;
         while (std::getline(input, line))
@@ -1270,8 +1270,8 @@ namespace
             std::string rest = line.substr(7);
             for (const std::string& fileName : SplitWhitespace(rest))
             {
-                std::filesystem::path path = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(fileName);
-                files.push_back(Utf8Path::ToUtf8(path.lexically_normal()));
+                std::filesystem::path path = InteropText::PathFromUtf8(directory) / InteropText::PathFromUtf8(fileName);
+                files.push_back(InteropText::PathToUtf8(path.lexically_normal()));
             }
         }
 
@@ -1293,7 +1293,7 @@ namespace
         {
             collection.AddSourceFile(mtlPath);
 
-            std::ifstream input(Utf8Path::FromUtf8(mtlPath));
+            std::ifstream input(InteropText::PathFromUtf8(mtlPath));
             if (!input)
             {
                 collection.AddWarning("MTL file failed to open: " + mtlPath);
@@ -1363,14 +1363,14 @@ namespace
                     stream >> textureFile;
                     if (textureFile.empty()) continue;
 
-                    std::filesystem::path texturePath = Utf8Path::FromUtf8(directory) / Utf8Path::FromUtf8(textureFile);
+                    std::filesystem::path texturePath = InteropText::PathFromUtf8(directory) / InteropText::PathFromUtf8(textureFile);
                     std::string textureSuffix = command == "map_Kd" ? "_Diffuse" : "_Bump";
                     std::string textureKey = AssetPipeline::GetImportedObjectKey(sourceKey, Texture2D::StaticType(),
                         SanitizeKeyName(currentMaterialName + textureSuffix, "Texture"));
                     //漫反射贴图是颜色，凹凸贴图是数据。
                     const TextureColorSpace textureColorSpace = command == "map_Kd" ? TextureColorSpace::SRGB : TextureColorSpace::Linear;
                     //OBJ 的子贴图没有独立的设置文件，按语义推断
-                    Texture2D* texture = ImportImageAsKey(Utf8Path::ToUtf8(texturePath), textureKey, collection, textureColorSpace, {});
+                    Texture2D* texture = ImportImageAsKey(InteropText::PathToUtf8(texturePath), textureKey, collection, textureColorSpace, {});
                     if (!texture) continue;
 
                     if (command == "map_Kd")
@@ -2077,8 +2077,8 @@ AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSe
     if (settings.fontPrebakeCharacterSet != "None" && !settings.fontPrebakeTextFile.empty())
     {
         std::string textKey = ResourceManager::GetSourceKey(settings.fontPrebakeTextFile);
-        std::filesystem::path textPath = Utf8Path::FromUtf8(textKey).lexically_normal();
-        std::string relative = Utf8Path::ToUtf8(textPath);
+        std::filesystem::path textPath = InteropText::PathFromUtf8(textKey).lexically_normal();
+        std::string relative = InteropText::PathToUtf8(textPath);
         if (textPath.is_absolute() || textPath.has_root_name() || relative == ".." || StartsWith(relative, "../")
             || GetLowerExtension(relative) != ".txt")
         {
@@ -2134,10 +2134,7 @@ AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSe
         for (uint32 scalar = 0x20; scalar <= 0x7e; ++scalar) characters.push_back(static_cast<char>(scalar));
     if (settings.fontPrebakeCharacterSet == "Latin1")
         for (uint32 scalar = 0xa0; scalar <= 0xff; ++scalar)
-        {
-            characters.push_back(static_cast<char>(0xc0 | (scalar >> 6)));
-            characters.push_back(static_cast<char>(0x80 | (scalar & 0x3f)));
-        }
+            InteropText::AppendUtf8Codepoint(characters, scalar);
     characters += textCharacters;
 
     //烘焙并保存图集载荷
@@ -2291,7 +2288,7 @@ AssetCollection AssetPipeline::Import_ORBMAT(std::string path)
 /// <summary>把内存中的材质写回 .orbmat 源文件，供编辑器编辑后保存。</summary>
 bool AssetPipeline::SaveMaterialAsset(const Material& material, const std::string& path, std::string& error)
 {
-    std::ofstream output(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::trunc);
+    std::ofstream output(InteropText::PathFromUtf8(path), std::ios::binary | std::ios::trunc);
     if (!output)
     {
         error = "Cannot create material: " + path;
@@ -2655,7 +2652,7 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path, const AssetImportSet
             AddTo(mesh->tangents[ic], tangent);
         };
 
-    std::ifstream input(Utf8Path::FromUtf8(objPath));
+    std::ifstream input(InteropText::PathFromUtf8(objPath));
     std::string line;
     while (std::getline(input, line))
     {

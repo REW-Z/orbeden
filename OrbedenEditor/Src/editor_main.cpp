@@ -2,7 +2,7 @@
 #include "Editor/EditorSystem.h"
 #include "Editor/AssetInspection.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "ResourceManager/ResourceManager.h"
 #include <filesystem>
 #include <cstdio>
@@ -34,12 +34,12 @@ int wmain(int argc, wchar_t** argv)
         std::fflush(stdout);
         if (_dup2(_fileno(stderr), _fileno(stdout)) != 0) { std::fclose(output); return 1; }
         _setmode(_fileno(output), _O_BINARY);
-        PathDefines::SetContentRoot(Utf8Path::ToUtf8(std::filesystem::path(argv[2])));
+        PathDefines::SetContentRoot(InteropText::PathToUtf8(std::filesystem::path(argv[2])));
 
         std::string settingsTable;
         if (argc == 6)
         {
-            std::ifstream settingsFile(Utf8Path::FromUtf8(Utf8Path::ToUtf8(std::filesystem::path(argv[5]))));
+            std::ifstream settingsFile(InteropText::PathFromUtf8(InteropText::PathToUtf8(std::filesystem::path(argv[5]))));
             if (settingsFile)
             {
                 settingsTable.assign(std::istreambuf_iterator<char>(settingsFile), std::istreambuf_iterator<char>());
@@ -48,7 +48,7 @@ int wmain(int argc, wchar_t** argv)
 
         std::filesystem::path directory(argv[4]);
         std::filesystem::create_directories(directory);
-        std::string result = AssetInspection::Inspect(Utf8Path::ToUtf8(std::filesystem::path(argv[3])), Utf8Path::ToUtf8(directory), settingsTable);
+        std::string result = AssetInspection::Inspect(InteropText::PathToUtf8(std::filesystem::path(argv[3])), InteropText::PathToUtf8(directory), settingsTable);
         bool succeeded = std::fwrite(result.data(), 1, result.size(), output) == result.size();
         if (std::fclose(output) != 0) succeeded = false;
         ResourceManager::Shutdown();
@@ -76,7 +76,7 @@ int wmain(int argc, wchar_t** argv)
     }
 
     {
-        std::string executable = argc > 0 ? Utf8Path::ToUtf8(std::filesystem::path(argv[0])) : "";
+        std::string executable = argc > 0 ? InteropText::PathToUtf8(std::filesystem::path(argv[0])) : "";
         EditorSystem editorSystem(app, executable.c_str());
 
         using Clock = std::chrono::steady_clock;

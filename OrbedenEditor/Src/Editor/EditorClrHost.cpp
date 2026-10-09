@@ -1,6 +1,6 @@
 #include "Editor/EditorClrHost.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Platform/DynamicLibrary.h"
 
@@ -25,7 +25,7 @@ namespace
     string_t ToStringT(const std::string& value)
     {
 #if defined(_WIN32)
-        std::wstring wideValue = Utf8Path::FromUtf8(value).wstring();
+        std::wstring wideValue = InteropText::Utf8ToWide(value);
         return string_t(wideValue.begin(), wideValue.end());
 #else
         return value;
@@ -38,7 +38,7 @@ namespace
         if (value == nullptr) return std::string();
 
 #if defined(_WIN32)
-        return Utf8Path::ToUtf8(std::filesystem::path(reinterpret_cast<const wchar_t*>(value)));
+        return InteropText::PathToUtf8(InteropText::PathFromWide(reinterpret_cast<const wchar_t*>(value)));
 #else
         return std::string(value);
 #endif
@@ -50,9 +50,9 @@ namespace
         if (value == nullptr) return std::filesystem::path();
 
 #if defined(_WIN32)
-        return std::filesystem::path(reinterpret_cast<const wchar_t*>(value));
+        return InteropText::PathFromWide(reinterpret_cast<const wchar_t*>(value));
 #else
-        return Utf8Path::FromUtf8(value);
+        return InteropText::PathFromUtf8(value);
 #endif
     }
 
@@ -60,7 +60,7 @@ namespace
     std::string ToCleanPath(const std::string& path)
     {
         if (path.empty()) return std::string();
-        return Utf8Path::ToUtf8(std::filesystem::absolute(Utf8Path::FromUtf8(path)).lexically_normal());
+        return InteropText::PathToUtf8(std::filesystem::absolute(InteropText::PathFromUtf8(path)).lexically_normal());
     }
 
     //输出 hostfxr 内部错误。

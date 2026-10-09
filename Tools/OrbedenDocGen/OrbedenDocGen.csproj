@@ -7,5 +7,9 @@
     <AssemblyName>OrbedenDocGen</AssemblyName>
     <RootNamespace>OrbedenDocGen</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../OrbedenCore/Managed/OrbedenCore.CSharp/Interop/InteropText.cs" Link="Interop/InteropText.cs" />
+  </ItemGroup>
 </Project>

@@ -391,7 +391,7 @@ public sealed unsafe partial class Ens
         {
             int actualBytes = ensApi.GetName(ens, pointer, requiredBytes);
             int length = Math.Clamp(actualBytes, 0, requiredBytes);
-            return Encoding.UTF8.GetString(bytes[..length]);
+            return InteropText.DecodeUtf8(bytes[..length]);
         }
     }
 
@@ -401,7 +401,7 @@ public sealed unsafe partial class Ens
         if (!ensApiInitialized || ensApi.SetName == null) return;
 
         string value = name ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         if (byteCount <= 0)
         {
             ensApi.SetName(ens, null, 0);
@@ -409,7 +409,7 @@ public sealed unsafe partial class Ens
         }
 
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[byteCount] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
         fixed (byte* pointer = bytes)
         {
             ensApi.SetName(ens, pointer, byteCount);
@@ -437,9 +437,9 @@ public sealed unsafe partial class Ens
         if (!worldApiInitialized || worldApi.CreateEns == null) return EnsId.Null;
 
         string value = name ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -454,12 +454,12 @@ public sealed unsafe partial class Ens
 
         string stableValue = stableId ?? string.Empty;
         string nameValue = name ?? string.Empty;
-        int stableBytesCount = Encoding.UTF8.GetByteCount(stableValue);
-        int nameBytesCount = Encoding.UTF8.GetByteCount(nameValue);
+        int stableBytesCount = InteropText.GetUtf8ByteCount(stableValue);
+        int nameBytesCount = InteropText.GetUtf8ByteCount(nameValue);
         Span<byte> stableBytes = stableBytesCount <= 1024 ? stackalloc byte[Math.Max(stableBytesCount, 1)] : new byte[stableBytesCount];
         Span<byte> nameBytes = nameBytesCount <= 1024 ? stackalloc byte[Math.Max(nameBytesCount, 1)] : new byte[nameBytesCount];
-        Encoding.UTF8.GetBytes(stableValue.AsSpan(), stableBytes);
-        Encoding.UTF8.GetBytes(nameValue.AsSpan(), nameBytes);
+        InteropText.EncodeUtf8(stableValue.AsSpan(), stableBytes);
+        InteropText.EncodeUtf8(nameValue.AsSpan(), nameBytes);
 
         fixed (byte* stablePointer = stableBytes)
         fixed (byte* namePointer = nameBytes)
@@ -474,9 +474,9 @@ public sealed unsafe partial class Ens
         if (!worldApiInitialized || worldApi.FindEns == null) return EnsId.Null;
 
         string value = stableId ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {

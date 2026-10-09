@@ -1,3 +1,4 @@
+using Orbeden;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -90,8 +91,8 @@ internal static unsafe class NativeEditorProfiler
     internal static bool ExportFrameText(string path, string text)
     {
         if (!initialized || exportFrameText == null) return false;
-        byte[] pathBytes = Encoding.UTF8.GetBytes(path);
-        byte[] textBytes = Encoding.UTF8.GetBytes(text);
+        byte[] pathBytes = InteropText.EncodeUtf8(path);
+        byte[] textBytes = InteropText.EncodeUtf8(text);
         fixed (byte* pathPointer = pathBytes)
         fixed (byte* textPointer = textBytes)
             return exportFrameText(pathPointer, pathBytes.Length, textPointer, textBytes.Length) != 0;
@@ -155,7 +156,7 @@ internal static unsafe class NativeEditorProfiler
         byte[] bytes = new byte[NameCapacity];
         int length = 0;
         fixed (byte* pointer = bytes) length = api.CopyName(nameId, pointer, bytes.Length);
-        return length <= 0 ? string.Empty : Encoding.UTF8.GetString(bytes, 0, Math.Min(length, NameCapacity - 1));
+        return length <= 0 ? string.Empty : InteropText.DecodeUtf8(bytes, 0, Math.Min(length, NameCapacity - 1));
     }
 
     /// <summary>读取分类数量。</summary>

@@ -125,6 +125,13 @@ public abstract class UIElement : Script, IManagedComponentLifecycle
     {
     }
 
+    /// <summary>序列化前的扩展点；运行时权威值在这里同步进宿主字段快照。</summary>
+    protected virtual void OnUIBeforeSerialize()
+    {
+    }
+
+    void IManagedComponentLifecycle.OnComponentBeforeSerialize() => RunExtension("OnUIBeforeSerialize", OnUIBeforeSerialize);
+
     //索引先登记，扩展回调后执行；扩展抛出异常只影响本节点后续的干净卸载。
     void IManagedComponentLifecycle.OnComponentAttached()
     {

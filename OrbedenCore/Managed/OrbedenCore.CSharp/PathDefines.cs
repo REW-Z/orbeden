@@ -51,7 +51,7 @@ private static PathDefinesBindApi api;
         {
             int actualBytes = api.GetContentRoot(pointer, requiredBytes);
             int length = Math.Clamp(actualBytes, 0, requiredBytes);
-            return Encoding.UTF8.GetString(bytes[..length]);
+            return InteropText.DecodeUtf8(bytes[..length]);
         }
     }
 
@@ -61,9 +61,9 @@ private static PathDefinesBindApi api;
         if (!initialized || api.GetContentFilePath == null) return path ?? string.Empty;
 
         string value = path ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> input = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), input);
+        InteropText.EncodeUtf8(value.AsSpan(), input);
 
         fixed (byte* inputPointer = input)
         {
@@ -75,7 +75,7 @@ private static PathDefinesBindApi api;
             {
                 int actualBytes = api.GetContentFilePath(inputPointer, byteCount, outputPointer, requiredBytes);
                 int length = Math.Clamp(actualBytes, 0, requiredBytes);
-                return Encoding.UTF8.GetString(output[..length]);
+                return InteropText.DecodeUtf8(output[..length]);
             }
         }
     }

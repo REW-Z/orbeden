@@ -1,4 +1,5 @@
 #include "Platform/GlfwWindow.h"
+#include "Runtime/Native/InteropText.h"
 
 #include <array>
 #include <cstdio>
@@ -268,32 +269,7 @@ namespace
         event.kind = KindTextCommit;
         event.device = DeviceKeyboard;
         event.position = CurrentPointerPosition();
-        //UTF-8 编码；四个字节足够容纳一个码点。
-        char buffer[5] = {};
-        int length = 0;
-        if (codepoint < 0x80)
-        {
-            buffer[length++] = static_cast<char>(codepoint);
-        }
-        else if (codepoint < 0x800)
-        {
-            buffer[length++] = static_cast<char>(0xC0 | (codepoint >> 6));
-            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-        else if (codepoint < 0x10000)
-        {
-            buffer[length++] = static_cast<char>(0xE0 | (codepoint >> 12));
-            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-        else
-        {
-            buffer[length++] = static_cast<char>(0xF0 | (codepoint >> 18));
-            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
-            buffer[length++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
-            buffer[length++] = static_cast<char>(0x80 | (codepoint & 0x3F));
-        }
-        event.text.assign(buffer, static_cast<usize>(length));
+        InteropText::AppendUtf8Codepoint(event.text, codepoint);
         event.timestamp = glfwGetTime();
         InputManager::PushEvent(std::move(event));
     }

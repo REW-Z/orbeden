@@ -14,16 +14,40 @@ public static partial class GUI
         NativeLabel(text);
     }
 
+    /// <summary>绘制已准备的文本，直接借用其 UTF-8 表示。</summary>
+    public static unsafe void Label(GuiContent content)
+    {
+        if (!initialized || api.Label == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) api.Label(pointer, bytes.Length);
+    }
+
     /// <summary>绘制按钮并返回本帧是否点击。</summary>
     public static bool Button(string text)
     {
         return NativeButton(text);
     }
 
+    /// <summary>绘制已准备的按钮文本并返回点击状态。</summary>
+    public static unsafe bool Button(GuiContent content)
+    {
+        if (!initialized || api.Button == null) return false;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length) != 0;
+    }
+
     /// <summary>开始一个浮动面板，调用后必须匹配 EndPanel。</summary>
     public static bool BeginPanel(string title)
     {
         return NativeBeginPanel(title);
+    }
+
+    /// <summary>借用已准备的标题开始浮动面板。</summary>
+    public static unsafe bool BeginPanel(GuiContent title)
+    {
+        if (!initialized || api.BeginPanel == null) return false;
+        ReadOnlySpan<byte> bytes = title.Utf8;
+        fixed (byte* pointer = bytes) return api.BeginPanel(pointer, bytes.Length) != 0;
     }
 
     /// <summary>结束当前浮动面板。</summary>
@@ -224,9 +248,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.Label == null) return;
 
         string value = text ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -240,9 +264,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.Button == null) return false;
 
         string value = text ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -256,9 +280,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.BeginPanel == null) return false;
 
         string value = title ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -279,9 +303,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.BeginComponentBlock == null) return;
 
         string value = title ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -308,14 +332,14 @@ private static RuntimeGuiApi api;
         }
 
         string titleText = title ?? string.Empty;
-        int titleByteCount = Encoding.UTF8.GetByteCount(titleText);
+        int titleByteCount = InteropText.GetUtf8ByteCount(titleText);
         Span<byte> titleBytes = titleByteCount <= 1024 ? stackalloc byte[Math.Max(titleByteCount, 1)] : new byte[titleByteCount];
-        Encoding.UTF8.GetBytes(titleText.AsSpan(), titleBytes);
+        InteropText.EncodeUtf8(titleText.AsSpan(), titleBytes);
 
         string idText = id ?? string.Empty;
-        int idByteCount = Encoding.UTF8.GetByteCount(idText);
+        int idByteCount = InteropText.GetUtf8ByteCount(idText);
         Span<byte> idBytes = idByteCount <= 1024 ? stackalloc byte[Math.Max(idByteCount, 1)] : new byte[idByteCount];
-        Encoding.UTF8.GetBytes(idText.AsSpan(), idBytes);
+        InteropText.EncodeUtf8(idText.AsSpan(), idBytes);
 
         byte nativeRemoveRequested = 0;
         fixed (byte* titlePointer = titleBytes)
@@ -338,14 +362,14 @@ private static RuntimeGuiApi api;
         if (!initialized || extensionApi.BeginCombo == null) return false;
 
         string labelText = label ?? string.Empty;
-        int labelByteCount = Encoding.UTF8.GetByteCount(labelText);
+        int labelByteCount = InteropText.GetUtf8ByteCount(labelText);
         Span<byte> labelBytes = labelByteCount <= 1024 ? stackalloc byte[Math.Max(labelByteCount, 1)] : new byte[labelByteCount];
-        Encoding.UTF8.GetBytes(labelText.AsSpan(), labelBytes);
+        InteropText.EncodeUtf8(labelText.AsSpan(), labelBytes);
 
         string previewText = preview ?? string.Empty;
-        int previewByteCount = Encoding.UTF8.GetByteCount(previewText);
+        int previewByteCount = InteropText.GetUtf8ByteCount(previewText);
         Span<byte> previewBytes = previewByteCount <= 1024 ? stackalloc byte[Math.Max(previewByteCount, 1)] : new byte[previewByteCount];
-        Encoding.UTF8.GetBytes(previewText.AsSpan(), previewBytes);
+        InteropText.EncodeUtf8(previewText.AsSpan(), previewBytes);
 
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* previewPointer = previewBytes)
@@ -367,9 +391,9 @@ private static RuntimeGuiApi api;
         if (!initialized || extensionApi.Selectable == null) return false;
 
         string value = label ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -394,7 +418,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.BeginTable == null) return false;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return advancedApi.BeginTable(pointer, bytes.Length, columns) != 0;
@@ -412,7 +436,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.TableSetupColumn == null) return;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             advancedApi.TableSetupColumn(pointer, bytes.Length, width, fixedWidth ? (byte)1 : (byte)0);
@@ -442,7 +466,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.Selectable == null) return NativeSelectable(label, selected);
 
-        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return advancedApi.Selectable(pointer,
@@ -463,7 +487,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.BeginPopupContextItem == null) return false;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return advancedApi.BeginPopupContextItem(pointer, bytes.Length) != 0;
@@ -475,7 +499,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.BeginPopupContextWindow == null) return false;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(id ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return advancedApi.BeginPopupContextWindow(pointer, bytes.Length) != 0;
@@ -493,7 +517,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.MenuItem == null) return false;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(label ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return advancedApi.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
@@ -505,7 +529,7 @@ private static RuntimeGuiApi api;
     {
         if (!initialized || advancedApi.SetClipboardText == null) return;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(text ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             advancedApi.SetClipboardText(pointer, bytes.Length);
@@ -530,9 +554,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.Checkbox == null) return false;
 
         string text = label ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(text);
+        int byteCount = InteropText.GetUtf8ByteCount(text);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(text.AsSpan(), bytes);
+        InteropText.EncodeUtf8(text.AsSpan(), bytes);
 
         byte nativeValue = value ? (byte)1 : (byte)0;
         fixed (byte* pointer = bytes)
@@ -549,9 +573,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.InputInt == null) return false;
 
         string text = label ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(text);
+        int byteCount = InteropText.GetUtf8ByteCount(text);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(text.AsSpan(), bytes);
+        InteropText.EncodeUtf8(text.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -568,9 +592,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.InputFloat == null) return false;
 
         string text = label ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(text);
+        int byteCount = InteropText.GetUtf8ByteCount(text);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(text.AsSpan(), bytes);
+        InteropText.EncodeUtf8(text.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -587,9 +611,9 @@ private static RuntimeGuiApi api;
         if (!initialized || api.InputVector3 == null) return false;
 
         string text = label ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(text);
+        int byteCount = InteropText.GetUtf8ByteCount(text);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(text.AsSpan(), bytes);
+        InteropText.EncodeUtf8(text.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {
@@ -606,37 +630,13 @@ private static RuntimeGuiApi api;
         if (!initialized || api.InputText == null) return false;
 
         string text = label ?? string.Empty;
-        int labelByteCount = Encoding.UTF8.GetByteCount(text);
+        int labelByteCount = InteropText.GetUtf8ByteCount(text);
         Span<byte> labelBytes = labelByteCount <= 1024 ? stackalloc byte[Math.Max(labelByteCount, 1)] : new byte[labelByteCount];
-        Encoding.UTF8.GetBytes(text.AsSpan(), labelBytes);
+        InteropText.EncodeUtf8(text.AsSpan(), labelBytes);
 
         value ??= string.Empty;
         Span<byte> valueBytes = stackalloc byte[256];
-        int maxValueBytes = valueBytes.Length - 1;
-        int valueCharCount = value.Length;
-        if (Encoding.UTF8.GetByteCount(value) > maxValueBytes)
-        {
-            int low = 0;
-            int high = value.Length;
-            while (low < high)
-            {
-                int candidate = low + (high - low + 1) / 2;
-                if (Encoding.UTF8.GetByteCount(value.AsSpan(0, candidate)) <= maxValueBytes) low = candidate;
-                else high = candidate - 1;
-            }
-
-            valueCharCount = low;
-            if (valueCharCount > 0
-                && valueCharCount < value.Length
-                && char.IsHighSurrogate(value[valueCharCount - 1])
-                && char.IsLowSurrogate(value[valueCharCount]))
-            {
-                valueCharCount--;
-            }
-        }
-
-        int valueByteCount = Encoding.UTF8.GetBytes(value.AsSpan(0, valueCharCount), valueBytes);
-        valueBytes[valueByteCount] = 0;
+        InteropText.WriteUtf8Terminated(value.AsSpan(), valueBytes);
 
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* valuePointer = valueBytes)
@@ -645,7 +645,7 @@ private static RuntimeGuiApi api;
             if (newByteCount < 0) return false;
 
             newByteCount = Math.Min(newByteCount, valueBytes.Length - 1);
-            string newValue = Encoding.UTF8.GetString(valueBytes[..newByteCount]);
+            string newValue = InteropText.DecodeUtf8(valueBytes[..newByteCount]);
             bool changed = newValue != value;
             value = newValue;
             return changed;

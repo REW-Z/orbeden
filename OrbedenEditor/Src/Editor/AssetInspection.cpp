@@ -1,7 +1,7 @@
 #include "Editor/AssetInspection.h"
 
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
@@ -29,15 +29,15 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
     {
         result += std::string("message") + '\0' + text + '\0' + '\0' + '\0';
     };
-    std::filesystem::path relative = Utf8Path::FromUtf8(key);
+    std::filesystem::path relative = InteropText::PathFromUtf8(key);
     if (relative.is_absolute() || relative.has_root_name() || key.find(":") != std::string::npos
         || key.find("//") != std::string::npos) return result;
     for (const auto& part : relative) if (part == "..") return result;
-    std::string blobPrefix = Utf8Path::ToUtf8(relative.filename()) + ".";
+    std::string blobPrefix = InteropText::PathToUtf8(relative.filename()) + ".";
     std::string fullPath = PathDefines::GetContentFilePath(key);
     sourceFiles.push_back(fullPath);
     std::error_code errorCode;
-    if (!std::filesystem::is_regular_file(Utf8Path::FromUtf8(fullPath), errorCode))
+    if (!std::filesystem::is_regular_file(InteropText::PathFromUtf8(fullPath), errorCode))
     {
         diagnostic("Source file is missing or inaccessible.");
         return result;
@@ -51,7 +51,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
             sourceFiles.push_back(PathDefines::GetContentFilePath(key + ".frag.glsl"));
             break;
         }
-    std::string extension = Utf8Path::ToUtf8(relative.extension());
+    std::string extension = InteropText::PathToUtf8(relative.extension());
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
     bool cooked = extension == ".orbo";
     List<Object*> objects;
@@ -67,7 +67,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
                 const std::string& objectKey = object->GetInstanceId().GetPath();
                 if (ResourceManager::FindLoaded(objectKey) != object) return;
                 bool matches = cooked
-                    ? CookedAssetSerializer::GetBlobFileName(objectKey) == Utf8Path::ToUtf8(relative.filename())
+                    ? CookedAssetSerializer::GetBlobFileName(objectKey) == InteropText::PathToUtf8(relative.filename())
                     : ResourceManager::GetSourceKey(objectKey) == key;
                 if (matches && std::find(objects.begin(), objects.end(), object) == objects.end()) objects.push_back(object);
             });
@@ -112,7 +112,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
             const auto* record = ResourceManager::FindRecord(objectKey);
             List<std::string> dependencies = record ? record->dependencies : List<std::string>();
             std::string error;
-            std::string blob = Utf8Path::ToUtf8(Utf8Path::FromUtf8(outputDirectory) / Utf8Path::FromUtf8(blobPrefix + CookedAssetSerializer::GetBlobFileName(objectKey)));
+            std::string blob = InteropText::PathToUtf8(InteropText::PathFromUtf8(outputDirectory) / InteropText::PathFromUtf8(blobPrefix + CookedAssetSerializer::GetBlobFileName(objectKey)));
             if (!CookedAssetSerializer::Write(blob, object, ResourceManager::GetSourceKey(objectKey), dependencies, error))
                 result += std::string("error") + '\0' + error + '\0' + '\0' + '\0';
             else result += std::string("blob") + '\0' + blobPrefix + CookedAssetSerializer::GetBlobFileName(objectKey) + '\0' + '\0' + '\0';
@@ -128,8 +128,8 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
     }
     for (const std::string& source : sourceFiles)
     {
-        auto dependency = Utf8Path::FromUtf8(source).lexically_relative(Utf8Path::FromUtf8(PathDefines::GetContentRoot()));
-        result += std::string("dependency") + '\0' + Utf8Path::ToUtf8(dependency) + '\0' + '\0' + '\0';
+        auto dependency = InteropText::PathFromUtf8(source).lexically_relative(InteropText::PathFromUtf8(PathDefines::GetContentRoot()));
+        result += std::string("dependency") + '\0' + InteropText::PathToUtf8(dependency) + '\0' + '\0' + '\0';
     }
     for (Object* object : objects)
     {

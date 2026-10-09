@@ -1,7 +1,7 @@
 #include "Editor/EditorPlayMode.h"
 #include "Editor/ManagedEditorBridge.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include <chrono>
 #include <filesystem>
@@ -12,7 +12,7 @@ namespace
     //规范化路径字符串。
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     //创建 shadow copy 目标路径。
@@ -60,7 +60,7 @@ namespace
         {
             if (directoryText.empty()) continue;
 
-            std::filesystem::path directory = Utf8Path::FromUtf8(directoryText);
+            std::filesystem::path directory = InteropText::PathFromUtf8(directoryText);
             if (!std::filesystem::is_directory(directory)) continue;
             if (!CopyManagedDirectoryFiles(directory, targetDirectory)) return false;
         }
@@ -81,7 +81,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
     ClearBindings();
     lastError.clear();
 
-    std::filesystem::path sourceAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(gameAssemblyPath));
+    std::filesystem::path sourceAssembly = std::filesystem::absolute(InteropText::PathFromUtf8(gameAssemblyPath));
     if (!std::filesystem::exists(sourceAssembly))
     {
         lastError = "Game assembly does not exist: " + ToCleanPath(sourceAssembly);
@@ -89,7 +89,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    std::filesystem::path runtimeAssembly = std::filesystem::absolute(Utf8Path::FromUtf8(runtimeAssemblyPath));
+    std::filesystem::path runtimeAssembly = std::filesystem::absolute(InteropText::PathFromUtf8(runtimeAssemblyPath));
     if (!std::filesystem::exists(runtimeAssembly))
     {
         lastError = "Script runtime assembly does not exist: " + ToCleanPath(runtimeAssembly);
@@ -97,7 +97,7 @@ bool EditorPlayMode::Start(ScriptSystem& scripts,
         return false;
     }
 
-    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, Utf8Path::FromUtf8(shadowDirectory));
+    std::filesystem::path shadowAssembly = CopyAssemblyToShadowCache(sourceAssembly, InteropText::PathFromUtf8(shadowDirectory));
     std::filesystem::path sourcePdb = std::filesystem::path(sourceAssembly).replace_extension(".pdb");
     std::filesystem::path sourceDeps = std::filesystem::path(sourceAssembly).replace_extension(".deps.json");
     std::filesystem::path shadowPdb = std::filesystem::path(shadowAssembly).replace_extension(".pdb");

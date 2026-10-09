@@ -8,4 +8,4 @@
 //忘记递增的后果是打开老项目时不会提示更新，而构建会在别处以难以排查的方式失败
 //（工具集不匹配、MetaGen 参数过期、绑定签名不符）。宁可多递增，也不要漏。
 //编辑器载入项目时比对存档值：相等直接加载，落后提示更新，超前只提示不拦。
-constexpr uint32 OrbedenProjectVersion = 62;
+constexpr uint32 OrbedenProjectVersion = 64;

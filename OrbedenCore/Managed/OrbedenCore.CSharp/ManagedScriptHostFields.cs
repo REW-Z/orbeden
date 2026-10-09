@@ -166,7 +166,7 @@ internal static partial class ManagedTypeMetadataCache
                 }
             }
             StringBuilder text = new(values.Count.ToString(CultureInfo.InvariantCulture) + ":");
-            foreach (string itemText in values) text.Append(Encoding.UTF8.GetByteCount(itemText)).Append(':').Append(itemText);
+            foreach (string itemText in values) text.Append(InteropText.GetUtf8ByteCount(itemText)).Append(':').Append(itemText);
             return Script.WriteHostField(host, field.Name, GetSerializedTypeName(field.FieldType, field.Kind), text.ToString(), field.InspectorVisible);
         }
         if (field.Kind == InteropValueKind.EnsId && field.Getter(script) is EnsId ensId)
@@ -256,14 +256,14 @@ internal static partial class ManagedTypeMetadataCache
             result = null;
             Type element = GetCollectionElementType(field.FieldType)!;
             TryGetKind(element, out var kind);
-            byte[] bytes = Encoding.UTF8.GetBytes(stored.Value);
+            byte[] bytes = InteropText.EncodeUtf8(stored.Value);
             int position = 0;
             if (!ReadCollectionLength(bytes, ref position, out int count) || count > (bytes.Length - position) / 2) return false;
             Array array = Array.CreateInstance(element, count);
             for (int index = 0; index < count; ++index)
             {
                 if (!ReadCollectionLength(bytes, ref position, out int length) || length > bytes.Length - position) return false;
-                string text = Encoding.UTF8.GetString(bytes, position, length);
+                string text = InteropText.DecodeUtf8(bytes, position, length);
                 position += length;
                 object? itemValue;
                 if (kind == InteropValueKind.Object)

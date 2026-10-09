@@ -191,7 +191,7 @@ internal static class EditorRefresh
         {
             UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden,
             RedirectStandardOutput = true, RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8,
+            StandardOutputEncoding = InteropText.Utf8, StandardErrorEncoding = InteropText.Utf8,
         };
         start.ArgumentList.Add("build");
         start.ArgumentList.Add(scriptProject);

@@ -362,7 +362,7 @@ internal static unsafe class ScriptInteropDispatch
     internal static ComponentProxy? FindNative(EnsId ens, string typeName, int occurrence)
     {
         if (nativeApi.FindNativeByName == null || occurrence < 0 || string.IsNullOrWhiteSpace(typeName)) return null;
-        byte[] bytes = Encoding.UTF8.GetBytes(typeName);
+        byte[] bytes = InteropText.EncodeUtf8(typeName);
         ComponentHandle handle;
         fixed (byte* pointer = bytes)
         {
@@ -412,7 +412,7 @@ internal static unsafe class ScriptInteropDispatch
         }
         member = default;
         if (nativeApi.ResolveField == null) return InteropStatus.StaleHandle;
-        byte[] bytes = Encoding.UTF8.GetBytes(name);
+        byte[] bytes = InteropText.EncodeUtf8(name);
         fixed (byte* pointer = bytes)
         fixed (MemberHandle* output = &member)
         {
@@ -436,7 +436,7 @@ internal static unsafe class ScriptInteropDispatch
         member = default;
         if (nativeApi.ResolveMethod == null) return InteropStatus.StaleHandle;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(name);
+        byte[] bytes = InteropText.EncodeUtf8(name);
         uint[] rawKinds = new uint[kinds.Length];
         for (int index = 0; index < kinds.Length; ++index) rawKinds[index] = (uint)kinds[index];
         fixed (byte* namePointer = bytes)
@@ -584,7 +584,7 @@ internal static unsafe class InteropAbiConverter
                 case InteropValueKind.Float32: if (value.TryGet(out float f)) *(float*)payload = f; else result.Success = false; break;
                 case InteropValueKind.String:
                 case InteropValueKind.StringId:
-                    if (value.TryGet(out string text)) result.Pin(Encoding.UTF8.GetBytes(text)); else result.Success = false;
+                    if (value.TryGet(out string text)) result.Pin(InteropText.EncodeUtf8(text)); else result.Success = false;
                     break;
                 case InteropValueKind.Vector2: if (value.TryGet(out vector2 v2)) *(vector2*)payload = v2; else result.Success = false; break;
                 case InteropValueKind.Vector3: if (value.TryGet(out vector3 v)) *(vector3*)payload = v; else result.Success = false; break;
@@ -630,6 +630,6 @@ internal static unsafe class InteropAbiConverter
     {
         byte* pointer = *(byte**)payload;
         int length = *(int*)(payload + 8);
-        return pointer == null || length <= 0 ? string.Empty : Encoding.UTF8.GetString(pointer, length);
+        return pointer == null || length <= 0 ? string.Empty : InteropText.DecodeUtf8(pointer, length);
     }
 }

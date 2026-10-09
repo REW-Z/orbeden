@@ -14,7 +14,7 @@ public static unsafe class GameModule
     {
         if (assemblyPath == null || assemblyPathLength <= 0) return 0;
 
-        string path = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(assemblyPath, assemblyPathLength));
+        string path = InteropText.DecodeUtf8(new ReadOnlySpan<byte>(assemblyPath, assemblyPathLength));
         return ScriptRuntime.LoadGameAssembly(path) ? (byte)1 : (byte)0;
     }
 

@@ -1,7 +1,7 @@
 #include "Runtime/CookedAssetSerializer.h"
 
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Object/Material.h"
 #include "Runtime/Object/Mesh.h"
@@ -540,7 +540,7 @@ namespace
         fileSize = 0;
 
         std::error_code code;
-        std::filesystem::path sourcePath = Utf8Path::FromUtf8(GetSourceFilePath(sourceKey));
+        std::filesystem::path sourcePath = InteropText::PathFromUtf8(GetSourceFilePath(sourceKey));
         std::filesystem::file_time_type writeTime = std::filesystem::last_write_time(sourcePath, code);
         if (code) return;
 
@@ -584,7 +584,7 @@ bool CookedAssetSerializer::WriteIndex(const std::string& indexPath, const List<
     std::sort(sortedKeys.begin(), sortedKeys.end());
     sortedKeys.erase(std::unique(sortedKeys.begin(), sortedKeys.end()), sortedKeys.end());
 
-    std::ofstream output(Utf8Path::FromUtf8(indexPath), std::ios::binary | std::ios::trunc);
+    std::ofstream output(InteropText::PathFromUtf8(indexPath), std::ios::binary | std::ios::trunc);
     if (!output.is_open())
     {
         error = "Cooked asset index could not be written: " + indexPath;
@@ -613,7 +613,7 @@ bool CookedAssetSerializer::ReadIndex(List<std::string>& resourceKeys)
     resourceKeys.clear();
     if (!PathDefines::HasContentRoot()) return false;
 
-    std::ifstream input(Utf8Path::FromUtf8(PathDefines::GetContentFilePath(IndexFileName)), std::ios::binary);
+    std::ifstream input(InteropText::PathFromUtf8(PathDefines::GetContentFilePath(IndexFileName)), std::ios::binary);
     if (!input.is_open()) return false;
 
     std::string line;
@@ -656,7 +656,7 @@ bool CookedAssetSerializer::Write(const std::string& blobPath, Object* object, c
 
     if (!WritePayload(writer, object, error)) return false;
 
-    std::filesystem::path path = Utf8Path::FromUtf8(blobPath);
+    std::filesystem::path path = InteropText::PathFromUtf8(blobPath);
     std::error_code code;
     if (path.has_parent_path()) std::filesystem::create_directories(path.parent_path(), code);
 
@@ -683,7 +683,7 @@ bool CookedAssetSerializer::Read(const std::string& blobPath, List<std::string>&
 {
     error.clear();
 
-    std::ifstream input(Utf8Path::FromUtf8(blobPath), std::ios::binary);
+    std::ifstream input(InteropText::PathFromUtf8(blobPath), std::ios::binary);
     if (!input.is_open())
     {
         error = "Cooked asset file was not found: " + blobPath;
@@ -749,7 +749,7 @@ bool CookedAssetSerializer::Read(const std::string& blobPath, List<std::string>&
     }
 
     //Key 必须与文件名哈希一致，否则说明文件被改名或发生碰撞。
-    if (filenamePrefix + GetBlobFileName(resourceKey) != Utf8Path::ToUtf8(Utf8Path::FromUtf8(blobPath).filename()))
+    if (filenamePrefix + GetBlobFileName(resourceKey) != InteropText::PathToUtf8(InteropText::PathFromUtf8(blobPath).filename()))
     {
         error = "Cooked asset key does not match its file name: " + blobPath;
         return false;

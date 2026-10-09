@@ -97,11 +97,29 @@ public static partial class GUI
         NativeText(text, x, y, color, fontScale);
     }
 
+    /// <summary>借用已准备的文本在指定位置绘制。</summary>
+    public static unsafe void Text(GuiContent content, float x, float y, uint color, float fontScale = 1.0f)
+    {
+        if (!drawInitialized || drawApi.Text == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) drawApi.Text(pointer, bytes.Length, x, y, color, fontScale);
+    }
+
     /// <summary>获取文本绘制尺寸。</summary>
     public static vector2 GetTextSize(string text, float fontScale = 1.0f)
     {
         if (!drawInitialized) return default;
         return NativeGetTextSize(text, fontScale);
+    }
+
+    /// <summary>借用已准备的文本计算绘制尺寸。</summary>
+    public static unsafe vector2 GetTextSize(GuiContent content, float fontScale = 1.0f)
+    {
+        if (!drawInitialized || drawApi.GetTextSize == null) return default;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        float width = 0, height = 0;
+        fixed (byte* pointer = bytes) drawApi.GetTextSize(pointer, bytes.Length, fontScale, &width, &height);
+        return new vector2(width, height);
     }
 
     /// <summary>推入裁剪区域，之后的绘制只在区域内可见。</summary>
@@ -153,16 +171,11 @@ public static unsafe partial class GUI
         drawInitialized = drawApi.BeginFixedWindow != null;
     }
 
-    private static byte[] EncodeUtf8(string? text)
-    {
-        return Encoding.UTF8.GetBytes(text ?? string.Empty);
-    }
-
     internal static bool NativeBeginFixedWindow(string? title, float x, float y, float width, float height)
     {
         if (drawApi.BeginFixedWindow == null) return false;
 
-        byte[] bytes = EncodeUtf8(title);
+        byte[] bytes = InteropText.EncodeUtf8(title ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return drawApi.BeginFixedWindow(pointer, bytes.Length, x, y, width, height) != 0;
@@ -243,7 +256,7 @@ public static unsafe partial class GUI
     {
         if (drawApi.Text == null) return;
 
-        byte[] bytes = EncodeUtf8(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             drawApi.Text(pointer, bytes.Length, x, y, color, fontScale);
@@ -254,7 +267,7 @@ public static unsafe partial class GUI
     {
         if (drawApi.GetTextSize == null) return default;
 
-        byte[] bytes = EncodeUtf8(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         float width = 0.0f;
         float height = 0.0f;
         fixed (byte* pointer = bytes)

@@ -1,3 +1,4 @@
+using Orbeden;
 using System.Text;
 
 namespace OrbedenDocGen;
@@ -50,12 +51,12 @@ internal sealed class MarkdownWriter(string outputDirectory)
     {
         if (File.Exists(path) && File.ReadAllText(path) == text) return;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, text, new UTF8Encoding(false));
+        File.WriteAllText(path, text, InteropText.CreateUtf8Encoding(false));
     }
 
     private static string FirstLine(string path)
     {
-        using var reader = new StreamReader(path, Encoding.UTF8);
+        using var reader = new StreamReader(path, InteropText.Utf8);
         return reader.ReadLine() ?? "";
     }
 

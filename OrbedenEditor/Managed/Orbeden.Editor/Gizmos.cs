@@ -144,9 +144,9 @@ public static unsafe class Gizmos
         if (!initialized || api.Label3D == null) return;
 
         string value = text ?? string.Empty;
-        int byteCount = Encoding.UTF8.GetByteCount(value);
+        int byteCount = InteropText.GetUtf8ByteCount(value);
         Span<byte> bytes = byteCount <= 1024 ? stackalloc byte[Math.Max(byteCount, 1)] : new byte[byteCount];
-        Encoding.UTF8.GetBytes(value.AsSpan(), bytes);
+        InteropText.EncodeUtf8(value.AsSpan(), bytes);
 
         fixed (byte* pointer = bytes)
         {

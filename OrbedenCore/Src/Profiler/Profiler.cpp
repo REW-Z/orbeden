@@ -1,6 +1,6 @@
 #include "Profiler.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Memory/MemoryManager.h"
 
 #include <cstring>
@@ -391,7 +391,7 @@ void Profiler::WriteProfileLog(const char* path)
     WriteSampleLog(output, headSample, 0);
 
     //写入日志文件
-    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
     if (filePath.has_parent_path())
     {
         std::filesystem::create_directories(filePath.parent_path());

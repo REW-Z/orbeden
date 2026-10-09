@@ -4,5 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../OrbedenCore/Managed/OrbedenCore.CSharp/Interop/InteropText.cs" Link="Interop/InteropText.cs" />
+  </ItemGroup>
 </Project>

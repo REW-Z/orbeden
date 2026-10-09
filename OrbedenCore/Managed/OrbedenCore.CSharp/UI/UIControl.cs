@@ -27,6 +27,14 @@ public class UIControl : UIElement, IUIEventSource,
     //持久化的事件绑定；派发时按这里的行顺序先于代码订阅执行。
     [SerializeField] private List<UIEventBinding> bindings = [];
 
+    //绑定落盘用的五列并列宿主字段：宿主字段表只认标量与引用，对象列表进不去。
+    //列长必须一致，顺序就是派发顺序；[HideInEditor] 只挡检视面板，不挡序列化。
+    [HideInEditor, SerializeField] private List<int> bindingEvents = [];
+    [HideInEditor, SerializeField] private List<EnsId> bindingTargets = [];
+    [HideInEditor, SerializeField] private List<string> bindingTypes = [];
+    [HideInEditor, SerializeField] private List<string> bindingMethods = [];
+    [HideInEditor, SerializeField] private List<bool> bindingEnabled = [];
+
     //由路由器维护的运行时状态，不持久化。
     private bool hovered;
     private bool pressed;
@@ -41,19 +49,31 @@ public class UIControl : UIElement, IUIEventSource,
     }
 
     /// <summary>持久化的事件绑定列表。返回的是内部列表，遍历期间不要增删。</summary>
-    public List<UIEventBinding> GetBindings() => bindings;
+    public List<UIEventBinding> GetBindings()
+    {
+        EnsureBindingsMaterialized();
+        return bindings;
+    }
 
     /// <summary>绑定条数。</summary>
-    public int GetEventBindingCount() => bindings.Count;
+    public int GetEventBindingCount()
+    {
+        EnsureBindingsMaterialized();
+        return bindings.Count;
+    }
 
     /// <summary>按下标取一条绑定；越界返回空。</summary>
-    public UIEventBinding? GetEventBinding(int index) =>
-        index >= 0 && index < bindings.Count ? bindings[index] : null;
+    public UIEventBinding? GetEventBinding(int index)
+    {
+        EnsureBindingsMaterialized();
+        return index >= 0 && index < bindings.Count ? bindings[index] : null;
+    }
 
     /// <summary>在下标处插入一条绑定；越界时夹到表尾。</summary>
     public void InsertEventBinding(int index, UIEventBinding binding)
     {
         ArgumentNullException.ThrowIfNull(binding);
+        EnsureBindingsMaterialized();
         bindings.Insert(Math.Clamp(index, 0, bindings.Count), binding);
     }
 
@@ -61,6 +81,7 @@ public class UIControl : UIElement, IUIEventSource,
     public void SetEventBinding(int index, UIEventBinding binding)
     {
         ArgumentNullException.ThrowIfNull(binding);
+        EnsureBindingsMaterialized();
         if (index < 0 || index >= bindings.Count) return;
         bindings[index] = binding;
     }
@@ -68,6 +89,7 @@ public class UIControl : UIElement, IUIEventSource,
     /// <summary>按下标移除一条绑定；越界时忽略。</summary>
     public void RemoveEventBinding(int index)
     {
+        EnsureBindingsMaterialized();
         if (index < 0 || index >= bindings.Count) return;
         bindings.RemoveAt(index);
     }
@@ -75,13 +97,79 @@ public class UIControl : UIElement, IUIEventSource,
     /// <summary>加一条事件绑定并返回它。</summary>
     public UIEventBinding AddBinding()
     {
+        EnsureBindingsMaterialized();
         UIEventBinding binding = new();
         bindings.Add(binding);
         return binding;
     }
 
     /// <summary>移除一条绑定。</summary>
-    public void RemoveBinding(UIEventBinding binding) => bindings.Remove(binding);
+    public void RemoveBinding(UIEventBinding binding)
+    {
+        EnsureBindingsMaterialized();
+        bindings.Remove(binding);
+    }
+
+    /// <summary>序列化前把运行时绑定摊平成五列；保存、复制、Prefab 与进 Play 都经这条边界。</summary>
+    protected override void OnUIBeforeSerialize() => FlattenBindingsIntoColumns();
+
+    //五列只在场景加载时写入一次，所以绑定表按需物化：第一次触碰时按列重建，之后一律以 bindings 为准。
+    //不放在 OnUIAttached 那个扩展点上：派生控件覆写它时按基类约定不必调 base，重建会被整条跳过。
+    private bool bindingsMaterialized;
+
+    private void EnsureBindingsMaterialized()
+    {
+        if (bindingsMaterialized) return;
+        bindingsMaterialized = true;
+        RebuildBindingsFromColumns();
+    }
+
+    //摊平：列顺序即派发顺序，不能重排。先物化一次，否则从没打开过检视面板的场景会被空表抹掉。
+    private void FlattenBindingsIntoColumns()
+    {
+        EnsureBindingsMaterialized();
+        bindingEvents.Clear();
+        bindingTargets.Clear();
+        bindingTypes.Clear();
+        bindingMethods.Clear();
+        bindingEnabled.Clear();
+        foreach (UIEventBinding binding in bindings)
+        {
+            if (binding == null) continue;
+            bindingEvents.Add(binding.GetEventId());
+            bindingTargets.Add(binding.GetTarget());
+            bindingTypes.Add(binding.GetTargetType());
+            bindingMethods.Add(binding.GetMethod());
+            bindingEnabled.Add(binding.IsEnabled());
+        }
+    }
+
+    //重建：列长不一致时只取最短的公共部分，宁可丢尾也不构造半条绑定。
+    private void RebuildBindingsFromColumns()
+    {
+        int count = bindingEvents.Count;
+        if (bindingTargets.Count != count || bindingTypes.Count != count
+            || bindingMethods.Count != count || bindingEnabled.Count != count)
+        {
+            count = Math.Min(count, Math.Min(bindingTargets.Count, Math.Min(bindingTypes.Count,
+                Math.Min(bindingMethods.Count, bindingEnabled.Count))));
+            Console.Error.WriteLine(
+                $"UIControl({EnsId.id}:{EnsId.version}): event binding columns differ in length; loading the first {count}.");
+        }
+        if (count == 0) return;
+
+        bindings.Clear();
+        for (int index = 0; index < count; ++index)
+        {
+            UIEventBinding binding = new();
+            binding.SetEventId(bindingEvents[index]);
+            binding.SetTarget(bindingTargets[index]);
+            binding.SetTargetType(bindingTypes[index]);
+            binding.SetMethod(bindingMethods[index]);
+            binding.SetEnabled(bindingEnabled[index]);
+            bindings.Add(binding);
+        }
+    }
 
     /// <summary>
     /// 触发一条控件事件：入队之后由派发器按 FIFO 处理，
@@ -98,6 +186,7 @@ public class UIControl : UIElement, IUIEventSource,
         OnEventRaised(entry.eventId, entry.payload);
 
         //持久化行顺序先于代码订阅；顺序由列表本身给出。
+        EnsureBindingsMaterialized();
         for (int index = 0; index < bindings.Count; ++index)
         {
             UIEventBinding binding = bindings[index];

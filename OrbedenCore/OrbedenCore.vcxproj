@@ -159,7 +159,6 @@
     <ClInclude Include="Src\Defines\Version.h" />
     <ClInclude Include="Src\Defines\types.h" />
     <ClInclude Include="Src\FileSystem\FileSystem.h" />
-    <ClInclude Include="Src\FileSystem\Utf8Path.h" />
     <ClInclude Include="Src\Log\Log.h" />
     <ClInclude Include="Src\Memory\MemoryManager.h" />
     <ClInclude Include="Src\Runtime\Object\CharacterController.h" />
@@ -213,6 +212,7 @@
     <ClInclude Include="Src\Runtime\AssetPipeline.h" />
     <ClInclude Include="Src\Runtime\CookedAssetSerializer.h" />
     <ClInclude Include="Src\Runtime\Native\NativeCall.h" />
+    <ClInclude Include="Src\Runtime\Native\InteropText.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenEngineNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\OrbedenNativeApi.h" />
     <ClInclude Include="Src\Runtime\Native\RuntimeComponentBinds.h" />
@@ -311,6 +311,7 @@
     <ClCompile Include="Src\Runtime\AssetPipeline.cpp" />
     <ClCompile Include="Src\Runtime\CookedAssetSerializer.cpp" />
     <ClCompile Include="Src\Runtime\Native\OrbedenNativeApi.cpp" />
+    <ClCompile Include="Src\Runtime\Native\InteropText.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeComponentBinds.cpp" />
     <ClCompile Include="Src\Runtime\Native\RuntimeResourceBinds.cpp" />
     <ClCompile Include="Src\Runtime\Gui\RetainedGuiBridge.cpp" />

@@ -246,6 +246,15 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 
 ---
 
+# 字符串编解码边界
+
+- 托管字符串保持 UTF-16，原生普通字符串及现有字符串 ABI 保持 UTF-8，跨语言长度采用原有字节数约定。
+- 所有自有代码的显式字符编码调用集中到 `Orbeden.InteropText`（`OrbedenCore/Managed/OrbedenCore.CSharp/Interop/InteropText.cs`）和原生 `InteropText`（`OrbedenCore/Src/Runtime/Native/InteropText.h/.cpp`）；业务代码仅构造参数、分配/持有缓冲和调用入口。
+- 独立工具通过源文件链接复用托管入口，不引用引擎运行时程序集。生成的绑定使用原有值读写桥接；需要修改生成结果时修改生成器，不手改生成文件。
+- 字节计数、BOM、非法字符策略、结束零和缓冲容量规则由 InteropText 提供；调用点继续保留其原有策略。二进制字节和第三方/参考源码不纳入文本编解码迁移。
+- RetainedGUI 的码点解析、排版、字形查找和网格绘制直接使用字符、整数及几何数据，不要求编码为 UTF-8。文本输入/剪贴板的跨边界转码仍走 InteropText。
+- 统一入口不隐式缓存字符串，不改变缓冲所有权。GuiContent 持有自己的原生表示；临时指针只在约定调用期间有效，原生长期保存的数据需要独立副本。
+
 # 项目版本号
 
 - `OrbedenCore/Src/Defines/Version.h` 的 `OrbedenProjectVersion` 是权威版本号；`.oeproj` 的 `version` 属性记录项目建立或上次更新时的值。

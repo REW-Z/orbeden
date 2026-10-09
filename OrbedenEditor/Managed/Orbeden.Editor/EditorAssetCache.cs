@@ -396,8 +396,8 @@ internal static class EditorAssetCache
     {
         foreach (string field in fields)
         {
-            byte[] utf8 = Encoding.UTF8.GetBytes(field);
-            hash.AppendData(Encoding.UTF8.GetBytes(utf8.Length.ToString(CultureInfo.InvariantCulture)));
+            byte[] utf8 = InteropText.EncodeUtf8(field);
+            hash.AppendData(InteropText.EncodeUtf8(utf8.Length.ToString(CultureInfo.InvariantCulture)));
             hash.AppendData([(byte)'\n']);
             hash.AppendData(utf8);
             hash.AppendData([(byte)'\n']);
@@ -409,7 +409,7 @@ internal static class EditorAssetCache
     {
         string file = GetMetadataPath(path);
         string temporary = file + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(manifest), new UTF8Encoding(false));
+        File.WriteAllText(temporary, JsonSerializer.Serialize(manifest), InteropText.CreateUtf8Encoding(false));
         File.Move(temporary, file, true);
     }
 
@@ -484,13 +484,13 @@ internal static class EditorAssetCache
 
                 //把设置写成原生可解析的行表交给工作进程，避免在引擎里引入 JSON 解析
                 string settingsFile = Path.Combine(directory, Path.GetFileName(path) + SettingsFileNameSuffix);
-                File.WriteAllText(settingsFile, EncodeSettingsTable(path, ReadSettings(path)), new UTF8Encoding(false));
+                File.WriteAllText(settingsFile, EncodeSettingsTable(path, ReadSettings(path)), InteropText.CreateUtf8Encoding(false));
 
                 ProcessStartInfo start = new(Environment.ProcessPath!)
                 {
                     UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden,
                     RedirectStandardOutput = true, RedirectStandardError = true,
-                    StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8,
+                    StandardOutputEncoding = InteropText.Utf8, StandardErrorEncoding = InteropText.Utf8,
                 };
                 start.ArgumentList.Add("--inspect-asset");
                 start.ArgumentList.Add(root);

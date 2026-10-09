@@ -286,7 +286,7 @@ private static ObjectBindApi api;
         fixed (byte* output = bytes)
         {
             int actualBytes = extensionApi.GetResourceKey(pointer, output, requiredBytes);
-            return Encoding.UTF8.GetString(bytes[..Math.Clamp(actualBytes, 0, requiredBytes)]);
+            return InteropText.DecodeUtf8(bytes[..Math.Clamp(actualBytes, 0, requiredBytes)]);
         }
     }
 

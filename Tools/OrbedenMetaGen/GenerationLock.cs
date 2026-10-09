@@ -1,3 +1,4 @@
+using Orbeden;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,7 +11,7 @@ internal sealed class GenerationLock : IDisposable
 
     internal GenerationLock(string outputDirectory)
     {
-        string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(outputDirectory.ToUpperInvariant())));
+        string key = Convert.ToHexString(SHA256.HashData(InteropText.EncodeUtf8(outputDirectory.ToUpperInvariant())));
         mutex = new Mutex(false, "OrbedenMetaGen_" + key);
         try { mutex.WaitOne(); }
         catch (AbandonedMutexException) { }

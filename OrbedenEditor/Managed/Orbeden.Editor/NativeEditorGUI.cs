@@ -113,7 +113,7 @@ internal static unsafe class NativeEditorGUI
     /// <summary>建立自定义控件身份空间。</summary>
     internal static void PushId(string id)
     {
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) api.PushId(pointer, bytes.Length);
     }
 
@@ -123,7 +123,7 @@ internal static unsafe class NativeEditorGUI
     /// <summary>开始带只读数量框的紧凑列表，返回展开标记；始终配对 EndList。</summary>
     internal static int BeginList(string label, ref int count, bool editable, bool mixed, bool canRemove)
     {
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* text = bytes)
         fixed (int* size = &count) return api.BeginList(text, bytes.Length, size, (editable ? 1 : 0) | (mixed ? 2 : 0) | (canRemove ? 4 : 0));
     }
@@ -146,7 +146,7 @@ internal static unsafe class NativeEditorGUI
     //从当前条目开始拖动对象或资源
     internal static void DragSource(int kind, string key)
     {
-        byte[] bytes = Encode(key);
+        byte[] bytes = InteropText.EncodeUtf8(key ?? string.Empty);
         fixed (byte* pointer = bytes) api.DragSource(kind, pointer, bytes.Length);
     }
 
@@ -158,7 +158,7 @@ internal static unsafe class NativeEditorGUI
         byte[] bytes = new byte[count];
         fixed (byte* pointer = bytes) api.ReadDrag(&nativeKind, pointer, count);
         kind = nativeKind;
-        return Encoding.UTF8.GetString(bytes);
+        return InteropText.DecodeUtf8(bytes);
     }
 
     //绘制类型匹配预览并接收释放操作
@@ -167,7 +167,7 @@ internal static unsafe class NativeEditorGUI
     //创建统一面板内容区域
     internal static bool BeginPanelContent(string id, ref ulong host, vector2 scroll, bool restoreScroll)
     {
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (ulong* hostPointer = &host)
             return api.BeginPanelContent(pointer, bytes.Length, hostPointer, &scroll, restoreScroll ? (byte)1 : (byte)0) != 0;
@@ -213,7 +213,7 @@ internal static unsafe class NativeEditorGUI
     //开始可调整宽度的独立滚动区域
     internal static bool BeginChild(string id, ref float width, float height = 0, bool resizable = false)
     {
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (float* size = &width)
             return api.BeginChild(pointer, bytes.Length, size, height, resizable ? (byte)1 : (byte)0) != 0;
@@ -226,8 +226,8 @@ internal static unsafe class NativeEditorGUI
     internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
         bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false)
     {
-        byte[] bytes = Encode(label);
-        byte[] iconBytes = Encode(icon);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* pointer = bytes)
         {
@@ -243,14 +243,14 @@ internal static unsafe class NativeEditorGUI
     //打开确认弹窗
     internal static void OpenPopup(string id)
     {
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) api.OpenPopup(pointer, bytes.Length);
     }
 
     //开始模态弹窗
     internal static bool BeginPopup(string id)
     {
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) return api.BeginPopup(pointer, bytes.Length) != 0;
     }
 
@@ -258,32 +258,50 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginDialog(string id, float width = 0.0f)
     {
         if (!initialized || api.BeginDialog == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
+        fixed (byte* pointer = bytes) return api.BeginDialog(pointer, bytes.Length, width) != 0;
+    }
+
+    //借用已准备的标题开始弹窗
+    internal static bool BeginDialog(GuiContent content, float width = 0.0f)
+    {
+        if (!initialized || api.BeginDialog == null) return false;
+        ReadOnlySpan<byte> bytes = content.Utf8;
         fixed (byte* pointer = bytes) return api.BeginDialog(pointer, bytes.Length, width) != 0;
     }
 
     //关闭当前弹窗
     internal static void ClosePopup() => api.ClosePopup();
 
-    //编码 UTF-8 文本
-    private static byte[] Encode(string? text)
-    {
-        return Encoding.UTF8.GetBytes(text ?? string.Empty);
-    }
-
     //绘制文本标签
     internal static void Label(string? text)
     {
         if (!initialized || api.Label == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) api.Label(pointer, bytes.Length);
+    }
+
+    //借用已准备的标签文本
+    internal static void Label(GuiContent content)
+    {
+        if (!initialized || api.Label == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) api.Label(pointer, bytes.Length);
+    }
+
+    //借用已准备的按钮文本
+    internal static bool Button(GuiContent content)
+    {
+        if (!initialized || api.Button == null) return false;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length) != 0;
     }
 
     //绘制按钮
     internal static bool Button(string? text)
     {
         if (!initialized || api.Button == null) return false;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length) != 0;
     }
 
@@ -291,8 +309,8 @@ internal static unsafe class NativeEditorGUI
     internal static void BeginComponentBlock(string? icon, string? title)
     {
         if (!initialized || api.BeginComponentBlock == null) return;
-        byte[] iconBytes = Encode(icon);
-        byte[] titleBytes = Encode(title);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
+        byte[] titleBytes = InteropText.EncodeUtf8(title ?? string.Empty);
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* titlePointer = titleBytes)
             api.BeginComponentBlock(iconPointer, iconBytes.Length, titlePointer, titleBytes.Length);
@@ -343,9 +361,9 @@ internal static unsafe class NativeEditorGUI
         toggled = false;
         if (!initialized || api.BeginCollapsibleComponentBlock == null) return false;
 
-        byte[] iconBytes = Encode(icon);
-        byte[] titleBytes = Encode(title);
-        byte[] idBytes = Encode(id);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
+        byte[] titleBytes = InteropText.EncodeUtf8(title ?? string.Empty);
+        byte[] idBytes = InteropText.EncodeUtf8(id ?? string.Empty);
         byte nativeToggled = 0;
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* titlePointer = titleBytes)
@@ -370,9 +388,9 @@ internal static unsafe class NativeEditorGUI
     internal static int ReferenceField(string? icon, string? text, string? id)
     {
         if (!initialized || api.ReferenceField == null) return 0;
-        byte[] iconBytes = Encode(icon);
-        byte[] textBytes = Encode(text);
-        byte[] idBytes = Encode(id);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
+        byte[] textBytes = InteropText.EncodeUtf8(text ?? string.Empty);
+        byte[] idBytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* textPointer = textBytes)
         fixed (byte* idPointer = idBytes)
@@ -383,9 +401,9 @@ internal static unsafe class NativeEditorGUI
     internal static int AssetTile(string? icon, string? label, string? id, float width, bool selected, bool expandable = false, bool expanded = false)
     {
         if (!initialized || api.AssetTile == null) return 0;
-        byte[] iconBytes = Encode(icon);
-        byte[] labelBytes = Encode(label);
-        byte[] idBytes = Encode(id);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
+        byte[] labelBytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        byte[] idBytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* iconPointer = iconBytes)
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* idPointer = idBytes)
@@ -398,14 +416,11 @@ internal static unsafe class NativeEditorGUI
     {
         if (!initialized || api.AssetRenameTile == null) return 0;
 
-        byte[] iconBytes = Encode(icon);
-        byte[] idBytes = Encode(id);
+        byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
+        byte[] idBytes = InteropText.EncodeUtf8(id ?? string.Empty);
         value ??= string.Empty;
         Span<byte> buffer = stackalloc byte[RenameBufferCapacity];
-        int maxBytes = buffer.Length - 1;
-        Encoder encoder = Encoding.UTF8.GetEncoder();
-        encoder.Convert(value.AsSpan(), buffer[..maxBytes], true, out _, out int bytesUsed, out _);
-        buffer[bytesUsed] = 0;
+        InteropText.WriteUtf8Terminated(value.AsSpan(), buffer);
 
         byte focus = focusRequested ? (byte)1 : (byte)0;
         fixed (byte* iconPointer = iconBytes)
@@ -415,7 +430,7 @@ internal static unsafe class NativeEditorGUI
             int result = api.AssetRenameTile(iconPointer, iconBytes.Length, idPointer, idBytes.Length,
                 bufferPointer, buffer.Length, &focus, width, selected ? (byte)1 : (byte)0);
             focusRequested = focus != 0;
-            value = Marshal.PtrToStringUTF8((IntPtr)bufferPointer) ?? string.Empty;
+            value = InteropText.ReadUtf8Terminated((IntPtr)bufferPointer) ?? string.Empty;
             return result;
         }
     }
@@ -424,7 +439,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool ViewToggleButton(string? id, bool gridMode)
     {
         if (!initialized || api.ViewToggleButton == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) return api.ViewToggleButton(pointer, bytes.Length, gridMode ? (byte)1 : (byte)0) != 0;
     }
 
@@ -432,15 +447,31 @@ internal static unsafe class NativeEditorGUI
     internal static void TextColored(string? text, color value)
     {
         if (!initialized || api.TextColored == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) api.TextColored(&value, pointer, bytes.Length);
+    }
+
+    //借用已准备的带颜色文本
+    internal static void TextColored(GuiContent content, color value)
+    {
+        if (!initialized || api.TextColored == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) api.TextColored(&value, pointer, bytes.Length);
+    }
+
+    //借用已准备的换行文本
+    internal static void TextWrapped(GuiContent content)
+    {
+        if (!initialized || api.TextWrapped == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
+        fixed (byte* pointer = bytes) api.TextWrapped(pointer, bytes.Length);
     }
 
     //绘制自动换行文本
     internal static void TextWrapped(string? text)
     {
         if (!initialized || api.TextWrapped == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) api.TextWrapped(pointer, bytes.Length);
     }
 
@@ -477,7 +508,16 @@ internal static unsafe class NativeEditorGUI
     internal static void DrawTextClipped(vector2 clipMin, vector2 clipMax, vector2 position, color value, string? text, float fontSize = 0)
     {
         if (!initialized || api.DrawTextClipped == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
+        fixed (byte* pointer = bytes)
+            api.DrawTextClipped(&clipMin, &clipMax, &position, &value, pointer, bytes.Length, fontSize);
+    }
+
+    //借用已准备的文本绘制裁剪区域
+    internal static void DrawTextClipped(vector2 clipMin, vector2 clipMax, vector2 position, color value, GuiContent content, float fontSize = 0)
+    {
+        if (!initialized || api.DrawTextClipped == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
         fixed (byte* pointer = bytes)
             api.DrawTextClipped(&clipMin, &clipMax, &position, &value, pointer, bytes.Length, fontSize);
     }
@@ -486,7 +526,15 @@ internal static unsafe class NativeEditorGUI
     internal static bool InvisibleButton(string? id, vector2 size)
     {
         if (!initialized || api.InvisibleButton == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
+        fixed (byte* pointer = bytes) return api.InvisibleButton(pointer, bytes.Length, &size) != 0;
+    }
+
+    //借用已准备的身份文本绘制交互区域
+    internal static bool InvisibleButton(GuiContent content, vector2 size)
+    {
+        if (!initialized || api.InvisibleButton == null) return false;
+        ReadOnlySpan<byte> bytes = content.Utf8;
         fixed (byte* pointer = bytes) return api.InvisibleButton(pointer, bytes.Length, &size) != 0;
     }
 
@@ -514,7 +562,15 @@ internal static unsafe class NativeEditorGUI
     internal static void SetTooltip(string? text)
     {
         if (!initialized || api.SetTooltip == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
+        fixed (byte* pointer = bytes) api.SetTooltip(pointer, bytes.Length);
+    }
+
+    //借用已准备的提示文本
+    internal static void SetTooltip(GuiContent content)
+    {
+        if (!initialized || api.SetTooltip == null) return;
+        ReadOnlySpan<byte> bytes = content.Utf8;
         fixed (byte* pointer = bytes) api.SetTooltip(pointer, bytes.Length);
     }
 
@@ -525,8 +581,8 @@ internal static unsafe class NativeEditorGUI
     {
         if (!initialized || api.InputTextMultiline == null) return;
 
-        byte[] labelBytes = Encode(label);
-        byte[] textBytes = Encode(text);
+        byte[] labelBytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        byte[] textBytes = InteropText.EncodeUtf8(text ?? string.Empty);
         int required = textBytes.Length + 1;
         if (multilineBuffer.Length < required) multilineBuffer = new byte[required];
 
@@ -545,8 +601,8 @@ internal static unsafe class NativeEditorGUI
     internal static bool InputTextMultiline(string label, ref string text, float height)
     {
         if (!initialized || api.InputTextMultiline == null) return false;
-        byte[] labelBytes = Encode(label);
-        byte[] textBytes = Encode(text);
+        byte[] labelBytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        byte[] textBytes = InteropText.EncodeUtf8(text ?? string.Empty);
         if (multilineEditBuffer.Length < textBytes.Length + 4096)
             multilineEditBuffer = new byte[textBytes.Length + 4096];
         byte[] buffer = multilineEditBuffer;
@@ -558,7 +614,7 @@ internal static unsafe class NativeEditorGUI
             if (api.InputTextMultiline(labelPointer, labelBytes.Length, bufferPointer, buffer.Length, height, 0) == 0) return false;
         }
         int length = Array.IndexOf(buffer, (byte)0);
-        text = Encoding.UTF8.GetString(buffer, 0, length < 0 ? buffer.Length : length);
+        text = InteropText.DecodeUtf8(buffer, 0, length < 0 ? buffer.Length : length);
         return true;
     }
 
@@ -569,7 +625,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool SliderFloat(string? id, ref float value, float minimum, float maximum, float width = 0.0f)
     {
         if (!initialized || api.SliderFloat == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (float* valuePointer = &value)
             return api.SliderFloat(pointer, bytes.Length, valuePointer, minimum, maximum, width) != 0;
@@ -581,13 +637,10 @@ internal static unsafe class NativeEditorGUI
     {
         if (!initialized || api.RenameInput == null) return 0;
 
-        byte[] idBytes = Encode(id);
+        byte[] idBytes = InteropText.EncodeUtf8(id ?? string.Empty);
         value ??= string.Empty;
         Span<byte> buffer = stackalloc byte[RenameBufferCapacity];
-        int maxBytes = buffer.Length - 1;
-        Encoder encoder = Encoding.UTF8.GetEncoder();
-        encoder.Convert(value.AsSpan(), buffer[..maxBytes], true, out _, out int bytesUsed, out _);
-        buffer[bytesUsed] = 0;
+        InteropText.WriteUtf8Terminated(value.AsSpan(), buffer);
 
         byte focus = focusRequested ? (byte)1 : (byte)0;
         fixed (byte* idPointer = idBytes)
@@ -595,7 +648,7 @@ internal static unsafe class NativeEditorGUI
         {
             int result = api.RenameInput(idPointer, idBytes.Length, bufferPointer, buffer.Length, &focus, width);
             focusRequested = focus != 0;
-            value = Marshal.PtrToStringUTF8((IntPtr)bufferPointer) ?? string.Empty;
+            value = InteropText.ReadUtf8Terminated((IntPtr)bufferPointer) ?? string.Empty;
             return result;
         }
     }
@@ -616,8 +669,8 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginCombo(string? label, string? preview)
     {
         if (!initialized || api.BeginCombo == null) return false;
-        byte[] labelBytes = Encode(label);
-        byte[] previewBytes = Encode(preview);
+        byte[] labelBytes = InteropText.EncodeUtf8(label ?? string.Empty);
+        byte[] previewBytes = InteropText.EncodeUtf8(preview ?? string.Empty);
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* previewPointer = previewBytes)
         {
@@ -635,7 +688,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool Selectable(string? label, bool selected)
     {
         if (!initialized || api.Selectable == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes) return api.Selectable(pointer, bytes.Length, selected ? (byte)1 : (byte)0) != 0;
     }
 
@@ -643,7 +696,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool Checkbox(string? label, ref bool value)
     {
         if (!initialized || api.Checkbox == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         byte nativeValue = value ? (byte)1 : (byte)0;
         fixed (byte* pointer = bytes)
         {
@@ -657,7 +710,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool InputInt(string? label, ref int value)
     {
         if (!initialized || api.InputInt == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (int* valuePointer = &value)
         {
@@ -669,7 +722,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool InputFloat(string? label, ref float value)
     {
         if (!initialized || api.InputFloat == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (float* valuePointer = &value)
         {
@@ -681,7 +734,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool InputVector2(string? label, ref vector2 value)
     {
         if (!initialized || api.InputVector2 == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (vector2* valuePointer = &value)
         {
@@ -693,7 +746,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool InputVector3(string? label, ref vector3 value)
     {
         if (!initialized || api.InputVector3 == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (vector3* valuePointer = &value)
         {
@@ -706,13 +759,11 @@ internal static unsafe class NativeEditorGUI
     {
         if (!initialized || api.InputText == null) return false;
 
-        byte[] labelBytes = Encode(label);
+        byte[] labelBytes = InteropText.EncodeUtf8(label ?? string.Empty);
         value ??= string.Empty;
         Span<byte> valueBytes = stackalloc byte[256];
         int maxBytes = valueBytes.Length - 1;
-        Encoder encoder = Encoding.UTF8.GetEncoder();
-        encoder.Convert(value.AsSpan(), valueBytes[..maxBytes], true, out _, out int bytesUsed, out _);
-        valueBytes[bytesUsed] = 0;
+        InteropText.WriteUtf8Terminated(value.AsSpan(), valueBytes);
 
         fixed (byte* labelPointer = labelBytes)
         fixed (byte* valuePointer = valueBytes)
@@ -722,7 +773,7 @@ internal static unsafe class NativeEditorGUI
             if (newByteCount < 0) return false;
 
             newByteCount = Math.Min(newByteCount, maxBytes);
-            value = Encoding.UTF8.GetString(valueBytes[..newByteCount]);
+            value = InteropText.DecodeUtf8(valueBytes[..newByteCount]);
             return true;
         }
     }
@@ -731,7 +782,15 @@ internal static unsafe class NativeEditorGUI
     internal static float CalcButtonWidth(string? text)
     {
         if (!initialized || api.CalcButtonWidth == null) return 0.0f;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
+        fixed (byte* pointer = bytes) return api.CalcButtonWidth(pointer, bytes.Length);
+    }
+
+    //借用已准备的文本测量控件宽度
+    internal static float CalcButtonWidth(GuiContent content)
+    {
+        if (!initialized || api.CalcButtonWidth == null) return 0.0f;
+        ReadOnlySpan<byte> bytes = content.Utf8;
         fixed (byte* pointer = bytes) return api.CalcButtonWidth(pointer, bytes.Length);
     }
 
@@ -757,7 +816,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool ToggleButton(string? text, bool active)
     {
         if (!initialized || api.ToggleButton == null) return false;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) return api.ToggleButton(pointer, bytes.Length, active ? (byte)1 : (byte)0) != 0;
     }
 
@@ -765,7 +824,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginTable(string? id, int columns, bool scroll = true)
     {
         if (!initialized || api.BeginTable == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) return api.BeginTable(pointer, bytes.Length, columns, scroll ? (byte)1 : (byte)0) != 0;
     }
 
@@ -779,7 +838,7 @@ internal static unsafe class NativeEditorGUI
     internal static void TableSetupColumn(string? label, float width, bool fixedWidth)
     {
         if (!initialized || api.TableSetupColumn == null) return;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             api.TableSetupColumn(pointer, bytes.Length, width, fixedWidth ? (byte)1 : (byte)0);
@@ -808,7 +867,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool TableSelectable(string? label, bool selected, bool spanAllColumns)
     {
         if (!initialized || api.TableSelectable == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return api.TableSelectable(pointer,
@@ -828,7 +887,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginPopupContextItem(string? id)
     {
         if (!initialized || api.BeginPopupContextItem == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) return api.BeginPopupContextItem(pointer, bytes.Length) != 0;
     }
 
@@ -836,7 +895,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginPopupContextWindow(string? id)
     {
         if (!initialized || api.BeginPopupContextWindow == null) return false;
-        byte[] bytes = Encode(id);
+        byte[] bytes = InteropText.EncodeUtf8(id ?? string.Empty);
         fixed (byte* pointer = bytes) return api.BeginPopupContextWindow(pointer, bytes.Length) != 0;
     }
 
@@ -850,7 +909,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool MenuItem(string? label, bool enabled)
     {
         if (!initialized || api.MenuItem == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes) return api.MenuItem(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
     }
 
@@ -858,7 +917,7 @@ internal static unsafe class NativeEditorGUI
     internal static bool BeginMenu(string? label, bool enabled)
     {
         if (!initialized || api.BeginMenu == null) return false;
-        byte[] bytes = Encode(label);
+        byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes) return api.BeginMenu(pointer, bytes.Length, enabled ? (byte)1 : (byte)0) != 0;
     }
 
@@ -872,7 +931,7 @@ internal static unsafe class NativeEditorGUI
     internal static void SetClipboardText(string? text)
     {
         if (!initialized || api.SetClipboardText == null) return;
-        byte[] bytes = Encode(text);
+        byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) api.SetClipboardText(pointer, bytes.Length);
     }
 
@@ -892,7 +951,7 @@ internal static unsafe class NativeEditorGUI
     internal static void DrawIcon(string name, vector2 position, float size, color tint)
     {
         if (!initialized || api.DrawIcon == null || !float.IsFinite(size) || size <= 0f) return;
-        byte[] bytes = Encode(name);
+        byte[] bytes = InteropText.EncodeUtf8(name ?? string.Empty);
         fixed (byte* pointer = bytes) api.DrawIcon(pointer, bytes.Length, &position, size, &tint);
     }
 

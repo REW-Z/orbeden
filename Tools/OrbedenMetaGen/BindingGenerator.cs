@@ -1,3 +1,4 @@
+using Orbeden;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -65,7 +66,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
             }
             calls.Add(type, entries);
             string schema = "Bindings-v1|" + type.QualifiedName + "|" + type.BaseName + "|" + string.Join("|", entries.Select(call => call.Operation + ":" + call.Name + ":" + DescribeValue(call.Result, []) + ":" + call.Member.IsStatic + ":" + call.Member.IsConst + ":" + call.Member.Changed + ":" + call.Member.Getter + ":" + call.Member.Setter + ":" + call.Member.Buffer + ":" + call.Member.Count + ":" + string.Join(",", call.Parameters.Select(parameter => parameter.Parameter.Type + "=" + parameter.Parameter.DefaultValue + ":" + DescribeValue(parameter.Value, [])))));
-            signatures.Add(type, BitConverter.ToUInt64(SHA256.HashData(Encoding.UTF8.GetBytes(schema))));
+            signatures.Add(type, BitConverter.ToUInt64(SHA256.HashData(InteropText.EncodeUtf8(schema))));
         }
         foreach ((CppType type, List<BindingCall> entries) in calls)
             foreach (BindingCall call in entries)

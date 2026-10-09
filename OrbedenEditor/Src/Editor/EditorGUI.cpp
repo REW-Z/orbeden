@@ -6,7 +6,7 @@
 #include "Profiler/Profiler.h"
 #include "Application.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include <filesystem>
 #include "Platform/GlfwWindow.h"
 #include "Rendering/RenderSystem.h"
@@ -141,7 +141,7 @@ namespace
         //列表内部排序由托管控件校验文档身份和下标，不对应资源路径。
         if (dragPayload.kind == 3) return true;
         std::error_code error;
-        return std::filesystem::exists(Utf8Path::FromUtf8(dragPayload.contentRoot) / Utf8Path::FromUtf8(dragPayload.key), error);
+        return std::filesystem::exists(InteropText::PathFromUtf8(dragPayload.contentRoot) / InteropText::PathFromUtf8(dragPayload.key), error);
     }
 
     //从当前 GUI 项开始资源拖动

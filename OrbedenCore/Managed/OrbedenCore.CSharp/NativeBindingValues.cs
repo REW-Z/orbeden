@@ -33,7 +33,7 @@ public sealed class NativeBindingWriter
     public void Text(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
-        byte[] bytes = Encoding.UTF8.GetBytes(value); Scalar(bytes.Length); stream.Write(bytes);
+        byte[] bytes = InteropText.EncodeUtf8(value); Scalar(bytes.Length); stream.Write(bytes);
     }
     public byte[] ToArray() => stream.ToArray();
 }
@@ -56,7 +56,7 @@ public ref struct NativeBindingReader(ReadOnlySpan<byte> data)
     }
     public string Text()
     {
-        int length = Count(); string result = Encoding.UTF8.GetString(remaining[..length]); remaining = remaining[length..]; return result;
+        int length = Count(); string result = InteropText.DecodeUtf8(remaining[..length]); remaining = remaining[length..]; return result;
     }
     public void Complete()
     {

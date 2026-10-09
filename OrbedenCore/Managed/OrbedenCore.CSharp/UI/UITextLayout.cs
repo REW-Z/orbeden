@@ -222,8 +222,14 @@ public sealed class UITextLayout
     private readonly List<UIGlyphEntry?> entries = [];
     private readonly List<UITextLine> lines = [];
     private readonly List<UITextGlyph> glyphs = [];
+    private readonly Dictionary<(uint left, uint right), float> kerningPairs = [];
 
     private string normalizedText = string.Empty;
+    private string parsedSource = string.Empty;
+    private char[] normalizationBuffer = [];
+    private uint[] parsedScalars = [];
+    private int[] parsedScalarStarts = [0];
+    private int[] parsedUtf16Map = [0];
     private UIGlyphEntry? spaceEntry;
     private int spaceIndex = -1;
     private float fontSize;
@@ -248,7 +254,8 @@ public sealed class UITextLayout
         float spacing = float.IsFinite(lineSpacing) && lineSpacing >= 0.0f ? lineSpacing : 1.0f;
         float limit = float.IsFinite(availableWidth) && availableWidth > 0.0f ? availableWidth : float.PositiveInfinity;
 
-        Normalize(text);
+        ParseText(text);
+        kerningPairs.Clear();
         ResolveGlyphs(font, rasterMode, fontSize, rasterScale);
         metrics.GetFontMetrics(font, out float ascenderUnits, out float lineHeightUnits, out int unitsPerEm);
         unitsPerLogical = unitsPerEm > 0 ? fontSize / unitsPerEm : 1.0f;
@@ -263,9 +270,9 @@ public sealed class UITextLayout
         return new TextLayoutResult
         {
             text = normalizedText,
-            scalars = [.. scalars],
-            scalarToUtf16 = [.. scalarStarts],
-            utf16ToScalar = BuildUtf16ToScalar(),
+            scalars = [.. parsedScalars],
+            scalarToUtf16 = [.. parsedScalarStarts],
+            utf16ToScalar = [.. parsedUtf16Map],
             lines = [.. lines],
             glyphs = [.. glyphs],
             measuredSize = new vector2(width, blockHeight),
@@ -276,46 +283,44 @@ public sealed class UITextLayout
         };
     }
 
-    //归一化：非法代理项替换 U+FFFD，CRLF 与 CR 归一 LF，同时记录标量到 UTF-16 的边界。
-    private void Normalize(string? text)
+    //解析变化后的文本并缓存 Unicode 标量和 UTF-16 索引
+    private void ParseText(string? text)
     {
+        string source = text ?? string.Empty;
+        if (parsedSource == source) return;
         scalars.Clear();
         scalarStarts.Clear();
-        normalizedText = string.Empty;
-        if (string.IsNullOrEmpty(text)) return;
-
-        string source = text!;
-        System.Text.StringBuilder builder = new(source.Length);
+        if (normalizationBuffer.Length < source.Length)
+            Array.Resize(ref normalizationBuffer, Math.Max(source.Length, normalizationBuffer.Length * 2));
+        int length = 0;
+        bool changed = false;
         for (int index = 0; index < source.Length; ++index)
         {
+            scalarStarts.Add(length);
             char current = source[index];
             if (current == CarriageReturn)
             {
                 if (index + 1 < source.Length && source[index + 1] == '\n') ++index;
-                Append(LineFeed);
-                continue;
+                current = '\n';
+                changed = true;
             }
-
             if (char.IsHighSurrogate(current) && index + 1 < source.Length && char.IsLowSurrogate(source[index + 1]))
             {
-                Append((uint)char.ConvertToUtf32(current, source[index + 1]));
-                ++index;
+                scalars.Add((uint)char.ConvertToUtf32(current, source[index + 1]));
+                normalizationBuffer[length++] = current;
+                normalizationBuffer[length++] = source[++index];
                 continue;
             }
-
-            //落单的代理项不是合法标量，统一替换。
-            Append(char.IsSurrogate(current) ? ReplacementScalar : current);
+            if (char.IsSurrogate(current)) { current = (char)ReplacementScalar; changed = true; }
+            scalars.Add(current);
+            normalizationBuffer[length++] = current;
         }
-        scalarStarts.Add(builder.Length);
-        normalizedText = builder.ToString();
-        return;
-
-        void Append(uint scalar)
-        {
-            scalarStarts.Add(builder.Length);
-            scalars.Add(scalar);
-            builder.Append(char.ConvertFromUtf32((int)scalar));
-        }
+        scalarStarts.Add(length);
+        normalizedText = changed ? new string(normalizationBuffer, 0, length) : source;
+        parsedSource = source;
+        parsedScalars = [.. scalars];
+        parsedScalarStarts = [.. scalarStarts];
+        parsedUtf16Map = BuildUtf16ToScalar();
     }
 
     //批量解析全部标量的字形，外加一个空格字形供制表位使用。
@@ -421,7 +426,7 @@ public sealed class UITextLayout
                     advance = entry?.GetAdvance(fontSize) ?? 0.0f;
                     //字距只作用于同一字体内相邻的有效字形；缺字与控制字符清空前字形。
                     if (previousGlyph != 0 && entry != null && entry.GlyphIndex != 0)
-                        kerning = metrics.GetKerning(font, previousGlyph, entry.GlyphIndex) * unitsPerLogical;
+                        kerning = GetKerning(font, previousGlyph, entry.GlyphIndex) * unitsPerLogical;
                     previousGlyph = entry?.GlyphIndex ?? 0;
                 }
 
@@ -476,12 +481,21 @@ public sealed class UITextLayout
         UIGlyphEntry? entry = index < entries.Count ? entries[index] : null;
         float advance = entry?.GetAdvance(fontSize) ?? 0.0f;
         if (previousGlyph != 0 && entry != null && entry.GlyphIndex != 0)
-            advance += metrics.GetKerning(font, previousGlyph, entry.GlyphIndex) * unitsPerLogical;
+            advance += GetKerning(font, previousGlyph, entry.GlyphIndex) * unitsPerLogical;
         previousGlyph = entry?.GlyphIndex ?? 0;
         return advance;
     }
 
-    //制表符前进到下一个制表位；制表位按四个空格宽度对齐，从行首算起。
+    //复用本次排版中相同字形对的字距
+    private float GetKerning(Font? font, uint left, uint right)
+    {
+        if (kerningPairs.TryGetValue((left, right), out float value)) return value;
+        value = metrics.GetKerning(font, left, right);
+        kerningPairs[(left, right)] = value;
+        return value;
+    }
+
+    //计算制表位的水平步进
     private float TabAdvance(float pen)
     {
         float space = spaceEntry?.GetAdvance(fontSize) ?? fontSize * 0.5f;

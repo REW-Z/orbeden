@@ -5,7 +5,7 @@
 #include "Editor/NewProjectGenerator.h"
 #include "Editor/NewProjectTemplate.h"
 #include "Editor/ProjectLayout.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
 #include <filesystem>
@@ -18,7 +18,7 @@ namespace
     //统一成正斜杠的 UTF-8 路径，与仓库其它地方的项目路径写法一致
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 }
 
@@ -37,14 +37,14 @@ bool ProjectUpdate::UpdateProject(const std::string& projectRoot,
         return false;
     }
 
-    std::filesystem::path root = Utf8Path::FromUtf8(templateRoot);
+    std::filesystem::path root = InteropText::PathFromUtf8(templateRoot);
     if (!std::filesystem::is_directory(root / ProjectFolder))
     {
         outError = "Project template directory was not found. Rebuild OrbedenEditor.";
         return false;
     }
 
-    std::filesystem::path project = Utf8Path::FromUtf8(projectRoot);
+    std::filesystem::path project = InteropText::PathFromUtf8(projectRoot);
     if (!std::filesystem::is_directory(project))
     {
         outError = "Project directory was not found: " + projectRoot;

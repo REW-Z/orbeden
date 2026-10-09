@@ -44,7 +44,7 @@ internal unsafe struct EditorTextAbi
     public int Length;
     public int Reserved;
     public readonly ReadOnlySpan<byte> Bytes => new(Data, Length);
-    public override readonly string ToString() => Encoding.UTF8.GetString(Bytes);
+    public override readonly string ToString() => InteropText.DecodeUtf8(Bytes);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -253,7 +253,7 @@ internal static unsafe class EditorNativeComponents
                     //解析发生变化的宿主文本，并缓存解析失败状态
                     if (source.Kind == InteropValueKind.String && field.Descriptor.Kind != InteropValueKind.String)
                     {
-                        string text = Encoding.UTF8.GetString(field.Text);
+                        string text = InteropText.DecodeUtf8(field.Text);
                         if (!EditorInteropValueText.TryParse(field.Descriptor.Kind, text, out field.Value))
                             field.Status = InteropStatus.InvocationFailed;
                     }
@@ -275,9 +275,9 @@ internal static unsafe class EditorNativeComponents
     {
         if (api.SetComponentProperty == null) return InteropStatus.NotFound;
         EditorValueAbi encoded = new() { Kind = value.Kind };
-        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
+        byte[] nameBytes = InteropText.EncodeUtf8(name);
         byte[] text = value.Kind is InteropValueKind.String or InteropValueKind.StringId
-            && value.TryGet(out string content) ? Encoding.UTF8.GetBytes(content) : [];
+            && value.TryGet(out string content) ? InteropText.EncodeUtf8(content) : [];
         fixed (byte* namePointer = nameBytes)
         fixed (byte* textPointer = text)
         {
@@ -306,26 +306,26 @@ internal static unsafe class EditorNativeComponents
     //读取符合声明类型的存活引用对象
     internal static string GetReferenceObjects(string type)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(type);
+        byte[] bytes = InteropText.EncodeUtf8(type);
         fixed (byte* pointer = bytes)
         {
             int count = api.GetReferenceObjects(api.Context, pointer, bytes.Length, null, 0);
             byte[] output = new byte[count];
             fixed (byte* target = output) api.GetReferenceObjects(api.Context, pointer, bytes.Length, target, count);
-            return Encoding.UTF8.GetString(output);
+            return InteropText.DecodeUtf8(output);
         }
     }
 
     //读取存活引用的显示名称
     internal static string GetReferenceLabel(string key)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* pointer = bytes)
         {
             int count = api.GetReferenceLabel(api.Context, pointer, bytes.Length, null, 0);
             byte[] output = new byte[count];
             fixed (byte* target = output) api.GetReferenceLabel(api.Context, pointer, bytes.Length, target, count);
-            return Encoding.UTF8.GetString(output);
+            return InteropText.DecodeUtf8(output);
         }
     }
 
@@ -354,7 +354,7 @@ internal static unsafe class EditorNativeComponents
     //按原生继承链匹配组件声明类型
     internal static bool MatchesComponentType(int objectId, string type)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(type);
+        byte[] bytes = InteropText.EncodeUtf8(type);
         fixed (byte* pointer = bytes) return api.MatchComponentType(api.Context, objectId, pointer, bytes.Length) != 0;
     }
 
@@ -384,7 +384,7 @@ internal static unsafe class EditorNativeComponents
     internal static int AddComponentAndGetId(EnsId ens, string typeName, bool isManaged = false)
     {
         if (api.AddComponent == null || string.IsNullOrEmpty(typeName)) return 0;
-        byte[] bytes = Encoding.UTF8.GetBytes(typeName);
+        byte[] bytes = InteropText.EncodeUtf8(typeName);
         fixed (byte* pointer = bytes)
         {
             return api.AddComponent(api.Context, ens.id, ens.version, pointer, bytes.Length, isManaged ? (byte)1 : (byte)0);
@@ -395,9 +395,9 @@ internal static unsafe class EditorNativeComponents
     internal static bool SetManagedField(int objectId, string name, string typeName, string value, bool inspectorVisible)
     {
         if (api.SetManagedField == null || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(typeName)) return false;
-        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
-        byte[] typeBytes = Encoding.UTF8.GetBytes(typeName);
-        byte[] valueBytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] nameBytes = InteropText.EncodeUtf8(name);
+        byte[] typeBytes = InteropText.EncodeUtf8(typeName);
+        byte[] valueBytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* namePointer = nameBytes)
         fixed (byte* typePointer = typeBytes)
         fixed (byte* valuePointer = valueBytes)
@@ -432,7 +432,7 @@ internal static unsafe class EditorNativeComponents
     internal static int RestoreComponent(EnsId ens, string snapshot, int index)
     {
         if (api.RestoreComponent == null) return 0;
-        byte[] bytes = Encoding.UTF8.GetBytes(snapshot);
+        byte[] bytes = InteropText.EncodeUtf8(snapshot);
         fixed (byte* pointer = bytes)
             return api.RestoreComponent(api.Context, ens.id, ens.version, pointer, bytes.Length, index);
     }
@@ -441,7 +441,7 @@ internal static unsafe class EditorNativeComponents
     internal static int FindComponent(string key)
     {
         if (api.FindComponent == null) return 0;
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* pointer = bytes) return api.FindComponent(api.Context, pointer, bytes.Length);
     }
 
@@ -474,7 +474,7 @@ internal static unsafe class EditorNativeComponents
         fixed (byte* pointer = bytes)
         {
             int actual = Math.Clamp(copy(pointer, bytes.Length), 0, bytes.Length);
-            return Encoding.UTF8.GetString(bytes, 0, actual);
+            return InteropText.DecodeUtf8(bytes, 0, actual);
         }
     }
 }

@@ -1,6 +1,6 @@
 #include "FileSystem.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 
@@ -79,39 +79,39 @@ bool Path::HasExtension()
 //获取扩展名
 std::string Path::GetExtension(std::string fullName)
 {
-    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(fullName).extension());
+    return InteropText::PathToUtf8(InteropText::PathFromUtf8(fullName).extension());
 }
 
 //获取文件名
 std::string Path::GetName(std::string fullName)
 {
-    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(fullName).filename());
+    return InteropText::PathToUtf8(InteropText::PathFromUtf8(fullName).filename());
 }
 
 //获取无扩展名完整路径
 std::string Path::GetFullNameWithOutExtension(std::string fullName)
 {
-    std::filesystem::path path = Utf8Path::FromUtf8(fullName);
+    std::filesystem::path path = InteropText::PathFromUtf8(fullName);
     path.replace_extension();
-    return Utf8Path::ToUtf8(path);
+    return InteropText::PathToUtf8(path);
 }
 
 //获取无扩展名文件名
 std::string Path::GetNameWithOutExtension(std::string fullName)
 {
-    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(fullName).stem());
+    return InteropText::PathToUtf8(InteropText::PathFromUtf8(fullName).stem());
 }
 
 //获取目录
 std::string Path::GetDirectory(std::string fullName)
 {
-    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(fullName).parent_path());
+    return InteropText::PathToUtf8(InteropText::PathFromUtf8(fullName).parent_path());
 }
 
 //是否有扩展名
 bool Path::HasExtension(std::string fullName)
 {
-    return Utf8Path::FromUtf8(fullName).has_extension();
+    return InteropText::PathFromUtf8(fullName).has_extension();
 }
 
 //是否为二进制文件
@@ -184,7 +184,7 @@ void AsyncFileRoutine::WaitCurrent()
 //文件是否存在
 bool FileSystem::Exist(std::string path)
 {
-    return std::filesystem::exists(Utf8Path::FromUtf8(path));
+    return std::filesystem::exists(InteropText::PathFromUtf8(path));
 }
 
 //读取二进制文件
@@ -212,7 +212,7 @@ void FileSystem::LoadFileBinary(std::string path, FileBinary* filePtr, AsyncFile
     }
 
     //打开文件
-    std::ifstream file(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::ate);
+    std::ifstream file(InteropText::PathFromUtf8(path), std::ios::binary | std::ios::ate);
     if (!file)
     {
         LogFileError("Load binary file failed", path);
@@ -276,7 +276,7 @@ void FileSystem::LoadFileText(std::string path, FileText* filePtr, AsyncFileResu
     }
 
     //读取文本内容
-    std::ifstream file(Utf8Path::FromUtf8(path), std::ios::in);
+    std::ifstream file(InteropText::PathFromUtf8(path), std::ios::in);
     if (!file)
     {
         LogFileError("Load text file failed", path);
@@ -338,7 +338,7 @@ void FileSystem::WriteObject(std::string path, void* objPtr, usize size)
     if (!objPtr || size == 0) return;
 
     //创建目录并写入文件
-    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
     if (filePath.has_parent_path())
     {
         std::filesystem::create_directories(filePath.parent_path());
@@ -360,7 +360,7 @@ void FileSystem::ReadObject(std::string path, void* objPtr, usize size)
     if (!objPtr || size == 0) return;
 
     //读取对象数据
-    std::ifstream file(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::in);
+    std::ifstream file(InteropText::PathFromUtf8(path), std::ios::binary | std::ios::in);
     if (!file)
     {
         LogFileError("Read object failed", path);

@@ -1,4 +1,5 @@
 #include "Platform/WindowsTextInput.h"
+#include "Runtime/Native/InteropText.h"
 
 #ifdef _WIN32
 
@@ -28,35 +29,6 @@ namespace
 
     WindowsTextInput* activeInstance = nullptr;
 
-    //UTF-16 转 UTF-8；遇到非法序列返回假，不做截断。
-    bool ToUtf8(const wchar_t* text, int32 length, std::string& out)
-    {
-        out.clear();
-        if (length <= 0) return true;
-
-        int32 bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text, length, nullptr, 0, nullptr, nullptr);
-        if (bytes <= 0) return false;
-
-        out.resize(static_cast<usize>(bytes));
-        return WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text, length,
-            out.data(), bytes, nullptr, nullptr) == bytes;
-    }
-
-    //UTF-8 转 UTF-16；遇到非法序列返回假，不做截断。
-    bool ToUtf16(const std::string& text, std::wstring& out)
-    {
-        out.clear();
-        if (text.empty()) return true;
-
-        int32 count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(),
-            static_cast<int32>(text.size()), nullptr, 0);
-        if (count <= 0) return false;
-
-        out.resize(static_cast<usize>(count));
-        return MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(),
-            static_cast<int32>(text.size()), out.data(), count) == count;
-    }
-
     //读取输入法组合串；没有内容时返回空串。
     std::string ReadCompositionString(HIMC context, DWORD kind)
     {
@@ -69,7 +41,7 @@ namespace
 
         buffer.resize(static_cast<usize>(written) / sizeof(wchar_t));
         std::string utf8;
-        if (!ToUtf8(buffer.data(), static_cast<int32>(buffer.size()), utf8)) return std::string();
+        if (!InteropText::TryUtf16ToUtf8(buffer.data(), static_cast<int32>(buffer.size()), utf8)) return std::string();
         return utf8;
     }
 
@@ -215,7 +187,7 @@ bool WindowsTextInput::ReadClipboard(std::string& out)
         if (text)
         {
             std::string utf8;
-            success = ToUtf8(text, static_cast<int32>(wcslen(text)), utf8);
+            success = InteropText::TryUtf16ToUtf8(text, static_cast<int32>(wcslen(text)), utf8);
             //读取失败时不动 out，调用方保留原文。
             if (success) out = std::move(utf8);
             GlobalUnlock(handle);
@@ -230,7 +202,7 @@ bool WindowsTextInput::WriteClipboard(const std::string& text)
     if (!window) return false;
 
     std::wstring wide;
-    if (!ToUtf16(text, wide))
+    if (!InteropText::TryUtf8ToUtf16(text, wide))
     {
         Log::Error("WindowsTextInput: clipboard text is not valid UTF-8.");
         return false;
@@ -287,7 +259,7 @@ bool WindowsTextInput::ConsumeEcho(uint32 codepoint)
 
     std::string head = pendingEcho.substr(0, length);
     std::wstring wide;
-    if (!ToUtf16(head, wide) || wide.size() != 1 || static_cast<uint32>(wide[0]) != codepoint)
+    if (!InteropText::TryUtf8ToUtf16(head, wide) || wide.size() != 1 || static_cast<uint32>(wide[0]) != codepoint)
     {
         //对不上说明是新的输入，回显作废，正常放行。
         pendingEcho.clear();

@@ -428,7 +428,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
                 int offset = (int)record.textOffset;
                 int length = (int)record.textLength;
                 if (offset >= 0 && length >= 0 && offset + length <= textBytes)
-                    text = System.Text.Encoding.UTF8.GetString(inputText, offset, length);
+                    text = InteropText.DecodeUtf8(inputText, offset, length);
             }
             rawEvents[index] = new UIRawInputEvent(record, text);
         }

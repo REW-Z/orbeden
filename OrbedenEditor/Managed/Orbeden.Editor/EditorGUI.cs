@@ -25,6 +25,9 @@ public static class EditorGUI
     /// <summary>绘制文本标签。</summary>
     public static void Label(string text) => NativeEditorGUI.Label(text);
 
+    /// <summary>借用控件持有的已准备文本绘制标签。</summary>
+    public static void Label(GuiContent content) => NativeEditorGUI.Label(content);
+
     /// <summary>绘制 Scene 面板的原生场景视口。</summary>
     public static void DrawSceneView() => NativeEditorGUI.DrawSceneView();
 
@@ -33,6 +36,9 @@ public static class EditorGUI
 
     /// <summary>绘制按钮。</summary>
     public static bool Button(string text) => NativeEditorGUI.Button(text);
+
+    /// <summary>借用控件持有的已准备文本绘制按钮。</summary>
+    public static bool Button(GuiContent content) => NativeEditorGUI.Button(content);
 
     /// <summary>开始组件块，未指定图标时使用通用图标。</summary>
     public static void BeginComponentBlock(string title) => NativeEditorGUI.BeginComponentBlock("Other", title);
@@ -279,14 +285,23 @@ public static class EditorGUI
     /// <summary>绘制带颜色文本。</summary>
     public static void TextColored(string text, color value) => NativeEditorGUI.TextColored(text, value);
 
+    /// <summary>借用已准备的文本绘制带颜色标签。</summary>
+    public static void TextColored(GuiContent content, color value) => NativeEditorGUI.TextColored(content, value);
+
     /// <summary>绘制自动换行文本。</summary>
     public static void TextWrapped(string text) => NativeEditorGUI.TextWrapped(text);
+
+    /// <summary>借用已准备的文本绘制自动换行内容。</summary>
+    public static void TextWrapped(GuiContent content) => NativeEditorGUI.TextWrapped(content);
 
     /// <summary>把滚动位置移到当前光标处。</summary>
     public static void SetScrollHereY(float ratio) => NativeEditorGUI.SetScrollHereY(ratio);
 
     /// <summary>显示单行提示。</summary>
     public static void SetTooltip(string text) => NativeEditorGUI.SetTooltip(text);
+
+    /// <summary>借用已准备的文本显示提示。</summary>
+    public static void SetTooltip(GuiContent content) => NativeEditorGUI.SetTooltip(content);
 }
 
 public readonly struct ObjectFieldOption

@@ -3,7 +3,7 @@
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
 #include "Scripting/ScriptSystem.h"
 
@@ -36,7 +36,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     std::string ReadTextFile(const std::filesystem::path& path)
@@ -105,7 +105,7 @@ namespace
         //内容根固定为 <项目根>/Content，资源 Key 与 startupWorld 都相对它解析。
         std::filesystem::path contentRoot = projectRoot / "Content";
         PathDefines::SetContentRoot(ToCleanPath(contentRoot));
-        std::string worldPath = ToCleanPath(contentRoot / Utf8Path::FromUtf8(startupWorld));
+        std::string worldPath = ToCleanPath(contentRoot / InteropText::PathFromUtf8(startupWorld));
         if (app.LoadWorld(worldPath)) return true;
 
         Log::Error(("Player startup world load failed: " + worldPath).c_str());

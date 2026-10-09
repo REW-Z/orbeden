@@ -79,8 +79,8 @@ internal static unsafe class EditorPanelRegistry
         //记录已注册面板
         foreach (var (panel, info, _) in candidates)
         {
-            byte[] id = Encoding.UTF8.GetBytes(info.Id);
-            byte[] title = Encoding.UTF8.GetBytes(info.Title ?? string.Empty);
+            byte[] id = InteropText.EncodeUtf8(info.Id);
+            byte[] title = InteropText.EncodeUtf8(info.Title ?? string.Empty);
             fixed (byte* idPointer = id)
             fixed (byte* titlePointer = title)
             {

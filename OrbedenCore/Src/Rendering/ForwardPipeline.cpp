@@ -3,7 +3,7 @@
 #include "Log/Log.h"
 #include "FileSystem/PathDefines.h"
 #include "Profiler/Profiler.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Rendering/ParticleRenderer.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
@@ -50,7 +50,7 @@ namespace
         {
             for (const std::string& key : cookedKeys)
             {
-                if (Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).filename()) != fileName) continue;
+                if (InteropText::PathToUtf8(InteropText::PathFromUtf8(key).filename()) != fileName) continue;
 
                 matches.push_back(key);
             }
@@ -58,15 +58,15 @@ namespace
         else
         {
             //未打包的内容根按文件名递归扫描，目录结构完全自由。
-            std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot());
+            std::filesystem::path root = InteropText::PathFromUtf8(PathDefines::GetContentRoot());
             std::error_code error;
             for (std::filesystem::recursive_directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error))
             {
                 const std::filesystem::directory_entry& entry = *iterator;
                 if (!entry.is_regular_file()) continue;
-                if (Utf8Path::ToUtf8(entry.path().filename()) != fileName) continue;
+                if (InteropText::PathToUtf8(entry.path().filename()) != fileName) continue;
 
-                matches.push_back(Utf8Path::ToUtf8(entry.path().lexically_relative(root)));
+                matches.push_back(InteropText::PathToUtf8(entry.path().lexically_relative(root)));
             }
         }
 

@@ -1,3 +1,4 @@
+using Orbeden;
 using OrbedenMetaGen;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -196,10 +197,10 @@ if (bindings != null)
 var generatedPath = Path.Combine(outputDir, "Reflection.Generated.cpp");
 string reflectionText = GenerateCpp(classes, sourceRoot, gameModule, bindingModule);
 if (!File.Exists(generatedPath) || File.ReadAllText(generatedPath) != reflectionText)
-    File.WriteAllText(generatedPath, reflectionText, new UTF8Encoding(false));
+    File.WriteAllText(generatedPath, reflectionText, InteropText.CreateUtf8Encoding(false));
 Console.WriteLine($"Generated {generatedPath}");
 //生成成功后才落指纹：上次失败留下的旧指纹不能骗过下一次构建。
-File.WriteAllText(fingerprintPath, fingerprint, new UTF8Encoding(false));
+File.WriteAllText(fingerprintPath, fingerprint, InteropText.CreateUtf8Encoding(false));
 return 0;
 
 //读取命令行选项的取值。
@@ -256,7 +257,7 @@ static string ComputeInputFingerprint(string sourceRoot, List<string> headerFile
         using FileStream stream = File.OpenRead(import);
         text.Append(Convert.ToHexString(SHA256.HashData(stream))).Append('\n');
     }
-    return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())));
+    return Convert.ToHexString(SHA256.HashData(InteropText.EncodeUtf8(text.ToString())));
 }
 
 //从公共词法模型投影反射支持的成员，不改变 Binding 的完整声明数据。

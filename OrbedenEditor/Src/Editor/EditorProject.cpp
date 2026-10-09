@@ -3,7 +3,7 @@
 #include "Application.h"
 #include "Editor/ProjectLayout.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Rendering/RenderSystem.h"
 #include "ResourceManager/ResourceManager.h"
@@ -21,7 +21,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     //二进制读写：.oeproj 要逐字节保持原样，文本模式会把已有 CRLF 再转一次。
@@ -457,9 +457,9 @@ namespace
     //项目目录改名因此不影响任何东西。name 属性只作为旧项目的一次性回退读入。
     std::string DeriveProjectName(const std::filesystem::path& filePath, const std::string& rootTag)
     {
-        std::string name = Utf8Path::ToUtf8(filePath.stem());
+        std::string name = InteropText::PathToUtf8(filePath.stem());
         if (name.empty()) name = GetAttribute(rootTag, "name");
-        if (name.empty()) name = Utf8Path::ToUtf8(filePath.parent_path().filename());
+        if (name.empty()) name = InteropText::PathToUtf8(filePath.parent_path().filename());
         return name;
     }
 
@@ -467,8 +467,8 @@ namespace
     {
         if (!std::filesystem::is_directory(folder)) return std::string();
 
-        std::string expectedName = Utf8Path::ToUtf8(folder.filename()) + ".oeproj";
-        std::filesystem::path expected = folder / Utf8Path::FromUtf8(expectedName);
+        std::string expectedName = InteropText::PathToUtf8(folder.filename()) + ".oeproj";
+        std::filesystem::path expected = folder / InteropText::PathFromUtf8(expectedName);
         if (std::filesystem::exists(expected)) return ToCleanPath(expected);
 
         std::error_code error;
@@ -497,7 +497,7 @@ bool EditorProject::ProbeProjectFile(const std::string& projectFile, ProjectVers
     outProbe = ProjectVersionProbe();
     outError.clear();
 
-    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(projectFile);
     if (!std::filesystem::exists(filePath))
     {
         outError = "Project file does not exist: " + projectFile;
@@ -535,7 +535,7 @@ bool EditorProject::ProbeProjectFile(const std::string& projectFile, ProjectVers
 
 bool EditorProject::ProbeProjectFolder(const std::string& folder, ProjectVersionProbe& outProbe, std::string& outError)
 {
-    std::string projectFile = FindProjectFileInFolder(Utf8Path::FromUtf8(folder));
+    std::string projectFile = FindProjectFileInFolder(InteropText::PathFromUtf8(folder));
     if (projectFile.empty())
     {
         outProbe = ProjectVersionProbe();
@@ -563,7 +563,7 @@ bool EditorProject::UpdateProjectRootAttributes(const std::string& projectFile,
 {
     outError.clear();
 
-    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(projectFile);
     if (!std::filesystem::exists(filePath))
     {
         outError = "Project file does not exist: " + projectFile;
@@ -609,7 +609,7 @@ bool EditorProject::UpdateProjectRootAttributes(const std::string& projectFile,
 
 bool EditorProject::LoadProjectFolder(const std::string& folder)
 {
-    std::string projectFile = FindProjectFileInFolder(Utf8Path::FromUtf8(folder));
+    std::string projectFile = FindProjectFileInFolder(InteropText::PathFromUtf8(folder));
     if (projectFile.empty())
     {
         lastError = "Project folder does not contain a .oeproj file: " + folder;
@@ -622,7 +622,7 @@ bool EditorProject::LoadProjectFolder(const std::string& folder)
 
 bool EditorProject::LoadProjectFile(const std::string& projectFile)
 {
-    std::filesystem::path filePath = Utf8Path::FromUtf8(projectFile);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(projectFile);
     if (!std::filesystem::exists(filePath))
     {
         lastError = "Project file does not exist: " + projectFile;
@@ -655,12 +655,12 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     }
 
     std::string parsedProjectRoot = ToCleanPath(std::filesystem::absolute(filePath.parent_path()));
-    std::filesystem::path contentRoot = Utf8Path::FromUtf8(parsedProjectRoot) / ProjectLayout::ContentFolder;
+    std::filesystem::path contentRoot = InteropText::PathFromUtf8(parsedProjectRoot) / ProjectLayout::ContentFolder;
     //两个 Key 都相对内容根，场景放在内容根内任何目录都能加载。
     //编辑器回到上次编辑的场景；它已经被删或被改名时退回启动场景，
     //老项目没有 lastWorld 属性，同样走这条回退。
     std::string openedWorld = parsedStartupWorld;
-    if (!parsedLastWorld.empty() && std::filesystem::is_regular_file(contentRoot / Utf8Path::FromUtf8(parsedLastWorld)))
+    if (!parsedLastWorld.empty() && std::filesystem::is_regular_file(contentRoot / InteropText::PathFromUtf8(parsedLastWorld)))
     {
         openedWorld = parsedLastWorld;
     }
@@ -764,15 +764,15 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
         return false;
     }
 
-    std::filesystem::path relative = Utf8Path::FromUtf8(relativePath).lexically_normal();
+    std::filesystem::path relative = InteropText::PathFromUtf8(relativePath).lexically_normal();
     if (relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".world")
     {
         lastError = "Expected a Content-relative .world key.";
         return false;
     }
 
-    std::string worldPath = ToCleanPath(Utf8Path::FromUtf8(GetContentRootPath()) / Utf8Path::FromUtf8(relativePath));
-    if (!std::filesystem::exists(Utf8Path::FromUtf8(worldPath)))
+    std::string worldPath = ToCleanPath(InteropText::PathFromUtf8(GetContentRootPath()) / InteropText::PathFromUtf8(relativePath));
+    if (!std::filesystem::exists(InteropText::PathFromUtf8(worldPath)))
     {
         lastError = "World does not exist: " + relativePath;
         Log::Error(lastError.c_str());
@@ -792,7 +792,7 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
         return false;
     }
 
-    currentWorld = ToCleanPath(Utf8Path::FromUtf8(relativePath));
+    currentWorld = ToCleanPath(InteropText::PathFromUtf8(relativePath));
     worldLoaded = true;
     lastError.clear();
 
@@ -825,10 +825,10 @@ const std::string& EditorProject::GetStartupWorldKey() const
 //设置并持久化启动 World
 bool EditorProject::SetStartupWorld(const std::string& key)
 {
-    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    std::filesystem::path relative = InteropText::PathFromUtf8(key).lexically_normal();
     if (!HasProject() || relative.empty() || relative.has_root_path()
         || *relative.begin() == ".." || relative.extension() != ".world"
-        || !std::filesystem::is_regular_file(Utf8Path::FromUtf8(GetContentRootPath()) / relative))
+        || !std::filesystem::is_regular_file(InteropText::PathFromUtf8(GetContentRootPath()) / relative))
     {
         lastError = "Expected an existing Content-relative .world key.";
         return false;
@@ -879,21 +879,21 @@ bool EditorProject::RemapWorldKeys(const std::string& oldKey, const std::string&
 //创建带默认渲染设置的空 World
 bool EditorProject::CreateWorld(const std::string& key)
 {
-    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    std::filesystem::path relative = InteropText::PathFromUtf8(key).lexically_normal();
     if (!HasProject() || relative.empty() || relative.has_root_path()
         || *relative.begin() == ".." || relative.extension() != ".world")
     {
         lastError = "Expected a Content-relative .world key.";
         return false;
     }
-    std::filesystem::path destination = Utf8Path::FromUtf8(GetContentRootPath()) / relative;
+    std::filesystem::path destination = InteropText::PathFromUtf8(GetContentRootPath()) / relative;
     if (std::filesystem::exists(destination) || !std::filesystem::is_directory(destination.parent_path()))
     {
         lastError = "World already exists or its folder is missing.";
         return false;
     }
     World empty;
-    if (!WorldSerializer::SaveXml(empty, Utf8Path::ToUtf8(destination)))
+    if (!WorldSerializer::SaveXml(empty, InteropText::PathToUtf8(destination)))
     {
         lastError = "Cannot write World: " + key;
         return false;
@@ -930,7 +930,7 @@ bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
         return false;
     }
 
-    if (!WriteEditorLayoutToProjectFile(Utf8Path::FromUtf8(projectFilePath), layout))
+    if (!WriteEditorLayoutToProjectFile(InteropText::PathFromUtf8(projectFilePath), layout))
     {
         lastError = "Editor layout save failed: " + projectFilePath;
         Log::Error(lastError.c_str());
@@ -961,25 +961,25 @@ const std::string& EditorProject::GetProjectName() const
 std::string EditorProject::GetContentRootPath() const
 {
     if (projectRoot.empty()) return std::string();
-    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::ContentFolder);
+    return ToCleanPath(InteropText::PathFromUtf8(projectRoot) / ProjectLayout::ContentFolder);
 }
 
 std::string EditorProject::GetManagedRootPath() const
 {
     if (projectRoot.empty()) return std::string();
-    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::ManagedFolder);
+    return ToCleanPath(InteropText::PathFromUtf8(projectRoot) / ProjectLayout::ManagedFolder);
 }
 
 std::string EditorProject::GetNativeBuildPath() const
 {
     if (projectRoot.empty()) return std::string();
-    return ToCleanPath(Utf8Path::FromUtf8(projectRoot) / ProjectLayout::NativeBuildFolder);
+    return ToCleanPath(InteropText::PathFromUtf8(projectRoot) / ProjectLayout::NativeBuildFolder);
 }
 
 std::string EditorProject::GetWorldPath() const
 {
     if (projectRoot.empty() || currentWorld.empty()) return std::string();
-    return ToCleanPath(Utf8Path::FromUtf8(GetContentRootPath()) / Utf8Path::FromUtf8(currentWorld));
+    return ToCleanPath(InteropText::PathFromUtf8(GetContentRootPath()) / InteropText::PathFromUtf8(currentWorld));
 }
 
 //获取项目文件完整路径

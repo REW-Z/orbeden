@@ -100,7 +100,7 @@ public static class EditorRuntime
     {
         if (initializationErrorPointer != IntPtr.Zero) Marshal.FreeHGlobal(initializationErrorPointer);
 
-        byte[] bytes = Encoding.UTF8.GetBytes(message);
+        byte[] bytes = InteropText.EncodeUtf8(message);
         initializationErrorPointer = Marshal.AllocHGlobal(bytes.Length);
         Marshal.Copy(bytes, 0, initializationErrorPointer, bytes.Length);
         initializationErrorLength = bytes.Length;
@@ -210,7 +210,7 @@ public static class EditorRuntime
     {
         try
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(EditorAssetCache.EncodeAllSettings());
+            byte[] bytes = InteropText.EncodeUtf8(EditorAssetCache.EncodeAllSettings());
             if (output != null && capacity >= bytes.Length) bytes.CopyTo(new Span<byte>(output, capacity));
             return bytes.Length;
         }
@@ -255,7 +255,7 @@ public static class EditorRuntime
     public static unsafe byte LoadScriptAssembly(byte* assemblyPath, int assemblyPathLength)
     {
         if (assemblyPath == null || assemblyPathLength <= 0) return 0;
-        string path = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(assemblyPath, assemblyPathLength));
+        string path = InteropText.DecodeUtf8(new ReadOnlySpan<byte>(assemblyPath, assemblyPathLength));
         return GameScriptRuntime.LoadAssembly(path, typeof(OrbedenEditor.ComponentEditor).Assembly) ? (byte)1 : (byte)0;
     }
 
@@ -474,7 +474,7 @@ public static class EditorRuntime
     private static unsafe string ReadUtf8(byte* text, int length)
     {
         if (text == null || length <= 0) return string.Empty;
-        return Encoding.UTF8.GetString(new ReadOnlySpan<byte>(text, length));
+        return InteropText.DecodeUtf8(new ReadOnlySpan<byte>(text, length));
     }
 
     //读取以 NUL 分隔并与 Ens 选择列表对齐的 UTF-8 字符串。
@@ -486,12 +486,12 @@ public static class EditorRuntime
         for (int index = 0; index < length && result.Count < expectedCount; ++index)
         {
             if (value[index] != 0) continue;
-            result.Add(Encoding.UTF8.GetString(new ReadOnlySpan<byte>(value + start, index - start)));
+            result.Add(InteropText.DecodeUtf8(new ReadOnlySpan<byte>(value + start, index - start)));
             start = index + 1;
         }
         if (start < length && result.Count < expectedCount)
         {
-            result.Add(Encoding.UTF8.GetString(new ReadOnlySpan<byte>(value + start, length - start)));
+            result.Add(InteropText.DecodeUtf8(new ReadOnlySpan<byte>(value + start, length - start)));
         }
         while (result.Count < expectedCount) result.Add(string.Empty);
         return result;
@@ -504,8 +504,7 @@ public static class EditorRuntime
 
         Span<byte> output = new(buffer, bufferSize);
         output.Clear();
-        Encoding.UTF8.GetEncoder().Convert(text.AsSpan(), output[..^1], true, out _, out int bytesUsed, out _);
-        output[bytesUsed] = 0;
+        InteropText.WriteUtf8Terminated(text.AsSpan(), output);
     }
 
     //在读取 C++ Editor 函数表前验证托管 ABI 的固定尺寸。

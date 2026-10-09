@@ -53,7 +53,7 @@ internal static unsafe class EditorAssetsNative
     /// <summary>从导入缓存加载单个对象及其引用依赖。</summary>
     internal static Orbeden.Object? LoadCachedAsset(string path, string key)
     {
-        byte[] pathBytes = Encoding.UTF8.GetBytes(path), keyBytes = Encoding.UTF8.GetBytes(key);
+        byte[] pathBytes = InteropText.EncodeUtf8(path), keyBytes = InteropText.EncodeUtf8(key);
         fixed (byte* source = pathBytes)
         fixed (byte* identity = keyBytes)
             return NativeBindingRuntime.Wrap<Orbeden.Object>(api.LoadCachedAsset(api.Context, source, pathBytes.Length, identity, keyBytes.Length));
@@ -61,7 +61,7 @@ internal static unsafe class EditorAssetsNative
     //实例化预制体、恢复子树快照或按快照复制子树
     internal static Ens InstantiatePrefab(string text, PrefabSource source, EnsId parent, EnsId before)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        byte[] bytes = InteropText.EncodeUtf8(text);
         fixed (byte* pointer = bytes)
             return NativeBindingRuntime.Wrap<Ens>(api.InstantiatePrefab(api.Context, pointer, bytes.Length,
                 (byte)source, parent, before)) ?? Ens.Null;
@@ -70,7 +70,7 @@ internal static unsafe class EditorAssetsNative
     //把材质资产写回它的源文件；失败原因由原生侧写进 Console
     internal static bool SaveMaterial(int objectId, string key)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* pointer = bytes) return api.SaveMaterial(api.Context, objectId, pointer, bytes.Length) != 0;
     }
 
@@ -81,7 +81,7 @@ internal static unsafe class EditorAssetsNative
         int length = api.CaptureEns(api.Context, root, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.CaptureEns(api.Context, root, pointer, length);
-        return Encoding.UTF8.GetString(bytes);
+        return InteropText.DecodeUtf8(bytes);
     }
 
     //销毁子树中的全部对象
@@ -90,7 +90,7 @@ internal static unsafe class EditorAssetsNative
     //在当前 World 根下创建空 Ens
     internal static Ens CreateEns(string name)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(name);
+        byte[] bytes = InteropText.EncodeUtf8(name);
         fixed (byte* pointer = bytes)
             return NativeBindingRuntime.Wrap<Ens>(api.CreateEns(api.Context, pointer, bytes.Length)) ?? Ens.Null;
     }
@@ -99,8 +99,8 @@ internal static unsafe class EditorAssetsNative
     //settings 是 "源Key\t设置名\t值" 行表，取自资源旁 .resinfo；为空表示全部按语义推断。
     internal static int ReimportAsset(string resourceKey, bool prefix, string settings = "")
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(resourceKey);
-        byte[] settingsBytes = Encoding.UTF8.GetBytes(settings ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(resourceKey);
+        byte[] settingsBytes = InteropText.EncodeUtf8(settings ?? string.Empty);
         fixed (byte* pointer = bytes)
         fixed (byte* settingsPointer = settingsBytes)
             return api.ReimportAsset(api.Context, pointer, bytes.Length, prefix ? (byte)1 : (byte)0,
@@ -110,7 +110,7 @@ internal static unsafe class EditorAssetsNative
     //强制重新导入全部已加载资源，返回处理的源文件数
     internal static int ReimportAllAssets(string settings = "")
     {
-        byte[] settingsBytes = Encoding.UTF8.GetBytes(settings ?? string.Empty);
+        byte[] settingsBytes = InteropText.EncodeUtf8(settings ?? string.Empty);
         fixed (byte* settingsPointer = settingsBytes)
             return api.ReimportAllAssets(api.Context, settingsPointer, settingsBytes.Length);
     }
@@ -119,7 +119,7 @@ internal static unsafe class EditorAssetsNative
     internal static bool SavePrefab(string source, string key)
     {
         ScriptRuntimeRegistry.FlushHostFields();
-        byte[] sourceBytes = Encoding.UTF8.GetBytes(source), keyBytes = Encoding.UTF8.GetBytes(key);
+        byte[] sourceBytes = InteropText.EncodeUtf8(source), keyBytes = InteropText.EncodeUtf8(key);
         fixed (byte* sourcePointer = sourceBytes)
         fixed (byte* keyPointer = keyBytes)
             return api.SavePrefab(api.Context, sourcePointer, sourceBytes.Length, keyPointer, keyBytes.Length) != 0;
@@ -131,7 +131,7 @@ internal static unsafe class EditorAssetsNative
         int length = api.GetWorldKey(api.Context, startup ? (byte)1 : (byte)0, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.GetWorldKey(api.Context, startup ? (byte)1 : (byte)0, pointer, length);
-        return Encoding.UTF8.GetString(bytes);
+        return InteropText.DecodeUtf8(bytes);
     }
 
     //读取项目操作失败原因
@@ -140,7 +140,7 @@ internal static unsafe class EditorAssetsNative
         int length = api.GetProjectError(api.Context, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.GetProjectError(api.Context, pointer, length);
-        return Encoding.UTF8.GetString(bytes);
+        return InteropText.DecodeUtf8(bytes);
     }
 
     //保存当前编辑 World
@@ -153,21 +153,21 @@ internal static unsafe class EditorAssetsNative
     //设置启动 World
     internal static bool SetStartupWorld(string key)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* pointer = bytes) return api.SetStartupWorld(api.Context, pointer, bytes.Length) != 0;
     }
 
     //创建默认空 World 文件
     internal static bool CreateWorld(string key)
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* pointer = bytes) return api.CreateWorld(api.Context, pointer, bytes.Length) != 0;
     }
 
     //同步移动或删除后的 World 配置
     internal static bool RemapWorldKeys(string oldKey, string newKey, bool prefix)
     {
-        byte[] oldBytes = Encoding.UTF8.GetBytes(oldKey), newBytes = Encoding.UTF8.GetBytes(newKey);
+        byte[] oldBytes = InteropText.EncodeUtf8(oldKey), newBytes = InteropText.EncodeUtf8(newKey);
         fixed (byte* oldPointer = oldBytes)
         fixed (byte* newPointer = newBytes)
             return api.RemapWorldKeys(api.Context, oldPointer, oldBytes.Length, newPointer, newBytes.Length, prefix ? (byte)1 : (byte)0) != 0;
@@ -184,8 +184,8 @@ internal static unsafe class EditorAssetsNative
     {
         if (api.RemapLiveReferences == null || string.IsNullOrEmpty(oldKey)) return 0;
 
-        byte[] oldBytes = Encoding.UTF8.GetBytes(oldKey);
-        byte[] newBytes = Encoding.UTF8.GetBytes(newKey ?? string.Empty);
+        byte[] oldBytes = InteropText.EncodeUtf8(oldKey);
+        byte[] newBytes = InteropText.EncodeUtf8(newKey ?? string.Empty);
         fixed (byte* oldPointer = oldBytes)
         fixed (byte* newPointer = newBytes)
         {
@@ -203,7 +203,7 @@ internal static unsafe class EditorAssetsNative
     {
         if (api.OpenWorld == null || string.IsNullOrEmpty(relativeKey)) return false;
 
-        byte[] keyBytes = Encoding.UTF8.GetBytes(relativeKey);
+        byte[] keyBytes = InteropText.EncodeUtf8(relativeKey);
         fixed (byte* keyPointer = keyBytes)
         {
             return api.OpenWorld(api.Context, keyPointer, keyBytes.Length) != 0;

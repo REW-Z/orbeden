@@ -64,7 +64,7 @@ internal static class EditorDisplaySettings
         try
         {
             string text = Header + "\nexposure\t" + exposure.ToString("R", CultureInfo.InvariantCulture) + "\n";
-            File.WriteAllText(temporary, text, new UTF8Encoding(false));
+            File.WriteAllText(temporary, text, InteropText.CreateUtf8Encoding(false));
             File.Move(temporary, path, true);
             loadedRoot = "\0";
             Refresh();

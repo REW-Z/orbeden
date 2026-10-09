@@ -1,19 +1,36 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Orbeden;
 using OrbedenEditor;
 
 namespace OrbedenEditor;
 
 /// <summary>
-/// 控件编辑器：交互配置加一张事件表。事件表一行就是一个绑定，
-/// 四个字段改动一起提交为一条事务；无效引用与无效方法只标出来，不自动删除。
+/// 控件编辑器：交互配置加一张事件表。事件表一行就是一个绑定：目标用引用框选，
+/// 组件与方法合成一个 Function 选择器，改任何一项都记一条事务；无效引用与无效方法只标出来，不自动删除。
 /// </summary>
 [CustomEditor(typeof(UIControl), true)]
 public sealed class UIControlEditor : ComponentEditor
 {
     //遍历期间不能改列表：删除请求先记下来，遍历结束后统一处理。
     private int pendingRemove = -1;
+
+    //行身份按绑定对象发，不按列表下标：选择器是模态弹窗，开着的时候 Ctrl+Z 依然生效，
+    //下标身份会让弹窗落到另一条绑定上。对象没了，行号跟着一起回收。
+    private static readonly ConditionalWeakTable<UIEventBinding, RowToken> rowTokens = new();
+    private static int nextRowToken = 1;
+
+    private sealed class RowToken
+    {
+        internal int Value;
+    }
+
+    //Function 选择器的候选项与搜索词。只存字符串：换世界或换程序集之后残留的选项不会指向失效对象。
+    private static readonly List<FunctionChoice> functionChoices = [];
+    private static string functionSearch = string.Empty;
+
+    private sealed record FunctionChoice(string Group, string Text, string TypeName, string Method);
 
     /// <summary>绘制控件检视面板。</summary>
     public override void OnDrawInspector()
@@ -69,7 +86,7 @@ public sealed class UIControlEditor : ComponentEditor
             pendingRemove = -1;
             UIEventBinding removed = bindings[at];
             bindings.RemoveAt(at);
-            EditorPropertyHistory.RecordAction("Remove UI Event",
+            ApplyBindingChange("Remove UI Event",
                 () => bindings.Insert(at, removed), () => bindings.Remove(removed));
         }
 
@@ -77,14 +94,14 @@ public sealed class UIControlEditor : ComponentEditor
         UIEventBinding added = control.AddBinding();
         added.SetTarget(Target.EnsId);
         added.SetEventId(UIEventIds.Clicked);
-        EditorPropertyHistory.RecordAction("Add UI Event",
+        ApplyBindingChange("Add UI Event",
             () => bindings.Remove(added), () => bindings.Add(added));
     }
 
     private void DrawRow(List<UIEventBinding> bindings, int index)
     {
         UIEventBinding binding = bindings[index];
-        EditorGUI.PushId($"ui_event_{index}");
+        EditorGUI.PushId(RowId(binding));
         try
         {
             EditorGUI.Separator();
@@ -93,17 +110,13 @@ public sealed class UIControlEditor : ComponentEditor
             {
                 bool previous = binding.IsEnabled();
                 binding.SetEnabled(enabled);
-                EditorPropertyHistory.RecordAction("UI Event Enabled",
+                ApplyBindingChange("UI Event Enabled",
                     () => binding.SetEnabled(previous), () => binding.SetEnabled(enabled));
             }
             EditorGUI.Label("Event");
-            DrawEventColumn(binding, index);
-            EditorGUI.Label("Target Node ID");
-            DrawTargetColumn(binding, index);
-            EditorGUI.Label("Component Type");
-            DrawComponentColumn(binding, index);
-            EditorGUI.Label("Method");
-            DrawMethodColumn(binding, index);
+            DrawEventColumn(binding);
+            DrawTargetRow(binding);
+            DrawFunctionRow(binding);
             if (EditorGUI.Button("Remove")) pendingRemove = index;
 
             //无效引用与方法只提示，不自动删除：作者可能正要改目标。
@@ -116,10 +129,21 @@ public sealed class UIControlEditor : ComponentEditor
         }
     }
 
-    //事件列：下拉里列出全部已登记事件。
-    private void DrawEventColumn(UIEventBinding binding, int index)
+    //绑定对象到行号：同一帧里每一行都有稳定且互不相同的 ID，撤销改动列表时弹窗不会漂到别的行上。
+    private static string RowId(UIEventBinding binding)
     {
-        if (!EditorGUI.BeginCombo($"##event{index}", UIEventIds.GetName(binding.GetEventId())))
+        if (!rowTokens.TryGetValue(binding, out RowToken? token))
+        {
+            token = new RowToken { Value = nextRowToken++ };
+            rowTokens.Add(binding, token);
+        }
+        return "ui_event_" + token.Value;
+    }
+
+    //事件列：下拉里列出全部已登记事件。
+    private void DrawEventColumn(UIEventBinding binding)
+    {
+        if (!EditorGUI.BeginCombo("##event", UIEventIds.GetName(binding.GetEventId())))
         {
             return;
         }
@@ -133,125 +157,191 @@ public sealed class UIControlEditor : ComponentEditor
         EditorGUI.EndCombo();
     }
 
-    //目标列：填目标 Ens 的稳定 ID；留空表示与控件同节点。
-    private void DrawTargetColumn(UIEventBinding binding, int index)
+    //目标列：引用框选节点，支持层级拖拽、搜索选择器、清空与双击定位。
+    private void DrawTargetRow(UIEventBinding binding)
     {
-        (string target, string component, string method) = RowEdit(index, binding);
-        if (EditorGUI.InputText($"##target{index}", ref target, 120.0f))
+        EnsId id = binding.GetTarget();
+        Ens owner = Ens.FromId(id);
+        //悬空引用写成占位串，引用框显示成 Missing，而不是冒充"没设目标"。
+        string key = owner.IsValid ? owner.ResourceKey : id.IsNull ? string.Empty : "Missing Ens " + id;
+        int objectId = 0;
+        if (!EditorObjectField.Draw("Target", "Ens", ref key, ref objectId, ensHandle: true)) return;
+        CommitTarget(binding, key.Length == 0 ? EnsId.Null : Ens.Find(key).Id);
+    }
+
+    //功能列：一个字段显示"[C#] 脚本 / 方法"，点开是按脚本分组的选择器；组件类型随方法一起写定。
+    private void DrawFunctionRow(UIEventBinding binding)
+    {
+        string method = binding.GetMethod();
+        string text = method.Length == 0 ? "No Function" : DescribeFunction(binding, method);
+        EditorGUI.Label("Function");
+        EditorGUI.SameLine();
+        //动作码：1 单击、3 省略号、4 双击（EditorGuiReferenceField）。
+        int action = NativeEditorGUI.ReferenceField("CSharpScript", text, "function");
+        switch (action)
         {
-            if (int.TryParse(target, out int parsed)) CommitTarget(binding, parsed);
+        case 2:
+            CommitFunction(binding, binding.GetTargetType(), string.Empty);
+            break;
+        case 4:
+            Ens owner = Ens.FromId(binding.GetTarget());
+            if (owner.IsValid) EnsPanel.Ping(owner.ResourceKey);
+            break;
+        case 1:
+        case 3:
+            CollectFunctionChoices(binding.GetTarget());
+            functionSearch = string.Empty;
+            NativeEditorGUI.OpenPopup("ui_function_picker");
+            break;
         }
-    }
 
-    //组件列：目标组件在托管侧的类型全名；留空表示在全部脚本里找。
-    private void DrawComponentColumn(UIEventBinding binding, int index)
-    {
-        (string target, string component, string method) = RowEdit(index, binding);
-        if (!EditorGUI.InputText($"##component{index}", ref component, 160.0f)) return;
-        string previous = binding.GetTargetType();
-        if (previous == component) return;
-        binding.SetTargetType(component);
-        EditorPropertyHistory.RecordAction("UI Event Component",
-            () => binding.SetTargetType(previous), () => binding.SetTargetType(component));
-    }
-
-    //方法列：目标能解析时给下拉，列出签名匹配的方法；解析不出来退回文本框手填。
-    private void DrawMethodColumn(UIEventBinding binding, int index)
-    {
-        (string target, string component, string method) = RowEdit(index, binding);
-        if (TryCollectMethods(binding, out List<BindableMethod>? candidates))
+        if (!NativeEditorGUI.BeginPopup("ui_function_picker")) return;
+        try
         {
-            //下拉里只放能直接当事件回调的方法：返回空、参数不超过一个且是载荷支持的种类。
-            if (!EditorGUI.BeginCombo($"##method{index}", method.Length == 0 ? "(unset)" : method))
+            EditorGUI.InputText("Search##ui_function_search", ref functionSearch);
+            float width = 440;
+            bool visible = NativeEditorGUI.BeginChild("##ui_function_choices", ref width, 300);
+            try
             {
-                return;
+                if (visible) DrawFunctionChoices(binding);
             }
-            foreach (BindableMethod candidate in candidates!)
-            {
-                if (!EditorGUI.Selectable(Describe(candidate), candidate.Name == method)) continue;
-                CommitMethod(binding, index, target, component, candidate.Name);
-            }
-            EditorGUI.EndCombo();
+            finally { NativeEditorGUI.EndChild(); }
+            if (EditorGUI.Button("Cancel##ui_function_cancel")) NativeEditorGUI.ClosePopup();
+        }
+        finally { EditorGUI.EndPopup(); }
+    }
+
+    //选择器内容：先 (None)，再按脚本分组列可绑定方法；重名方法与同名脚本都靠 ## 后缀区分。
+    private static void DrawFunctionChoices(UIEventBinding binding)
+    {
+        if (EditorGUI.Selectable("(None)##ui_function_none", binding.GetMethod().Length == 0))
+        {
+            CommitFunction(binding, binding.GetTargetType(), string.Empty);
+            NativeEditorGUI.ClosePopup();
             return;
         }
 
-        if (!EditorGUI.InputText($"##method{index}", ref method, 140.0f)) return;
-        CommitMethod(binding, index, target, component, method);
+        string printedGroup = string.Empty;
+        foreach (FunctionChoice choice in functionChoices)
+        {
+            if (!MatchesSearch(choice)) continue;
+            //组头跟着第一条可见项出现，搜索滤空的分组不留空标题。
+            if (choice.Group != printedGroup)
+            {
+                printedGroup = choice.Group;
+                EditorGUI.Label(printedGroup);
+            }
+            bool selected = binding.GetMethod() == choice.Method && binding.GetTargetType() == choice.TypeName;
+            if (!EditorGUI.Selectable($"{choice.Text}##{choice.TypeName}.{choice.Method}", selected)) continue;
+            CommitFunction(binding, choice.TypeName, choice.Method);
+            NativeEditorGUI.ClosePopup();
+            return;
+        }
     }
 
-    //把绑定的目标解析成脚本实例，再按元数据列出可绑定的方法。
-    private static bool TryCollectMethods(UIEventBinding binding, out List<BindableMethod>? methods)
-    {
-        methods = null;
-        EnsId target = binding.GetTarget();
-        Ens owner = target.IsNull ? Ens.Null : Ens.FromId(target);
-        if (!owner.IsValid) return false;
+    private static bool MatchesSearch(FunctionChoice choice) =>
+        choice.Text.Contains(functionSearch, StringComparison.OrdinalIgnoreCase);
 
+    //按目标节点重建候选：只收托管脚本。C++ 脚本没有托管宿主句柄，
+    //ComponentProxy.FromComponent 返回空（ComponentProxy.cs），列出来运行期也调不动。
+    private static void CollectFunctionChoices(EnsId target)
+    {
+        functionChoices.Clear();
+        Ens owner = Ens.FromId(target);
+        if (!owner.IsValid) return;
+
+        List<string> visitedTypes = [];
+        foreach (Script script in owner.GetComponents<Script>())
+        {
+            if (script == null || !NativeBindingRuntime.IsManagedScript(script.GetType())) continue;
+            string typeName = script.GetType().FullName ?? string.Empty;
+            if (typeName.Length == 0 || visitedTypes.Contains(typeName)) continue;
+            visitedTypes.Add(typeName);
+
+            string group = "[C#] " + ShortName(typeName);
+            List<string> visitedMethods = [];
+            foreach (BindableMethod candidate in ComponentProxy.DescribeMethods(script))
+            {
+                //重载只留一个：运行期按名字匹配、不看参数种类，列出重载等于给出运行期区分不了的选项。
+                //DescribeMethods 按名字与参数个数排序，第一个匹配的正是运行期会选中的那个。
+                if (!IsBindableMethod(candidate) || visitedMethods.Contains(candidate.Name)) continue;
+                visitedMethods.Add(candidate.Name);
+                //带参数的把参数种类写出来：那个参数由事件载荷按种类灌进去，作者得知道要接的是哪一种。
+                string label = candidate.ParameterKinds.Count == 0
+                    ? candidate.Name : $"{candidate.Name}({candidate.ParameterKinds[0]})";
+                functionChoices.Add(new FunctionChoice(group, $"{group} / {label}", typeName, candidate.Name));
+            }
+        }
+    }
+
+    //字段显示名与运行期解析一致：先按类型全名精确匹配，否则在目标的脚本里找第一个带该方法的。
+    private static string DescribeFunction(UIEventBinding binding, string method)
+    {
         string typeName = binding.GetTargetType();
+        string fallback = typeName.Length == 0 ? method : $"[C#] {ShortName(typeName)} / {method}";
+        Ens owner = Ens.FromId(binding.GetTarget());
+        if (!owner.IsValid) return fallback + " (missing)";
+
         foreach (Script script in owner.GetComponents<Script>())
         {
             if (script == null) continue;
-            if (typeName.Length != 0 && !string.Equals(script.GetType().FullName, typeName, StringComparison.Ordinal)) continue;
-            methods = [];
-            foreach (BindableMethod candidate in ComponentProxy.DescribeMethods(script))
-            {
-                if (candidate.ReturnKind != InteropValueKind.Empty) continue;
-                if (candidate.ParameterKinds.Count > 1) continue;
-                if (candidate.ParameterKinds.Count == 1 && !IsSupportedParameter(candidate.ParameterKinds[0])) continue;
-                methods.Add(candidate);
-            }
-            return true;
+            string scriptType = script.GetType().FullName ?? string.Empty;
+            if (typeName.Length != 0 && scriptType != typeName) continue;
+            if (!HasBindableMethod(script, method)) continue;
+            return $"[C#] {ShortName(scriptType)} / {method}";
+        }
+        return fallback + " (missing)";
+    }
+
+    private static bool HasBindableMethod(Script script, string method)
+    {
+        foreach (BindableMethod candidate in ComponentProxy.DescribeMethods(script))
+        {
+            if (candidate.Name == method && IsBindableMethod(candidate)) return true;
         }
         return false;
     }
 
-    //下拉里的显示名：带参数的方法把参数种类写出来，重载就不会看起来一模一样。
-    private static string Describe(BindableMethod method) =>
-        method.ParameterKinds.Count == 0 ? method.Name : $"{method.Name}({method.ParameterKinds[0]})";
+    //能当事件回调的方法：返回空、参数不超过一个且是载荷支持的种类。
+    private static bool IsBindableMethod(BindableMethod method)
+    {
+        if (method.ReturnKind != InteropValueKind.Empty) return false;
+        if (method.ParameterKinds.Count > 1) return false;
+        return method.ParameterKinds.Count == 0 || IsSupportedParameter(method.ParameterKinds[0]);
+    }
 
     private static bool IsSupportedParameter(InteropValueKind kind) =>
         kind is InteropValueKind.Bool or InteropValueKind.Float32 or InteropValueKind.Int32
             or InteropValueKind.Vector2 or InteropValueKind.String;
 
-    //方法名改动记一条撤销；下拉与文本框两条路径共用。
-    private void CommitMethod(UIEventBinding binding, int index, string target, string component, string method)
+    //取类型名去掉命名空间后的短名；嵌套类型用 + 分隔，也要切掉。
+    private static string ShortName(string typeName)
     {
-        string previous = binding.GetMethod();
-        if (previous == method) return;
-        binding.SetMethod(method);
-        EditorPropertyHistory.RecordAction("UI Event Method",
-            () => binding.SetMethod(previous), () => binding.SetMethod(method));
+        int separator = Math.Max(typeName.LastIndexOf('.'), typeName.LastIndexOf('+'));
+        return separator >= 0 ? typeName[(separator + 1)..] : typeName;
     }
 
-    //读取当前绑定值并跟随撤销结果
-    private (string Target, string Component, string Method) RowEdit(int index, UIEventBinding binding)
-    {
-        (string, string, string) created = (
-            binding.GetTarget().IsNull ? string.Empty : binding.GetTarget().id.ToString(),
-            binding.GetTargetType(),
-            binding.GetMethod());
-        return created;
-    }
-
-    private void CommitTarget(UIEventBinding binding, int targetId)
+    //整份 id 加 version 一起写：World::GetEns 校验版本号，只改 id 的目标永远解析不到。
+    private static void CommitTarget(UIEventBinding binding, EnsId next)
     {
         EnsId previous = binding.GetTarget();
-        EnsId next = previous;
-        next.id = unchecked((uint)targetId);
-        if (previous.id == next.id) return;
+        if (previous.id == next.id && previous.version == next.version) return;
         binding.SetTarget(next);
-        EditorPropertyHistory.RecordAction("UI Event Target",
+        ApplyBindingChange("UI Event Target",
             () => binding.SetTarget(previous), () => binding.SetTarget(next));
     }
 
-    //无效引用与方法：只报出来，交给作者决定。
-    private string? DescribeProblem(UIEventBinding binding)
+    //组件类型与方法是一次选择的两个部分，合成同一条撤销。
+    private static void CommitFunction(UIEventBinding binding, string typeName, string method)
     {
-        if (binding.GetMethod().Length == 0) return "No method set.";
-        EnsId target = binding.GetTarget();
-        if (target.IsNull) return null;
-        if (!Ens.FromId(target).IsValid) return "Target node no longer exists.";
-        return binding.IsResolvable() ? null : "No method on the target matches the signature.";
+        string previousType = binding.GetTargetType();
+        string previousMethod = binding.GetMethod();
+        if (previousType == typeName && previousMethod == method) return;
+        binding.SetTargetType(typeName);
+        binding.SetMethod(method);
+        ApplyBindingChange("UI Event Function",
+            () => { binding.SetTargetType(previousType); binding.SetMethod(previousMethod); },
+            () => { binding.SetTargetType(typeName); binding.SetMethod(method); });
     }
 
     //事件标识的改动同样记一条撤销。
@@ -260,7 +350,26 @@ public sealed class UIControlEditor : ComponentEditor
         int previous = binding.GetEventId();
         if (previous == next) return;
         binding.SetEventId(next);
-        EditorPropertyHistory.RecordAction("UI Event",
+        ApplyBindingChange("UI Event",
             () => binding.SetEventId(previous), () => binding.SetEventId(next));
+    }
+
+    //绑定的改动不进属性文档，所以脏标记得自己补：不然保存提示不亮。
+    private static void ApplyBindingChange(string label, Action undo, Action redo)
+    {
+        EditorApplication.MarkWorldDirty();
+        EditorPropertyHistory.RecordAction(label,
+            () => { undo(); EditorApplication.MarkWorldDirty(); },
+            () => { redo(); EditorApplication.MarkWorldDirty(); });
+    }
+
+    //无效引用与方法：只报出来，交给作者决定。目标为空也报——运行期拿不到目标就解析不了。
+    private static string? DescribeProblem(UIEventBinding binding)
+    {
+        EnsId target = binding.GetTarget();
+        if (target.IsNull) return "No target node set.";
+        if (!Ens.FromId(target).IsValid) return "Target node no longer exists.";
+        if (binding.GetMethod().Length == 0) return "No function set.";
+        return binding.IsResolvable() ? null : "No method on the target matches the signature.";
     }
 }

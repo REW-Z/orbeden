@@ -1,4 +1,4 @@
-﻿#include "Editor/EditorSystem.h"
+#include "Editor/EditorSystem.h"
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -9,7 +9,7 @@
 #include "Editor/ProjectUpdate.h"
 #include "InputManager/InputManager.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
 #include "Rendering/RenderSystem.h"
 #include "ResourceManager/ResourceManager.h"
@@ -149,7 +149,7 @@ namespace
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     void CopyToBuffer(char* buffer, std::size_t bufferSize, const std::string& value)
@@ -165,12 +165,12 @@ namespace
     {
         List<std::string> result;
         std::error_code error;
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(directory), error))
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(InteropText::PathFromUtf8(directory), error))
         {
             if (error) break;
             if (!entry.is_directory()) continue;
 
-            result.push_back(Utf8Path::ToUtf8(entry.path().filename()));
+            result.push_back(InteropText::PathToUtf8(entry.path().filename()));
         }
 
         std::sort(result.begin(), result.end());
@@ -223,13 +223,13 @@ namespace
 
     std::string GetParentDirectory(const std::string& path)
     {
-        std::filesystem::path value = Utf8Path::FromUtf8(path);
+        std::filesystem::path value = InteropText::PathFromUtf8(path);
         return ToCleanPath(value.has_parent_path() ? value.parent_path() : std::filesystem::current_path());
     }
 
     bool FileExists(const std::string& path)
     {
-        return !path.empty() && std::filesystem::exists(Utf8Path::FromUtf8(path));
+        return !path.empty() && std::filesystem::exists(InteropText::PathFromUtf8(path));
     }
 
     //扫描一棵源码树，判断有没有比给定时间更新的脚本源；excludedPrefixes 里的子树整体跳过。
@@ -282,7 +282,7 @@ namespace
         const std::string& assemblyPath)
     {
         if (projectRoot.empty() || assemblyPath.empty()) return false;
-        std::filesystem::path assembly = Utf8Path::FromUtf8(assemblyPath);
+        std::filesystem::path assembly = InteropText::PathFromUtf8(assemblyPath);
         if (!std::filesystem::exists(assembly)) return true;
 
         std::error_code error;
@@ -291,7 +291,7 @@ namespace
 
         //编辑扩展与运行时程序集同批产出：缺了就说明这次构建不完整，按过期处理。
         std::filesystem::path editorAssembly = assembly.parent_path()
-            / Utf8Path::FromUtf8(Utf8Path::ToUtf8(assembly.stem()) + ".Editor.dll");
+            / InteropText::PathFromUtf8(InteropText::PathToUtf8(assembly.stem()) + ".Editor.dll");
         if (!std::filesystem::exists(editorAssembly)) return true;
         std::filesystem::file_time_type editorTime = std::filesystem::last_write_time(editorAssembly, error);
         if (error) return true;
@@ -302,12 +302,12 @@ namespace
         {
             "Build/", "Lib/", "Legacy/", ".vs/", ".git/",
         };
-        return HasNewerScriptSource(Utf8Path::FromUtf8(projectRoot), assemblyTime, excludedPrefixes);
+        return HasNewerScriptSource(InteropText::PathFromUtf8(projectRoot), assemblyTime, excludedPrefixes);
     }
 
     bool ScriptProjectUsesLocalRuntimeDll(const std::string& csproj)
     {
-        std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
+        std::string content = ReadTextFile(InteropText::PathFromUtf8(csproj));
         return content.find("Lib\\OrbedenCore.CSharp.dll") != std::string::npos
             || content.find("Lib/OrbedenCore.CSharp.dll") != std::string::npos;
     }
@@ -336,7 +336,7 @@ namespace
         return result;
 #else
         const char* value = std::getenv(name);
-        return value ? Utf8Path::FromUtf8(value) : std::filesystem::path();
+        return value ? InteropText::PathFromUtf8(value) : std::filesystem::path();
 #endif
     }
 
@@ -377,13 +377,6 @@ namespace
         return end == std::string::npos ? output.substr(begin) : output.substr(begin, end - begin);
     }
 
-    //命令行里的可执行文件路径必须使用系统首选分隔符：cmd 不认 Utf8Path::ToUtf8 的正斜杠通用格式。
-    std::string ToNativeUtf8(const std::filesystem::path& path)
-    {
-        std::u8string bytes = path.u8string();
-        return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-    }
-
     bool IsRegularFile(const std::filesystem::path& path)
     {
         std::error_code error;
@@ -417,7 +410,7 @@ namespace
     //PATH 上的 MSBuild.exe：从 Developer Command Prompt 启动编辑器时直接命中。
     std::filesystem::path FindMSBuildOnPath()
     {
-        std::string pathList = Utf8Path::ToUtf8(GetEnvironmentPath("PATH"));
+        std::string pathList = InteropText::PathToUtf8(GetEnvironmentPath("PATH"));
         std::size_t begin = 0;
         while (begin < pathList.size())
         {
@@ -432,7 +425,7 @@ namespace
             }
             if (!entry.empty())
             {
-                std::filesystem::path candidate = Utf8Path::FromUtf8(entry) / "MSBuild.exe";
+                std::filesystem::path candidate = InteropText::PathFromUtf8(entry) / "MSBuild.exe";
                 if (IsRegularFile(candidate)) return candidate;
             }
 
@@ -460,7 +453,7 @@ namespace
         std::filesystem::path vsWhere = GetVsWherePath();
         if (!IsRegularFile(vsWhere)) return std::string();
 
-        std::string command = Quote(ToNativeUtf8(vsWhere)) + " " + arguments + " -utf8";
+        std::string command = Quote(InteropText::PathToNativeUtf8(vsWhere)) + " " + arguments + " -utf8";
         return FirstOutputLine(CaptureCommandOutput(command));
     }
 
@@ -505,11 +498,11 @@ namespace
         {
             if (!IsRegularFile(overridePath))
             {
-                outError = "ORBEDEN_MSBUILD does not point to an existing file: " + ToNativeUtf8(overridePath);
+                outError = "ORBEDEN_MSBUILD does not point to an existing file: " + InteropText::PathToNativeUtf8(overridePath);
                 return false;
             }
 
-            outPath = ToNativeUtf8(overridePath.lexically_normal());
+            outPath = InteropText::PathToNativeUtf8(overridePath.lexically_normal());
             return true;
         }
 
@@ -530,7 +523,7 @@ namespace
         }
 
         //3) 校验实例自带的工具集：缺 v145 这类目标工具集时立刻说清楚，不必等到 MSB8020。
-        std::filesystem::path visualStudioRoot = Utf8Path::FromUtf8(installPath);
+        std::filesystem::path visualStudioRoot = InteropText::PathFromUtf8(installPath);
         bool toolsetMissing = !visualStudioRoot.empty() && !HasPlatformToolset(visualStudioRoot, requiredToolset);
 
         std::filesystem::path resolved;
@@ -542,7 +535,7 @@ namespace
         if (resolved.empty())
         {
             outError = toolsetMissing
-                ? "The latest Visual Studio instance (" + ToNativeUtf8(visualStudioRoot)
+                ? "The latest Visual Studio instance (" + InteropText::PathToNativeUtf8(visualStudioRoot)
                     + ") provides no platform toolset '" + requiredToolset
                     + "'. Install the matching C++ workload, or point ORBEDEN_MSBUILD at a suitable MSBuild.exe."
                 : "MSBuild.exe was not found. Install Visual Studio with the C++ workload, "
@@ -551,7 +544,7 @@ namespace
         }
 
         //路径先归一化再转原生分隔符，随后整个命令按 UTF-8 传给 cmd。
-        cachedPath = ToNativeUtf8(resolved.lexically_normal());
+        cachedPath = InteropText::PathToNativeUtf8(resolved.lexically_normal());
         outPath = cachedPath;
         return true;
     }
@@ -561,7 +554,7 @@ namespace
     {
         if (nativeRoot.empty()) return false;
         std::error_code error;
-        for (const auto& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(nativeRoot), error))
+        for (const auto& entry : std::filesystem::directory_iterator(InteropText::PathFromUtf8(nativeRoot), error))
         {
             if (entry.is_regular_file() && entry.path().extension() == ".vcxproj") return true;
         }
@@ -941,7 +934,7 @@ void EditorSystem::DrawUpdateProjectDialog()
         std::string error;
         if (RunProjectUpdate(error))
         {
-            std::string folder = ToCleanPath(Utf8Path::FromUtf8(pendingUpdate.projectFilePath).parent_path());
+            std::string folder = ToCleanPath(InteropText::PathFromUtf8(pendingUpdate.projectFilePath).parent_path());
             pendingUpdate = ProjectVersionProbe();
             updateError.clear();
             LoadProjectFromFolder(folder);
@@ -1229,11 +1222,11 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         return false;
     }
 
-    std::filesystem::path buildDirectory = Utf8Path::FromUtf8(nativeRoot) / ProjectLayout::NativeBuildFolder;
+    std::filesystem::path buildDirectory = InteropText::PathFromUtf8(nativeRoot) / ProjectLayout::NativeBuildFolder;
     //定位唯一的游戏 C++ 工程文件，模块名随工程文件名。
     std::filesystem::path vcxProject;
     std::error_code scanError;
-    for (const auto& entry : std::filesystem::directory_iterator(Utf8Path::FromUtf8(nativeRoot), scanError))
+    for (const auto& entry : std::filesystem::directory_iterator(InteropText::PathFromUtf8(nativeRoot), scanError))
     {
         if (entry.is_regular_file() && entry.path().extension() == ".vcxproj")
         {
@@ -1248,7 +1241,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
         return false;
     }
 
-    std::filesystem::path sdkPath = Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor/Sdk";
+    std::filesystem::path sdkPath = InteropText::PathFromUtf8(repositoryRoot) / "OrbedenEditor/Sdk";
 
     //工具链找不到时直接给出报错，不要拼出一条一定会失败的命令行。
     std::string msbuildPath;
@@ -1271,7 +1264,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
 
     std::string modulePath = ToCleanPath(buildDirectory
         / (project.GetProjectName() + ProjectLayout::ModuleNameSuffix + ".dll"));
-    std::string shadowDirectory = ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".native-pie");
+    std::string shadowDirectory = ToCleanPath(InteropText::PathFromUtf8(project.GetManagedRootPath()) / ".native-pie");
 
     //清空全部模块实例后替换 DLL，再从 .world 恢复字段和挂载顺序
     project.MarkWorldPendingReload();
@@ -1351,7 +1344,7 @@ void EditorSystem::StartPlayMode()
     app.GetWorld().SetDirtyTrackingEnabled(false);
     editorScene.EnterPlayMode(app.GetWorld());
 
-    std::filesystem::path shadowDirectory = Utf8Path::FromUtf8(project.GetManagedRootPath()) / ".pie";
+    std::filesystem::path shadowDirectory = InteropText::PathFromUtf8(project.GetManagedRootPath()) / ".pie";
     std::string runtimeAssemblyPath = FindRuntimeCSharpDll();
     ScriptSystem* scriptSystem = app.GetSystem<ScriptSystem>();
     //Unity 的 domain reload：进 Play 前把编辑态脚本域整体关闭，编辑态的托管静态状态
@@ -1504,11 +1497,11 @@ void EditorSystem::RequestBuildPlayer()
 
     std::string aotLibraryName = GetNativeAotLibraryName(target, assemblyName);
     //命令行参数使用原生分隔符路径：ToCleanPath 输出正斜杠，cmd 内建命令（copy）无法解析。
-    std::filesystem::path aotLibraryFile = Utf8Path::FromUtf8(project.GetProjectRoot())
+    std::filesystem::path aotLibraryFile = InteropText::PathFromUtf8(project.GetProjectRoot())
         / PlayerAotDirectory
         / target.aotDirectory
         / BuildConfiguration
-        / Utf8Path::FromUtf8(aotLibraryName);
+        / InteropText::PathFromUtf8(aotLibraryName);
     std::string aotLibraryPath = aotLibraryFile.string();
     if (!FileExists(aotLibraryPath))
     {
@@ -1518,19 +1511,19 @@ void EditorSystem::RequestBuildPlayer()
     }
 
     //AOT 共享库与导入库同目录，构建完成后拷贝到 Player 输出目录。
-    std::filesystem::path aotLibrary = Utf8Path::FromUtf8(aotLibraryPath);
+    std::filesystem::path aotLibrary = InteropText::PathFromUtf8(aotLibraryPath);
     std::filesystem::path aotDll = aotLibrary;
     aotDll.replace_extension(".dll");
 
-    std::string playerProject = ToCleanPath(Utf8Path::FromUtf8(repoRoot) / "OrbedenGame/OrbedenGame.vcxproj");
-    if (!std::filesystem::exists(Utf8Path::FromUtf8(playerProject)))
+    std::string playerProject = ToCleanPath(InteropText::PathFromUtf8(repoRoot) / "OrbedenGame/OrbedenGame.vcxproj");
+    if (!std::filesystem::exists(InteropText::PathFromUtf8(playerProject)))
     {
         projectStatus = "Player project was not found: " + playerProject;
         Log::Error(projectStatus.c_str());
         return;
     }
 
-    std::filesystem::path sdkPath = Utf8Path::FromUtf8(repoRoot) / "OrbedenEditor/Sdk";
+    std::filesystem::path sdkPath = InteropText::PathFromUtf8(repoRoot) / "OrbedenEditor/Sdk";
 
     //Player 只链接 SDK 预编译的 Core 静态库；缺失时直接失败，不触发 Core 源码编译。
     std::filesystem::path coreStaticLibrary = sdkPath / "Native/WindowsX64" / BuildConfiguration / "OrbedenCoreStatic.lib";
@@ -1573,7 +1566,7 @@ void EditorSystem::RequestBuildPlayer()
         return;
     }
 
-    std::string packageRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / PlayerPackageDirectory);
+    std::string packageRoot = ToCleanPath(InteropText::PathFromUtf8(project.GetProjectRoot()) / PlayerPackageDirectory);
     if (!SyncPlayerPackage(packageRoot, packageError))
     {
         projectStatus = "Build Player packaging failed: " + packageError;
@@ -1608,7 +1601,7 @@ bool EditorSystem::CookPlayerContent(std::string& error)
     ResourceManager::Shutdown();
     PathDefines::SetContentRoot(project.GetContentRootPath());
 
-    std::string cacheRoot = ToCleanPath(Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder);
+    std::string cacheRoot = ToCleanPath(InteropText::PathFromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder);
     bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error, settingsTable);
 
     //cook 导入的全部资源都是一次性的，释放后由场景重载重新取用。
@@ -1631,8 +1624,8 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
 {
     error.clear();
 
-    std::filesystem::path cacheRoot = Utf8Path::FromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder;
-    std::filesystem::path packageContentRoot = Utf8Path::FromUtf8(packageRoot) / ProjectLayout::ContentFolder;
+    std::filesystem::path cacheRoot = InteropText::PathFromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder;
+    std::filesystem::path packageContentRoot = InteropText::PathFromUtf8(packageRoot) / ProjectLayout::ContentFolder;
 
     //先删干净，避免上一次打包残留的产物留在包里。
     std::error_code code;
@@ -1646,8 +1639,8 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
     }
 
     //Player 从包根的项目文件读取启动场景。
-    std::filesystem::path projectFile = Utf8Path::FromUtf8(project.GetProjectFilePath());
-    std::filesystem::copy_file(projectFile, Utf8Path::FromUtf8(packageRoot) / projectFile.filename(),
+    std::filesystem::path projectFile = InteropText::PathFromUtf8(project.GetProjectFilePath());
+    std::filesystem::copy_file(projectFile, InteropText::PathFromUtf8(packageRoot) / projectFile.filename(),
         std::filesystem::copy_options::overwrite_existing, code);
     if (code)
     {
@@ -1783,8 +1776,8 @@ void EditorSystem::SetManagedPanelVisible(int32 handle, bool visible)
 std::string EditorSystem::GetProjectScriptProjectPath() const
 {
     //脚本工程直接放在项目根，优先用约定名，找不到再取第一个 .csproj。
-    std::filesystem::path projectRoot = Utf8Path::FromUtf8(project.GetProjectRoot());
-    std::filesystem::path expected = projectRoot / Utf8Path::FromUtf8(project.GetProjectName() + ".csproj");
+    std::filesystem::path projectRoot = InteropText::PathFromUtf8(project.GetProjectRoot());
+    std::filesystem::path expected = projectRoot / InteropText::PathFromUtf8(project.GetProjectName() + ".csproj");
     if (!projectRoot.empty() && std::filesystem::exists(expected)) return ToCleanPath(expected);
 
     return FindFirstCsproj(projectRoot);
@@ -1795,11 +1788,11 @@ std::string EditorSystem::GetProjectGameAssemblyName() const
     std::string csproj = GetProjectScriptProjectPath();
     if (csproj.empty()) return std::string();
 
-    std::string content = ReadTextFile(Utf8Path::FromUtf8(csproj));
+    std::string content = ReadTextFile(InteropText::PathFromUtf8(csproj));
     std::string assemblyName = GetXmlTagValue(content, "AssemblyName");
     if (!assemblyName.empty()) return assemblyName;
 
-    return Utf8Path::ToUtf8(Utf8Path::FromUtf8(csproj).stem());
+    return InteropText::PathToUtf8(InteropText::PathFromUtf8(csproj).stem());
 }
 
 std::string EditorSystem::GetProjectGameAssemblyPath() const
@@ -1807,7 +1800,7 @@ std::string EditorSystem::GetProjectGameAssemblyPath() const
     std::string assemblyName = GetProjectGameAssemblyName();
     if (assemblyName.empty()) return std::string();
 
-    return ToCleanPath(Utf8Path::FromUtf8(project.GetManagedRootPath()) / Utf8Path::FromUtf8(assemblyName + ".dll"));
+    return ToCleanPath(InteropText::PathFromUtf8(project.GetManagedRootPath()) / InteropText::PathFromUtf8(assemblyName + ".dll"));
 }
 
 
@@ -1888,7 +1881,7 @@ std::string EditorSystem::FindRepositoryRoot() const
     starts.push_back(std::filesystem::current_path());
     if (project.HasProject())
     {
-        starts.push_back(Utf8Path::FromUtf8(project.GetProjectRoot()));
+        starts.push_back(InteropText::PathFromUtf8(project.GetProjectRoot()));
     }
 
     for (std::filesystem::path start : starts)
@@ -1932,8 +1925,8 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     std::string repoRoot = FindRepositoryRoot();
     if (!repoRoot.empty())
     {
-        candidates.push_back(Utf8Path::FromUtf8(repoRoot) / "OrbedenEditor" / RuntimeDllRelativePath);
-        candidates.push_back(Utf8Path::FromUtf8(repoRoot) / "OrbedenGame" / RuntimeDllRelativePath);
+        candidates.push_back(InteropText::PathFromUtf8(repoRoot) / "OrbedenEditor" / RuntimeDllRelativePath);
+        candidates.push_back(InteropText::PathFromUtf8(repoRoot) / "OrbedenGame" / RuntimeDllRelativePath);
     }
 
     for (const std::filesystem::path& path : candidates)
@@ -1975,7 +1968,7 @@ bool EditorSystem::SyncProjectRuntimeCSharpDll(std::string& outError) const
         return false;
     }
 
-    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(Utf8Path::FromUtf8(scriptProject).parent_path() / "Lib")).c_str());
+    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(InteropText::PathFromUtf8(scriptProject).parent_path() / "Lib")).c_str());
     return true;
 #endif
 }
@@ -1987,7 +1980,7 @@ List<std::string> EditorSystem::GetManagedDependencyDirectories() const
     std::string runtimeDll = FindRuntimeCSharpDll();
     if (!runtimeDll.empty())
     {
-        directories.push_back(ToCleanPath(Utf8Path::FromUtf8(runtimeDll).parent_path()));
+        directories.push_back(ToCleanPath(InteropText::PathFromUtf8(runtimeDll).parent_path()));
     }
 
     return directories;
@@ -1997,7 +1990,7 @@ bool EditorSystem::RunCommand(const std::string& command, const char* actionName
 {
     Log::Info(("RunCommand: " + command).c_str());
 #if defined(_WIN32)
-    std::wstring nativeCommand = Utf8Path::FromUtf8(command).wstring();
+    std::wstring nativeCommand = InteropText::Utf8ToWide(command);
     //必须保留这层外引号：_wsystem 走 cmd /C，当命令以引号开头且以引号结尾时，
     //cmd 会剥掉首尾两个引号再解析；命令内的带空格路径（如 "C:\Program Files\...\MSBuild.exe"）
     //因此失去引号保护而被按空格截断。外层再包一对引号，让 cmd 剥掉外层、保留内层。
@@ -2417,7 +2410,7 @@ void EditorSystem::DrawProjectDialog()
 
     if (ImGui::Button("Up"))
     {
-        std::filesystem::path parent = Utf8Path::FromUtf8(dialogDirectory).parent_path();
+        std::filesystem::path parent = InteropText::PathFromUtf8(dialogDirectory).parent_path();
         if (!parent.empty())
         {
             SetDialogDirectory(ToCleanPath(parent));
@@ -2433,7 +2426,7 @@ void EditorSystem::DrawProjectDialog()
         {
             if (ImGui::Selectable(child.c_str()))
             {
-                SetDialogDirectory(ToCleanPath(Utf8Path::FromUtf8(dialogDirectory) / Utf8Path::FromUtf8(child)));
+                SetDialogDirectory(ToCleanPath(InteropText::PathFromUtf8(dialogDirectory) / InteropText::PathFromUtf8(child)));
             }
         }
     }
@@ -2507,7 +2500,7 @@ void EditorSystem::DrawNewProjectDialog()
 
     if (ImGui::Button("Up"))
     {
-        std::filesystem::path parent = Utf8Path::FromUtf8(dialogDirectory).parent_path();
+        std::filesystem::path parent = InteropText::PathFromUtf8(dialogDirectory).parent_path();
         if (!parent.empty())
         {
             SetDialogDirectory(ToCleanPath(parent));
@@ -2523,7 +2516,7 @@ void EditorSystem::DrawNewProjectDialog()
         {
             if (ImGui::Selectable(child.c_str()))
             {
-                SetDialogDirectory(ToCleanPath(Utf8Path::FromUtf8(dialogDirectory) / Utf8Path::FromUtf8(child)));
+                SetDialogDirectory(ToCleanPath(InteropText::PathFromUtf8(dialogDirectory) / InteropText::PathFromUtf8(child)));
             }
         }
     }
@@ -2588,7 +2581,7 @@ void EditorSystem::DrawNewProjectDialog()
 
 void EditorSystem::SetDialogDirectory(const std::string& path)
 {
-    dialogDirectory = ToCleanPath(Utf8Path::FromUtf8(path));
+    dialogDirectory = ToCleanPath(InteropText::PathFromUtf8(path));
     CopyToBuffer(pathBuffer, sizeof(pathBuffer), dialogDirectory);
 }
 
@@ -2621,7 +2614,7 @@ std::string EditorSystem::GetSourceTemplateRoot() const
     std::string repositoryRoot = FindRepositoryRoot();
     if (repositoryRoot.empty()) return std::string();
 
-    std::filesystem::path templates = Utf8Path::FromUtf8(repositoryRoot) / "OrbedenEditor" / "Templates";
+    std::filesystem::path templates = InteropText::PathFromUtf8(repositoryRoot) / "OrbedenEditor" / "Templates";
     if (!std::filesystem::is_directory(templates / "Project")) return std::string();
 
     return ToCleanPath(templates);

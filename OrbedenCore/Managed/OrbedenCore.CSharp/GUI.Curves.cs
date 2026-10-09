@@ -55,7 +55,7 @@ public static unsafe partial class GUI
     public static bool ColorField(string label, ref color value)
     {
         if (curveApi.ColorField == null) return false;
-        byte[] bytes = Encoding.UTF8.GetBytes(label);
+        byte[] bytes = InteropText.EncodeUtf8(label);
         fixed (byte* text = bytes)
         fixed (color* pointer = &value)
             return curveApi.ColorField(text, bytes.Length, pointer) != 0;
@@ -95,7 +95,7 @@ public static unsafe partial class GUI
         uint identity = 0;
         vector2 mouse = default;
         float wheel = 0.0f;
-        byte[] bytes = Encoding.UTF8.GetBytes(id);
+        byte[] bytes = InteropText.EncodeUtf8(id);
         fixed (byte* text = bytes)
             curveApi.Canvas(text, bytes.Length, null, 0, null, null, 0, null, 0, -1, 0.0f, 0.0f, 0, &mouse, &wheel, &identity);
         if (draggedCurve == identity && (draggingGradient || !source.keys.SequenceEqual(curveDragStart.keys))) ResetCurveDrag();
@@ -243,7 +243,7 @@ public static unsafe partial class GUI
         {
             keys = [new() { time = 0, value = new color { r = 1, g = 1, b = 1, a = 1 } }, new() { time = 1, value = new color { r = 1, g = 1, b = 1, a = 1 } }],
         };
-        byte[] bytes = Encoding.UTF8.GetBytes(id);
+        byte[] bytes = InteropText.EncodeUtf8(id);
         uint identity = 0;
         vector2 mouse = default;
         float wheel = 0.0f;

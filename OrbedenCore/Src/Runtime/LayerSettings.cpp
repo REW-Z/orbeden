@@ -1,7 +1,7 @@
 #include "Runtime/LayerSettings.h"
 
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
 #include <array>
@@ -23,7 +23,7 @@ void LayerSettings::Refresh()
 {
     const std::string& root = PathDefines::GetContentRoot();
     std::error_code error;
-    auto path = Utf8Path::FromUtf8(PathDefines::GetContentFilePath(FileName));
+    auto path = InteropText::PathFromUtf8(PathDefines::GetContentFilePath(FileName));
     auto modified = std::filesystem::last_write_time(path, error);
     if (initialized && root == loadedRoot && modified == loadedTime) return;
     initialized = true;

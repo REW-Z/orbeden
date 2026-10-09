@@ -4,7 +4,7 @@
 #include "Editor/ProjectLayout.h"
 
 #include "Defines/Version.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
 #include <cctype>
@@ -16,7 +16,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     bool IsProjectNameChar(char ch)
@@ -200,7 +200,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    std::filesystem::path parentPath = Utf8Path::FromUtf8(parentDirectory);
+    std::filesystem::path parentPath = InteropText::PathFromUtf8(parentDirectory);
     if (!std::filesystem::is_directory(parentPath))
     {
         outError = "Parent directory does not exist: " + parentDirectory;
@@ -208,7 +208,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
         return false;
     }
 
-    std::filesystem::path runtimePath = Utf8Path::FromUtf8(runtimeDllPath);
+    std::filesystem::path runtimePath = InteropText::PathFromUtf8(runtimeDllPath);
     if (!std::filesystem::exists(runtimePath))
     {
         outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first: " + runtimeDllPath;
@@ -276,7 +276,7 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
 {
     outError.clear();
 
-    std::filesystem::path projectPath = Utf8Path::FromUtf8(scriptProjectPath);
+    std::filesystem::path projectPath = InteropText::PathFromUtf8(scriptProjectPath);
     if (!std::filesystem::exists(projectPath))
     {
         outError = "Script project does not exist: " + scriptProjectPath;
@@ -321,20 +321,20 @@ bool NewProjectGenerator::SyncRuntimeCSharpDll(const std::string& scriptProjectP
     const std::string& runtimeDllPath, std::string& outError)
 {
     outError.clear();
-    if (runtimeDllPath.empty() || !std::filesystem::exists(Utf8Path::FromUtf8(runtimeDllPath)))
+    if (runtimeDllPath.empty() || !std::filesystem::exists(InteropText::PathFromUtf8(runtimeDllPath)))
     {
         outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
         return false;
     }
 
-    std::filesystem::path target = Utf8Path::FromUtf8(scriptProjectPath).parent_path() / "Lib/OrbedenCore.CSharp.dll";
+    std::filesystem::path target = InteropText::PathFromUtf8(scriptProjectPath).parent_path() / "Lib/OrbedenCore.CSharp.dll";
     std::filesystem::create_directories(target.parent_path());
 
     std::error_code equivalentError;
-    if (!std::filesystem::exists(target) || !std::filesystem::equivalent(Utf8Path::FromUtf8(runtimeDllPath), target, equivalentError))
+    if (!std::filesystem::exists(target) || !std::filesystem::equivalent(InteropText::PathFromUtf8(runtimeDllPath), target, equivalentError))
     {
         std::error_code copyError;
-        std::filesystem::copy_file(Utf8Path::FromUtf8(runtimeDllPath),
+        std::filesystem::copy_file(InteropText::PathFromUtf8(runtimeDllPath),
             target,
             std::filesystem::copy_options::overwrite_existing,
             copyError);
@@ -352,14 +352,14 @@ bool NewProjectGenerator::SyncRuntimeCSharpDll(const std::string& scriptProjectP
 bool NewProjectGenerator::SyncBindingBuildFiles(const std::string& scriptProjectPath,
     const std::string& runtimeDllPath, std::string& outError)
 {
-    std::filesystem::path sdkRoot = Utf8Path::FromUtf8(runtimeDllPath).parent_path().parent_path().parent_path();
+    std::filesystem::path sdkRoot = InteropText::PathFromUtf8(runtimeDllPath).parent_path().parent_path().parent_path();
     if (!std::filesystem::exists(sdkRoot / "Tools/OrbedenMetaGen/Orbeden.Bindings.targets")
         || !std::filesystem::exists(sdkRoot / "Native/Bindings.Manifest.json"))
     {
         outError = "Binding SDK was not found. Rebuild OrbedenCore first.";
         return false;
     }
-    std::filesystem::path library = Utf8Path::FromUtf8(scriptProjectPath).parent_path() / "Lib";
+    std::filesystem::path library = InteropText::PathFromUtf8(scriptProjectPath).parent_path() / "Lib";
     return WriteTextFileIfChanged(library / "Orbeden.Bindings.targets", GetBindingsTargetsShimText(), outError)
         && WriteTextFileIfChanged(library / "OrbedenSdk.path", ToCleanPath(std::filesystem::absolute(sdkRoot)), outError);
 }

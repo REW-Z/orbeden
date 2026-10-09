@@ -1,3 +1,4 @@
+using Orbeden;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -66,7 +67,7 @@ internal static unsafe class NativeEditorLog
 
         level = nativeLevel;
         timestampMilliseconds = nativeTimestamp;
-        return Encoding.UTF8.GetString(bytes, 0, length);
+        return InteropText.DecodeUtf8(bytes, 0, length);
     }
 
     /// <summary>统计保留窗口内各级别的条数。</summary>
@@ -81,7 +82,7 @@ internal static unsafe class NativeEditorLog
     {
         if (!IsAvailable) return;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        byte[] bytes = InteropText.EncodeUtf8(text);
         fixed (byte* pointer = bytes) api.Append(level, pointer, bytes.Length);
     }
 

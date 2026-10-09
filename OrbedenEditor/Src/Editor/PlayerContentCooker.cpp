@@ -2,7 +2,7 @@
 
 #include "Editor/ProjectLayout.h"
 #include "FileSystem/PathDefines.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
@@ -46,7 +46,7 @@ namespace
             const std::filesystem::directory_entry& entry = *iterator;
             if (!entry.is_regular_file()) continue;
 
-            keys.push_back(ResourceManager::ToResourceKey(Utf8Path::ToUtf8(entry.path().lexically_relative(contentRoot))));
+            keys.push_back(ResourceManager::ToResourceKey(InteropText::PathToUtf8(entry.path().lexically_relative(contentRoot))));
         }
     }
 
@@ -57,7 +57,7 @@ namespace
         {
             //项目级设置文件按原样复制，不参与 cook
             if (key == LayerSettings::FileName || key == DisplaySettings::FileName
-                || Utf8Path::ToUtf8(Utf8Path::FromUtf8(key).extension()) == WorldExtension)
+                || InteropText::PathToUtf8(InteropText::PathFromUtf8(key).extension()) == WorldExtension)
             {
                 worldKeys.push_back(key);
                 continue;
@@ -87,7 +87,7 @@ namespace
         std::filesystem::copy_file(sourcePath, targetPath, std::filesystem::copy_options::overwrite_existing, code);
         if (code)
         {
-            error = "World file could not be copied while packaging: " + Utf8Path::ToUtf8(sourcePath);
+            error = "World file could not be copied while packaging: " + InteropText::PathToUtf8(sourcePath);
             return false;
         }
 
@@ -113,8 +113,8 @@ namespace
             const ResourceManager::ResourceRecord* record = ResourceManager::FindRecord(objectKey);
             List<std::string> dependencies = record ? record->dependencies : List<std::string>();
 
-            std::filesystem::path blobPath = outputRoot / Utf8Path::FromUtf8(CookedAssetSerializer::GetBlobFileName(objectKey));
-            if (!CookedAssetSerializer::Write(Utf8Path::ToUtf8(blobPath), collection.objects[index], sourceKey, dependencies, error)) return false;
+            std::filesystem::path blobPath = outputRoot / InteropText::PathFromUtf8(CookedAssetSerializer::GetBlobFileName(objectKey));
+            if (!CookedAssetSerializer::Write(InteropText::PathToUtf8(blobPath), collection.objects[index], sourceKey, dependencies, error)) return false;
 
             cookedKeys.push_back(objectKey);
         }
@@ -129,14 +129,14 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
 {
     error.clear();
 
-    std::filesystem::path contentRoot = Utf8Path::FromUtf8(sourceContentRoot);
+    std::filesystem::path contentRoot = InteropText::PathFromUtf8(sourceContentRoot);
     if (!std::filesystem::is_directory(contentRoot))
     {
         error = "Content root was not found: " + sourceContentRoot;
         return false;
     }
 
-    std::filesystem::path outputRoot = Utf8Path::FromUtf8(cookedOutputRoot);
+    std::filesystem::path outputRoot = InteropText::PathFromUtf8(cookedOutputRoot);
     //输出目录会被清空重建，只允许指向项目的资源缓存目录。
     if (outputRoot.filename() != "Player" || outputRoot.parent_path().filename() != ProjectLayout::ResourceCacheFolder)
     {
@@ -160,8 +160,8 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
 
     for (const std::string& worldKey : worldKeys)
     {
-        std::filesystem::path worldSource = contentRoot / Utf8Path::FromUtf8(worldKey);
-        if (!CopyWorldFile(worldSource, outputRoot / Utf8Path::FromUtf8(worldKey), error)) return false;
+        std::filesystem::path worldSource = contentRoot / InteropText::PathFromUtf8(worldKey);
+        if (!CopyWorldFile(worldSource, outputRoot / InteropText::PathFromUtf8(worldKey), error)) return false;
     }
 
     List<std::string> cookedKeys;
@@ -170,6 +170,6 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
         if (!CookSourceKey(sourceKey, outputRoot, cookedKeys, error, settingsTable)) return false;
     }
 
-    std::filesystem::path indexPath = outputRoot / Utf8Path::FromUtf8(CookedAssetSerializer::IndexFileName);
-    return CookedAssetSerializer::WriteIndex(Utf8Path::ToUtf8(indexPath), cookedKeys, error);
+    std::filesystem::path indexPath = outputRoot / InteropText::PathFromUtf8(CookedAssetSerializer::IndexFileName);
+    return CookedAssetSerializer::WriteIndex(InteropText::PathToUtf8(indexPath), cookedKeys, error);
 }

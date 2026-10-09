@@ -54,7 +54,7 @@ public static unsafe class World
     {
         ArgumentNullException.ThrowIfNull(key);
         if (api.LoadWorld == null) return new WorldLoadOperation(0);
-        byte[] bytes = Encoding.UTF8.GetBytes(key);
+        byte[] bytes = InteropText.EncodeUtf8(key);
         fixed (byte* text = bytes)
             return new WorldLoadOperation(api.LoadWorld(text, bytes.Length, asynchronous ? (byte)1 : (byte)0));
     }
@@ -73,7 +73,7 @@ public static unsafe class World
         fixed (byte* text = bytes)
         {
             int count = api.GetWorldLoadError(id, text, size);
-            return Encoding.UTF8.GetString(bytes, 0, Math.Min(count, size));
+            return InteropText.DecodeUtf8(bytes, 0, Math.Min(count, size));
         }
     }
 }

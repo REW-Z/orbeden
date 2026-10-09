@@ -5,18 +5,18 @@ namespace OrbedenEditor;
 /// <summary>编辑器底部状态栏：显示 Print 的临时提示，没有提示时回退到 Console 最新一条。</summary>
 public static class EditorStatusBar
 {
-    private static string printed = string.Empty;
+    private static readonly GuiContent printed = new();
     //Print 当时的日志最新序号：Console 再来新消息，提示就让位给那条消息
     private static long printedRevision = -1;
     //Console 回退文本按序号缓存，同一条消息不每帧拷贝
     private static long consoleRevision = -1;
-    private static string consoleMessage = string.Empty;
+    private static readonly GuiContent consoleMessage = new();
     private static color consoleColor = default;
 
     /// <summary>打印一条临时提示；Console 出现新消息时它自动让位。</summary>
     public static void Print(string message)
     {
-        printed = message ?? string.Empty;
+        printed.Text = message ?? string.Empty;
         NativeEditorLog.GetRange(out _, out printedRevision);
         //空闲编辑器不出帧，提示落地要自己唤醒一帧
         EditorApplication.RequestRepaint();
@@ -29,14 +29,14 @@ public static class EditorStatusBar
         if (EditorProgress.DrawStatusBarRow()) return;
 
         long newest = RefreshConsoleMessage();
-        if (printed.Length != 0 && printedRevision == newest)
+        if (printed.Text.Length != 0 && printedRevision == newest)
         {
             EditorGUI.Label(printed);
             return;
         }
 
-        printed = string.Empty;
-        if (consoleMessage.Length != 0) EditorGUI.TextColored(consoleMessage, consoleColor);
+        printed.Text = string.Empty;
+        if (consoleMessage.Text.Length != 0) EditorGUI.TextColored(consoleMessage, consoleColor);
     }
 
     //读取 Console 最新一条并按序号缓存，返回当前最新序号
@@ -46,14 +46,14 @@ public static class EditorStatusBar
         if (newest == consoleRevision) return newest;
 
         consoleRevision = newest;
-        consoleMessage = string.Empty;
+        consoleMessage.Text = string.Empty;
         consoleColor = default;
         //序号区间是半开的，最新一条是 newest - 1；窗口为空或已过期时没有可显示的消息
         if (retained <= 0 || newest <= 0) return newest;
         string? message = NativeEditorLog.CopyEntry(newest - 1, out int level, out _);
         if (message == null) return newest;
 
-        consoleMessage = message;
+        consoleMessage.Text = message;
         consoleColor = LevelColor(level);
         return newest;
     }

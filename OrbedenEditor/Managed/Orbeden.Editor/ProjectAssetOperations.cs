@@ -1,3 +1,4 @@
+using Orbeden;
 using System.Net;
 using System.Security;
 using System.Text.Json;
@@ -659,7 +660,7 @@ internal sealed class ReferenceRewritePlan
     //重建 GLB，并只替换 JSON Chunk。
     private byte[] RewriteGlb(byte[] content, string oldOwnerKey, string newOwnerKey)
     {
-        using BinaryReader reader = new(new MemoryStream(content), System.Text.Encoding.UTF8, leaveOpen: false);
+        using BinaryReader reader = new(new MemoryStream(content), InteropText.Utf8, leaveOpen: false);
         uint magic = reader.ReadUInt32();
         uint version = reader.ReadUInt32();
         uint totalLength = reader.ReadUInt32();
@@ -675,11 +676,11 @@ internal sealed class ReferenceRewritePlan
             if (data.Length != length) throw new EndOfStreamException("Incomplete GLB chunk.");
             if (type == 0x4E4F534A)
             {
-                string json = System.Text.Encoding.UTF8.GetString(data).TrimEnd('\0', ' ', '\t', '\r', '\n');
+                string json = InteropText.DecodeUtf8(data).TrimEnd('\0', ' ', '\t', '\r', '\n');
                 string updatedJson = RewriteGltf(json, oldOwnerKey, newOwnerKey);
                 if (updatedJson != json)
                 {
-                    data = System.Text.Encoding.UTF8.GetBytes(updatedJson);
+                    data = InteropText.EncodeUtf8(updatedJson);
                     int jsonByteLength = data.Length;
                     int paddedLength = (data.Length + 3) & ~3;
                     Array.Resize(ref data, paddedLength);
@@ -692,7 +693,7 @@ internal sealed class ReferenceRewritePlan
         if (!changed) return content;
 
         using MemoryStream output = new();
-        using (BinaryWriter writer = new(output, System.Text.Encoding.UTF8, leaveOpen: true))
+        using (BinaryWriter writer = new(output, InteropText.Utf8, leaveOpen: true))
         {
             writer.Write(magic);
             writer.Write(version);

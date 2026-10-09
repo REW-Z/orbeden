@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "FileSystem/FileSystem.h"
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Runtime/WorldSerializer.h"
 #include "Runtime/Reflection.h"
@@ -989,7 +989,7 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
     Reflection::RegisterGeneratedReflection();
 
     //创建目标目录
-    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
     if (filePath.has_parent_path())
     {
         std::filesystem::create_directories(filePath.parent_path());
@@ -1089,7 +1089,7 @@ std::shared_ptr<WorldDocument> WorldSerializer::ParseDocument(const std::string&
 //读取文档，不访问反射、资源和对象运行时
 std::shared_ptr<WorldDocument> WorldSerializer::ReadDocument(const std::string& path, std::string& error)
 {
-    std::ifstream input(Utf8Path::FromUtf8(path), std::ios::binary);
+    std::ifstream input(InteropText::PathFromUtf8(path), std::ios::binary);
     if (!input) { error = "Cannot read file: " + path; return nullptr; }
     std::ostringstream text;
     text << input.rdbuf();
@@ -1308,7 +1308,7 @@ bool WorldSerializer::SavePrefab(Ens& ens, const std::string& path, std::string&
         const std::string& id = GetAttribute(token, "stableId");
         if (!id.empty()) paths.emplace(id, id);
     }
-    std::ofstream output(Utf8Path::FromUtf8(path), std::ios::binary | std::ios::trunc);
+    std::ofstream output(InteropText::PathFromUtf8(path), std::ios::binary | std::ios::trunc);
     if (!output) { error = "Cannot create prefab: " + path; return false; }
     output << WriteDocument(*document, paths, true);
     output.flush();

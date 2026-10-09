@@ -1,6 +1,6 @@
 #include "Editor/EditorIcons.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
 #include <glad/gl.h>
@@ -68,9 +68,9 @@ ImTextureID EditorIcons::Get(const std::string& name, float32 displaySize)
     if (found != iconTextures.end()) return found->second;
 
     //按需上传所选尺寸，缓存缺失结果
-    auto path = iconDirectory / Utf8Path::FromUtf8(textureName + ".png");
+    auto path = iconDirectory / InteropText::PathFromUtf8(textureName + ".png");
     ImTextureID texture = UploadIcon(path);
-    if (texture == 0) Log::Warning(("Editor icon could not be loaded: " + Utf8Path::ToUtf8(path)).c_str());
+    if (texture == 0) Log::Warning(("Editor icon could not be loaded: " + InteropText::PathToUtf8(path)).c_str());
     iconTextures.emplace(textureName, texture);
     return texture;
 }

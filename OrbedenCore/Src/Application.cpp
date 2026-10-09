@@ -2,7 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <filesystem>
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "FileSystem/PathDefines.h"
 
 #include "Application.h"
@@ -231,7 +231,7 @@ std::shared_ptr<WorldLoadOperation> Application::LoadWorldOperation(const std::s
         return operation;
     }
     //校验内容根内的相对路径
-    std::filesystem::path relative = Utf8Path::FromUtf8(key).lexically_normal();
+    std::filesystem::path relative = InteropText::PathFromUtf8(key).lexically_normal();
     if (relative.empty() || relative.is_absolute() || relative.has_root_name()
         || *relative.begin() == ".." || relative.extension() != ".world")
     {
@@ -239,7 +239,7 @@ std::shared_ptr<WorldLoadOperation> Application::LoadWorldOperation(const std::s
         operation->error = "Expected a Content-relative .world key.";
         return operation;
     }
-    std::string path = Utf8Path::ToUtf8(Utf8Path::FromUtf8(PathDefines::GetContentRoot()) / relative);
+    std::string path = InteropText::PathToUtf8(InteropText::PathFromUtf8(PathDefines::GetContentRoot()) / relative);
     pendingWorldLoad = operation;
     if (asynchronous)
     {

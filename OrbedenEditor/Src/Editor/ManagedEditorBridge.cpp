@@ -9,7 +9,7 @@
 #include "FileSystem/PathDefines.h"
 #include "FileSystem/FileSystem.h"
 #include <exception>
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
@@ -457,12 +457,12 @@ namespace
         if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
         Ens* ens = editor->GetWorld().FindEns(StringId(ReadUtf8(source, sourceLength)));
         if (!ens || editor->GetEditorScene().IsTemporaryEns(ens->GetId())) return 0;
-        std::filesystem::path relative = Utf8Path::FromUtf8(ReadUtf8(key, keyLength)).lexically_normal();
+        std::filesystem::path relative = InteropText::PathFromUtf8(ReadUtf8(key, keyLength)).lexically_normal();
         if (relative.empty() || relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".prefab") return 0;
-        std::filesystem::path path = Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative;
+        std::filesystem::path path = InteropText::PathFromUtf8(editor->GetProjectContentRootPath()) / relative;
         if (std::filesystem::exists(path)) return 0;
         std::string error;
-        bool saved = WorldSerializer::SavePrefab(*ens, Utf8Path::ToUtf8(path), error);
+        bool saved = WorldSerializer::SavePrefab(*ens, InteropText::PathToUtf8(path), error);
         if (!saved) Log::Error(error.c_str());
         return saved ? 1 : 0;
     }
@@ -475,12 +475,12 @@ namespace
         Object* object = Object::FindObjectById(objectId);
         Material* material = object ? object->Cast<Material>() : nullptr;
         if (!material) return 0;
-        std::filesystem::path relative = Utf8Path::FromUtf8(ReadUtf8(key, length)).lexically_normal();
+        std::filesystem::path relative = InteropText::PathFromUtf8(ReadUtf8(key, length)).lexically_normal();
         if (relative.empty() || relative.has_root_path() || *relative.begin() == ".."
             || relative.extension() != ".orbmat") return 0;
-        std::filesystem::path path = Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative;
+        std::filesystem::path path = InteropText::PathFromUtf8(editor->GetProjectContentRootPath()) / relative;
         std::string error;
-        bool saved = AssetPipeline::SaveMaterialAsset(*material, Utf8Path::ToUtf8(path), error);
+        bool saved = AssetPipeline::SaveMaterialAsset(*material, InteropText::PathToUtf8(path), error);
         if (!saved) Log::Error(error.c_str());
         return saved ? 1 : 0;
     }
@@ -545,10 +545,10 @@ namespace
         else if (kind == 2) root = WorldSerializer::CopyEns(world, value, parent, error);
         else
         {
-            std::filesystem::path relative = Utf8Path::FromUtf8(value).lexically_normal();
+            std::filesystem::path relative = InteropText::PathFromUtf8(value).lexically_normal();
             if (relative.empty() || relative.has_root_path() || *relative.begin() == ".." || relative.extension() != ".prefab") return 0;
             root = WorldSerializer::InstantiatePrefab(world,
-                Utf8Path::ToUtf8(Utf8Path::FromUtf8(editor->GetProjectContentRootPath()) / relative), parent, error);
+                InteropText::PathToUtf8(InteropText::PathFromUtf8(editor->GetProjectContentRootPath()) / relative), parent, error);
         }
         if (!root) { Log::Error(error.c_str()); return 0; }
         if (!world.MoveEns(root->GetId(), parent, before))
@@ -679,10 +679,10 @@ namespace
                         std::make_pair(TemplateFolderBuiltin, NewProjectTemplate::BuiltinFolderName) })
                     {
                         if ((folders & folder.first) == 0) continue;
-                        std::string source = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? templates : content) / folder.second);
-                        std::string target = Utf8Path::ToUtf8(Utf8Path::FromUtf8(reset ? content : templates) / folder.second);
+                        std::string source = InteropText::PathToUtf8(InteropText::PathFromUtf8(reset ? templates : content) / folder.second);
+                        std::string target = InteropText::PathToUtf8(InteropText::PathFromUtf8(reset ? content : templates) / folder.second);
                         //某一侧缺这个目录就跳过（例如 Builtin 之前的旧项目），不让单个目录废掉整次迁移
-                        if (!std::filesystem::is_directory(Utf8Path::FromUtf8(source)))
+                        if (!std::filesystem::is_directory(InteropText::PathFromUtf8(source)))
                         {
                             skipped += " ";
                             skipped += folder.second;
@@ -751,8 +751,8 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || !editor->HasProject()) return 0;
-        std::filesystem::path path = Utf8Path::FromUtf8(ReadUtf8(pathText, pathLength));
-        std::filesystem::path root = Utf8Path::FromUtf8(PathDefines::GetContentRoot()).parent_path() / "ResourceCache" / "Imported";
+        std::filesystem::path path = InteropText::PathFromUtf8(ReadUtf8(pathText, pathLength));
+        std::filesystem::path root = InteropText::PathFromUtf8(PathDefines::GetContentRoot()).parent_path() / "ResourceCache" / "Imported";
         std::error_code code;
         auto canonical = std::filesystem::weakly_canonical(path, code);
         if (code) return 0;
@@ -760,7 +760,7 @@ namespace
         if (code || relative.empty() || relative.is_absolute()) return 0;
         for (const auto& part : relative) if (part == "..") return 0;
         std::string key = ReadUtf8(keyText, keyLength);
-        std::string filename = Utf8Path::ToUtf8(canonical.filename());
+        std::string filename = InteropText::PathToUtf8(canonical.filename());
         std::string blobName = CookedAssetSerializer::GetBlobFileName(key);
         if (!filename.ends_with(blobName) || filename.size() <= blobName.size()) return 0;
         std::string prefix = filename.substr(0, filename.size() - blobName.size());
@@ -774,10 +774,10 @@ namespace
             std::string current = pending[index];
             if (ResourceManager::FindLoaded(current) || std::find(visited.begin(), visited.end(), current) != visited.end()) continue;
             visited.push_back(current);
-            auto file = canonical.parent_path() / Utf8Path::FromUtf8(prefix + CookedAssetSerializer::GetBlobFileName(current));
+            auto file = canonical.parent_path() / InteropText::PathFromUtf8(prefix + CookedAssetSerializer::GetBlobFileName(current));
             List<std::string> references;
             std::string error;
-            if (!CookedAssetSerializer::Read(Utf8Path::ToUtf8(file), references, error, prefix))
+            if (!CookedAssetSerializer::Read(InteropText::PathToUtf8(file), references, error, prefix))
             {
                 Log::Error(error.c_str());
                 for (const std::string& loadedKey : created) ResourceManager::Unload(loadedKey);
@@ -2056,7 +2056,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     }
 
     std::filesystem::path managedDirectory = ExecutablePath::GetDirectory(executablePath) / "Managed";
-    std::string editorAssemblyPath = Utf8Path::ToUtf8((managedDirectory / "Orbeden.Editor.dll").lexically_normal());
+    std::string editorAssemblyPath = InteropText::PathToUtf8((managedDirectory / "Orbeden.Editor.dll").lexically_normal());
 
     //绑定托管入口并注册面板
     clrHost = &host;

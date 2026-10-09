@@ -515,7 +515,7 @@ internal static unsafe partial class ManagedScriptInterop
         *output = encoded.Abi;
         if (value.Kind is InteropValueKind.String or InteropValueKind.StringId)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(value.ToString());
+            byte[] bytes = InteropText.EncodeUtf8(value.ToString());
             stringPin = GCHandle.Alloc(bytes, GCHandleType.Pinned);
             byte* payload = output->Payload;
                 *(IntPtr*)payload = stringPin.AddrOfPinnedObject();
@@ -532,7 +532,7 @@ internal static unsafe partial class ManagedScriptInterop
         try
         {
             if (name == null || length <= 0 || output == null) return InteropStatus.InvalidArgument;
-            string typeName = Encoding.UTF8.GetString(name, length);
+            string typeName = InteropText.DecodeUtf8(name, length);
             InteropStatus status = FindComponent(ens, typeName, occurrence, out ComponentHandle handle);
             if (status == InteropStatus.Ok) *output = handle;
             return status;
@@ -559,7 +559,7 @@ internal static unsafe partial class ManagedScriptInterop
         try
         {
             if (name == null || length <= 0 || output == null) return InteropStatus.InvalidArgument;
-            InteropStatus status = ResolveField(component, Encoding.UTF8.GetString(name, length), out MemberHandle member);
+            InteropStatus status = ResolveField(component, InteropText.DecodeUtf8(name, length), out MemberHandle member);
             if (status == InteropStatus.Ok) *output = member;
             return status;
         }
@@ -577,7 +577,7 @@ internal static unsafe partial class ManagedScriptInterop
             if (name == null || length <= 0 || count < 0 || count > 0 && rawKinds == null || output == null) return InteropStatus.InvalidArgument;
             InteropValueKind[] kinds = new InteropValueKind[count];
             for (int index = 0; index < count; ++index) kinds[index] = (InteropValueKind)rawKinds[index];
-            InteropStatus status = ResolveMethod(component, Encoding.UTF8.GetString(name, length), kinds, out MemberHandle member);
+            InteropStatus status = ResolveMethod(component, InteropText.DecodeUtf8(name, length), kinds, out MemberHandle member);
             if (status == InteropStatus.Ok) *output = member;
             return status;
         }

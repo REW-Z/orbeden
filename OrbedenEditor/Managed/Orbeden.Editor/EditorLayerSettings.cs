@@ -74,7 +74,7 @@ internal static class EditorLayerSettings
                 if (name.IndexOfAny(['\t', '\r', '\n']) >= 0) throw new InvalidDataException("Layer names cannot contain tabs or line breaks.");
                 text.Append(masks[index].ToString("X8", CultureInfo.InvariantCulture)).Append('\t').Append(name).Append('\n');
             }
-            File.WriteAllText(temporary, text.ToString(), new UTF8Encoding(false));
+            File.WriteAllText(temporary, text.ToString(), InteropText.CreateUtf8Encoding(false));
             File.Move(temporary, path, true);
             loadedRoot = "\0";
             Refresh();

@@ -1,3 +1,4 @@
+using Orbeden;
 using System;
 using System.Numerics;
 using System.Text;
@@ -125,7 +126,7 @@ public static unsafe class EditorApplication
     /// <summary>请求打开项目文件或项目选择、新建对话框。</summary>
     internal static void RequestProjectAction(int action, string path = "")
     {
-        byte[] bytes = Encoding.UTF8.GetBytes(path);
+        byte[] bytes = InteropText.EncodeUtf8(path);
         fixed (byte* pointer = bytes) api.RequestProjectAction(api.Context, action, pointer, bytes.Length);
     }
 
@@ -159,14 +160,14 @@ public static unsafe class EditorApplication
         if (api.GetWorldRenderSettings(api.Context, &settings) == 0) return false;
 
         skyboxKey = settings.SkyboxKeyLength > 0 && settings.SkyboxKey != IntPtr.Zero
-            ? Encoding.UTF8.GetString((byte*)settings.SkyboxKey, settings.SkyboxKeyLength)
+            ? InteropText.DecodeUtf8((byte*)settings.SkyboxKey, settings.SkyboxKeyLength)
             : string.Empty;
         skyboxEnabled = settings.SkyboxEnabled != 0;
         ambientColor = new Vector4(settings.AmbientR, settings.AmbientG, settings.AmbientB, settings.AmbientA);
         ambientIntensity = settings.AmbientIntensity;
         reflectionIntensity = settings.ReflectionIntensity;
         reflectionEnvironmentKey = settings.ReflectionEnvironmentKeyLength > 0 && settings.ReflectionEnvironmentKey != IntPtr.Zero
-            ? Encoding.UTF8.GetString((byte*)settings.ReflectionEnvironmentKey, settings.ReflectionEnvironmentKeyLength)
+            ? InteropText.DecodeUtf8((byte*)settings.ReflectionEnvironmentKey, settings.ReflectionEnvironmentKeyLength)
             : string.Empty;
         atmosphere = new WorldAtmosphereSettings
         {
@@ -196,8 +197,8 @@ public static unsafe class EditorApplication
     {
         if (api.SetWorldRenderSettings == null) return;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(skyboxKey ?? string.Empty);
-        byte[] reflectionBytes = Encoding.UTF8.GetBytes(reflectionEnvironmentKey ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(skyboxKey ?? string.Empty);
+        byte[] reflectionBytes = InteropText.EncodeUtf8(reflectionEnvironmentKey ?? string.Empty);
         fixed (byte* keyPointer = bytes)
         fixed (byte* reflectionPointer = reflectionBytes)
         {
@@ -270,7 +271,7 @@ public static unsafe class EditorApplication
         int length = api.GetProjectText(api.Context, (int)field, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.GetProjectText(api.Context, (int)field, pointer, length);
-        return Encoding.UTF8.GetString(bytes);
+        return InteropText.DecodeUtf8(bytes);
     }
 
     //请求构建脚本、原生模块、Player，或重导并重编的刷新
@@ -297,7 +298,7 @@ public static unsafe class EditorApplication
         fixed (byte* pointer = bytes)
         {
             int length = api.MirrorTemplate(api.Context, reset ? (byte)1 : (byte)0, (byte)folders, pointer, bytes.Length);
-            return Encoding.UTF8.GetString(bytes, 0, Math.Clamp(length, 0, bytes.Length));
+            return InteropText.DecodeUtf8(bytes, 0, Math.Clamp(length, 0, bytes.Length));
         }
     }
 

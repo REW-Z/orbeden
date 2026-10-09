@@ -1,6 +1,6 @@
 #include "Editor/NativeGameModule.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Component.h"
 #include "Scripting/NativeGameModule.h"
@@ -11,7 +11,7 @@ namespace
 {
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        return Utf8Path::ToUtf8(path.lexically_normal());
+        return InteropText::PathToUtf8(path.lexically_normal());
     }
 
     bool CopyModuleShadow(const std::string& sourcePath,
@@ -20,7 +20,7 @@ namespace
         std::string& outputPath,
         std::string& error)
     {
-        std::filesystem::path source = Utf8Path::FromUtf8(sourcePath);
+        std::filesystem::path source = InteropText::PathFromUtf8(sourcePath);
         if (!std::filesystem::exists(source))
         {
             error = "Native game DLL was not found: " + sourcePath;
@@ -28,7 +28,7 @@ namespace
         }
 
         std::error_code fileError;
-        std::filesystem::path directory = Utf8Path::FromUtf8(shadowDirectory);
+        std::filesystem::path directory = InteropText::PathFromUtf8(shadowDirectory);
         std::filesystem::create_directories(directory, fileError);
         if (fileError)
         {
@@ -74,7 +74,7 @@ bool NativeGameModule::LoadCandidate(const std::string& sourcePath,
     if (!CopyModuleShadow(sourcePath, shadowDirectory, ++shadowVersion, candidatePath, error)) return false;
 
     Object::BeginModuleTypeRegistration(this);
-    DynamicLibrary candidate = LoadDynamicLibrary(Utf8Path::FromUtf8(candidatePath));
+    DynamicLibrary candidate = LoadDynamicLibrary(InteropText::PathFromUtf8(candidatePath));
     bool typesRegistered = Object::EndModuleTypeRegistration(candidate.handle != nullptr);
     if (!candidate.handle)
     {

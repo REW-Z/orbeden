@@ -1,6 +1,6 @@
 #include "FileSystem/PathDefines.h"
 
-#include "FileSystem/Utf8Path.h"
+#include "Runtime/Native/InteropText.h"
 
 #include <filesystem>
 
@@ -20,7 +20,7 @@ namespace
 
     std::string ToCleanPath(const std::filesystem::path& path)
     {
-        std::string value = Utf8Path::ToUtf8(path.lexically_normal());
+        std::string value = InteropText::PathToUtf8(path.lexically_normal());
         while (value.size() > 1 && value.back() == '/')
         {
             value.pop_back();
@@ -31,7 +31,7 @@ namespace
 
     std::filesystem::path AbsolutePath(const std::string& path)
     {
-        std::filesystem::path filePath = Utf8Path::FromUtf8(path);
+        std::filesystem::path filePath = InteropText::PathFromUtf8(path);
         return filePath.is_absolute() ? filePath : std::filesystem::absolute(filePath);
     }
 
@@ -59,11 +59,11 @@ const std::string& PathDefines::GetContentRoot()
 
 std::string PathDefines::GetContentFilePath(const std::string& path)
 {
-    std::filesystem::path filePath = Utf8Path::FromUtf8(path);
+    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
     if (filePath.is_absolute()) return ToCleanPath(filePath);
 
     const PathDefinesRuntime& runtime = GetRuntime();
     if (runtime.contentRoot.empty()) return ToCleanPath(filePath);
 
-    return ToCleanPath(Utf8Path::FromUtf8(runtime.contentRoot) / filePath);
+    return ToCleanPath(InteropText::PathFromUtf8(runtime.contentRoot) / filePath);
 }

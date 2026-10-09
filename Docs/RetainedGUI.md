@@ -454,6 +454,22 @@ DestroyContext 释放帧、网格、派生位置、视图快照和资源根，�
 
 # 关于字体与文字系统
 
+版本 64：托管和原生字符编解码集中到 InteropText，不引入全局缓存。GuiContent 的内容变更编码、即时 GUI 边界、RetainedGUI 文本输入与剪贴板均调用统一入口；RetainedGUI 排版仍解析 UTF-16 标量，字形请求传整数码点，呈现传网格和纹理，不在文字绘制中新增 UTF-16/UTF-8 转换。
+
+版本 63：源字符串保持 UTF-16，排版缓存其 Unicode 标量和索引，仅在文本内容变化时解析；正常文本复用源字符串，CRLF 和非法代理项使用可复用字符缓冲处理，不逐字符创建字符串。断行与定位复用单次排版的字距查询，占位及 IME 组合文本分别缓存排版并检查图集驻留。正常呈现继续提交网格、纹理和数字命令。即时 GUI 由控件持有 GuiContent，内容变化时准备 UTF-8，绘制重载直接借用其只读字节；没有通用字符串缓存。原有 string 接口继续按调用转码，热路径应在更新阶段修改 GuiContent.Text，在绘制阶段复用该对象，不在每帧新建。原生即时 GUI 自身仍会解析 UTF-8 进行字形布局；新输入、首次内容和内容变化仍需处理。没有进行性能采样。
+
+状态栏和进度显示使用各自持有的 GuiContent；任务文案在 Begin/Report 时更新，时长仅在显示秒数变化时更新。同一段进度文本的测量与裁剪绘制借用相同 UTF-8 字节，固定弹窗标题、交互身份及按钮文字在初始化时准备。
+
+即时 GUI 热路径示例：内容对象由控件持有，在更新文本时修改 Text，绘制时复用对象。
+
+```csharp
+private readonly GuiContent caption = new("开始");
+
+public void SetCaption(string value) => caption.Text = value;
+
+public void Draw() => GUI.Button(caption);
+```
+
 版本 62：预烘焙字符文本改为 `.txt` 原始文件引用框，支持拖放、文件选择、清空与缺失显示；Import Settings 保存 Content 相对路径 `prebakeTextFile`，不保存字符文本。导入读取 UTF-8（可带 BOM）文件并记入源文件依赖，跳过换行等控制字符，按 Unicode 标量去重和排序；同一字形的多个字符映射共用图集区域。字符文件变化参与编辑器缓存和运行态重导指纹。字符文件只参与导入，Font 运行时读取已烘焙载荷，文件内容不会被修改。
 
 版本 61：字体导入预烘焙常用字符，运行时读取烘焙页并在剩余空间动态补字。源文件 Import Settings 配置 Raster Mode、Atlas Resolution、Bake Pixel Size（px/em）、Prebake Character Set 和自定义字符文本。Bitmap 的字形宽高按烘焙像素字号及字体比例生成，不固定为等宽单元；不同 Bitmap 投影字号分别缓存，距离场字形共用指定采样密度。图集页及字形表作为 Font 的不可变载荷持久化，运行时复制像素后恢复装箱游标；补字只修改世界所属纹理。图集回收或 PIE 切换后重新加载载荷，沿用版本 60 的失效和重建边界。
@@ -632,8 +648,9 @@ UI 事件统一进 FIFO；每事件先更新状态/视觉，再持久化行顺�
 回调生成新事件入队尾，不递归派发；单帧上限 4096，超限清余项并报错。
 代码事件监听器在开始派发时快照；回调增删订阅从下一事件生效。
 回调前验证源、目标与代次；删除源终止该源余下调用；单监听器异常不阻断其他有效目标。
-持久化 UIEventBinding={int eventId,Component? target,string methodName,bool useArgument}。
-底层四列表 bindingEvents/Targets/Methods/UseArguments 长度必须相同，事务原子更新。
+持久化 UIEventBinding={int eventId,EnsId target,string targetType,string method,bool enabled}。
+宿主字段表只认标量与引用，绑定落盘为五列并列数组 bindingEvents/bindingTargets/bindingTypes/bindingMethods/bindingEnabled，
+长度必须相同；序列化前摊平、首次触碰绑定表时按列重建，保存、复制、Prefab 与进入 Play 都经 FlushHostFields。
 目标方法为 public 实例 void，无参数或精确匹配事件参数；禁止猜重载和隐式数值转换。
 方法解析缓存绑定精确 ComponentHandle+generation，不按“该类型第一个实例”调用。
 无效目标/方法保留配置并标红，运行时跳过且每次绑定代次只记录一次错误。

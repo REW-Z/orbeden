@@ -9,7 +9,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return false;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return function(pointer, bytes.Length) != 0;
@@ -21,8 +21,8 @@ internal static unsafe class NativeText
     {
         if (function == null) return false;
 
-        byte[] firstBytes = Encoding.UTF8.GetBytes(first ?? string.Empty);
-        byte[] secondBytes = Encoding.UTF8.GetBytes(second ?? string.Empty);
+        byte[] firstBytes = InteropText.EncodeUtf8(first ?? string.Empty);
+        byte[] secondBytes = InteropText.EncodeUtf8(second ?? string.Empty);
         fixed (byte* firstPointer = firstBytes)
         fixed (byte* secondPointer = secondBytes)
         {
@@ -35,9 +35,9 @@ internal static unsafe class NativeText
     {
         if (function == null) return false;
 
-        byte[] firstBytes = Encoding.UTF8.GetBytes(first ?? string.Empty);
-        byte[] secondBytes = Encoding.UTF8.GetBytes(second ?? string.Empty);
-        byte[] thirdBytes = Encoding.UTF8.GetBytes(third ?? string.Empty);
+        byte[] firstBytes = InteropText.EncodeUtf8(first ?? string.Empty);
+        byte[] secondBytes = InteropText.EncodeUtf8(second ?? string.Empty);
+        byte[] thirdBytes = InteropText.EncodeUtf8(third ?? string.Empty);
         fixed (byte* firstPointer = firstBytes)
         fixed (byte* secondPointer = secondBytes)
         fixed (byte* thirdPointer = thirdBytes)
@@ -51,7 +51,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return 0;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return function(pointer, bytes.Length);
@@ -63,7 +63,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return 0;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return function(pointer, bytes.Length, index);
@@ -75,7 +75,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return 0;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             return function(pointer, bytes.Length);
@@ -87,7 +87,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return string.Empty;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             int requiredBytes = function(pointer, bytes.Length, null, 0);
@@ -98,7 +98,7 @@ internal static unsafe class NativeText
             {
                 int actualBytes = function(pointer, bytes.Length, outputPointer, output.Length);
                 int length = Math.Clamp(actualBytes, 0, output.Length);
-                return Encoding.UTF8.GetString(output, 0, length);
+                return InteropText.DecodeUtf8(output, 0, length);
             }
         }
     }
@@ -108,7 +108,7 @@ internal static unsafe class NativeText
     {
         if (function == null) return string.Empty;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] bytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* pointer = bytes)
         {
             int requiredBytes = function(pointer, bytes.Length, index, null, 0);
@@ -119,7 +119,7 @@ internal static unsafe class NativeText
             {
                 int actualBytes = function(pointer, bytes.Length, index, outputPointer, output.Length);
                 int length = Math.Clamp(actualBytes, 0, output.Length);
-                return Encoding.UTF8.GetString(output, 0, length);
+                return InteropText.DecodeUtf8(output, 0, length);
             }
         }
     }
@@ -129,8 +129,8 @@ internal static unsafe class NativeText
     {
         if (function == null) return string.Empty;
 
-        byte[] firstBytes = Encoding.UTF8.GetBytes(first ?? string.Empty);
-        byte[] secondBytes = Encoding.UTF8.GetBytes(second ?? string.Empty);
+        byte[] firstBytes = InteropText.EncodeUtf8(first ?? string.Empty);
+        byte[] secondBytes = InteropText.EncodeUtf8(second ?? string.Empty);
         fixed (byte* firstPointer = firstBytes)
         fixed (byte* secondPointer = secondBytes)
         {
@@ -142,7 +142,7 @@ internal static unsafe class NativeText
             {
                 int actualBytes = function(firstPointer, firstBytes.Length, secondPointer, secondBytes.Length, outputPointer, output.Length);
                 int length = Math.Clamp(actualBytes, 0, output.Length);
-                return Encoding.UTF8.GetString(output, 0, length);
+                return InteropText.DecodeUtf8(output, 0, length);
             }
         }
     }

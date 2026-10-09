@@ -35,7 +35,7 @@ internal static unsafe partial class ManagedScriptInterop
         {
             if (host == IntPtr.Zero || name == null || length <= 0)
                 return InteropStatus.InvalidArgument;
-            return ScriptRuntime.OnHostFieldChanged(host, Encoding.UTF8.GetString(name, length));
+            return ScriptRuntime.OnHostFieldChanged(host, InteropText.DecodeUtf8(name, length));
         }
         catch { return InteropStatus.InvocationFailed; }
     }

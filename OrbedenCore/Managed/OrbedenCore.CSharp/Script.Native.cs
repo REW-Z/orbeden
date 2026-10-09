@@ -61,7 +61,7 @@ public abstract unsafe partial class Script
         if (!initialized || api.CreateHost == null || ens.IsNull || string.IsNullOrWhiteSpace(typeName))
             return IntPtr.Zero;
 
-        byte[] bytes = Encoding.UTF8.GetBytes(typeName);
+        byte[] bytes = InteropText.EncodeUtf8(typeName);
         fixed (byte* pointer = bytes)
         {
             return api.CreateHost(api.Context, ens, pointer, bytes.Length);
@@ -122,7 +122,7 @@ public abstract unsafe partial class Script
         if (!initialized || host == IntPtr.Zero || api.RemoveField == null || string.IsNullOrEmpty(name))
             return false;
 
-        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
+        byte[] nameBytes = InteropText.EncodeUtf8(name);
         fixed (byte* namePointer = nameBytes)
             return api.RemoveField(api.Context, host, namePointer, nameBytes.Length) != 0;
     }
@@ -133,9 +133,9 @@ public abstract unsafe partial class Script
         if (!initialized || host == IntPtr.Zero || api.SetField == null || string.IsNullOrEmpty(name))
             return false;
 
-        byte[] nameBytes = Encoding.UTF8.GetBytes(name);
-        byte[] typeBytes = Encoding.UTF8.GetBytes(typeName ?? string.Empty);
-        byte[] valueBytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+        byte[] nameBytes = InteropText.EncodeUtf8(name);
+        byte[] typeBytes = InteropText.EncodeUtf8(typeName ?? string.Empty);
+        byte[] valueBytes = InteropText.EncodeUtf8(value ?? string.Empty);
         fixed (byte* namePointer = nameBytes)
         fixed (byte* typePointer = typeBytes)
         fixed (byte* valuePointer = valueBytes)
@@ -176,7 +176,7 @@ public abstract unsafe partial class Script
         fixed (byte* pointer = bytes)
         {
             int actual = Math.Clamp(getter(api.Context, host, pointer, length), 0, length);
-            return Encoding.UTF8.GetString(bytes, 0, actual);
+            return InteropText.DecodeUtf8(bytes, 0, actual);
         }
     }
 
@@ -192,7 +192,7 @@ public abstract unsafe partial class Script
         fixed (byte* pointer = bytes)
         {
             int actual = Math.Clamp(getter(api.Context, host, index, pointer, length), 0, length);
-            return Encoding.UTF8.GetString(bytes, 0, actual);
+            return InteropText.DecodeUtf8(bytes, 0, actual);
         }
     }
 
@@ -253,8 +253,8 @@ public abstract unsafe partial class Script
     internal static Object? ResolveReference(string key, Type type)
     {
         if (!initialized || api.ResolveReference == null || string.IsNullOrEmpty(key)) return null;
-        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-        byte[] typeBytes = Encoding.UTF8.GetBytes(type.FullName ?? type.Name);
+        byte[] keyBytes = InteropText.EncodeUtf8(key);
+        byte[] typeBytes = InteropText.EncodeUtf8(type.FullName ?? type.Name);
         EnsId ens;
         int kind;
         IntPtr pointer;
