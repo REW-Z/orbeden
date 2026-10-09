@@ -5744,6 +5744,7 @@ namespace Reflection
         RegisterTypeFields(Font::StaticType(),
             {
                 FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("prebakedAtlas", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("sourceBytes", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("faceIndex", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Font_faceIndex, ReflectionGeneratedAccess::Set_Font_faceIndex, nullptr, ReflectionGeneratedAccess::GetValue_Font_faceIndex, ReflectionGeneratedAccess::SetValue_Font_faceIndex, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("rasterMode", "FontRasterMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),

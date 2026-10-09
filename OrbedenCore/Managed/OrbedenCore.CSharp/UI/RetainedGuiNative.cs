@@ -11,7 +11,7 @@ namespace Orbeden;
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal unsafe struct RetainedGuiApi
 {
-    /// <summary>表版本。当前为 2。</summary>
+    /// <summary>表版本。当前为 3。</summary>
     public uint version;
 
     /// <summary>表字节数。</summary>
@@ -38,13 +38,16 @@ internal unsafe struct RetainedGuiApi
 
     /// <summary>读取主显示目标的像素尺寸；屏幕画布的首帧视口引导用它。</summary>
     public delegate* unmanaged[Cdecl]<int*, int*, byte> ReadDisplaySize;
+
+    /// <summary>读取指定字体版本的预烘焙图集载荷。</summary>
+    public delegate* unmanaged[Cdecl]<ulong, int, ulong, byte*, int, int> ReadPrebakedAtlas;
 }
 
 /// <summary>RetainedGUI 函数表的进程级持有者。表在进程内稳定，不随世界切换变化。</summary>
 internal static unsafe class RetainedGuiNative
 {
     /// <summary>当前表版本；与原生 RetainedGuiApi::version 必须一致。</summary>
-    internal const uint ExpectedVersion = 2;
+    internal const uint ExpectedVersion = 3;
 
     private static RetainedGuiApi api;
     private static bool initialized;
@@ -154,6 +157,10 @@ internal static unsafe class RetainedGuiNative
 
     internal static float GetKerning(int fontObjectId, uint leftGlyph, uint rightGlyph) =>
         initialized ? api.GetKerning(fontObjectId, leftGlyph, rightGlyph) : 0.0f;
+
+    /// <summary>读取预烘焙载荷；容量不足时返回所需字节数。</summary>
+    internal static int ReadPrebakedAtlas(ulong context, int fontObjectId, ulong revision, byte* output, int capacity) =>
+        initialized ? api.ReadPrebakedAtlas(context, fontObjectId, revision, output, capacity) : -1;
 
     internal static void SetTextInput(ulong context, ulong token, bool active, int x, int y, int width, int height)
     {

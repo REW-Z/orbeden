@@ -27,6 +27,7 @@
 #include "Runtime/Object/Font.h"
 #include "Runtime/Object/TextResource.h"
 #include "Runtime/Fonts/FontRasterizer.h"
+#include "Runtime/Fonts/FontAtlasBaker.h"
 
 //实现编在第三方的静态库里（Tools/OrbedenThirdParty/src 下的编译单元），这里只取声明。
 #include "ThirdParty/stb/stb_image.h"
@@ -116,7 +117,14 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
             else if (value == "MSDF") settings.fontRasterMode = FontRasterMode::MSDF;
             else Log::Warning(("Unknown import setting value for rasterMode: " + value).c_str());
         }
-        else if (name == "atlasSize" || name == "distanceFieldSize")
+        else if (name == "prebakeCharacterSet")
+        {
+            if (value == "BasicLatin" || value == "Latin1" || value == "Custom" || value == "None")
+                settings.fontPrebakeCharacterSet = value;
+            else Log::Warning(("Unknown import setting value for prebakeCharacterSet: " + value).c_str());
+        }
+        else if (name == "prebakeTextFile") settings.fontPrebakeTextFile = ResourceManager::GetSourceKey(value);
+        else if (name == "atlasSize" || name == "distanceFieldSize" || name == "prebakePixelSize")
         {
             uint32 parsed = 0;
             auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
@@ -125,6 +133,7 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
                 settings.fontDistanceFieldSize, settings.fontDistanceFieldRange)) settings.fontAtlasSize = parsed;
             else if (valid && name == "distanceFieldSize" && Font::ValidateImportSettings(settings.fontRasterMode,
                 settings.fontAtlasSize, parsed, settings.fontDistanceFieldRange)) settings.fontDistanceFieldSize = parsed;
+            else if (valid && name == "prebakePixelSize" && parsed >= 1 && parsed <= 512) settings.fontPrebakePixelSize = parsed;
             else Log::Warning(("Unknown import setting value for " + std::string(name) + ": " + value).c_str());
         }
         else if (name == "distanceFieldRange")
@@ -2063,10 +2072,30 @@ AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSe
     List<uint8> bytes = LoadBytesOrError(collection.sourceKey, collection);
     if (!collection.Succeeded()) return collection;
 
+    //读取字符集文本并记录导入依赖
+    std::string textCharacters;
+    if (settings.fontPrebakeCharacterSet != "None" && !settings.fontPrebakeTextFile.empty())
+    {
+        std::string textKey = ResourceManager::GetSourceKey(settings.fontPrebakeTextFile);
+        std::filesystem::path textPath = Utf8Path::FromUtf8(textKey).lexically_normal();
+        std::string relative = Utf8Path::ToUtf8(textPath);
+        if (textPath.is_absolute() || textPath.has_root_name() || relative == ".." || StartsWith(relative, "../")
+            || GetLowerExtension(relative) != ".txt")
+        {
+            collection.AddError("Prebake text file must be a .txt file inside Content: " + textKey);
+            return collection;
+        }
+        List<uint8> textBytes = LoadBytesOrError(relative, collection);
+        if (!collection.Succeeded()) return collection;
+        usize offset = textBytes.size() >= 3 && textBytes[0] == 0xef && textBytes[1] == 0xbb && textBytes[2] == 0xbf ? 3 : 0;
+        textCharacters.assign(textBytes.begin() + offset, textBytes.end());
+    }
+
     //校验字节与导入参数
     uint32 faceIndex = settings.hasFontFaceIndex ? settings.fontFaceIndex : 0;
     if (!Font::ValidateImportSettings(settings.fontRasterMode, settings.fontAtlasSize,
         settings.fontDistanceFieldSize, settings.fontDistanceFieldRange)
+        || settings.fontPrebakePixelSize < 1 || settings.fontPrebakePixelSize > 512
         || !FontRasterizer::ValidateFontBytes(bytes, faceIndex))
     {
         collection.AddError("Invalid font data, face index or import settings: " + collection.sourceKey);
@@ -2089,6 +2118,7 @@ AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSe
     resource->atlasSize = settings.fontAtlasSize;
     resource->distanceFieldSize = settings.fontDistanceFieldSize;
     resource->distanceFieldRange = settings.fontDistanceFieldRange;
+    resource->SetPrebakedAtlas({});
     resource->BumpRevision();
 
     //导入时就打开一次：字体面下标越界或格式不支持时在这里失败，而不是等到运行时。
@@ -2097,6 +2127,31 @@ AssetCollection AssetPipeline::Import_FONT(std::string path, const AssetImportSe
         collection.AddError("Font could not be opened (unsupported format or face index out of range): " + collection.sourceKey);
         return collection;
     }
+
+    //构建预设字符集并追加文件字符
+    std::string characters;
+    if (settings.fontPrebakeCharacterSet == "BasicLatin" || settings.fontPrebakeCharacterSet == "Latin1")
+        for (uint32 scalar = 0x20; scalar <= 0x7e; ++scalar) characters.push_back(static_cast<char>(scalar));
+    if (settings.fontPrebakeCharacterSet == "Latin1")
+        for (uint32 scalar = 0xa0; scalar <= 0xff; ++scalar)
+        {
+            characters.push_back(static_cast<char>(0xc0 | (scalar >> 6)));
+            characters.push_back(static_cast<char>(0x80 | (scalar & 0x3f)));
+        }
+    characters += textCharacters;
+
+    //烘焙并保存图集载荷
+    List<uint8> prebakedAtlas;
+    uint32 missingCount = 0;
+    std::string error;
+    if (!FontAtlasBaker::Bake(*resource, characters, settings.fontPrebakePixelSize, prebakedAtlas, missingCount, error))
+    {
+        collection.AddError("Font atlas bake failed: " + collection.sourceKey + ": " + error);
+        return collection;
+    }
+    resource->SetPrebakedAtlas(std::move(prebakedAtlas));
+    if (missingCount > 0) collection.AddWarning("Font prebake skipped " + std::to_string(missingCount)
+        + " characters absent from the source font: " + collection.sourceKey);
 
     collection.AddObject(fontKey, resource, true);
     return collection;

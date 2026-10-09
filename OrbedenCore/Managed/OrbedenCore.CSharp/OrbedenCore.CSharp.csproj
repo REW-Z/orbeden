@@ -28,7 +28,6 @@
     <Copy SourceFiles="@(RuntimeSdkFiles)" DestinationFolder="$(GameSdkOutputPath)" SkipUnchangedFiles="true" />
   </Target>
   <ItemGroup>
-    <InternalsVisibleTo Include="RetainedGUI.ManagedTests" />
     <Compile Include="../../Src/Runtime/Generated/Bindings.Generated.cs" Link="Generated/Bindings.Generated.cs" />
   </ItemGroup>
   <Target Name="GenerateObjectBindings" BeforeTargets="BeforeCompile">

@@ -206,10 +206,13 @@ internal sealed class UIFontAtlasPage
     internal ulong pinnedFrame;
     //独占页只放一个字形，不再参与逐行装箱。
     internal bool dedicated;
+    //预烘焙页的来源索引；回收时解除运行时纹理引用。
+    internal UIFontPrebakedAtlas? prebakedAtlas;
+    internal int prebakedPageIndex = -1;
 }
 
 /// <summary>
-/// 动态字形 Atlas。只管装箱、上传与回收：度量与像素来自原生 FontRasterizer，排版在 UITextLayout。
+/// 预烘焙与动态补字 Atlas。装箱、上传与回收由本类负责，排版在 UITextLayout。
 /// 缓存实例按进程共享，纹理页与字形状态按当前世界维护；上下文切换时清理并重建。
 /// 页纹理由本类持有强引用，原生 World 销毁时仍会失效。
 /// </summary>
@@ -255,6 +258,7 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     //标量到字形下标的解析结果；0 表示该标量在字体里没有字形。
     private readonly Dictionary<ScalarKey, uint> scalarGlyphs = [];
     private readonly List<UIFontAtlasPage> pages = [];
+    private readonly Dictionary<(int fontId, ulong revision), UIFontPrebakedAtlas?> prebakedAtlases = [];
     //已回收但还要跨帧保活的页：提交过的几何可能还引用着它们的纹理。
     private readonly List<RetiredPage> retired = [];
     private readonly Dictionary<UIGlyphKey, int> batchKeys = [];
@@ -461,15 +465,18 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         {
             page.generation = NextGeneration();
             page.texture = null;
+            page.prebakedAtlas = null;
         }
         foreach (RetiredPage item in retired)
         {
             item.page.generation = NextGeneration();
             item.page.texture = null;
+            item.page.prebakedAtlas = null;
         }
         pages.Clear();
         retired.Clear();
         glyphs.Clear();
+        prebakedAtlases.Clear();
         scalarGlyphs.Clear();
         batchKeys.Clear();
         pending.Clear();
@@ -638,6 +645,8 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
         entry = null;
         if (demand.font == null) return false;
 
+        if (TryGetPrebakedGlyph(demand, out entry)) return true;
+
         int fontObjectId = demand.font.GetObjectId();
         ulong revision = demand.font.GetRevision();
         if (!scalarGlyphs.TryGetValue(new ScalarKey(fontObjectId, revision, demand.scalar), out uint glyphIndex))
@@ -660,6 +669,111 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
 
     private void RememberScalar(int fontObjectId, ulong revision, uint scalar, uint glyphIndex) =>
         scalarGlyphs[new ScalarKey(fontObjectId, revision, scalar)] = glyphIndex;
+
+    //加载预烘焙载荷并移除同字体的旧版本
+    private unsafe UIFontPrebakedAtlas? LoadPrebakedAtlas(Font font)
+    {
+        int fontId = font.GetObjectId();
+        ulong revision = font.GetRevision();
+        if (prebakedAtlases.TryGetValue((fontId, revision), out UIFontPrebakedAtlas? resident)) return resident;
+        if (Context == 0) return null;
+
+        //释放重新导入前的图集状态
+        List<(int fontId, ulong revision)> obsolete = [];
+        foreach (var key in prebakedAtlases.Keys)
+            if (key.fontId == fontId && key.revision != revision) obsolete.Add(key);
+        for (int index = pages.Count - 1; index >= 0; --index)
+            if (pages[index].fontObjectId == fontId && pages[index].fontRevision != revision) ReleasePage(pages[index]);
+        foreach (var key in obsolete) prebakedAtlases.Remove(key);
+
+        //读取完整预烘焙载荷
+        int required = RetainedGuiNative.ReadPrebakedAtlas(Context, fontId, revision, null, 0);
+        if (required < 0) return null;
+        if (required == 0) { prebakedAtlases[(fontId, revision)] = null; return null; }
+        if (required > UIFontPrebakedAtlas.MaximumPayloadBytes)
+        {
+            Console.Error.WriteLine("FontAtlasCache: 预烘焙载荷超出字节限制。");
+            prebakedAtlases[(fontId, revision)] = null;
+            return null;
+        }
+        byte[] data = new byte[required];
+        fixed (byte* output = data)
+            if (RetainedGuiNative.ReadPrebakedAtlas(Context, fontId, revision, output, data.Length) != required) return null;
+        try
+        {
+            UIFontPrebakedAtlas atlas = UIFontPrebakedAtlas.Read(data);
+            prebakedAtlases[(fontId, revision)] = atlas;
+            return atlas;
+        }
+        catch (System.IO.IOException exception)
+        {
+            Console.Error.WriteLine($"FontAtlasCache: 预烘焙载荷无效：{exception.Message}");
+            prebakedAtlases[(fontId, revision)] = null;
+            return null;
+        }
+    }
+
+    //加载预烘焙字形所在的图集页并建立缓存条目
+    private bool TryGetPrebakedGlyph(in UIGlyphDemand demand, out UIGlyphEntry? entry)
+    {
+        entry = null;
+        Font? font = demand.font;
+        if (font is not { IsAlive: true }) return false;
+        UIFontPrebakedAtlas? atlas = LoadPrebakedAtlas(font);
+        if (atlas == null || atlas.rasterMode != demand.rasterMode
+            || (demand.rasterMode == FontRasterMode.Bitmap && atlas.pixelSize != KeyPixelSize(demand.rasterMode, demand.pixelSize))
+            || !atlas.glyphs.TryGetValue(demand.scalar, out UIFontPrebakedAtlas.Glyph glyph)) return false;
+
+        UIGlyphKey key = new(font.GetObjectId(), font.GetRevision(), glyph.GlyphIndex, demand.rasterMode,
+            KeyPixelSize(demand.rasterMode, demand.pixelSize));
+        if (glyphs.TryGetValue(key, out entry) && (entry.page == null || entry.HasPixels))
+        {
+            RememberScalar(key.fontObjectId, key.fontRevision, demand.scalar, glyph.GlyphIndex);
+            PinGlyph(entry);
+            return true;
+        }
+
+        //按需上传烘焙页并恢复装箱游标
+        UIFontAtlasPage? page = null;
+        if (glyph.PageIndex >= 0)
+        {
+            UIFontPrebakedAtlas.Page source = atlas.pages[glyph.PageIndex];
+            if (source.Width > MaximumTextureSize() || source.Height > MaximumTextureSize()) return false;
+            page = atlas.runtimePages[glyph.PageIndex];
+            if (page?.texture is not { IsAlive: true })
+            {
+                if (page != null) ReleasePage(page);
+                page = CreatePage(font, source.Width, source.Height, source.Channels, source.Width != (int)font.atlasSize);
+                if (page == null || page.texture == null || !page.texture.UpdateRegion(0, 0, source.Width, source.Height,
+                    atlas.data.AsSpan(source.PixelOffset, source.ByteCount), source.Width * source.Channels))
+                {
+                    if (page != null) ReleasePage(page);
+                    entry = RetryMissing;
+                    return true;
+                }
+                page.cursor = source.Cursor;
+                page.prebakedAtlas = atlas;
+                page.prebakedPageIndex = glyph.PageIndex;
+                atlas.runtimePages[glyph.PageIndex] = page;
+            }
+        }
+
+        //复用导入时的度量和字形区域
+        entry = new UIGlyphEntry(key, glyph.GlyphIndex, false, atlas.unitsPerEm)
+        {
+            Advance = glyph.Advance, BearingX = glyph.BearingX, BearingY = glyph.BearingY,
+            Width = glyph.MetricWidth, Height = glyph.MetricHeight, PixelSize = atlas.pixelSize,
+            BitmapWidth = glyph.Width, BitmapHeight = glyph.Height, OriginX = glyph.OriginX, OriginY = glyph.OriginY,
+            page = page,
+        };
+        if (page != null)
+            entry.Uv = new UIRect(new vector2((float)glyph.X / page.width, 1.0f - (float)(glyph.Y + glyph.Height) / page.height),
+                new vector2((float)glyph.Width / page.width, (float)glyph.Height / page.height));
+        glyphs[key] = entry;
+        RememberScalar(key.fontObjectId, key.fontRevision, demand.scalar, glyph.GlyphIndex);
+        PinGlyph(entry);
+        return true;
+    }
 
     //命中即固定所在页：本帧不再回收，同时推进 LRU 时间戳。
     internal void PinGlyph(UIGlyphEntry entry)
@@ -911,6 +1025,12 @@ public sealed class FontAtlasCache : IDisposable, IUITextMetrics
     //回收一页：条目随页一起移除，代次推进让依赖它的几何失效。
     private void ReleasePage(UIFontAtlasPage page)
     {
+        if (page.prebakedAtlas != null)
+        {
+            page.prebakedAtlas.runtimePages[page.prebakedPageIndex] = null;
+            page.prebakedAtlas = null;
+            page.prebakedPageIndex = -1;
+        }
         pages.Remove(page);
         ResidentBytes -= page.bytes;
         page.generation = NextGeneration();

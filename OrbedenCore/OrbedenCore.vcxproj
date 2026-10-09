@@ -244,6 +244,7 @@
     <ClInclude Include="Src\Runtime\Object\Skybox.h" />
     <ClInclude Include="Src\Runtime\Object\TextResource.h" />
     <ClInclude Include="Src\Runtime\Fonts\FontRasterizer.h" />
+    <ClInclude Include="Src\Runtime\Fonts\FontAtlasBaker.h" />
     <ClInclude Include="Src\Runtime\Object\Texture2D.h" />
     <ClInclude Include="Src\Runtime\Object\Transform.h" />
     <ClInclude Include="Src\Runtime\Object\StaticMeshRenderer.h" />
@@ -338,6 +339,7 @@
     <ClCompile Include="Src\Runtime\Object\Skybox.cpp" />
     <ClCompile Include="Src\Runtime\Object\TextResource.cpp" />
     <ClCompile Include="Src\Runtime\Fonts\FontRasterizer.cpp" />
+    <ClCompile Include="Src\Runtime\Fonts\FontAtlasBaker.cpp" />
     <ClCompile Include="Src\Runtime\Object\Texture2D.cpp" />
     <ClCompile Include="Src\Runtime\Object\Transform.cpp" />
     <ClCompile Include="Src\Runtime\Object\StaticMeshRenderer.cpp" />

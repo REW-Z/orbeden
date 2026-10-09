@@ -13,7 +13,7 @@ C++ 负责 GPU 执行、字体解析与光栅化、平台输入、原生资源�
 | 交互 | Button、CheckBox、RadioButton、Slider、ScrollBar、ScrollBox、ComboBox、TextField |
 | 布局 | LayoutBox：水平/垂直；GridBox：固定列/固定行/自适应列 |
 | 遮罩 | Mask：矩形、图片 Alpha、嵌套软遮罩 |
-| 字体 | TTF、OTF、TTC；Bitmap、SDF、MSDF；动态 Atlas |
+| 字体 | TTF、OTF、TTC；Bitmap、SDF、MSDF；预烘焙 Atlas＋动态补字 |
 | 输入 | 鼠标、键盘、触摸、手柄；中文 IME、剪贴板 |
 | 事件 | C# 订阅、Inspector 持久化绑定 |
 | 编辑器 | 创建、属性、矩形手柄、像素预览、Undo/Redo |
@@ -402,7 +402,7 @@ UIView.viewerId：这条呈现视图属于哪台相机（Ens ID），屏幕与�
 UICanvasSubmission 不指定相机；WorldSpace 每块画布只提交一次，任意 LayerMask 匹配的相机均可绘制。
 用于屏幕画布的视图使用单位 view 与正交 projection。
 
-RetainedGuiApi 表头为 uint version=2、uint structSize；随后指针槽顺序固定：
+RetainedGuiApi 表头为 uint version=3、uint structSize；随后指针槽顺序固定：
 | 槽 | C# 薄层方法合同 |
 |---|---|
 | 0 | ulong CreateContext(ulong worldRevision, ulong managedGeneration) |
@@ -424,6 +424,7 @@ RetainedGuiApi 表头为 uint version=2、uint structSize；随后指针槽顺�
 | 16 | bool WriteClipboard(ReadOnlySpan<byte> text) |
 | 17 | int ReadChanges(ulong context, Span<UISceneChange> output, out bool fullResync) |
 | 18 | bool ReadDisplaySize(out int width, out int height) |
+| 19 | int ReadPrebakedAtlas(ulong context, int fontObjectId, ulong fontRevision, Span<byte> output) |
 
 深度来源按"画布 + 观察者"分槽：世界空间下同一块画布被多台相机看到时各存各的目标与深度。
 ReadDisplaySize 给的是主显示目标的像素尺寸，屏幕画布的首帧视口引导用它：
@@ -453,11 +454,15 @@ DestroyContext 释放帧、网格、派生位置、视图快照和资源根，�
 
 # 关于字体与文字系统
 
+版本 62：预烘焙字符文本改为 `.txt` 原始文件引用框，支持拖放、文件选择、清空与缺失显示；Import Settings 保存 Content 相对路径 `prebakeTextFile`，不保存字符文本。导入读取 UTF-8（可带 BOM）文件并记入源文件依赖，跳过换行等控制字符，按 Unicode 标量去重和排序；同一字形的多个字符映射共用图集区域。字符文件变化参与编辑器缓存和运行态重导指纹。字符文件只参与导入，Font 运行时读取已烘焙载荷，文件内容不会被修改。
+
+版本 61：字体导入预烘焙常用字符，运行时读取烘焙页并在剩余空间动态补字。源文件 Import Settings 配置 Raster Mode、Atlas Resolution、Bake Pixel Size（px/em）、Prebake Character Set 和自定义字符文本。Bitmap 的字形宽高按烘焙像素字号及字体比例生成，不固定为等宽单元；不同 Bitmap 投影字号分别缓存，距离场字形共用指定采样密度。图集页及字形表作为 Font 的不可变载荷持久化，运行时复制像素后恢复装箱游标；补字只修改世界所属纹理。图集回收或 PIE 切换后重新加载载荷，沿用版本 60 的失效和重建边界。
+
 版本 60：FontAtlasCache 的共享实例跨世界保留，图集页及字形状态绑定当前 UI 上下文；进入和退出 PIE 都清理旧页并推进缓存版本。Text/TextField 检查缓存版本、图集纹理存活与临时失败状态后重排，字体图集失效时不绘制实心替代矩形。输入计数查询须提供 textBytes 输出指针，无文本输入不要求分配文本缓冲。PIE 世界重建只使运行时缓存失效，不改写世界文件。
 
-分工：Font/FontRasterizer 用 C++，UITextLayout/FontAtlasCache/Text 用 C#。
-原生职责为字体字节、字体面、glyphIndex、度量、kerning、轮廓光栅化；不执行换行或 Atlas 装箱。
-Font 位于 Native/Runtime/Object/Font.h/.cpp，其余字体服务位于 Native/Runtime/Fonts/。
+分工：Font/FontRasterizer/FontAtlasBaker 用 C++，UITextLayout/FontAtlasCache/Text 用 C#。
+原生运行时负责字体字节、字体面、glyphIndex、度量、kerning、轮廓光栅化；导入阶段由 FontAtlasBaker 烘焙和装箱，动态装箱由 C# 负责，换行在 UITextLayout。
+Font 位于 OrbedenCore/Src/Runtime/Object/Font.h/.cpp，其余原生字体服务位于 OrbedenCore/Src/Runtime/Fonts/。
 依赖固定 FreeType VER-2-14-3、msdfgen v1.13；保留 FTL 与 MIT 授权文件。
 https://github.com/freetype/freetype/releases/tag/VER-2-14-3
 https://github.com/Chlumsky/msdfgen/releases/tag/v1.13
@@ -466,9 +471,9 @@ msdfgen 不构建 standalone、OpenMP、Skia、安装目标；通过 FT_Outline_
 
 Font 持久化 sourceBytes:List<uint8>、faceIndex:uint=0；字体元数据从字节解析。
 元数据为 familyName、styleName、unitsPerEm、ascender、descender、lineHeight。
-revision 为运行时 ulong，重新导入成功后递增；Font 不保存 FT_Face、Atlas 或 GPU 句柄。
+revision 为运行时 ulong，重新导入成功后递增；Font 保存预烘焙 Atlas 的像素与字形表，不保存 FT_Face 或 GPU 句柄。
 导入 .ttf/.otf/.ttc；越界 faceIndex 导入失败；Player 使用打包字节，不读系统字体。
-cooked 字体载荷版本 2 保存 faceIndex、rasterMode、atlasSize、distanceFieldSize、distanceFieldRange、字节长度与字节；先校验和解析，再替换资源。版本 1 载荷按默认导入设置读取。
+cooked 字体载荷版本 3 保存 faceIndex、rasterMode、atlasSize、distanceFieldSize、distanceFieldRange、字体字节及预烘焙载荷；先校验和解析，再替换资源。版本 1/2 没有预烘焙载荷，继续动态生成；版本 1 使用默认导入设置。字体字节保留供动态补字使用。
 原始字体在 ProjectPanel 下展开为 Font 对象，与 PNG 展开为 Texture2D 一致；源文件 Inspector 显示 Objects 和 Import Settings。
 导入设置写入源文件旁的 .resinfo，Apply 重新导入并保持 Font 对象身份，推进 revision、刷新字体面及文字几何。
 字体仍属于外部原始格式，导入结果是 Font 对象；编辑器不新增 .orbfont 文件格式，Cooked 产物为 .orbo。
@@ -480,14 +485,17 @@ Bitmap 光栅字号取四舍五入并限于 [1,512]，留白 1 texel，处理正
 WorldSpace 的布局、Image/Text 网格、控件附加网格与文字排版均与摄像机无关。
 相机移动、增删与分辨率变化不重建 WorldSpace 几何；需要跨距离保持清晰时使用 SDF/MSDF，shader 按 UV 导数处理边缘。
 每台相机分别发布呈现快照，命中检测使用对应相机矩阵、视口和深度，不生成相机网格变体。
-Font 导入设置默认 rasterMode=Bitmap、atlasSize=1024、distanceFieldSize=64、distanceFieldRange=4。
+Font 导入设置默认 rasterMode=Bitmap、atlasSize=1024、prebakePixelSize=16、prebakeCharacterSet=BasicLatin、distanceFieldSize=64、distanceFieldRange=4。
+预烘焙字符集支持 BasicLatin（U+0020–U+007E）、Latin1（再加 U+00A0–U+00FF）、Custom（Text File Characters）与 None；非 None 模式追加 `prebakeTextFile` 引用的 UTF-8 `.txt` 文件内容，去重后按码点排序，忽略控制字符，字体未包含的字符报告 Warning。Import Settings 的 Prebake Text File 仅接收 Content 内的 `.txt` 文件，支持 UTF-8 BOM，缺失显示 Missing。`.resinfo` 只保存文件引用路径，字符文件作为导入依赖参与缓存验证；旧 `prebakeCharacters` 文本设置不再使用。
+预烘焙载荷内部版本为 1，小端存储：头部为 version、rasterMode、pixelSize、atlasSize、unitsPerEm、pageCount、glyphCount（各 uint32）；每页为 width、height、channels、cursorX、cursorY、rowHeight、byteCount 后跟像素；每字形为 scalar、glyphIndex、pageIndex（空轮廓为 -1）、x、y、width、height、originX、originY，随后五个 float32（advance、bearingX、bearingY、width、height）。字号单位为 px/em，Bitmap 支持 1–512，距离场支持 16–256；字体比例和留白共同决定字形实际像素宽高。烘焙图集像素限制为每字体 64 MiB，超限导入失败。
 atlasSize 支持 256/512/1024/2048/4096；distanceFieldSize 支持 [16,256] pixels/em；distanceFieldRange 支持 [1,32] texel。
-SDF/MSDF 从 Font 读取像素密度和 range，padding=ceil(range)+2、edge angle=3 radians、seed=0；Bitmap 按 Text 字号动态生成。
+SDF/MSDF 从 Font 读取像素密度和 range，padding=ceil(range)+2、edge angle=3 radians、seed=0；Bitmap 在投影字号与烘焙字号一致时使用烘焙字形，其他字号动态生成。
 空格只缓存度量，不分配 Atlas；空轮廓同样不生成像素。
 
 Atlas 键：fontObjectId、fontRevision、glyphIndex、rasterMode、bitmapPixelSize。
 SDF/MSDF 的 bitmapPixelSize=0；页面保存 pageId、generation、texture、row cursor、lastUsedFrame。
 普通页边长由 Font.atlasSize 指定并限制到设备上限；字体对象及 revision 各自分配页面。逐行装箱，宽不足换行，高不足换页，不旋转、不移动已有字形。
+烘焙页按实际使用的字形加载，上传后恢复游标，剩余空间与动态字形共用。LRU 回收时解除载荷索引对运行时页的引用，下次使用重新上传原始烘焙像素；动态图集内容不写回字体载荷。设备不支持烘焙页尺寸时按动态路径生成字形。
 超大字形分配能容纳它的二次幂独立页；超设备上限使用缺字图形并记录错误。
 64 MiB 为软预算：先收集本帧全部视图字形并固定命中页，再生成冷字形。
 只驱逐未固定的 LRU 页；当前工作集超过预算允许超出，禁止本帧反复驱逐。

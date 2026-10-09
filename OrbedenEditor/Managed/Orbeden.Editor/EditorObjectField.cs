@@ -24,9 +24,22 @@ internal static class EditorObjectField
     }
 
     //枚举场景对象和资源并按声明类型过滤
-    private static List<Choice> CollectChoices(string declaredType, bool ensHandle, bool allowScene)
+    private static List<Choice> CollectChoices(string declaredType, bool ensHandle, bool allowScene, string? sourceExtension = null)
     {
         List<Choice> result = [];
+        //枚举指定扩展名的原始文件
+        if (sourceExtension != null)
+        {
+            string root = PathDefines.ContentRoot;
+            if (!Directory.Exists(root)) return result;
+            foreach (string file in Directory.EnumerateFiles(root, "*" + sourceExtension,
+                new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }))
+            {
+                string key = Path.GetRelativePath(root, file).Replace('\\', '/');
+                result.Add(new Choice(key, key, 0, EnsId.Null));
+            }
+            return result.OrderBy(choice => choice.Label, StringComparer.OrdinalIgnoreCase).ToList();
+        }
         Type? expected = FindType(ensHandle ? "Orbeden.Ens" : declaredType);
         string nativeType = expected == null ? declaredType : NativeBindingRuntime.GetNativeTypeName(expected) ?? declaredType;
         string[] values = EditorNativeComponents.GetReferenceObjects(ensHandle ? "Ens" : nativeType).Split('\0');
@@ -53,8 +66,15 @@ internal static class EditorObjectField
     }
 
     //加载用户选定的引用并验证对象仍然存活
-    private static bool TryLoadChoice(Choice choice, string declaredType, out Orbeden.Object? selected)
+    private static bool TryLoadChoice(Choice choice, string declaredType, out Orbeden.Object? selected, string? sourceExtension = null)
     {
+        //验证原始文件引用
+        if (sourceExtension != null)
+        {
+            selected = null;
+            return Path.GetExtension(choice.Key).Equals(sourceExtension, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(Path.Combine(PathDefines.ContentRoot, choice.Key));
+        }
         selected = choice.ObjectId == 0 ? null : NativeBindingRuntime.Wrap<Orbeden.Object>(choice.ObjectId);
         if (choice.ObjectId == 0)
         {
@@ -102,12 +122,18 @@ internal static class EditorObjectField
     }
 
     //绘制引用框、清空按钮和类型过滤选择器
-    internal static bool Draw(string label, string declaredType, ref string key, ref int objectId, bool ensHandle = false, bool allowScene = true)
+    internal static bool Draw(string label, string declaredType, ref string key, ref int objectId,
+        bool ensHandle = false, bool allowScene = true, string? sourceExtension = null)
     {
         key ??= string.Empty;
         string currentKey = key;
         bool missing = false;
         string name = key.Length == 0 ? "None" : EditorNativeComponents.GetReferenceLabel(key);
+        if (sourceExtension != null && key.Length != 0)
+        {
+            missing = !File.Exists(Path.Combine(PathDefines.ContentRoot, key));
+            name = missing ? "Missing" : Path.GetFileName(key);
+        }
         if (name.Length == 0)
         {
             Type? type = FindType(declaredType);
@@ -116,7 +142,7 @@ internal static class EditorObjectField
             missing = asset == null;
             name = asset?.DisplayName ?? "Missing";
         }
-        string shortType = declaredType[(declaredType.LastIndexOf('.') + 1)..];
+        string shortType = sourceExtension?.TrimStart('.') ?? declaredType[(declaredType.LastIndexOf('.') + 1)..];
         string popup = "Select " + shortType + "##reference_picker_" + label;
         bool changed = false;
         EditorGUI.Label(label.Split("##", StringSplitOptions.None)[0]);
@@ -131,7 +157,7 @@ internal static class EditorObjectField
         {
             if (key.StartsWith("world://", StringComparison.Ordinal))
             {
-                Choice? target = CollectChoices(declaredType, ensHandle, allowScene).FirstOrDefault(choice => choice.Key == currentKey);
+                Choice? target = CollectChoices(declaredType, ensHandle, allowScene, sourceExtension).FirstOrDefault(choice => choice.Key == currentKey);
                 Ens owner = target == null ? Ens.Null : Ens.FromId(target.Owner);
                 if (owner.IsValid) EnsPanel.Ping(owner.ResourceKey);
             }
@@ -140,7 +166,12 @@ internal static class EditorObjectField
         string draggedKey = NativeEditorGUI.ReadDrag(out int draggedKind);
         if (draggedKey.Length != 0)
         {
-            List<Choice> candidates = CollectChoices(declaredType, ensHandle, allowScene);
+            if (sourceExtension != null)
+            {
+                int separator = draggedKey.IndexOf("//", StringComparison.Ordinal);
+                if (separator >= 0) draggedKey = draggedKey[..separator];
+            }
+            List<Choice> candidates = CollectChoices(declaredType, ensHandle, allowScene, sourceExtension);
             if (draggedKind == 1)
             {
                 Choice? exact = candidates.FirstOrDefault(choice => choice.Key == draggedKey);
@@ -152,10 +183,10 @@ internal static class EditorObjectField
                     || choice.Key.StartsWith(draggedKey + "//", StringComparison.Ordinal)).ToList();
             if (NativeEditorGUI.AcceptDrag(candidates.Count != 0))
             {
-                if (candidates.Count == 1 && TryLoadChoice(candidates[0], declaredType, out Orbeden.Object? selected))
+                if (candidates.Count == 1 && TryLoadChoice(candidates[0], declaredType, out Orbeden.Object? selected, sourceExtension))
                 {
                     key = candidates[0].Key;
-                    objectId = selected!.InstanceId;
+                    objectId = selected?.InstanceId ?? 0;
                     changed = true;
                 }
                 else if (candidates.Count > 1)
@@ -174,7 +205,7 @@ internal static class EditorObjectField
         }
         else if (action == 3)
         {
-            choices = CollectChoices(declaredType, ensHandle, allowScene);
+            choices = CollectChoices(declaredType, ensHandle, allowScene, sourceExtension);
             search = string.Empty;
             NativeEditorGUI.OpenPopup(popup);
         }
@@ -193,9 +224,9 @@ internal static class EditorObjectField
                         if (!choice.Label.Contains(search, StringComparison.OrdinalIgnoreCase)
                             && !choice.Key.Contains(search, StringComparison.OrdinalIgnoreCase)) continue;
                         if (!EditorGUI.Selectable(choice.Label + "##" + choice.Key, key == choice.Key)) continue;
-                        if (!TryLoadChoice(choice, declaredType, out Orbeden.Object? selected)) continue;
+                        if (!TryLoadChoice(choice, declaredType, out Orbeden.Object? selected, sourceExtension)) continue;
                         key = choice.Key;
-                        objectId = selected!.InstanceId;
+                        objectId = selected?.InstanceId ?? 0;
                         changed = true;
                         NativeEditorGUI.ClosePopup();
                     }

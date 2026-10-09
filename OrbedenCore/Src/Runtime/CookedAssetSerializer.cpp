@@ -8,6 +8,7 @@
 #include "Runtime/Object/Shader.h"
 #include "Runtime/Object/Skybox.h"
 #include "Runtime/Fonts/FontRasterizer.h"
+#include "Runtime/Fonts/FontAtlasBaker.h"
 #include "Runtime/Object/Font.h"
 #include "Runtime/Object/TextResource.h"
 #include "Runtime/Object/Texture2D.h"
@@ -448,9 +449,9 @@ namespace
     }
 
     //字体载荷的格式版本；升级字节布局时递增。
-    constexpr uint32 FontPayloadVersion = 2;
+    constexpr uint32 FontPayloadVersion = 3;
 
-    //写入字体资源载荷：格式版本、字体面下标、导入设置与字节
+    //写入字体导入设置、源字节与预烘焙载荷
     bool WriteFont(BlobWriter& writer, Font* font)
     {
         writer.WriteValue(FontPayloadVersion);
@@ -460,6 +461,7 @@ namespace
         writer.WriteValue(font->distanceFieldSize);
         writer.WriteValue(font->distanceFieldRange);
         writer.WriteArray(font->sourceBytes);
+        writer.WriteArray(font->GetPrebakedAtlas());
         return true;
     }
 
@@ -467,7 +469,7 @@ namespace
     bool ReadFont(BlobReader& reader, Font* font)
     {
         uint32 version = 0;
-        if (!reader.ReadValue(version) || (version != 1 && version != FontPayloadVersion)) return false;
+        if (!reader.ReadValue(version) || version < 1 || version > FontPayloadVersion) return false;
 
         uint32 faceIndex = 0;
         if (!reader.ReadValue(faceIndex)) return false;
@@ -483,6 +485,9 @@ namespace
 
         List<uint8> bytes;
         if (!reader.ReadArray(bytes)) return false;
+        List<uint8> prebakedAtlas;
+        if (version >= 3 && (!reader.ReadArray(prebakedAtlas)
+            || !FontAtlasBaker::Validate(prebakedAtlas, rasterMode, atlasSize, distanceFieldSize))) return false;
         if (!FontRasterizer::ValidateFontBytes(bytes, faceIndex)) return false;
 
         FontRasterizer::ReleaseFont(font->GetObjectId());
@@ -492,6 +497,7 @@ namespace
         font->distanceFieldSize = distanceFieldSize;
         font->distanceFieldRange = distanceFieldRange;
         font->sourceBytes = std::move(bytes);
+        font->SetPrebakedAtlas(std::move(prebakedAtlas));
         //内容换了：字形与图集缓存按键里的 revision 失效。
         font->BumpRevision();
         return FontRasterizer::OpenFont(*font);

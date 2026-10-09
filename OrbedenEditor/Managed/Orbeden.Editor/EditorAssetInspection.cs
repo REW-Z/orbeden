@@ -76,7 +76,7 @@ internal static class EditorAssetInspection
         Texture,
         /// <summary>模型：设置网格缩放倍率与源坐标系上轴。</summary>
         Mesh,
-        /// <summary>字体：设置字体面、字形模式与动态图集参数。</summary>
+        /// <summary>字体：设置字体面、字形表示及预烘焙图集参数。</summary>
         Font,
     }
 
@@ -103,7 +103,8 @@ internal static class EditorAssetInspection
         if (settingsSource == SourcePath) return;
         settingsSource = SourcePath;
         settingsDraft.Clear();
-        foreach ((string name, string value) in EditorAssetCache.ReadSettings(SourcePath)) settingsDraft[name] = value;
+        foreach ((string name, string value) in EditorAssetCache.ReadSettings(SourcePath))
+            if (name != "prebakeCharacters") settingsDraft[name] = value;
         settingsDirty = false;
         settingsStatus = string.Empty;
     }
@@ -177,7 +178,7 @@ internal static class EditorAssetInspection
                 ("SDF", "SDF"),
                 ("MSDF", "MSDF"),
             ]);
-            DrawChoice("atlasSize", "Atlas Size",
+            DrawChoice("atlasSize", "Atlas Resolution",
             [
                 ("256", "256 x 256"),
                 ("512", "512 x 512"),
@@ -187,15 +188,32 @@ internal static class EditorAssetInspection
             ]);
             if (DraftText("rasterMode") is "SDF" or "MSDF")
             {
-                DrawFontInteger("distanceFieldSize", "Distance Field Size", 64, 16, 256);
+                DrawFontInteger("distanceFieldSize", "Bake Pixel Size (px/em)", 64, 16, 256);
                 string rangeText = DraftText("distanceFieldRange");
                 float range = float.TryParse(rangeText, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : 4.0f;
                 if (EditorGUI.InputFloat("Distance Field Range", ref range) && float.IsFinite(range))
                     SetDraft("distanceFieldRange", Math.Clamp(range, 1.0f, 32.0f).ToString("R", CultureInfo.InvariantCulture));
             }
+            else DrawFontInteger("prebakePixelSize", "Bake Pixel Size (px/em)", 16, 1, 512);
+            DrawChoice("prebakeCharacterSet", "Prebake Character Set",
+            [
+                (null, "Basic Latin (ASCII)"),
+                ("Latin1", "Latin-1"),
+                ("Custom", "Text File Characters"),
+                ("None", "None (dynamic only)"),
+            ]);
+            if (DraftText("prebakeCharacterSet") != "None")
+            {
+                string textFile = DraftText("prebakeTextFile");
+                int objectId = 0;
+                if (EditorObjectField.Draw("Prebake Text File", typeof(TextResource).FullName!, ref textFile, ref objectId,
+                    allowScene: false, sourceExtension: ".txt"))
+                    SetDraft("prebakeTextFile", textFile.Length == 0 ? null : textFile);
+                EditorGUI.TextWrapped("Reference a UTF-8 .txt file from Content. Characters are deduplicated automatically; line breaks and control characters are ignored.");
+            }
             if (Path.GetExtension(SourcePath).Equals(".ttc", StringComparison.OrdinalIgnoreCase))
                 DrawFontInteger("faceIndex", "Face Index", 0, 0, int.MaxValue);
-            EditorGUI.TextWrapped("Glyphs are added to dynamic atlas pages on demand. Text components use these font settings.");
+            EditorGUI.TextWrapped("Pixel size sets glyph sampling density; glyph dimensions keep their font proportions. Baked glyphs load from the font asset; other glyphs are generated on demand. Bitmap text at other pixel sizes uses a separate cache.");
             break;
         }
     }

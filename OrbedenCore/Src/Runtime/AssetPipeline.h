@@ -42,11 +42,17 @@ public:
     bool hasFontFaceIndex = false;
     uint32 fontFaceIndex = 0;
 
-    //字体字形表示与动态图集参数；未指定时沿用 Font 默认值。
+    //字体字形表示与图集参数；未指定时沿用 Font 默认值。
     FontRasterMode fontRasterMode = FontRasterMode::Bitmap;
     uint32 fontAtlasSize = 1024;
     uint32 fontDistanceFieldSize = 64;
     float32 fontDistanceFieldRange = 4.0f;
+    //预烘焙字符集；文本文件字符追加到预设字符集。
+    std::string fontPrebakeCharacterSet = "BasicLatin";
+    //字符集文本文件的 Content 相对路径，导入时读取 UTF-8 内容并去重。
+    std::string fontPrebakeTextFile;
+    //Bitmap 预烘焙像素字号；距离场使用 fontDistanceFieldSize。
+    uint32 fontPrebakePixelSize = 16;
 
     //从设置表里取出指定源文件的设置；首行是可选的版本头
     static AssetImportSettings Lookup(const std::string& table, const std::string& sourceKey);

@@ -2,6 +2,8 @@
 #include "Runtime/Object/Material.h"
 
 #include <algorithm>
+#include <cstring>
+#include <limits>
 #include <memory>
 #include <span>
 #include <string>
@@ -524,6 +526,18 @@ namespace
         return object ? object->Cast<Font>() : nullptr;
     }
 
+    //读取指定字体版本的预烘焙载荷
+    int32 ORBEDEN_NATIVE_CALL GuiReadPrebakedAtlas(uint64 handle, int32 fontObjectId, uint64 revision, uint8* output, int32 capacity)
+    {
+        Font* font = ResolveFont(fontObjectId);
+        if (!Resolve(handle) || !font || font->GetRevision() != revision || capacity < 0) return -1;
+        const List<uint8>& data = font->GetPrebakedAtlas();
+        if (data.size() > static_cast<usize>(std::numeric_limits<int32>::max())) return -1;
+        int32 required = static_cast<int32>(data.size());
+        if (required > 0 && output && capacity >= required) std::memcpy(output, data.data(), data.size());
+        return required;
+    }
+
     //一次字形光栅化的暂存结果。像素要立刻复制出来：FontRasterizer 的缓冲会被下一次调用覆盖。
     struct GlyphBatch
     {
@@ -865,5 +879,6 @@ RetainedGuiApi RetainedGuiApi::Create()
     api.WriteClipboard = reinterpret_cast<void*>(&GuiWriteClipboard);
     api.ReadChanges = reinterpret_cast<void*>(&GuiReadChanges);
     api.ReadDisplaySize = reinterpret_cast<void*>(&GuiReadDisplaySize);
+    api.ReadPrebakedAtlas = reinterpret_cast<void*>(&GuiReadPrebakedAtlas);
     return api;
 }

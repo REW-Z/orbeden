@@ -16,8 +16,8 @@ enum class FontRasterMode : uint32
 };
 
 //字体资源：保存字体文件字节与字体面下标，元数据在导入时由字节解析。
-//不保存 FT_Face、Atlas 或 GPU 句柄：字体面由 FontRasterizer 按需缓存，
-//图集与纹理归托管侧的字体图集缓存。Player 只使用打包字节，不读系统字体。
+//保存预烘焙图集像素与字形表；字体面及 GPU 纹理由运行时按需建立。
+//Player 使用打包的图集与字体字节，不读系统字体。
 class Font : public Object
 {
     OBJECT_TYPE_DECLARE(Font)
@@ -25,6 +25,8 @@ class Font : public Object
 private:
     //内容版本。重新导入成功后递增，字形与图集缓存据此失效。
     uint64 revision = 1;
+    //预烘焙载荷，布局由 FontAtlasBaker 定义；不保存运行时纹理对象。
+    List<uint8> prebakedAtlas;
 
 public:
     //字体文件字节。支持 .ttf/.otf/.ttc，TTC 由 faceIndex 选择字体面。
@@ -34,7 +36,7 @@ public:
 
     //导入时选定的字形表示；UI 组件使用该设置，不单独选择模式。
     FontRasterMode rasterMode = FontRasterMode::Bitmap;
-    //动态图集普通页边长，支持 256 到 4096 的二次幂。
+    //预烘焙和动态补字图集页边长，支持 256 到 4096 的二次幂。
     uint32 atlasSize = 1024;
     //距离场每 em 的像素数，支持 16 到 256。
     uint32 distanceFieldSize = 64;
@@ -52,6 +54,14 @@ public:
 
     //读取内容版本
     uint64 GetRevision() const;
+
+    //读取预烘焙图集载荷
+    ORBEDEN_BIND_IGNORE
+    const List<uint8>& GetPrebakedAtlas() const;
+
+    //替换预烘焙图集载荷
+    ORBEDEN_BIND_IGNORE
+    void SetPrebakedAtlas(List<uint8> data);
 
     //推进内容版本；重新导入成功后由导入器调用
     ORBEDEN_BIND_IGNORE

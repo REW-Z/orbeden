@@ -44,6 +44,7 @@ public class TextField : UIControl
     private ulong layoutFontRevision;
     private ulong layoutAtlasRevision;
     private readonly List<(UIGlyphEntry entry, uint generation)> glyphPages = [];
+    private bool overlayGlyphsNeedRetry;
 
     //视图状态：光标闪烁计时与横向滚动。
     private float caretTimer;
@@ -337,7 +338,8 @@ public class TextField : UIControl
         Font? effectiveFont = GetEffectiveFont();
         bool changed = !ReferenceEquals(layoutFont, effectiveFont)
             || layoutFontRevision != (effectiveFont?.GetRevision() ?? 0)
-            || layoutAtlasRevision != FontAtlasCache.Shared.Revision;
+            || layoutAtlasRevision != FontAtlasCache.Shared.Revision
+            || overlayGlyphsNeedRetry;
         if (layout != null)
             foreach (UITextGlyph glyph in layout.glyphs) changed |= glyph.entry.NeedsRetry;
         foreach ((UIGlyphEntry entry, uint generation) in glyphPages)
@@ -353,6 +355,7 @@ public class TextField : UIControl
     protected override void PopulateOverlay(UIMeshBuilder mesh)
     {
         glyphPages.Clear();
+        overlayGlyphsNeedRetry = false;
         UIRect rect = GetLayout()?.GetResolvedRect() ?? default;
         if (rect.Width <= 0.0f || rect.Height <= 0.0f) return;
         //所有内部图形都被这层矩形裁剪约束。
@@ -470,6 +473,7 @@ public class TextField : UIControl
         bool started = false;
         foreach (UITextGlyph glyph in current.glyphs)
         {
+            overlayGlyphsNeedRetry |= glyph.entry.NeedsRetry;
             if (!glyph.entry.HasPixels) continue;
             glyphPages.Add((glyph.entry, glyph.entry.PageGeneration));
             vector2 pen = new(origin.x + glyph.position.x, origin.y + glyph.position.y);

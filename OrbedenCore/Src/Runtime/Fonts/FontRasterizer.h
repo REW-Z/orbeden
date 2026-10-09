@@ -38,7 +38,7 @@ struct FontGlyphBitmap
 };
 
 //字体光栅化服务。只负责字体字节、字体面、字形度量与轮廓光栅化，
-//不执行换行、不执行 Atlas 装箱——那些在托管侧。
+//不执行换行或 Atlas 装箱；动态装箱在托管侧，预烘焙装箱在 FontAtlasBaker。
 namespace FontRasterizer
 {
     //打开字体面并解析元数据。revision 变化时先释放旧字体面再重新打开。

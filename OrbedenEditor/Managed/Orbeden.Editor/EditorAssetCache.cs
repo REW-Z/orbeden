@@ -40,7 +40,7 @@ internal static class EditorAssetCache
 
     private const string MetadataExtension = ".resinfo";
     private const string SettingsFileNameSuffix = ".import.settings";
-    internal const int CurrentVersion = 5;
+    internal const int CurrentVersion = 7;
 
     /// <summary>将文件路径转换为 Content 相对路径。</summary>
     private static string GetRelativePath(string path) => Path.GetRelativePath(root, Path.GetFullPath(path)).Replace('\\', '/');
@@ -211,7 +211,7 @@ internal static class EditorAssetCache
         if (settings.Count == 0) return text.ToString();
         string source = GetRelativePath(path);
         foreach ((string name, string value) in settings)
-            text.Append('\n').Append(source).Append('\t').Append(name).Append('\t').Append(value);
+            if (name != "prebakeCharacters") text.Append('\n').Append(source).Append('\t').Append(name).Append('\t').Append(value);
         return text.ToString();
     }
 
@@ -229,7 +229,7 @@ internal static class EditorAssetCache
             string source = metadata[..^MetadataExtension.Length];
             if (!File.Exists(source)) continue;
             foreach ((string name, string value) in ReadSettings(source))
-                text.Append('\n').Append(GetRelativePath(source)).Append('\t').Append(name).Append('\t').Append(value);
+                if (name != "prebakeCharacters") text.Append('\n').Append(GetRelativePath(source)).Append('\t').Append(name).Append('\t').Append(value);
         }
         return text.ToString();
     }
@@ -311,6 +311,17 @@ internal static class EditorAssetCache
         foreach (Stamp stamp in ReadManifest(GetMetadataPath(path))?.Dependencies ?? [])
         {
             if (!string.IsNullOrEmpty(stamp.Path)) inputs.Add(stamp.Path);
+        }
+
+        //收集当前设置引用的字符文件
+        Dictionary<string, string> settings = ReadSettings(path);
+        if (settings.GetValueOrDefault("prebakeCharacterSet") != "None"
+            && settings.TryGetValue("prebakeTextFile", out string? textFile) && !string.IsNullOrEmpty(textFile))
+        {
+            string source = textFile.Replace('\\', '/');
+            int separator = source.IndexOf("//", StringComparison.Ordinal);
+            if (separator >= 0) source = source[..separator];
+            if (Path.GetExtension(source).Equals(".txt", StringComparison.OrdinalIgnoreCase)) inputs.Add(source);
         }
 
         //依赖路径来自伴生文件，可能被手工编辑；内容根之外的路径一律剔除。

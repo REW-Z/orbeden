@@ -1,6 +1,7 @@
 #include "Runtime/Object/Font.h"
 
 #include <cmath>
+#include <utility>
 
 OBJECT_TYPE_IMPLEMENT(Font, Object)
 
@@ -8,6 +9,18 @@ OBJECT_TYPE_IMPLEMENT(Font, Object)
 uint64 Font::GetRevision() const
 {
     return revision;
+}
+
+//读取预烘焙图集载荷
+const List<uint8>& Font::GetPrebakedAtlas() const
+{
+    return prebakedAtlas;
+}
+
+//替换预烘焙图集载荷
+void Font::SetPrebakedAtlas(List<uint8> data)
+{
+    prebakedAtlas = std::move(data);
 }
 
 //推进内容版本
