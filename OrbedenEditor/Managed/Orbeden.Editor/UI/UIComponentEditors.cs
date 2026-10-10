@@ -79,7 +79,7 @@ public sealed class MaskEditor : ComponentEditor
     }
 }
 
-/// <summary>布局编辑器：锚点、枢轴、偏移与尺寸，外加一次提交五组字段的锚点预设。</summary>
+/// <summary>布局编辑器：锚点、枢轴、Transform 位置与尺寸，预设修改合并为一次撤销。</summary>
 [CustomEditor(typeof(UILayout))]
 public sealed class UILayoutEditor : ComponentEditor
 {
@@ -116,7 +116,10 @@ public sealed class UILayoutEditor : ComponentEditor
                     vector2 origin = EditorGUI.CursorScreenPosition;
                     if (EditorGUI.ToggleButton($"        \n        \n        ##{row}_{column}", selected))
                         ApplyPreset(layout, min, max);
-                    EditorGUI.SetTooltip($"{rows[row]} / {columns[column]}");
+                    //SetTooltip 自己不做悬停判断，不加这一句就是十六格每帧各建一条提示
+                    //最后一条（Stretch / Stretch）会盖掉前面的，一直挂在鼠标上
+                    if (NativeEditorGUI.IsItemHovered())
+                        EditorGUI.SetTooltip($"{rows[row]} / {columns[column]}");
                     EditorGUI.DrawRectOutline(new vector2(origin.x + 9, origin.y + 8),
                         new vector2(origin.x + 39, origin.y + 38), new color(0.5f, 0.5f, 0.5f, 1));
                     EditorGUI.DrawRectOutline(new vector2(origin.x + 8 + min.x * 30, origin.y + 7 + (1 - max.y) * 30),
@@ -150,16 +153,18 @@ public sealed class UILayoutEditor : ComponentEditor
         {
             size = new vector2(stretchX ? -x - width : MathF.Max(0, width), stretchY ? -y - height : MathF.Max(0, height));
             offset = new vector2(stretchX ? x + pivot.x * size.x : x, stretchY ? height + pivot.y * size.y : y);
-            SetValue("offset", InteropValue.From(offset));
-            SetValue("sizeDelta", InteropValue.From(size));
+            gizmos.Begin(layout);
+            layout.SetOffset(offset);
+            layout.SetSizeDelta(size);
+            gizmos.End("UI Rectangle");
         }
         EditorGUI.BeginDisabled(Targets.Count != 1);
-        float z = layout.GetAnchoredPosition().z;
+        float z = layout.Ens.Transform.GetLocalPosition().z;
         if (EditorGUI.InputFloat("Position Z", ref z) && float.IsFinite(z))
         {
             gizmos.Begin(layout);
-            vector3 position = layout.GetAnchoredPosition();
-            layout.SetAnchoredPosition(new vector3(position.x, position.y, z));
+            vector3 position = layout.Ens.Transform.GetLocalPosition();
+            layout.Ens.Transform.SetLocalPosition(new vector3(position.x, position.y, z));
             gizmos.End("UI Position Z");
         }
         EditorGUI.EndDisabled();
@@ -167,11 +172,10 @@ public sealed class UILayoutEditor : ComponentEditor
         if (Targets.Count != 1) EditorGUI.TextWrapped("Presets and derived dimensions require one selection. Raw fields below support multiple selections.");
         if (layout.HasDrivenRect) EditorGUI.TextWrapped("Rectangle is driven by a layout group or control.");
         EditorGUI.Separator();
+        //绘制锚点、轴心与布局开关
         DrawProperty("anchorMin");
         DrawProperty("anchorMax");
         DrawProperty("pivot");
-        DrawProperty("offset");
-        DrawProperty("sizeDelta");
         DrawProperty("fitWidth");
         DrawProperty("fitHeight");
         DrawProperty("ignoreLayout");
@@ -186,7 +190,7 @@ public sealed class UILayoutEditor : ComponentEditor
         if (Target.Ens.GetComponent<UILayout>() is UILayout layout) gizmos.OnSceneGui(layout);
     }
 
-    //计算预设补偿并作为同一属性事务提交
+    //计算预设补偿并记录布局与 Transform 的一次撤销
     private void ApplyPreset(UILayout layout, vector2 min, vector2 max)
     {
         vector2 oldMin = layout.GetAnchorMin();
@@ -210,11 +214,12 @@ public sealed class UILayoutEditor : ComponentEditor
             offset = new vector2(offset.x + parentSize.x * (oldMin.x - min.x) - oldPivot.x * size.x + pivot.x * nextSize.x,
                 offset.y + parentSize.y * (oldMin.y - min.y) - oldPivot.y * size.y + pivot.y * nextSize.y);
         }
-        SetValue("anchorMin", InteropValue.From(min));
-        SetValue("anchorMax", InteropValue.From(max));
-        SetValue("pivot", InteropValue.From(pivot));
-        SetValue("offset", InteropValue.From(offset));
-        SetValue("sizeDelta", InteropValue.From(nextSize));
+        gizmos.Begin(layout);
+        layout.SetAnchors(min, max);
+        layout.SetPivot(pivot);
+        layout.SetOffset(offset);
+        layout.SetSizeDelta(nextSize);
+        gizmos.End("UI Anchor Preset");
     }
 }
 

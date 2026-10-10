@@ -1,8 +1,10 @@
 #include "Editor/NewProjectTemplate.h"
 
 #include "Editor/ProjectLayout.h"
-#include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
+#include "Runtime/DisplaySettings.h"
+#include "Runtime/GameSettingsFile.h"
+#include "Runtime/Native/InteropText.h"
 
 #include <cctype>
 #include <filesystem>
@@ -180,7 +182,19 @@ bool NewProjectTemplate::CopyTemplateTree(const std::string& sourceDirectory,
             //Build/ 是构建产物目录，模板里那份是源码树上跑构建留下的缓存，任何模板复制都不该带它。
             //带过去会把目标项目的 Build/Managed/obj/ 覆盖成模板的旧缓存。
             bool skip = !relative.empty() && *relative.begin() == ProjectLayout::BuildFolder;
-            if (!skip && skipProjectFile) skip = relative == ProjectFileName;
+            if (!skip && skipProjectFile)
+            {
+                //.oeproj 记着该项目的启动场景与上次编辑的场景，一律不覆盖。
+                skip = relative == ProjectFileName;
+                if (!skip && relative == GameSettingsFile::FileName)
+                {
+                    //项目级设置存的是作者调好的值，已有就不覆盖；项目里缺这份文件时才用模板补齐。
+                    //查询失败也按已有处理，宁可不动项目里的那份。
+                    std::error_code existsError;
+                    bool settingsExist = std::filesystem::exists(targetRoot / relative, existsError);
+                    skip = settingsExist || static_cast<bool>(existsError);
+                }
+            }
             if (!skip)
             {
                 std::filesystem::path target = targetRoot / MapTemplateFileName(relative, projectName);

@@ -743,6 +743,7 @@ void RenderSystem::PrepareCameraRenderData()
             GpuDepthTextureDesc depthDesc;
             depthDesc.width = camera.viewportWidth;
             depthDesc.height = camera.viewportHeight;
+            depthDesc.floatingPoint = true;
             GpuDepthTextureID newSceneDepthTexture = backend.CreateDepthTexture(depthDesc);
             GpuDepthTextureID newDepthTexture = backend.CreateDepthTexture(depthDesc);
 

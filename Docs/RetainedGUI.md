@@ -207,31 +207,31 @@ UILayout 配置：
 | 字段 | 默认值 |
 |---|---|
 | anchorMin、anchorMax、pivot : vector2 | 均为 {0.5,0.5} |
-| offset : vector2 | {0,0} |
 | sizeDelta : vector2 | {100,30} |
 | fitWidth、fitHeight、ignoreLayout : bool | false |
 
 UIRect 为 readonly struct，含 vector2 min、size；构造 UIRect(vector2 min, vector2 size)。
 Contains(vector2 point) 左/下包含，右/上不包含；零尺寸不命中。
+偏移直接读取 Transform.localPosition.xy，UILayout 不保存 offset 字段；Z 同样来自 Transform.localPosition.z。
 父矩形 Pmin/Psize；逐分量计算：
 ```text
 Amin = Pmin + Psize * anchorMin
 Amax = Pmin + Psize * anchorMax
 S = max(0, Amax - Amin + sizeDelta)
-Q = Amin + (Amax - Amin) * pivot + offset
+Q = Amin + (Amax - Amin) * pivot + Transform.localPosition.xy
 rect.min = -pivot * S
 rect.size = S
 ```
 anchor 与 pivot 限于 [0,1]；写 min 不超过当前 max，写 max 不小于当前 min。
 sizeDelta 可为负；非有限浮点写入拒绝。
-pivot setter 不补偿位置；编辑器“保持矩形”操作一次修改 pivot 与 offset。
-offset 与 Transform 局部 X/Y 使用同一份平移，Z 使用 Transform 局部 Z；GetAnchoredPosition/SetAnchoredPosition 提供三维入口。
+pivot setter 不补偿位置；编辑器“保持矩形”操作一次修改 pivot 与 Transform 局部位置。
+GetOffset/SetOffset 直接读写 Transform 局部 X/Y，SetOffset 保留 Z；三维位置通过 Transform.GetLocalPosition/SetLocalPosition 读写。
 
-Transform 作者位置与布局位置分开：最终 XY=Q+作者 localPosition.xy，Z 使用作者 localPosition.z。
+Transform 保存作者位置，布局落点作为非持久化派生位置：最终 XY=Q，Z 使用作者 localPosition.z，偏移只计入一次。
 屏幕画布的直接子节点还要叠加画布根矩形的枢轴居中偏移（−pivot×根矩形尺寸）：根逻辑矩形从 {0,0} 起算，
 而画布对象落在枢轴上，这段偏移与场景预览矩阵在画布原点上的居中是同一个值，两边因此逐点重合。
 WorldSpace 根矩形已按枢轴解析，不叠加。
-容器驱动矩形覆盖自身锚点解析结果；当前实现仍叠加作者 localPosition，驱动结果不覆盖原配置。
+容器驱动矩形覆盖自身锚点解析结果，XY 直接取驱动矩形上的轴心落点，Z 仍使用作者 localPosition.z；驱动结果不写回原配置。
 原生 Transform 增加非持久化派生位置覆盖，世界矩阵使用覆盖值；原 GetLocalPosition 仍返回作者值。
 退出 UI、禁用、销毁与域卸载时清除覆盖，恢复作者值。
 C# 一次批量写派生位置，原生使用 DirtySuppressionScope；通知包含派生写标志，避免反馈重建。
@@ -241,11 +241,13 @@ UI 节点的旋转/缩放影响渲染与命中，不用于计算布局期望包�
 布局与普通子 Ens 共用解析后的 Transform 世界矩阵。
 
 **场景编辑规则**
-SceneView 的 Rect 工具（T）修改 UILayout 的 offset 与 sizeDelta；Move/Rotate/Scale（W/E/R）修改 Transform。
-普通 UI 的最终位置是“父矩形中的锚点落点 + UILayout.offset + Transform.localPosition”。
+SceneView 的 Rect 工具（T）修改 Transform 局部位置与 UILayout.sizeDelta；Move/Rotate/Scale（W/E/R）修改 Transform。
+普通 UI 的最终位置是“父矩形中的锚点基点 + Transform.localPosition”，Rect 与 Move 使用同一份位置。
+Inspector 的 Position X/Y 直接显示并修改 Transform 局部 X/Y；拉伸轴显示的边距由局部位置与 sizeDelta 换算。
+Move/Rotate/Scale 手柄按世界拖动增量换算局部增量，再加到起始 Transform 局部位置；按下且尚未移动时保留原位置。
 未拉伸时 Width/Height 等于 sizeDelta；拉伸时矩形尺寸等于锚点跨度加 sizeDelta，Inspector 显示相应边距。
 localScale 在布局完成后缩放网格、文字及子树，不修改 Width/Height，也不会让文字按缩放后的宽度重新换行。
-常规排版保持 localPosition=(0,0,0)、localScale=(1,1,1)，用 Rect 调位置与尺寸；额外位移或缩放动画使用 Transform。
+常规排版保持 localScale=(1,1,1)，用 Rect 调位置与尺寸；位置动画使用 Transform，与 Rect 调整同一份锚点偏移。
 父布局组驱动的子矩形应修改布局组或设置 ignoreLayout。
 Overlay 根 Canvas 的 Transform 只参与 SceneView 空间预览，PIE 的大小由 Canvas 缩放配置与视口决定；
 WorldSpace 根 Canvas 的 Transform 则决定真实世界位置和尺寸。
@@ -274,6 +276,7 @@ ReferenceResolution:
 logicalSize = targetPixelSize / scale
 ```
 Overlay/Offscreen 根 Transform 不参与屏幕投影；根逻辑矩形 min={0,0}、size=logicalSize。
+Overlay/Offscreen 最终裁剪 Z 固定为 0，元素的 Transform 局部 Z 保留但不参与深度裁剪与排序；覆盖顺序仍由画布及图形顺序决定。
 Overlay 根 Transform 的缩放决定画布在场景中的大小，新建为 0.01（与 WorldSpace 同刻度）。
 WorldSpace 根矩形由根 sizeDelta/pivot 解析，使用真实世界矩阵，不执行分辨率缩放。
 新建 WorldSpace Canvas 为 800×600，Transform 缩放 {0.01,0.01,0.01}。
@@ -594,6 +597,8 @@ resize/销毁先使命中快照失效，再释放 GPU 目标。
 PointerMove、PointerDown、PointerUp、PointerCancel、Wheel、KeyDown、KeyUp、TextCommit、
 CompositionStart、CompositionUpdate、CompositionCommit、CompositionCancel、WindowFocusLost、GamepadState。
 sequence 递增且保留到达顺序，Down/Up 不折叠；文本使用同帧 UTF-8 池。
+平台事件在本帧输入阶段交付，未被 UI 消费的事件也在帧尾丢弃，不跨帧重放；游戏仍通过 Input.Key/KeyDown/KeyUp 查询物理状态。
+InputManager.EndFrame 在等待下一帧之前清空已交付事件，等待期间采集的事件进入下一帧；禁用输入时清空事件与占有。
 pointerId=0 为鼠标，触摸 id 从 1 开始映射；device={Mouse=0,Touch=1,Gamepad=2,Keyboard=3}。
 指针 key 为 Left=0/Right=1/Middle=2，触摸固定 Left；手柄 key 为 AxisX=0/AxisY=1/Submit=2/Cancel=3。
 原始坐标为窗口逻辑坐标；UIInputRecord 的 modifiers 位为 Shift=1、Control=2、Alt=4。
@@ -619,6 +624,7 @@ Overlay 按画布和图形逆序命中；顶部 raycastTarget 图形阻挡后方
 WorldSpace 反投影相机射线，与候选图形平面求交；平行、负 t、奇异变换跳过。
 交点转换局部坐标执行 Raycast/Mask，再与已呈现场景深度比较。
 深度读取按 viewId+presentedFrame+像素缓存，一次输入阶段同像素只回读一次。
+相机场景深度与折射深度副本统一使用 32 位浮点格式，WorldSpace UI 从场景深度缓冲读取遮挡值。
 NDC z 转窗口深度使用 (z+1)/2，容差 1e-5；读取失败不允许该候选命中。
 视图从最后合成的相机向前查询；Overlay 优先于 WorldSpace。
 Offscreen 仅接受 Canvas.InjectPointer(in UIPointerEvent input)，下一输入阶段排空队列。
@@ -631,6 +637,7 @@ UIPointerState 保存 downTarget、captureTarget、pressPosition、lastPosition�
 移交先 Cancel 原按下目标，再建立新捕获；同一范围控件只接受一个拖动指针。
 滚轮从命中节点向祖先传播，当前容器在该方向已到边界则交外层。
 失焦、隐藏、禁用、销毁、视图切换立即取消捕获；Up 不得恢复已取消点击。
+失焦事件确认消费；取消交互保留当前输入阶段已消费的序列，世界分离时清空悬停、焦点、捕获与注入事件。
 
 Tab 使用画布/层级顺序，Shift+Tab 反向；方向导航优先显式引用。
 自动候选位于方向半平面，score=forwardDistance+2*perpendicularDistance，最小者获焦点。
@@ -773,7 +780,7 @@ Inspector 的可添加组件列表同时收集核心程序集与游戏程序集�
 | LayoutBox/GridBox/Mask | UILayout+对应组件 | 200×200 |
 
 每个子节点也带 UILayout；默认作者 Transform XY=0，Z=0，单位旋转/缩放。
-文本子节点双轴拉伸，offset=0、sizeDelta={-8,-4}；文本默认为控件类名。
+文本子节点双轴拉伸，Transform 局部 X/Y=0、sizeDelta={-8,-4}；文本默认为控件类名。
 Mark 为左侧 16×16，Label 留左边距 24；勾选图形采用纯色矩形。
 Slider Track 双轴拉伸且高 4，Thumb 16×20；Fill 由 Slider 驱动。
 ScrollBar Track 拉伸，Thumb 由 pageSize 驱动；VerticalBar 右侧宽 16。
@@ -782,9 +789,9 @@ Arrow 为右侧 12×12 纯色矩形；用户可替换纹理，首版不新增矢
 创建过程先建对象，再配引用，成功后记录整子树快照和选中；失败撤回本次对象。
 Undo/Redo 使用稳定 ID 与序列化快照，不闭包保存已销毁包装。
 
-所有属性编辑走 PropertyDocument；新增公开 EditorPropertyHistory.RecordAction(string label,Action undo,Action redo)。
-矩形移动写 offset，尺寸调整写 sizeDelta，锚点预设一次提交五组布局字段。
-“保持矩形修改 pivot”根据起始矩形公式重算 offset，不累计使用中间拖动值。
+普通字段编辑走 PropertyDocument；布局与 Transform 的组合修改通过 EditorPropertyHistory.RecordAction(string label,Action undo,Action redo) 记录一次撤销。
+矩形移动写 Transform 局部位置，尺寸调整写 sizeDelta，锚点预设一次记录锚点、轴心、尺寸与 Transform 位置。
+“保持矩形修改 pivot”根据起始矩形公式重算 Transform 局部 X/Y，不累计使用中间拖动值。
 驱动轴只读并显示 owner；Scene 手柄使用解析世界矩阵与射线平面交点。
 拖动开始保存基线，结束合成一条历史，Escape 恢复基线；解析变换不写历史。
 事件表一行事务同时提交四列表；显示无效引用/方法但不自动删除。

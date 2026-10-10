@@ -81,6 +81,8 @@ private:
         int32 reimportedCount = 0;
     };
     bool scriptBuildRunning = false;
+    //托管侧改完编辑器外观配置后的重建请求；帧边界处理
+    bool editorGuiConfigPending = false;
     bool scriptBuildCompleted = false;
     bool pendingPlayAfterScriptBuild = false;
     ScriptBuildResult pendingScriptBuildResult;
@@ -130,6 +132,10 @@ public:
 
     //请求刷新：重导已加载资源，脚本过期时重新编译并重载程序集
     void RequestRefresh();
+
+    //请求按项目文件里的 <EditorGuiConfig> 重设标签列宽度与字体。
+    //托管侧在画面板时提出请求，真正重建推迟到帧边界（重建字体图集要清掉正在用的字体）。
+    void RequestEditorGuiConfig();
 
     //接收托管侧后台脚本构建的结算；只记结果，帧边界才应用
     void CompleteScriptBuild(bool succeeded, bool cancelled, bool compiled, int32 reimportedCount);
@@ -282,6 +288,9 @@ private:
 
     //应用当前项目编辑器布局
     void ApplyEditorLayout();
+
+    //按项目文件里的 <EditorGuiConfig> 重设标签列宽度与字体
+    void ApplyEditorGuiConfig();
 
     //项目加载成功后的统一收尾，Load 与 New Project 两条路径共用
     void FinishProjectLoad(const std::string& successLabel, const std::string& pendingNativeLabel);

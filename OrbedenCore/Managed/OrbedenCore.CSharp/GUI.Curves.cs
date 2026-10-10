@@ -302,8 +302,10 @@ public static unsafe partial class GUI
         try
         {
             ParticleGradientKey key = working.keys[selected];
-            //标题里带上第几个色标：选中的是哪一个只能从画布上看出来，这里给个数
-            bool keyChanged = ColorField($"Color / Alpha  ({selected + 1} / {working.keys.Length})##{id}", ref key.value);
+            //标题里带上第几个色标：选中的是哪一个只能从画布上看出来，这里给个数。
+            //说明文字比属性行的标签列宽，单独占一行画，不进标签列（进了会被裁掉，正好丢掉这个数）
+            Label($"Color / Alpha  ({selected + 1} / {working.keys.Length})");
+            bool keyChanged = ColorField($"##{id}", ref key.value);
             if (keyChanged) { working.keys = [.. working.keys]; working.keys[selected] = key; changed = true; }
         }
         finally { EndDisabled(); }

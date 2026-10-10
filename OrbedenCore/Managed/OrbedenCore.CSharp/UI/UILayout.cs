@@ -4,7 +4,7 @@ namespace Orbeden;
 
 /// <summary>
 /// UI 节点的矩形配置与解析结果。配置持久化，解析结果只存在于运行时。
-/// 轴心与锚点定义矩形的落位，offset 与 sizeDelta 是相对锚点区域的增量。
+/// 轴心与锚点定义矩形的落位，Transform 局部 X/Y 提供偏移，sizeDelta 提供尺寸增量。
 /// </summary>
 [UniqueComponent]
 public class UILayout : Script, IManagedComponentLifecycle
@@ -17,9 +17,6 @@ public class UILayout : Script, IManagedComponentLifecycle
 
     /// <summary>轴心，两个分量都限于 [0,1]。</summary>
     [SerializeField] private vector2 pivot = new(0.5f, 0.5f);
-
-    /// <summary>相对轴心点的偏移。</summary>
-    [SerializeField] private vector2 offset = new(0.0f, 0.0f);
 
     /// <summary>相对锚点区域尺寸的增量，可为负。</summary>
     [SerializeField] private vector2 sizeDelta = new(100.0f, 30.0f);
@@ -38,9 +35,6 @@ public class UILayout : Script, IManagedComponentLifecycle
     private vector2 resolvedAnchorPoint;
     private vector2 publishedSize;
     private bool hasResolvedRect;
-    private vector2 resolvedOffset;
-    private vector2 synchronizedPosition;
-    private bool positionSynchronized;
     //运行期矩形覆盖的来源与当前值；不参与持久化。
     private object? drivenOwner;
     private UIRect drivenRect;
@@ -58,7 +52,6 @@ public class UILayout : Script, IManagedComponentLifecycle
     //登记布局组件引起的节点结构变化
     void IManagedComponentLifecycle.OnComponentAttached()
     {
-        SynchronizePosition();
         UIWorldContext.Current?.RequestFullResync();
     }
 
@@ -73,14 +66,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     void IManagedComponentLifecycle.OnComponentActiveChanged(bool active) => MarkLayoutDirty();
 
     //刷新恢复或批量应用的布局字段
-    void IManagedComponentLifecycle.OnComponentFieldsChanged()
-    {
-        SynchronizePosition();
-        MarkLayoutDirty();
-    }
-
-    //同步序列化前的位置配置
-    void IManagedComponentLifecycle.OnComponentBeforeSerialize() => SynchronizePosition();
+    void IManagedComponentLifecycle.OnComponentFieldsChanged() => MarkLayoutDirty();
 
     /// <summary>锚点左下角。</summary>
     public vector2 GetAnchorMin() => anchorMin;
@@ -123,10 +109,10 @@ public class UILayout : Script, IManagedComponentLifecycle
         MarkLayoutDirty();
     }
 
-    /// <summary>轴心。setter 不补偿位置：需要保持矩形时由编辑器同时改 offset。</summary>
+    /// <summary>轴心。setter 不补偿位置：需要保持矩形时由编辑器同时改 Transform 局部位置。</summary>
     public vector2 GetPivot() => pivot;
 
-    /// <summary>设置轴心；分量夹紧到 [0,1]，不改动 offset。</summary>
+    /// <summary>设置轴心；分量夹紧到 [0,1]，不改动 Transform 局部位置。</summary>
     public void SetPivot(vector2 value)
     {
         vector2 clamped = ClampUnit(ClampPair(value));
@@ -135,79 +121,30 @@ public class UILayout : Script, IManagedComponentLifecycle
         MarkLayoutDirty();
     }
 
-    /// <summary>偏移。</summary>
+    /// <summary>读取 Transform 局部 X/Y 作为锚点偏移。</summary>
     public vector2 GetOffset()
     {
-        if (positionSynchronized) SynchronizePosition();
-        return offset;
+        vector3 position = Ens.Transform.GetLocalPosition();
+        return new vector2(position.x, position.y);
     }
 
-    /// <summary>设置偏移；非有限值拒绝写入。</summary>
+    /// <summary>设置 Transform 局部 X/Y，保留 Z；非有限值拒绝写入。</summary>
     public void SetOffset(vector2 value)
     {
-        if (positionSynchronized) SynchronizePosition();
-        if (!UILayoutMath.IsFinite(value) || Same(value, offset)) return;
-        offset = value;
-        vector3 position = Ens.Transform.GetLocalPosition();
-        Ens.Transform.SetLocalPosition(new vector3(value.x, value.y, position.z));
-        synchronizedPosition = value;
-        positionSynchronized = true;
-        MarkLayoutDirty();
-    }
-
-    /// <summary>读取锚点偏移三维位置，与 Transform 局部位置同步。</summary>
-    public vector3 GetAnchoredPosition()
-    {
-        SynchronizePosition();
-        return Ens.Transform.GetLocalPosition();
-    }
-
-    /// <summary>设置锚点偏移三维位置并同步 Transform。</summary>
-    public void SetAnchoredPosition(vector3 value)
-    {
-        if (!float.IsFinite(value.x) || !float.IsFinite(value.y) || !float.IsFinite(value.z)) return;
-        SetOffset(new vector2(value.x, value.y));
-        Ens.Transform.SetLocalPosition(value);
-        MarkLayoutDirty();
-    }
-
-    //同步布局偏移与作者位置
-    internal void SynchronizePosition()
-    {
-        if (!Ens.IsValid) return;
+        if (!UILayoutMath.IsFinite(value)) return;
         Transform transform = Ens.Transform;
         vector3 position = transform.GetLocalPosition();
-        vector2 transformPosition = new(position.x, position.y);
-        if (!positionSynchronized)
-        {
-            if (Ens.GetComponent<Canvas>() != null || Same(offset, default)) offset = transformPosition;
-            else transform.SetLocalPosition(new vector3(offset.x, offset.y, position.z));
-            synchronizedPosition = offset;
-            positionSynchronized = true;
-            MarkLayoutDirty();
-            if (Same(offset, transformPosition))
-                ComponentProxy.FromComponent(this)?.SetField("offset", InteropValue.From(offset));
-            return;
-        }
-
-        bool layoutChanged = !Same(offset, synchronizedPosition);
-        bool transformChanged = !Same(transformPosition, synchronizedPosition);
-        if (!layoutChanged && !transformChanged) return;
-        if (layoutChanged) transform.SetLocalPosition(new vector3(offset.x, offset.y, position.z));
-        else offset = transformPosition;
-        synchronizedPosition = offset;
+        if (position.x == value.x && position.y == value.y) return;
+        transform.SetLocalPosition(new vector3(value.x, value.y, position.z));
         MarkLayoutDirty();
-        if (transformChanged && !layoutChanged)
-            ComponentProxy.FromComponent(this)?.SetField("offset", InteropValue.From(offset));
     }
 
-    //合成一次锚点位置与作者平移
+    //读取布局落点与 Transform 局部 Z
     internal vector3 GetResolvedLocalPosition()
     {
-        vector3 position = GetAnchoredPosition();
+        vector3 position = Ens.Transform.GetLocalPosition();
         if (Ens.GetComponent<Canvas>() != null || !hasResolvedRect) return position;
-        return new vector3(resolvedAnchorPoint.x - resolvedOffset.x + position.x,
-            resolvedAnchorPoint.y - resolvedOffset.y + position.y, position.z);
+        return new vector3(resolvedAnchorPoint.x, resolvedAnchorPoint.y, position.z);
     }
 
     /// <summary>尺寸增量。</summary>
@@ -268,7 +205,6 @@ public class UILayout : Script, IManagedComponentLifecycle
     {
         resolvedRect = value;
         resolvedAnchorPoint = anchorPoint;
-        resolvedOffset = offset;
         hasResolvedRect = true;
     }
 
@@ -287,7 +223,6 @@ public class UILayout : Script, IManagedComponentLifecycle
     {
         resolvedRect = default;
         resolvedAnchorPoint = default;
-        resolvedOffset = default;
         publishedSize = default;
         hasResolvedRect = false;
     }
@@ -298,7 +233,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     /// 位于父级局部空间，供派生位置使用。
     /// </summary>
     public UIRect Resolve(vector2 parentMin, vector2 parentSize, out vector2 anchorPoint) =>
-        UILayoutMath.Resolve(anchorMin, anchorMax, pivot, offset, sizeDelta, parentMin, parentSize, out anchorPoint);
+        UILayoutMath.Resolve(anchorMin, anchorMax, pivot, GetOffset(), sizeDelta, parentMin, parentSize, out anchorPoint);
 
     /// <summary>按父矩形解析并直接得到本节点局部矩形，丢弃锚点落点。</summary>
     public UIRect ResolveAgainst(vector2 parentMin, vector2 parentSize) => Resolve(parentMin, parentSize, out _);

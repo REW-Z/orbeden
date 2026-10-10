@@ -29,7 +29,6 @@ internal static class UILayoutRegistry
         {
             //按画布目标初始化根矩形
             if (root.Canvas == null || root.Layout == null || root.ConfigurationError.Length != 0) continue;
-            SynchronizePositions(root);
             vector2 size = context.ResolveCanvasLogicalSize(root.Canvas);
             vector2 pivot = root.Layout.GetPivot();
             vector2 min = root.Canvas.GetRenderMode() == CanvasRenderMode.WorldSpace
@@ -49,13 +48,6 @@ internal static class UILayoutRegistry
 
         measuredWidths.Clear();
         measuredHeights.Clear();
-    }
-
-    //同步布局前的作者位置
-    private static void SynchronizePositions(UINode node)
-    {
-        node.Layout?.SynchronizePosition();
-        foreach (UINode child in node.Children) SynchronizePositions(child);
     }
 
     /// <summary>清空解析缓存；世界分离时调用。</summary>

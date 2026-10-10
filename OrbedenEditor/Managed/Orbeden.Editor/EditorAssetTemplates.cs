@@ -43,8 +43,6 @@ internal static class EditorAssetTemplates
         ///// <summary>示例脚本。</summary>
         //public sealed class ExampleScript : Script
         //{
-        //    public float speed = 1.0f;
-        //
         //    public ExampleScript(Ens ens) : base(ens) {}
         //
         //    private void OnUpdate(float deltaTime)

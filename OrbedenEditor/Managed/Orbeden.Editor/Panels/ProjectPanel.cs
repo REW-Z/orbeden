@@ -284,7 +284,10 @@ internal sealed class ProjectPanel : EditorPanel
         EditorGUI.SliderFloat("##project_tile_size", ref tileSize, TileSizeMin, TileSizeMax, 120.0f);
 
         EditorGUI.SameLine();
-        EditorGUI.InputText("Search##project_search", ref search);
+        //工具条上的搜索框：就地排布，不套属性行的标签列（套了会跳回列位、压到左边的控件上）
+        EditorGUI.Label("Search");
+        EditorGUI.SameLine();
+        EditorGUI.InputText("##project_search", ref search);
     }
 
     //绘制当前正在确认的文件操作。

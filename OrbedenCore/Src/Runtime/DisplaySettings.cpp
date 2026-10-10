@@ -1,6 +1,7 @@
 #include "Runtime/DisplaySettings.h"
 
 #include "FileSystem/PathDefines.h"
+#include "Runtime/GameSettingsFile.h"
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
@@ -15,6 +16,17 @@ namespace
     std::string loadedRoot;
     std::filesystem::file_time_type loadedTime;
     bool initialized = false;
+
+    //曝光所在的分块名
+    constexpr const char* RenderingSection = "Rendering";
+
+    //识别 "[分块名]" 行并切换当前分块
+    bool ParseSection(const std::string& line, std::string& section)
+    {
+        if (line.size() < 2 || line.front() != '[' || line.back() != ']') return false;
+        section.assign(line, 1, line.size() - 2);
+        return true;
+    }
 
     //解析一行 "键\t值"，键不认识就跳过，便于以后追加参数。
     bool ApplyLine(const std::string& line)
@@ -40,30 +52,28 @@ namespace
 void DisplaySettings::Refresh()
 {
     const std::string& root = PathDefines::GetContentRoot();
+    std::filesystem::path path = InteropText::PathFromUtf8(GameSettingsFile::GetPath());
     std::error_code error;
-    auto path = InteropText::PathFromUtf8(PathDefines::GetContentFilePath(FileName));
-    auto modified = std::filesystem::last_write_time(path, error);
+    auto modified = path.empty() ? std::filesystem::file_time_type::min() : std::filesystem::last_write_time(path, error);
     if (initialized && root == loadedRoot && modified == loadedTime) return;
     initialized = true;
     loadedRoot = root;
     loadedTime = modified;
     exposure = DefaultExposure;
-    if (root.empty() || error) return;
+    if (path.empty() || error) return;
 
     std::ifstream input(path);
     std::string line;
-    if (!std::getline(input, line) || line != "OrbedenDisplay1")
-    {
-        Log::Error("Invalid ProjectSettings.display; using the default exposure.");
-        return;
-    }
-
+    std::string section;
     while (std::getline(input, line))
     {
         if (line.empty()) continue;
+        if (ParseSection(line, section)) continue;
+        //不认识的块整块跳过：文件里的块可能属于更晚的引擎版本
+        if (section != RenderingSection) continue;
         if (!ApplyLine(line))
         {
-            Log::Error("Ignored an unsupported line in ProjectSettings.display.");
+            Log::Error("Ignored an unsupported line in GameSettings.ini.");
         }
     }
 }

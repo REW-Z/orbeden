@@ -320,7 +320,7 @@ bool EditorGizmoHandles::BuildScreenRay(const matrix4x4& viewProjection, const v
     return true;
 }
 
-//缓存单个目标的局部变换与父级世界矩阵
+//缓存单个目标的局部变换与父级世界逆矩阵
 bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
 {
     Transform* transform = world.GetTransform(ens);
@@ -333,24 +333,32 @@ bool EditorGizmoHandles::CaptureTarget(World& world, EnsId ens, Target& target)
     const quaternion& localRotation = transform->GetLocalRotation();
     const vector3& localScale = transform->GetLocalScale();
     target.localPosition = { localPosition.x, localPosition.y, localPosition.z };
-    target.derivedPositionOffset = SubtractVector(transform->GetResolvedLocalPosition(), localPosition);
     target.localRotation = { localRotation.x, localRotation.y, localRotation.z, localRotation.w };
     target.localScale = { localScale.x, localScale.y, localScale.z };
 
-    //父级世界矩阵与父级世界旋转分别用于位置与旋转变换
+    //缓存父级逆矩阵与旋转
     EnsId parent = transform->GetParent();
     Transform* parentTransform = parent.IsNull() ? nullptr : world.GetTransform(parent);
     if (parentTransform)
     {
-        target.parentWorldMatrix = parentTransform->worldMatrix;
+        target.parentWorldInverseMatrix = RenderMath::Inverse(parentTransform->worldMatrix);
         target.parentWorldRotation = parentTransform->worldRotation;
     }
     else
     {
-        target.parentWorldMatrix = matrix4x4();
+        target.parentWorldInverseMatrix = matrix4x4();
         target.parentWorldRotation = quaternion();
     }
     return true;
+}
+
+//将世界位移叠加到拖拽起始局部位置
+vector3 EditorGizmoHandles::GetDraggedLocalPosition(const Target& target, const vector3& worldPosition)
+{
+    vector3 worldDelta = SubtractVector(worldPosition, target.worldPosition);
+    vector3 localDelta = RenderMath::TransformDirection(target.parentWorldInverseMatrix, worldDelta);
+    return { target.localPosition.x + localDelta.x, target.localPosition.y + localDelta.y,
+        target.localPosition.z + localDelta.z };
 }
 
 //收集选择集并算出枢轴与三个手柄轴
@@ -699,8 +707,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
             if (!transform) continue;
 
             vector3 worldPosition = AddVector(target.worldPosition, delta);
-            transform->SetLocalPosition(
-                SubtractVector(RenderMath::TransformPoint(RenderMath::Inverse(target.parentWorldMatrix), worldPosition), target.derivedPositionOffset));
+            transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
         }
         return;
     }
@@ -725,8 +732,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
             vector3 rotatedOffset = RenderMath::TransformDirection(RenderMath::Rotation(rotation), offset);
             vector3 worldPosition = AddVector(pivotWorld, rotatedOffset);
 
-            transform->SetLocalPosition(
-                SubtractVector(RenderMath::TransformPoint(RenderMath::Inverse(target.parentWorldMatrix), worldPosition), target.derivedPositionOffset));
+            transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
             transform->SetLocalRotation(NormalizeQuaternion(
                 MultiplyQuaternion(ConjugateQuaternion(target.parentWorldRotation), worldRotation)));
         }
@@ -748,8 +754,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
 
             vector3 offset = SubtractVector(target.worldPosition, pivotWorld);
             vector3 worldPosition = AddVector(pivotWorld, ScaleVector(offset, ratio));
-            transform->SetLocalPosition(
-                SubtractVector(RenderMath::TransformPoint(RenderMath::Inverse(target.parentWorldMatrix), worldPosition), target.derivedPositionOffset));
+            transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
             transform->SetLocalScale({
                 target.localScale.x * ratio,
                 target.localScale.y * ratio,
@@ -780,8 +785,7 @@ void EditorGizmoHandles::ApplyDrag(World& world, const EditorGizmoView& view)
         float32 along = RenderMath::Dot(offset, startAxes[axisIndex]);
         vector3 worldPosition = AddVector(pivotWorld,
             AddVector(offset, ScaleVector(startAxes[axisIndex], along * (factor - 1.0f))));
-        transform->SetLocalPosition(
-            SubtractVector(RenderMath::TransformPoint(RenderMath::Inverse(target.parentWorldMatrix), worldPosition), target.derivedPositionOffset));
+        transform->SetLocalPosition(GetDraggedLocalPosition(target, worldPosition));
     }
 }
 

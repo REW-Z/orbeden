@@ -48,6 +48,7 @@ MyGame/
 ├─ MyGame.csproj          工程文件直接放在项目根
 ├─ MyGameNative.vcxproj
 ├─ Directory.Build.props
+├─ GameSettings.ini       游戏设置：曝光、层与碰撞矩阵，由 Rendering 与 Game Settings 面板编辑
 ├─ Lib/                   SDK 快照，由编辑器自动刷新
 ├─ Content/               内容根：你想放什么、怎么放都行
 │   ├─ Meshes/  Materials/  Textures/  Shaders/  Scenes/  Scripts/

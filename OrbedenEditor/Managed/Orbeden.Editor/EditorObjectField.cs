@@ -146,7 +146,7 @@ internal static class EditorObjectField
         string popup = "Select " + shortType + "##reference_picker_" + label;
         bool changed = false;
         EditorGUI.Label(label.Split("##", StringSplitOptions.None)[0]);
-        EditorGUI.SameLine();
+        //引用框自己跳到属性列（宽度是项目配置，原生侧一处持有），这里不再自己排
         int action = NativeEditorGUI.ReferenceField(
             EditorIconCatalog.ForReference(declaredType),
             name + " (" + shortType + ")",

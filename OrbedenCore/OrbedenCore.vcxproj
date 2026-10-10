@@ -428,6 +428,8 @@
     <ClInclude Include="Src\Runtime\Particles\ParticleSettings.h" />
     <ClInclude Include="Src\Runtime\Particles\ParticleSimulationSystem.h" />
     <ClInclude Include="Src\Runtime\DisplaySettings.h" />
+    <ClInclude Include="Src\Runtime\GameSettingsFile.h" />
+    <ClCompile Include="Src\Runtime\GameSettingsFile.cpp" />
     <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
   </ItemGroup>
 </Project>

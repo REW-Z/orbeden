@@ -197,14 +197,33 @@ namespace
         return events;
     }
 
+    //颜色字段属性行的标签列宽度。编辑器开着项目时由 EditorGUI::ApplyTheme 按 .oeproj 的
+    //<EditorGuiConfig> 推过来（RuntimeGuiBridge::SetPropertyLabelWidth），
+    //与编辑器原语、对象框用的是同一个值，否则颜色框与其它属性行的框落不到同一列。
+    float32 colorLabelColumn = 120.0f;
+
     //绘制带 Alpha 通道的颜色选择器
     uint8 ORBEDEN_NATIVE_CALL RuntimeGuiColorField(const uint8* label, int32 length, color* value)
     {
         if (!value) return 0;
         std::string text(reinterpret_cast<const char*>(label), static_cast<usize>(length));
+
+        //标签有可见文字时画进左侧固定宽度的标签列，拾色器吃满右列；
+        //只有 "##ID" 时整行都归拾色器（也不再白占一行放空标签）
         const usize marker = text.find("##");
-        ImGui::TextUnformatted(text.substr(0, marker).c_str());
+        const std::string visible = text.substr(0, marker);
         ImGui::PushID(text.c_str());
+        if (!visible.empty())
+        {
+            //标签超长时裁在列内，不挤到拾色器上
+            const ImVec2 start = ImGui::GetCursorScreenPos();
+            ImGui::PushClipRect(start, ImVec2(start.x + colorLabelColumn - ImGui::GetStyle().ItemInnerSpacing.x,
+                start.y + ImGui::GetFrameHeight()), true);
+            ImGui::TextUnformatted(visible.c_str());
+            ImGui::PopClipRect();
+            //与编辑器的属性行同基准（都从窗口左缘起算），颜色字段才落进其它属性行同一列
+            ImGui::SameLine(colorLabelColumn);
+        }
         ImGui::SetNextItemWidth(-1.0f);
         float32 channels[] = { value->r, value->g, value->b, value->a };
         const bool changed = ImGui::ColorEdit4("##Color", channels, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_AlphaPreviewHalf);
@@ -221,6 +240,13 @@ RuntimeGuiCurveApi RuntimeGuiBridge::GetCurveApi()
     api.Canvas = reinterpret_cast<void*>(&RuntimeGuiCurveCanvas);
     api.ColorField = reinterpret_cast<void*>(&RuntimeGuiColorField);
     return api;
+}
+
+//设置颜色字段属性行的标签列宽度
+void RuntimeGuiBridge::SetPropertyLabelWidth(float32 value)
+{
+    if (!(value > 0.0f) || !std::isfinite(value)) return;
+    colorLabelColumn = value;
 }
 
 namespace

@@ -9,6 +9,8 @@
 #include "Editor/ProjectUpdate.h"
 #include "InputManager/InputManager.h"
 #include "FileSystem/PathDefines.h"
+#include "Runtime/DisplaySettings.h"
+#include "Runtime/GameSettingsFile.h"
 #include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
 #include "Rendering/RenderSystem.h"
@@ -634,6 +636,14 @@ void EditorSystem::Update(World& world, float deltaTime)
 {
     PROFILE("Editor/Update");
 
+    //外观配置的重建推迟到帧边界：托管侧是在画面板的时候提出请求的，
+    //而重建字体图集要清掉正在使用的字体，不能在帧中间做
+    if (editorGuiConfigPending)
+    {
+        editorGuiConfigPending = false;
+        ApplyEditorGuiConfig();
+    }
+
     if (!pendingProjectFile.empty())
     {
         std::string path = std::exchange(pendingProjectFile, std::string());
@@ -849,7 +859,26 @@ void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std:
     }
 
     ApplyEditorLayout();
+    ApplyEditorGuiConfig();
     RefreshInspectorGameAssembly();
+}
+
+//请求应用项目里的编辑器外观配置；实际重建在下一帧开头
+void EditorSystem::RequestEditorGuiConfig()
+{
+    editorGuiConfigPending = true;
+    RequestRepaint();
+}
+
+//应用项目里的编辑器外观配置：标签列宽度与字体图集
+void EditorSystem::ApplyEditorGuiConfig()
+{
+    if (!project.ReloadEditorGuiConfig()) return;
+
+    const EditorGuiConfigState& config = project.GetEditorGuiConfig();
+    editorGUI.SetPropertyLabelWidth(config.labelWidth);
+    //字体图集在这里重建：ImGui 上下文与浮动窗都共享它，重建后两边一起换字体
+    editorGUI.ApplyFontConfig(config.font, config.fontSize);
 }
 
 //加载一个项目
@@ -1619,7 +1648,7 @@ bool EditorSystem::CookPlayerContent(std::string& error)
     return true;
 }
 
-//清空包内 Content 后同步 cook 产物，再把 .oeproj 复制到包根
+//清空包内 Content 后同步 cook 产物，再把 .oeproj 复制到包根、把项目级设置镜像到包根
 bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string& error)
 {
     error.clear();
@@ -1645,6 +1674,22 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
     if (code)
     {
         error = "Project file could not be copied into the package: " + ToCleanPath(projectFile);
+        return false;
+    }
+
+    //项目级设置同样放在项目根，Player 从包根读取同一份。包根那份以项目为准：
+    //先删掉旧副本，项目里没有这个文件时就只剩删除的结果，不会留下上一次打包的旧值。
+    std::filesystem::path settingsTarget = InteropText::PathFromUtf8(packageRoot) / GameSettingsFile::FileName;
+    std::filesystem::path settingsFile = InteropText::PathFromUtf8(project.GetProjectRoot()) / GameSettingsFile::FileName;
+    std::filesystem::remove(settingsTarget, code);
+    if (std::filesystem::is_regular_file(settingsFile, code))
+    {
+        std::filesystem::copy_file(settingsFile, settingsTarget, std::filesystem::copy_options::overwrite_existing, code);
+    }
+
+    if (code)
+    {
+        error = "Project settings could not be synchronized into the package: " + ToCleanPath(settingsTarget);
         return false;
     }
 

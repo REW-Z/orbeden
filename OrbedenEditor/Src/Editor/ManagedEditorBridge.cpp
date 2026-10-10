@@ -631,6 +631,7 @@ namespace
         else if (kind == 1) editor->RequestBuildNative();
         else if (kind == 2) editor->RequestBuildPlayer();
         else if (kind == 3) editor->RequestRefresh();
+        else if (kind == 4) editor->RequestEditorGuiConfig();
     }
 
     //读取当前 Player 构建目标

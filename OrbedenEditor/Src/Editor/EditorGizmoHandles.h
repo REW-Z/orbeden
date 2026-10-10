@@ -105,10 +105,9 @@ private:
         EnsId ens;
         vector3 worldPosition;
         quaternion worldRotation;
-        matrix4x4 parentWorldMatrix;
+        matrix4x4 parentWorldInverseMatrix;
         quaternion parentWorldRotation;
         EditorGizmoVector3 localPosition;
-        vector3 derivedPositionOffset;
         EditorGizmoQuaternion localRotation;
         EditorGizmoVector3 localScale;
     };
@@ -136,8 +135,11 @@ private:
     void RestoreTargets(World& world) const;
     //记录一条待提交的编辑
     void PushEdit(const EditorGizmoEdit& edit);
-    //解析单个目标的局部到世界缓存
+    //记录单个目标的局部变换与父级世界逆矩阵
     static bool CaptureTarget(World& world, EnsId ens, Target& target);
+
+    //将世界位移叠加到拖拽起始局部位置
+    static vector3 GetDraggedLocalPosition(const Target& target, const vector3& worldPosition);
 
     EditorScene& scene;
     EditorGizmoMode mode = EditorGizmoMode::Move;

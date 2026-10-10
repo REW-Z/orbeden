@@ -2,8 +2,8 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>统一编辑项目级设置，当前提供层名称和物理碰撞矩阵。</summary>
-internal sealed class ProjectSettingsPanel : EditorPanel
+/// <summary>游戏侧设置：层名称和物理碰撞矩阵。编辑器自身的外观在 Editor Settings 面板里。</summary>
+internal sealed class GameSettingsPanel : EditorPanel
 {
     private string root = "\0";
     private string[] names = [];
@@ -12,7 +12,7 @@ internal sealed class ProjectSettingsPanel : EditorPanel
     private string status = string.Empty;
     private int selectedLayer;
 
-    public override EditorPanelInfo Info => new("project_settings", "Project Settings", false,
+    public override EditorPanelInfo Info => new("game_settings", "Game Settings", false,
         new vector2(680, 650), PanelDockPlacement.Floating, 0.3f, 130);
 
     /// <summary>显式保存入口也参与关闭项目时的待保存检查。</summary>
@@ -40,7 +40,7 @@ internal sealed class ProjectSettingsPanel : EditorPanel
             status = string.Empty;
         }
         if (EditorLayerSettings.Error.Length != 0) EditorGUI.Label(EditorLayerSettings.Error);
-        EditorGUI.Label(dirty ? "Project Settings (Unsaved)" : "Project Settings");
+        EditorGUI.Label(dirty ? "Game Settings (Unsaved)" : "Game Settings");
         EditorGUI.BeginDisabled(!EditorAssetsNative.CanModifyAssets());
         try
         {

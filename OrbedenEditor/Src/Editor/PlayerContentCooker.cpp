@@ -6,8 +6,6 @@
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/AssetPipeline.h"
 #include "Runtime/CookedAssetSerializer.h"
-#include "Runtime/DisplaySettings.h"
-#include "Runtime/LayerSettings.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -55,9 +53,10 @@ namespace
     {
         for (const std::string& key : contentKeys)
         {
-            //项目级设置文件按原样复制，不参与 cook
-            if (key == LayerSettings::FileName || key == DisplaySettings::FileName
-                || InteropText::PathToUtf8(InteropText::PathFromUtf8(key).extension()) == WorldExtension)
+            //场景文件按原样复制，不参与 cook。
+            //项目级设置（层与碰撞矩阵等）在项目根的 GameSettings.ini 里，不在内容根内，
+            //由打包时单独镜像到包根，走不到这里
+            if (InteropText::PathToUtf8(InteropText::PathFromUtf8(key).extension()) == WorldExtension)
             {
                 worldKeys.push_back(key);
                 continue;

@@ -84,8 +84,11 @@ public:
     //判断输入系统是否接收平台事件
     static bool IsEnabled();
 
-    //清理本帧瞬时输入状态；跨帧占有与未消费的事件都不受影响
+    //清理本帧瞬时输入状态，保留等待事件期间采集的事件与键占有
     static void BeginFrame();
+
+    //丢弃本帧已交付事件，保留持续按键状态与 UI 占有
+    static void EndFrame();
 
     //写入按键状态，供平台回调调用
     static void SetKeyState(KeyEnum key, bool pressed);
@@ -99,7 +102,7 @@ public:
     //写入一条有序事件；序号由输入系统分配，保留到达顺序
     static void PushEvent(InputEvent event);
 
-    //读取尚未被消费的事件；消费之前跨帧保留
+    //读取本帧尚未被消费的事件；未消费事件也在帧尾丢弃
     static const std::vector<InputEvent>& GetFrameEvents();
 
     //标记事件已消费；被消费的按下会占有该键，直到对应的抬起

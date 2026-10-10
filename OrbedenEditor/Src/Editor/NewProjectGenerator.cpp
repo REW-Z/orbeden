@@ -261,8 +261,15 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
     if (!SyncBindingBuildFiles(ToCleanPath(projectRoot / (projectName + ".csproj")), runtimeDllPath, outError)) return false;
 
     //模板里的 .oeproj 不带版本号，新建项目直接写当前引擎版本，否则首次打开就会提示更新。
-    if (!EditorProject::WriteProjectVersion(ToCleanPath(projectRoot / (projectName + ".oeproj")),
-        OrbedenProjectVersion, outError))
+    std::string projectFile = ToCleanPath(projectRoot / (projectName + ".oeproj"));
+    if (!EditorProject::WriteProjectVersion(projectFile, OrbedenProjectVersion, outError))
+    {
+        return false;
+    }
+
+    //同时写下编辑器外观配置的默认值：新项目的 .oeproj 一出生就是完整的，
+    //不用等到第一次保存布局才补上这一块。
+    if (!EditorProject::WriteEditorGuiConfig(projectFile, EditorGuiConfigState(), outError))
     {
         return false;
     }

@@ -222,7 +222,7 @@ internal static unsafe class NativeEditorGUI
     //结束滚动区域
     internal static void EndChild() => api.EndChild();
 
-    //绘制目录节点。返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
+    //绘制目录节点。返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击
     internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
         bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false)
     {

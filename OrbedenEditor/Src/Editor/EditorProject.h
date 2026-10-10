@@ -16,6 +16,19 @@ enum class ProjectVersionStatus
     Newer,       //由更新版本的 Orbeden 创建，只提示不拦
 };
 
+//编辑器 GUI 配置，存在项目文件的 <EditorGuiConfig> 块里。
+//块名与属性名与托管侧 EditorGuiSettings.cs 逐字对应，改一处必须改两处。
+struct EditorGuiConfigState
+{
+public:
+    //属性行标签列的宽度；标签画在左列，控件从这一列起算
+    float32 labelWidth = 120.0f;
+    //字体文件路径；空表示用 ImGui 内置默认字体。保留值 "builtin:vector" 表示内置的可缩放字体
+    std::string font;
+    //字号（像素）；只对非点阵字体有意义
+    float32 fontSize = 16.0f;
+};
+
 //只读探测得到的项目版本信息。
 //同时带上更新需要的路径：被探测的项目未必是当前已打开的那个，
 //不能靠 EditorProject 的现有成员推导。
@@ -44,6 +57,7 @@ private:
     std::string currentWorld;
     std::string projectFilePath;
     EditorLayoutState editorLayout;
+    EditorGuiConfigState editorGuiConfig;
     std::string lastError;
     bool worldLoaded = false;
 
@@ -101,6 +115,17 @@ public:
 
     //获取编辑器布局状态
     const EditorLayoutState& GetEditorLayout() const;
+
+    //获取编辑器 GUI 配置；打开项目时从 .oeproj 读入，缺失走默认值
+    const EditorGuiConfigState& GetEditorGuiConfig() const;
+
+    //重新从项目文件读取编辑器 GUI 配置；文件被编辑器面板改写后用它刷新
+    bool ReloadEditorGuiConfig();
+
+    //写回编辑器 GUI 配置块：读最新文件、只替换这一块、原子替换。
+    //托管侧 EditorGuiSettings 写的是同一个块，两边必须都走这种读改写，才不会互相抹掉。
+    static bool WriteEditorGuiConfig(const std::string& projectFile, const EditorGuiConfigState& config,
+        std::string& outError);
 
     //获取当前项目根目录
     const std::string& GetProjectRoot() const;

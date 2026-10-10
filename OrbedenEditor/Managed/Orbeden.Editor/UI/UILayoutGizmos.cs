@@ -56,7 +56,7 @@ public sealed class UILayoutGizmos
         reportedDrivenAxis = false;
     }
 
-    /// <summary>按增量移动矩形：写的是 offset，锚点与尺寸不动。</summary>
+    /// <summary>按增量移动矩形：修改 Transform 局部位置，锚点与尺寸不动。</summary>
     public void ApplyOffsetDelta(vector2 delta)
     {
         if (baseline == null || delta.x == 0.0f && delta.y == 0.0f) return;
@@ -116,9 +116,7 @@ public sealed class UILayoutGizmos
         ScriptRuntimeRegistry.FlushHostFields();
         EditorApplication.MarkWorldDirty();
 
-        UILayout target = layout;
-        EditorPropertyHistory.RecordAction(label,
-            () => start.Apply(target), () => end.Apply(target));
+        EditorPropertyHistory.RecordAction(label, start.Apply, end.Apply);
     }
 
     /// <summary>取消编辑：解析回基线，不写历史。</summary>
@@ -127,7 +125,7 @@ public sealed class UILayoutGizmos
         if (baseline == null) return;
         LayoutBaseline start = baseline.Value;
         baseline = null;
-        if (start.TryResolve(out UILayout? layout) && layout != null) start.Apply(layout);
+        start.Apply();
     }
 
     /// <summary>
@@ -389,15 +387,8 @@ public sealed class UILayoutGizmos
         vector3 translation = new(matrix[0] * compensation.x + matrix[4] * compensation.y,
             matrix[1] * compensation.x + matrix[5] * compensation.y,
             matrix[2] * compensation.x + matrix[6] * compensation.y);
-        if (layout.Ens.GetComponent<Canvas>() is Canvas)
-            layout.Ens.Transform.SetLocalPosition(new vector3(start.Position.x + translation.x,
-                start.Position.y + translation.y, start.Position.z + translation.z));
-        else
-        {
-            layout.SetOffset(new vector2(start.Offset.x + translation.x, start.Offset.y + translation.y));
-            if (translation.z != 0)
-                layout.Ens.Transform.SetLocalPosition(new vector3(start.Position.x, start.Position.y, start.Position.z + translation.z));
-        }
+        layout.Ens.Transform.SetLocalPosition(new vector3(start.Position.x + translation.x,
+            start.Position.y + translation.y, start.Position.z + translation.z));
     }
 
     //按画布模式将节点坐标映射到场景屏幕
@@ -460,7 +451,6 @@ public sealed class UILayoutGizmos
         private readonly vector2 anchorMin;
         private readonly vector2 anchorMax;
         private readonly vector2 pivot;
-        private readonly vector2 offset;
         private readonly vector2 sizeDelta;
         private readonly UIRect resolved;
         private readonly vector3 position;
@@ -472,7 +462,6 @@ public sealed class UILayoutGizmos
             anchorMin = layout.GetAnchorMin();
             anchorMax = layout.GetAnchorMax();
             pivot = layout.GetPivot();
-            offset = layout.GetOffset();
             sizeDelta = layout.GetSizeDelta();
             this.resolved = resolved;
             Transform transform = layout.Ens.Transform;
@@ -482,7 +471,7 @@ public sealed class UILayoutGizmos
             localMatrix = matrix4x4.Trs(default, transform.GetLocalRotation(), scale);
         }
 
-        internal vector2 Offset => offset;
+        internal vector2 Offset => new(position.x, position.y);
         internal vector2 SizeDelta => sizeDelta;
         internal vector2 Pivot => pivot;
         internal UIRect ResolvedRect => resolved;
@@ -501,11 +490,12 @@ public sealed class UILayoutGizmos
             return layout != null;
         }
 
-        internal void Apply(UILayout layout)
+        //按稳定 ID 恢复布局配置与 Transform 位置
+        internal void Apply()
         {
+            if (!TryResolve(out UILayout? layout) || layout == null) return;
             layout.SetAnchors(anchorMin, anchorMax);
             layout.SetPivot(pivot);
-            layout.SetOffset(offset);
             layout.SetSizeDelta(sizeDelta);
             layout.Ens.Transform.SetLocalPosition(position);
             ScriptRuntimeRegistry.FlushHostFields();
@@ -516,7 +506,6 @@ public sealed class UILayoutGizmos
             anchorMin.x == other.anchorMin.x && anchorMin.y == other.anchorMin.y
             && anchorMax.x == other.anchorMax.x && anchorMax.y == other.anchorMax.y
             && pivot.x == other.pivot.x && pivot.y == other.pivot.y
-            && offset.x == other.offset.x && offset.y == other.offset.y
             && sizeDelta.x == other.sizeDelta.x && sizeDelta.y == other.sizeDelta.y
             && position.x == other.position.x && position.y == other.position.y && position.z == other.position.z;
     }

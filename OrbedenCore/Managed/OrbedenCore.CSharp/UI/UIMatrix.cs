@@ -51,7 +51,7 @@ internal static class UIMatrix
     }
 
     /// <summary>
-    /// 构造正交投影，把 [left,right]×[bottom,top] 映射到 [-1,1]；UI 在 z=0 平面上，深度保持单位。
+    /// 构造屏幕画布投影，把 XY 映射到 [-1,1]，最终裁剪深度固定为零。
     /// </summary>
     internal static matrix4x4 Ortho(float left, float right, float bottom, float top)
     {
@@ -62,6 +62,7 @@ internal static class UIMatrix
 
         result[0] = 2.0f / width;
         result[5] = 2.0f / height;
+        result[10] = 0.0f;
         result[12] = -(right + left) / width;
         result[13] = -(top + bottom) / height;
         return result;

@@ -115,7 +115,7 @@ internal enum EditorProjectField
 }
 
 /// <summary>编辑器请求的种类：构建脚本/原生模块/Player，以及重导并重编的刷新。</summary>
-internal enum EditorRequestKind { Scripts, Native, Player, Refresh }
+internal enum EditorRequestKind { Scripts, Native, Player, Refresh, EditorAppearance }
 
 /// <summary>模板内容目录位，与 ManagedEditorBridge.cpp 的 TemplateFolder* 常量对应。</summary>
 internal enum EditorTemplateFolder { Examples = 1, Builtin = 2 }

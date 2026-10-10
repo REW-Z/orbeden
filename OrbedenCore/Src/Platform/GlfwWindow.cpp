@@ -549,6 +549,8 @@ void GlfwWindow::RefreshSize()
 //派发 framebuffer resize 事件
 void GlfwWindow::HandleFramebufferResize(int32 newWidth, int32 newHeight)
 {
+    //同步窗口逻辑尺寸后通知渲染器
+    RefreshSize();
     framebufferWidth = newWidth;
     framebufferHeight = newHeight;
 

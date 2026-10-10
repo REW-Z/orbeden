@@ -33,16 +33,6 @@ namespace
         return output.str();
     }
 
-    //写入文本文件。
-    bool WriteTextFile(const std::filesystem::path& path, const std::string& text)
-    {
-        std::ofstream output(path, std::ios::out | std::ios::trunc | std::ios::binary);
-        if (!output) return false;
-
-        output << text;
-        return true;
-    }
-
     //转义 XML 属性文本。
     std::string EscapeXml(const std::string& text)
     {
@@ -321,6 +311,112 @@ namespace
         }
     }
 
+    //读取编辑器 GUI 配置块。块或单个属性缺失都走结构体默认值，
+    //旧项目因此天然兼容：块名与属性名与托管侧 EditorGuiSettings.cs 逐字对应。
+    void ReadEditorGuiConfig(const std::string& content, EditorGuiConfigState& config)
+    {
+        config = EditorGuiConfigState();
+
+        std::size_t blockStart = content.find("<EditorGuiConfig");
+        if (blockStart == std::string::npos) return;
+
+        std::size_t blockEnd = content.find('>', blockStart);
+        if (blockEnd == std::string::npos) return;
+
+        std::string token = content.substr(blockStart, blockEnd - blockStart + 1);
+        config.labelWidth = GetFloatAttribute(token, "labelWidth", config.labelWidth);
+        config.font = GetAttribute(token, "font");
+        config.fontSize = GetFloatAttribute(token, "fontSize", config.fontSize);
+    }
+
+    //移除旧编辑器 GUI 配置块。
+    std::string RemoveEditorGuiConfigBlock(std::string content)
+    {
+        std::size_t blockStart = content.find("<EditorGuiConfig");
+        if (blockStart == std::string::npos) return content;
+
+        std::size_t blockEnd = content.find('>', blockStart);
+        if (blockEnd == std::string::npos) return content;
+
+        std::size_t eraseStart = blockStart;
+        while (eraseStart > 0 && (content[eraseStart - 1] == ' ' || content[eraseStart - 1] == '\t'))
+        {
+            eraseStart--;
+        }
+        if (eraseStart > 0 && content[eraseStart - 1] == '\n')
+        {
+            eraseStart--;
+            if (eraseStart > 0 && content[eraseStart - 1] == '\r')
+            {
+                eraseStart--;
+            }
+        }
+
+        std::size_t eraseEnd = blockEnd + 1;
+        while (eraseEnd < content.size() && (content[eraseEnd] == '\r' || content[eraseEnd] == '\n'))
+        {
+            eraseEnd++;
+        }
+
+        content.erase(eraseStart, eraseEnd - eraseStart);
+        return content;
+    }
+
+    //写出编辑器 GUI 配置块文本。属性名与托管侧 EditorGuiSettings.cs 逐字对应。
+    std::string BuildEditorGuiConfigBlock(const EditorGuiConfigState& config)
+    {
+        std::ostringstream output;
+        output << "    <EditorGuiConfig labelWidth=\"" << ToFloatText(config.labelWidth)
+            << "\" font=\"" << EscapeXml(config.font)
+            << "\" fontSize=\"" << ToFloatText(config.fontSize)
+            << "\" />\n";
+        return output.str();
+    }
+
+    //把一段块文本插到根元素结束之前；根标签是自闭合写法时先展开它。
+    bool InsertBlockIntoProjectRoot(const std::filesystem::path& projectFile, std::string content,
+        const std::string& block)
+    {
+        std::size_t rootStart = content.find("<OrbedenProject");
+        if (rootStart == std::string::npos) return false;
+
+        std::size_t rootEnd = content.find('>', rootStart);
+        if (rootEnd == std::string::npos) return false;
+
+        std::size_t lastRootChar = rootEnd;
+        while (lastRootChar > rootStart && std::isspace(static_cast<unsigned char>(content[lastRootChar - 1])))
+        {
+            lastRootChar--;
+        }
+
+        bool selfClosing = lastRootChar > rootStart && content[lastRootChar - 1] == '/';
+        if (selfClosing)
+        {
+            content.erase(lastRootChar - 1, 1);
+            rootEnd--;
+            std::size_t insertPosition = rootEnd + 1;
+            while (insertPosition < content.size() && (content[insertPosition] == '\r' || content[insertPosition] == '\n'))
+            {
+                content.erase(insertPosition, 1);
+            }
+
+            content.insert(insertPosition, "\n" + block + "</OrbedenProject>\n");
+            return WriteTextFileAtomic(projectFile, content);
+        }
+
+        std::size_t closePosition = content.rfind("</OrbedenProject>");
+        if (closePosition == std::string::npos) return false;
+
+        std::string insertText = block;
+        if (closePosition > 0 && content[closePosition - 1] != '\n')
+        {
+            insertText = "\n" + insertText;
+        }
+
+        content.insert(closePosition, insertText);
+        return WriteTextFileAtomic(projectFile, content);
+    }
+
     //移除旧编辑器布局块。
     std::string RemoveEditorLayoutBlock(std::string content)
     {
@@ -412,45 +508,14 @@ namespace
     bool WriteEditorLayoutToProjectFile(const std::filesystem::path& projectFile, const EditorLayoutState& layout)
     {
         std::string content = RemoveEditorLayoutBlock(ReadTextFile(projectFile));
-        std::size_t rootStart = content.find("<OrbedenProject");
-        if (rootStart == std::string::npos) return false;
-
-        std::size_t rootEnd = content.find('>', rootStart);
-        if (rootEnd == std::string::npos) return false;
-
-        std::size_t lastRootChar = rootEnd;
-        while (lastRootChar > rootStart && std::isspace(static_cast<unsigned char>(content[lastRootChar - 1])))
+        std::string block = BuildEditorLayoutBlock(layout);
+        //GUI 配置块由自定义编辑器面板改写；这里只在它还没有时补一份默认值，
+        //绝不覆盖已有内容——否则每次存布局都会把作者调好的值抹回去。
+        if (content.find("<EditorGuiConfig") == std::string::npos)
         {
-            lastRootChar--;
+            block += BuildEditorGuiConfigBlock(EditorGuiConfigState());
         }
-
-        std::string layoutBlock = BuildEditorLayoutBlock(layout);
-        bool selfClosing = lastRootChar > rootStart && content[lastRootChar - 1] == '/';
-        if (selfClosing)
-        {
-            content.erase(lastRootChar - 1, 1);
-            rootEnd--;
-            std::size_t insertPosition = rootEnd + 1;
-            while (insertPosition < content.size() && (content[insertPosition] == '\r' || content[insertPosition] == '\n'))
-            {
-                content.erase(insertPosition, 1);
-            }
-
-            content.insert(insertPosition, "\n" + layoutBlock + "</OrbedenProject>\n");
-            return WriteTextFile(projectFile, content);
-        }
-
-        std::size_t closePosition = content.rfind("</OrbedenProject>");
-        if (closePosition == std::string::npos) return false;
-
-        std::string insertText = layoutBlock;
-        if (closePosition > 0 && content[closePosition - 1] != '\n')
-        {
-            insertText = "\n" + insertText;
-        }
-
-        content.insert(closePosition, insertText);
-        return WriteTextFile(projectFile, content);
+        return InsertBlockIntoProjectRoot(projectFile, content, block);
     }
 
     //项目名的唯一真源是 .oeproj 的文件基名：csproj、vcxproj 与模块 DLL 名都从它推导，
@@ -647,6 +712,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     std::string parsedLastWorld = GetAttribute(rootTag, "lastWorld");
     EditorLayoutState parsedLayout;
     ReadEditorLayout(content, parsedLayout);
+    EditorGuiConfigState parsedGuiConfig;
+    ReadEditorGuiConfig(content, parsedGuiConfig);
     if (parsedStartupWorld.empty())
     {
         lastError = "Project file is missing startupWorld: " + projectFile;
@@ -686,6 +753,7 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     currentWorld = openedWorld;
     projectFilePath = ToCleanPath(std::filesystem::absolute(filePath));
     editorLayout = parsedLayout;
+    editorGuiConfig = parsedGuiConfig;
     lastError.clear();
     worldLoaded = false;
 
@@ -943,6 +1011,44 @@ bool EditorProject::SaveEditorLayout(const EditorLayoutState& layout)
 }
 
 //获取编辑器布局状态
+const EditorGuiConfigState& EditorProject::GetEditorGuiConfig() const
+{
+    return editorGuiConfig;
+}
+
+//重新读取编辑器 GUI 配置
+bool EditorProject::ReloadEditorGuiConfig()
+{
+    if (projectFilePath.empty()) return false;
+
+    std::filesystem::path filePath = InteropText::PathFromUtf8(projectFilePath);
+    if (!std::filesystem::is_regular_file(filePath)) return false;
+
+    ReadEditorGuiConfig(ReadTextFile(filePath), editorGuiConfig);
+    return true;
+}
+
+bool EditorProject::WriteEditorGuiConfig(const std::string& projectFile, const EditorGuiConfigState& config,
+    std::string& outError)
+{
+    std::filesystem::path filePath = InteropText::PathFromUtf8(projectFile);
+    if (!std::filesystem::exists(filePath))
+    {
+        outError = "Project file does not exist: " + projectFile;
+        return false;
+    }
+
+    std::string content = RemoveEditorGuiConfigBlock(ReadTextFile(filePath));
+    if (!InsertBlockIntoProjectRoot(filePath, content, BuildEditorGuiConfigBlock(config)))
+    {
+        outError = "Editor GUI config write failed: " + projectFile;
+        return false;
+    }
+
+    outError.clear();
+    return true;
+}
+
 const EditorLayoutState& EditorProject::GetEditorLayout() const
 {
     return editorLayout;

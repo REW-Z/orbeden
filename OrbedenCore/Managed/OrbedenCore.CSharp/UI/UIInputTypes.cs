@@ -135,10 +135,10 @@ public readonly struct UIEventTarget
     }
 
     /// <summary>是否指向了一个节点。</summary>
-    public bool IsValid => !ens.IsNull;
+    public bool IsValid => !ens.IsNull && ens.version != 0;
 
     /// <summary>节点是否还在 UI 树里；控件被销毁不算失效。</summary>
-    public bool IsAlive => !ens.IsNull && UIWorldContext.Current?.FindNode(ens) != null;
+    public bool IsAlive => IsValid && UIWorldContext.Current?.FindNode(ens) != null;
 }
 
 /// <summary>方向导航。</summary>

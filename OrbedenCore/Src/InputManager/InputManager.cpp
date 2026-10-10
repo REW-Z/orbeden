@@ -11,7 +11,7 @@
 namespace
 {
     constexpr usize KeyCount = static_cast<usize>(KeyEnum::UNMAPPED) + 1;
-    //未消费事件的上限；超出丢最旧的，避免卡住的消费者把内存吃光。
+    //单帧事件的上限；超出丢最旧的。
     constexpr usize MaxPendingEvents = 4096;
 
     //事件种类与设备；与 UIInputKind/UIInputDevice 的数值一致，这里不引用 UI 合同头文件。
@@ -40,7 +40,7 @@ namespace
     std::unordered_map<uint32, bool> rawKeyStates;
     std::unordered_set<uint32> rawKeyDownThisFrame;
     std::unordered_set<uint32> rawKeyUpThisFrame;
-    //待消费的有序事件；消费之前跨帧保留。
+    //本帧有序事件；帧尾丢弃，消费只控制游戏输入占有。
     std::vector<InputEvent> pendingEvents;
     uint64 nextEventSequence = 1;
     vector2 mousePos{};
@@ -100,6 +100,8 @@ void InputManager::SetEnabled(bool value)
     if (!inputEnabled)
     {
         ClearInputState();
+        pendingEvents.clear();
+        eventOverflowReported = false;
     }
 }
 
@@ -115,9 +117,16 @@ void InputManager::BeginFrame()
     mouseMov = vector2{};
     keyDownThisFrame.fill(false);
     keyUpThisFrame.fill(false);
-    //占有与未消费的事件跨帧保留，这里只清瞬时态。
+    //保留等待事件期间采集的事件与跨帧键占有
     rawKeyDownThisFrame.clear();
     rawKeyUpThisFrame.clear();
+}
+
+//丢弃本帧已交付的事件
+void InputManager::EndFrame()
+{
+    pendingEvents.clear();
+    eventOverflowReported = false;
 }
 
 //写入按键状态
@@ -190,7 +199,7 @@ void InputManager::PushEvent(InputEvent event)
     pendingEvents.push_back(std::move(event));
 }
 
-//读取尚未被消费的事件
+//读取本帧尚未被消费的事件
 const std::vector<InputEvent>& InputManager::GetFrameEvents()
 {
     return pendingEvents;

@@ -263,8 +263,11 @@ namespace RenderMath
         inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
         inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
 
+        //按行列式展开项的相对误差判断退化
         float32 determinant = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-        if (std::abs(determinant) <= 0.000001f) return matrix4x4();
+        float32 determinantMagnitude = std::abs(m[0] * inv[0]) + std::abs(m[1] * inv[4])
+            + std::abs(m[2] * inv[8]) + std::abs(m[3] * inv[12]);
+        if (std::abs(determinant) <= 0.000001f * determinantMagnitude) return matrix4x4();
 
         determinant = 1.0f / determinant;
         for (int index = 0; index < 16; ++index)

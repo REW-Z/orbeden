@@ -3,7 +3,7 @@ using Orbeden;
 namespace OrbedenEditor;
 
 /// <summary>渲染与显示参数的集中入口，按归属分成两节：
-/// 世界级的环境与天空盒存在当前 World 文件里，项目级的曝光存在 ProjectSettings.display 里。</summary>
+/// 世界级的环境与天空盒存在当前 World 文件里，项目级的曝光存在项目根的 GameSettings.ini 里。</summary>
 internal sealed class RenderingPanel : EditorPanel
 {
     private string root = "\0";
@@ -45,7 +45,7 @@ internal sealed class RenderingPanel : EditorPanel
         status = string.Empty;
     }
 
-    /// <summary>把项目级草稿写回 ProjectSettings.display。</summary>
+    /// <summary>把项目级草稿写回项目根的 GameSettings.ini。</summary>
     private bool ApplyDisplay()
     {
         if (!EditorAssetsNative.CanModifyAssets()) { status = "Rendering settings cannot be changed while playing."; return false; }
@@ -83,7 +83,7 @@ internal sealed class RenderingPanel : EditorPanel
                 EditorGUI.BeginDisabled(!EditorAssetsNative.CanModifyAssets());
                 try
                 {
-                    EditorGUI.Label("Project-level settings, stored in ProjectSettings.display.");
+                    EditorGUI.Label("Project-level settings, stored in GameSettings.ini at the project root.");
                     if (EditorGUI.InputFloat("Exposure", ref exposure)) dirty = true;
                     EditorGUI.Label("Exposure is how the scene is observed, not how bright its lights are.");
                     EditorGUI.Label("A Camera component can override it per camera.");

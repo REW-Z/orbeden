@@ -296,6 +296,14 @@ public sealed class UIWorldContext : IManagedFrameSystem
     /// <summary>分离世界：先撤销全部派生位置覆盖，再清空索引与解析结果。</summary>
     public void DetachWorld()
     {
+        //取消旧世界输入并清空注入事件
+        inputRouter.Reset();
+        inputModule.Reset();
+        raycaster.ResetDepthCache();
+        eventDispatcher.Reset();
+        injectedPointers.Clear();
+        rawEventCount = 0;
+
         //域卸载先恢复作者位置，否则下次附着时残留的覆盖会盖住新算出的结果。
         List<UIDerivedPosition> clears = [];
         foreach (UINode node in nodes.Values)
@@ -307,6 +315,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
         UILayoutRegistry.Clear(nodes.Values);
         nodes.Clear();
         canvasViewports.Clear();
+        explicitCanvasViewports.Clear();
         HandlerCache.Clear();
         defaultFont = null;
         defaultFontLoadAttempted = false;
@@ -329,8 +338,7 @@ public sealed class UIWorldContext : IManagedFrameSystem
     }
 
     /// <summary>
-    /// 屏幕画布的默认视口取窗口帧缓冲尺寸。宿主（编辑器预览）可以显式改写，
-    /// 只有仍然等于上一次默认值的画布才跟着窗口一起变，宿主写进去的尺寸不会被覆盖。
+    /// 屏幕画布的默认视口跟随窗口帧缓冲尺寸；宿主显式设置的画布尺寸保持不变。
     /// </summary>
     private void RefreshDefaultCanvasViewports()
     {
@@ -1083,7 +1091,6 @@ public sealed class UIWorldContext : IManagedFrameSystem
             case UISceneChangeKind.TransformChanged:
                 if (nodes.TryGetValue(change.ens, out UINode? touched) && touched.Layout != null)
                 {
-                    touched.Layout.SynchronizePosition();
                     EnqueueLayout(touched.Layout);
                 }
                 break;

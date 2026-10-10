@@ -94,7 +94,7 @@ direct = albedo · nDotL · lightColor · intensity
 
 曝光描述的是**观察方式**，与描述场景光照的灯光强度互不影响，因此两者分开：
 
-- 项目级默认值：`Content/ProjectSettings.display` 的 `exposure`（线性倍数），由 Rendering 面板编辑
+- 项目级默认值：项目根下 `GameSettings.ini` 的 `[Rendering]` 分块里的 `exposure`（线性倍数），由 Rendering 面板编辑
 - 相机级覆盖：`Camera.overrideExposure` + `Camera.exposure`，在 Inspector 里编辑
 - 世界文件**不保存**曝光：同一份场景在不同项目里可以有不同曝光
 

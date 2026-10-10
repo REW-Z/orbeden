@@ -127,7 +127,8 @@ internal sealed class EnsPanel : EditorPanel
         bool altToggle = (state & 16) != 0 && (state & 32) != 0;
         bool expandSubtree = altToggle && (state & 1) != 0;
         if (altToggle && !expandSubtree) MarkCollapsedSubtree(ens);
-        if ((state & 2) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
+        //选中认松开点击：按下就换选中会让检视面板立刻改内容，把节点拖到别的面板时那边已经换掉了
+        if ((state & 64) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
         if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
         NativeEditorGUI.DragSource(1, ens.ResourceKey);

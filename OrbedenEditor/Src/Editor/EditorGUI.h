@@ -164,8 +164,20 @@ private:
     void UpdateMouseCursor();
 
 public:
+    //font 配置的保留值：ImGui 自带的可缩放默认字体。空字符串则是内置的点阵字体。
+    //.oeproj 的 <EditorGuiConfig> 里存的就是它；托管侧 EditorGuiSettings.cs 用同一个字面量。
+    static constexpr const char* BuiltinVectorFont = "builtin:vector";
+
     //应用共享主题到当前 ImGui 上下文
     static void ApplyTheme();
+
+    //按项目配置重建编辑器字体图集。font 为空表示内置点阵字体（只适合 13px），
+    //BuiltinVectorFont 表示内置的可缩放字体，其余按字体文件路径从内存加载。
+    //字号在这里烘进图集，显示值由 ApplyTheme 按同一个字号写进每个上下文。
+    void ApplyFontConfig(const std::string& font, float32 fontSize);
+
+    //设置属性行的标签列宽度；同时推给 OrbedenCore 的颜色字段
+    static void SetPropertyLabelWidth(float32 value);
 
     //获取主题定义的停靠分隔条尺寸
     static float32 GetSplitterSize();

@@ -21,7 +21,6 @@ Project/
     Models/robot.gltf.resinfo             伴生文件：导入设置 + 内部资源清单（进版本管理）
     Textures/brick.png
     Textures/brick.png.resinfo            同上
-    ProjectSettings.layers
   ResourceCache/
     Imported/
       Models/
@@ -192,9 +191,9 @@ brick.png                    ← 文件名
 
 Layers 提供 32 个共享名称，默认 Layer 0 为 Default。Renderer 下拉写入 `1u << index`，而不是下拉索引；Camera mask 提供 Nothing、Everything 和逐层勾选。原有零值或多位单层值显示 Custom/十六进制，直到用户明确选择才改变。Collider、HeightField、CharacterController 的相关字段使用同一套命名控件。提交仍走 PropertyDocument，保留多选和撤销。
 
-Physics 按选中层显示碰撞矩阵的一行，改变一格同时更新对称列，包含自身碰撞。Apply 原子保存、Revert 放弃草稿、Restore Defaults 修改草稿；Play 期间禁用修改。配置为 `Content/ProjectSettings.layers`，随 Player 复制：UTF-8 无 BOM，首行 OrbedenLayers1，随后 32 行为八位十六进制允许掩码、TAB、层名。
+Physics 按选中层显示碰撞矩阵的一行，改变一格同时更新对称列，包含自身碰撞。Apply 原子保存、Revert 放弃草稿、Restore Defaults 修改草稿；Play 期间禁用修改。配置为项目根 `GameSettings.ini` 的 `[Layers]` 分块，随 Player 镜像到包根：32 行，每行 `<序号>TAB<层名>TAB<八位十六进制允许掩码>`；文件在但缺这一段时按默认值补写。层名与碰撞矩阵是项目级设置，因此不放在会被 cook 的内容根里。
 
-PhysX 有效 mask 为组件原 collisionMask 与矩阵允许行的交集；Collider、HeightField、CharacterController、Trigger 和 CCT 配对遵循矩阵。普通 Raycast/Sweep/Overlap 没有源层，仍按传入 layerMask 查询。旧多位层取所属行并集。配置参与形状 hash，变化后在物理同步时生效。无配置保持旧项目的全允许矩阵；非法或非对称配置报错并使用默认值。
+PhysX 有效 mask 为组件原 collisionMask 与矩阵允许行的交集；Collider、HeightField、CharacterController、Trigger 和 CCT 配对遵循矩阵。普通 Raycast/Sweep/Overlap 没有源层，仍按传入 layerMask 查询。旧多位层取所属行并集。配置参与形状 hash，变化后在物理同步时生效。缺少分块时按默认值补写并保持全允许矩阵；非法或非对称配置报错并使用默认值。
 
 项目版本递增至 11，需更新 SDK、重建模块和重新打包；已有组件位值不迁移。
 

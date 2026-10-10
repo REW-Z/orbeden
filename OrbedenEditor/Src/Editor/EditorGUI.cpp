@@ -12,6 +12,8 @@
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Native/NativeCall.h"
+//颜色字段原语在核心层，标签列宽度推给它才能跟编辑器这一侧的属性行对齐
+#include "Runtime/Gui/RuntimeGuiBridge.h"
 
 #include <glad/gl.h>
 #include <imgui_impl_opengl3.h>
@@ -20,6 +22,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cstring>
+#include <fstream>
+#include <iterator>
 #include <string>
 
 EditorGUI* EditorGUI::activeInstance = nullptr;
@@ -227,6 +231,95 @@ namespace
         return std::string(reinterpret_cast<const char*>(text), static_cast<usize>(length));
     }
 
+    //属性行标签列的宽度。来自项目级 Editor GUI 配置（.oeproj 的 <EditorGuiConfig>），
+    //由托管侧经 EditorThemeData 送进来、在 ApplyTheme 里落到这里。
+    //颜色字段（RuntimeGuiBridge.cpp）与对象框（托管侧 EditorObjectField.cs）用的是同一个值，
+    //三处必须一致，否则不同类型的框落不到同一列。
+    float32 propertyLabelWidth = 120.0f;
+
+    //当前生效的字体配置。空 = 内置点阵字体，BuiltinVectorFont = 内置矢量字体，其余是字体文件路径。
+    std::string editorFont;
+    float32 editorFontSize = 13.0f;
+    //内置点阵只适合 13px：字号在它上面一律按 13 算，免得放糊
+    bool editorFontIsBitmap = true;
+    constexpr float32 BitmapFontSize = 13.0f;
+
+    //按当前字体配置重建图集。字号在 AddFont 时就烘进去，图集按字号重新光栅化，
+    //所以换字号要重建而不是缩放。ImGui 1.92 的字体系统支持运行时重建：
+    //ClearFonts 会通知所有用这张图表的上下文改绑新字体（浮动窗的上下文也在内）。
+    void BuildEditorFont(ImFontAtlas& atlas)
+    {
+        atlas.Clear();
+
+        if (editorFontIsBitmap)
+        {
+            atlas.AddFontDefaultBitmap();
+            return;
+        }
+
+        ImFontConfig config;
+        config.SizePixels = editorFontSize;
+        if (editorFont == EditorGUI::BuiltinVectorFont)
+        {
+            atlas.AddFontDefaultVector(&config);
+            return;
+        }
+
+        //字体文件走内存加载：ImGui 的 AddFontFromFileTTF 内部是 fopen，Windows 上按 ANSI 解释路径，
+        //"C:\Windows\Fonts\微软雅黑.ttf" 这类会直接失败。自己按 UTF-8 路径读进来再交过去。
+        std::ifstream input(InteropText::PathFromUtf8(editorFont), std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+        if (bytes.empty())
+        {
+            Log::Warning(("Editor font could not be read, using the built-in font: " + editorFont).c_str());
+            editorFontIsBitmap = true;
+            atlas.AddFontDefaultBitmap();
+            return;
+        }
+
+        //图集拿走这块内存的所有权（ClearFonts 时按 ImGui 的分配器释放），
+        //因此必须用它的 MemAlloc，不能把 std::string 的缓冲直接交出去。
+        void* data = ImGui::MemAlloc(bytes.size());
+        if (!data)
+        {
+            editorFontIsBitmap = true;
+            atlas.AddFontDefaultBitmap();
+            return;
+        }
+        std::memcpy(data, bytes.data(), bytes.size());
+        if (!atlas.AddFontFromMemoryTTF(data, static_cast<int32>(bytes.size()), editorFontSize, &config))
+        {
+            ImGui::MemFree(data);
+            editorFontIsBitmap = true;
+            Log::Warning(("Editor font could not be parsed, using the built-in font: " + editorFont).c_str());
+            atlas.AddFontDefaultBitmap();
+        }
+    }
+
+    //把属性标签画进左侧固定宽度的标签列，再把光标移到右列起点，返回控件该用的 label。
+    //返回空串表示标签没有可见文字（只有 "##ID"）：调用方仍按老样子就地画控件——
+    //列表元素、表格单元格与工具条上的搜索框都靠这条不跟着跳列。
+    std::string BeginPropertyRow(const std::string& text)
+    {
+        const char* begin = text.c_str();
+        const char* end = ImGui::FindRenderedTextEnd(begin);
+        if (begin == end) return std::string();
+
+        //标签超长时裁在列内，不挤进右边的控件区
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        ImGui::PushClipRect(start, ImVec2(start.x + propertyLabelWidth - ImGui::GetStyle().ItemInnerSpacing.x,
+            start.y + ImGui::GetFrameHeight()), true);
+        ImGui::TextEx(begin, end);
+        ImGui::PopClipRect();
+        //右列用 SameLine(offset) 定位：它与托管侧对象框走的是同一个 EditorGuiSameLine，
+        //两者的基准一致（都从窗口左缘起算），列位才对得上。
+        //代价是这一路会带上外层 Group 的偏移——列表与向量控件内部才开 Group，
+        //那两处画的是没有可见标签的控件，走不到这里
+        ImGui::SameLine(propertyLabelWidth);
+        //控件 ID 取 "##" 之后的部分；原标签没有 "##" 时补一个，同一次调用里仍然唯一
+        return *end == '\0' ? "##" + text : std::string(end);
+    }
+
     //开始可独立滚动的内容区域
     uint8 ORBEDEN_NATIVE_CALL EditorGuiBeginChild(const uint8* id, int32 length, float32* width, float32 height, uint8 resizable)
     {
@@ -240,9 +333,23 @@ namespace
     //结束内容区域
     void ORBEDEN_NATIVE_CALL EditorGuiEndChild() { ImGui::EndChild(); }
 
+    //判断左键松开的这一下是否点在本节点上：按下点要落在这个节点自己的行内，
+    //箭头区除外——箭头是按下当帧就切换展开的，松开时不该再补一次选中；叶子没有箭头，整行都能点
+    bool IsReleasedOnNodeLabel(uint8 options)
+    {
+        if (!ImGui::IsMouseReleased(ImGuiMouseButton_Left) || !ImGui::IsItemHovered()) return false;
+        ImVec2 pressed = ImGui::GetIO().MouseClickedPos[ImGuiMouseButton_Left];
+        ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
+        if (pressed.x < min.x || pressed.x >= max.x || pressed.y < min.y || pressed.y >= max.y) return false;
+        if (options & 2) return true;
+        return pressed.x > min.x + ImGui::GetTreeNodeToLabelSpacing() + ImGui::GetStyle().TouchExtraPadding.x;
+    }
+
     //绘制目录节点并返回展开与点击状态
     //options：1 选中、2 叶子、4 默认展开、8 强制展开、16 强制折叠、32 灰显
-    //返回值：1 展开、2 点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换
+    //返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击
+    //同一个节点两种点击都报：按下点击给要即刻响应的操作，选中用松开点击——
+    //拖动会跨到别的面板，按下就落定选中会让对方面板在拖到一半时换掉内容
     int32 ORBEDEN_NATIVE_CALL EditorGuiTreeNode(const uint8* label, int32 length, uint8 options, const uint8* icon, int32 iconLength)
     {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -278,7 +385,8 @@ namespace
         bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
         return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled ? 2 : 0)
             | (ImGui::GetIO().KeyCtrl ? 4 : 0) | (doubleClicked ? 8 : 0)
-            | (ImGui::GetIO().KeyAlt ? 16 : 0) | (toggled ? 32 : 0);
+            | (ImGui::GetIO().KeyAlt ? 16 : 0) | (toggled ? 32 : 0)
+            | (IsReleasedOnNodeLabel(options) ? 64 : 0);
     }
 
     //结束目录节点
@@ -304,8 +412,11 @@ namespace
         float32 minimum, float32 maximum, float32 width)
     {
         if (!value || maximum <= minimum) return 0;
-        ImGui::SetNextItemWidth(width > 0.0f ? width : -1.0f);
-        return ImGui::SliderFloat(ReadUtf8Text(id, length).c_str(), value, minimum, maximum,
+        std::string text = ReadUtf8Text(id, length);
+        const std::string control = BeginPropertyRow(text);
+        const bool columned = control.length() != 0;
+        ImGui::SetNextItemWidth(width > 0.0f ? width : columned ? -FLT_MIN : -1.0f);
+        return ImGui::SliderFloat(columned ? control.c_str() : text.c_str(), value, minimum, maximum,
             "%.0f", ImGuiSliderFlags_AlwaysClamp) ? 1 : 0;
     }
 
@@ -501,7 +612,10 @@ namespace
     {
         std::string labelText = ReadUtf8Text(label, labelLength);
         std::string previewText = ReadUtf8Text(preview, previewLength);
-        return ImGui::BeginCombo(labelText.c_str(), previewText.c_str()) ? 1 : 0;
+        const std::string control = BeginPropertyRow(labelText);
+        const bool columned = control.length() != 0;
+        if (columned) ImGui::SetNextItemWidth(-FLT_MIN);
+        return ImGui::BeginCombo(columned ? control.c_str() : labelText.c_str(), previewText.c_str()) ? 1 : 0;
     }
 
     //结束下拉选择框
@@ -524,7 +638,8 @@ namespace
 
         bool boolValue = *value != 0;
         std::string text = ReadUtf8Text(label, length);
-        bool changed = ImGui::Checkbox(text.c_str(), &boolValue);
+        const std::string control = BeginPropertyRow(text);
+        bool changed = ImGui::Checkbox(control.length() != 0 ? control.c_str() : text.c_str(), &boolValue);
         *value = boolValue ? 1 : 0;
         return changed ? 1 : 0;
     }
@@ -534,7 +649,9 @@ namespace
     {
         if (!value) return 0;
         std::string text = ReadUtf8Text(label, length);
-        return ImGui::InputInt(text.c_str(), value) ? 1 : 0;
+        const std::string control = BeginPropertyRow(text);
+        if (control.length() != 0) ImGui::SetNextItemWidth(-FLT_MIN);
+        return ImGui::InputInt(control.length() != 0 ? control.c_str() : text.c_str(), value) ? 1 : 0;
     }
 
     //绘制浮点输入框；ImGui 的 format 对浮点只管显示（解析固定按 %f 走），所以直接把算好的文本交过去
@@ -542,8 +659,11 @@ namespace
     {
         if (!value) return 0;
         std::string text = ReadUtf8Text(label, length);
+        const std::string control = BeginPropertyRow(text);
+        if (control.length() != 0) ImGui::SetNextItemWidth(-FLT_MIN);
         std::string display = FormatFloatText(*value);
-        return ImGui::InputFloat(text.c_str(), value, 0.0f, 0.0f, display.c_str()) ? 1 : 0;
+        return ImGui::InputFloat(control.length() != 0 ? control.c_str() : text.c_str(),
+            value, 0.0f, 0.0f, display.c_str()) ? 1 : 0;
     }
 
     //绘制三维向量输入框；三个分量各自取最短写法，所以不能借 ImGui::InputFloat3 那种三格共用的格式
@@ -552,13 +672,16 @@ namespace
         if (!value) return 0;
 
         std::string text = ReadUtf8Text(label, length);
+        //标签有可见文字时画进左列，三格吃满右列；否则仍把标签画在三格右侧
+        const std::string control = BeginPropertyRow(text);
+        const bool columned = control.length() != 0;
         float32 values[3] = { value->x, value->y, value->z };
         std::string displays[3] = { FormatFloatText(values[0]), FormatFloatText(values[1]), FormatFloatText(values[2]) };
 
         bool changed = false;
         ImGui::BeginGroup();
         ImGui::PushID(text.c_str());
-        ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
+        ImGui::PushMultiItemsWidths(3, columned ? ImGui::GetContentRegionAvail().x : ImGui::CalcItemWidth());
         for (int32 index = 0; index < 3; ++index)
         {
             ImGui::PushID(index);
@@ -569,12 +692,15 @@ namespace
         }
         ImGui::PopID();
 
-        //标签画在三格右侧，与 ImGui::InputFloat3 的排布保持一致
-        const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
-        if (text.c_str() != labelEnd)
+        if (!columned)
         {
-            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-            ImGui::TextEx(text.c_str(), labelEnd);
+            //标签画在三格右侧，与 ImGui::InputFloat3 的排布保持一致
+            const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
+            if (text.c_str() != labelEnd)
+            {
+                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                ImGui::TextEx(text.c_str(), labelEnd);
+            }
         }
         ImGui::EndGroup();
         if (changed)
@@ -592,13 +718,16 @@ namespace
         if (!value) return 0;
 
         std::string text = ReadUtf8Text(label, length);
+        //标签有可见文字时画进左列，两格吃满右列；否则仍把标签画在两格右侧
+        const std::string control = BeginPropertyRow(text);
+        const bool columned = control.length() != 0;
         float32 values[2] = { value->x, value->y };
         std::string displays[2] = { FormatFloatText(values[0]), FormatFloatText(values[1]) };
 
         bool changed = false;
         ImGui::BeginGroup();
         ImGui::PushID(text.c_str());
-        ImGui::PushMultiItemsWidths(2, ImGui::CalcItemWidth());
+        ImGui::PushMultiItemsWidths(2, columned ? ImGui::GetContentRegionAvail().x : ImGui::CalcItemWidth());
         for (int32 index = 0; index < 2; ++index)
         {
             ImGui::PushID(index);
@@ -609,12 +738,15 @@ namespace
         }
         ImGui::PopID();
 
-        //标签画在两格右侧，与 ImGui::InputFloat2 的排布保持一致
-        const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
-        if (text.c_str() != labelEnd)
+        if (!columned)
         {
-            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-            ImGui::TextEx(text.c_str(), labelEnd);
+            //标签画在两格右侧，与 ImGui::InputFloat2 的排布保持一致
+            const char* labelEnd = ImGui::FindRenderedTextEnd(text.c_str());
+            if (text.c_str() != labelEnd)
+            {
+                ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+                ImGui::TextEx(text.c_str(), labelEnd);
+            }
         }
         ImGui::EndGroup();
         if (changed)
@@ -632,14 +764,18 @@ namespace
         if (!buffer || bufferSize <= 0) return -1;
 
         std::string text = ReadUtf8Text(label, length);
+        const std::string control = BeginPropertyRow(text);
+        const bool columned = control.length() != 0;
         buffer[bufferSize - 1] = 0;
         if (width > 0.0f) ImGui::SetNextItemWidth(width);
+        else if (columned) ImGui::SetNextItemWidth(-FLT_MIN);
         //只读框一律按禁用态压暗（编辑器的禁用控件就是 ImGui 那个 Alpha 乘法），
         //但走 ReadOnly 标志而不是真禁用：文字仍可选中复制，只是按下不进去
         const ImGuiInputTextFlags flags = readOnly ? ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_None;
         const float32 alpha = ImGui::GetStyle().Alpha * ImGui::GetStyle().DisabledAlpha;
         if (readOnly) ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
-        bool changed = ImGui::InputText(text.c_str(), reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize), flags);
+        bool changed = ImGui::InputText(columned ? control.c_str() : text.c_str(),
+            reinterpret_cast<char*>(buffer), static_cast<usize>(bufferSize), flags);
         if (readOnly) ImGui::PopStyleVar();
         return changed ? static_cast<int32>(std::strlen(reinterpret_cast<const char*>(buffer))) : -1;
     }
@@ -654,6 +790,9 @@ namespace
 
         ImGuiStyle& style = ImGui::GetStyle();
         float32 height = ImGui::GetFrameHeight();
+        //引用框住在属性行的右列：调用方先画标签，这里自己跳到列位。
+        //宽度是项目配置，只有原生这一处持有，托管侧不必跟着同步一个数。
+        ImGui::SameLine(propertyLabelWidth);
         ImVec2 lineStart = ImGui::GetCursorScreenPos();
         //清空与选择器两个方按钮先占位，引用框只取剩余宽度，与输入框一样贴满卡片
         float32 reserved = 2.0f * (height + style.ItemSpacing.x);
@@ -1395,9 +1534,11 @@ namespace
         if (!text || capacity <= 0) return 0;
 
         std::string labelText = ReadUtf8Text(label, labelLength);
+        const std::string control = BeginPropertyRow(labelText);
+        const bool columned = control.length() != 0;
         ImGuiInputTextFlags flags = readOnly != 0 ? ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_None;
-        return ImGui::InputTextMultiline(labelText.c_str(), reinterpret_cast<char*>(text),
-            static_cast<usize>(capacity), ImVec2(-1.0f, height), flags) ? 1 : 0;
+        return ImGui::InputTextMultiline(columned ? control.c_str() : labelText.c_str(), reinterpret_cast<char*>(text),
+            static_cast<usize>(capacity), ImVec2(columned ? -FLT_MIN : -1.0f, height), flags) ? 1 : 0;
     }
 
     //读取本帧的鼠标滚轮增量
@@ -1495,7 +1636,10 @@ bool EditorGUI::Initialize(IWindow* editorWindow)
     mouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
     mouseCursors[ImGuiMouseCursor_NotAllowed] = glfwCreateStandardCursor(GLFW_NOT_ALLOWED_CURSOR);
 
+    //先按默认配置把图集建起来（内置点阵）；项目打开后 ApplyFontConfig 会按项目配置重建。
+    //显式建一次而不是交给 ImGui 的惰性默认，编辑器启动时的字体来源才只有一处。
     mainFontAtlas = io.Fonts;
+    BuildEditorFont(*mainFontAtlas);
     RegisterDragWindow(glfwWindow);
     activeInstance = this;
     previousWindowFocusCallback = glfwSetWindowFocusCallback(glfwWindow, WindowFocusCallback);
@@ -1568,6 +1712,38 @@ void EditorGUI::ApplyTheme()
     style.WindowPadding = ImVec2(theme.paddingX, theme.paddingY);
     style.ItemSpacing = ImVec2(theme.spacingX, theme.spacingY);
     style.FramePadding = ImVec2(theme.framePaddingX, theme.framePaddingY);
+
+    //界面字号。这一项每个上下文各写一份（浮动窗有自己的 ImGuiStyle，图集则是共享的），
+    //所以放在 ApplyTheme 里而不是只在重建图集时设一次。内置点阵只按 13 算。
+    style.FontSizeBase = editorFontIsBitmap ? BitmapFontSize : editorFontSize;
+}
+
+//设置属性行的标签列宽度
+void EditorGUI::SetPropertyLabelWidth(float32 value)
+{
+    if (!(value > 0.0f) || !std::isfinite(value)) return;
+    propertyLabelWidth = value;
+    //同一个数也要给 OrbedenCore 的颜色字段，它的原语在那边。直接调 core 的普通函数，
+    //不走任何函数表——这条路径只在编辑器进程里有意义，Player 里颜色字段保持自己的默认值。
+    RuntimeGuiBridge::SetPropertyLabelWidth(value);
+}
+
+//按项目配置重建编辑器字体图集
+void EditorGUI::ApplyFontConfig(const std::string& font, float32 fontSize)
+{
+    //先把配置记下来：还没初始化时也要留住，Initialize 建图集时才有得用
+    editorFont = font;
+    editorFontIsBitmap = font.empty();
+    editorFontSize = editorFontIsBitmap ? BitmapFontSize : std::max(8.0f, fontSize);
+
+    if (!initialized || !context || !mainFontAtlas) return;
+
+    //图集属于主上下文：重建要在它的上下文里做。浮动窗的上下文共享同一张图集，
+    //ImGui 会在 ClearFonts 时把它们一起改绑到新字体上。
+    ImGuiContext* previous = ImGui::GetCurrentContext();
+    ImGui::SetCurrentContext(context);
+    BuildEditorFont(*mainFontAtlas);
+    if (previous && previous != context) ImGui::SetCurrentContext(previous);
 }
 
 //获取共享停靠分隔尺寸

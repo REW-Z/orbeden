@@ -103,6 +103,10 @@ public:
     //读取曲线画布原语函数表
     static RuntimeGuiCurveApi GetCurveApi();
 
+    //设置颜色字段属性行的标签列宽度。编辑器按项目里的 Editor GUI 配置推过来；
+    //没有人推时用默认值，Player 里就是这个默认值。
+    static void SetPropertyLabelWidth(float32 value);
+
     // 获取 Runtime GUI 增量函数表。
     static RuntimeGuiExtensionApi GetExtensionApi();
 

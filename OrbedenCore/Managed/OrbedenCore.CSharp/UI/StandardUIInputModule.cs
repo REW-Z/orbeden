@@ -52,6 +52,7 @@ public class StandardUIInputModule : UIInputModule
                 {
                     Reset();
                     router.Reset();
+                    router.ConsumeSequence(raw.data.sequence);
                 }
                 else router.ProcessPointer(ToPointer(raw, UIPointerPhase.Cancel));
                 break;

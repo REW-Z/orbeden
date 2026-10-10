@@ -97,7 +97,7 @@ flowchart LR
 | Editor C# | Windows Editor CLR 工具程序集 | Editor 工程构建时自动构建 | `OrbedenEditor/x64/{Configuration}/Managed/Orbeden.Editor.dll`；不进入 Player |
 | Game C# Debug | CLR Assembly Build | Debug Editor `Ctrl+R` 或 `Build Game C#` | `{ProjectRoot}/Build/Managed/{AssemblyName}.dll` |
 | Core + Game C# Release | 目标平台 NativeAOT Static Build | Release Editor `Build Player` | `{ProjectRoot}/Build/Aot/{Target}/Release/{AssemblyName}.lib` 或 `lib{AssemblyName}.a` |
-| Player | MSVC Executable（`OrbedenGame.vcxproj`）+ 资源打包 | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/`，自包含发布目录：`OrbedenGame.exe`、`.oeproj`、`Content/` |
+| Player | MSVC Executable（`OrbedenGame.vcxproj`）+ 资源打包 | Release Editor `Build Player` | `{ProjectRoot}/Build/windows-x64/bin/`，自包含发布目录：`OrbedenGame.exe`、`.oeproj`、`GameSettings.ini`、`Content/` |
 
 ### MSBuild 的定位
 
@@ -124,7 +124,7 @@ Debug 仅用于 Windows x64 Editor/PIE，C# 使用 CLR；正式发布从 Windows
 5. **打包资源**：Player 构建成功后，Editor 接着把内容根内的资源打成发布产物，`Build Player` 结束即得到完整发布目录。
    - 内容根内每个可导入的源文件经 `AssetPipeline` 导入，产生的**每个资源对象**序列化为一个 `.orbo`（`Orbeden::Object` 二进制），先写入 `{ProjectRoot}/ResourceCache/Player/`，再整体同步到 `{ProjectRoot}/Build/windows-x64/bin/Content/`。
    - `.world` 场景**不 cook**，保持 XML 原样复制，并保留其相对内容根的目录结构。
-   - `.oeproj` 复制到包根，供 Player 读取启动场景；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
+   - `.oeproj` 复制到包根，供 Player 读取启动场景；项目根的游戏设置 `GameSettings.ini` 按项目当前状态镜像到包根——项目里有就覆盖，没有就删掉包里的旧副本（Player 随后用默认值）；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
    - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物。整个 ResourceCache（含 `.resinfo`）可删除重建，不纳入版本管理。
 
 > Player 以**可执行文件所在目录**为根解析内容，发布目录整体拷到别的路径或别的机器都能运行。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
@@ -371,6 +371,7 @@ flowchart LR
 - `Content/` 下的资源产物 `.orbo`（`Orbeden::Object` 二进制）与清单 `cooked.index`
 - `Content/` 下原样复制的 `.world` 场景
 - 包根的 `.oeproj` 项目配置
+- 包根的 `GameSettings.ini` 游戏设置（镜像项目根，项目里没有就不保留）
 - 平台需要的原生依赖
 
 发布目录里**没有**原始资源文件（`.obj` / `.png` / `.mtl` / `.orbshader`）与脚本源码——它们已经在打包时转换进 `.orbo` 或编译进 Player。
@@ -443,6 +444,7 @@ MyGame/
 ├─ MyGame.csproj            工程文件直接放在项目根
 ├─ MyGameNative.vcxproj
 ├─ Directory.Build.props
+├─ GameSettings.ini         游戏设置：分块存放（[Rendering] 曝光、[Layers] 层名与碰撞矩阵），与内容根无关
 ├─ Lib/                     SDK 快照：Core C# 运行库、绑定目标转发、OrbedenSdk.path、用户手册 Lib/Docs/
 ├─ ResourceCache/           资源导入产物缓存，可由 cook 全量重建（可删除，不进版本控制）
 ├─ Content/                 内容根：内部结构完全自由
@@ -457,6 +459,7 @@ MyGame/
         └─ bin/             自包含发布目录
             ├─ OrbedenGame.exe / glfw3.dll / {AssemblyName}.dll
             ├─ {ProjectName}.oeproj
+            ├─ GameSettings.ini    游戏设置（镜像项目根，项目里存在时才有）
             └─ Content/     .orbo 产物（扁平，文件名是资源 Key 的哈希）
                             cooked.index（文件名与资源 Key 对照表）
                             **/*.world（保持原目录结构）
@@ -502,6 +505,14 @@ MyGame/
 内容根之外按定义不含用户内容，因此 glob 不需要排除表。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 70：屏幕画布的最终正交投影固定裁剪 Z=0，Overlay/Offscreen 元素的非零 Transform.localPosition.z 不再导致裁剪消失，作者位置与编辑器场景预览保留三维变换。相机场景深度缓冲与折射深度副本统一使用 32 位浮点格式，修复当前 OpenGL 路径下 24 位深度在 UI 绘制后读成 0、WorldSpace 按钮被误判为遮挡的问题；WorldSpace 保留相机射线、局部矩形与场景深度遮挡判定。需重建 Core、Editor，更新游戏 SDK 并重建发布产物；场景字段格式不变，无需迁移或重置 Builtin/Examples。
+
+版本 69：修复 RetainedUI Button 在重复 PIE 后悬停闪烁，以及 GLFW 窗口缩放或最大化后命中坐标失配。平台事件只保留到当前帧结束，InputManager.EndFrame 在等待下一帧前清空已交付事件，等待期间采集的新事件保留到下一帧；禁用输入时清空事件与按键占有。失焦事件确认消费，路由器取消交互时保留当前阶段已消费的序列，世界分离时清空指针、焦点、注入事件与事件派发队列。默认 UIEventTarget 的零代次判为无效，不再把已经清空的捕获误判为有效目标。GLFW resize 通知前同步逻辑窗口尺寸与帧缓冲尺寸，绘制与鼠标命中使用同一尺寸。需重建 Core、Editor，更新游戏 SDK 并重建发布产物；场景字段格式不变，无需迁移或重置 Builtin/Examples。
+
+版本 68：修复默认 Canvas 缩放 0.01 时矩阵求逆把合法的小行列式判为退化并返回单位矩阵的问题，退化判据改为行列式展开项的相对误差。Move/Rotate/Scale 手柄缓存父级世界逆矩阵，按世界拖动增量换算局部增量并叠加到起始 Transform.localPosition，移除派生位置差值快照与绝对位置回算；拖动零增量保留原位置，解决 UI 元素开始拖动时跳位。UILayout Inspector 的 Position X/Y 继续直接编辑 Transform 局部 X/Y，拉伸时边距换算也写入同一位置。需重建 Core、Editor，更新游戏 SDK 并重建发布产物；场景字段格式不变，无需手工迁移或重置 Builtin/Examples。
+
+版本 67：移除 UILayout 的 offset 序列化字段、位置同步状态与双向同步流程。GetOffset/SetOffset 直接读写 Transform 局部 X/Y，三维位置统一使用 Transform.GetLocalPosition/SetLocalPosition，删除 GetAnchoredPosition/SetAnchoredPosition。布局锚点落点只计入一次局部偏移，Canvas 根保留 Transform 场景位置，控件与布局组驱动矩形继续覆盖自身锚点解析结果。Inspector 的矩形参数和锚点预设、Rect 手柄与撤销统一记录布局配置及 Transform 位置；修复旋转节点缩放矩形时 Z 补偿覆盖 X/Y 的问题。需重建 Core、Editor，更新游戏 SDK 并重建游戏脚本及 Editor 扩展；脚本中的三维锚点位置调用改用 Transform 接口。旧场景只采用已保存的 Transform 局部位置，旧 offset 不再读取；两者原先不一致的内容需要手工把目标偏移写入 Transform，项目更新不自动迁移内容，无需重置 Builtin 或 Examples。
 
 版本 66：移除 UIControl 的 targetVisual 字段及读写接口，Button 通过 DependsOnComponent 声明同节点 Image 依赖，状态颜色直接作用于该 Image。按钮点击事件命名为 ClickEvent，事件字段排在 Inspector 普通属性之后；OrbEvent 的语言域、组件类型、实例序号和方法合并为 Function 下拉项，按所选方法签名自动配置参数传递。需重建 Core、Editor、更新游戏 SDK 并重建游戏；脚本中的按钮订阅改用 ClickEvent，不自动修改已有场景内容。
 
@@ -563,7 +574,7 @@ MyGame/
 
 **更新做的事**（`ProjectUpdate::UpdateProject`）：
 
-1. 用当前模板的 `Templates/Project/` 覆盖项目根下的脚手架——**只覆盖模板里有的文件**，不删除任何东西，`Build/` 子树跳过，`.oeproj` 不覆盖（否则会冲掉 `startupWorld` 与 `lastWorld`）；
+1. 用当前模板的 `Templates/Project/` 覆盖项目根下的脚手架——**只覆盖模板里有的文件**，不删除任何东西，`Build/` 子树跳过，`.oeproj` 不覆盖（否则会冲掉 `startupWorld` 与 `lastWorld`），`GameSettings.ini` 已有则不覆盖（否则会冲掉作者调好的值），只有项目里缺这份文件时才用模板补上；
 2. 用**镜像语义**重置 `Content/Builtin/`（等同于 Dev 面板的 `Reset Builtin`）：覆盖同名文件，并**删除模板里已经没有的文件**；
 3. 刷新 `Lib/` 下的 SDK 快照（Core C# 运行库、绑定目标转发、`OrbedenSdk.path`）；
 4. 最后写入新的版本号。**写版本号是最后一步，写成功即代表一次完整更新**；中途失败则不写，下次打开仍会提示。

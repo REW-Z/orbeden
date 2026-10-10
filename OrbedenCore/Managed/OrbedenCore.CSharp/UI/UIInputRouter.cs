@@ -136,9 +136,7 @@ public sealed class UIInputRouter
             break;
         }
 
-        //移动与抬起是纯瞬态：处理过就消费。原生队列按消费删除，漏消费会让这段历史每帧重放，
-        //重放的旧移动会被当成拖动清掉按下状态，点击就永远等不到抬起。
-        //按下不在这里消费：没被图形挡住时不消费，键占有（屏蔽游戏输入）只发生在 UI 真的接手时。
+        //确认移动与抬起，按下只在 UI 接手时占有
         if (input.phase is UIPointerPhase.Move or UIPointerPhase.Up) Consume(input.sequence);
 
         pointers.TryGetValue(input.pointerId, out UIPointerState state);
@@ -375,7 +373,6 @@ public sealed class UIInputRouter
         }
         pointers.Clear();
         cancelledSequences.Clear();
-        consumed.Clear();
         if (hoveredNode is UIEventTarget hovered)
         {
             if (hovered.control != null) hovered.control.Hovered = false;

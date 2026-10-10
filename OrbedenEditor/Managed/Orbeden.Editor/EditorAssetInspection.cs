@@ -260,7 +260,7 @@ internal static class EditorAssetInspection
         finally { EditorGUI.EndDisabled(); }
     }
 
-    /// <summary>分节小标题。沿用 ProjectSettingsPanel 的做法，用可折叠节点而不是新造控件。</summary>
+    /// <summary>分节小标题。沿用 GameSettingsPanel 的做法，用可折叠节点而不是新造控件。</summary>
     private static void DrawSection(string title, string id, Action body)
     {
         int node = NativeEditorGUI.TreeNode(title + "##" + id, false, false, true);

@@ -219,7 +219,10 @@ internal sealed class ProfilerPanel : EditorPanel
         }
 
         EditorGUI.SameLine();
-        EditorGUI.Checkbox("Follow##profiler_follow", ref followLatest);
+        //工具条上的勾选框：就地排布，不套属性行的标签列（套了会跳回列位、压到前面的按钮上）
+        EditorGUI.Label("Follow");
+        EditorGUI.SameLine();
+        EditorGUI.Checkbox("##profiler_follow", ref followLatest);
 
         EditorGUI.SameLine();
         if (EditorGUI.Button(timelineView ? "Hierarchy##profiler_view" : "Timeline##profiler_view")) timelineView = !timelineView;

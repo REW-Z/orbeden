@@ -478,6 +478,8 @@ void Application::Run()
         Render(elapsed.count());
         Present();
 
+        //结束输入帧并保留随后等待期间采集的新事件
+        InputManager::EndFrame();
         WaitForNextFrame(frameStartTime);
 
         //节拍等完再收帧，帧耗时才是这一帧真正占用的时间

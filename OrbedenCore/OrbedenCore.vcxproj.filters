@@ -558,5 +558,7 @@
     <ClCompile Include="Src\Runtime\LayerSettings.cpp" />
     <ClInclude Include="Src\Runtime\DisplaySettings.h" />
     <ClCompile Include="Src\Runtime\DisplaySettings.cpp" />
+    <ClInclude Include="Src\Runtime\GameSettingsFile.h" />
+    <ClCompile Include="Src\Runtime\GameSettingsFile.cpp" />
   </ItemGroup>
 </Project>
