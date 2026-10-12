@@ -545,6 +545,8 @@ MyGame/
 
 ### 引擎更新与项目同步
 
+版本 72：SelectionOutline 的选择数据、着色器、遮罩与合成流程从 Core 移入 Editor。Core 仅提供按完整相机句柄绑定的通用渲染扩展，在场景绘制后、颜色输出前调用；Editor 直接绑定 EditorCamera，移除相机时解除绑定，PIE 与 Player 的运行时相机不执行选中描边。移除 Core 的 SelectionHighlight 与 SetSelectionHighlights 接口；描边遮罩在每次绘制前重新绑定当前相机的深度附件，避免 OpenGL 纹理编号复用后仍引用旧深度。需重建 Core、Editor，通过 Update Project 更新游戏 SDK，并重建游戏原生模块与 Player；无模板内容或场景格式变更，无需重置 Builtin/Examples。
+
 版本 71：支持普通 `.cs` 文件同时定义 Runtime 脚本和由 `#if ORBEDEN_EDITOR` 包裹的 CustomEditor。Editor/PIE 的构建入口显式传入 `OrbedenEditorBuild=true`，游戏程序集定义 `ORBEDEN_EDITOR` 并引用 `Orbeden.Editor`；Player 打包显式关闭该开关，NativeAOT 编译也始终排除该符号和编辑器引用。原有 `Editor` 文件夹独立编译到 `<Game>.Editor.dll` 的流程保持不变。需重建 Core 以发布 `Sdk/Tools/OrbedenMetaGen/Orbeden.Bindings.targets`，重建 Editor，并通过 Update Project 同步项目脚手架与 SDK 后执行 Build Game C#；已有发布产物需要重新 Build Player。场景格式不变，无需迁移或重置 Builtin/Examples。
 
 版本 70：屏幕画布的最终正交投影固定裁剪 Z=0，Overlay/Offscreen 元素的非零 Transform.localPosition.z 不再导致裁剪消失，作者位置与编辑器场景预览保留三维变换。相机场景深度缓冲与折射深度副本统一使用 32 位浮点格式，修复当前 OpenGL 路径下 24 位深度在 UI 绘制后读成 0、WorldSpace 按钮被误判为遮挡的问题；WorldSpace 保留相机射线、局部矩形与场景深度遮挡判定。需重建 Core、Editor，更新游戏 SDK 并重建发布产物；场景字段格式不变，无需迁移或重置 Builtin/Examples。

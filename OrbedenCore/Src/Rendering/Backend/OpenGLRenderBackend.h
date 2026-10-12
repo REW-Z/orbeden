@@ -88,6 +88,8 @@ public:
     GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) override;
     void DeleteCubeTexture(GpuCubeTextureID id) override;
     GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) override;
+    /// <summary>更新渲染目标的深度附件。</summary>
+    void AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture) override;
     void DeleteRenderTarget(GpuRenderTargetID id) override;
     GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const override;
     bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) override;

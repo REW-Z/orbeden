@@ -637,6 +637,14 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     return { id };
 }
 
+/// <summary>绑定渲染目标并更新深度附件。</summary>
+void OpenGLRenderBackend::AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture)
+{
+    if (!target.IsValid()) return;
+    glBindFramebuffer(GL_FRAMEBUFFER, target.id);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture.id, 0);
+}
+
 void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
 {
     if (!id.IsValid()) return;

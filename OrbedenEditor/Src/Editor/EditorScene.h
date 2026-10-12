@@ -3,9 +3,11 @@
 #include "Editor/EditorGizmoAbi.h"
 #include "Editor/EditorGizmoHandles.h"
 #include "Editor/EditorSceneGizmos.h"
+#include "Editor/EditorSelectionOutline.h"
 #include "Editor/EditorLayoutState.h"
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderScene.h"
+#include "Rendering/RenderSystem.h"
 #include "Rendering/RenderTypes.h"
 #include "Runtime/EnsId.h"
 #include "Runtime/Native/NativeApiAbi.h"
@@ -32,7 +34,7 @@ public:
 };
 
 //编辑器背景场景，负责相机、选择、轮廓和 Handles 绘制。
-class EditorScene
+class EditorScene : public ICameraRenderExtension
 {
 private:
     static EditorScene* activeScene;
@@ -72,6 +74,7 @@ private:
     //手柄与托管 Gizmo 共用的相机数据，取自渲染这张离屏图的 RenderCamera
     EditorGizmoHandles gizmoHandles;
     EditorSceneGizmos componentGizmos;
+    EditorSelectionOutline selectionOutline;
     bool gizmoViewValid = false;
     bool gizmoToolbarHovered = false;
     vector3 gizmoCameraRight = { 1.0f, 0.0f, 0.0f };
@@ -84,8 +87,15 @@ public:
     /// <summary>创建编辑器背景场景。</summary>
     EditorScene(Application& application, ManagedEditorBridge& bridge);
 
-    /// <summary>释放场景视口的离屏目标。</summary>
-    ~EditorScene();
+    /// <summary>解除相机渲染扩展并释放场景视口资源。</summary>
+    ~EditorScene() override;
+
+    /// <summary>直接绘制 EditorCamera 的选中描边。</summary>
+    void RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+        World& world, const RenderCamera& camera, const VisibleSet& visibleSet) override;
+
+    /// <summary>释放编辑器描边资源。</summary>
+    void ReleaseResources(RenderBackend& backend) override;
 
     /// <summary>获取当前活动的编辑器场景。</summary>
     static EditorScene* GetActiveScene();
@@ -102,7 +112,7 @@ public:
     /// <summary>按场景视口可见性维护离屏目标并绑定编辑相机。</summary>
     void RefreshSceneViewTarget(World& world);
 
-    /// <summary>绘制原生场景视口图像并叠加轮廓与 Handles。</summary>
+    /// <summary>显示包含选中描边的场景视口图像并叠加 Handles。</summary>
     void DrawSceneView();
 
     /// <summary>获取本帧场景视口矩形与像素尺寸。</summary>
@@ -208,7 +218,7 @@ private:
     //推进一次聚焦动画；返回本帧是否写出了位置。
     bool AdvanceFocusAnimation(float32 deltaTime, vector3& position);
 
-    //在当前上下文的绘制列表上提交选择轮廓与托管 Handles。
+    //在场景视口叠加托管 Gizmos 与 Handles。
     void DrawSceneOverlay();
 
     //释放场景视口的离屏目标。
@@ -227,8 +237,8 @@ private:
     bool RaycastScene(const RenderScene& scene, const vector2& screenPosition,
         EnsId& hitEns, vector3& hitPosition) const;
 
-    //把当前选择及其后代提交给渲染系统做屏幕空间描边。
-    void SubmitSelectionHighlight(World& world);
+    /// <summary>刷新当前选择及其后代的描边数据。</summary>
+    void UpdateSelectionHighlights(World& world);
 
     //准备本帧手柄与托管 Gizmo 共用的视图投影
     void PrepareGizmoView(const RenderScene& scene);

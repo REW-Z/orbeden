@@ -3,7 +3,6 @@
 #include "Application.h"
 #include "Rendering/Backend/OpenGLRenderBackend.h"
 #include "Rendering/ForwardPipeline.h"
-#include "Rendering/FullscreenQuad.h"
 #include "Rendering/ImGuiLayer.h"
 #include "Rendering/OutputPass.h"
 #include "Rendering/InstanceDrawData.h"
@@ -13,6 +12,7 @@
 #include "Runtime/Gui/UIRenderer.h"
 
 #include <span>
+#include <unordered_map>
 
 //渲染覆盖层接口，由渲染系统统一管理 frame 生命周期。
 class IRenderOverlay
@@ -24,18 +24,23 @@ public:
     virtual void DrawOverlay() = 0;
 };
 
+//相机渲染扩展，执行于场景绘制之后、颜色输出之前
+class ICameraRenderExtension
+{
+public:
+    virtual ~ICameraRenderExtension() = default;
+
+    /// <summary>向绑定相机的线性场景缓冲绘制扩展内容。</summary>
+    virtual void RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+        World& world, const RenderCamera& camera, const VisibleSet& visibleSet) = 0;
+
+    /// <summary>在解除绑定或后端关闭前释放 GPU 资源。</summary>
+    virtual void ReleaseResources(RenderBackend& backend) = 0;
+};
+
 //渲染系统
 class RenderSystem : public IEngineSystem
 {
-public:
-    //选中物体描边：目标 Ens 与其描边颜色，alpha 为 0 表示不描边
-    struct SelectionHighlight
-    {
-    public:
-        EnsId ens;
-        color tint;
-    };
-
 private:
     struct ManagedRenderTarget
     {
@@ -102,6 +107,9 @@ private:
     //由外部设置的额外覆盖层
     IRenderOverlay* renderOverlay = nullptr;
 
+    //按完整相机句柄登记的扩展，由调用方持有实例
+    std::unordered_map<uint64, ICameraRenderExtension*> cameraRenderExtensions;
+
     //编辑器预览目标；未设置时屏幕画布画主帧缓冲。
     UIOutputTarget editorPreviewTarget;
     bool hasEditorPreviewTarget = false;
@@ -113,17 +121,6 @@ private:
     List<ManagedRenderTarget> renderTargets;
     List<ManagedCameraFrameTextures> cameraFrameTextures;
     uint32 nextRenderTargetId = 1;
-
-    //选择描边：内置 shader、全屏四边形和复用的遮罩目标
-    GpuShaderProgramID outlineMaskProgram;
-    GpuShaderProgramID outlineCompositeProgram;
-    GpuRenderTargetID outlineMaskTarget;
-    GpuTextureID outlineMaskTexture;
-    FullscreenQuad outlineQuad;
-    int32 outlineMaskWidth = 0;
-    int32 outlineMaskHeight = 0;
-    bool outlineWarned = false;
-    List<SelectionHighlight> selectionHighlights;
 
     //主 framebuffer 尺寸。
     int32 framebufferWidth = 0;
@@ -171,20 +168,8 @@ private:
     //准备当前帧相机的目标、像素 viewport 和投影数据
     void PrepareCameraRenderData();
 
-    //准备选择描边所需的内置 shader 和全屏四边形
-    bool PrepareOutlineResources();
-
-    //释放选择描边持有的后端资源
-    void ReleaseOutlineResources();
-
-    //为指定相机绘制选择描边：先把选中几何写成遮罩，再合成到相机颜色目标
-    void RenderSelectionOutline(const RenderCamera& camera, const VisibleSet& visibleSet);
-
-    //把相机的线性场景缓冲转换到它的最终输出目标，必须在描边与调试线之后调用
+    //把完成相机绘制的线性场景缓冲转换到最终输出目标
     void RenderOutputPass(const RenderCamera& camera);
-
-    //查找本帧提交的描边颜色，未选中时 alpha 为 0
-    color FindHighlightTint(EnsId ens) const;
 
     //查找指定相机持有的颜色和深度快照资源
     ManagedCameraFrameTextures* FindCameraFrameTextures(EnsId cameraEns);
@@ -219,6 +204,9 @@ public:
     //设置额外的渲染覆盖层
     void SetRenderOverlay(IRenderOverlay* overlay);
 
+    /// <summary>绑定指定相机的渲染扩展，传 nullptr 解除绑定；实例由调用方持有。</summary>
+    void SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtension* extension);
+
     //设置是否在调试覆盖层中绘制 FPS 标签  
     void SetFpsLabelVisible(bool value);
 
@@ -251,9 +239,6 @@ public:
 
     //获取离屏目标的深度纹理，供后处理共享同一份深度
     GpuDepthTextureID GetRenderTargetDepthTexture(RenderTargetID id) const;
-
-    //提交本帧需要描边的物体；传空列表关闭描边
-    void SetSelectionHighlights(const List<SelectionHighlight>& highlights);
 
     const RenderScene& GetCurrentScene() const;
 

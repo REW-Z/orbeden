@@ -20864,6 +20864,92 @@
       "EnumValues": []
     },
     {
+      "Name": "ICameraRenderExtension",
+      "QualifiedName": "ICameraRenderExtension",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/RenderSystem.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "RenderCameraEffects",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "backend",
+              "Type": "RenderBackend\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "gpuResourceManager",
+              "Type": "GpuResourceManager\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "world",
+              "Type": "World\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "visibleSet",
+              "Type": "const VisibleSet\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReleaseResources",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "backend",
+              "Type": "RenderBackend\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "IEngineSystem",
       "QualifiedName": "IEngineSystem",
       "BaseName": "",
@@ -28349,6 +28435,36 @@
             {
               "Name": "desc",
               "Type": "const GpuRenderTargetDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "AttachRenderTargetDepthTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "target",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depthTexture",
+              "Type": "GpuDepthTextureID",
               "DefaultValue": ""
             }
           ]
@@ -45204,6 +45320,36 @@
           ]
         },
         {
+          "Name": "AttachRenderTargetDepthTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "target",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depthTexture",
+              "Type": "GpuDepthTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "DeleteRenderTarget",
           "Type": "void",
           "Access": "public",
@@ -49110,6 +49256,25 @@
           "Parameters": []
         },
         {
+          "Name": "cameraRenderExtensions",
+          "Type": "std::unordered_map\u003Cuint64,ICameraRenderExtension*\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "editorPreviewTarget",
           "Type": "UIOutputTarget",
           "Access": "private",
@@ -49207,177 +49372,6 @@
         {
           "Name": "nextRenderTargetId",
           "Type": "uint32",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineMaskProgram",
-          "Type": "GpuShaderProgramID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineCompositeProgram",
-          "Type": "GpuShaderProgramID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineMaskTarget",
-          "Type": "GpuRenderTargetID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineMaskTexture",
-          "Type": "GpuTextureID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineQuad",
-          "Type": "FullscreenQuad",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineMaskWidth",
-          "Type": "int32",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineMaskHeight",
-          "Type": "int32",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "outlineWarned",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "selectionHighlights",
-          "Type": "List\u003CSelectionHighlight\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -49808,74 +49802,6 @@
           "Parameters": []
         },
         {
-          "Name": "PrepareOutlineResources",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "ReleaseOutlineResources",
-          "Type": "void",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "RenderSelectionOutline",
-          "Type": "void",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "camera",
-              "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "visibleSet",
-              "Type": "const VisibleSet\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
           "Name": "RenderOutputPass",
           "Type": "void",
           "Access": "private",
@@ -49896,31 +49822,6 @@
             {
               "Name": "camera",
               "Type": "const RenderCamera\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "FindHighlightTint",
-          "Type": "color",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": true,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "ens",
-              "Type": "EnsId",
               "DefaultValue": ""
             }
           ]
@@ -50197,6 +50098,36 @@
             {
               "Name": "overlay",
               "Type": "IRenderOverlay*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetCameraRenderExtension",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "cameraEns",
+              "Type": "EnsId",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "extension",
+              "Type": "ICameraRenderExtension*",
               "DefaultValue": ""
             }
           ]
@@ -50481,31 +50412,6 @@
             {
               "Name": "id",
               "Type": "RenderTargetID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetSelectionHighlights",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "highlights",
-              "Type": "const List\u003CSelectionHighlight\u003E\u0026",
               "DefaultValue": ""
             }
           ]
@@ -50983,60 +50889,6 @@
         {
           "Name": "height",
           "Type": "int32",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        }
-      ],
-      "EnumValues": []
-    },
-    {
-      "Name": "SelectionHighlight",
-      "QualifiedName": "RenderSystem::SelectionHighlight",
-      "BaseName": "",
-      "Kind": "struct",
-      "EnumBase": "int32",
-      "IsExported": false,
-      "Include": "Rendering/RenderSystem.h",
-      "IsObject": false,
-      "IsAbstract": false,
-      "IsUnique": false,
-      "IsFinal": false,
-      "Members": [
-        {
-          "Name": "ens",
-          "Type": "EnsId",
-          "Access": "public",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "tint",
-          "Type": "color",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,

@@ -204,6 +204,8 @@ public:
     virtual GpuCubeTextureID CreateCubeTexture(const GpuCubeTextureDesc& desc) = 0;
     virtual void DeleteCubeTexture(GpuCubeTextureID id) = 0;
     virtual GpuRenderTargetID CreateRenderTarget(const GpuRenderTargetDesc& desc) = 0;
+    /// <summary>更新渲染目标的深度附件。</summary>
+    virtual void AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture) = 0;
     virtual void DeleteRenderTarget(GpuRenderTargetID id) = 0;
     virtual GpuTextureID GetRenderTargetColorTexture(GpuRenderTargetID id) const = 0;
     virtual bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) = 0;

@@ -5,7 +5,7 @@
 class RenderBackend;
 
 //全屏四边形顶点着色器源码。输出 v_Uv（原点在左下角）与覆盖整个视口的裁剪空间坐标，
-//供输出 Pass 与选择描边等全屏绘制共用。
+//供输出 Pass 与其他全屏绘制共用。
 extern const char* const FullscreenQuadVertexSource;
 
 //全屏四边形几何，供需要铺满视口的 Pass 复用。

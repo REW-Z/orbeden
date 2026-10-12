@@ -4,7 +4,7 @@
 //- 渲染区域就是面板内容区：renderPosition/renderSize 取内容区左上角与可用尺寸，乘 DisplayFramebufferScale
 //  得到离屏目标的像素尺寸。尺寸变化时整体重建（后端不支持原位 resize）；面板不可见或内容区过小时
 //  释放目标并跳过渲染。可见性用 sceneView.visible 的单帧闩锁判断，本帧绘制过才为 true。
-//- 场景图由 DrawSceneView 提交，选择轮廓、托管 Gizmo 与手柄随后叠在它上面。
+//- 场景图与选中描边由 EditorCamera 渲染到离屏目标，DrawSceneView 显示图像并叠加托管 Gizmo 与手柄。
 //
 //交互：
 //- 能不能交互只看 interactPosition/interactSize（IsMouseOverSceneView），拾取、相机拖拽、手柄与
@@ -528,11 +528,27 @@ EditorScene::EditorScene(Application& application, ManagedEditorBridge& bridge)
     activeScene = this;
 }
 
-//释放场景视口的离屏目标。
+//解除相机渲染扩展并释放场景视口资源。
 EditorScene::~EditorScene()
 {
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
     ReleaseSceneViewTarget();
     if (activeScene == this) activeScene = nullptr;
+}
+
+/// <summary>直接绘制绑定的 EditorCamera 的选中描边。</summary>
+void EditorScene::RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+    World& world, const RenderCamera& camera, const VisibleSet& visibleSet)
+{
+    UpdateSelectionHighlights(world);
+    selectionOutline.Render(backend, gpuResourceManager, camera, visibleSet);
+}
+
+/// <summary>释放编辑器描边资源。</summary>
+void EditorScene::ReleaseResources(RenderBackend& backend)
+{
+    selectionOutline.ReleaseResources(backend);
 }
 
 //获取当前活动的编辑器场景。
@@ -604,7 +620,7 @@ void EditorScene::RefreshSceneViewTarget(World& world)
     if (camera) camera->renderTargetId = sceneTarget.id;
 }
 
-//绘制原生场景视口图像并叠加轮廓与 Handles。
+//显示包含选中描边的场景视口图像并叠加 Handles。
 void EditorScene::DrawSceneView()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -637,7 +653,7 @@ void EditorScene::DrawSceneView()
     DrawSceneOverlay();
 }
 
-//在背景绘制列表上提交选择轮廓与托管 Handles。
+//在场景视口叠加托管 Gizmos 与 Handles。
 void EditorScene::DrawSceneOverlay()
 {
     World& world = app.GetWorld();
@@ -652,7 +668,6 @@ void EditorScene::DrawSceneOverlay()
     UpdateGizmoHandles(world);
     managedBridge.DrawSceneGizmos(true);
     HandleSelection(scene);
-    SubmitSelectionHighlight(world);
     componentGizmos.Draw(world, *this, gizmoView, scene);
     DrawGizmoHandles();
     //罗盘是视口部件而非组件 Gizmo：放在最后画，且不受 Gizmos 开关影响
@@ -1010,6 +1025,8 @@ void EditorScene::ApplyLayout(const EditorLayoutState& layout, World& world)
     cameraState = layout.editorCamera;
     cameraYaw = cameraState.yaw;
     cameraPitch = cameraState.pitch;
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
     cameraEns = EnsId();
     //换项目时相机位置由布局说了算，飞在半路的聚焦动画必须让位，否则下一帧把相机拽回旧目标
     focusAnimating = false;
@@ -1137,7 +1154,18 @@ void EditorScene::CreateEditorCamera(World& world)
     {
         transform->SetLocalRotation(GetYawPitchRotation(cameraYaw, cameraPitch));
     }
-    cameraEns = editorCamera->GetId();
+    EnsId currentCameraEns = editorCamera->GetId();
+    if (cameraEns != currentCameraEns)
+    {
+        if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+            renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
+        cameraEns = currentCameraEns;
+    }
+    if (camera)
+    {
+        if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+            renderSystem->SetCameraRenderExtension(cameraEns, this);
+    }
 }
 
 //记录当前编辑器观察相机状态。
@@ -1172,6 +1200,8 @@ void EditorScene::RemoveCamera(World& world)
     World::DirtySuppressionScope suppression(world);
     Ens* editorCamera = world.GetEns(cameraEns);
     if (!editorCamera) editorCamera = world.FindEns(StringId(EditorCameraId));
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
     if (editorCamera) editorCamera->Destroy();
 
     cameraEns = EnsId();
@@ -1426,19 +1456,16 @@ bool EditorScene::ResolveSceneDropPosition(vector3& position) const
     return true;
 }
 
-//把当前选择及其后代提交给渲染系统，由屏幕空间后处理绘制描边。
-void EditorScene::SubmitSelectionHighlight(World& world)
+/// <summary>刷新当前选择及其后代的描边数据。</summary>
+void EditorScene::UpdateSelectionHighlights(World& world)
 {
-    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
-    if (!renderSystem) return;
-
     //显式选择优先，后代只补没有被显式选中的节点
-    std::unordered_map<uint64, RenderSystem::SelectionHighlight> highlights;
+    std::unordered_map<uint64, EditorSelectionOutline::SelectionHighlight> highlights;
     for (EnsId ens : selectedEns)
     {
         if (!ens.IsNull() && world.IsAlive(ens))
         {
-            highlights[GetEnsKey(ens)] = RenderSystem::SelectionHighlight { ens, GetSelectionTint(ExplicitSelection) };
+            highlights[GetEnsKey(ens)] = EditorSelectionOutline::SelectionHighlight { ens, GetSelectionTint(ExplicitSelection) };
         }
     }
 
@@ -1463,7 +1490,7 @@ void EditorScene::SubmitSelectionHighlight(World& world)
         if (ens.IsNull() || !world.IsAlive(ens)) continue;
         if (highlights.find(GetEnsKey(ens)) != highlights.end()) continue;
 
-        highlights.emplace(GetEnsKey(ens), RenderSystem::SelectionHighlight { ens, GetSelectionTint(DescendantSelection) });
+        highlights.emplace(GetEnsKey(ens), EditorSelectionOutline::SelectionHighlight { ens, GetSelectionTint(DescendantSelection) });
         Transform* transform = world.GetTransform(ens);
         if (!transform) continue;
 
@@ -1476,10 +1503,10 @@ void EditorScene::SubmitSelectionHighlight(World& world)
         }
     }
 
-    List<RenderSystem::SelectionHighlight> items;
+    List<EditorSelectionOutline::SelectionHighlight> items;
     items.reserve(highlights.size());
     for (const auto& entry : highlights) items.push_back(entry.second);
-    renderSystem->SetSelectionHighlights(items);
+    selectionOutline.SetHighlights(items);
 }
 
 //绘制托管 Scene Handles。
