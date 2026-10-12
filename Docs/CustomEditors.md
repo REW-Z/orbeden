@@ -8,6 +8,32 @@ SceneView 工具栏的 **Gizmos** 菜单控制总开关、方向光、碰撞体�
 
 把编辑器代码放在内容根内任意 `Editor` 文件夹，例如 `Content/Editor/MyComponentEditor.cs`。执行编辑器的 **Build Game C#**，系统会先构建游戏程序集，再构建旁边的 `<游戏程序集名>.Editor.dll` 并一起重载。`Editor` 文件夹中的 C# 文件不会进入游戏主程序集或 NativeAOT Player；这些源文件编译时定义 `ORBEDEN_EDITOR`。
 
+也可以把脚本和它的编辑器写在同一个 `.cs` 文件中，文件放在内容根内的普通脚本目录，例如 `Content/Scripts/Test.cs`。Editor/PIE 的构建入口显式传入 `OrbedenEditorBuild=true`，游戏程序集因此定义 `ORBEDEN_EDITOR` 并引用 `Orbeden.Editor`，脚本和编辑器使用同一份脚本类型；Inspector 会直接从游戏程序集中发现自定义编辑器。Player 打包显式传入 `OrbedenEditorBuild=false`，NativeAOT 编译也始终排除该符号和编辑器引用，条件编译块不会进入 Player。手动为 Editor/PIE 构建游戏脚本时使用 `dotnet build <项目>.csproj -c Debug /p:OrbedenEditorBuild=true`；普通 `dotnet build` 不启用同文件的编辑器代码。`OrbedenBuildEditorExtensions=false` 仍只关闭独立 Editor 程序集构建。
+
+```csharp
+using Orbeden;
+#if ORBEDEN_EDITOR
+using OrbedenEditor;
+#endif
+
+public class Test : Script
+{
+    /// <summary>由运行时关联宿主。</summary>
+    public Test(Ens ens) : base(ens) { }
+}
+
+#if ORBEDEN_EDITOR
+[CustomEditor(typeof(Test), true)]
+public sealed class TestEditor : ComponentEditor
+{
+    /// <summary>绘制脚本字段。</summary>
+    public override void OnDrawInspector() => DrawDefaultInspector();
+}
+#endif
+```
+
+同文件写法的编辑器 `using`、类型声明和所有编辑器 API 调用都放进 `#if ORBEDEN_EDITOR` 块。不要把包含 Runtime 脚本定义的文件放进 `Editor` 文件夹，该目录仍只编译到独立 Editor 程序集。
+
 编辑器继承 `OrbedenEditor.ComponentEditor`，用 `[CustomEditor(typeof(...))]` 绑定组件。参数可以是 C# 用户脚本，也可以是 C++ 的生成包装类（内建类型如 `Orbeden.BoxCollider`，用户原生类型写作 `Native.MyComponent`，构建时提供 Native 别名）。第二个参数为 `true` 时同时匹配派生组件，更具体的注册优先。
 
 | 回调 | 调用时机 |
@@ -78,6 +104,8 @@ public sealed class DetectionZoneEditor : ComponentEditor
 ```
 
 可用绘制入口包括 `Gizmos.Line`、`Gizmos.Label`、`Gizmos.WireSphere`、`Gizmos.WireCube`，坐标均为世界空间，尺寸均为世界单位。自定义 GUI 回调各有独立 ID 空间；同一回调内重复绘制同名控件时可用 `EditorGUI.PushId()` / `PopId()` 区分。所有 Begin/End 或 Push/Pop 必须配对，建议用 `try/finally`。
+
+组件 Inspector 不常驻显示默认行为、重复参数解释等次要说明；必要的操作说明放到悬停提示中。缺失依赖、配置冲突、编辑受限等需要用户关注的信息统一调用 `EditorGUI.Warning(text)`，使用主题黄色并自动换行。字段标签、分组标题和数值读数保持普通文本。
 
 编辑器构造失败或回调抛出异常会输出 Console。失败回调停用到下次程序集重载，Inspector 回退到默认界面，其他组件编辑器继续工作。
 

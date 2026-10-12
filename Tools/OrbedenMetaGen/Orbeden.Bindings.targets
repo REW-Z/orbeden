@@ -18,7 +18,21 @@
     <!--用户手册随 SDK 刷新，落点与 Lib 下其他 SDK 快照同级。-->
     <OrbedenManualSource>$(OrbedenSdkRoot)/Manual</OrbedenManualSource>
     <OrbedenManualTarget>$(OrbedenProjectRoot)/Lib/Docs</OrbedenManualTarget>
+    <OrbedenEditorAssembly>$(OrbedenSdkRoot)/Managed/Orbeden.Editor/Orbeden.Editor.dll</OrbedenEditorAssembly>
   </PropertyGroup>
+  <!-- Editor/PIE 脚本包含同文件的条件编译编辑器代码；Player/AOT 编译只包含运行时代码。 -->
+  <PropertyGroup Condition="'$(OrbedenEditorBuild)' == 'true' and '$(PublishAot)' != 'true'">
+    <DefineConstants>$(DefineConstants);ORBEDEN_EDITOR</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(OrbedenEditorBuild)' == 'true' and '$(PublishAot)' != 'true'">
+    <Reference Include="Orbeden.Editor">
+      <HintPath>$(OrbedenEditorAssembly)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="ValidateOrbedenEditorSdk" BeforeTargets="CoreCompile" Condition="'$(OrbedenEditorBuild)' == 'true' and '$(PublishAot)' != 'true'">
+    <Error Condition="!Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />
+  </Target>
   <!--
     是否包含原生模块，与上面的源根无关：源根是内容根，工程文件则在项目根，不能跟着源根一起改。
   -->
@@ -49,7 +63,6 @@
   <!-- Editor 代码单独编译；Player/AOT 不引用编辑器程序集。空工程也重建，以清除已删除扩展的旧 DLL。 -->
   <Target Name="BuildOrbedenEditorExtensions" AfterTargets="Build" Condition="'$(PublishAot)' != 'true' and '$(OrbedenBuildEditorExtensions)' != 'false'">
     <PropertyGroup>
-      <OrbedenEditorAssembly>$(OrbedenSdkRoot)/Managed/Orbeden.Editor/Orbeden.Editor.dll</OrbedenEditorAssembly>
       <OrbedenEditorBindingNamespace Condition="'@(NativeVcxProject)' != ''">$(OrbedenBindingNamespace)</OrbedenEditorBindingNamespace>
     </PropertyGroup>
     <Error Condition="'@(OrbedenEditorSource)' != '' and !Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />

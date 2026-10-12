@@ -1370,6 +1370,14 @@ namespace
         ImGui::PopTextWrapPos();
     }
 
+    //绘制自动换行的带颜色文本
+    void ORBEDEN_NATIVE_CALL EditorGuiTextWrappedColored(const color* value, const uint8* text, int32 length)
+    {
+        ImGui::PushTextWrapPos(0.0f);
+        EditorGuiTextColored(value, text, length);
+        ImGui::PopTextWrapPos();
+    }
+
     //把滚动位置移到当前光标处
     void ORBEDEN_NATIVE_CALL EditorGuiSetScrollHereY(float32 ratio) { ImGui::SetScrollHereY(ratio); }
 
@@ -2016,6 +2024,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.drawIcon = reinterpret_cast<void*>(&EditorGuiDrawIcon);
     api.drawTexture = reinterpret_cast<void*>(&EditorGuiDrawTexture);
     api.setCursorScreenPos = reinterpret_cast<void*>(&EditorGuiSetCursorScreenPos);
+    api.textWrappedColored = reinterpret_cast<void*>(&EditorGuiTextWrappedColored);
     return api;
 }
 

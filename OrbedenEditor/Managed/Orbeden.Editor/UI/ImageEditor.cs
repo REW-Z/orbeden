@@ -20,14 +20,14 @@ public sealed class ImageEditor : ComponentEditor
         DrawProperty("uvMin");
         DrawProperty("uvMax");
         Texture2D? texture = image.GetTexture();
-        if (texture == null) EditorGUI.TextWrapped("No texture: draws a solid color. Nine-slice needs a source image to show preserved corners.");
-        else if (image.GetMode() == UIImageMode.NineSlice) DrawSliceEditor(image, texture);
-        else EditorGUI.TextWrapped("Simple stretches the whole source region. Choose NineSlice to edit the four source borders.");
+        if (image.GetMode() == UIImageMode.NineSlice)
+        {
+            if (texture == null) EditorGUI.Warning("Nine-slice requires a texture.");
+            else DrawSliceEditor(image, texture);
+        }
         EditorGUI.Separator();
         DrawProperty("raycastTarget");
         DrawProperty("material");
-        if (image.GetMaterial() != null)
-            EditorGUI.TextWrapped("Custom material must use a UI-compatible shader. Leave Material empty to use the built-in image shader; ordinary lit 3D materials are not suitable.");
     }
 
     //绘制源图切线并将像素边框写入属性事务
@@ -38,7 +38,6 @@ public sealed class ImageEditor : ComponentEditor
         float width = MathF.Max(0, (uvMax.x - uvMin.x) * texture.width);
         float height = MathF.Max(0, (uvMax.y - uvMin.y) * texture.height);
         EditorGUI.Label($"Nine-slice Source: {width:0.#} x {height:0.#} px");
-        EditorGUI.TextWrapped("Borders are source-image pixels, not layout margins. Corners keep their size; edges stretch along one axis and the center stretches along both.");
         string[] names = ["borderLeft", "borderRight", "borderBottom", "borderTop"];
         string[] labels = ["Left", "Right", "Bottom", "Top"];
         float[] borders = [image.GetBorderLeft(), image.GetBorderRight(), image.GetBorderBottom(), image.GetBorderTop()];
@@ -54,12 +53,12 @@ public sealed class ImageEditor : ComponentEditor
                 SetValue(names[index], InteropValue.From((index < 2 ? width : height) / 3));
         }
         if (borders[0] + borders[1] + borders[2] + borders[3] == 0)
-            EditorGUI.TextWrapped("All borders are zero: the result is identical to Simple. Set borders here, then resize the layout to see the difference.");
+            EditorGUI.Warning("All borders are zero; nine-slice has no effect.");
         if (borders[0] + borders[1] > width || borders[2] + borders[3] > height)
-            EditorGUI.TextWrapped("Opposing borders exceed the source size; the renderer scales them down proportionally.");
+            EditorGUI.Warning("Borders exceed the source size and will be scaled down.");
 
         //选择切线并点击源图定位
-        EditorGUI.Label("Click source image to place selected border");
+        EditorGUI.Label("Border Preview");
         for (int index = 0; index < 4; ++index)
         {
             if (index > 0) EditorGUI.SameLine();
@@ -70,6 +69,7 @@ public sealed class ImageEditor : ComponentEditor
         vector2 size = new(texture.width * scale, texture.height * scale);
         vector2 origin = EditorGUI.CursorScreenPosition;
         EditorGUI.DrawTexture(texture, size);
+        if (NativeEditorGUI.IsItemHovered()) EditorGUI.SetTooltip("Click to place the selected border.");
         if (EditorGUI.IsItemClicked())
         {
             vector2 mouse = EditorGUI.MousePosition;

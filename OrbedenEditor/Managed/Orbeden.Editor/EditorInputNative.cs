@@ -60,4 +60,10 @@ public enum EditorKey
 
     /// <summary>左 Alt。</summary>
     LeftAlt = 529,
+
+    /// <summary>右 Shift。</summary>
+    RightShift = 532,
+
+    /// <summary>右 Alt。</summary>
+    RightAlt = 533,
 }

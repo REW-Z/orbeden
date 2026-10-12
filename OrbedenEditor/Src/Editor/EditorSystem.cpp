@@ -1180,7 +1180,7 @@ bool EditorSystem::ReloadProjectContent()
     }
 
     std::string csproj = GetProjectScriptProjectPath();
-    if (!csproj.empty() && !RunCommand("dotnet build " + Quote(csproj) + " -c Debug", "Build Game C#")) return false;
+    if (!csproj.empty() && !RunCommand("dotnet build " + Quote(csproj) + " -c Debug /p:OrbedenEditorBuild=true", "Build Game C#")) return false;
     RefreshInspectorGameAssembly();
     RequestRepaint();
     return true;

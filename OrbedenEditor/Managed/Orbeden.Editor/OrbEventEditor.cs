@@ -16,7 +16,7 @@ internal static class OrbEventEditor
         OrbEvent eventValue;
         try { eventValue = OrbEvent.Parse(text); }
         catch (Exception exception) when (exception is FormatException or ArgumentException or OverflowException)
-        { EditorGUI.TextWrapped($"{label}: invalid event data."); return false; }
+        { EditorGUI.Warning($"{label}: invalid event data."); return false; }
 
         bool changed = false;
         EditorGUI.PushId(property.Name);
@@ -40,10 +40,10 @@ internal static class OrbEventEditor
                     { call.TargetKey = key; changed = true; }
                     changed |= DrawFunction(eventValue, call);
                     if (EditorGUI.Button("Remove Call")) removed = call;
-                    if (call.TargetKey.Length == 0) EditorGUI.TextWrapped("Choose a target node.");
-                    else if (!Ens.Find(call.TargetKey).IsValid) EditorGUI.TextWrapped("Target node is missing.");
+                    if (call.TargetKey.Length == 0) EditorGUI.Warning("Choose a target node.");
+                    else if (!Ens.Find(call.TargetKey).IsValid) EditorGUI.Warning("Target node is missing.");
                     else if (!call.TryGetMethod(eventValue.ParameterKinds.ToArray(), out _))
-                        EditorGUI.TextWrapped("The target method does not match the event signature.");
+                        EditorGUI.Warning("The target method does not match the event signature.");
                 }
                 finally { EditorGUI.PopId(); }
             }

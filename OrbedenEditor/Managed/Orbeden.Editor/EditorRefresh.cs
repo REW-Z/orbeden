@@ -197,6 +197,7 @@ internal static class EditorRefresh
         start.ArgumentList.Add(scriptProject);
         start.ArgumentList.Add("-c");
         start.ArgumentList.Add("Debug");
+        start.ArgumentList.Add("/p:OrbedenEditorBuild=true");
         process = Process.Start(start) ?? throw new IOException("Could not start dotnet build.");
         standardOutput = process.StandardOutput.ReadToEndAsync();
         standardError = process.StandardError.ReadToEndAsync();

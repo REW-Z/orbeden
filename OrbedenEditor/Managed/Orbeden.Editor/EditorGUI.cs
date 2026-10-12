@@ -291,6 +291,9 @@ public static class EditorGUI
     /// <summary>绘制自动换行文本。</summary>
     public static void TextWrapped(string text) => NativeEditorGUI.TextWrapped(text);
 
+    /// <summary>以主题黄色绘制需要关注的提示，并按可用宽度自动换行。</summary>
+    public static void Warning(string text) => NativeEditorGUI.TextWrappedColored(text, EditorTheme.Current.LogWarning);
+
     /// <summary>借用已准备的文本绘制自动换行内容。</summary>
     public static void TextWrapped(GuiContent content) => NativeEditorGUI.TextWrapped(content);
 

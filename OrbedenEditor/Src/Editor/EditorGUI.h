@@ -106,11 +106,12 @@ public:
     void* drawTexture = nullptr;
     //把光标挪到屏幕坐标；场景手柄靠它把拖拽区放到任意位置
     void* setCursorScreenPos = nullptr;
+    void* textWrappedColored = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 85);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 86);
 
 //Editor ImGui 绑定层
 class EditorGUI

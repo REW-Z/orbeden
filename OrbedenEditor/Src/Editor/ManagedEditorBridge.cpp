@@ -287,18 +287,18 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 175);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 176);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 86);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 102);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 111);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 113);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 132);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 157);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 162);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 170);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 172);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 174);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 87);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 103);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 112);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 114);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 133);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 158);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 163);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 171);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 173);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 175);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)

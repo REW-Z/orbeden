@@ -96,6 +96,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<int, float, float, void> DrawTexture;
     //把光标挪到屏幕坐标，下一个条目就落在那里
     public delegate* unmanaged[Cdecl]<vector2*, void> SetCursorScreenPos;
+    public delegate* unmanaged[Cdecl]<color*, byte*, int, void> TextWrappedColored;
 }
 #pragma warning restore CS0649
 
@@ -473,6 +474,14 @@ internal static unsafe class NativeEditorGUI
         if (!initialized || api.TextWrapped == null) return;
         byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
         fixed (byte* pointer = bytes) api.TextWrapped(pointer, bytes.Length);
+    }
+
+    /// <summary>绘制自动换行的带颜色文本。</summary>
+    internal static void TextWrappedColored(string text, color value)
+    {
+        if (!initialized || api.TextWrappedColored == null) return;
+        byte[] bytes = InteropText.EncodeUtf8(text);
+        fixed (byte* pointer = bytes) api.TextWrappedColored(&value, pointer, bytes.Length);
     }
 
     //把滚动位置移到当前光标处

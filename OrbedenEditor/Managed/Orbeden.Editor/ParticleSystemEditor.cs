@@ -24,12 +24,12 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         DrawPreviewControls();
         if (!settingsLoaded)
         {
-            EditorGUI.TextWrapped("Cannot read the particle settings of this component.");
+            EditorGUI.Warning("Cannot read the particle settings of this component.");
             DrawDefaultInspector();
             return;
         }
 
-        if (settingsMixed) EditorGUI.TextWrapped("Multi-selection has different particle settings; a change is written to every selected emitter, the fields you did not touch are left alone.");
+        if (settingsMixed) EditorGUI.Warning("Particle settings differ. Edited fields apply to all selected emitters.");
 
         bool changed = false;
         changed |= DrawMain();
@@ -42,7 +42,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         changed |= DrawSubEmitters();
 
         if (changed) Commit();
-        if (lastError.Length != 0) EditorGUI.TextColored(lastError, new color { r = 1.0f, g = 0.5f, b = 0.35f, a = 1.0f });
+        if (lastError.Length != 0) EditorGUI.Warning(lastError);
     }
 
     //读取第一个目标的配置；各目标不一致时标记为混合
@@ -171,7 +171,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
         //诊断文本来自组件本身，不在 ABI 里返回临时字符串
         Orbeden.ParticleSystem? component = Target.Ens.GetComponent<Orbeden.ParticleSystem>();
         string error = component?.GetLastError() ?? string.Empty;
-        if (error.Length != 0) EditorGUI.TextColored($"Error: {error}", new color { r = 1.0f, g = 0.5f, b = 0.35f, a = 1.0f });
+        if (error.Length != 0) EditorGUI.Warning($"Error: {error}");
     }
 
     private static string DescribeState(uint state)
@@ -370,11 +370,9 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             motion.acceleration.z = Math.Clamp(motion.acceleration.z, -100000.0f, 100000.0f);
             changed |= FloatField("Drag", ref motion.drag, 0.0f, 1000.0f);
 
-            EditorGUI.Label("Size multiplier over normalized lifetime");
             changed |= GUI.AnimationCurve("Size Over Lifetime", $"{Target.ObjectId}:size", ref motion.sizeOverLifetime, 0.0f);
 
-            EditorGUI.Label("Angular velocity (degrees / second)");
-            changed |= GUI.AnimationCurve("Angular Velocity Over Lifetime", $"{Target.ObjectId}:angular", ref motion.angularVelocityOverLifetime, float.MinValue);
+            changed |= GUI.AnimationCurve("Angular Velocity Over Lifetime (deg/s)", $"{Target.ObjectId}:angular", ref motion.angularVelocityOverLifetime, float.MinValue);
 
             changed |= GUI.ColorGradient("Color Over Lifetime", $"{Target.ObjectId}:color", ref motion.colorOverLifetime);
 
@@ -425,7 +423,6 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             changed |= FloatField("Texture Tile Length", ref trails.textureTileLength, 0.0001f, 100000.0f);
             changed |= EditorGUI.Checkbox("Die With Particle", ref trails.dieWithParticle);
 
-            EditorGUI.Label("Width multiplier over normalized length");
             changed |= GUI.AnimationCurve("Width Over Length", $"{Target.ObjectId}:trail-width", ref trails.widthOverLength, 0.0f);
 
             changed |= GUI.ColorGradient("Color Over Length", $"{Target.ObjectId}:trail-color", ref trails.colorOverLength);
@@ -462,7 +459,6 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             DrawProperty("drawLayer");
             DrawProperty("receiveShadows");
             if (rendering.mode == ParticleRenderMode.Mesh) DrawProperty("castShadows");
-            else EditorGUI.TextWrapped("Billboard and trail particles do not cast shadows.");
 
             int tilesX = (int)rendering.tilesX;
             if (IntField("Tiles X", ref tilesX, 1, 256)) { rendering.tilesX = (uint)tilesX; changed = true; }

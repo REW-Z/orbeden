@@ -203,7 +203,7 @@ internal sealed class InspectorPanel : EditorPanel
         if (selection.Count == 0)
         {
             ClearPropertyDocuments();
-            EditorGUI.Label("Selected Ens is not alive.");
+            EditorGUI.Warning("Selected Ens is not alive.");
             return;
         }
 
@@ -214,8 +214,9 @@ internal sealed class InspectorPanel : EditorPanel
         }
         Ens active = Ens.FromId(context.SelectedEns);
         DrawObjectHeader(active, selection, context.SelectedStableId);
-        if (!string.IsNullOrWhiteSpace(status)) EditorGUI.Label($"C# Assembly: {status}");
-        if (propertyError.Length != 0) EditorGUI.Label(propertyError);
+        if (!string.IsNullOrWhiteSpace(status) && !status.StartsWith("Loaded:", StringComparison.Ordinal))
+            EditorGUI.Warning($"C# Assembly: {status}");
+        if (propertyError.Length != 0) EditorGUI.Warning(propertyError);
         DrawComponents(selection);
         DrawAddComponent(selection);
     }
@@ -327,7 +328,7 @@ internal sealed class InspectorPanel : EditorPanel
         Material? material = materialDocument.Asset;
         if (material == null)
         {
-            EditorGUI.Label("Material is not imported yet.");
+            EditorGUI.Warning("Material is not imported yet.");
             return;
         }
 
@@ -350,7 +351,7 @@ internal sealed class InspectorPanel : EditorPanel
             EditorGUI.EndDisabled();
         }
 
-        if (!string.IsNullOrEmpty(propertyError)) EditorGUI.Label(propertyError);
+        if (!string.IsNullOrEmpty(propertyError)) EditorGUI.Warning(propertyError);
         //写回放在属性文档提交之后：MarkDirty 只在一次成功提交里被调一次
         if (materialAssetDirty)
         {
@@ -1192,7 +1193,7 @@ internal sealed class InspectorPanel : EditorPanel
 
         if (choices.Count == 0)
         {
-            EditorGUI.Label("No component types are available.");
+            EditorGUI.Warning("No component types are available.");
             return;
         }
 

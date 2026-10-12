@@ -6,6 +6,8 @@ namespace OrbedenEditor;
 [CustomEditor(typeof(Text))]
 public sealed class TextEditor : ComponentEditor
 {
+    private readonly UIAlignmentPicker alignmentPicker = new();
+
     /// <summary>绘制多行文本与排版配置。</summary>
     public override void OnDrawInspector()
     {
@@ -21,29 +23,20 @@ public sealed class TextEditor : ComponentEditor
         DrawProperty("lineSpacing");
 
         //绘制九种水平与垂直对齐组合
-        EditorGUI.Label("Alignment");
-        if (EditorGUI.BeginTable("text_alignment", 3, false))
+        PropertyValue? horizontal = FindProperty("horizontalAlignment");
+        PropertyValue? vertical = FindProperty("verticalAlignment");
+        bool mixed = horizontal?.HasMultipleDifferentValues == true || vertical?.HasMultipleDifferentValues == true;
+        EditorGUI.Label(mixed ? "Alignment (Mixed)" : "Alignment");
+        int current = mixed ? -1 : (int)text.GetVerticalAlignment() * 3 + (int)text.GetHorizontalAlignment();
+        int selected = alignmentPicker.Draw("text_alignment", current);
+        if (selected >= 0)
         {
-            string[] columns = ["Left", "Center", "Right"];
-            string[] rows = ["Top", "Center", "Bottom"];
-            for (int row = 0; row < 3; ++row)
-            {
-                EditorGUI.TableNextRow();
-                for (int column = 0; column < 3; ++column)
-                {
-                    EditorGUI.TableSetColumnIndex(column);
-                    bool selected = (int)text.GetHorizontalAlignment() == column && (int)text.GetVerticalAlignment() == row;
-                    if (!EditorGUI.ToggleButton($"{rows[row]} {columns[column]}", selected)) continue;
-                    SetValue("horizontalAlignment", InteropValue.From((uint)column));
-                    SetValue("verticalAlignment", InteropValue.From((uint)row));
-                }
-            }
-            EditorGUI.EndTable();
+            SetValue("horizontalAlignment", InteropValue.From((uint)(selected % 3)));
+            SetValue("verticalAlignment", InteropValue.From((uint)(selected / 3)));
         }
         DrawProperty("raycastTarget");
         DrawProperty("material");
-        if (text.GetFont() == null) EditorGUI.TextWrapped("Font is empty: using the built-in default font (Cubic 11, Bitmap).");
         if (text.GetWrap() && text.GetLayout()?.GetFitWidth() == true)
-            EditorGUI.TextWrapped("Fit Width uses the unwrapped text width. Turn it off to wrap within a fixed width.");
+            EditorGUI.Warning("Fit Width prevents wrapping. Disable it to wrap within a fixed width.");
     }
 }

@@ -432,7 +432,7 @@ public sealed class UILayoutGizmos
     {
         if (reportedDrivenAxis) return;
         reportedDrivenAxis = true;
-        EditorGUI.Label("This axis is driven by a control; edit it in the owning control instead.");
+        EditorGUI.Warning("This axis is driven by a control; edit it in the owning control instead.");
         _ = layout;
     }
 

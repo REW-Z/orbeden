@@ -17,9 +17,9 @@ public sealed class CanvasEditor : ComponentEditor
         Canvas? canvas = Target.Ens.GetComponent<Canvas>();
         if (canvas == null) return;
         if (canvas.GetLayout() == null)
-            EditorGUI.TextWrapped("Canvas requires UILayout on the same node. Add UILayout to this Canvas; its children cannot render without it.");
+            EditorGUI.Warning("Canvas requires UILayout on the same node; its children cannot render without it.");
         else if (UIWorldContext.Current?.FindNode(canvas.EnsId) is UINode node && node.ConfigurationError.Length != 0)
-            EditorGUI.TextWrapped(node.ConfigurationError);
+            EditorGUI.Warning(node.ConfigurationError);
         DrawProperty("enabled");
         if (canvas.GetRenderMode() != CanvasRenderMode.WorldSpace)
         {
@@ -42,7 +42,7 @@ public sealed class CanvasEditor : ComponentEditor
         if (canvas.GetRenderMode() == CanvasRenderMode.WorldSpace)
         {
             vector2 size = canvas.GetLayout()?.GetSizeDelta() ?? default;
-            EditorGUI.Label($"World Space Size: {size.x:0.#} x {size.y:0.#} (logical units; scale comes from the node Transform)");
+            EditorGUI.Label($"World Space Size: {size.x:0.#} x {size.y:0.#}");
         }
         //屏幕画布在场景里按根节点缩放显示：逻辑矩形乘根缩放就是它在场景中的大小，场景手柄与聚焦读同一个值。
         else if (canvas.GetRenderMode() == CanvasRenderMode.Overlay)
@@ -55,7 +55,7 @@ public sealed class CanvasEditor : ComponentEditor
         DrawProperty("sortOrder");
         DrawProperty("drawLayer");
         if (canvas.GetRenderMode() == CanvasRenderMode.WorldSpace && canvas.GetDrawLayer() == 0)
-            EditorGUI.TextWrapped("Draw Layer 0 excludes this Canvas from every camera. Use 1 for the default layer.");
+            EditorGUI.Warning("Draw Layer 0 excludes this Canvas from every camera. Use 1 for the default layer.");
     }
 }
 
@@ -75,7 +75,7 @@ public sealed class MaskEditor : ComponentEditor
         if (Target.Ens.GetComponent<Mask>() is not Mask mask) return;
         //配置不完整时覆盖率为零：在面板上明说，不让作者去猜为什么看不到内容。
         string diagnostic = mask.GetDiagnostic();
-        if (diagnostic.Length != 0) EditorGUI.Label(diagnostic);
+        if (diagnostic.Length != 0) EditorGUI.Warning(diagnostic);
     }
 }
 
@@ -84,50 +84,26 @@ public sealed class MaskEditor : ComponentEditor
 public sealed class UILayoutEditor : ComponentEditor
 {
     private readonly UILayoutGizmos gizmos = new();
-    private bool setPivot;
-    private bool setPosition;
+    private readonly EditorRectPrimitive[] presetRects = new EditorRectPrimitive[16 * 6];
+    private static readonly string[] presetColumns = ["Left", "Center", "Right", "Stretch"];
+    private static readonly string[] presetRows = ["Top", "Middle", "Bottom", "Stretch"];
 
     /// <summary>绘制锚点预设与矩形参数。</summary>
     public override void OnDrawInspector()
     {
         if (Target.Ens.GetComponent<UILayout>() is not UILayout layout) return;
+        bool canvasRoot = layout.Ens.GetComponent<Canvas>() != null;
         DrawProperty("enabled");
-        EditorGUI.Label("Anchor Presets");
-        EditorGUI.Checkbox("Also Set Pivot", ref setPivot);
-        EditorGUI.Checkbox("Also Set Position / Stretch Size", ref setPosition);
-        if (!setPosition && UIWorldContext.Current?.FindNode(layout.EnsId)?.Parent?.Layout == null)
-            EditorGUI.TextWrapped("Preserving the rectangle requires a parent UI layout in Scene preview. Enable Also Set Position to apply without it.");
+        //仅对子节点显示相对父矩形的锚点预设
+        if (!canvasRoot)
+        {
+            EditorGUI.Label("Anchor Presets");
+            if (UIWorldContext.Current?.FindNode(layout.EnsId)?.Parent?.Layout == null)
+                EditorGUI.Warning("No parent UI layout. Alt-click a preset to apply without preserving the rectangle.");
+        }
         EditorGUI.BeginDisabled(Targets.Count != 1 || layout.HasDrivenRect);
 
-        //绘制固定锚点与单轴、双轴拉伸预设
-        string[] columns = ["Left", "Center", "Right", "Stretch"];
-        string[] rows = ["Top", "Middle", "Bottom", "Stretch"];
-        if (EditorGUI.BeginTable("anchors", 4, false))
-        {
-            for (int row = 0; row < 4; ++row)
-            {
-                EditorGUI.TableNextRow();
-                for (int column = 0; column < 4; ++column)
-                {
-                    EditorGUI.TableSetColumnIndex(column);
-                    vector2 min = new(column == 3 ? 0 : column * 0.5f, row == 3 ? 0 : 1 - row * 0.5f);
-                    vector2 max = new(column == 3 ? 1 : min.x, row == 3 ? 1 : min.y);
-                    bool selected = layout.GetAnchorMin().Equals(min) && layout.GetAnchorMax().Equals(max);
-                    vector2 origin = EditorGUI.CursorScreenPosition;
-                    if (EditorGUI.ToggleButton($"        \n        \n        ##{row}_{column}", selected))
-                        ApplyPreset(layout, min, max);
-                    //SetTooltip 自己不做悬停判断，不加这一句就是十六格每帧各建一条提示
-                    //最后一条（Stretch / Stretch）会盖掉前面的，一直挂在鼠标上
-                    if (NativeEditorGUI.IsItemHovered())
-                        EditorGUI.SetTooltip($"{rows[row]} / {columns[column]}");
-                    EditorGUI.DrawRectOutline(new vector2(origin.x + 9, origin.y + 8),
-                        new vector2(origin.x + 39, origin.y + 38), new color(0.5f, 0.5f, 0.5f, 1));
-                    EditorGUI.DrawRectOutline(new vector2(origin.x + 8 + min.x * 30, origin.y + 7 + (1 - max.y) * 30),
-                        new vector2(origin.x + 10 + max.x * 30, origin.y + 9 + (1 - min.y) * 30), new color(1, 0.6f, 0.2f, 1), 2);
-                }
-            }
-            EditorGUI.EndTable();
-        }
+        if (!canvasRoot) DrawAnchorPresets(layout);
 
         //按轴显示固定尺寸或拉伸边距
         vector2 offset = layout.GetOffset();
@@ -135,8 +111,8 @@ public sealed class UILayoutEditor : ComponentEditor
         vector2 pivot = layout.GetPivot();
         vector2 minAnchor = layout.GetAnchorMin();
         vector2 maxAnchor = layout.GetAnchorMax();
-        bool stretchX = minAnchor.x != maxAnchor.x;
-        bool stretchY = minAnchor.y != maxAnchor.y;
+        bool stretchX = !canvasRoot && minAnchor.x != maxAnchor.x;
+        bool stretchY = !canvasRoot && minAnchor.y != maxAnchor.y;
         float x = stretchX ? offset.x - pivot.x * size.x : offset.x;
         float y = stretchY ? -offset.y - (1 - pivot.y) * size.y : offset.y;
         float width = stretchX ? -offset.x - (1 - pivot.x) * size.x : size.x;
@@ -169,19 +145,84 @@ public sealed class UILayoutEditor : ComponentEditor
         }
         EditorGUI.EndDisabled();
         EditorGUI.EndDisabled();
-        if (Targets.Count != 1) EditorGUI.TextWrapped("Presets and derived dimensions require one selection. Raw fields below support multiple selections.");
-        if (layout.HasDrivenRect) EditorGUI.TextWrapped("Rectangle is driven by a layout group or control.");
+        if (Targets.Count != 1) EditorGUI.Warning("Presets and dimensions require a single selection. Edit the raw fields below for multiple objects.");
+        if (layout.HasDrivenRect) EditorGUI.Warning("Rectangle is driven by a layout group or control.");
         EditorGUI.Separator();
         //绘制锚点、轴心与布局开关
-        DrawProperty("anchorMin");
-        DrawProperty("anchorMax");
+        if (!canvasRoot)
+        {
+            DrawProperty("anchorMin");
+            DrawProperty("anchorMax");
+        }
         DrawProperty("pivot");
         DrawProperty("fitWidth");
         DrawProperty("fitHeight");
         DrawProperty("ignoreLayout");
         UIRect rect = layout.GetResolvedRect();
         EditorGUI.Label($"Resolved Size: {rect.Width:0.##} x {rect.Height:0.##}");
-        EditorGUI.TextWrapped("Anchors / Pivot: (0,0) bottom-left, (1,1) top-right. Stretch margins are relative to the anchor edges. Fit axes use measured content size.");
+    }
+
+    /// <summary>绘制仅点击的等比锚点网格，尺寸独立于字体并随可用宽度收缩。</summary>
+    private void DrawAnchorPresets(UILayout layout)
+    {
+        const float CellSize = 48;
+        const float Gap = 4;
+        const float StretchGap = 4;
+        const float GridSize = CellSize * 4 + Gap * 3 + StretchGap;
+        float scale = MathF.Min(1, MathF.Max(1, NativeEditorGUI.GetContentRegionAvail().x) / GridSize);
+        float side = CellSize * scale;
+        vector2 origin = EditorGUI.CursorScreenPosition;
+        EditorTheme theme = EditorTheme.Current;
+        color anchorColor = new(1, 0.65f, 0.3f, 1);
+        int count = 0;
+
+        //按统一几何尺寸布置点击区域与预设图标
+        for (int row = 0; row < 4; ++row)
+        {
+            for (int column = 0; column < 4; ++column)
+            {
+                float left = origin.x + (column * (CellSize + Gap) + (column == 3 ? StretchGap : 0)) * scale;
+                float top = origin.y + (row * (CellSize + Gap) + (row == 3 ? StretchGap : 0)) * scale;
+                vector2 min = new(column == 3 ? 0 : column * 0.5f, row == 3 ? 0 : 1 - row * 0.5f);
+                vector2 max = new(column == 3 ? 1 : min.x, row == 3 ? 1 : min.y);
+                NativeEditorGUI.SetCursorScreenPos(new vector2(left, top));
+                if (NativeEditorGUI.InvisibleButton($"##anchor_{row}_{column}", new vector2(side, side)))
+                    ApplyPreset(layout, min, max);
+                bool hovered = NativeEditorGUI.IsItemHovered();
+                bool selected = layout.GetAnchorMin().Equals(min) && layout.GetAnchorMax().Equals(max);
+                if (hovered) EditorGUI.SetTooltip($"{presetRows[row]} / {presetColumns[column]}\nShift: also set pivot\nAlt: also set position / stretch size");
+
+                //绘制圆角卡片与选中边框
+                color background = hovered ? theme.Hovered : theme.Header;
+                count = EditorRects.Append(presetRects, count, left, top, left + side, top + side,
+                    selected ? theme.Active : hovered ? theme.Text : theme.Border);
+                presetRects[count - 1].Rounding = 5 * scale;
+                float border = (selected ? 2 : 1) * scale;
+                count = EditorRects.Append(presetRects, count, left + border, top + border,
+                    left + side - border, top + side - border, background);
+                presetRects[count - 1].Rounding = 4 * scale;
+
+                //绘制父矩形与锚点；屏幕 Y 方向与布局 Y 方向相反
+                float x = left + 12 * scale;
+                float y = top + 12 * scale;
+                float extent = 24 * scale;
+                count = EditorRects.Append(presetRects, count, x, y, x + extent, y + extent, theme.Control);
+                count = EditorRects.Append(presetRects, count, x + scale, y + scale,
+                    x + extent - scale, y + extent - scale, background);
+                float anchorLeft = x + min.x * extent - 2 * scale;
+                float anchorTop = y + (1 - max.y) * extent - 2 * scale;
+                float anchorRight = x + max.x * extent + 2 * scale;
+                float anchorBottom = y + (1 - min.y) * extent + 2 * scale;
+                count = EditorRects.Append(presetRects, count, anchorLeft, anchorTop, anchorRight, anchorBottom, anchorColor);
+                if (column == 3 && row == 3)
+                    count = EditorRects.Append(presetRects, count, anchorLeft + 2 * scale, anchorTop + 2 * scale,
+                        anchorRight - 2 * scale, anchorBottom - 2 * scale, background);
+            }
+        }
+        NativeEditorGUI.DrawRects(presetRects, count);
+
+        //保留最后一行的布局高度并恢复左侧起点
+        NativeEditorGUI.SetCursorScreenPos(new vector2(origin.x, NativeEditorGUI.GetCursorScreenPos().y));
     }
 
     /// <summary>绘制场景矩形手柄。</summary>
@@ -193,6 +234,9 @@ public sealed class UILayoutEditor : ComponentEditor
     //计算预设补偿并记录布局与 Transform 的一次撤销
     private void ApplyPreset(UILayout layout, vector2 min, vector2 max)
     {
+        if (layout.Ens.GetComponent<Canvas>() != null) return;
+        bool setPivot = EditorInput.IsKeyDown(EditorKey.LeftShift) || EditorInput.IsKeyDown(EditorKey.RightShift);
+        bool setPosition = EditorInput.IsKeyDown(EditorKey.LeftAlt) || EditorInput.IsKeyDown(EditorKey.RightAlt);
         vector2 oldMin = layout.GetAnchorMin();
         vector2 oldMax = layout.GetAnchorMax();
         vector2 oldPivot = layout.GetPivot();
