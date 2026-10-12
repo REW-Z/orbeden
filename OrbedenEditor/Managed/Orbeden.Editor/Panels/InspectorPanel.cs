@@ -89,8 +89,6 @@ internal sealed class InspectorPanel : EditorPanel
     private readonly List<ComponentAddChoice> addChoices = [];
     private uint addChoicesGeneration;
     private bool addChoicesDirty = true;
-    //组件菜单请求的挂载顺序调整：-1 上移、1 下移、0 无请求。
-    private int moveRequested;
 
     private readonly List<Type> scriptTypes = [];
     private string componentSearch = string.Empty;
@@ -636,12 +634,13 @@ internal sealed class InspectorPanel : EditorPanel
             ? EditorGUI.BeginCollapsibleComponentBlock(title, icon, identity, enabled, out toggled)
             : EditorGUI.BeginCollapsibleComponentBlock(title, icon, identity);
         bool removeRequested = false;
+        int moveRequested = 0;
         try
         {
             //菜单必须画在组件块内：原生是在这一层的 ID 栈上开的弹窗，挪到 EndComponentBlock 之后就换了 ID
             if (EditorGUI.BeginPopupContextItem(identity + MenuIdSuffix))
             {
-                try { removeRequested = DrawComponentMenu(selection, components); }
+                try { removeRequested = DrawComponentMenu(selection, components, out moveRequested); }
                 finally { EditorGUI.EndPopup(); }
             }
             if (expanded)
@@ -698,9 +697,9 @@ internal sealed class InspectorPanel : EditorPanel
         EditorApplication.RequestRepaint();
     }
 
-    //绘制组件卡片标题的右键菜单。返回是否请求删除本组件：菜单是在画卡片的过程中打开的，
-    //删除必须由调用方等卡片画完之后再做
-    private bool DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components)
+    //绘制组件卡片标题的右键菜单，返回删除与移动请求
+    private bool DrawComponentMenu(IReadOnlyList<EnsId> selection, IReadOnlyList<NativeComponentInfo> components,
+        out int moveRequested)
     {
         bool removeRequested = false;
         moveRequested = 0;
@@ -715,10 +714,19 @@ internal sealed class InspectorPanel : EditorPanel
         bool removable = primary.IsManaged
             || !string.Equals(primary.TypeName, "Transform", StringComparison.Ordinal);
         if (EditorGUI.MenuItem("Remove Component", removable)) removeRequested = true;
-        //挂载顺序决定网格修改器与输入处理器的执行次序，所以顺序要能调。
+        //按各目标的挂载位置检查移动方向
+        bool canMoveUp = false;
+        bool canMoveDown = false;
+        for (int index = 0; index < components.Count; ++index)
+        {
+            List<NativeComponentInfo> ordered = EditorNativeComponents.GetComponents(selection[index]);
+            int position = ordered.FindIndex(value => value.ObjectId == components[index].ObjectId);
+            canMoveUp |= CanMoveComponent(ordered, position, position - 1);
+            canMoveDown |= CanMoveComponent(ordered, position, position + 1);
+        }
         EditorGUI.Separator();
-        if (EditorGUI.MenuItem("Move Component Up")) moveRequested = -1;
-        if (EditorGUI.MenuItem("Move Component Down")) moveRequested = 1;
+        if (EditorGUI.MenuItem("Move Component Up", canMoveUp)) moveRequested = -1;
+        if (EditorGUI.MenuItem("Move Component Down", canMoveDown)) moveRequested = 1;
 
         //Script 的派生类才算脚本：C# 托管宿主与 C++ 脚本都命中，Transform / Camera 这类内建组件不命中
         if (!EditorNativeComponents.MatchesComponentType(primary.ObjectId, "Script")) return removeRequested;
@@ -1414,21 +1422,36 @@ internal sealed class InspectorPanel : EditorPanel
             });
     }
 
+    /// <summary>检查移动位置并保持 Transform 的挂载位置。</summary>
+    private static bool CanMoveComponent(IReadOnlyList<NativeComponentInfo> ordered, int from, int to)
+    {
+        return from >= 0 && from < ordered.Count && to >= 0 && to < ordered.Count
+            && (ordered[from].IsManaged || ordered[from].TypeName != "Transform")
+            && (ordered[to].IsManaged || ordered[to].TypeName != "Transform");
+    }
+
     //把这一组组件在挂载顺序里移动；顺序决定修改器与输入处理器的执行次序。
     private void MoveComponentGroup(
         IReadOnlyList<EnsId> selection,
         IReadOnlyList<NativeComponentInfo> components,
         int delta)
     {
-        List<(int ObjectId, int From, int To)> moves = [];
+        List<(string StableId, int From, int To)> moves = [];
         for (int index = 0; index < components.Count; ++index)
         {
             List<NativeComponentInfo> ordered = EditorNativeComponents.GetComponents(selection[index]);
             int from = ordered.FindIndex(value => value.ObjectId == components[index].ObjectId);
             int to = from + delta;
-            if (from < 0 || to < 0 || to >= ordered.Count) continue;
+            if (!CanMoveComponent(ordered, from, to)) continue;
+            EditorNativeComponents.ComponentSnapshot snapshot = new();
+            if (EditorNativeComponents.ReadComponentSnapshot(components[index].ObjectId, snapshot) != InteropStatus.Ok
+                || snapshot.StableId.Length == 0)
+            {
+                status = $"Component identity is not available: {components[index].TypeName}";
+                continue;
+            }
             if (!EditorNativeComponents.MoveComponent(components[index].ObjectId, to)) continue;
-            moves.Add((components[index].ObjectId, from, to));
+            moves.Add((snapshot.StableId, from, to));
         }
         if (moves.Count == 0) return;
 
@@ -1437,14 +1460,23 @@ internal sealed class InspectorPanel : EditorPanel
             "Move Component",
             () =>
             {
-                //回退按逆序：同一 Ens 上多个组件的目标下标互相影响。
+                //按稳定路径重新定位并逆序回退组件
                 for (int index = moves.Count - 1; index >= 0; --index)
-                    EditorNativeComponents.MoveComponent(moves[index].ObjectId, moves[index].From);
+                {
+                    int objectId = EditorNativeComponents.FindComponent(moves[index].StableId);
+                    if (!EditorNativeComponents.MoveComponent(objectId, moves[index].From))
+                        throw new InvalidOperationException("Component move undo failed.");
+                }
                 TouchWorld();
             },
             () =>
             {
-                foreach ((int objectId, int _, int to) in moves) EditorNativeComponents.MoveComponent(objectId, to);
+                foreach ((string stableId, int _, int to) in moves)
+                {
+                    int objectId = EditorNativeComponents.FindComponent(stableId);
+                    if (!EditorNativeComponents.MoveComponent(objectId, to))
+                        throw new InvalidOperationException("Component move redo failed.");
+                }
                 TouchWorld();
             });
     }
