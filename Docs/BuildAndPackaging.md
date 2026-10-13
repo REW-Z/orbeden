@@ -102,6 +102,8 @@ flowchart LR
 
 ### 托管程序集的编译引用与加载关系
 
+IDE 的设计时项目加载（`DesignTimeBuild=true`）在未显式设置 `OrbedenEditorBuild` 且不属于 NativeAOT 构建时，将该开关默认为 true，使普通脚本内的 Editor 条件代码获得智能提示。Editor API 引用由 SDK targets 提供，不要求游戏 `.csproj` 直接列出该 DLL；普通命令行构建和 Player 的编译边界保持不变。
+
 以下表格省略 .NET 框架程序集。编译引用由 `.csproj` / `.targets` 配置，程序集元数据只保留实际用到的引用；没有 Editor 源文件时仍构建空的 `<Game>.Editor.dll`，它的元数据可能没有表中的业务引用。
 
 | 程序集或编译输入 | 项目配置的引用 | 内容与用途 |
@@ -156,7 +158,7 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
    - 内容根内每个可导入的源文件经 `AssetPipeline` 导入，产生的**每个资源对象**序列化为一个 `.orbo`（`Orbeden::Object` 二进制），先写入 `{ProjectRoot}/ResourceCache/Player/`，再整体同步到 `{ProjectRoot}/Build/windows-x64/bin/Content/`。
    - `.world` 场景**不 cook**，保持 XML 原样复制，并保留其相对内容根的目录结构。
    - `.oeproj` 复制到包根，供 Player 读取启动场景；项目根的游戏设置 `GameSettings.ini` 按项目当前状态镜像到包根——项目里有就覆盖，没有就删掉包里的旧副本（Player 随后用默认值）；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
-   - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物。整个 ResourceCache（含 `.resinfo`）可删除重建，不纳入版本管理。
+   - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物与 `.import.status` 校验记录。整个 ResourceCache 可删除重建，不纳入版本管理；Content 中的 `.resinfo` 承载导入设置，必须保留并提交。
 
 > Player 以**可执行文件所在目录**为根解析内容，发布目录整体拷到别的路径或别的机器都能运行。CLR DLL、hostfxr、nethost 和 Editor 文件不进入发布包。
 
@@ -528,6 +530,8 @@ MyGame/
 
 伴生文件必须进版本管理：它是导入设置的唯一载体，丢了设置就没了。产物 `.orbo` 与 `ResourceCache/` 都可以全量重建，因此不进版本管理。`*.resinfo.tmp` 是原子写入的中间文件，仍被忽略。
 
+`Dependencies` 只保存引用路径；同路径资源内容改变不修改该列表。`ImportStatus` 保存源文件自身的内容状态，完整依赖内容校验记录另存 `ResourceCache/Imported/*.import.status`。文本长度排除回车与换行，内容指纹把 CRLF 按 LF 计算；内容未变时保留 `Modified`，生成 JSON 相同时不写回。项目模板的 `.gitattributes` 使用 `text=auto eol=lf`，覆盖 `core.autocrlf` 的 LF 到 CRLF 检出转换；入库仍统一为 LF，二进制不转换。
+
 ### 内容根与资源 Key
 
 **所有 `Object` 派生资源的 stringid 都是内容根相对路径**：`Meshes/cube.obj` 对应 `<项目根>/Content/Meshes/cube.obj`。`startupWorld` 同样相对内容根。Key 里没有 `Resource/` 这类前缀特判，解析就是一次路径拼接。
@@ -544,6 +548,10 @@ MyGame/
 内容根之外按定义不含用户内容，因此 glob 不需要排除表。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 74：补齐同文件 Runtime / CustomEditor 的 IDE 智能提示。SDK 的 `Orbeden.Bindings.targets` 在设计时加载（`DesignTimeBuild=true`）且未显式指定 `OrbedenEditorBuild` 时，自动启用 Editor 条件符号与 SDK 程序集引用；显式关闭和 NativeAOT 构建仍排除编辑器代码与引用。需重建 Core 发布新版 targets，重建 Editor 刷新项目版本，通过 Update Project 同步脚手架与 SDK；IDE 需要重新加载项目或窗口。游戏 `.csproj` 无需添加无条件 Editor 引用，Builtin / Examples 和场景格式不变。
+
+版本 73：资源伴生清单升级为 Version=8，Runtime 改为 ImportStatus，Dependencies 改为仅存引用路径。源文件状态使用内容指纹，文本长度排除 CR/LF、哈希折叠 CRLF、未变内容保留 Modified；完整依赖指纹放到 ResourceCache 的 `.import.status`，主进程已加载对象的导入记录只存内存。后台与 Refresh 不再反复清空、写回同一段元数据；相同伴生 JSON 不重写，旧清单重建时保留 Settings。引擎与游戏模板增加 LF 属性规则，更新需同步项目根 `.gitattributes` 和新版 Builtin 伴生文件；Examples 不必重置，其旧伴生文件在后台自动重建。需重建 Core、Editor，并通过 Update Project 同步脚手架与 SDK，重启编辑器；场景和 Player 资源格式不变。格式升级会产生一次清单变化，此后时间戳触碰、LF/CRLF 切换、缓存重建以及同路径依赖内容变化均不改写未变的资源清单。
 
 版本 72：SelectionOutline 的选择数据、着色器、遮罩与合成流程从 Core 移入 Editor。Core 仅提供按完整相机句柄绑定的通用渲染扩展，在场景绘制后、颜色输出前调用；Editor 直接绑定 EditorCamera，移除相机时解除绑定，PIE 与 Player 的运行时相机不执行选中描边。移除 Core 的 SelectionHighlight 与 SetSelectionHighlights 接口；描边遮罩在每次绘制前重新绑定当前相机的深度附件，避免 OpenGL 纹理编号复用后仍引用旧深度。需重建 Core、Editor，通过 Update Project 更新游戏 SDK，并重建游戏原生模块与 Player；无模板内容或场景格式变更，无需重置 Builtin/Examples。
 

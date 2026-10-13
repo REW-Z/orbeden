@@ -14,42 +14,96 @@ namespace OrbedenEditor;
 /// 对象产物 `.orbo` 仍在可删除重建的 ResourceCache/Imported 下。 </summary>
 internal static class EditorAssetCache
 {
-    internal sealed record Stamp(string Path, long Length, long Modified);
-    /// <summary>运行态最后一次导入的输入快照。只由 Ctrl+R 的条件重导路径写：
-    /// 伴生文件里的 Dependencies 是后台导入进程维护的，它变新不代表主进程的运行态对象变新。</summary>
-    internal sealed record RuntimeImport(List<Stamp> Inputs, string SettingsHash, string ContentHash);
+    internal sealed record Stamp(string Path, long Length, long Modified, string ContentHash);
+    private sealed record FileStamp(long Length, long Modified);
+    /// <summary>导入输入的内容指纹；伴生文件只记录源文件，完整依赖快照放在本地缓存。</summary>
+    internal sealed record ImportStatus(List<Stamp> Inputs, string SettingsHash, string ContentHash);
     internal sealed record Manifest(int Version, string Source, Dictionary<string, string> Settings,
-        List<Stamp> Dependencies, List<string> Blobs, EditorAssetInspection.Result Data,
-        RuntimeImport? Runtime = null);
+        List<string> Dependencies, List<string> Blobs, EditorAssetInspection.Result Data,
+        ImportStatus? ImportStatus = null);
+    private sealed record CachedImport(int Version, ImportStatus ImportStatus);
     private sealed class Entry
     {
         internal Manifest? Manifest;
         internal bool Attempted;
         internal bool NeedsImport;
-        internal Stamp? MetadataStamp;
+        internal FileStamp? MetadataStamp;
+        internal CachedImport? CachedImport;
         internal string Error = string.Empty;
     }
     private sealed record Job(string Source, Entry Entry, Process Process,
-        Task<string> Output, Task<string> Error, DateTime Started, Stamp SourceStamp);
+        Task<string> Output, Task<string> Error, DateTime Started, FileStamp SourceStamp);
     private static readonly Dictionary<string, Entry> entries = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> sources = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, ImportStatus> loadedImports = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, (FileStamp File, long Length, string Hash)> contentStamps = new(StringComparer.OrdinalIgnoreCase);
     //哈希分块读取的复用缓冲区，避免大贴图整块进内存
     private static readonly byte[] hashBuffer = new byte[1 << 20];
+    private static readonly byte[] textHashBuffer = new byte[(1 << 20) + 1];
     private static string root = string.Empty;
     private static Job? job;
 
     private const string MetadataExtension = ".resinfo";
     private const string SettingsFileNameSuffix = ".import.settings";
-    internal const int CurrentVersion = 7;
+    private const string ImportStatusFileNameSuffix = ".import.status";
+    internal const int CurrentVersion = 8;
 
     /// <summary>将文件路径转换为 Content 相对路径。</summary>
     private static string GetRelativePath(string path) => Path.GetRelativePath(root, Path.GetFullPath(path)).Replace('\\', '/');
 
-    /// <summary>读取依赖文件的相对路径、长度和修改时间。</summary>
-    private static Stamp ReadStamp(string path)
+    /// <summary>读取本机文件长度与修改时间，用于磁盘变动检测。</summary>
+    private static FileStamp ReadFileStamp(string path)
     {
         FileInfo info = new(Path.GetFullPath(path));
-        return new Stamp(GetRelativePath(info.FullName), info.Exists ? info.Length : -1, info.Exists ? info.LastWriteTimeUtc.Ticks : 0);
+        return new(info.Exists ? info.Length : -1, info.Exists ? info.LastWriteTimeUtc.Ticks : 0);
+    }
+
+    /// <summary>读取内容指纹，文本排除换行字节计长并将 CRLF 按 LF 计算哈希。</summary>
+    private static Stamp ReadStamp(string path, Stamp? previous = null)
+    {
+        path = Path.GetFullPath(path);
+        FileStamp file = ReadFileStamp(path);
+        if (!contentStamps.TryGetValue(path, out var cached) || cached.File != file)
+        {
+            long length = file.Length;
+            string digest = "-";
+            if (file.Length >= 0)
+            {
+                bool text = EditorAssetCatalog.IsCodeFile(path) || EditorAssetCatalog.IsTextFile(path)
+                    || Path.GetExtension(path).ToLowerInvariant() is ".obj" or ".mtl" or ".gltf" or ".orbmat" or ".orbsky" or ".orbinc" or ".world" or ".fnt";
+                using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, hashBuffer.Length, FileOptions.SequentialScan);
+                using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                length = 0;
+                bool pendingReturn = false;
+                int read;
+                //流式计算文本和二进制内容指纹
+                while ((read = stream.Read(hashBuffer)) > 0)
+                {
+                    if (!text) { length += read; hash.AppendData(hashBuffer, 0, read); continue; }
+                    int count = 0;
+                    for (int index = 0; index < read; ++index)
+                    {
+                        byte value = hashBuffer[index];
+                        if (pendingReturn)
+                        {
+                            if (value != (byte)'\n') textHashBuffer[count++] = (byte)'\r';
+                            pendingReturn = false;
+                        }
+                        if (value == (byte)'\r') { pendingReturn = true; continue; }
+                        if (value != (byte)'\n') ++length;
+                        textHashBuffer[count++] = value;
+                    }
+                    hash.AppendData(textHashBuffer, 0, count);
+                }
+                if (pendingReturn) hash.AppendData([(byte)'\r']);
+                digest = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+                if (ReadFileStamp(path) != file) throw new IOException("Asset changed while reading its content.");
+            }
+            cached = (file, length, digest);
+            contentStamps[path] = cached;
+        }
+        long modified = previous?.Length == cached.Length && previous.ContentHash == cached.Hash ? previous.Modified : file.Modified;
+        return new(GetRelativePath(path), cached.Length, modified, cached.Hash);
     }
 
     /// <summary>伴生文件：与源文件同目录，承载导入设置与清单。</summary>
@@ -80,6 +134,9 @@ internal static class EditorAssetCache
         string settings = Path.Combine(directory, Path.GetFileName(source) + SettingsFileNameSuffix);
         File.Delete(settings);
         File.Delete(settings + ".tmp");
+        string status = Path.Combine(directory, Path.GetFileName(source) + ImportStatusFileNameSuffix);
+        File.Delete(status);
+        File.Delete(status + ".tmp");
         foreach (string file in Directory.EnumerateFiles(directory))
             if (IsBlobName(source, Path.GetFileName(file))) File.Delete(file);
     }
@@ -98,9 +155,16 @@ internal static class EditorAssetCache
         try
         {
             return value.Version == CurrentVersion && value.Source == GetRelativePath(path)
-                && value.Dependencies is { Count: > 0 } && value.Blobs != null && value.Data?.Objects != null
-                && value.Dependencies.All(stamp => stamp != null && !string.IsNullOrEmpty(stamp.Path)
-                    && !Path.IsPathRooted(stamp.Path) && ReadStamp(Path.Combine(root, stamp.Path)) == stamp)
+                && value.Settings != null && value.Dependencies != null && value.Blobs != null && value.Data?.Objects != null
+                && value.ImportStatus?.Inputs is { Count: 1 }
+                && value.Dependencies.All(dependency => !string.IsNullOrEmpty(dependency) && !Path.IsPathRooted(dependency)
+                    && dependency != ".." && !dependency.StartsWith("../", StringComparison.Ordinal))
+                && ReadStamp(path, value.ImportStatus.Inputs[0]) == value.ImportStatus.Inputs[0]
+                && value.ImportStatus.SettingsHash == ComputeSettingsHash(value.Settings)
+                && entries.TryGetValue(path, out Entry? entry) && entry.CachedImport?.Version == CurrentVersion
+                && entry.CachedImport.ImportStatus != null
+                && entry.CachedImport.ImportStatus.SettingsHash == value.ImportStatus.SettingsHash
+                && entry.CachedImport.ImportStatus.ContentHash == ComputeContentHash(ReadInputStamps(path, value))
                 && value.Blobs.All(blob => IsBlobName(path, blob) && File.Exists(Path.Combine(GetBlobDirectory(path), blob)))
                 && value.Data.Objects.All(asset => asset != null && value.Blobs.Contains(asset.BlobName));
         }
@@ -128,8 +192,10 @@ internal static class EditorAssetCache
         {
             entries.Clear();
             sources.Clear();
+            loadedImports.Clear();
             root = current;
         }
+        contentStamps.Clear();
         foreach (Entry entry in entries.Values) { entry.Attempted = false; entry.Error = string.Empty; entry.NeedsImport |= force; }
     }
 
@@ -166,20 +232,32 @@ internal static class EditorAssetCache
                     default: throw new IOException("Unknown asset inspection record.");
                 }
             }
-            List<Stamp> stamps = dependencies.Select(ReadStamp).ToList();
-            if (ReadStamp(completed.Source) != completed.SourceStamp
-                || stamps.Any(stamp => stamp.Modified > completed.Started.Ticks))
+            string sourceKey = GetRelativePath(completed.Source);
+            List<string> paths = dependencies.Select(GetRelativePath)
+                .Where(path => !path.Equals(sourceKey, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList();
+            if (ReadFileStamp(completed.Source) != completed.SourceStamp
+                || dependencies.Any(path => ReadFileStamp(path).Modified > completed.Started.Ticks))
                 throw new IOException("Source or dependency changed during import. Refresh to retry.");
 
-            //导入设置是用户数据，重新导入只重建清单部分，设置原样保留
-            Manifest manifest = new(CurrentVersion, GetRelativePath(completed.Source), ReadSettings(completed.Source),
-                stamps, blobs, new(objects, messages));
+            //记录源文件状态和引用路径
+            Manifest? previous = ReadManifest(GetMetadataPath(completed.Source));
+            Dictionary<string, string> settings = ReadSettings(completed.Source);
+            Stamp source = ReadStamp(completed.Source, previous?.ImportStatus?.Inputs.FirstOrDefault());
+            string settingsHash = ComputeSettingsHash(settings);
+            Manifest manifest = new(CurrentVersion, sourceKey, settings,
+                paths, blobs.Order(StringComparer.Ordinal).ToList(), new(objects.OrderBy(asset => asset.Key, StringComparer.Ordinal).ToList(), messages),
+                new([source], settingsHash, ComputeContentHash([source])));
+            List<Stamp> inputs = ReadInputStamps(completed.Source, manifest);
+            CachedImport cached = new(CurrentVersion, new(inputs, settingsHash, ComputeContentHash(inputs)));
+            completed.Entry.CachedImport = cached;
             if (!IsCurrent(manifest, completed.Source)) throw new IOException("Import cache is incomplete.");
             WriteMetadata(completed.Source, manifest);
+            WriteCacheStatus(completed.Source, cached);
             completed.Entry.Manifest = manifest;
             completed.Entry.Error = string.Empty;
             completed.Entry.NeedsImport = false;
-            completed.Entry.MetadataStamp = ReadStamp(GetMetadataPath(completed.Source));
+            completed.Entry.MetadataStamp = ReadFileStamp(GetMetadataPath(completed.Source));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -196,9 +274,10 @@ internal static class EditorAssetCache
         if (!File.Exists(file)) return new(StringComparer.Ordinal);
         try
         {
-            Manifest? manifest = JsonSerializer.Deserialize<Manifest>(File.ReadAllText(file));
-            if (manifest?.Settings == null) return new(StringComparer.Ordinal);
-            return new Dictionary<string, string>(manifest.Settings, StringComparer.Ordinal);
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
+            if (!document.RootElement.TryGetProperty("Settings", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
+                return new(StringComparer.Ordinal);
+            return new Dictionary<string, string>(value.Deserialize<Dictionary<string, string>>() ?? [], StringComparer.Ordinal);
         }
         catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException)
         { return new(StringComparer.Ordinal); }
@@ -252,16 +331,15 @@ internal static class EditorAssetCache
     {
         settingsRows = string.Empty;
         reason = string.Empty;
-        Manifest? manifest = ReadManifest(GetMetadataPath(path));
-        RuntimeImport? snapshot = manifest?.Runtime;
-        //没有运行态快照就只能重导：伴生文件的时间戳由后台导入进程维护，它变新不代表运行态对象变新
-        if (snapshot == null || snapshot.Inputs.Count == 0)
+        Dictionary<string, string> settings = ReadSettings(path);
+        settingsRows = EncodeSettingsTable(path, settings);
+        //读取主进程已加载对象的导入快照
+        if (!loadedImports.TryGetValue(path, out ImportStatus? snapshot) || snapshot.Inputs.Count == 0)
         {
             reason = "no recorded runtime import";
             return true;
         }
 
-        Dictionary<string, string> settings = ReadSettings(path);
         //平台不一致必须重导，与文件时间戳无关
         if (!PlatformMatches())
         {
@@ -271,11 +349,7 @@ internal static class EditorAssetCache
         }
 
         bool settingsMatch = ComputeSettingsHash(settings) == snapshot.SettingsHash;
-        //输入时间戳与设置都没动：直接跳过，不读任何文件内容
-        if (settingsMatch && InputsUnchanged(snapshot.Inputs)) return false;
-
-        //时间戳动了才值得读内容，且只有设置也没变时内容相同才能豁免重导。
-        //输入集合按当前的 Dependencies 现取，这样后台导入进程刚补上的新依赖也能进指纹。
+        //核对当前依赖集合的内容指纹
         if (settingsMatch && ComputeContentHash(ReadInputStamps(path)) == snapshot.ContentHash) return false;
 
         settingsRows = EncodeSettingsTable(path, settings);
@@ -283,38 +357,25 @@ internal static class EditorAssetCache
         return true;
     }
 
-    /// <summary>记录运行态完成了一次导入：写入输入快照并同步内存条目。</summary>
-    internal static void RecordRuntimeImport(string path)
+    /// <summary>记录主进程已加载对象的导入输入，不修改后台清单。</summary>
+    internal static void RecordLoadedImport(string path)
     {
-        string file = GetMetadataPath(path);
-        Manifest? existing = ReadManifest(file);
-        if (existing == null) return;
-
         List<Stamp> inputs = ReadInputStamps(path);
-        //只换 Runtime 段：动 Dependencies 会让缓存被判为有效，从而压制后台导入进程对该源的重新导入
-        Manifest manifest = existing with
-        {
-            Runtime = new(inputs, ComputeSettingsHash(ReadSettings(path)), ComputeContentHash(inputs)),
-        };
-        WriteMetadata(path, manifest);
-
-        //写后必须同步指纹，否则下一帧读取会以为伴生文件被外部改动而丢掉内存清单
-        if (!entries.TryGetValue(path, out Entry? entry)) entries[path] = entry = new Entry();
-        entry.Manifest = manifest;
-        entry.MetadataStamp = ReadStamp(file);
+        loadedImports[path] = new(inputs, ComputeSettingsHash(ReadSettings(path)), ComputeContentHash(inputs));
     }
 
     //收集某个源参与哈希的全部输入文件：源文件加上伴生文件记录的依赖
-    private static List<Stamp> ReadInputStamps(string path)
+    private static List<Stamp> ReadInputStamps(string path, Manifest? manifest = null)
     {
+        manifest ??= ReadManifest(GetMetadataPath(path));
         HashSet<string> inputs = new(StringComparer.OrdinalIgnoreCase) { GetRelativePath(path) };
-        foreach (Stamp stamp in ReadManifest(GetMetadataPath(path))?.Dependencies ?? [])
+        foreach (string dependency in manifest?.Dependencies ?? [])
         {
-            if (!string.IsNullOrEmpty(stamp.Path)) inputs.Add(stamp.Path);
+            if (!string.IsNullOrEmpty(dependency)) inputs.Add(dependency);
         }
 
         //收集当前设置引用的字符文件
-        Dictionary<string, string> settings = ReadSettings(path);
+        Dictionary<string, string> settings = manifest?.Settings ?? ReadSettings(path);
         if (settings.GetValueOrDefault("prebakeCharacterSet") != "None"
             && settings.TryGetValue("prebakeTextFile", out string? textFile) && !string.IsNullOrEmpty(textFile))
         {
@@ -333,30 +394,19 @@ internal static class EditorAssetCache
     }
 
     //判断运行态上次导入的目标平台与当前选择是否一致。
-    //TODO: 多平台导入落地后改为把目标平台存进 RuntimeImport 并在此比对。现在恒为真，
+    //TODO: 多平台导入落地后把目标平台存进 ImportStatus 并在此比对。现在恒为真，
     //      因此这个判定是空操作——引擎的导入与 cook 都是平台无关的：ImportSource 不接受平台参数，
     //      AssetImportSettings 也只有 colorSpace/scale/upAxis 三个字段，且五个目标里只有 Windows x64 可用。
     private static bool PlatformMatches() => true;
-
-    //逐个核对输入的时间戳；任一项读不到或已变化都返回 false（调用方据此进入内容哈希门）
-    private static bool InputsUnchanged(IReadOnlyList<Stamp> inputs)
-    {
-        foreach (Stamp stamp in inputs)
-        {
-            if (string.IsNullOrEmpty(stamp.Path) || Path.IsPathRooted(stamp.Path)) return false;
-            if (ReadStamp(Path.Combine(root, stamp.Path)) != stamp) return false;
-        }
-        return true;
-    }
 
     //计算一组输入的内容指纹：源文件不存在是合法状态，编码成长度 -1、摘要 "-"
     private static string ComputeContentHash(IReadOnlyList<Stamp> inputs)
     {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        AppendDescriptor(hash, "OrbedenAssetContent1");
+        AppendDescriptor(hash, "OrbedenAssetContent2");
         foreach (Stamp stamp in inputs)
         {
-            AppendDescriptor(hash, "F", stamp.Path, stamp.Length.ToString(CultureInfo.InvariantCulture), ReadDigest(stamp));
+            AppendDescriptor(hash, "F", stamp.Path, stamp.Length.ToString(CultureInfo.InvariantCulture), stamp.ContentHash);
         }
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
@@ -370,25 +420,6 @@ internal static class EditorAssetCache
         AppendDescriptor(hash, "OrbedenAssetSettings1", names.Count.ToString(CultureInfo.InvariantCulture));
         foreach (string name in names) AppendDescriptor(hash, "S", name, settings[name]);
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-    }
-
-    //读取单个文件的内容摘要；不存在或读不到时返回 "-"
-    private static string ReadDigest(Stamp stamp)
-    {
-        if (stamp.Length < 0) return "-";
-        try
-        {
-            using FileStream stream = new(Path.Combine(root, stamp.Path),
-                FileMode.Open, FileAccess.Read, FileShare.ReadWrite, hashBuffer.Length, FileOptions.SequentialScan);
-            using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            int read;
-            while ((read = stream.Read(hashBuffer)) > 0) hash.AppendData(hashBuffer, 0, read);
-            return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return "-";
-        }
     }
 
     //把每个字段以十进制长度前缀写进哈希流，避免路径里出现分隔符导致拼接歧义
@@ -407,10 +438,31 @@ internal static class EditorAssetCache
     /// <summary>原子写出伴生文件。</summary>
     private static void WriteMetadata(string path, Manifest manifest)
     {
+        manifest = manifest with { Settings = manifest.Settings.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal) };
         string file = GetMetadataPath(path);
+        string json = JsonSerializer.Serialize(manifest);
+        if (File.Exists(file) && File.ReadAllText(file) == json) return;
         string temporary = file + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(manifest), InteropText.CreateUtf8Encoding(false));
+        File.WriteAllText(temporary, json, InteropText.CreateUtf8Encoding(false));
         File.Move(temporary, file, true);
+    }
+
+    /// <summary>保存后台导入的完整依赖快照到本机资源缓存。</summary>
+    private static void WriteCacheStatus(string path, CachedImport value)
+    {
+        string file = Path.Combine(GetBlobDirectory(path), Path.GetFileName(path) + ImportStatusFileNameSuffix);
+        string temporary = file + ".tmp";
+        File.WriteAllText(temporary, JsonSerializer.Serialize(value), InteropText.CreateUtf8Encoding(false));
+        File.Move(temporary, file, true);
+    }
+
+    /// <summary>读取本机对象缓存的完整依赖快照。</summary>
+    private static CachedImport? ReadCacheStatus(string path)
+    {
+        string file = Path.Combine(GetBlobDirectory(path), Path.GetFileName(path) + ImportStatusFileNameSuffix);
+        try { return File.Exists(file) ? JsonSerializer.Deserialize<CachedImport>(File.ReadAllText(file)) : null; }
+        catch (Exception exception) when (exception is IOException or JsonException or UnauthorizedAccessException) { return null; }
     }
 
     /// <summary>保存导入设置并让缓存失效，下次读取时按新设置重新导入。</summary>
@@ -454,12 +506,13 @@ internal static class EditorAssetCache
         Pump();
         if (!entries.TryGetValue(path, out Entry? entry)) entries[path] = entry = new Entry();
         string file = GetMetadataPath(path);
-        Stamp metadataStamp = ReadStamp(file);
+        FileStamp metadataStamp = ReadFileStamp(file);
         if (entry.MetadataStamp != metadataStamp)
         {
             if (entry.Manifest != null || metadataStamp.Length >= 0) entry.Attempted = false;
             entry.MetadataStamp = metadataStamp;
             entry.Manifest = metadataStamp.Length >= 0 ? ReadManifest(file) : null;
+            entry.CachedImport = ReadCacheStatus(path);
             if (metadataStamp.Length >= 0 && entry.Manifest == null)
                 entry.Error = "Import metadata is unreadable.";
         }
@@ -498,7 +551,7 @@ internal static class EditorAssetCache
                 start.ArgumentList.Add(directory);
                 start.ArgumentList.Add(settingsFile);
                 DateTime began = DateTime.UtcNow;
-                Stamp stamp = ReadStamp(path);
+                FileStamp stamp = ReadFileStamp(path);
                 Process process = Process.Start(start) ?? throw new IOException("Could not start asset importer.");
                 job = new(path, entry, process, process.StandardOutput.ReadToEndAsync(), process.StandardError.ReadToEndAsync(), began, stamp);
             }

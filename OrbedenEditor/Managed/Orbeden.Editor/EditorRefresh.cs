@@ -151,7 +151,7 @@ internal static class EditorRefresh
             if (EditorAssetsNative.ReimportAsset(key, false, settingsRows) <= 0) continue;
             ++count;
             //重导成功才记快照：失败时下次仍判为重导
-            if (path.Length != 0) EditorAssetCache.RecordRuntimeImport(path);
+            if (path.Length != 0) EditorAssetCache.RecordLoadedImport(path);
         }
         reimportedCount = count;
     }

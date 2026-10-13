@@ -1514,9 +1514,15 @@ void EditorScene::DrawManagedGizmos()
 {
     if (!gizmoViewValid) return;
 
-    ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
-    ImVec2 savedCursor = ImGui::GetCursorScreenPos();
-    ImVec2 savedMax = window->DC.CursorMaxPos;
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    if (!context || !context->CurrentWindow) return;
+
+    ImGuiWindow* window = context->CurrentWindow;
+    const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
+    const ImVec2 savedMax = window->DC.CursorMaxPos;
+    const ImGuiID previousHoveredId = context->HoveredId;
+
+    //绘制视口内的托管控件
     ImGui::PushClipRect(ImVec2(sceneView.renderPosition.x, sceneView.renderPosition.y),
         ImVec2(sceneView.renderPosition.x + sceneView.renderSize.x, sceneView.renderPosition.y + sceneView.renderSize.y), true);
     ImGui::SetCursorScreenPos(ImVec2(sceneView.renderPosition.x + 8, sceneView.renderPosition.y + 40));
@@ -1525,7 +1531,12 @@ void EditorScene::DrawManagedGizmos()
     managedBridge.DrawSceneGizmos();
     if (CurrentGizmoScene == this) CurrentGizmoScene = nullptr;
     ImGui::EndGroup();
-    gizmoToolbarHovered |= ImGui::IsItemHovered();
+
+    //检查实际控件的鼠标命中
+    gizmoToolbarHovered |= context->HoveredId != 0
+        && context->HoveredId != previousHoveredId;
+
+    //恢复视口布局状态
     ImGui::PopClipRect();
     ImGui::SetCursorScreenPos(savedCursor);
     window->DC.CursorMaxPos = savedMax;

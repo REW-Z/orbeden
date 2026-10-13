@@ -19,6 +19,8 @@
     <OrbedenManualSource>$(OrbedenSdkRoot)/Manual</OrbedenManualSource>
     <OrbedenManualTarget>$(OrbedenProjectRoot)/Lib/Docs</OrbedenManualTarget>
     <OrbedenEditorAssembly>$(OrbedenSdkRoot)/Managed/Orbeden.Editor/Orbeden.Editor.dll</OrbedenEditorAssembly>
+    <!--启用 IDE 设计时加载中的编辑器代码与 API 引用。-->
+    <OrbedenEditorBuild Condition="'$(OrbedenEditorBuild)' == '' and '$(DesignTimeBuild)' == 'true' and '$(PublishAot)' != 'true'">true</OrbedenEditorBuild>
   </PropertyGroup>
   <!-- Editor/PIE 脚本包含同文件的条件编译编辑器代码；Player/AOT 编译只包含运行时代码。 -->
   <PropertyGroup Condition="'$(OrbedenEditorBuild)' == 'true' and '$(PublishAot)' != 'true'">

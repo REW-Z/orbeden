@@ -26,6 +26,7 @@ Project/
       Models/
         robot.gltf.<对象Key哈希>.orbo      对象产物（可重建，不进版本管理）
         robot.gltf.import.settings         交给导入工作进程的设置表（临时）
+        robot.gltf.import.status           完整输入校验记录（可重建，不进版本管理）
       Textures/
         brick.png.<对象Key哈希>.orbo
     Player/
@@ -44,40 +45,43 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 
 ### `.resinfo` 的数据分区
 
-采用 UTF-8 JSON，当前 Version=3。字段分两类：**Settings 是用户数据，其余全部是生成数据**。
+采用 UTF-8 JSON，当前 Version=8。字段分两类：**Settings 是用户数据，其余全部是生成数据**。
 
 | 字段 | 类别 | 职责 |
 | --- | --- | --- |
 | Version | — | 清单与导入协议版本；不兼容变动时递增并重建 |
 | Source | 生成 | 相对 Content 的源文件路径，使用 `/` 分隔 |
 | **Settings** | **用户** | **导入设置，稀疏字典：只存用户显式改过的键，缺键表示按语义自动推断** |
-| Dependencies | 生成 | 相对 Content 的依赖路径、文件长度与 UTC 修改时间 |
+| Dependencies | 生成 | 按序数排序的 Content 相对引用路径；不含源文件自身、文件长度、时间戳或内容哈希 |
 | Blobs | 生成 | 本次生成的全部对象文件名，包括可达依赖 |
 | Data.Objects | 生成 | 完整资源 Key、原生类型、BlobName、反射摘要 |
 | Data.Messages | 生成 | 导入器警告 |
-| Runtime | 生成 | 运行态导入快照，见下 |
+| ImportStatus | 生成 | 源文件自身的导入状态：Inputs、SettingsHash、ContentHash；不记录依赖内容 |
 
 **重新导入只重建生成部分，`Settings` 原样保留**——这是伴生文件与纯缓存的根本区别。
 
-#### Runtime 段与 Ctrl+R 条件重导
+#### ImportStatus 与 Ctrl+R 条件重导
 
-`Runtime` 记录 **主进程运行态**最后一次导入的输入：`Inputs`（输入文件及其长度与修改时间）、`SettingsHash`、`ContentHash`（输入内容与设置的内容指纹）。
+`Dependencies` 只描述引用关系。同一路径的图片被替换，或被引用的 Shader 增加注释，都不改变该列表。依赖内容改变仍需使对象缓存过期；重导结果若改变了资源对象字段，`Data` 仍按实际结果更新。
 
-**它必须与 `Dependencies` 分开，因为两者描述的不是一件事**：`Dependencies` 由 `--inspect-asset` 工作进程独占维护，而工作进程是另一个进程——它把 `Dependencies` 的时间戳刷成新的，只说明"工作进程见过当前内容"，**不代表主进程的运行态对象被重新导入了**。所以：
+`ImportStatus` 由后台导入完成后写入，`Inputs` 只含源文件自身的 `Path`、`Length`、`Modified`、`ContentHash`，另存 `SettingsHash` 和源输入的聚合 `ContentHash`。文本的 `Length` 排除 CR、LF 字节；哈希只把 CRLF 折成 LF，保留换行位置及孤立 CR。二进制资源的长度与哈希覆盖全部原始字节。源内容指纹相同时沿用原 `Modified`，不因检出、复制或换行格式切换刷新时间。
 
-- **`Runtime` 只由 `Ctrl+R`（Refresh）的条件重导路径写**，工作进程永不触碰。写回时只替换 `Runtime` 字段，不动 `Dependencies`——改了 `Dependencies` 会让清单被判为有效，从而压制工作进程对该源的重新导入，产物与 `Data` 会停在旧内容上。
-- 判定顺序：`Runtime` 缺席则重导（保守）；否则先比 `Inputs` 的时间戳与 `SettingsHash`（**不读文件内容**），全部相符即跳过；时间戳变了才算 `ContentHash`，相同则跳过——这让"文件被动过但内容没变"（`git checkout` 回来、备份还原）不再触发重导。
+后台对象缓存的完整输入校验记录保存在 `ResourceCache/Imported/<相对目录>/<源文件名>.import.status`，包含源文件及依赖的指纹和设置哈希，不复制资源内容、不进版本管理。其版本不符、内容指纹变化或对象缓存缺失时重新导入。路径、Blob 列表和设置按序数排序；伴生 JSON 相同时跳过写入。
+
+主进程已加载对象的导入记录只保存在内存，与后台状态分开维护。后台重建 `.orbo` 不会把主进程对象标为已更新，也不会清空主进程记录。
+
+- Refresh 没有主进程记录时重导；重导成功后只更新内存记录，不改写伴生文件。后续 Refresh 比较当前源文件、依赖与设置的内容指纹，内容相同即跳过。磁盘长度与时间戳只作为内存哈希缓存的读取提示；Refresh 会清空该缓存，重新校验实际内容。
 - 这条路径**只服务 `Ctrl+R` 与 Project 面板右键菜单里的 `Refresh`**（两者走同一个入口）。同一菜单里的 `Reimport` / `Reimport All` 保持无条件强制重导，语义分明；顶部 Project 菜单只留新建与载入，不挂这三项。
 - 判定结果会打进 Console：一条汇总（`Refresh: N of M loaded source(s) need reimporting.`）加逐源的原因（`no recorded runtime import` / `content changed` / `import settings changed`），最多列 50 条以免冲掉日志窗口。
 - 命中键**不含导入器版本**，这是有意的：改了引擎的导入逻辑（例如 `Import_IMG` 的默认色空间推断）之后，未变资源不会因 Ctrl+R 而重导，需要靠递增 `CurrentVersion` 或显式 Reimport。Unity 把 importer ID 与 importer version 纳入判定，我们这一维暂缺。
-- 命中键里的**目标平台是占位**（`EditorAssetCache.PlatformMatches` 恒为真，带 TODO）：引擎的导入与 cook 都是平台无关的——`ImportSource` 不接受平台参数、`AssetImportSettings` 只有三个字段、五个 Player 目标里只有 Windows x64 可用。多平台导入落地时改成把平台存进 `RuntimeImport` 并在判定里比对。
-- 已知缺口：给 `#include` 之外的依赖维度（例如某文件的存在性改变了 include 解析结果）在时间戳全符时无法察觉；若给 shader 新增 `#include`，那个新文件要等工作进程重扫进 `Dependencies` 后才能参与指纹。
+- 命中键里的**目标平台是占位**（`EditorAssetCache.PlatformMatches` 恒为真，带 TODO）：多平台导入落地后再把平台写入导入记录并参与比对。
+- 已知缺口：未被导入器列出的依赖不参与判定；新增 `#include` 文件要等后台重扫进 `Dependencies` 后才能参与主进程指纹。
 
 指纹用 SHA-256（BCL 自带，`NuGet.config` 已清空包源），输入集合按相对路径序数排序后以长度前缀编码，避免拼接歧义；大文件流式分块读取，不整块进内存。
 
 `Settings` 可以缺席：没有伴生文件、或伴生文件由更早版本写下时都按空处理，行为与"全部自动推断"一致，因此老项目升级后画面不变。
 
-移除 SourceId、未知扩展字段保留、Engine 构建时间戳和 Generation。源路径及依赖路径不记录本机绝对路径；依赖校验仍使用源文件自身的长度和修改时间，不使用本机引擎安装路径或构建文件时间戳。更换路径后按新 Content 根解释相对路径。跨 Content 的依赖以相对路径表示，无法相对表示的路径拒绝提交。
+移除 SourceId、未知扩展字段保留、Engine 构建时间戳和 Generation。源路径及依赖路径不记录本机绝对路径；依赖校验比较内容指纹，不使用本机引擎安装路径或构建文件时间戳。更换路径后按新 Content 根解释相对路径。跨 Content 的依赖以相对路径表示，无法相对表示的路径拒绝提交。旧版本清单重新生成，Settings 独立于清单结构读取并保留。
 
 **原生侧不解析 JSON。** 编辑器把 `Settings` 导出成 `源Key\t设置名\t值` 行表，通过两条通道交给原生：后台工作进程走命令行指向的设置文件，进程内 Reimport 走桥参数。原生用一个共用解析器按源文件 Key 逐行取用，因此整目录重导也能各自带上自己的设置。
 

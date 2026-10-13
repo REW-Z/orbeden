@@ -10,6 +10,8 @@ SceneView 工具栏的 **Gizmos** 菜单控制总开关、方向光、碰撞体�
 
 也可以把脚本和它的编辑器写在同一个 `.cs` 文件中，文件放在内容根内的普通脚本目录，例如 `Content/Scripts/Test.cs`。Editor/PIE 的构建入口显式传入 `OrbedenEditorBuild=true`，游戏程序集因此定义 `ORBEDEN_EDITOR` 并引用 `Orbeden.Editor`，脚本和编辑器使用同一份脚本类型；Inspector 会直接从游戏程序集中发现自定义编辑器。Player 打包显式传入 `OrbedenEditorBuild=false`，NativeAOT 编译也始终排除该符号和编辑器引用，条件编译块不会进入 Player。手动为 Editor/PIE 构建游戏脚本时使用 `dotnet build <项目>.csproj -c Debug /p:OrbedenEditorBuild=true`；普通 `dotnet build` 不启用同文件的编辑器代码。`OrbedenBuildEditorExtensions=false` 仍只关闭独立 Editor 程序集构建。
 
+VS Code / Visual Studio 的设计时项目加载（`DesignTimeBuild=true`）默认启用 `OrbedenEditorBuild`，使同文件的 `#if ORBEDEN_EDITOR` 代码参与智能提示，并解析 SDK 中的 `Orbeden.Editor.dll`。无需在游戏 `.csproj` 中添加无条件 Editor 引用。显式设置 `OrbedenEditorBuild=false` 或进入 NativeAOT 构建时不启用；更新 SDK 后，IDE 仍显示旧条件编译状态时，重新加载项目或窗口。
+
 ```csharp
 using Orbeden;
 #if ORBEDEN_EDITOR

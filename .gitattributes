@@ -1,3 +1,6 @@
+#文本统一使用 LF，覆盖 core.autocrlf 的检出转换
+* text=auto eol=lf
+
 #保留上游许可原始字节，支持锁文件 SHA-256 校验
 Tools/OrbedenThirdParty/licenses/** -text
 OrbedenEditor/Templates/Builtin/Fonts/OFL.txt -text

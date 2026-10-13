@@ -1,0 +1,2 @@
+#文本统一使用 LF，覆盖 core.autocrlf 的检出转换
+* text=auto eol=lf

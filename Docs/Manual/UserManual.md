@@ -174,7 +174,7 @@ Inspector 按当前选择切换内容，同一块面板服务三类检视：
 
 `Ctrl+R`（Refresh）一次做完三件事：重导已加载资源、脚本过期时重新编译、重载编辑器侧的游戏程序集。编译走后台进程，期间编辑器保持可用，进度显示在模态浮窗里（可 `Run in Background` 退到状态栏细条，或 `Cancel` 取消）。重导**已加载**资源会原地写回，对象身份与引用不变。
 
-重导是**条件**的：逐个比对每个已加载源的导入输入（源文件与依赖文件的长度和时间戳、导入设置），只有输入变了的才真正重新导入，因此"什么都没改"的一次刷新只会打出 `Refresh complete. Nothing changed.`，不会重新解码贴图、不会重传显存。判定依据记在源文件旁 `.resinfo` 的 `Runtime` 段里，细节见 [资源检视设计](../AssetInspectorDesign.md) 的「Runtime 段与 Ctrl+R 条件重导」。
+重导是**条件**的：逐个比对已加载资源的源文件、依赖内容指纹及导入设置；首次 Refresh 没有主进程记录时重导，之后内容未变就跳过。文本的 LF/CRLF 差异不触发重导，新增或删除换行仍算内容变化。主进程导入记录只存内存；`.resinfo` 的 `ImportStatus` 记录源文件自身状态，`Dependencies` 只存引用路径，完整缓存校验记录放在不提交的 ResourceCache 中。细节见 [资源检视设计](../AssetInspectorDesign.md) 的「ImportStatus 与 Ctrl+R 条件重导」。
 
 **Project 面板的右键菜单**（背景处或某个条目上都可以）有三个入口：
 
