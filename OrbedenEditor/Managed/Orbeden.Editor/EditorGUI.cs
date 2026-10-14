@@ -262,9 +262,19 @@ public static class EditorGUI
     /// <summary>绘制整数输入框。</summary>
     public static bool InputInt(string label, ref int value) => NativeEditorGUI.InputInt(label, ref value);
 
-    /// <summary>绘制浮点滑条。</summary>
-    public static bool SliderFloat(string id, ref float value, float minimum, float maximum, float width = 0.0f)
-        => NativeEditorGUI.SliderFloat(id, ref value, minimum, maximum, width);
+    /// <summary>绘制浮点滑条，默认步长为范围的 1%，step 为零时连续取值。</summary>
+    public static bool SliderFloat(string id, ref float value, float minimum, float maximum, float width = 0.0f, float? step = null)
+    {
+        if (step.HasValue && (!float.IsFinite(step.Value) || step.Value < 0)) throw new ArgumentOutOfRangeException(nameof(step));
+        if (!float.IsFinite(minimum) || !float.IsFinite(maximum) || maximum <= minimum || !float.IsFinite(value)) return false;
+        float previous = value;
+        if (!NativeEditorGUI.SliderFloat(id, ref value, minimum, maximum, width)) return false;
+        double increment = step ?? (((double)maximum - minimum) * 0.01);
+        if (increment > 0 && value > minimum && value < maximum)
+            value = (float)Math.Clamp(minimum + Math.Round(((double)value - minimum) / increment, MidpointRounding.AwayFromZero) * increment,
+                minimum, maximum);
+        return value != previous;
+    }
 
     /// <summary>绘制浮点输入框。</summary>
     public static bool InputFloat(string label, ref float value) => NativeEditorGUI.InputFloat(label, ref value);

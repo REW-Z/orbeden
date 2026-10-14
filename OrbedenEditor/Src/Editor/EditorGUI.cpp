@@ -417,7 +417,7 @@ namespace
         const bool columned = control.length() != 0;
         ImGui::SetNextItemWidth(width > 0.0f ? width : columned ? -FLT_MIN : -1.0f);
         return ImGui::SliderFloat(columned ? control.c_str() : text.c_str(), value, minimum, maximum,
-            "%.0f", ImGuiSliderFlags_AlwaysClamp) ? 1 : 0;
+            "%.3f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_NoRoundToFormat) ? 1 : 0;
     }
 
     //开始一个固定宽度的模态确认窗；id 里 ### 之前是标题栏文字、之后是稳定 ID
