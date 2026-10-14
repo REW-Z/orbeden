@@ -24,11 +24,16 @@ public:
     virtual void DrawOverlay() = 0;
 };
 
-//相机渲染扩展，执行于场景绘制之后、颜色输出之前
+//相机场景绘制与颜色输出前的渲染扩展
 class ICameraRenderExtension
 {
 public:
     virtual ~ICameraRenderExtension() = default;
+
+    //替换绑定相机的场景几何绘制
+    virtual void RenderCameraScene(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+        World& world, const RenderCamera& camera, const VisibleSet& visibleSet,
+        std::span<const InstanceSubmission> submissions) {}
 
     /// <summary>向绑定相机的线性场景缓冲绘制扩展内容。</summary>
     virtual void RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
@@ -107,8 +112,14 @@ private:
     //由外部设置的额外覆盖层
     IRenderOverlay* renderOverlay = nullptr;
 
-    //按完整相机句柄登记的扩展，由调用方持有实例
-    std::unordered_map<uint64, ICameraRenderExtension*> cameraRenderExtensions;
+    struct CameraRenderExtension
+    {
+        ICameraRenderExtension* extension = nullptr;
+        bool replaceSceneRendering = false;
+    };
+
+    //按完整相机句柄登记的扩展
+    std::unordered_map<uint64, CameraRenderExtension> cameraRenderExtensions;
 
     //编辑器预览目标；未设置时屏幕画布画主帧缓冲。
     UIOutputTarget editorPreviewTarget;
@@ -205,7 +216,8 @@ public:
     void SetRenderOverlay(IRenderOverlay* overlay);
 
     /// <summary>绑定指定相机的渲染扩展，传 nullptr 解除绑定；实例由调用方持有。</summary>
-    void SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtension* extension);
+    void SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtension* extension,
+        bool replaceSceneRendering = false);
 
     //设置是否在调试覆盖层中绘制 FPS 标签  
     void SetFpsLabelVisible(bool value);

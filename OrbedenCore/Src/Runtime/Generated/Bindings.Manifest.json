@@ -21506,6 +21506,56 @@
       "IsFinal": false,
       "Members": [
         {
+          "Name": "RenderCameraScene",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "backend",
+              "Type": "RenderBackend\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "gpuResourceManager",
+              "Type": "GpuResourceManager\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "world",
+              "Type": "World\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "visibleSet",
+              "Type": "const VisibleSet\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "submissions",
+              "Type": "std::span\u003Cconst InstanceSubmission\u003E",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "RenderCameraEffects",
           "Type": "void",
           "Access": "public",
@@ -49976,7 +50026,7 @@
         },
         {
           "Name": "cameraRenderExtensions",
-          "Type": "std::unordered_map\u003Cuint64,ICameraRenderExtension*\u003E",
+          "Type": "std::unordered_map\u003Cuint64,CameraRenderExtension\u003E",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -50848,6 +50898,11 @@
               "Name": "extension",
               "Type": "ICameraRenderExtension*",
               "DefaultValue": ""
+            },
+            {
+              "Name": "replaceSceneRendering",
+              "Type": "bool",
+              "DefaultValue": "false"
             }
           ]
         },
@@ -51325,6 +51380,60 @@
               "DefaultValue": ""
             }
           ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "CameraRenderExtension",
+      "QualifiedName": "RenderSystem::CameraRenderExtension",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/RenderSystem.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "extension",
+          "Type": "ICameraRenderExtension*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "replaceSceneRendering",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []

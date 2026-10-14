@@ -35,7 +35,7 @@ public:
 };
 
 //编辑器背景场景，负责相机、选择、轮廓和 Handles 绘制。
-class EditorScene : public ICameraRenderExtension, public IRenderOverlay
+class EditorScene : public ICameraRenderExtension
 {
 private:
     static EditorScene* activeScene;
@@ -77,8 +77,6 @@ private:
     EditorSceneGizmos componentGizmos;
     EditorSelectionOutline selectionOutline;
     EditorSceneWireframe wireframe;
-    RenderCamera wireframeCamera;
-    GpuTextureID wireframeTexture;
     bool gizmoViewValid = false;
     bool gizmoToolbarHovered = false;
     vector3 gizmoCameraRight = { 1.0f, 0.0f, 0.0f };
@@ -93,6 +91,11 @@ public:
 
     /// <summary>解除相机渲染扩展并释放场景视口资源。</summary>
     ~EditorScene() override;
+
+    //绘制绑定相机的独立线框
+    void RenderCameraScene(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+        World& world, const RenderCamera& camera, const VisibleSet& visibleSet,
+        std::span<const InstanceSubmission> submissions) override;
 
     /// <summary>直接绘制 EditorCamera 的选中描边。</summary>
     void RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
@@ -118,9 +121,6 @@ public:
 
     /// <summary>显示包含选中描边的场景视口图像并叠加 Handles。</summary>
     void DrawSceneView();
-
-    //在场景渲染帧内绘制独立线框视口
-    void DrawOverlay() override;
 
     //获取场景显示模式
     EditorSceneRenderMode GetRenderMode() const { return cameraState.renderMode; }

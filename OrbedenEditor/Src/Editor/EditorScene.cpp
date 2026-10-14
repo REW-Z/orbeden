@@ -28,8 +28,6 @@
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
-#include "Runtime/DisplaySettings.h"
-#include "Scripting/ScriptSystem.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -535,7 +533,6 @@ EditorScene::~EditorScene()
 {
     if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
     {
-        renderSystem->SetRenderOverlay(app.GetSystem<ScriptSystem>());
         renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
     }
     wireframe.ReleaseResources();
@@ -543,7 +540,15 @@ EditorScene::~EditorScene()
     if (activeScene == this) activeScene = nullptr;
 }
 
-/// <summary>直接绘制绑定的 EditorCamera 的选中描边。</summary>
+//绘制绑定相机的独立线框
+void EditorScene::RenderCameraScene(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
+    World& world, const RenderCamera& camera, const VisibleSet& visibleSet,
+    std::span<const InstanceSubmission> submissions)
+{
+    wireframe.Render(backend, gpuResourceManager, world, camera, visibleSet, submissions, false);
+}
+
+/// <summary>绘制绑定相机的叠加线框与选中描边。</summary>
 void EditorScene::RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
     World& world, const RenderCamera& camera, const VisibleSet& visibleSet)
 {
@@ -551,8 +556,8 @@ void EditorScene::RenderCameraEffects(RenderBackend& backend, GpuResourceManager
     {
         if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
         {
-            RenderCamera overlayCamera = camera;
-            wireframe.Render(app.GetWindow(), world, *renderSystem, overlayCamera, true);
+            wireframe.Render(backend, gpuResourceManager, world, camera, visibleSet,
+                renderSystem->GetActiveInstanceSubmissions(), true);
         }
     }
     UpdateSelectionHighlights(world);
@@ -564,8 +569,6 @@ void EditorScene::ReleaseResources(RenderBackend& backend)
 {
     selectionOutline.ReleaseResources(backend);
     wireframe.ReleaseResources();
-    wireframeTexture = {};
-    wireframeCamera = {};
 }
 
 //设置场景显示模式
@@ -573,13 +576,15 @@ void EditorScene::SetRenderMode(EditorSceneRenderMode value)
 {
     if (value > EditorSceneRenderMode::ShadedWireframe || cameraState.renderMode == value) return;
     cameraState.renderMode = value;
+    if (value == EditorSceneRenderMode::Shaded) wireframe.ReleaseResources();
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        renderSystem->SetCameraRenderExtension(cameraEns, this, value == EditorSceneRenderMode::Wireframe);
     if (IWindow* window = app.GetWindow()) window->WakeEventLoop();
 }
 
 //获取当前视口使用的相机数据
 const RenderCamera* EditorScene::GetViewCamera(const RenderScene& scene) const
 {
-    if (GetRenderMode() == EditorSceneRenderMode::Wireframe && wireframeTexture.IsValid()) return &wireframeCamera;
     for (const RenderCamera& camera : scene.cameras)
         if (camera.ens == cameraEns) return &camera;
     return nullptr;
@@ -611,14 +616,6 @@ void EditorScene::ReleaseSceneViewTarget()
 //按场景视口可见性维护离屏目标并绑定编辑相机。
 void EditorScene::RefreshSceneViewTarget(World& world)
 {
-    //绑定本帧的线框或脚本覆盖层
-    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
-    {
-        IRenderOverlay* overlay = !playModeActive && GetRenderMode() == EditorSceneRenderMode::Wireframe
-            ? static_cast<IRenderOverlay*>(this) : app.GetSystem<ScriptSystem>();
-        renderSystem->SetRenderOverlay(overlay);
-    }
-
     //本帧记录只对下一次刷新有效，未绘制即视为不可见
     int32 requestedWidth = !playModeActive && sceneView.visible ? std::max(sceneView.pixelWidth, 1) : 0;
     int32 requestedHeight = !playModeActive && sceneView.visible ? std::max(sceneView.pixelHeight, 1) : 0;
@@ -659,11 +656,7 @@ void EditorScene::RefreshSceneViewTarget(World& world)
     //把编辑相机绑定到当前离屏目标，无目标时回到主窗口帧缓冲
     Ens* editorCamera = world.GetEns(cameraEns);
     Camera* camera = editorCamera ? editorCamera->GetComponent<Camera>() : nullptr;
-    if (camera)
-    {
-        camera->renderTargetId = sceneTarget.id;
-        camera->viewportWidth = GetRenderMode() == EditorSceneRenderMode::Wireframe ? 0.0f : 1.0f;
-    }
+    if (camera) camera->renderTargetId = sceneTarget.id;
 }
 
 //显示包含选中描边的场景视口图像并叠加 Handles。
@@ -690,43 +683,13 @@ void EditorScene::DrawSceneView()
     sceneView.visible = true;
 
     //离屏纹理原点在左下角，交换 V 轴与 ImGui 的左上角原点对齐
-    GpuTextureID texture = GetRenderMode() == EditorSceneRenderMode::Wireframe && wireframeTexture.IsValid()
-        ? wireframeTexture : sceneTargetTexture;
-    if (texture.id != 0)
-        ImGui::Image(static_cast<ImTextureID>(texture.id), viewSize,
+    if (sceneTargetTexture.id != 0)
+        ImGui::Image(static_cast<ImTextureID>(sceneTargetTexture.id), viewSize,
             ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
     else
         ImGui::Dummy(viewSize);
 
     DrawSceneOverlay();
-}
-
-//在场景渲染帧内绘制独立线框视口
-void EditorScene::DrawOverlay()
-{
-    if (ScriptSystem* scripts = app.GetSystem<ScriptSystem>()) scripts->DrawOverlay();
-    if (GetRenderMode() != EditorSceneRenderMode::Wireframe || playModeActive
-        || sceneTargetWidth <= 0 || sceneTargetHeight <= 0) return;
-    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
-    if (!renderSystem) return;
-    for (const RenderCamera& camera : renderSystem->GetCurrentScene().cameras)
-    {
-        if (camera.ens != cameraEns) continue;
-        wireframeCamera = camera;
-        wireframeCamera.viewportX = 0;
-        wireframeCamera.viewportY = 0;
-        wireframeCamera.viewportWidth = sceneTargetWidth;
-        wireframeCamera.viewportHeight = sceneTargetHeight;
-        wireframeCamera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView,
-            static_cast<float32>(sceneTargetWidth) / sceneTargetHeight, camera.nearPlane, camera.farPlane);
-        wireframeCamera.viewProjectionMatrix = RenderMath::Mul(wireframeCamera.projectionMatrix, camera.viewMatrix);
-        wireframeCamera.viewFrustum = RenderMath::BuildFrustum(wireframeCamera.viewProjectionMatrix);
-        wireframeCamera.exposure = camera.camera && camera.camera->overrideExposure
-            ? camera.camera->exposure : DisplaySettings::GetExposure();
-        UpdateSelectionHighlights(app.GetWorld());
-        wireframeTexture = wireframe.Render(app.GetWindow(), app.GetWorld(), *renderSystem, wireframeCamera, false);
-        break;
-    }
 }
 
 //在场景视口叠加托管 Gizmos 与 Handles。
@@ -1240,7 +1203,8 @@ void EditorScene::CreateEditorCamera(World& world)
     if (camera)
     {
         if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
-            renderSystem->SetCameraRenderExtension(cameraEns, this);
+            renderSystem->SetCameraRenderExtension(cameraEns, this,
+                GetRenderMode() == EditorSceneRenderMode::Wireframe);
     }
 }
 
@@ -1575,7 +1539,6 @@ void EditorScene::UpdateSelectionHighlights(World& world)
     items.reserve(highlights.size());
     for (const auto& entry : highlights) items.push_back(entry.second);
     selectionOutline.SetHighlights(items);
-    wireframe.SetHighlights(items);
 }
 
 //绘制托管 Scene Handles。
@@ -1682,7 +1645,40 @@ void EditorScene::DrawGizmoToolbar()
         if (clicked) SetGizmoMode(modes[index]);
     }
 
-    //坐标空间切换：显示的是当前空间，点击切到另一个
+    //安排渲染模式与坐标空间控件
+    const char* renderModes[3] = { "Shaded", "Wireframe", "Shaded + Wireframe" };
+    const char* gizmosLabel = componentGizmos.enabled ? "Gizmos##component_gizmos" : "Gizmos Off##component_gizmos";
+    float32 toolbarRight = sceneView.renderPosition.x + sceneView.renderSize.x - 8.0f;
+    if (toolbarRight - 72.0f - ImGui::GetItemRectMax().x >= 172.0f) ImGui::SameLine(0.0f, 8.0f);
+    else ImGui::SetCursorScreenPos(ImVec2(sceneView.renderPosition.x + 8.0f,
+        sceneView.renderPosition.y + std::min(76.0f, sceneView.renderSize.y - 26.0f)));
+    if (ImGui::GetCursorScreenPos().y < sceneView.renderPosition.y + 72.0f) toolbarRight -= 72.0f;
+    const float32 availableWidth = toolbarRight - ImGui::GetCursorScreenPos().x;
+    const float32 modeWidth = ImGui::CalcTextSize(renderModes[2]).x + 22.0f + ImGui::GetStyle().FramePadding.x * 2.0f;
+    const float32 gizmosWidth = ImGui::CalcTextSize(gizmosLabel, nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    const bool showGizmos = availableWidth >= modeWidth + 72.0f + gizmosWidth;
+    ImGui::SetNextItemWidth(std::min(modeWidth, availableWidth - 64.0f - (showGizmos ? gizmosWidth + 8.0f : 0.0f)));
+
+    //绘制场景渲染模式
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+        ImVec2(ImGui::GetStyle().FramePadding.x, std::max(0.0f, (22.0f - ImGui::GetFontSize()) * 0.5f)));
+    const int32 renderMode = static_cast<int32>(GetRenderMode());
+    bool modePopup = ImGui::BeginCombo("##scene_display_mode", renderModes[renderMode]);
+    overToolbar |= ImGui::IsItemHovered();
+    if (modePopup)
+    {
+        for (int32 index = 0; index < 3; ++index)
+        {
+            bool current = renderMode == index;
+            if (ImGui::Selectable(renderModes[index], current)) SetRenderMode(static_cast<EditorSceneRenderMode>(index));
+            if (current) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+        overToolbar = true;
+    }
+    ImGui::PopStyleVar();
+
+    //绘制坐标空间切换
     ImGui::SameLine(0.0f, 8.0f);
     bool localMode = gizmoHandles.GetOrientation() == EditorGizmoOrientation::Local;
     if (localMode) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
@@ -1693,10 +1689,10 @@ void EditorScene::DrawGizmoToolbar()
     if (localMode) ImGui::PopStyleColor();
 
     overToolbar |= ImGui::IsItemHovered();
-    if (sceneView.renderSize.x >= 300.0f)
+    if (showGizmos)
     {
         ImGui::SameLine(0.0f, 8.0f);
-        if (ImGui::Button(componentGizmos.enabled ? "Gizmos##component_gizmos" : "Gizmos Off##component_gizmos", ImVec2(0,22)))
+        if (ImGui::Button(gizmosLabel, ImVec2(0,22)))
             ImGui::OpenPopup("component_gizmos_options");
         overToolbar |= ImGui::IsItemHovered();
         if (ImGui::BeginPopup("component_gizmos_options"))

@@ -136,7 +136,7 @@ void RenderSystem::Shutdown()
     //UI 渲染器必须在资源管理器之前释放：它持有网格缓冲与覆盖率池。
     uiRenderer.Shutdown();
     //释放相机扩展资源
-    for (const auto& entry : cameraRenderExtensions) entry.second->ReleaseResources(backend);
+    for (const auto& entry : cameraRenderExtensions) entry.second.extension->ReleaseResources(backend);
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
     forwardPipeline.Shutdown();
@@ -155,7 +155,8 @@ void RenderSystem::SetRenderOverlay(IRenderOverlay* overlay)
 }
 
 /// <summary>绑定相机渲染扩展，替换或解除时释放原扩展资源。</summary>
-void RenderSystem::SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtension* extension)
+void RenderSystem::SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtension* extension,
+    bool replaceSceneRendering)
 {
     if (cameraEns.IsNull()) return;
 
@@ -163,11 +164,15 @@ void RenderSystem::SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtens
     auto found = cameraRenderExtensions.find(cameraKey);
     if (found != cameraRenderExtensions.end())
     {
-        if (found->second == extension) return;
-        found->second->ReleaseResources(backend);
+        if (found->second.extension == extension)
+        {
+            found->second.replaceSceneRendering = replaceSceneRendering;
+            return;
+        }
+        found->second.extension->ReleaseResources(backend);
         cameraRenderExtensions.erase(found);
     }
-    if (extension) cameraRenderExtensions.emplace(cameraKey, extension);
+    if (extension) cameraRenderExtensions.emplace(cameraKey, CameraRenderExtension { extension, replaceSceneRendering });
 }
 
 void RenderSystem::SetUIEditorPreviewTarget(const UIOutputTarget& target)
@@ -432,17 +437,22 @@ void RenderSystem::Render(World& world, float deltaTime)
             sorter.Sort(visibleSet);//排序
         }
 
+        uint64 cameraKey = (static_cast<uint64>(camera.ens.id) << 32) | camera.ens.version;
+        auto extension = cameraRenderExtensions.find(cameraKey);
+        const bool replaceSceneRendering = extension != cameraRenderExtensions.end()
+            && extension->second.replaceSceneRendering;
         {
             PROFILE("Render/Pipeline");
-            forwardPipeline.Render(scene, visibleSet, gpuResourceManager);//forword绘制
+            if (replaceSceneRendering)
+                extension->second.extension->RenderCameraScene(backend, gpuResourceManager, world, camera,
+                    visibleSet, activeInstanceSubmissions);
+            else forwardPipeline.Render(scene, visibleSet, gpuResourceManager);
         }
 
         //执行当前相机绑定的渲染扩展
-        uint64 cameraKey = (static_cast<uint64>(camera.ens.id) << 32) | camera.ens.version;
-        auto extension = cameraRenderExtensions.find(cameraKey);
         if (extension != cameraRenderExtensions.end())
         {
-            extension->second->RenderCameraEffects(backend, gpuResourceManager, world, camera, visibleSet);
+            extension->second.extension->RenderCameraEffects(backend, gpuResourceManager, world, camera, visibleSet);
             backend.ProfileGpuWait("Render/GpuWait/CameraExtension");
         }
         if (debugLineWorld == &world && !debugLines.empty())

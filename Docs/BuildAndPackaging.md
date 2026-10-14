@@ -549,6 +549,8 @@ MyGame/
 
 ### 引擎更新与项目同步
 
+版本 80：相机渲染扩展可替换场景几何绘制，后续选择描边、调试线、UI 与颜色输出继续使用正常相机流程。编辑器线框复用主渲染后端、GPU 网格和可见集合，移除独立资源管理器、描边网格副本、逐三角形 CPU 展开和独立输出目标；相同子网格使用实例批次，粒子与拖尾不绘制线框。切回 Shaded 时释放线框 Shader、实例缓冲与临时数据。需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player；Builtin／Examples 无变更，无场景迁移。
+
 版本 79：Forward 材质绑定按链接后实际使用的 uniform／sampler 筛选，Shader GPU 缓存为每个 Pass 和几何变体保存共享绑定布局。未使用的材质输入不再提交，阴影、环境反射、相机快照与空气透视纹理按程序需求连续分配槽位，不再固定预留；纹理存在标记独立筛选。Inspector 继续按 Shader 源码声明展示颜色、浮点和二维纹理槽，增加 Shader 槽位版本查询，同一个 Shader 重导入后刷新参数列表；材质数据格式不变。公共常量无需求时跳过提交，阴影／大气图集的生成算法与频率不变。RenderBackend 新增链接程序的 uniform 需求查询，需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player；Builtin／Examples 无新增变更，无场景迁移。Shader 热重导入时刷新绑定布局，修改材质值不重建 Shader 布局。
 
 版本 78：新增 `Builtin/surface_effects.orbinc`，提供 `ORBEDEN_APPLY_SHADOW` 与 `ORBEDEN_APPLY_FOG` 表面着色宏；统一声明片元的相机位置与主光方向，内置 Blinn-Phong、PBS、Transparent 接入宏。阴影和雾的算法、采样次数与绘制流程不变，原有底层查询函数仍可单独使用。新增游戏开发者／TA 手册 `Docs/Manual/ShaderDevelopment.md`，随 SDK 发布到游戏项目 `Lib/Docs/`。需重建 Core、Editor，通过 Update Project 同步 SDK 文档与 Builtin；手动同步时复制新 include、两个查询 include 和三支表面 Shader。自定义 Shader 接入公共 include 时删除重复的 `u_CameraPosition`、`u_LightDirection` 声明，并以宏替换原有阴影／加雾调用，避免重复应用效果。没有场景格式迁移，Examples 无需重置；发布包重新 Build Player。

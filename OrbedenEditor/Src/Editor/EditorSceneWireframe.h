@@ -1,68 +1,52 @@
 #pragma once
 
-#include "Editor/EditorSelectionOutline.h"
-#include "Rendering/Backend/OpenGLRenderBackend.h"
-#include "Rendering/GpuResourceManager.h"
-#include "Rendering/OutputPass.h"
-#include "Rendering/ParticleRenderer.h"
+#include "Rendering/Backend/RenderBackend.h"
+#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/InstanceDrawData.h"
+#include "Rendering/RenderScene.h"
 
-#include <unordered_map>
+#include <span>
 
-class RenderSystem;
+class GpuResourceManager;
+struct GpuMesh;
 
-//编辑器线框画面与统一几何提交
+//编辑器网格线框绘制
 class EditorSceneWireframe
 {
-    struct OutlineMesh
+    struct MeshDraw
     {
-        Ref<Mesh> source;
-        Ref<Mesh> copy;
-        uint64 version = 0;
+        Mesh* mesh = nullptr;
+        uint32 indexStart = 0;
+        uint32 indexCount = 0;
+        matrix4x4 model;
     };
 
-    OpenGLRenderBackend backend;
-    GpuResourceManager resources;
-    OutputPass output;
-    EditorSelectionOutline outline;
-    ParticleRenderer particles;
+    //主渲染后端的非拥有引用
+    RenderBackend* backend = nullptr;
     GpuShaderProgramID program;
-    GpuVertexBufferID vertexBuffer;
-    GpuIndexBufferID indexBuffer;
-    GpuVertexInputID vertexInput;
-    GpuRenderTargetID sceneTarget;
-    GpuRenderTargetID displayTarget;
-    GpuDepthTextureID depthTexture;
-    int32 width = 0;
-    int32 height = 0;
-    bool initialized = false;
-    List<vector3> vertices;
-    List<EditorSelectionOutline::SelectionHighlight> selectionHighlights;
-    std::unordered_map<int32, OutlineMesh> outlineMeshes;
+    GpuShaderProgramID instancedProgram;
+    GpuVertexBufferID instanceBuffer;
+    usize instanceCapacity = 0;
+    List<MeshDraw> draws;
+    List<GpuMeshInstance> instances;
 
 public:
-    //绘制独立线框或叠加线框并返回显示纹理
-    GpuTextureID Render(IWindow* window, World& world, RenderSystem& renderSystem,
-        RenderCamera& camera, bool overlay);
+    //在相机场景缓冲绘制网格线框
+    void Render(RenderBackend& renderBackend, GpuResourceManager& resources, World& world,
+        const RenderCamera& camera, const VisibleSet& visibleSet,
+        std::span<const InstanceSubmission> submissions, bool overlay);
 
-    //设置独立线框画面的选中描边
-    void SetHighlights(const List<EditorSelectionOutline::SelectionHighlight>& highlights);
-
-    //释放编辑器线框资源
+    //释放线框 Shader、实例缓冲和临时数据
     void ReleaseResources();
 
 private:
-    //创建硬编码 Shader 和统一绘制缓冲
-    bool PrepareResources(IWindow* window);
+    //创建线框 Shader
+    bool PrepareResources(RenderBackend& renderBackend);
 
-    //提交一块统一线框几何
-    void ExecuteBatch();
+    //追加一个网格绘制项
+    void AppendMeshDraw(Mesh* mesh, uint32 indexStart, uint32 indexCount, const matrix4x4& model);
 
-    //追加一组世界空间三角形
-    void AppendMesh(const Mesh& mesh, uint32 indexStart, uint32 indexCount, const matrix4x4& model);
-
-    //追加一个世界空间三角形
-    void AppendTriangle(const vector3& first, const vector3& second, const vector3& third);
-
-    //获取描边专用的网格副本
-    Mesh* GetOutlineMesh(Mesh* source);
+    //提交同一子网格的实例批次
+    void DrawInstances(const GpuMesh& mesh, uint32 indexStart, uint32 indexCount,
+        std::span<const MeshDraw> batch);
 };
