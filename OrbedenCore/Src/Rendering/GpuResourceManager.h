@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 //网格上传到 GPU 后持有的缓冲和顶点输入。
 struct GpuMesh
@@ -68,6 +69,42 @@ public:
     }
 };
 
+//单个程序实际使用的材质槽与公共输入
+struct GpuShaderBindings
+{
+    List<uint32> textureBindingIndices;
+    List<uint32> texturePresenceBindingIndices;
+    List<uint32> colorBindingIndices;
+    List<uint32> floatBindingIndices;
+    int32 shadowTextureSlot = -1;
+    int32 cameraColorSlot = -1;
+    int32 cameraDepthSlot = -1;
+    int32 environmentSlot = -1;
+    int32 atmosphereRadianceSlot = -1;
+    int32 atmosphereOpticalDepthSlot = -1;
+    uint32 textureCount = 0;
+    bool useViewProjection = false;
+    bool useCameraPosition = false;
+    bool useCameraNearPlane = false;
+    bool useCameraFarPlane = false;
+    bool useTime = false;
+    bool useCameraTextures = false;
+    bool useAmbientColor = false;
+    bool useEnvironmentIntensity = false;
+    bool useEnvironmentMaxLod = false;
+    bool useLightDirection = false;
+    bool useLightColor = false;
+    bool useLightIntensity = false;
+    bool useShadowStrength = false;
+    bool useInstanceTint = false;
+    bool useInstanceUvRect = false;
+    bool useAtmosphereAdditive = false;
+    bool useReceiveShadows = false;
+    bool useShadowMap = false;
+    bool useShadowUniforms = false;
+    bool useAtmosphereUniforms = false;
+};
+
 //Shader 上传到 GPU 后持有的有序 Pass
 struct GpuShader
 {
@@ -77,6 +114,8 @@ public:
     usize storageIndex = static_cast<usize>(-1);
 
     List<GpuShaderPass> passes;
+    //按 program 缓存输入布局，材质参数修改不重建布局
+    std::unordered_map<uint32, GpuShaderBindings> programBindings;
 
     //按契约检查每个 Pass 声明支持的变体是否全部编译成功
     bool IsValid() const

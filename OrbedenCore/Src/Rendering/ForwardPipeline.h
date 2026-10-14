@@ -72,8 +72,8 @@ private:
     //已经报过「材质缺少几何变体」的材质编号，同一材质只报一次，资源失效时清空
     std::unordered_set<int32> reportedMissingVariants;
 
-    //已经报过「空气透视纹理槽不足」的材质编号
-    std::unordered_set<int32> reportedAtmosphereOverflow;
+    //已经报过「程序纹理槽不足」的材质编号
+    std::unordered_set<int32> reportedTextureOverflow;
 
     //刷新粒子渲染快照，runtime 与 preview 二选一。
     void CaptureParticleFrame(World& world);

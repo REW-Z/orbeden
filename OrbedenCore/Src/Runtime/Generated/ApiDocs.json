@@ -1516,6 +1516,20 @@
           ]
         },
         {
+          "Name": "GetMaterialSlotRevision",
+          "Doc": "\u8BFB\u53D6\u6750\u8D28\u69FD\u58F0\u660E\u7684\u66F4\u65B0\u7248\u672C",
+          "IsMethod": true,
+          "IsStatic": false,
+          "Property": "",
+          "Type": "uint32",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": [
+            0
+          ]
+        },
+        {
           "Name": "GetPass",
           "Doc": "\u83B7\u53D6\u6307\u5B9A Pass",
           "IsMethod": true,

@@ -394,11 +394,12 @@ void CascadedShadowMap::BindUniforms(const RenderCamera& camera)
     }
 }
 
-void CascadedShadowMap::BindTexture(uint32 slot)
+void CascadedShadowMap::BindTexture(int32 slot)
 {
-    backend->SetUniformInt("u_ShadowMap", static_cast<int32>(slot));
     backend->SetUniformInt("u_UseShadowMap", ready ? 1 : 0);
-    backend->BindDepthTexture(slot, ready ? atlas : GpuDepthTextureID{});
+    if (slot < 0) return;
+    backend->SetUniformInt("u_ShadowMap", slot);
+    backend->BindDepthTexture(static_cast<uint32>(slot), ready ? atlas : GpuDepthTextureID{});
 }
 
 void CascadedShadowMap::CaptureDepth(const RenderCamera& camera)

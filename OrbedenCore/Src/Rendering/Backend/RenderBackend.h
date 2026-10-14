@@ -211,6 +211,8 @@ public:
     virtual bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) = 0;
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;
+    //查询链接后实际使用的 uniform
+    virtual bool HasShaderUniform(GpuShaderProgramID program, const char* name) = 0;
 
     virtual void BindShaderProgram(GpuShaderProgramID id) = 0;
     virtual void BindVertexInput(GpuVertexInputID id) = 0;

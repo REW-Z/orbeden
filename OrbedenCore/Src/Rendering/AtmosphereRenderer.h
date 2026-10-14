@@ -183,8 +183,8 @@ public:
     //向当前程序提交材质的空气透视参数
     void BindMaterialUniforms();
 
-    //绑定材质的空气透视纹理槽
-    void BindMaterialTextures(uint32 firstSlot);
+    //绑定材质实际使用的空气透视纹理槽，负值跳过
+    void BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot);
 
     //本帧是否应用空气透视
     bool IsFogActive() const { return frame.fogActive; }

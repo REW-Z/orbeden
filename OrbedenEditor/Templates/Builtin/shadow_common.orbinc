@@ -1,4 +1,7 @@
 --------frag
+#ifndef ORBEDEN_SHADOW_COMMON_INCLUDED
+#define ORBEDEN_SHADOW_COMMON_INCLUDED
+
 uniform sampler2D u_ShadowMap;
 uniform bool u_UseShadowMap;
 uniform bool u_ReceiveShadows;
@@ -93,3 +96,5 @@ float SampleShadow(vec3 worldPosition, vec3 surfaceNormal)
     }
     return shadow * clamp(u_ShadowStrength, 0.0, 1.0);
 }
+
+#endif

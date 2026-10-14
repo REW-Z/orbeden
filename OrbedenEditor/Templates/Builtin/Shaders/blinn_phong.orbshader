@@ -38,19 +38,16 @@ in vec3 v_Normal;
 in vec2 v_TexCoord;
 in vec4 v_Tint;
 
-uniform vec3 u_CameraPosition;
 uniform vec4 u_AmbientColor;
 uniform vec4 u_DiffuseColor;
 uniform vec4 u_SpecularColor;
 uniform float u_Shininess;
-uniform vec3 u_LightDirection;
 uniform vec4 u_LightColor;
 uniform float u_LightIntensity;
 uniform bool u_HasDiffuseTexture;
 uniform sampler2D u_DiffuseTexture;
-#include "Builtin/shadow_common.orbinc"
+#include "Builtin/surface_effects.orbinc"
 #include "Builtin/environment_reflection.orbinc"
-#include "Builtin/atmosphere_sampling.orbinc"
 
 out vec4 FragColor;
 
@@ -71,7 +68,6 @@ void main()
     float nDotL = max(dot(normal, lightDir), 0.0);
     float nDotH = max(dot(normal, halfDir), 0.0);
     float vDotH = max(dot(viewDir, halfDir), 0.0);
-    float shadow = SampleShadow(v_WorldPosition, normal);
 
     //u_SpecularColor 直接作为垂直入射反射率，黑色即无高光，与旧行为一致
     vec3 fresnel = u_SpecularColor.rgb + (1.0 - u_SpecularColor.rgb) * pow(1.0 - vDotH, 5.0);
@@ -86,13 +82,14 @@ void main()
 
     vec3 ambient = u_AmbientColor.rgb * albedo;
     vec3 direct = (diffuse + specular) * nDotL * u_LightColor.rgb * max(u_LightIntensity, 0.0);
+    ORBEDEN_APPLY_SHADOW(direct, v_WorldPosition, normal);
     float roughness = pow(2.0 / (specularPower + 2.0), 0.25);
     vec3 reflection = EvaluateEnvironmentReflection(normal, viewDir, u_SpecularColor.rgb, roughness, 1.0);
-    vec3 color = ambient + direct * (1.0 - shadow) + reflection;
+    vec3 color = ambient + direct + reflection;
     //每实例 tint 默认白色，不改变原有画面
     color *= v_Tint.rgb;
     //光照与 tint 完成后依次合成空气透视与浓雾
-    color = ApplySurfaceFog(color, v_WorldPosition, GetAtmosphereScreenUv());
+    ORBEDEN_APPLY_FOG(color, v_WorldPosition);
     //输出线性值，显示转换统一在输出 Pass 完成
     FragColor = vec4(color, v_Tint.a);
 }

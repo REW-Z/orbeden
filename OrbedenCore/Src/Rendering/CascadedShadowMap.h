@@ -57,7 +57,7 @@ public:
     void BindUniforms(const RenderCamera& camera);
 
     //绑定阴影 atlas
-    void BindTexture(uint32 slot);
+    void BindTexture(int32 slot);
     //提交冻结相机深度统计
     void CaptureDepth(const RenderCamera& camera);
 

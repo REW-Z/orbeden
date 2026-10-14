@@ -549,6 +549,10 @@ MyGame/
 
 ### 引擎更新与项目同步
 
+版本 79：Forward 材质绑定按链接后实际使用的 uniform／sampler 筛选，Shader GPU 缓存为每个 Pass 和几何变体保存共享绑定布局。未使用的材质输入不再提交，阴影、环境反射、相机快照与空气透视纹理按程序需求连续分配槽位，不再固定预留；纹理存在标记独立筛选。Inspector 继续按 Shader 源码声明展示颜色、浮点和二维纹理槽，增加 Shader 槽位版本查询，同一个 Shader 重导入后刷新参数列表；材质数据格式不变。公共常量无需求时跳过提交，阴影／大气图集的生成算法与频率不变。RenderBackend 新增链接程序的 uniform 需求查询，需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player；Builtin／Examples 无新增变更，无场景迁移。Shader 热重导入时刷新绑定布局，修改材质值不重建 Shader 布局。
+
+版本 78：新增 `Builtin/surface_effects.orbinc`，提供 `ORBEDEN_APPLY_SHADOW` 与 `ORBEDEN_APPLY_FOG` 表面着色宏；统一声明片元的相机位置与主光方向，内置 Blinn-Phong、PBS、Transparent 接入宏。阴影和雾的算法、采样次数与绘制流程不变，原有底层查询函数仍可单独使用。新增游戏开发者／TA 手册 `Docs/Manual/ShaderDevelopment.md`，随 SDK 发布到游戏项目 `Lib/Docs/`。需重建 Core、Editor，通过 Update Project 同步 SDK 文档与 Builtin；手动同步时复制新 include、两个查询 include 和三支表面 Shader。自定义 Shader 接入公共 include 时删除重复的 `u_CameraPosition`、`u_LightDirection` 声明，并以宏替换原有阴影／加雾调用，避免重复应用效果。没有场景格式迁移，Examples 无需重置；发布包重新 Build Player。
+
 版本 74：补齐同文件 Runtime / CustomEditor 的 IDE 智能提示。SDK 的 `Orbeden.Bindings.targets` 在设计时加载（`DesignTimeBuild=true`）且未显式指定 `OrbedenEditorBuild` 时，自动启用 Editor 条件符号与 SDK 程序集引用；显式关闭和 NativeAOT 构建仍排除编辑器代码与引用。需重建 Core 发布新版 targets，重建 Editor 刷新项目版本，通过 Update Project 同步脚手架与 SDK；IDE 需要重新加载项目或窗口。游戏 `.csproj` 无需添加无条件 Editor 引用，Builtin / Examples 和场景格式不变。
 
 版本 73：资源伴生清单升级为 Version=8，Runtime 改为 ImportStatus，Dependencies 改为仅存引用路径。源文件状态使用内容指纹，文本长度排除 CR/LF、哈希折叠 CRLF、未变内容保留 Modified；完整依赖指纹放到 ResourceCache 的 `.import.status`，主进程已加载对象的导入记录只存内存。后台与 Refresh 不再反复清空、写回同一段元数据；相同伴生 JSON 不重写，旧清单重建时保留 Settings。引擎与游戏模板增加 LF 属性规则，更新需同步项目根 `.gitattributes` 和新版 Builtin 伴生文件；Examples 不必重置，其旧伴生文件在后台自动重建。需重建 Core、Editor，并通过 Update Project 同步脚手架与 SDK，重启编辑器；场景和 Player 资源格式不变。格式升级会产生一次清单变化，此后时间戳触碰、LF/CRLF 切换、缓存重建以及同路径依赖内容变化均不改写未变的资源清单。

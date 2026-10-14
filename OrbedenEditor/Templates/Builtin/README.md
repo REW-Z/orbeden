@@ -4,6 +4,8 @@
 
 ## 引擎内部 Shader
 
+自定义表面 Shader 在片元阶段包含 `Builtin/surface_effects.orbinc`，用 `ORBEDEN_APPLY_SHADOW(direct, worldPosition, worldNormal)` 衰减主光直接光，用 `ORBEDEN_APPLY_FOG(rgb, worldPosition)` 叠加空气透视与浓雾。公共 include 已声明 `u_CameraPosition` 与 `u_LightDirection`，宿主不要重复声明；接入后以宏替换已有效果调用。宏修改传入的 RGB 变量，不修改 Alpha。完整示例与使用限制见 [着色器开发手册](../../../Docs/Manual/ShaderDevelopment.md)。
+
 v44 删除 `Shaders/skybox_clear.orbshader`：浓雾改成闭合解后代码量已不值得躲，六面天空只剩 `skybox.orbshader` 一条路径。已有项目按更新流程重置 `Content/Builtin/` 即可，不必再维护无雾孪生。
 
 `Shaders/shadow_depth.orbshader` 与 `Shaders/skybox.orbshader` 不挂材质，由管线自行加载：前者是级联阴影的深度绘制入口，顶点阶段按几何 ABI 取世界矩阵，普通、实例与展开几何共用这一条位置公式；后者绘制天空盒立方体，用自带的视投影与 `xyww` 深度。

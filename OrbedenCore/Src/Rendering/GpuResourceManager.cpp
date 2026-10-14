@@ -2,6 +2,7 @@
 
 
 #include <cctype>
+#include <initializer_list>
 
 namespace
 {
@@ -196,6 +197,73 @@ namespace
         return "u_Has" + name + "Texture";
     }
 
+    //缓存程序实际使用的材质槽与公共输入
+    GpuShaderBindings BuildShaderBindings(RenderBackend* backend, GpuShaderProgramID program, const Shader& shader)
+    {
+        GpuShaderBindings bindings;
+        auto uses = [&](const char* name) { return backend->HasShaderUniform(program, name); };
+        auto usesAny = [&](std::initializer_list<const char*> names)
+        {
+            for (const char* name : names)
+                if (uses(name)) return true;
+            return false;
+        };
+
+        //筛选材质输入
+        uint32 textureIndex = 0;
+        for (const ShaderTextureSlot& slot : shader.textureSlots)
+        {
+            if (slot.dimension != ShaderTextureDimension::Texture2D) continue;
+            if (uses(slot.name.c_str())) bindings.textureBindingIndices.push_back(textureIndex);
+            if (uses(CreateTexturePresenceUniformName(slot.name).c_str()))
+                bindings.texturePresenceBindingIndices.push_back(textureIndex);
+            ++textureIndex;
+        }
+        for (uint32 index = 0; index < shader.colorSlots.size(); ++index)
+            if (uses(shader.colorSlots[index].name.c_str())) bindings.colorBindingIndices.push_back(index);
+        for (uint32 index = 0; index < shader.floatSlots.size(); ++index)
+            if (uses(shader.floatSlots[index].name.c_str())) bindings.floatBindingIndices.push_back(index);
+
+        //连续分配实际使用的公共纹理槽
+        int32 nextSlot = static_cast<int32>(bindings.textureBindingIndices.size());
+        auto textureSlot = [&](const char* name) { return uses(name) ? nextSlot++ : -1; };
+        bindings.shadowTextureSlot = textureSlot("u_ShadowMap");
+        bindings.cameraColorSlot = textureSlot("u_CameraColorTexture");
+        bindings.cameraDepthSlot = textureSlot("u_CameraDepthTexture");
+        bindings.environmentSlot = textureSlot("u_EnvironmentTexture");
+        bindings.atmosphereRadianceSlot = textureSlot("u_AtmosphereRadianceTexture");
+        bindings.atmosphereOpticalDepthSlot = textureSlot("u_AtmosphereOpticalDepthTexture");
+        bindings.textureCount = static_cast<uint32>(nextSlot);
+
+        //记录公共常量需求
+        bindings.useViewProjection = uses("u_ViewProjection");
+        bindings.useCameraPosition = uses("u_CameraPosition");
+        bindings.useCameraNearPlane = uses("u_CameraNearPlane");
+        bindings.useCameraFarPlane = uses("u_CameraFarPlane");
+        bindings.useTime = uses("u_Time");
+        bindings.useCameraTextures = uses("u_UseCameraTextures");
+        bindings.useAmbientColor = uses("u_AmbientColor");
+        bindings.useEnvironmentIntensity = uses("u_EnvironmentIntensity");
+        bindings.useEnvironmentMaxLod = uses("u_EnvironmentMaxLod");
+        bindings.useLightDirection = uses("u_LightDirection");
+        bindings.useLightColor = uses("u_LightColor");
+        bindings.useLightIntensity = uses("u_LightIntensity");
+        bindings.useShadowStrength = uses("u_ShadowStrength");
+        bindings.useInstanceTint = uses("u_InstanceTint");
+        bindings.useInstanceUvRect = uses("u_InstanceUvRect");
+        bindings.useAtmosphereAdditive = uses("u_AtmosphereAdditive");
+        bindings.useReceiveShadows = uses("u_ReceiveShadows");
+        bindings.useShadowMap = uses("u_UseShadowMap");
+        bindings.useShadowUniforms = usesAny({ "u_ShadowCascadeCount", "u_ShadowView", "u_ShadowBias",
+            "u_ShadowNormalBias", "u_ShadowMatrices[0]", "u_ShadowRects[0]", "u_ShadowParams[0]" });
+        bindings.useAtmosphereUniforms = usesAny({ "u_AtmosphereFogEnabled", "u_AtmosphereMaxDistanceKm",
+            "u_AtmosphereMetersPerWorldUnit", "u_AtmosphereCameraHeightKm", "u_AtmosphereCameraUp",
+            "u_AtmosphereDenseFogEnabled", "u_AtmosphereDenseFogMode", "u_AtmosphereDenseFogExtinction",
+            "u_AtmosphereDenseFogScattering", "u_AtmosphereDenseFogProfile", "u_AtmosphereDenseFogTopFade",
+            "u_AtmosphereViewport", "u_AtmosphereAtlas" });
+        return bindings;
+    }
+
     //释放 GPU Mesh 句柄：先释放两份顶点输入，再释放它们引用的缓冲
     void DeleteGpuResource(RenderBackend* backend, GpuMesh& mesh)
     {
@@ -250,6 +318,7 @@ namespace
         }
 
         shader.passes.clear();
+        shader.programBindings.clear();
     }
 
     //清空材质解析缓存
@@ -438,7 +507,19 @@ namespace
             if (!compiled) break;
         }
 
-        if (uploaded.IsValid()) return true;
+        if (uploaded.IsValid())
+        {
+            for (const GpuShaderPass& pass : uploaded.passes)
+            {
+                for (GpuShaderProgramID program : { pass.shaderProgram, pass.instancedProgram,
+                    pass.expandedProgram, pass.trailInstancedProgram })
+                {
+                    if (program.IsValid())
+                        uploaded.programBindings.emplace(program.id, BuildShaderBindings(backend, program, *shader));
+                }
+            }
+            return true;
+        }
 
         DeleteGpuResource(backend, uploaded);
         Log::Error("GpuResourceManager shader upload failed.");
@@ -738,6 +819,7 @@ const GpuShader* GpuResourceManager::GetShader(Shader* shader)
     }
 
     gpuShader->passes = std::move(uploaded.passes);
+    gpuShader->programBindings = std::move(uploaded.programBindings);
     shader->ClearDirty();
     return gpuShader;
 }

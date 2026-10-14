@@ -1,0 +1,17 @@
+--------frag
+#ifndef ORBEDEN_SURFACE_EFFECTS_INCLUDED
+#define ORBEDEN_SURFACE_EFFECTS_INCLUDED
+
+uniform vec3 u_CameraPosition;
+uniform vec3 u_LightDirection;
+
+#include "Builtin/shadow_common.orbinc"
+#include "Builtin/atmosphere_sampling.orbinc"
+
+//衰减主方向光的直接光照
+#define ORBEDEN_APPLY_SHADOW(directLighting, worldPosition, worldNormal) ((directLighting) *= (1.0 - SampleShadow((worldPosition), (worldNormal))))
+
+//叠加空气透视与浓雾
+#define ORBEDEN_APPLY_FOG(rgb, worldPosition) ((rgb) = ApplySurfaceFog((rgb), (worldPosition), GetAtmosphereScreenUv()))
+
+#endif

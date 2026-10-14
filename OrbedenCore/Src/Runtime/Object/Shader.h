@@ -100,6 +100,7 @@ private:
     //GPU Shader 由资源管理器持有。
     GpuShader* gpuShader = nullptr;
     bool gpuDirty = true;
+    uint32 materialSlotRevision = 0;
 
     //清除 GPU 刷新标记
     void ClearDirty();
@@ -128,6 +129,9 @@ public:
 
     //从 GLSL 源码刷新材质槽反射结果
     bool ReflectSlotsFromSource();
+
+    //读取材质槽声明的更新版本
+    uint32 GetMaterialSlotRevision() const;
 
     //替换 GLSL 源码并刷新反射结果
     void ReplaceSource(const std::string& vertex, const std::string& fragment);

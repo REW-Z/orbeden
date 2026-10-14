@@ -797,6 +797,12 @@ void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
     glUseProgram(id.id);
 }
 
+//查询指定程序实际使用的 uniform
+bool OpenGLRenderBackend::HasShaderUniform(GpuShaderProgramID program, const char* name)
+{
+    return GetUniformLocation(program, name) >= 0;
+}
+
 void OpenGLRenderBackend::BindVertexInput(GpuVertexInputID id)
 {
     if (currentVertexInput.id == id.id) return;
@@ -1308,13 +1314,19 @@ void OpenGLRenderBackend::InvalidateTexture2D(uint32 texture)
 
 int32 OpenGLRenderBackend::GetUniformLocation(const char* name)
 {
-    if (!currentShaderProgram.IsValid() || !name) return -1;
+    return GetUniformLocation(currentShaderProgram, name);
+}
 
-    auto& locations = uniformLocations[currentShaderProgram.id];
+//缓存指定程序的 uniform 位置
+int32 OpenGLRenderBackend::GetUniformLocation(GpuShaderProgramID program, const char* name)
+{
+    if (!program.IsValid() || !name) return -1;
+
+    auto& locations = uniformLocations[program.id];
     auto it = locations.find(name);
     if (it != locations.end()) return it->second;
 
-    int32 location = glGetUniformLocation(currentShaderProgram.id, name);
+    int32 location = glGetUniformLocation(program.id, name);
     locations.emplace(name, location);
     return location;
 }

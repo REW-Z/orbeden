@@ -661,7 +661,7 @@ void AtmosphereRenderer::BindMaterialUniforms()
           static_cast<float32>(quality.aerialSlices), static_cast<float32>(quality.atlasColumns) });
 }
 
-void AtmosphereRenderer::BindMaterialTextures(uint32 firstSlot)
+void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalDepthSlot)
 {
     if (!backend) return;
 
@@ -671,10 +671,16 @@ void AtmosphereRenderer::BindMaterialTextures(uint32 firstSlot)
     const GpuTextureID opticalDepth = frame.fogActive && aerialOpticalDepthTexture.IsValid()
         ? aerialOpticalDepthTexture : neutralTexture;
 
-    backend->SetUniformInt("u_AtmosphereRadianceTexture", static_cast<int32>(firstSlot));
-    backend->BindTexture(firstSlot, radiance);
-    backend->SetUniformInt("u_AtmosphereOpticalDepthTexture", static_cast<int32>(firstSlot + 1));
-    backend->BindTexture(firstSlot + 1, opticalDepth);
+    if (radianceSlot >= 0)
+    {
+        backend->SetUniformInt("u_AtmosphereRadianceTexture", radianceSlot);
+        backend->BindTexture(static_cast<uint32>(radianceSlot), radiance);
+    }
+    if (opticalDepthSlot >= 0)
+    {
+        backend->SetUniformInt("u_AtmosphereOpticalDepthTexture", opticalDepthSlot);
+        backend->BindTexture(static_cast<uint32>(opticalDepthSlot), opticalDepth);
+    }
 }
 
 bool AtmosphereRenderer::RenderSky()

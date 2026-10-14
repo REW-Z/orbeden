@@ -308,8 +308,15 @@ bool Shader::ReflectSlotsFromSource()
         valid &= !HasFloatSlot(floatSlots, colorSlot.name);
     }
 
+    ++materialSlotRevision;
     MarkDirty();
     return valid;
+}
+
+//读取材质槽声明的更新版本
+uint32 Shader::GetMaterialSlotRevision() const
+{
+    return materialSlotRevision;
 }
 
 void Shader::ReplaceSource(const std::string& vertex, const std::string& fragment)

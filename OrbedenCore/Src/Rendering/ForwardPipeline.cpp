@@ -178,7 +178,7 @@ void ForwardPipeline::InvalidateResourceCaches()
     //Shader 重新导入后同一个材质可能已经补上变体，允许再报一次
     reportedMissingVariants.clear();
     batchBuilder.InvalidateReports();
-    reportedAtmosphereOverflow.clear();
+    reportedTextureOverflow.clear();
     atmosphere.InvalidateResources();
     expandedChunks.clear();
     shadowDepthShader.Set(nullptr);
@@ -692,6 +692,25 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
     const RenderDirectionalLight* mainLight, bool cameraTexturesReady, const GpuMaterial& material, uint32 programId,
     std::unordered_set<uint32>& configuredPrograms)
 {
+    if (!material.shader) return false;
+    auto found = material.shader->programBindings.find(programId);
+    if (found == material.shader->programBindings.end()) return false;
+    const GpuShaderBindings& bindings = found->second;
+    if (bindings.textureCount > backend->GetFragmentTextureUnitCount())
+    {
+        int32 key = material.sourceShader ? material.sourceShader->GetObjectId() : 0;
+        if (reportedTextureOverflow.insert(key).second)
+        {
+            std::string message = "ForwardPipeline refused shader '";
+            message += material.sourceShader ? material.sourceShader->name : std::string("<none>");
+            message += "': the active program needs " + std::to_string(bindings.textureCount);
+            message += " texture slots, but the backend exposes only ";
+            message += std::to_string(backend->GetFragmentTextureUnitCount()) + ".";
+            Log::Error(message.c_str());
+        }
+        return false;
+    }
+
     //uniform 只对当前绑定生效，必须在这一步就把目标 program 绑上
     backend->BindShaderProgram(GpuShaderProgramID{ programId });
     backend->SetDepthTest(batch.key.depthTest != 0);
@@ -704,107 +723,80 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
     //相机、光照与环境反射对本队列的每个 program 只提交一次
     if (configuredPrograms.insert(programId).second)
     {
-        backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-        shadows.BindUniforms(camera);
-        backend->SetUniformVector3("u_CameraPosition", camera.position);
-        backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
-        backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
-        backend->SetUniformFloat("u_Time", camera.elapsedTime);
-        backend->SetUniformInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
-        backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
-        backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
-        backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
-        if (mainLight)
-        {
-            backend->SetUniformVector3("u_LightDirection", mainLight->direction);
-            backend->SetUniformColor("u_LightColor", mainLight->color);
-            backend->SetUniformFloat("u_LightIntensity", mainLight->intensity);
-            backend->SetUniformFloat("u_ShadowStrength", std::clamp(mainLight->shadowStrength, 0.0f, 1.0f));
-        }
-        else
-        {
-            backend->SetUniformVector3("u_LightDirection", { 0.0f, -1.0f, 0.0f });
-            backend->SetUniformColor("u_LightColor", { 1.0f, 1.0f, 1.0f, 1.0f });
-            backend->SetUniformFloat("u_LightIntensity", 0.0f);
-            backend->SetUniformFloat("u_ShadowStrength", 0.0f);
-        }
-        atmosphere.BindMaterialUniforms();
+        if (bindings.useViewProjection) backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        if (bindings.useShadowUniforms) shadows.BindUniforms(camera);
+        if (bindings.useCameraPosition) backend->SetUniformVector3("u_CameraPosition", camera.position);
+        if (bindings.useCameraNearPlane) backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
+        if (bindings.useCameraFarPlane) backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
+        if (bindings.useTime) backend->SetUniformFloat("u_Time", camera.elapsedTime);
+        if (bindings.useCameraTextures)
+            backend->SetUniformInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
+        if (bindings.useAmbientColor) backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
+        if (bindings.useEnvironmentIntensity) backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
+        if (bindings.useEnvironmentMaxLod) backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
+        if (bindings.useLightDirection)
+            backend->SetUniformVector3("u_LightDirection", mainLight ? mainLight->direction : vector3{ 0.0f, -1.0f, 0.0f });
+        if (bindings.useLightColor)
+            backend->SetUniformColor("u_LightColor", mainLight ? mainLight->color : color{ 1.0f, 1.0f, 1.0f, 1.0f });
+        if (bindings.useLightIntensity) backend->SetUniformFloat("u_LightIntensity", mainLight ? mainLight->intensity : 0.0f);
+        if (bindings.useShadowStrength)
+            backend->SetUniformFloat("u_ShadowStrength", mainLight ? std::clamp(mainLight->shadowStrength, 0.0f, 1.0f) : 0.0f);
+        if (bindings.useAtmosphereUniforms) atmosphere.BindMaterialUniforms();
     }
 
     //以下参数随批次变化，即使 program 已经配置过也必须重设。
     //实例模式的每实例 tint 与 uv 走顶点属性，这两个 uniform 不会被声明。
-    backend->SetUniformColor("u_InstanceTint", { 1.0f, 1.0f, 1.0f, 1.0f });
-    backend->SetUniformColor("u_InstanceUvRect", { 0.0f, 0.0f, 1.0f, 1.0f });
+    if (bindings.useInstanceTint) backend->SetUniformColor("u_InstanceTint", { 1.0f, 1.0f, 1.0f, 1.0f });
+    if (bindings.useInstanceUvRect) backend->SetUniformColor("u_InstanceUvRect", { 0.0f, 0.0f, 1.0f, 1.0f });
     //加性与 Alpha 混合的加雾方式不同，不能共用缓存值
-    backend->SetUniformInt("u_AtmosphereAdditive", batch.key.blendMode == BlendMode::Additive ? 1 : 0);
+    if (bindings.useAtmosphereAdditive)
+        backend->SetUniformInt("u_AtmosphereAdditive", batch.key.blendMode == BlendMode::Additive ? 1 : 0);
 
-    for (const GpuMaterialColorBinding& binding : material.colorBindings)
+    for (uint32 index : bindings.colorBindingIndices)
     {
+        const GpuMaterialColorBinding& binding = material.colorBindings[index];
         backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
     }
-    for (const GpuMaterialFloatBinding& binding : material.floatBindings)
+    for (uint32 index : bindings.floatBindingIndices)
     {
+        const GpuMaterialFloatBinding& binding = material.floatBindings[index];
         backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
     }
 
-    for (uint32 slot = 0; slot < material.textureBindings.size(); ++slot)
+    for (uint32 index : bindings.texturePresenceBindingIndices)
     {
-        const GpuMaterialTextureBinding& binding = material.textureBindings[slot];
-        backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
+        const GpuMaterialTextureBinding& binding = material.textureBindings[index];
         backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+    }
+    for (uint32 slot = 0; slot < bindings.textureBindingIndices.size(); ++slot)
+    {
+        const GpuMaterialTextureBinding& binding = material.textureBindings[bindings.textureBindingIndices[slot]];
+        backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
         backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
     }
 
-    //绑定内置渲染纹理
-    uint32 shadowTextureSlot = static_cast<uint32>(material.textureBindings.size());
-    shadows.BindTexture(shadowTextureSlot);
-    backend->SetUniformInt("u_ReceiveShadows", batch.key.receiveShadows ? 1 : 0);
-    uint32 cameraColorSlot = shadowTextureSlot + 1;
-    uint32 cameraDepthSlot = shadowTextureSlot + 2;
-    uint32 environmentSlot = shadowTextureSlot + 3;
-    backend->SetUniformInt("u_EnvironmentTexture", static_cast<int32>(environmentSlot));
-    backend->BindCubeTexture(environmentSlot, environmentReflection.texture);
-
-    if (batch.key.queue == DrawQueue::Refraction)
+    //绑定程序实际使用的公共纹理
+    if (bindings.shadowTextureSlot >= 0 || bindings.useShadowMap) shadows.BindTexture(bindings.shadowTextureSlot);
+    if (bindings.useReceiveShadows) backend->SetUniformInt("u_ReceiveShadows", batch.key.receiveShadows ? 1 : 0);
+    if (bindings.environmentSlot >= 0)
     {
-        backend->SetUniformInt("u_CameraColorTexture", static_cast<int32>(cameraColorSlot));
-        backend->SetUniformInt("u_CameraDepthTexture", static_cast<int32>(cameraDepthSlot));
-        backend->BindTexture(cameraColorSlot, cameraTexturesReady ? camera.cameraColorTexture : GpuTextureID());
-        backend->BindDepthTexture(cameraDepthSlot, cameraTexturesReady ? camera.cameraDepthTexture : GpuDepthTextureID());
+        backend->SetUniformInt("u_EnvironmentTexture", bindings.environmentSlot);
+        backend->BindCubeTexture(static_cast<uint32>(bindings.environmentSlot), environmentReflection.texture);
     }
-
-    //空气透视纹理占用环境反射之后的两个槽
-    const uint32 atmosphereSlot = environmentSlot + 1;
-    if (atmosphereSlot + 1 < backend->GetFragmentTextureUnitCount())
+    bool useCameraTextures = batch.key.queue == DrawQueue::Refraction && cameraTexturesReady;
+    if (bindings.cameraColorSlot >= 0)
     {
-        atmosphere.BindMaterialTextures(atmosphereSlot);
-        return true;
+        backend->SetUniformInt("u_CameraColorTexture", bindings.cameraColorSlot);
+        backend->BindTexture(static_cast<uint32>(bindings.cameraColorSlot), useCameraTextures ? camera.cameraColorTexture : GpuTextureID());
     }
-
-    //槽位不够：开启空气透视时不能静默画成无雾，关闭时指向已有的相机颜色槽即可
-    if (!atmosphere.IsFogActive())
+    if (bindings.cameraDepthSlot >= 0)
     {
-        backend->SetUniformInt("u_AtmosphereRadianceTexture", static_cast<int32>(cameraColorSlot));
-        backend->SetUniformInt("u_AtmosphereOpticalDepthTexture", static_cast<int32>(cameraColorSlot));
-        return true;
+        backend->SetUniformInt("u_CameraDepthTexture", bindings.cameraDepthSlot);
+        backend->BindDepthTexture(static_cast<uint32>(bindings.cameraDepthSlot), useCameraTextures ? camera.cameraDepthTexture : GpuDepthTextureID());
     }
-
-    int32 key = material.sourceShader ? material.sourceShader->GetObjectId() : 0;
-    if (reportedAtmosphereOverflow.insert(key).second)
-    {
-        std::string message = "ForwardPipeline refused material '";
-        message += material.sourceShader ? material.sourceShader->name : std::string("<none>");
-        message += "': atmosphere fog needs texture slots ";
-        message += std::to_string(atmosphereSlot);
-        message += " and ";
-        message += std::to_string(atmosphereSlot + 1);
-        message += ", but the backend exposes only ";
-        message += std::to_string(backend->GetFragmentTextureUnitCount());
-        message += ". Reduce the material texture bindings of this shader.";
-        Log::Error(message.c_str());
-    }
-
-    return false;
+    if (bindings.atmosphereRadianceSlot >= 0 || bindings.atmosphereOpticalDepthSlot >= 0)
+        atmosphere.BindMaterialTextures(bindings.atmosphereRadianceSlot, bindings.atmosphereOpticalDepthSlot);
+    return true;
 }
 
 //按需创建流式绘制缓冲

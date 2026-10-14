@@ -46,12 +46,14 @@ internal sealed class InspectorPanel : EditorPanel
     private readonly HashSet<(int ObjectId, int Generation)> refreshedManagedHosts = [];
     private int scriptAssemblyGeneration;
 
-    //材质资产面板的缓存：加载到的对象、它绑定的 Shader Key，以及对应的属性文档
+    //材质资产面板的缓存：源路径、Shader 槽位版本与属性文档
     private sealed class MaterialDocument
     {
-        internal string Key = string.Empty;
+        internal string SourcePath = string.Empty;
         internal Material? Asset;
         internal string ShaderKey = string.Empty;
+        internal int ShaderObjectId;
+        internal uint ShaderSlotRevision;
         internal PropertyDocument? Document;
     }
 
@@ -315,9 +317,9 @@ internal sealed class InspectorPanel : EditorPanel
         if (key.Length == 0) return;
 
         //换了资源才重新加载对象与文档，之后每帧复用
-        if (!string.Equals(materialDocument.Key, key, StringComparison.Ordinal))
+        if (!string.Equals(materialDocument.SourcePath, EditorAssetInspection.SourcePath, StringComparison.Ordinal))
         {
-            materialDocument.Key = key;
+            materialDocument.SourcePath = EditorAssetInspection.SourcePath;
             materialDocument.Asset = EditorAssetCatalog.Instance.Load(typeof(Material), key) as Material;
             materialDocument.ShaderKey = string.Empty;
             materialDocument.Document = null;
@@ -330,11 +332,18 @@ internal sealed class InspectorPanel : EditorPanel
             return;
         }
 
-        string shaderKey = material.shader?.GetInstanceId() ?? string.Empty;
+        Shader? shader = material.shader;
+        string shaderKey = shader?.GetInstanceId() ?? string.Empty;
+        int shaderObjectId = shader?.GetObjectId() ?? 0;
+        uint shaderSlotRevision = shader?.GetMaterialSlotRevision() ?? 0;
         if (materialDocument.Document == null
-            || !string.Equals(materialDocument.ShaderKey, shaderKey, StringComparison.Ordinal))
+            || !string.Equals(materialDocument.ShaderKey, shaderKey, StringComparison.Ordinal)
+            || materialDocument.ShaderObjectId != shaderObjectId
+            || materialDocument.ShaderSlotRevision != shaderSlotRevision)
         {
             materialDocument.ShaderKey = shaderKey;
+            materialDocument.ShaderObjectId = shaderObjectId;
+            materialDocument.ShaderSlotRevision = shaderSlotRevision;
             materialDocument.Document = new PropertyDocument([BuildMaterialTarget(material, key)]);
         }
 

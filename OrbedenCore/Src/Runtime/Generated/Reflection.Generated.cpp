@@ -3974,8 +3974,20 @@ public:
         return Reflection::Value(result);
     }
 
+    //调用 Shader.GetMaterialSlotRevision 方法
+    static Reflection::Value Invoke_Shader_GetMaterialSlotRevision_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Shader* instance = static_cast<Shader*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetMaterialSlotRevision();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //调用 Shader.ReplaceSource 方法
-    static Reflection::Value Invoke_Shader_ReplaceSource_1(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Shader_ReplaceSource_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -3991,7 +4003,7 @@ public:
     }
 
     //调用 Shader.GetPassCount 方法
-    static Reflection::Value Invoke_Shader_GetPassCount_2(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Shader_GetPassCount_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -4003,7 +4015,7 @@ public:
     }
 
     //调用 Shader.IsDirty 方法
-    static Reflection::Value Invoke_Shader_IsDirty_3(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Shader_IsDirty_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -4015,7 +4027,7 @@ public:
     }
 
     //调用 Shader.MarkDirty 方法
-    static Reflection::Value Invoke_Shader_MarkDirty_4(Object* object, std::span<const Reflection::Value> args, bool& success)
+    static Reflection::Value Invoke_Shader_MarkDirty_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
         success = false;
         Shader* instance = static_cast<Shader*>(object);
@@ -5950,6 +5962,7 @@ namespace Reflection
             {
                 FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("materialSlotRevision", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr, ReflectionGeneratedAccess::GetValue_Shader_name, ReflectionGeneratedAccess::SetValue_Shader_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
                 FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexPath, ReflectionGeneratedAccess::SetValue_Shader_vertexPath, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
@@ -5965,10 +5978,11 @@ namespace Reflection
         RegisterTypeMethods(Shader::StaticType(),
             {
                 MethodInfo("ReflectSlotsFromSource", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
-                MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_1),
-                MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_2),
-                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_IsDirty_3),
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_MarkDirty_4),
+                MethodInfo("GetMaterialSlotRevision", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetMaterialSlotRevision_1),
+                MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_2),
+                MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_3),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_IsDirty_4),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_MarkDirty_5),
             });
 
         RegisterTypeFields(Skybox::StaticType(),

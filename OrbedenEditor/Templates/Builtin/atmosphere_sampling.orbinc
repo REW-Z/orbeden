@@ -1,4 +1,7 @@
 --------frag
+#ifndef ORBEDEN_ATMOSPHERE_SAMPLING_INCLUDED
+#define ORBEDEN_ATMOSPHERE_SAMPLING_INCLUDED
+
 //表面片元的空气透视与浓雾合成。两者是各自独立的功能，各看各的开关：
 //空气透视查面向远景的 L/Tau 图集，浓雾按高度剖面解析积分，互不引用对方的 uniform。
 //宿主 Shader 需要声明 uniform vec3 u_CameraPosition; 本文件与 shadow_common 依赖 u_LightDirection 同理。
@@ -130,3 +133,5 @@ vec3 ApplySurfaceFog(vec3 rgb, vec3 worldPosition, vec2 screenUv)
 {
     return ApplyDenseFogToSurface(ApplyAtmosphereToSurface(rgb, worldPosition, screenUv), worldPosition);
 }
+
+#endif

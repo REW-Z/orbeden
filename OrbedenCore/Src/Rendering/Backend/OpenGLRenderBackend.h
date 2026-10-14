@@ -95,6 +95,7 @@ public:
     bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) override;
     GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) override;
     void DeleteShaderProgram(GpuShaderProgramID id) override;
+    bool HasShaderUniform(GpuShaderProgramID program, const char* name) override;
 
     void BindShaderProgram(GpuShaderProgramID id) override;
     void BindVertexInput(GpuVertexInputID id) override;
@@ -130,6 +131,8 @@ private:
     void BindTexture2D(uint32 slot, uint32 texture);
     void InvalidateTexture2D(uint32 texture);
     int32 GetUniformLocation(const char* name);
+    //缓存指定程序的 uniform 位置
+    int32 GetUniformLocation(GpuShaderProgramID program, const char* name);
 
     //按容量分配或覆盖顶点缓冲存储
     bool WriteVertexBuffer(uint32 buffer, const void* data, usize size, usize capacity);
