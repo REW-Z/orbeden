@@ -4,6 +4,7 @@
 #include "Editor/EditorGizmoHandles.h"
 #include "Editor/EditorSceneGizmos.h"
 #include "Editor/EditorSelectionOutline.h"
+#include "Editor/EditorSceneWireframe.h"
 #include "Editor/EditorLayoutState.h"
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderScene.h"
@@ -34,7 +35,7 @@ public:
 };
 
 //编辑器背景场景，负责相机、选择、轮廓和 Handles 绘制。
-class EditorScene : public ICameraRenderExtension
+class EditorScene : public ICameraRenderExtension, public IRenderOverlay
 {
 private:
     static EditorScene* activeScene;
@@ -75,6 +76,9 @@ private:
     EditorGizmoHandles gizmoHandles;
     EditorSceneGizmos componentGizmos;
     EditorSelectionOutline selectionOutline;
+    EditorSceneWireframe wireframe;
+    RenderCamera wireframeCamera;
+    GpuTextureID wireframeTexture;
     bool gizmoViewValid = false;
     bool gizmoToolbarHovered = false;
     vector3 gizmoCameraRight = { 1.0f, 0.0f, 0.0f };
@@ -114,6 +118,15 @@ public:
 
     /// <summary>显示包含选中描边的场景视口图像并叠加 Handles。</summary>
     void DrawSceneView();
+
+    //在场景渲染帧内绘制独立线框视口
+    void DrawOverlay() override;
+
+    //获取场景显示模式
+    EditorSceneRenderMode GetRenderMode() const { return cameraState.renderMode; }
+
+    //设置场景显示模式
+    void SetRenderMode(EditorSceneRenderMode value);
 
     /// <summary>获取本帧场景视口矩形与像素尺寸。</summary>
     const EditorSceneViewState& GetSceneViewState() const;
@@ -209,6 +222,9 @@ public:
     bool IsMouseOverSceneView() const;
 
 private:
+    //获取当前视口使用的相机数据
+    const RenderCamera* GetViewCamera(const RenderScene& scene) const;
+
     //创建或修复编辑器观察相机。
     void CreateEditorCamera(World& world);
 

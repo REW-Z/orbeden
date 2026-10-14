@@ -1323,6 +1323,21 @@ namespace
         if (scene) scene->DrawSceneView();
     }
 
+    //读取场景显示模式
+    int32 ORBEDEN_NATIVE_CALL EditorGuiGetSceneRenderMode()
+    {
+        EditorScene* scene = EditorScene::GetActiveScene();
+        return scene ? static_cast<int32>(scene->GetRenderMode()) : 0;
+    }
+
+    //设置场景显示模式
+    void ORBEDEN_NATIVE_CALL EditorGuiSetSceneRenderMode(int32 mode)
+    {
+        if (mode < 0 || mode > 2) return;
+        if (EditorScene* scene = EditorScene::GetActiveScene())
+            scene->SetRenderMode(static_cast<EditorSceneRenderMode>(mode));
+    }
+
     //解析场景视口当前鼠标位置的投放点
     uint8 ORBEDEN_NATIVE_CALL EditorGuiResolveSceneDropPosition(EditorGizmoVector3* position)
     {
@@ -1986,6 +2001,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.beginPanelContent = reinterpret_cast<void*>(&EditorGuiBeginPanelContent);
     api.endPanelContent = reinterpret_cast<void*>(&EditorGuiEndPanelContent);
     api.drawSceneView = reinterpret_cast<void*>(&EditorGuiDrawSceneView);
+    api.getSceneRenderMode = reinterpret_cast<void*>(&EditorGuiGetSceneRenderMode);
+    api.setSceneRenderMode = reinterpret_cast<void*>(&EditorGuiSetSceneRenderMode);
     api.resolveSceneDropPosition = reinterpret_cast<void*>(&EditorGuiResolveSceneDropPosition);
     api.referenceField = reinterpret_cast<void*>(&EditorGuiReferenceField);
     api.assetTile = reinterpret_cast<void*>(&EditorGuiAssetTile);

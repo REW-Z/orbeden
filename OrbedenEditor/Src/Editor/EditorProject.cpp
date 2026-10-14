@@ -307,6 +307,9 @@ namespace
                 //focus 是后加的属性，旧项目里没有，走结构体默认值
                 layout.editorCamera.focusDistance = GetFloatAttribute(cameraToken, "focus",
                     layout.editorCamera.focusDistance);
+                std::string renderMode = GetAttribute(cameraToken, "renderMode");
+                if (renderMode == "Wireframe") layout.editorCamera.renderMode = EditorSceneRenderMode::Wireframe;
+                else if (renderMode == "ShadedWireframe") layout.editorCamera.renderMode = EditorSceneRenderMode::ShadedWireframe;
             }
         }
     }
@@ -497,6 +500,8 @@ namespace
                 << "\" yaw=\"" << ToFloatText(layout.editorCamera.yaw)
                 << "\" pitch=\"" << ToFloatText(layout.editorCamera.pitch)
                 << "\" focus=\"" << ToFloatText(layout.editorCamera.focusDistance)
+                << "\" renderMode=\"" << (layout.editorCamera.renderMode == EditorSceneRenderMode::Wireframe ? "Wireframe"
+                    : layout.editorCamera.renderMode == EditorSceneRenderMode::ShadedWireframe ? "ShadedWireframe" : "Shaded")
                 << "\" />\n";
         }
 

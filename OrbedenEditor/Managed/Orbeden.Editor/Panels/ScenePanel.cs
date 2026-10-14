@@ -7,14 +7,30 @@ namespace OrbedenEditor;
 /// 相关约定见 OrbedenEditor/Src/Editor/EditorScene.cpp 顶部说明。</remarks>
 internal sealed class ScenePanel : EditorPanel
 {
+    private static readonly string[] RenderModeNames = ["Shaded", "Wireframe", "Shaded + Wireframe"];
+
     public override EditorPanelInfo Info => new("scene", "Scene", true,
         new vector2(960, 540), PanelDockPlacement.Center, 0.6f, 50, false, false);
 
     //绘制原生场景视口并接收预制体投放
     protected override void DrawContent(EditorPanelContext context)
     {
+        DrawDisplayMode();
         EditorGUI.DrawSceneView();
         DrawDropTarget();
+    }
+
+    //绘制场景显示模式
+    private static void DrawDisplayMode()
+    {
+        int mode = NativeEditorGUI.GetSceneRenderMode();
+        if (!EditorGUI.BeginCombo("##scene_display_mode", RenderModeNames[mode])) return;
+        try
+        {
+            for (int index = 0; index < RenderModeNames.Length; ++index)
+                if (EditorGUI.Selectable(RenderModeNames[index], index == mode)) NativeEditorGUI.SetSceneRenderMode(index);
+        }
+        finally { EditorGUI.EndCombo(); }
     }
 
     //按鼠标命中位置实例化场景投放的预制体

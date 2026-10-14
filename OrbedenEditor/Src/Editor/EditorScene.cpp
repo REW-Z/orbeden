@@ -28,6 +28,8 @@
 #include "Runtime/Object/Transform.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Runtime/World.h"
+#include "Runtime/DisplaySettings.h"
+#include "Scripting/ScriptSystem.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -532,7 +534,11 @@ EditorScene::EditorScene(Application& application, ManagedEditorBridge& bridge)
 EditorScene::~EditorScene()
 {
     if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        renderSystem->SetRenderOverlay(app.GetSystem<ScriptSystem>());
         renderSystem->SetCameraRenderExtension(cameraEns, nullptr);
+    }
+    wireframe.ReleaseResources();
     ReleaseSceneViewTarget();
     if (activeScene == this) activeScene = nullptr;
 }
@@ -541,6 +547,14 @@ EditorScene::~EditorScene()
 void EditorScene::RenderCameraEffects(RenderBackend& backend, GpuResourceManager& gpuResourceManager,
     World& world, const RenderCamera& camera, const VisibleSet& visibleSet)
 {
+    if (GetRenderMode() == EditorSceneRenderMode::ShadedWireframe)
+    {
+        if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+        {
+            RenderCamera overlayCamera = camera;
+            wireframe.Render(app.GetWindow(), world, *renderSystem, overlayCamera, true);
+        }
+    }
     UpdateSelectionHighlights(world);
     selectionOutline.Render(backend, gpuResourceManager, camera, visibleSet);
 }
@@ -549,6 +563,26 @@ void EditorScene::RenderCameraEffects(RenderBackend& backend, GpuResourceManager
 void EditorScene::ReleaseResources(RenderBackend& backend)
 {
     selectionOutline.ReleaseResources(backend);
+    wireframe.ReleaseResources();
+    wireframeTexture = {};
+    wireframeCamera = {};
+}
+
+//设置场景显示模式
+void EditorScene::SetRenderMode(EditorSceneRenderMode value)
+{
+    if (value > EditorSceneRenderMode::ShadedWireframe || cameraState.renderMode == value) return;
+    cameraState.renderMode = value;
+    if (IWindow* window = app.GetWindow()) window->WakeEventLoop();
+}
+
+//获取当前视口使用的相机数据
+const RenderCamera* EditorScene::GetViewCamera(const RenderScene& scene) const
+{
+    if (GetRenderMode() == EditorSceneRenderMode::Wireframe && wireframeTexture.IsValid()) return &wireframeCamera;
+    for (const RenderCamera& camera : scene.cameras)
+        if (camera.ens == cameraEns) return &camera;
+    return nullptr;
 }
 
 //获取当前活动的编辑器场景。
@@ -577,6 +611,14 @@ void EditorScene::ReleaseSceneViewTarget()
 //按场景视口可见性维护离屏目标并绑定编辑相机。
 void EditorScene::RefreshSceneViewTarget(World& world)
 {
+    //绑定本帧的线框或脚本覆盖层
+    if (RenderSystem* renderSystem = app.GetSystem<RenderSystem>())
+    {
+        IRenderOverlay* overlay = !playModeActive && GetRenderMode() == EditorSceneRenderMode::Wireframe
+            ? static_cast<IRenderOverlay*>(this) : app.GetSystem<ScriptSystem>();
+        renderSystem->SetRenderOverlay(overlay);
+    }
+
     //本帧记录只对下一次刷新有效，未绘制即视为不可见
     int32 requestedWidth = !playModeActive && sceneView.visible ? std::max(sceneView.pixelWidth, 1) : 0;
     int32 requestedHeight = !playModeActive && sceneView.visible ? std::max(sceneView.pixelHeight, 1) : 0;
@@ -617,7 +659,11 @@ void EditorScene::RefreshSceneViewTarget(World& world)
     //把编辑相机绑定到当前离屏目标，无目标时回到主窗口帧缓冲
     Ens* editorCamera = world.GetEns(cameraEns);
     Camera* camera = editorCamera ? editorCamera->GetComponent<Camera>() : nullptr;
-    if (camera) camera->renderTargetId = sceneTarget.id;
+    if (camera)
+    {
+        camera->renderTargetId = sceneTarget.id;
+        camera->viewportWidth = GetRenderMode() == EditorSceneRenderMode::Wireframe ? 0.0f : 1.0f;
+    }
 }
 
 //显示包含选中描边的场景视口图像并叠加 Handles。
@@ -644,13 +690,43 @@ void EditorScene::DrawSceneView()
     sceneView.visible = true;
 
     //离屏纹理原点在左下角，交换 V 轴与 ImGui 的左上角原点对齐
-    if (sceneTargetTexture.id != 0)
-        ImGui::Image(static_cast<ImTextureID>(sceneTargetTexture.id), viewSize,
+    GpuTextureID texture = GetRenderMode() == EditorSceneRenderMode::Wireframe && wireframeTexture.IsValid()
+        ? wireframeTexture : sceneTargetTexture;
+    if (texture.id != 0)
+        ImGui::Image(static_cast<ImTextureID>(texture.id), viewSize,
             ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
     else
         ImGui::Dummy(viewSize);
 
     DrawSceneOverlay();
+}
+
+//在场景渲染帧内绘制独立线框视口
+void EditorScene::DrawOverlay()
+{
+    if (ScriptSystem* scripts = app.GetSystem<ScriptSystem>()) scripts->DrawOverlay();
+    if (GetRenderMode() != EditorSceneRenderMode::Wireframe || playModeActive
+        || sceneTargetWidth <= 0 || sceneTargetHeight <= 0) return;
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    if (!renderSystem) return;
+    for (const RenderCamera& camera : renderSystem->GetCurrentScene().cameras)
+    {
+        if (camera.ens != cameraEns) continue;
+        wireframeCamera = camera;
+        wireframeCamera.viewportX = 0;
+        wireframeCamera.viewportY = 0;
+        wireframeCamera.viewportWidth = sceneTargetWidth;
+        wireframeCamera.viewportHeight = sceneTargetHeight;
+        wireframeCamera.projectionMatrix = RenderMath::Perspective(camera.fieldOfView,
+            static_cast<float32>(sceneTargetWidth) / sceneTargetHeight, camera.nearPlane, camera.farPlane);
+        wireframeCamera.viewProjectionMatrix = RenderMath::Mul(wireframeCamera.projectionMatrix, camera.viewMatrix);
+        wireframeCamera.viewFrustum = RenderMath::BuildFrustum(wireframeCamera.viewProjectionMatrix);
+        wireframeCamera.exposure = camera.camera && camera.camera->overrideExposure
+            ? camera.camera->exposure : DisplaySettings::GetExposure();
+        UpdateSelectionHighlights(app.GetWorld());
+        wireframeTexture = wireframe.Render(app.GetWindow(), app.GetWorld(), *renderSystem, wireframeCamera, false);
+        break;
+    }
 }
 
 //在场景视口叠加托管 Gizmos 与 Handles。
@@ -1275,15 +1351,7 @@ bool EditorScene::RaycastScene(const RenderScene& scene, const vector2& screenPo
     hitEns = EnsId();
     hitPosition = { 0.0f, 0.0f, 0.0f };
 
-    const RenderCamera* camera = nullptr;
-    for (const RenderCamera& candidate : scene.cameras)
-    {
-        if (candidate.ens == cameraEns)
-        {
-            camera = &candidate;
-            break;
-        }
-    }
+    const RenderCamera* camera = GetViewCamera(scene);
     if (!camera || !camera->renderTargetId.IsValid() || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return false;
     if (sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return false;
 
@@ -1507,6 +1575,7 @@ void EditorScene::UpdateSelectionHighlights(World& world)
     items.reserve(highlights.size());
     for (const auto& entry : highlights) items.push_back(entry.second);
     selectionOutline.SetHighlights(items);
+    wireframe.SetHighlights(items);
 }
 
 //绘制托管 Scene Handles。
@@ -1551,15 +1620,7 @@ void EditorScene::PrepareGizmoView(const RenderScene& scene)
     if (sceneView.renderSize.x <= 0.0f || sceneView.renderSize.y <= 0.0f) return;
 
     //渲染这张离屏图用的就是这份矩阵，手柄位置与命中才能和画面像素严格对齐
-    const RenderCamera* camera = nullptr;
-    for (const RenderCamera& candidate : scene.cameras)
-    {
-        if (candidate.ens == cameraEns)
-        {
-            camera = &candidate;
-            break;
-        }
-    }
+    const RenderCamera* camera = GetViewCamera(scene);
     //与 RaycastScene 用同一组门槛，保证画得出手柄就一定拾取得到
     if (!camera || !camera->renderTargetId.IsValid()
         || camera->viewportWidth <= 0 || camera->viewportHeight <= 0) return;

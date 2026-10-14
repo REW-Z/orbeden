@@ -38,7 +38,15 @@ public:
 //默认值取默认相机位置到原点的距离，开局的手感才和取景对得上。
 constexpr float32 DefaultEditorCameraFocusDistance = 9.2f;
 
-//编辑器观察相机布局状态。
+//场景面板显示模式
+enum class EditorSceneRenderMode : uint32
+{
+    Shaded = 0,
+    Wireframe = 1,
+    ShadedWireframe = 2,
+};
+
+//编辑器观察相机布局状态
 struct EditorCameraState
 {
 public:
@@ -48,6 +56,7 @@ public:
     float32 pitch = -22.0f;
     //相机到焦点的距离，缺失时用默认值：旧项目没有这个属性，读了也不会跑偏
     float32 focusDistance = DefaultEditorCameraFocusDistance;
+    EditorSceneRenderMode renderMode = EditorSceneRenderMode::Shaded;
 };
 
 //编辑器项目布局状态。

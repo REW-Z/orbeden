@@ -97,6 +97,8 @@ internal unsafe struct EditorGuiNativeApi
     //把光标挪到屏幕坐标，下一个条目就落在那里
     public delegate* unmanaged[Cdecl]<vector2*, void> SetCursorScreenPos;
     public delegate* unmanaged[Cdecl]<color*, byte*, int, void> TextWrappedColored;
+    public delegate* unmanaged[Cdecl]<int> GetSceneRenderMode;
+    public delegate* unmanaged[Cdecl]<int, void> SetSceneRenderMode;
 }
 #pragma warning restore CS0649
 
@@ -111,6 +113,15 @@ internal struct EditorRectPrimitive
 
 internal static unsafe class NativeEditorGUI
 {
+    //读取场景显示模式
+    internal static int GetSceneRenderMode() => initialized && api.GetSceneRenderMode != null ? api.GetSceneRenderMode() : 0;
+
+    //设置场景显示模式
+    internal static void SetSceneRenderMode(int mode)
+    {
+        if (initialized && api.SetSceneRenderMode != null) api.SetSceneRenderMode(mode);
+    }
+
     /// <summary>建立自定义控件身份空间。</summary>
     internal static void PushId(string id)
     {
