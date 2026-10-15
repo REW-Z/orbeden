@@ -49,6 +49,7 @@ using var generationLock = new GenerationLock(outputDir);
 
 //扫描所有 Runtime 头文件；先把清单定下来，它同时是增量指纹的一部分。
 var headerFiles = Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDirectories)
+    .Where(path => !gameModule || Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar)[0] != "RawContent")
     .Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar).Any(part => part is "ThirdParty" or "Build" or "Generated" or "obj" or "bin" or "Managed" or "Aot" or "Legacy" or ".vs"))
     .OrderBy(path => path, StringComparer.Ordinal)
     .ToList();

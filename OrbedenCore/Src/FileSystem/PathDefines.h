@@ -8,6 +8,8 @@
 class PathDefines
 {
 public:
+    static constexpr const char* RawContentFolder = "RawContent";
+
     //设置当前内容根目录
     static void SetContentRoot(const std::string& root);
 
@@ -22,4 +24,7 @@ public:
 
     //把内容相对路径解析为磁盘路径
     static std::string GetContentFilePath(const std::string& path);
+
+    //判断内容根相对路径是否属于原始内容目录
+    static bool IsRawContentPath(const std::string& path);
 };

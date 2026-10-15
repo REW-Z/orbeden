@@ -79,8 +79,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
         return NormalizeKey(relative);
     }
 
-    //递归枚举内容根下的资源源文件。内容根之外按定义不是用户内容，不需要排除表；
-    //只跳过以点开头的目录（版本库、编辑器缓存等）。
+    //递归枚举资源源文件，跳过原始内容和隐藏目录
     private static IEnumerable<string> EnumerateSourceFiles(string contentRoot)
     {
         Stack<string> pending = new();
@@ -90,6 +89,7 @@ internal sealed class EditorAssetCatalog : IObjectFieldAssetProvider
             string directory = pending.Pop();
             foreach (string child in Directory.EnumerateDirectories(directory))
             {
+                if (PathDefines.IsRawContentPath(Path.GetRelativePath(contentRoot, child))) continue;
                 if (Path.GetFileName(child).StartsWith('.') || (File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
                 pending.Push(child);
             }

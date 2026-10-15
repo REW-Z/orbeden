@@ -7,6 +7,15 @@ namespace Orbeden;
 /// <summary>当前内容路径定义访问。</summary>
 public static partial class PathDefines
 {
+    public const string RawContentFolder = "RawContent";
+
+    /// <summary>判断内容根相对路径是否属于原始内容目录。</summary>
+    public static bool IsRawContentPath(string path)
+    {
+        int separator = path.IndexOfAny(['/', '\\']);
+        return path.AsSpan(0, separator < 0 ? path.Length : separator).SequenceEqual(RawContentFolder);
+    }
+
     /// <summary>当前内容根目录。</summary>
     public static string ContentRoot => GetContentRoot();
 

@@ -47,8 +47,8 @@
     内容根之外按定义不含用户脚本。
   -->
   <ItemGroup>
-    <Compile Include="$(OrbedenContentRoot)/**/*.cs" Exclude="$(OrbedenContentRoot)/**/Editor/**/*.cs" />
-    <OrbedenEditorSource Include="$(OrbedenContentRoot)/**/Editor/**/*.cs" />
+    <Compile Include="$(OrbedenContentRoot)/**/*.cs" Exclude="$(OrbedenContentRoot)/**/Editor/**/*.cs;$(OrbedenContentRoot)/RawContent/**" />
+    <OrbedenEditorSource Include="$(OrbedenContentRoot)/**/Editor/**/*.cs" Exclude="$(OrbedenContentRoot)/RawContent/**" />
     <!--
       NativeAOT 要求导出层编译进游戏程序集本身：被引用程序集中的 UnmanagedCallersOnly 不会被导出。
       由 SDK 提供、直接引用，因此项目内不再保留这个文件。

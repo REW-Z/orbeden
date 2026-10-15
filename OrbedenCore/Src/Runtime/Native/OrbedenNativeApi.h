@@ -38,7 +38,7 @@ struct ScriptBindApi
 struct OrbedenNativeApi
 {
 public:
-    uint32 abiVersion = 3;
+    uint32 abiVersion = 4;
     uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;
@@ -56,6 +56,7 @@ public:
     //尾部追加：RetainedGUI 函数表访问入口，唯一不动既有槽位的扩表方式。
     //RetainedGUI 函数表地址；托管侧按 RetainedGuiApi* 直接解引用。
     void* GetRetainedGuiApi = nullptr;
+    FileSystemBind FileSystem;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create(::World* world);
@@ -64,6 +65,6 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 17);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 113);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 114);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
 static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 59);

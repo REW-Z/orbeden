@@ -99,6 +99,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<color*, byte*, int, void> TextWrappedColored;
     public delegate* unmanaged[Cdecl]<int> GetSceneRenderMode;
     public delegate* unmanaged[Cdecl]<int, void> SetSceneRenderMode;
+    public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> BeginSearchableCombo;
+    public delegate* unmanaged[Cdecl]<byte*, int, int, byte, byte, byte> SearchableComboItem;
 }
 #pragma warning restore CS0649
 
@@ -710,6 +712,34 @@ internal static unsafe class NativeEditorGUI
         if (!initialized || api.Selectable == null) return false;
         byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         fixed (byte* pointer = bytes) return api.Selectable(pointer, bytes.Length, selected ? (byte)1 : (byte)0) != 0;
+    }
+
+    //开始搜索下拉框并读取搜索词和键盘操作
+    internal static SearchableComboAction BeginSearchableCombo(string label, string preview, ref string search)
+    {
+        if (!initialized || api.BeginSearchableCombo == null) return SearchableComboAction.None;
+        byte[] labelBytes = InteropText.EncodeUtf8(label);
+        byte[] previewBytes = InteropText.EncodeUtf8(preview);
+        byte[] buffer = new byte[Math.Max(4096, InteropText.GetUtf8ByteCount(search) + 1)];
+        InteropText.WriteUtf8Terminated(search, buffer);
+        SearchableComboAction action;
+        fixed (byte* labelPointer = labelBytes)
+        fixed (byte* previewPointer = previewBytes)
+        fixed (byte* searchPointer = buffer)
+            action = (SearchableComboAction)api.BeginSearchableCombo(labelPointer, labelBytes.Length,
+                previewPointer, previewBytes.Length, searchPointer, buffer.Length);
+        if ((action & (SearchableComboAction.Opened | SearchableComboAction.SearchChanged)) != 0)
+            search = InteropText.ReadUtf8Terminated(buffer);
+        return action;
+    }
+
+    //绘制搜索结果项并滚动到当前选择
+    internal static bool SearchableComboItem(string label, int index, bool selected, bool scrollToSelection)
+    {
+        byte[] bytes = InteropText.EncodeUtf8(label);
+        fixed (byte* pointer = bytes)
+            return api.SearchableComboItem(pointer, bytes.Length, index,
+                selected ? (byte)1 : (byte)0, scrollToSelection ? (byte)1 : (byte)0) != 0;
     }
 
     //绘制布尔输入框

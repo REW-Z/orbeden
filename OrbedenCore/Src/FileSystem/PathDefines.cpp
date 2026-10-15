@@ -67,3 +67,9 @@ std::string PathDefines::GetContentFilePath(const std::string& path)
 
     return ToCleanPath(InteropText::PathFromUtf8(runtime.contentRoot) / filePath);
 }
+
+//判断内容根相对路径是否属于原始内容目录
+bool PathDefines::IsRawContentPath(const std::string& path)
+{
+    return path.substr(0, path.find_first_of("/\\")) == RawContentFolder;
+}

@@ -63,6 +63,11 @@ namespace
             for (std::filesystem::recursive_directory_iterator iterator(root, error), end; !error && iterator != end; iterator.increment(error))
             {
                 const std::filesystem::directory_entry& entry = *iterator;
+                if (PathDefines::IsRawContentPath(InteropText::PathToUtf8(entry.path().lexically_relative(root))))
+                {
+                    if (entry.is_directory()) iterator.disable_recursion_pending();
+                    continue;
+                }
                 if (!entry.is_regular_file()) continue;
                 if (InteropText::PathToUtf8(entry.path().filename()) != fileName) continue;
 

@@ -302,7 +302,7 @@ namespace
         //内容根之外都是构建生成物或工程文件，时间戳变化不代表脚本源变化。
         static const List<std::string> excludedPrefixes =
         {
-            "Build/", "Lib/", "Legacy/", ".vs/", ".git/",
+            "Build/", "Lib/", "Legacy/", ".vs/", ".git/", "Content/RawContent/",
         };
         return HasNewerScriptSource(InteropText::PathFromUtf8(projectRoot), assemblyTime, excludedPrefixes);
     }
@@ -1659,6 +1659,11 @@ bool EditorSystem::SyncPlayerPackage(const std::string& packageRoot, std::string
     //先删干净，避免上一次打包残留的产物留在包里。
     std::error_code code;
     std::filesystem::remove_all(packageContentRoot, code);
+    if (code)
+    {
+        error = "Package content directory could not be cleared: " + code.message();
+        return false;
+    }
     std::filesystem::copy(cacheRoot, packageContentRoot,
         std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing, code);
     if (code)

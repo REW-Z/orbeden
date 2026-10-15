@@ -47,10 +47,11 @@ internal static class EditorAssetInspection
     }
 
     /// <summary>扩展名只用于选择导入器，不推断子资源。</summary>
-    internal static bool CanInspect(string path) => Path.GetExtension(path).ToLowerInvariant() is
+    internal static bool CanInspect(string path) => !PathDefines.IsRawContentPath(EditorAssetCatalog.Instance.ToResourceKey(path))
+        && Path.GetExtension(path).ToLowerInvariant() is (
         ".obj" or ".orbmat" or ".orbsky" or ".gltf" or ".glb" or ".png" or ".jpg" or ".jpeg" or ".tga" or ".bmp"
         or ".orbshader" or ".glsl" or ".orbo" or ".ttf" or ".otf" or ".ttc"
-        or ".txt" or ".xml" or ".json" or ".csv" or ".yaml" or ".fnt" or ".bytes";
+        or ".txt" or ".xml" or ".json" or ".csv" or ".yaml" or ".fnt" or ".bytes");
 
     /// <summary>读取轻量清单；大文件导入由独立进程完成。</summary>
     internal static Result Get(string path)
@@ -89,7 +90,7 @@ internal static class EditorAssetInspection
     };
 
     /// <summary>该源文件是否有可编辑的导入设置。</summary>
-    internal static bool HasImportSettings(string path) => GetImportSettingsKind(path) != ImportSettingsKind.None;
+    internal static bool HasImportSettings(string path) => CanInspect(path) && GetImportSettingsKind(path) != ImportSettingsKind.None;
 
     //设置草稿：数值控件拖动期间会连续返回值，不能每帧触发一次重新导入
     private static string settingsSource = string.Empty;

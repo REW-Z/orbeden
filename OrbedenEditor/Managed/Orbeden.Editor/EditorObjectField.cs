@@ -107,7 +107,7 @@ internal static class EditorObjectField
         else if (property.Kind == InteropValueKind.Object)
         {
             property.Value.TryGet(out objectId);
-            Orbeden.Object? reference = Orbeden.Object.FindLoadedObject(objectId);
+            Orbeden.Object? reference = NativeBindingRuntime.Wrap<Orbeden.Object>(objectId);
             key = reference?.ResourceKey ?? (objectId == 0 ? string.Empty : "Missing Object " + objectId);
         }
         else property.Value.TryGet(out key);

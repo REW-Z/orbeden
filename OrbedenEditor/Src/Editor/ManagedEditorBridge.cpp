@@ -287,18 +287,18 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 178);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 180);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 89);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 105);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 114);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 116);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 135);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 160);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 165);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 173);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 175);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 177);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 91);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 107);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 116);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 118);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 137);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 162);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 167);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 175);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 177);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 179);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1676,6 +1676,9 @@ namespace
         if (!component || !component->GetEns())
         {
             const std::string& objectKey = object->GetInstanceId().GetPath();
+            //显示存活的程序生成对象
+            if (Object::IsRuntimeInstancePath(objectKey))
+                return CopyUtf8(objectKey, buffer, capacity);
             std::string sourceKey = ResourceManager::GetSourceKey(objectKey);
             if (!FileSystem::Exist(PathDefines::GetContentFilePath(sourceKey))
                 && !FileSystem::Exist(CookedAssetSerializer::GetBlobPath(objectKey))

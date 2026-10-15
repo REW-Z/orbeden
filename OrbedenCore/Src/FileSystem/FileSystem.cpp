@@ -1,5 +1,6 @@
 #include "FileSystem.h"
 
+#include "FileSystem/PathDefines.h"
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
@@ -330,6 +331,45 @@ std::string FileSystem::LoadText(std::string path)
     FileText file;
     LoadFileText(path, &file);
     return file.content;
+}
+
+//按 RawContent 相对路径读取原始字节
+bool FileSystem::ReadRawContent(const std::string& path, List<uint8>& content)
+{
+    content.clear();
+    std::filesystem::path relative = InteropText::PathFromUtf8(path).lexically_normal();
+    if (!PathDefines::HasContentRoot() || path.empty() || path.find('\0') != std::string::npos
+        || relative.has_root_path() || *relative.begin() == "..")
+    {
+        LogFileError("Invalid RawContent relative path", path);
+        return false;
+    }
+
+    //读取原始文件
+    std::filesystem::path filePath = InteropText::PathFromUtf8(PathDefines::GetContentRoot())
+        / PathDefines::RawContentFolder / relative;
+    std::error_code code;
+    if (!std::filesystem::is_regular_file(filePath, code))
+    {
+        LogFileError("RawContent file was not found", path);
+        return false;
+    }
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    std::streamoff length = file ? file.tellg() : std::streampos(-1);
+    if (length < 0 || length > std::numeric_limits<int32>::max())
+    {
+        LogFileError("RawContent file could not be read or is too large", path);
+        return false;
+    }
+    content.resize(static_cast<usize>(length));
+    file.seekg(0, std::ios::beg);
+    if (length > 0 && !file.read(reinterpret_cast<char*>(content.data()), length))
+    {
+        content.clear();
+        LogFileError("Read RawContent file failed", path);
+        return false;
+    }
+    return true;
 }
 
 //写入对象二进制数据

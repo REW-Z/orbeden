@@ -306,7 +306,7 @@ internal static class EditorAssetCache
             new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }))
         {
             string source = metadata[..^MetadataExtension.Length];
-            if (!File.Exists(source)) continue;
+            if (PathDefines.IsRawContentPath(GetRelativePath(source)) || !File.Exists(source)) continue;
             foreach ((string name, string value) in ReadSettings(source))
                 if (name != "prebakeCharacters") text.Append('\n').Append(GetRelativePath(source)).Append('\t').Append(name).Append('\t').Append(value);
         }
@@ -578,6 +578,7 @@ internal static class EditorAssetCache
         {
             //伴生文件与源文件同名同址，只多一个后缀
             string source = metadata[..^MetadataExtension.Length];
+            if (PathDefines.IsRawContentPath(GetRelativePath(source))) continue;
             if (!File.Exists(source)) DeleteAsset(source);
         }
     }

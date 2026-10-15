@@ -1,6 +1,8 @@
 #include "Runtime/Native/RuntimeComponentBinds.h"
 
 #include "FileSystem/PathDefines.h"
+#include "FileSystem/FileSystem.h"
+#include "Runtime/Native/NativeBindings.h"
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
 #include "Runtime/Object/RigidBody.h"
@@ -117,6 +119,24 @@ namespace
         return CopyText(PathDefines::GetContentFilePath(ReadUtf8Text(path, length)), buffer, bufferSize);
     }
 
+    //读取原始内容并传回独立字节缓冲
+    uint8 ORBEDEN_NATIVE_CALL NativeFileSystemReadRawContent(const uint8* path, int32 length, NativeBindingBuffer* buffer)
+    {
+        if (!buffer) return 0;
+        *buffer = {};
+        try
+        {
+            List<uint8> content;
+            if (!FileSystem::ReadRawContent(ReadUtf8Text(path, length), content)) return 0;
+            *buffer = NativeBindings::AllocateBuffer(content);
+            return 1;
+        }
+        catch (const std::exception&)
+        {
+            return 0;
+        }
+    }
+
     //判断 Ens 是否有效。
     uint8 ORBEDEN_NATIVE_CALL NativeEnsIsAlive(EnsId ens)
     {
@@ -209,6 +229,14 @@ PathDefinesBind PathDefinesBind::Create()
     PathDefinesBind bind;
     bind.GetContentRoot = reinterpret_cast<void*>(&NativePathDefinesGetContentRoot);
     bind.GetContentFilePath = reinterpret_cast<void*>(&NativePathDefinesGetContentFilePath);
+    return bind;
+}
+
+//创建 FileSystem 函数表
+FileSystemBind FileSystemBind::Create()
+{
+    FileSystemBind bind;
+    bind.ReadRawContent = reinterpret_cast<void*>(&NativeFileSystemReadRawContent);
     return bind;
 }
 

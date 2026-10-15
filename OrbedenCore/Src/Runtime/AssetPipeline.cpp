@@ -1971,6 +1971,7 @@ std::string AssetPipeline::GetImportedObjectKey(const std::string& sourceKey, Ty
 //按主文件路径判断可用导入器
 AssetImporter AssetPipeline::SelectImporter(const std::string& sourceKey)
 {
+    if (PathDefines::IsRawContentPath(ResourceManager::GetSourceKey(sourceKey))) return AssetImporter::None;
     std::string extension = GetLowerExtension(sourceKey);
 
     if (extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".tga" || extension == ".bmp")

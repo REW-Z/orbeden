@@ -93,7 +93,8 @@ internal sealed class InspectorPanel : EditorPanel
     private bool addChoicesDirty = true;
 
     private readonly List<Type> scriptTypes = [];
-    private string componentSearch = string.Empty;
+    private SearchableComboState componentPicker = new();
+    private string[] addChoiceLabels = [];
     private string status = "Game assembly is not loaded.";
     private static string propertyError = string.Empty;
     private sealed class ListState
@@ -273,7 +274,8 @@ internal sealed class InspectorPanel : EditorPanel
         addChoicesDirty = true;
         scriptTypes.Clear();
         EditorEnumOptions.Clear();
-        componentSearch = string.Empty;
+        componentPicker = new();
+        addChoiceLabels = [];
         status = "Game assembly is not loaded.";
     }
 
@@ -1203,6 +1205,7 @@ internal sealed class InspectorPanel : EditorPanel
                     type));
             }
             choices.Sort((left, right) => string.Compare(left.Label, right.Label, StringComparison.Ordinal));
+            addChoiceLabels = choices.Select(choice => choice.Label).ToArray();
 
             addChoicesGeneration = generation;
             addChoicesDirty = false;
@@ -1214,24 +1217,9 @@ internal sealed class InspectorPanel : EditorPanel
             return;
         }
 
-        if (!EditorGUI.BeginCombo("Component##add_component", "Add Component")) return;
-        try
-        {
-            EditorGUI.InputText("Search##add_component_search", ref componentSearch);
-            foreach (ComponentAddChoice choice in choices)
-            {
-                if (!string.IsNullOrWhiteSpace(componentSearch)
-                    && choice.Label.IndexOf(componentSearch, StringComparison.OrdinalIgnoreCase) < 0)
-                    continue;
-                if (!EditorGUI.Selectable($"{choice.Label}##add_{choice.IsManaged}_{choice.TypeName}")) continue;
-                AddComponentGroup(selection, choice);
-                componentSearch = string.Empty;
-            }
-        }
-        finally
-        {
-            EditorGUI.EndCombo();
-        }
+        if (EditorGUI.SearchableCombo("Component##add_component", "Add Component", addChoiceLabels,
+            componentPicker, out int selectedIndex))
+            AddComponentGroup(selection, choices[selectedIndex]);
     }
 
     //脚本改了字段（比如新增 public 字段）并重新 Build Game C# 之后，已有宿主里还没有这些字段：

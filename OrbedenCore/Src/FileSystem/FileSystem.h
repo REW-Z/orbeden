@@ -187,6 +187,9 @@ public:
     //读取文本内容
     static std::string LoadText(std::string path);
 
+    //按 RawContent 相对路径读取原始字节，失败返回假并清空输出
+    static bool ReadRawContent(const std::string& path, List<uint8>& content);
+
     //写入对象二进制数据
     static void WriteObject(std::string path, void* objPtr, usize size);
 

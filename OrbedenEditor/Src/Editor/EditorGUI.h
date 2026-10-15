@@ -109,11 +109,13 @@ public:
     void* textWrappedColored = nullptr;
     void* getSceneRenderMode = nullptr;
     void* setSceneRenderMode = nullptr;
+    void* beginSearchableCombo = nullptr;
+    void* searchableComboItem = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 88);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 90);
 
 //Editor ImGui 绑定层
 class EditorGUI

@@ -1,3 +1,5 @@
+using Orbeden;
+
 namespace OrbedenEditor;
 
 /// <summary>把脚本类型解析到它在内容根里的源文件：托管脚本找 .cs，原生脚本找 .h/.cpp。</summary>
@@ -85,6 +87,7 @@ internal static class EditorScriptFiles
             {
                 foreach (string child in Directory.EnumerateDirectories(directory))
                 {
+                    if (PathDefines.IsRawContentPath(Path.GetRelativePath(root, child))) continue;
                     if (Path.GetFileName(child).StartsWith('.')) continue;
                     pending.Push(child);
                 }

@@ -536,18 +536,43 @@ MyGame/
 
 **所有 `Object` 派生资源的 stringid 都是内容根相对路径**：`Meshes/cube.obj` 对应 `<项目根>/Content/Meshes/cube.obj`。`startupWorld` 同样相对内容根。Key 里没有 `Resource/` 这类前缀特判，解析就是一次路径拼接。
 
+### 原始内容 RawContent
+
+`Content/RawContent/` 是可选的原始内容目录，名称固定，只有内容根下这一层具有特殊含义。打包时将目录及全部文件按原有结构和字节复制到发布包的 `Content/RawContent/`，包含空文件、空目录、隐藏文件及任意扩展名；不生成资源对象，不执行 Cook，也不收集为 C#／C++ 脚本或绑定输入。目录不存在时无需创建。每次打包重建 Player 暂存目录并镜像到发布包，因此删除的原始文件不会残留在下次发布中。
+
+编辑器与 Player 使用相同的相对路径，从当前内容根的 RawContent 读取文件：
+
+```csharp
+if (Orbeden.FileSystem.ReadRawContent("Data/settings.json", out byte[] content))
+{
+    //使用原始字节
+}
+```
+
+```cpp
+List<uint8> content;
+if (FileSystem::ReadRawContent("Data/settings.json", content))
+{
+    //使用原始字节
+}
+```
+
+参数相对 `RawContent/`，不包含该目录前缀；支持子目录，拒绝绝对路径及越出目录的 `..` 路径。空文件返回成功和空数据；不存在、不可读、路径无效或超过 2 GiB 限制的文件返回失败并清空输出。内容不做文本解码、换行转换或资源反序列化。
+
 ### 位置无关
 
-脚本、资源、场景放在内容根内任何目录都能生效，新增文件不需要改工程：
+除 `RawContent/` 外，脚本、资源、场景放在内容根内任何目录都能生效，新增文件不需要改工程：
 
 - **C#**：`Directory.Build.props` 关掉 SDK 默认编译项通配，由 SDK 的 `Orbeden.Bindings.targets` 收集 `Content/**/*.cs`。
 - **C++**：`Orbeden.Native.targets` 收集 `Content/**/*.cpp`；Player 的 `OrbedenGame.vcxproj` 同样。
 - **场景**：`startupWorld` 与 `EditorProject::OpenWorld` 都以内容根为基准，在 Project 面板双击 `.world` 即可切换。
 - **内置 Shader**：`shadow_depth.orbshader` 与 `skybox.orbshader` 由引擎**按文件名在内容根内查找**（结果缓存），不要求固定位置；新建项目铺到 `Content/Builtin/Shaders/`，之后由 Dev 面板的 `Reset Builtin` 管理。同名多份时引擎取字典序靠前的一份并打一条告警，所以同一内容根内只应保留一份。
 
-内容根之外按定义不含用户内容，因此 glob 不需要排除表。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
+内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 81：新增可选的 `Content/RawContent/`，打包时原样复制全部内容并排除资源导入、Cook、脚本编译和绑定扫描。C++ 与 C# 同名提供 `FileSystem.ReadRawContent(path, out content)`，读取相对 RawContent 的原始字节。引擎原生 API 主版本升至 4，文件系统函数表追加在尾部。需重建 Core、Editor，通过 Update Project 同步 SDK、`Lib/Orbeden.Bindings.targets` 引用的 SDK 工具和 `Orbeden.Native.targets`，重建游戏托管／原生模块与 Player；重新 Build Player。无需重置 Builtin／Examples，无场景迁移；RawContent 由开发者自行创建。
 
 版本 80：相机渲染扩展可替换场景几何绘制，后续选择描边、调试线、UI 与颜色输出继续使用正常相机流程。编辑器线框复用主渲染后端、GPU 网格和可见集合，移除独立资源管理器、描边网格副本、逐三角形 CPU 展开和独立输出目标；相同子网格使用实例批次，粒子与拖尾不绘制线框。切回 Shaded 时释放线框 Shader、实例缓冲与临时数据。需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player；Builtin／Examples 无变更，无场景迁移。
 

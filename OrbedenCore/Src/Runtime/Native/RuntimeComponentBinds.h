@@ -33,6 +33,15 @@ public:
     static PathDefinesBind Create();
 };
 
+//FileSystem 原生函数表
+struct FileSystemBind
+{
+    void* ReadRawContent = nullptr;
+
+    //创建 FileSystem 函数表
+    static FileSystemBind Create();
+};
+
 //Ens 原生函数表。
 struct EnsBind
 {
@@ -57,4 +66,5 @@ public:
 #pragma pack(pop)
 ORBEDEN_ASSERT_NATIVE_API_TABLE(WorldBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(PathDefinesBind, 2);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(FileSystemBind, 1);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(EnsBind, 11);

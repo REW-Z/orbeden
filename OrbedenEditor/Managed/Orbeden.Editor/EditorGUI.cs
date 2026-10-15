@@ -90,6 +90,11 @@ public static class EditorGUI
     /// <summary>结束下拉选择框。</summary>
     public static void EndCombo() => NativeEditorGUI.EndCombo();
 
+    /// <summary>绘制可搜索下拉框，确认后返回原选项下标；每个控件独立持有状态。</summary>
+    public static bool SearchableCombo(string label, string preview, IReadOnlyList<string> options,
+        SearchableComboState state, out int selectedIndex)
+        => state.Draw(label, preview, options, out selectedIndex);
+
     /// <summary>绘制选择项。</summary>
     public static bool Selectable(string label, bool selected = false) => NativeEditorGUI.Selectable(label, selected);
 

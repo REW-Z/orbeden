@@ -100,11 +100,11 @@ internal static class ProjectAssetOperations
         {
             if (Directory.Exists(sourcePath))
             {
-                FileSystem.DeleteDirectory(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
             }
             else
             {
-                FileSystem.DeleteFile(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(sourcePath, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
             }
 
             EditorAssetsNative.RemapWorldKeys(plan.OldResourceKey, string.Empty, plan.Prefix);
@@ -815,6 +815,7 @@ internal sealed class ReferenceRewritePlan
     {
         //生成目录里的文件不是用户内容，重写它们的引用没有意义。
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return false;
+        if (PathDefines.IsRawContentPath(Path.GetRelativePath(contentRoot, path))) return false;
         string lower = path.ToLowerInvariant();
         return lower.EndsWith(".world")
             || lower.EndsWith(".prefab")

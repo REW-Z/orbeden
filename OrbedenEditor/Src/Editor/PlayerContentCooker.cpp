@@ -42,6 +42,11 @@ namespace
         for (std::filesystem::recursive_directory_iterator iterator(contentRoot, error), end; !error && iterator != end; iterator.increment(error))
         {
             const std::filesystem::directory_entry& entry = *iterator;
+            if (PathDefines::IsRawContentPath(InteropText::PathToUtf8(entry.path().lexically_relative(contentRoot))))
+            {
+                if (entry.is_directory()) iterator.disable_recursion_pending();
+                continue;
+            }
             if (!entry.is_regular_file()) continue;
 
             keys.push_back(ResourceManager::ToResourceKey(InteropText::PathToUtf8(entry.path().lexically_relative(contentRoot))));
@@ -90,6 +95,29 @@ namespace
             return false;
         }
 
+        return true;
+    }
+
+    //复制可选的原始内容目录
+    bool CopyRawContent(const std::filesystem::path& contentRoot, const std::filesystem::path& outputRoot, std::string& error)
+    {
+        std::filesystem::path source = contentRoot / PathDefines::RawContentFolder;
+        std::error_code code;
+        bool exists = std::filesystem::exists(source, code);
+        if (!code && !exists) return true;
+        if (!code && std::filesystem::is_directory(source, code))
+            std::filesystem::copy(source, outputRoot / PathDefines::RawContentFolder,
+                std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing, code);
+        else
+        {
+            error = "RawContent is not an accessible directory: " + InteropText::PathToUtf8(source);
+            return false;
+        }
+        if (code)
+        {
+            error = "RawContent could not be copied while packaging: " + code.message();
+            return false;
+        }
         return true;
     }
 
@@ -145,10 +173,22 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
 
     std::error_code code;
     std::filesystem::remove_all(outputRoot, code);
+    if (code)
+    {
+        error = "Player content staging directory could not be cleared: " + code.message();
+        return false;
+    }
     std::filesystem::create_directories(outputRoot, code);
+    if (code)
+    {
+        error = "Player content staging directory could not be created: " + code.message();
+        return false;
+    }
 
     //导入靠内容根解析 Key；调用方传进来的就是 Editor 正在用的那个内容根。
     PathDefines::SetContentRoot(sourceContentRoot);
+
+    if (!CopyRawContent(contentRoot, outputRoot, error)) return false;
 
     List<std::string> contentKeys;
     CollectContentKeys(contentRoot, contentKeys);

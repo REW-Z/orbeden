@@ -3,7 +3,7 @@
 #include <string>
 
 //把内容根内可导入的资源 cook 成打包用二进制，并复制场景与生成清单。
-//只有可导入的源文件会被导入；无导入器的文件（脚本、源码、MTL、包含文件）不进入产物。
+//RawContent 原样复制；其余内容只导入支持的资源并复制场景
 class PlayerContentCooker
 {
 public:

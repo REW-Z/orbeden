@@ -68,8 +68,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Src\game_main.cpp" />
-    <!--内容根下的游戏 C++ 源码全部进 Player；GameModule.cpp 由 Editor 的模块工程负责，不在这里编译。-->
-    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" />
+    <!--收集 RawContent 之外的游戏 C++ 源码；GameModule.cpp 由 Editor 模块工程编译。-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**" />
     <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
     <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\*.cpp">
       <ObjectFileName>$(IntDir)GameGenerated\%(Filename).obj</ObjectFileName>
@@ -77,7 +77,7 @@
     <ClInclude Include="Src\*.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" />
+    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" Exclude="$(OrbedenContentRoot)\RawContent\**" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <!--Player 不感知 Core 源码：SDK 缺少静态库时直接失败，不触发 Core 源码编译。-->

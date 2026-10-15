@@ -230,6 +230,7 @@ OrbedenEngineNativeApi OrbedenEngineNativeApi::Create()
     OrbedenEngineNativeApi api;
     api.World = WorldBind::Create();
     api.PathDefines = PathDefinesBind::Create();
+    api.FileSystem = FileSystemBind::Create();
     api.Ens = EnsBind::Create();
     api.Object = ObjectBind::Create();
     api.ObjectExtension = ObjectExtensionBind::Create();
@@ -274,6 +275,7 @@ OrbedenNativeApi OrbedenNativeApi::Create(::World* world)
     api.Gui = RuntimeGuiBridge::GetApi();
     api.World = WorldBind::Create();
     api.PathDefines = PathDefinesBind::Create();
+    api.FileSystem = FileSystemBind::Create();
     api.Ens = EnsBind::Create();
     api.Object = ObjectBind::Create();
     api.GuiExtension = RuntimeGuiBridge::GetExtensionApi();

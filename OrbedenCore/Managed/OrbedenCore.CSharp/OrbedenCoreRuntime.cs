@@ -20,6 +20,7 @@ internal unsafe struct OrbedenEngineNativeApi
     public RuntimeGuiAdvancedApi GuiAdvanced;
     public RuntimeGuiCurveApi GuiCurve;
     public IntPtr GetRetainedGuiApi;
+    public FileSystemBindApi FileSystem;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -41,6 +42,7 @@ internal unsafe struct OrbedenNativeApi
     public RuntimeGuiDrawApi GuiDraw;
     public RuntimeGuiCurveApi GuiCurve;
     public IntPtr GetRetainedGuiApi;
+    public FileSystemBindApi FileSystem;
 }
 #pragma warning restore CS0649
 
@@ -92,6 +94,7 @@ public static unsafe class OrbedenCoreRuntime
         {
             Ens.InitializeWorldNativeApi(default);
             PathDefines.InitializeNativeApi(default);
+            FileSystem.InitializeNativeApi(default);
             Ens.InitializeEnsNativeApi(default);
             Object.InitializeNativeApi(default, default);
             NativeBindingRuntime.Initialize(default);
@@ -113,6 +116,7 @@ public static unsafe class OrbedenCoreRuntime
     {
         Ens.InitializeWorldNativeApi(api.World);
         PathDefines.InitializeNativeApi(api.PathDefines);
+        FileSystem.InitializeNativeApi(api.FileSystem);
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
@@ -125,6 +129,7 @@ public static unsafe class OrbedenCoreRuntime
     {
         Ens.InitializeWorldNativeApi(api.World);
         PathDefines.InitializeNativeApi(api.PathDefines);
+        FileSystem.InitializeNativeApi(api.FileSystem);
         Ens.InitializeEnsNativeApi(api.Ens);
         Object.InitializeNativeApi(api.Object, api.ObjectExtension);
         NativeBindingRuntime.Initialize(api.Bindings);
@@ -134,7 +139,7 @@ public static unsafe class OrbedenCoreRuntime
     private static void ValidateNativeApiHeader(IntPtr pointer, int expectedSize)
     {
         uint* header = (uint*)pointer;
-        if (header[0] != 3 || header[1] != expectedSize)
+        if (header[0] != 4 || header[1] != expectedSize)
             throw new TypeLoadException("Native API version or layout mismatch. Rebuild Core, Editor and game modules together.");
     }
 
@@ -153,6 +158,7 @@ public static unsafe class OrbedenCoreRuntime
 
         ValidateFunctionTable<WorldBindApi>(nameof(WorldBindApi), 7);
         ValidateFunctionTable<PathDefinesBindApi>(nameof(PathDefinesBindApi), 2);
+        ValidateFunctionTable<FileSystemBindApi>(nameof(FileSystemBindApi), 1);
         ValidateFunctionTable<EnsBindApi>(nameof(EnsBindApi), 11);
         ValidateFunctionTable<ObjectBindApi>(nameof(ObjectBindApi), 6);
         ValidateFunctionTable<NativeBindingsApi>(nameof(NativeBindingsApi), 10);
@@ -165,8 +171,8 @@ public static unsafe class OrbedenCoreRuntime
         ValidateFunctionTable<NativeScriptInteropApi>(nameof(NativeScriptInteropApi), 9);
         ValidateFunctionTable<ManagedScriptInteropApi>(nameof(ManagedScriptInteropApi), 11);
         ValidateFunctionTable<ScriptBindApi>(nameof(ScriptBindApi), 17);
-        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 72 * IntPtr.Size);
-        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 113 * IntPtr.Size);
+        ValidateSize<OrbedenEngineNativeApi>(nameof(OrbedenEngineNativeApi), 8 + 73 * IntPtr.Size);
+        ValidateSize<OrbedenNativeApi>(nameof(OrbedenNativeApi), 8 + 114 * IntPtr.Size);
 
         nativeAbiValidated = true;
     }

@@ -12640,6 +12640,36 @@
           ]
         },
         {
+          "Name": "ReadRawContent",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "path",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "content",
+              "Type": "List\u003Cuint8\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "WriteObject",
           "Type": "void",
           "Access": "public",
@@ -12763,6 +12793,60 @@
           "Value": "2"
         }
       ]
+    },
+    {
+      "Name": "FileSystemBind",
+      "QualifiedName": "FileSystemBind",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Runtime/Native/RuntimeComponentBinds.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "ReadRawContent",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Create",
+          "Type": "FileSystemBind",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
     },
     {
       "Name": "FileText",
@@ -32329,6 +32413,25 @@
           "Parameters": []
         },
         {
+          "Name": "FileSystem",
+          "Type": "FileSystemBind",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Create",
           "Type": "OrbedenEngineNativeApi",
           "Access": "public",
@@ -32651,6 +32754,25 @@
         {
           "Name": "GetRetainedGuiApi",
           "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "FileSystem",
+          "Type": "FileSystemBind",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -41414,6 +41536,25 @@
       "IsFinal": false,
       "Members": [
         {
+          "Name": "RawContentFolder",
+          "Type": "const char*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "SetContentRoot",
           "Type": "void",
           "Access": "public",
@@ -41498,6 +41639,31 @@
         {
           "Name": "GetContentFilePath",
           "Type": "std::string",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "path",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IsRawContentPath",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": true,

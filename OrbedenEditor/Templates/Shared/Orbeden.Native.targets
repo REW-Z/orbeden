@@ -21,13 +21,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <!--内容根下的 C++ 源文件全部进入模块：代码放在内容根内任何目录都生效，不需要排除表。-->
-    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" />
+    <!--收集原始内容目录之外的 C++ 源文件-->
+    <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**" />
     <!--导出层由 SDK 提供、直接引用，不在项目内保留副本；生成文件要到构建期才产生，必须用字面路径列出。-->
     <ClCompile Include="$(OrbedenSdkRoot)\Shared\GameModule.cpp" />
     <ClCompile Include="$(OrbedenGeneratedDir)\Reflection.Generated.cpp" />
     <ClCompile Include="$(OrbedenGeneratedDir)\Bindings.Generated.cpp" />
-    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" />
+    <ClInclude Include="$(OrbedenContentRoot)\**\*.h" Exclude="$(OrbedenContentRoot)\RawContent\**" />
   </ItemGroup>
   <Target Name="GenerateGameBindings" BeforeTargets="ClCompile">
     <Error Condition="'$(OrbedenSdkRoot)' == ''" Text="Orbeden SDK was not found. Build OrbedenCore first." />

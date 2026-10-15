@@ -631,6 +631,89 @@ namespace
         return ImGui::Selectable(value.c_str(), selected != 0) ? 1 : 0;
     }
 
+    enum SearchableComboAction : int32
+    {
+        SearchableComboOpen = 1,
+        SearchableComboOpened = 2,
+        SearchableComboSearchChanged = 4,
+        SearchableComboUp = 8,
+        SearchableComboDown = 16,
+        SearchableComboConfirm = 32,
+    };
+
+    //读取搜索框中的上下方向键
+    int32 SearchableComboSearchCallback(ImGuiInputTextCallbackData* data)
+    {
+        int32& action = *static_cast<int32*>(data->UserData);
+        if (data->EventKey == ImGuiKey_UpArrow) action |= SearchableComboUp;
+        if (data->EventKey == ImGuiKey_DownArrow) action |= SearchableComboDown;
+        return 0;
+    }
+
+    //开始搜索下拉框并捕获搜索和选择操作
+    int32 ORBEDEN_NATIVE_CALL EditorGuiBeginSearchableCombo(const uint8* label, int32 labelLength,
+        const uint8* preview, int32 previewLength, uint8* buffer, int32 bufferSize)
+    {
+        if (!buffer || bufferSize <= 0) return 0;
+        std::string labelText = ReadUtf8Text(label, labelLength);
+        std::string previewText = ReadUtf8Text(preview, previewLength);
+        const std::string control = BeginPropertyRow(labelText);
+        if (!control.empty()) ImGui::SetNextItemWidth(-FLT_MIN);
+        if (!ImGui::BeginCombo(control.empty() ? labelText.c_str() : control.c_str(),
+            previewText.c_str(), ImGuiComboFlags_HeightLarge)) return 0;
+
+        //初始化搜索框和输入焦点
+        int32 action = SearchableComboOpen;
+        if (ImGui::IsWindowAppearing())
+        {
+            action |= SearchableComboOpened;
+            buffer[0] = 0;
+            ImGui::SetKeyboardFocusHere();
+        }
+        buffer[bufferSize - 1] = 0;
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::InputTextWithHint("##search", "Search", reinterpret_cast<char*>(buffer),
+            static_cast<usize>(bufferSize), ImGuiInputTextFlags_CallbackHistory,
+            SearchableComboSearchCallback, &action))
+            action |= SearchableComboSearchChanged;
+
+        //读取结果列表中的键盘操作
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows))
+        {
+            if (!ImGui::IsItemActive())
+            {
+                if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) action |= SearchableComboUp;
+                if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) action |= SearchableComboDown;
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false))
+            {
+                action |= SearchableComboConfirm;
+                ImGui::SetKeyboardFocusHere(-1);
+            }
+        }
+
+        //建立固定搜索框下方的滚动列表
+        float32 rowHeight = ImGui::GetTextLineHeightWithSpacing();
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, rowHeight), ImVec2(FLT_MAX, rowHeight * 8.0f));
+        ImGui::BeginChild("##search_results", ImVec2(0.0f, 0.0f), ImGuiChildFlags_AutoResizeY,
+            ImGuiWindowFlags_NoNavInputs);
+        return action;
+    }
+
+    //绘制搜索结果项并保持搜索框焦点
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiSearchableComboItem(const uint8* label, int32 length,
+        int32 index, uint8 selected, uint8 scrollToSelection)
+    {
+        std::string text = ReadUtf8Text(label, length);
+        ImGui::PushID(index);
+        ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
+        bool clicked = ImGui::Selectable(text.c_str(), selected != 0, ImGuiSelectableFlags_NoAutoClosePopups);
+        ImGui::PopItemFlag();
+        if (scrollToSelection) ImGui::SetScrollHereY();
+        ImGui::PopID();
+        return clicked ? 1 : 0;
+    }
+
     //绘制布尔输入框
     uint8 ORBEDEN_NATIVE_CALL EditorGuiCheckbox(const uint8* label, int32 length, uint8* value)
     {
@@ -2042,6 +2125,8 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.drawTexture = reinterpret_cast<void*>(&EditorGuiDrawTexture);
     api.setCursorScreenPos = reinterpret_cast<void*>(&EditorGuiSetCursorScreenPos);
     api.textWrappedColored = reinterpret_cast<void*>(&EditorGuiTextWrappedColored);
+    api.beginSearchableCombo = reinterpret_cast<void*>(&EditorGuiBeginSearchableCombo);
+    api.searchableComboItem = reinterpret_cast<void*>(&EditorGuiSearchableComboItem);
     return api;
 }
 

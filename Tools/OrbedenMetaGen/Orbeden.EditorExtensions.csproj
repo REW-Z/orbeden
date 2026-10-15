@@ -11,7 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Using Include="$(GameBindingNamespace)" Alias="Native" Condition="'$(GameBindingNamespace)' != ''" />
-    <Compile Include="$(GameContentRoot)/**/Editor/**/*.cs" />
+    <Compile Include="$(GameContentRoot)/**/Editor/**/*.cs" Exclude="$(GameContentRoot)/RawContent/**" />
     <Reference Include="$(GameAssemblyName)"><HintPath>$(GameAssemblyPath)</HintPath><Private>false</Private></Reference>
     <Reference Include="OrbedenCore.CSharp"><HintPath>$(GameRuntimeAssembly)</HintPath><Private>false</Private></Reference>
     <Reference Include="Orbeden.Editor"><HintPath>$(GameEditorAssembly)</HintPath><Private>false</Private></Reference>
