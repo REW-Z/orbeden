@@ -1,13 +1,36 @@
 #include "Rendering/GeometryExpander.h"
 
 #include "Rendering/RenderMath.h"
+#include "Profiler/Profiler.h"
 #include "Runtime/Object/Mesh.h"
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 
 namespace
 {
+    //保存索引区间的引用顺序与局部索引
+    struct IndexTopology
+    {
+        List<uint32> referencedVertices;
+        List<uint32> localIndices;
+        uint32 triangleVertexCount = 0;
+        bool valid = false;
+    };
+
+    //按网格身份与内容版本管理拓扑，不持有网格所有权
+    struct MeshTopologyCache
+    {
+        const Mesh* mesh = nullptr;
+        uint64 contentVersion = 0;
+        usize vertexCount = 0;
+        usize indexCount = 0;
+        std::unordered_map<uint64, IndexTopology> ranges;
+    };
+
+    std::unordered_map<int32, MeshTopologyCache> meshTopologies;
+
     //顶点映射的工作区。stamp 记世代号表示「本世代已映射」，localIndex 记该顶点在本次追加里的局部编号。
     //渲染是单线程的，复用这两张表可以避免每个绘制项都分配；推进世代号代替逐次清零。
     List<uint32> vertexStamp;
@@ -34,16 +57,58 @@ namespace
         return vertexStamp.data();
     }
 
-    //索引区间是否落在网格范围内，且每个索引都指向存在的顶点
-    bool IsIndexRangeValid(const Mesh& mesh, usize start, usize count)
+    //读取或重建一个索引区间的引用顶点和局部索引
+    const IndexTopology& GetOrBuildTopology(const Mesh& mesh, uint32 indexStart, uint32 indexCount)
     {
-        if (count == 0 || start > mesh.indices.size() || count > mesh.indices.size() - start) return false;
-        for (usize index = start; index < start + count; ++index)
+        PROFILE("Render/Geometry/GetTopology");
+        MeshTopologyCache& cache = meshTopologies[mesh.GetObjectId()];
+        uint64 version = mesh.GetContentVersion();
+        if (cache.mesh != &mesh || cache.contentVersion != version
+            || cache.vertexCount != mesh.vertices.size() || cache.indexCount != mesh.indices.size())
         {
-            if (mesh.indices[index] >= mesh.vertices.size()) return false;
+            cache.ranges.clear();
+            cache.mesh = &mesh;
+            cache.contentVersion = version;
+            cache.vertexCount = mesh.vertices.size();
+            cache.indexCount = mesh.indices.size();
         }
 
-        return true;
+        uint64 key = (static_cast<uint64>(indexStart) << 32) | indexCount;
+        auto [entry, inserted] = cache.ranges.try_emplace(key);
+        IndexTopology& topology = entry->second;
+        if (!inserted) return topology;
+
+        PROFILE("Render/Geometry/BuildTopology");
+        usize start = indexStart;
+        usize count = indexCount;
+        if (count == 0 || start > mesh.indices.size() || count > mesh.indices.size() - start)
+            return topology;
+
+        topology.referencedVertices.reserve(std::min(count, mesh.vertices.size()));
+        topology.localIndices.reserve(count);
+        usize triangleIndexCount = count - count % 3;
+        uint32* stamp = PrepareVertexMapping(mesh.vertices.size());
+        for (usize offset = 0; offset < count; ++offset)
+        {
+            uint32 vertex = mesh.indices[start + offset];
+            if (vertex >= mesh.vertices.size())
+            {
+                topology.referencedVertices.clear();
+                topology.localIndices.clear();
+                topology.triangleVertexCount = 0;
+                return topology;
+            }
+            if (stamp[vertex] != vertexGeneration)
+            {
+                stamp[vertex] = vertexGeneration;
+                vertexLocalIndex[vertex] = static_cast<uint32>(topology.referencedVertices.size());
+                topology.referencedVertices.push_back(vertex);
+                if (offset < triangleIndexCount) ++topology.triangleVertexCount;
+            }
+            topology.localIndices.push_back(vertexLocalIndex[vertex]);
+        }
+        topology.valid = true;
+        return topology;
     }
 
     //矩阵是否有限且可逆；奇异矩阵会让法线失去意义
@@ -122,68 +187,113 @@ namespace
     }
 }
 
+void GeometryExpander::ReleaseDestroyedMeshCaches()
+{
+    PROFILE("Render/Geometry/ReleaseCaches");
+    for (auto iterator = meshTopologies.begin(); iterator != meshTopologies.end();)
+    {
+        if (Object::FindObjectById(iterator->first) != iterator->second.mesh)
+        {
+            iterator = meshTopologies.erase(iterator);
+            continue;
+        }
+
+        //清理子网格区间调整后留下的旧映射
+        MeshTopologyCache& cache = iterator->second;
+        if (cache.ranges.size() > cache.mesh->subMeshes.size())
+        {
+            for (auto range = cache.ranges.begin(); range != cache.ranges.end();)
+            {
+                bool present = std::any_of(cache.mesh->subMeshes.begin(), cache.mesh->subMeshes.end(),
+                    [&](const SubMesh& subMesh)
+                    {
+                        uint64 key = (static_cast<uint64>(subMesh.indexStart) << 32) | subMesh.indexCount;
+                        return key == range->first;
+                    });
+                if (!present) range = cache.ranges.erase(range);
+                else ++range;
+            }
+        }
+        ++iterator;
+    }
+}
+
+void GeometryExpander::ClearCaches()
+{
+    meshTopologies.clear();
+    vertexStamp.clear();
+    vertexLocalIndex.clear();
+    vertexGeneration = 0;
+}
+
 uint32 GeometryExpander::CountReferencedVertices(const Mesh& mesh, uint32 indexStart, uint32 indexCount)
 {
+    PROFILE("Render/Geometry/CountReferencedVertices");
     usize start = std::min<usize>(indexStart, mesh.indices.size());
     usize count = std::min<usize>(indexCount, mesh.indices.size() - start);
-    if (!IsIndexRangeValid(mesh, start, count)) return 0;
-
-    //只统计被索引引用到的顶点，重复引用只算一次
-    uint32* stamp = PrepareVertexMapping(mesh.vertices.size());
-    uint32 referenced = 0;
-    for (usize index = start; index < start + count; ++index)
-    {
-        usize vertex = mesh.indices[index];
-        if (stamp[vertex] == vertexGeneration) continue;
-        stamp[vertex] = vertexGeneration;
-        ++referenced;
-    }
-
-    return referenced;
+    const IndexTopology& topology = GetOrBuildTopology(mesh, static_cast<uint32>(start), static_cast<uint32>(count));
+    return topology.valid ? static_cast<uint32>(topology.referencedVertices.size()) : 0;
 }
 
 bool GeometryExpander::AppendExpandedMesh(const Mesh& mesh, uint32 subMeshIndex, const matrix4x4& model,
     const color& tint, const color& uvRect, List<GpuExpandedVertex>& vertices, List<uint32>& indices)
 {
+    PROFILE("Render/Geometry/AppendMesh");
     if (subMeshIndex >= mesh.subMeshes.size()) return false;
     if (!IsTransformInvertible(model)) return false;
 
     const SubMesh& subMesh = mesh.subMeshes[subMeshIndex];
-    usize start = static_cast<usize>(subMesh.indexStart);
-    usize count = static_cast<usize>(subMesh.indexCount);
-    if (!IsIndexRangeValid(mesh, start, count)) return false;
-
-    usize indexCount = count - (count % 3);
-    if (indexCount == 0) return false;
-
-    //失败时回到调用前的长度，不留下部分追加数据
-    usize vertexBase = vertices.size();
-    usize indexBase = indices.size();
-
-    //每个被引用顶点只变换一次，索引重定位到本次追加的局部编号
-    uint32* stamp = PrepareVertexMapping(mesh.vertices.size());
-    for (usize index = start; index < start + indexCount; ++index)
+    const IndexTopology* topology;
     {
-        usize vertex = mesh.indices[index];
-        if (stamp[vertex] == vertexGeneration) continue;
-        stamp[vertex] = vertexGeneration;
-
-        GpuExpandedVertex expanded = BuildExpandedVertex(mesh, vertex, model, tint, uvRect);
-        if (!std::isfinite(expanded.position[0]) || !std::isfinite(expanded.position[1]) || !std::isfinite(expanded.position[2]))
-        {
-            vertices.resize(vertexBase);
-            indices.resize(indexBase);
-            return false;
-        }
-
-        vertexLocalIndex[vertex] = static_cast<uint32>(vertices.size() - vertexBase);
-        vertices.push_back(expanded);
+        PROFILE("Render/Geometry/ValidateIndices");
+        topology = &GetOrBuildTopology(mesh, subMesh.indexStart, subMesh.indexCount);
+        if (!topology->valid) return false;
     }
 
-    //重定位：标记表覆盖的正是同一段索引，直接按顶点号取局部编号
-    for (usize index = start; index < start + indexCount; ++index)
+    usize indexCount = topology->localIndices.size() - topology->localIndices.size() % 3;
+    if (indexCount == 0) return false;
+
+    //准备追加空间并保留失败回滚位置
+    usize vertexBase = vertices.size();
+    usize indexBase = indices.size();
     {
-        indices.push_back(static_cast<uint32>(vertexBase) + vertexLocalIndex[mesh.indices[index]]);
+        PROFILE("Render/Geometry/ReserveBuffers");
+        usize requiredVertices = vertexBase + topology->triangleVertexCount;
+        usize requiredIndices = indexBase + indexCount;
+        if (requiredVertices > vertices.capacity())
+            vertices.reserve(std::max(requiredVertices, vertices.capacity() * 2));
+        if (requiredIndices > indices.capacity())
+            indices.reserve(std::max(requiredIndices, indices.capacity() * 2));
+    }
+
+    //按首次引用顺序转换每个顶点
+    {
+        PROFILE("Render/Geometry/TransformVertices");
+        const uint32* sourceVertices = topology->referencedVertices.data();
+        for (usize vertex = 0; vertex < topology->triangleVertexCount; ++vertex)
+        {
+            GpuExpandedVertex expanded = BuildExpandedVertex(mesh, sourceVertices[vertex], model, tint, uvRect);
+            if (!std::isfinite(expanded.position[0]) || !std::isfinite(expanded.position[1]) || !std::isfinite(expanded.position[2]))
+            {
+                vertices.resize(vertexBase);
+                indices.resize(indexBase);
+                return false;
+            }
+            vertices.push_back(expanded);
+        }
+    }
+
+    //批量复制局部索引并应用本次追加的顶点偏移
+    {
+        PROFILE("Render/Geometry/RemapIndices");
+        const uint32* localIndices = topology->localIndices.data();
+        indices.insert(indices.end(), localIndices, localIndices + indexCount);
+        if (vertexBase != 0)
+        {
+            uint32* output = indices.data() + indexBase;
+            uint32 offset = static_cast<uint32>(vertexBase);
+            for (usize index = 0; index < indexCount; ++index) output[index] += offset;
+        }
     }
 
     return true;

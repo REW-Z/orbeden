@@ -117,6 +117,8 @@ private:
 
     //本相机的拖尾段几何，按 DrawItem::sourceIndex 索引
     List<ParticleTrailSegment> trailSegments;
+    //回收已提交展开块的顶点和索引容量
+    List<ExpandedGeometryChunk> expandedChunkPool;
 
 public:
     /// <summary>保存后端引用；四边形延迟创建。</summary>

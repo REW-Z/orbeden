@@ -1,6 +1,7 @@
 #include "Rendering/DrawBatchBuilder.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/ColorSpace.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
@@ -386,23 +387,26 @@ void DrawBatchBuilder::BuildCameraItems(const RenderScene& scene, const VisibleS
 //按队列、距离与稳定键排序
 void DrawBatchBuilder::SortItems(List<DrawItem>& items)
 {
-    std::stable_sort(items.begin(), items.end(), [](const DrawItem& a, const DrawItem& b)
     {
-        if (a.queue != b.queue) return static_cast<uint32>(a.queue) < static_cast<uint32>(b.queue);
-
-        float32 distanceA = GetSortableDistance(a.cameraDistance);
-        float32 distanceB = GetSortableDistance(b.cameraDistance);
-        if (a.queue != DrawQueue::Opaque)
+        PROFILE("Render/Batching/Sort/ByDistance");
+        std::stable_sort(items.begin(), items.end(), [](const DrawItem& a, const DrawItem& b)
         {
-            //透明与折射远到近
-            if (distanceA != distanceB) return distanceA > distanceB;
-            return StableKeyLess(a, b);
-        }
+            if (a.queue != b.queue) return static_cast<uint32>(a.queue) < static_cast<uint32>(b.queue);
 
-        //不透明近到远
-        if (distanceA != distanceB) return distanceA < distanceB;
-        return StableKeyLess(a, b);
-    });
+            float32 distanceA = GetSortableDistance(a.cameraDistance);
+            float32 distanceB = GetSortableDistance(b.cameraDistance);
+            if (a.queue != DrawQueue::Opaque)
+            {
+                //透明与折射远到近
+                if (distanceA != distanceB) return distanceA > distanceB;
+                return StableKeyLess(a, b);
+            }
+
+            //不透明近到远
+            if (distanceA != distanceB) return distanceA < distanceB;
+            return StableKeyLess(a, b);
+        });
+    }
 
     //在不透明的连续可重排区间内按批次键分组，区间顺序由组内最小距离决定
     List<DrawItem> groupScratch;
@@ -415,11 +419,15 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
             continue;
         }
 
+        PROFILE("Render/Batching/Sort/Regroup");
         usize end = begin;
         while (end < items.size() && items[end].reorderable) ++end;
 
-        groupScratch.assign(items.begin() + static_cast<isize>(begin), items.begin() + static_cast<isize>(end));
-        std::stable_sort(groupScratch.begin(), groupScratch.end(), KeyContentLess);
+        {
+            PROFILE("Render/Batching/Sort/ByKey");
+            groupScratch.assign(items.begin() + static_cast<isize>(begin), items.begin() + static_cast<isize>(end));
+            std::stable_sort(groupScratch.begin(), groupScratch.end(), KeyContentLess);
+        }
 
         //同键项在排序后必然相邻，按组收集下标再按组重排
         struct Group
@@ -430,26 +438,30 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         List<Group> groups;
         List<List<uint32>> groupMembers;
         usize cursor = 0;
-        while (cursor < groupScratch.size())
         {
-            usize groupEnd = cursor;
-            while (groupEnd < groupScratch.size() && KeyContentEqual(groupScratch[cursor], groupScratch[groupEnd])) ++groupEnd;
-
-            Group group;
-            group.first = groupScratch[cursor];
-            List<uint32> members;
-            for (usize member = cursor; member < groupEnd; ++member)
+            PROFILE("Render/Batching/Sort/BuildGroups");
+            while (cursor < groupScratch.size())
             {
-                group.minDistance = std::min(group.minDistance, GetSortableDistance(groupScratch[member].cameraDistance));
-                members.push_back(static_cast<uint32>(member));
-            }
+                usize groupEnd = cursor;
+                while (groupEnd < groupScratch.size() && KeyContentEqual(groupScratch[cursor], groupScratch[groupEnd])) ++groupEnd;
 
-            groups.push_back(group);
-            groupMembers.push_back(std::move(members));
-            cursor = groupEnd;
+                Group group;
+                group.first = groupScratch[cursor];
+                List<uint32> members;
+                for (usize member = cursor; member < groupEnd; ++member)
+                {
+                    group.minDistance = std::min(group.minDistance, GetSortableDistance(groupScratch[member].cameraDistance));
+                    members.push_back(static_cast<uint32>(member));
+                }
+
+                groups.push_back(group);
+                groupMembers.push_back(std::move(members));
+                cursor = groupEnd;
+            }
         }
 
         //组内按距离升序，组间按最小距离后稳定键
+        PROFILE("Render/Batching/Sort/ReorderGroups");
         List<uint32> order(groups.size());
         for (uint32 index = 0; index < order.size(); ++index) order[index] = index;
         std::stable_sort(order.begin(), order.end(), [&](uint32 a, uint32 b)

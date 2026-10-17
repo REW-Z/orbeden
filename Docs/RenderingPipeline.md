@@ -232,6 +232,10 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 - 所有 Refraction 物体共享同一份冻结快照，因此不会互相折射。
 - 普通透明物体全部先于 Refraction 绘制；前景透明物体可能被后绘制的折射表面覆盖。
 
+普通 Pass 的 CPU 采样在 `Render/BuildBatches` 下区分绘制项收集、排序与批次生成；排序细分距离排序、按键分组、组构造与组重排。绘制按 Uniform／Instanced／Expanded／TrailInstanced 分别记录；展开路径细分旧块清理、GPU 网格查询、引用顶点统计、索引校验、顶点转换、索引重排、块提交、状态绑定与 Draw 提交。保留既有 `Render/ExpandParticles` 与 `Render/UploadInstances` 名称用于前后比较，前者也包含普通网格动态展开。采样粒度为批次或网格阶段，不逐顶点采样；仍是 CPU 作用域时间，不是 GPU 时间查询。每帧事件容量为 4096，帧历史仍为 1024，原生事件数组约 160 MiB。
+
+展开几何的引用计数与局部索引按 Mesh 内容版本缓存，首次构建同时完成索引校验和首次引用顺序映射；网格修改后重建，销毁后清理，资源失效时清空。每批仍重新计算世界空间顶点；位置、法线、切线公式和 32 位索引格式不变。索引输出直接复制缓存映射并加顶点基址，已消费的展开块回收容量供后续批次复用。新增 `GetTopology`／`BuildTopology`／`ReserveBuffers` 采样；`ValidateIndices` 包含拓扑缓存读取或重建，首次录制需区分冷缓存和后续帧。
+
 ## 主要源码
 
 - 总调度：`OrbedenCore/Src/Rendering/RenderSystem.cpp`

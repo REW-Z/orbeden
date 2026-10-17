@@ -5,6 +5,7 @@
 #include "Profiler/Profiler.h"
 #include "Runtime/Native/InteropText.h"
 #include "Rendering/ParticleRenderer.h"
+#include "Rendering/GeometryExpander.h"
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/Camera.h"
 #include "ResourceManager/ResourceManager.h"
@@ -177,6 +178,7 @@ void ForwardPipeline::InvalidateResourceCaches()
     //重置管线资源状态
     staticBatches.Shutdown();
     staticBatchesReady = false;
+    GeometryExpander::ClearCaches();
     particleRenderer.Shutdown();
     particleRendererReady = false;
     particleSnapshot = ParticleFrameSnapshot();
@@ -208,6 +210,7 @@ void ForwardPipeline::Shutdown()
 void ForwardPipeline::PrepareFrame(const RenderScene& scene, GpuResourceManager& gpuResourceManager)
 {
     if (!backend) return;
+    GeometryExpander::ReleaseDestroyedMeshCaches();
     LoadBuiltinShaders();
     if (staticBatchesReady == false)
     {
@@ -351,10 +354,19 @@ void ForwardPipeline::BuildFrameBatches(const RenderScene& scene, const VisibleS
 {
     PROFILE("Render/BuildBatches");
     static const List<InstanceSubmission> EmptySubmissions;
-    batchBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
-        particleSnapshot, cameraItems);
-    batchBuilder.SortItems(cameraItems);
-    batchBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
+    {
+        PROFILE("Render/Batching/CollectItems");
+        batchBuilder.BuildCameraItems(scene, visibleSet, drawSubmissions ? *drawSubmissions : EmptySubmissions,
+            particleSnapshot, cameraItems);
+    }
+    {
+        PROFILE("Render/Batching/SortItems");
+        batchBuilder.SortItems(cameraItems);
+    }
+    {
+        PROFILE("Render/Batching/EmitBatches");
+        batchBuilder.BuildBatches(cameraItems, cameraBatches, batchStats);
+    }
     batchBuilder.Clear();
 }
 
@@ -380,6 +392,10 @@ void ForwardPipeline::ExecuteBatch(const DrawBatch& batch, const RenderScene& sc
     std::unordered_set<uint32>& configuredPrograms)
 {
     if (batch.items.empty()) return;
+    PROFILE(batch.key.mode == GeometryMode::Instanced ? "Render/DrawBatches/Instanced"
+        : batch.key.mode == GeometryMode::Expanded ? "Render/DrawBatches/Expanded"
+        : batch.key.mode == GeometryMode::TrailInstanced ? "Render/DrawBatches/TrailInstanced"
+        : "Render/DrawBatches/Uniform");
 
     const GpuMaterial* material = gpuResourceManager.GetMaterial(cameraItems[batch.items[0]].material);
     if (!material || !material->shader || material->shader->passes.empty())
@@ -491,14 +507,17 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
     }
     if (expandedChunks.empty()) return false;
 
-    if (!BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
-        shaderPass.expandedProgram.id, configuredPrograms))
     {
-        ++batchStats.invalidResources;
-        return false;
+        PROFILE("Render/Expanded/BindState");
+        if (!BindDrawState(batch, scene, camera, mainLight, cameraTexturesReady, material,
+            shaderPass.expandedProgram.id, configuredPrograms))
+        {
+            ++batchStats.invalidResources;
+            return false;
+        }
+        backend->BindShaderProgram(shaderPass.expandedProgram);
+        backend->BindVertexInput(drawStream.GetExpandedVertexInput());
     }
-    backend->BindShaderProgram(shaderPass.expandedProgram);
-    backend->BindVertexInput(drawStream.GetExpandedVertexInput());
 
     bool drew = false;
     for (const ExpandedGeometryChunk& chunk : expandedChunks)
@@ -518,7 +537,10 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
             static_cast<uint64>(chunk.indices.size()) * sizeof(uint32);
         batchStats.expandedVertices += chunk.vertices.size();
         batchStats.expandedIndices += chunk.indices.size();
-        backend->DrawIndexed(0, static_cast<uint32>(chunk.indices.size()));
+        {
+            PROFILE("Render/Expanded/Draw");
+            backend->DrawIndexed(0, static_cast<uint32>(chunk.indices.size()));
+        }
         ++batchStats.dynamicBatchDraws;
         drew = true;
     }

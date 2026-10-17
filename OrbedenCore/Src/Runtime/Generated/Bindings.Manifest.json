@@ -36674,6 +36674,25 @@
           "Parameters": []
         },
         {
+          "Name": "expandedChunkPool",
+          "Type": "List\u003CExpandedGeometryChunk\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Initialize",
           "Type": "bool",
           "Access": "public",

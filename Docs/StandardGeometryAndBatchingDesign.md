@@ -95,6 +95,9 @@
 - 新增 Rendering/GeometryExpander.h/.cpp，定义 `bool AppendExpandedMesh(const Mesh&, uint32 subMeshIndex, const matrix4x4&, const color& tint, const color& uvRect, List<GpuExpandedVertex>&, List<uint32>&)`。
 - 函数校验索引、矩阵与容量，构建引用顶点映射，追加转换后的顶点与重定位索引；失败不留下部分追加数据。
 - 网格粒子、普通动态合批、静态缓存调用此函数；Billboard 和拖尾保持自身几何生成，统一输出 GpuExpandedVertex。
+- GeometryExpander 按 Mesh 运行时 ID、对象地址、内容版本、顶点／索引数量和索引区间缓存引用顶点顺序与局部索引；首次构建校验完整区间，后续复用。只转换完整三角形引用的顶点，保留不完整尾部索引的原有校验与计数语义；输出保持原首次引用顺序，失败回滚追加长度。
+- 每帧准备时移除已销毁 Mesh 的拓扑缓存，内容根切换／资源失效／Shutdown 时统一清空；不持有 Mesh 所有权。几何修改沿用 Mesh.MarkDirty 与 GetContentVersion 的既有版本契约。
+- ParticleRenderer 回收已消费展开块的空顶点／索引容量，后续批次复用；AppendExpandedMesh 按缓存引用数量预留几何增长容量、批量复制局部索引并应用顶点基址偏移。当前新增缓存仅保存索引拓扑，不缓存世界坐标计算结果；GPU 顶点 ABI、32 位索引和分块规则保持不变。
 - DrawItem 携带 drawStrategy、静态组句柄/索引范围；DrawBatch 新增 `bool persistentGeometry=false` 及静态组句柄。
 - DrawBatchBuilder 将静态缓存项与剩余项分开处理；实例/动态键比较独立实现，禁止继续用必须相同 Mesh 的键筛选动态批。
 - ExecuteExpandedBatch 对动态批执行展开上传；对持久批绑定缓存 VAO 并绘制范围；二者共用材质状态与 Expanded Program。

@@ -1,6 +1,7 @@
 #include "Rendering/ParticleRenderer.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/GeometryExpander.h"
 #include "Rendering/GpuResourceManager.h"
 #include "Rendering/RenderMath.h"
@@ -182,6 +183,7 @@ void ParticleRenderer::InvalidateResourceCaches()
     quadIndexBuffer = GpuIndexBufferID();
     quadReady = false;
     trailSegments.clear();
+    expandedChunkPool.clear();
 }
 
 void ParticleRenderer::Shutdown()
@@ -654,14 +656,37 @@ void ParticleRenderer::BuildTrailInstances(const DrawBatch& batch, const List<Dr
 void ParticleRenderer::ExpandBatch(const DrawBatch& batch, const List<DrawItem>& items,
     List<ExpandedGeometryChunk>& chunks, GpuResourceManager& resources)
 {
-    chunks.clear();
-    ExpandedGeometryChunk chunk;
+    PROFILE("Render/Geometry/ExpandBatch");
+    {
+        PROFILE("Render/Geometry/ClearChunks");
+        for (ExpandedGeometryChunk& previous : chunks)
+        {
+            previous.vertices.clear();
+            previous.indices.clear();
+            expandedChunkPool.push_back(std::move(previous));
+        }
+        chunks.clear();
+    }
+
+    //取得可复用容量的空展开块
+    auto takeChunk = [&]()
+    {
+        ExpandedGeometryChunk result;
+        if (!expandedChunkPool.empty())
+        {
+            result = std::move(expandedChunkPool.back());
+            expandedChunkPool.pop_back();
+        }
+        return result;
+    };
+    ExpandedGeometryChunk chunk = takeChunk();
 
     auto flushChunk = [&]()
     {
+        PROFILE("Render/Geometry/FlushChunk");
         if (chunk.vertices.empty()) return;
         chunks.push_back(std::move(chunk));
-        chunk = ExpandedGeometryChunk();
+        chunk = takeChunk();
     };
 
     for (uint32 itemIndex : batch.items)
@@ -758,7 +783,10 @@ void ParticleRenderer::ExpandBatch(const DrawBatch& batch, const List<DrawItem>&
 
         Mesh* mesh = item.mesh;
         if (!mesh) continue;
-        if (!resources.GetMesh(mesh)) continue;
+        {
+            PROFILE("Render/Geometry/GetMesh");
+            if (!resources.GetMesh(mesh)) continue;
+        }
 
         //单个来源自身超过单批上限时不跨块拆分，明确报错跳过，不静默少画
         uint32 itemVertices = GeometryExpander::CountReferencedVertices(*mesh, item.indexStart, item.indexCount);
@@ -784,4 +812,6 @@ void ParticleRenderer::ExpandBatch(const DrawBatch& batch, const List<DrawItem>&
     }
 
     flushChunk();
+    if (chunk.vertices.capacity() != 0 || chunk.indices.capacity() != 0)
+        expandedChunkPool.push_back(std::move(chunk));
 }

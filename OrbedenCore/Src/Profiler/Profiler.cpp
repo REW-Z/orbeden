@@ -19,7 +19,7 @@ namespace
     constexpr int32 FrameWindowCapacity = 1024;
 
     //每帧事件上限，超出只丢事件并计数，分类耗时不受影响
-    constexpr int32 FrameEventCapacity = 1024;
+    constexpr int32 FrameEventCapacity = 4096;
 
     //名字驻留表容量
     constexpr int32 NameCapacity = 512;

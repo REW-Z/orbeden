@@ -572,6 +572,10 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 90：GeometryExpander 按 Mesh 运行时 ID、对象地址、内容版本、顶点／索引数量和索引区间缓存引用顺序与局部索引，复用合批预算和展开阶段的统计结果；索引校验及映射只在缓存失效后重建。顶点仍按原首次引用顺序逐次转换，位置／法线／切线公式、非法输入回滚、未组成完整三角形的尾部索引处理与 32 位索引格式不变。追加前按几何增长预留容量，索引批量复制后加顶点基址；ParticleRenderer 回收已消费展开块的容量供后续批次复用，保留 Billboard／拖尾构造、分块上限和 GPU 提交顺序。每帧清理已销毁 Mesh 的缓存，资源失效或 Shutdown 时清空拓扑与回收池；不修改 Mesh 的既有版本接口、合批策略、场景或资源格式。保留现有采样并新增 GetTopology、BuildTopology、ReserveBuffers；首次构建缓存会有额外开销，需比较后续帧。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块和 Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
+
+版本 89：仅细分普通 Pass 的 Profile：绘制项收集、排序和批次生成；排序中的距离排序、按键分组、组构造和组重排；按 Uniform／Instanced／Expanded／TrailInstanced 区分绘制路径；展开中的旧块清理、GPU 网格查询、引用顶点统计、索引校验、顶点转换、索引重排、块提交、状态绑定和 Draw 提交。保留原有采样名称和全部几何算法、索引格式、合批策略及渲染顺序，不逐顶点计时。原生与托管每帧事件上限从 1024 同步升至 4096，保留 1024 帧历史，原生事件数组约 160 MiB；录制仍包含原有 glFinish 诊断，CPU 作用域数据不等同于 GPU 计时。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK，清空并重新录制后检查 DroppedEventCount。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
+
 版本 88：级联阴影每次相机渲染只收集一次普通网格与显式实例候选，各级联独立裁剪并成批；同一 Renderer 的子网格共享一次包围盒判断，投射物分区包围盒和候选列表复用存储容量。候选只用于本次相机渲染，不跨帧缓存；持久静态批仍按成员裁剪索引区间，Opaque Mesh 粒子保留逐级追加，原有无效包围盒处理、层掩码、投影开关、候选顺序和阴影质量参数不变。增加 Render/Shadows/CollectItems 计时，BuildItems 改为记录级联筛选与静态批／粒子追加；沿用版本 87 的阴影 Auto GPU 网格路径，主画面流程不变。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块及 Player 并重新 Build Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
 
 版本 87：只调整阴影 Auto 普通网格的合批策略，在临时阴影绘制项中按 GpuInstancing 选择兼容实例批或原 GPU 网格的单绘制，停止逐级联 CPU 动态几何展开；Renderer 保存的策略、主画面合批、持久静态缓存、显式 DynamicBatching、粒子与显式实例路径保持不变。新增 Render/Shadows 总入口及每级联 Cascade、BuildItems、BuildBatches、DrawBatches 计时，DrawBatches 包含 Pass 建立、状态设置、提交与结束，仍是 CPU 作用域时间；阴影级联数、分辨率、距离、偏移与剔除规则不变。此调整可能增加阴影 DrawCall，以减少重复 CPU 顶点处理和上传。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块及 Player 并重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景迁移或模型重新导入。仅做静态检查，未编译或运行测试。
