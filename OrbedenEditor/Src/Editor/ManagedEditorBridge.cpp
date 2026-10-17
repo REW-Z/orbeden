@@ -13,6 +13,7 @@
 #include "Platform/ExecutablePath.h"
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
+#include "Rendering/RenderSystem.h"
 #include "Runtime/Reflection.h"
 #include "Runtime/RenderSettings.h"
 #include "Runtime/CookedAssetSerializer.h"
@@ -284,6 +285,8 @@ namespace
         void* exportProfilerFrameText = nullptr;
         void* beginProfileSample = nullptr;
         void* endProfileSample = nullptr;
+        void* getMeshDynamicBatching = nullptr;
+        void* setMeshDynamicBatching = nullptr;
     };
 
     #pragma pack(pop)
@@ -299,7 +302,7 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 182);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 184);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 91);
@@ -314,6 +317,8 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 179);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 180);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 181);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 182);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 183);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1974,6 +1979,20 @@ namespace
         Log::Clear();
     }
 
+    //读取普通网格的 CPU 动态合批开关
+    uint8 ORBEDEN_NATIVE_CALL GetManagedMeshDynamicBatching()
+    {
+        const RenderSystem* renderSystem = RenderSystem::Current();
+        return !renderSystem || renderSystem->IsMeshDynamicBatchingEnabled() ? 1 : 0;
+    }
+
+    //切换普通网格的 CPU 动态合批
+    void ORBEDEN_NATIVE_CALL SetManagedMeshDynamicBatching(uint8 value)
+    {
+        if (RenderSystem* renderSystem = RenderSystem::Current())
+            renderSystem->SetMeshDynamicBatchingEnabled(value != 0);
+    }
+
     //通过 FileSystem 写入并校验 UTF-8 帧分析文本
     uint8 ORBEDEN_NATIVE_CALL EditorProfilerExportFrameText(const uint8* path, int32 pathLength,
         const uint8* text, int32 textLength)
@@ -2238,6 +2257,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.exportProfilerFrameText = reinterpret_cast<void*>(&EditorProfilerExportFrameText);
     editorApi.beginProfileSample = reinterpret_cast<void*>(&EditorProfilerBeginSample);
     editorApi.endProfileSample = reinterpret_cast<void*>(&EditorProfilerEndSample);
+    editorApi.getMeshDynamicBatching = reinterpret_cast<void*>(&GetManagedMeshDynamicBatching);
+    editorApi.setMeshDynamicBatching = reinterpret_cast<void*>(&SetManagedMeshDynamicBatching);
     editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);
     editorApi.input.isKeyPressed = reinterpret_cast<void*>(&EditorInputIsKeyPressed);
     if (initializeEditor(&editorApi) == 0)

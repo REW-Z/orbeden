@@ -131,6 +131,20 @@ public static unsafe class EditorApplication
     }
 
     private static EditorApplicationNativeApi api;
+    private static delegate* unmanaged[Cdecl]<byte> getMeshDynamicBatching;
+    private static delegate* unmanaged[Cdecl]<byte, void> setMeshDynamicBatching;
+
+    /// <summary>切换当前编辑器会话中普通网格的 CPU 动态合批。</summary>
+    internal static bool MeshDynamicBatchingEnabled
+    {
+        get => getMeshDynamicBatching == null || getMeshDynamicBatching() != 0;
+        set
+        {
+            if (setMeshDynamicBatching == null) return;
+            setMeshDynamicBatching(value ? (byte)1 : (byte)0);
+            RequestRepaint();
+        }
+    }
 
     /// <summary>当前编辑 World 是否相对磁盘文件有未保存改动，真相源在原生 World。</summary>
     public static bool WorldDirty => api.IsWorldDirty != null && api.IsWorldDirty(api.Context) != 0;
@@ -233,9 +247,13 @@ public static unsafe class EditorApplication
     public static bool IsPlaying => api.IsPlaying != null && api.IsPlaying(api.Context) != 0;
 
     /// <summary>保存原生 Editor 应用 API，并校验环境设置载荷布局。</summary>
-    internal static void Initialize(EditorApplicationNativeApi value)
+    internal static void Initialize(EditorApplicationNativeApi value,
+        delegate* unmanaged[Cdecl]<byte> getBatching = null,
+        delegate* unmanaged[Cdecl]<byte, void> setBatching = null)
     {
         api = value;
+        getMeshDynamicBatching = getBatching;
+        setMeshDynamicBatching = setBatching;
         CheckRenderSettingsLayout();
     }
 

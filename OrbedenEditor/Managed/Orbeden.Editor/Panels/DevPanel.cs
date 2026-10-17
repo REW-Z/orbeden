@@ -2,7 +2,7 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>管理项目示例与引擎模板之间的同步。</summary>
+/// <summary>提供渲染性能对比开关与项目模板同步操作。</summary>
 internal sealed class DevPanel : EditorPanel
 {
     private string report = string.Empty;
@@ -10,7 +10,7 @@ internal sealed class DevPanel : EditorPanel
     public override EditorPanelInfo Info => new("dev", "Dev", false,
         new vector2(560, 340), PanelDockPlacement.Floating, 0.25f, 120);
 
-    /// <summary>绘制示例与默认资源目录的同步操作。</summary>
+    /// <summary>绘制渲染对比开关与模板同步操作。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
         string content = EditorApplication.GetProjectText(EditorProjectField.Content);
@@ -19,6 +19,15 @@ internal sealed class DevPanel : EditorPanel
             EditorGUI.Label("No project loaded.");
             return;
         }
+
+        //切换普通网格的 CPU 动态合批
+        bool meshDynamicBatching = EditorApplication.MeshDynamicBatchingEnabled;
+        if (EditorGUI.Checkbox("Mesh CPU Dynamic Batching", ref meshDynamicBatching))
+            EditorApplication.MeshDynamicBatchingEnabled = meshDynamicBatching;
+        EditorGUI.Label("GPU instancing, static cache and particles keep their current paths.");
+        EditorGUI.Label("Temporary setting; enabled again after restarting the editor.");
+        EditorGUI.Separator();
+
         string templates = EditorApplication.GetProjectText(EditorProjectField.SourceTemplate);
         string projectExamples = Path.Combine(content, "Examples");
         string projectBuiltin = Path.Combine(content, "Builtin");

@@ -216,7 +216,7 @@ Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU�
 
 缓存有效时直接返回；无缓存或版本变化时创建/刷新 GPU 对象。每帧开头的 `ReleaseDestroyedResources` 释放已销毁 CPU 对象对应的 GPU 对象和缓存项。
 
-Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Uniform Location，避免重复 OpenGL 调用。
+Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Uniform Location。OpenGL 按程序与实际 uniform 位置保存最近提交的类型和值，完全相同时跳过 glUniform；名称使用异构查找，命中时不构造临时字符串，当前程序直接复用缓存表指针。数组名与首元素名等别名共享位置记录；首次零值仍提交。参数改变时按原接口提交，程序删除时移除记录，后端初始化或 Shutdown 时清空；不使用近似浮点比较，不改变 Shader ABI。
 
 ## 当前边界
 
@@ -235,6 +235,10 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 普通 Pass 的 CPU 采样在 `Render/BuildBatches` 下区分绘制项收集、排序与批次生成；排序细分距离排序、按键分组、组构造与组重排。绘制按 Uniform／Instanced／Expanded／TrailInstanced 分别记录；展开路径细分旧块清理、GPU 网格查询、引用顶点统计、索引校验、顶点转换、索引重排、块提交、状态绑定与 Draw 提交。保留既有 `Render/ExpandParticles` 与 `Render/UploadInstances` 名称用于前后比较，前者也包含普通网格动态展开。采样粒度为批次或网格阶段，不逐顶点采样；仍是 CPU 作用域时间，不是 GPU 时间查询。每帧事件容量为 4096，帧历史仍为 1024，原生事件数组约 160 MiB。
 
 展开几何的引用计数与局部索引按 Mesh 内容版本缓存，首次构建同时完成索引校验和首次引用顺序映射；网格修改后重建，销毁后清理，资源失效时清空。每批仍重新计算世界空间顶点；位置、法线、切线公式和 32 位索引格式不变。索引输出直接复制缓存映射并加顶点基址，已消费的展开块回收容量供后续批次复用。新增 `GetTopology`／`BuildTopology`／`ReserveBuffers` 采样；`ValidateIndices` 包含拓扑缓存读取或重建，首次录制需区分冷缓存和后续帧。
+
+CPU 展开按绘制项准备共享变换系数，`PrepareTransform` 记录准备耗时；`TransformVertices` 记录顶点计算与写入。x64／启用 SSE2 的 x86 使用 SSE2 并行计算位置、法线、切线与 UV 分量，其他目标使用标量路径；不要求 AVX，不修改公共向量布局或 GPU 顶点格式。合批判定优先保留后续可实例化的连续组，实例能力不足时继续尝试策略允许的动态批。普通 Renderer 的动态批只接收单项不超过 128 个引用顶点、384 个索引的小网格绘制项，连续兼容项至少 8 个才组批，整批最多 1024 个引用顶点、3072 个索引；不足门槛或超限时复用原 GPU 网格绘制。预算按子网格绘制项计算，先拒绝索引超限项，再读取引用顶点统计；Auto 与显式 DynamicBatching 共用门槛，GPU Instancing、持久静态缓存和粒子／显式实例路径不变。预算数值仍需在实际场景测量。
+
+不透明可重排区间内先按批次键收集网格组，再按 Shader 基础程序、Material 和组最近距离排列；组内仍近到远。相同 Material 的不同网格保持相邻，减少材质参数和 Shader 切换，`Render/Batching/Sort/ByMaterial` 记录组排序。Individual、多 Pass、特殊深度／混合状态屏障仍保持位置，不跨区间聚合；透明与折射沿用远到近排序。跨材质的严格近远顺序让位于状态聚集，需结合 GPU 等待和整帧耗时评估遮挡成本，不以 Draw Call 数单独判断收益。
 
 ## 主要源码
 

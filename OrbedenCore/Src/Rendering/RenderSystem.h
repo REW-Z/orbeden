@@ -257,6 +257,12 @@ public:
     /// <summary>读取最近一帧的渲染批次统计，每帧开始时清零。</summary>
     const RenderBatchStats& GetBatchStats() const { return forwardPipeline.GetBatchStats(); }
 
+    //切换普通网格的 CPU 动态合批
+    void SetMeshDynamicBatchingEnabled(bool value) { forwardPipeline.SetMeshDynamicBatchingEnabled(value); }
+
+    //读取普通网格的 CPU 动态合批开关
+    bool IsMeshDynamicBatchingEnabled() const { return forwardPipeline.IsMeshDynamicBatchingEnabled(); }
+
     /// <summary>接收一次显式实例提交；复制配置与实例，下一次 Render 绘制。</summary>
     bool SubmitInstances(World& world, const InstanceDrawOptions& options, Mesh* mesh, uint32 subMeshIndex,
         Material* material, std::span<const MeshInstanceData> instances, int32 sourceObjectId = 0);

@@ -8,6 +8,13 @@
 #include <cmath>
 #include <unordered_map>
 
+#if defined(_M_X64) || defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#include <emmintrin.h>
+#define ORBEDEN_EXPANDED_VERTEX_SSE2 1
+#else
+#define ORBEDEN_EXPANDED_VERTEX_SSE2 0
+#endif
+
 namespace
 {
     //保存索引区间的引用顺序与局部索引
@@ -111,8 +118,26 @@ namespace
         return topology;
     }
 
-    //矩阵是否有限且可逆；奇异矩阵会让法线失去意义
-    bool IsTransformInvertible(const matrix4x4& model)
+    //保存本次绘制项共用的变换系数
+    struct alignas(16) PreparedVertexTransform
+    {
+#if ORBEDEN_EXPANDED_VERTEX_SSE2
+        __m128 modelColumns[4];
+        __m128 normalColumns[3];
+        __m128 uvScale;
+        __m128 uvOffset;
+        __m128 tint;
+#else
+        matrix4x4 model;
+        vector3 normalRows[3];
+        color uvRect;
+        color tint;
+#endif
+    };
+
+    //校验模型矩阵并准备位置、法线和材质参数
+    bool PrepareVertexTransform(const matrix4x4& model, const color& tint, const color& uvRect,
+        PreparedVertexTransform& transform)
     {
         for (uint32 element = 0; element < 16; ++element)
         {
@@ -123,70 +148,137 @@ namespace
         vector3 column1 = { model.m[4], model.m[5], model.m[6] };
         vector3 column2 = { model.m[8], model.m[9], model.m[10] };
         float32 determinant = RenderMath::Dot(column0, RenderMath::Cross(column1, column2));
-        return std::isfinite(determinant) && std::fabs(determinant) >= 1.0e-8f;
-    }
+        if (!std::isfinite(determinant) || std::fabs(determinant) < 1.0e-8f) return false;
 
-    //法线取逆转置，切线先线性变换再与法线正交化
-    vector3 TransformNormal(const matrix4x4& model, const vector3& normal)
-    {
-        vector3 column0 = { model.m[0], model.m[1], model.m[2] };
-        vector3 column1 = { model.m[4], model.m[5], model.m[6] };
-        vector3 column2 = { model.m[8], model.m[9], model.m[10] };
+        //准备原法线算法使用的余子式矩阵
         vector3 row0 = { (column1.y * column2.z - column1.z * column2.y), (column2.y * column0.z - column2.z * column0.y),
             (column0.y * column1.z - column0.z * column1.y) };
         vector3 row1 = { (column1.z * column2.x - column1.x * column2.z), (column2.z * column0.x - column2.x * column0.z),
             (column0.z * column1.x - column0.x * column1.z) };
         vector3 row2 = { (column1.x * column2.y - column1.y * column2.x), (column2.x * column0.y - column2.y * column0.x),
             (column0.x * column1.y - column0.y * column1.x) };
-        vector3 transformed = { RenderMath::Dot(row0, normal), RenderMath::Dot(row1, normal), RenderMath::Dot(row2, normal) };
-        return RenderMath::Normalize(transformed);
+#if ORBEDEN_EXPANDED_VERTEX_SSE2
+        for (uint32 column = 0; column < 4; ++column)
+            transform.modelColumns[column] = _mm_loadu_ps(model.m + column * 4);
+        transform.normalColumns[0] = _mm_setr_ps(row0.x, row1.x, row2.x, 0.0f);
+        transform.normalColumns[1] = _mm_setr_ps(row0.y, row1.y, row2.y, 0.0f);
+        transform.normalColumns[2] = _mm_setr_ps(row0.z, row1.z, row2.z, 0.0f);
+        transform.uvScale = _mm_setr_ps(uvRect.b, uvRect.a, 0.0f, 0.0f);
+        transform.uvOffset = _mm_setr_ps(uvRect.r, uvRect.g, 0.0f, 0.0f);
+        transform.tint = _mm_setr_ps(tint.r, tint.g, tint.b, tint.a);
+#else
+        transform.model = model;
+        transform.normalRows[0] = row0;
+        transform.normalRows[1] = row1;
+        transform.normalRows[2] = row2;
+        transform.uvRect = uvRect;
+        transform.tint = tint;
+#endif
+        return true;
     }
 
     //把一个顶点写成世界空间的展开顶点
-    GpuExpandedVertex BuildExpandedVertex(const Mesh& mesh, usize vertex, const matrix4x4& model,
-        const color& tint, const color& uvRect)
+    GpuExpandedVertex BuildExpandedVertex(const vector3& position, const vector3& sourceNormal,
+        const vector2& sourceUv, const vector3& tangentSource, const PreparedVertexTransform& transform)
     {
         GpuExpandedVertex expanded{};
-        vector3 world = RenderMath::TransformPoint(model, mesh.vertices[vertex]);
+#if ORBEDEN_EXPANDED_VERTEX_SSE2
+        //并行计算位置分量并沿用齐次除法条件
+        __m128 world = _mm_add_ps(_mm_add_ps(_mm_add_ps(
+            _mm_mul_ps(transform.modelColumns[0], _mm_set1_ps(position.x)),
+            _mm_mul_ps(transform.modelColumns[1], _mm_set1_ps(position.y))),
+            _mm_mul_ps(transform.modelColumns[2], _mm_set1_ps(position.z))), transform.modelColumns[3]);
+        alignas(16) float32 values[4];
+        _mm_store_ps(values, world);
+        float32 w = values[3];
+        if (std::abs(w) > 0.000001f && std::abs(w - 1.0f) > 0.000001f)
+        {
+            world = _mm_mul_ps(world, _mm_set1_ps(1.0f / w));
+            _mm_store_ps(values, world);
+        }
+        expanded.position[0] = values[0];
+        expanded.position[1] = values[1];
+        expanded.position[2] = values[2];
+
+        //并行计算法线并使用原归一化阈值
+        __m128 normal = _mm_add_ps(_mm_add_ps(
+            _mm_mul_ps(transform.normalColumns[0], _mm_set1_ps(sourceNormal.x)),
+            _mm_mul_ps(transform.normalColumns[1], _mm_set1_ps(sourceNormal.y))),
+            _mm_mul_ps(transform.normalColumns[2], _mm_set1_ps(sourceNormal.z)));
+        __m128 normalSquares = _mm_mul_ps(normal, normal);
+        float32 normalLengthSquared = _mm_cvtss_f32(normalSquares)
+            + _mm_cvtss_f32(_mm_shuffle_ps(normalSquares, normalSquares, _MM_SHUFFLE(1, 1, 1, 1)))
+            + _mm_cvtss_f32(_mm_shuffle_ps(normalSquares, normalSquares, _MM_SHUFFLE(2, 2, 2, 2)));
+        float32 normalLength = _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(normalLengthSquared)));
+        if (normalLength <= 0.000001f) normal = _mm_setzero_ps();
+        else normal = _mm_mul_ps(normal, _mm_set1_ps(1.0f / normalLength));
+        _mm_store_ps(values, normal);
+        expanded.normal[0] = values[0];
+        expanded.normal[1] = values[1];
+        expanded.normal[2] = values[2];
+
+        //变换切线并与法线正交化
+        __m128 tangent = _mm_add_ps(_mm_add_ps(
+            _mm_mul_ps(transform.modelColumns[0], _mm_set1_ps(tangentSource.x)),
+            _mm_mul_ps(transform.modelColumns[1], _mm_set1_ps(tangentSource.y))),
+            _mm_mul_ps(transform.modelColumns[2], _mm_set1_ps(tangentSource.z)));
+        __m128 products = _mm_mul_ps(tangent, normal);
+        float32 projection = _mm_cvtss_f32(products)
+            + _mm_cvtss_f32(_mm_shuffle_ps(products, products, _MM_SHUFFLE(1, 1, 1, 1)))
+            + _mm_cvtss_f32(_mm_shuffle_ps(products, products, _MM_SHUFFLE(2, 2, 2, 2)));
+        tangent = _mm_sub_ps(tangent, _mm_mul_ps(normal, _mm_set1_ps(projection)));
+        __m128 tangentSquares = _mm_mul_ps(tangent, tangent);
+        float32 tangentLengthSquared = _mm_cvtss_f32(tangentSquares)
+            + _mm_cvtss_f32(_mm_shuffle_ps(tangentSquares, tangentSquares, _MM_SHUFFLE(1, 1, 1, 1)))
+            + _mm_cvtss_f32(_mm_shuffle_ps(tangentSquares, tangentSquares, _MM_SHUFFLE(2, 2, 2, 2)));
+        float32 tangentLength = _mm_cvtss_f32(_mm_sqrt_ss(_mm_set_ss(tangentLengthSquared)));
+        if (tangentLength > 1.0e-6f) tangent = _mm_div_ps(tangent, _mm_set1_ps(tangentLength));
+        else tangent = _mm_setzero_ps();
+        _mm_store_ps(values, tangent);
+        expanded.tangent[0] = values[0];
+        expanded.tangent[1] = values[1];
+        expanded.tangent[2] = values[2];
+
+        //并行计算 UV 并写入颜色
+        __m128 uv = _mm_add_ps(_mm_mul_ps(_mm_setr_ps(sourceUv.x, sourceUv.y, 0.0f, 0.0f),
+            transform.uvScale), transform.uvOffset);
+        _mm_store_ps(values, uv);
+        expanded.uv[0] = values[0];
+        expanded.uv[1] = values[1];
+        _mm_storeu_ps(expanded.tint, transform.tint);
+#else
+        vector3 world = RenderMath::TransformPoint(transform.model, position);
         expanded.position[0] = world.x;
         expanded.position[1] = world.y;
         expanded.position[2] = world.z;
 
-        vector3 sourceNormal = vertex < mesh.normals.size() ? mesh.normals[vertex] : vector3();
-        vector3 normal = TransformNormal(model, sourceNormal);
+        vector3 normal = RenderMath::Normalize({ RenderMath::Dot(transform.normalRows[0], sourceNormal),
+            RenderMath::Dot(transform.normalRows[1], sourceNormal), RenderMath::Dot(transform.normalRows[2], sourceNormal) });
         expanded.normal[0] = normal.x;
         expanded.normal[1] = normal.y;
         expanded.normal[2] = normal.z;
 
-        vector2 uv = vertex < mesh.texcoords.size() ? mesh.texcoords[vertex] : vector2();
-        expanded.uv[0] = uv.x * uvRect.b + uvRect.r;
-        expanded.uv[1] = uv.y * uvRect.a + uvRect.g;
+        expanded.uv[0] = sourceUv.x * transform.uvRect.b + transform.uvRect.r;
+        expanded.uv[1] = sourceUv.y * transform.uvRect.a + transform.uvRect.g;
 
-        vector3 tangentSource = vertex < mesh.tangents.size() ? mesh.tangents[vertex] : vector3();
-        vector3 tangent = RenderMath::TransformDirection(model, tangentSource);
+        vector3 tangent = RenderMath::TransformDirection(transform.model, tangentSource);
         float32 projection = RenderMath::Dot(tangent, normal);
         tangent = { tangent.x - normal.x * projection, tangent.y - normal.y * projection, tangent.z - normal.z * projection };
         float32 tangentLength = std::sqrt(RenderMath::Dot(tangent, tangent));
         if (tangentLength > 1.0e-6f)
-        {
             tangent = { tangent.x / tangentLength, tangent.y / tangentLength, tangent.z / tangentLength };
-        }
-        else
-        {
-            tangent = { 0.0f, 0.0f, 0.0f };
-        }
-
+        else tangent = { 0.0f, 0.0f, 0.0f };
         expanded.tangent[0] = tangent.x;
         expanded.tangent[1] = tangent.y;
         expanded.tangent[2] = tangent.z;
-        expanded.tint[0] = tint.r;
-        expanded.tint[1] = tint.g;
-        expanded.tint[2] = tint.b;
-        expanded.tint[3] = tint.a;
+        expanded.tint[0] = transform.tint.r;
+        expanded.tint[1] = transform.tint.g;
+        expanded.tint[2] = transform.tint.b;
+        expanded.tint[3] = transform.tint.a;
+#endif
         return expanded;
     }
 }
-
 void GeometryExpander::ReleaseDestroyedMeshCaches()
 {
     PROFILE("Render/Geometry/ReleaseCaches");
@@ -240,7 +332,11 @@ bool GeometryExpander::AppendExpandedMesh(const Mesh& mesh, uint32 subMeshIndex,
 {
     PROFILE("Render/Geometry/AppendMesh");
     if (subMeshIndex >= mesh.subMeshes.size()) return false;
-    if (!IsTransformInvertible(model)) return false;
+    PreparedVertexTransform transform;
+    {
+        PROFILE("Render/Geometry/PrepareTransform");
+        if (!PrepareVertexTransform(model, tint, uvRect, transform)) return false;
+    }
 
     const SubMesh& subMesh = mesh.subMeshes[subMeshIndex];
     const IndexTopology* topology;
@@ -270,9 +366,20 @@ bool GeometryExpander::AppendExpandedMesh(const Mesh& mesh, uint32 subMeshIndex,
     {
         PROFILE("Render/Geometry/TransformVertices");
         const uint32* sourceVertices = topology->referencedVertices.data();
+        const vector3* positions = mesh.vertices.data();
+        const vector3* normals = mesh.normals.data();
+        const vector2* texcoords = mesh.texcoords.data();
+        const vector3* tangents = mesh.tangents.data();
+        usize normalCount = mesh.normals.size();
+        usize texcoordCount = mesh.texcoords.size();
+        usize tangentCount = mesh.tangents.size();
         for (usize vertex = 0; vertex < topology->triangleVertexCount; ++vertex)
         {
-            GpuExpandedVertex expanded = BuildExpandedVertex(mesh, sourceVertices[vertex], model, tint, uvRect);
+            uint32 source = sourceVertices[vertex];
+            vector3 sourceNormal = source < normalCount ? normals[source] : vector3();
+            vector2 sourceUv = source < texcoordCount ? texcoords[source] : vector2();
+            vector3 tangentSource = source < tangentCount ? tangents[source] : vector3();
+            GpuExpandedVertex expanded = BuildExpandedVertex(positions[source], sourceNormal, sourceUv, tangentSource, transform);
             if (!std::isfinite(expanded.position[0]) || !std::isfinite(expanded.position[1]) || !std::isfinite(expanded.position[2]))
             {
                 vertices.resize(vertexBase);

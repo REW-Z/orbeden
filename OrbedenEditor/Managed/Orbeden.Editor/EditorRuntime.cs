@@ -33,6 +33,8 @@ public static class EditorRuntime
         public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> ExportProfilerFrameText;
         public delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> BeginProfileSample;
         public delegate* unmanaged[Cdecl]<EditorProfileScope*, void> EndProfileSample;
+        public delegate* unmanaged[Cdecl]<byte> GetMeshDynamicBatching;
+        public delegate* unmanaged[Cdecl]<byte, void> SetMeshDynamicBatching;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -74,7 +76,7 @@ public static class EditorRuntime
             //面板注册期间的警告也要进 Console 面板，所以先装日志通道
             EditorConsole.Install();
             EditorTheme.ApplyCurrent();
-            EditorApplication.Initialize(api.Application);
+            EditorApplication.Initialize(api.Application, api.GetMeshDynamicBatching, api.SetMeshDynamicBatching);
             EditorPropertyHistory.Clear();
             Gizmos.Initialize(api.Gizmo);
             EditorAssetsNative.Initialize(api.Assets);
@@ -537,11 +539,14 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 182);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 184);
         ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
         if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 180 * IntPtr.Size
             || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 181 * IntPtr.Size)
             throw new TypeLoadException("Editor profiler sampling ABI layout mismatch.");
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 182 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 183 * IntPtr.Size)
+            throw new TypeLoadException("Editor mesh batching ABI layout mismatch.");
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 80);

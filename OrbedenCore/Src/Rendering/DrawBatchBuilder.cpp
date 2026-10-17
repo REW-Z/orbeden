@@ -18,10 +18,12 @@
 
 namespace
 {
-    //动态批的容量上限：单项引用顶点、整批引用顶点、整批索引
-    constexpr uint32 MaximumDynamicBatchItemVertices = 1024u;
-    constexpr uint32 MaximumDynamicBatchVertices = 4096u;
-    constexpr uint32 MaximumDynamicBatchIndices = 12288u;
+    //普通网格动态批的数量下限与几何预算
+    constexpr usize MinimumDynamicBatchItems = 8u;
+    constexpr uint32 MaximumDynamicBatchItemVertices = 128u;
+    constexpr uint32 MaximumDynamicBatchItemIndices = 384u;
+    constexpr uint32 MaximumDynamicBatchVertices = 1024u;
+    constexpr uint32 MaximumDynamicBatchIndices = 3072u;
 
     //策略是否允许走实例批与动态批
     bool AllowsInstancing(DrawStrategy strategy)
@@ -152,18 +154,31 @@ namespace
 
     //按预算收编连续的同材质项，返回动态批的结束下标。
     //单项超预算不参与；整批达到任一上限就结束，由调用方在下一个下标重新开始。
-    usize CollectDynamicBatch(const List<DrawItem>& items, usize begin, bool allowed)
+    usize CollectDynamicBatch(const List<DrawItem>& items, usize begin, bool allowed, bool preserveInstancing)
     {
         if (!allowed) return begin + 1;
 
         usize end = begin;
+        usize checkedInstancingEnd = begin;
         uint64 vertices = 0;
         uint64 indices = 0;
         while (end < items.size())
         {
             const DrawItem& item = items[end];
-            if (item.geometry != DrawGeometry::Mesh || !item.mesh) break;
+            if (item.persistentGeometry || item.geometry != DrawGeometry::Mesh || !item.mesh) break;
             if (end > begin && (!SameDynamicContent(items[begin], item) || !AllowsDynamicBatching(item.strategy))) break;
+            if (item.indexCount == 0 || item.indexCount > MaximumDynamicBatchItemIndices) break;
+
+            //保留后续可实例化的连续组
+            if (preserveInstancing && end > begin && end >= checkedInstancingEnd)
+            {
+                checkedInstancingEnd = end + 1;
+                while (checkedInstancingEnd < items.size()
+                    && SameBatchContent(item, items[checkedInstancingEnd]))
+                    ++checkedInstancingEnd;
+                if (checkedInstancingEnd > end + 1 && AllAllowInstancing(items, end, checkedInstancingEnd))
+                    break;
+            }
 
             uint32 itemVertices = GeometryExpander::CountReferencedVertices(*item.mesh, item.indexStart, item.indexCount);
             if (itemVertices == 0 || itemVertices > MaximumDynamicBatchItemVertices) break;
@@ -175,7 +190,7 @@ namespace
             ++end;
         }
 
-        return end;
+        return end - begin >= MinimumDynamicBatchItems ? end : begin + 1;
     }
 }
 
@@ -408,7 +423,7 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         });
     }
 
-    //在不透明的连续可重排区间内按批次键分组，区间顺序由组内最小距离决定
+    //在不透明的连续可重排区间内按批次键分组
     List<DrawItem> groupScratch;
     usize begin = 0;
     while (begin < items.size())
@@ -432,6 +447,8 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
         //同键项在排序后必然相邻，按组收集下标再按组重排
         struct Group
         {
+            uint32 programId = 0;
+            int32 materialObjectId = 0;
             float32 minDistance = SortableDistanceLimit;
             DrawItem first;
         };
@@ -447,6 +464,10 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
 
                 Group group;
                 group.first = groupScratch[cursor];
+                group.materialObjectId = group.first.material ? group.first.material->GetObjectId() : 0;
+                const GpuMaterial* material = gpuResources ? gpuResources->GetMaterial(group.first.material) : nullptr;
+                if (material && material->shader && !material->shader->passes.empty())
+                    group.programId = material->shader->passes[0].shaderProgram.id;
                 List<uint32> members;
                 for (usize member = cursor; member < groupEnd; ++member)
                 {
@@ -460,15 +481,21 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
             }
         }
 
-        //组内按距离升序，组间按最小距离后稳定键
+        //按程序和材质聚集组，同材质的网格组按距离升序
         PROFILE("Render/Batching/Sort/ReorderGroups");
         List<uint32> order(groups.size());
         for (uint32 index = 0; index < order.size(); ++index) order[index] = index;
-        std::stable_sort(order.begin(), order.end(), [&](uint32 a, uint32 b)
         {
-            if (groups[a].minDistance != groups[b].minDistance) return groups[a].minDistance < groups[b].minDistance;
-            return StableKeyLess(groups[a].first, groups[b].first);
-        });
+            PROFILE("Render/Batching/Sort/ByMaterial");
+            std::stable_sort(order.begin(), order.end(), [&](uint32 a, uint32 b)
+            {
+                if (groups[a].programId != groups[b].programId) return groups[a].programId < groups[b].programId;
+                if (groups[a].materialObjectId != groups[b].materialObjectId)
+                    return groups[a].materialObjectId < groups[b].materialObjectId;
+                if (groups[a].minDistance != groups[b].minDistance) return groups[a].minDistance < groups[b].minDistance;
+                return StableKeyLess(groups[a].first, groups[b].first);
+            });
+        }
 
         usize write = begin;
         for (uint32 groupIndex : order)
@@ -492,6 +519,7 @@ void DrawBatchBuilder::SortItems(List<DrawItem>& items)
 //按排序结果顺序扫描生成批次
 void DrawBatchBuilder::BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats)
 {
+    PROFILE(meshDynamicBatchingEnabled ? "Render/Batching/MeshDynamicOn" : "Render/Batching/MeshDynamicOff");
     EmitBatches(items, nullptr, batches, stats);
 }
 
@@ -701,17 +729,19 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
         if (first.source == DrawSource::StaticMesh)
         {
             mode = GeometryMode::Uniform;
-            if (end > index + 1 && AllAllowInstancing(items, index, end))
+            bool instancingRequested = end > index + 1 && AllAllowInstancing(items, index, end);
+            if (instancingRequested && instancedCapable)
             {
-                if (instancedCapable) mode = GeometryMode::Instanced;
-                else if (geometryAbiMissing) ReportMissingGeometryAbi(shader, *pass, GeometryMode::Instanced, first);
+                mode = GeometryMode::Instanced;
             }
             else
             {
+                if (instancingRequested && geometryAbiMissing)
+                    ReportMissingGeometryAbi(shader, *pass, GeometryMode::Instanced, first);
                 //动态批放宽到同材质与同状态，不要求同网格；按预算收编连续项
-                bool dynamicAllowed = AllAllowDynamicBatching(items, index, end);
-                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && dynamicAllowed);
-                if (dynamicEnd >= index + 2)
+                bool dynamicAllowed = meshDynamicBatchingEnabled && AllAllowDynamicBatching(items, index, end);
+                usize dynamicEnd = CollectDynamicBatch(items, index, expandedCapable && dynamicAllowed, instancedCapable);
+                if (dynamicEnd - index >= MinimumDynamicBatchItems)
                 {
                     end = dynamicEnd;
                     mode = GeometryMode::Expanded;
@@ -719,7 +749,8 @@ void DrawBatchBuilder::EmitBatches(const List<DrawItem>& items, const GpuShader*
                 else
                 {
                     //同材质项够多却没成动态批：声明了展开几何却拿不到变体时，未接入 ABI 的 Pass 要报出来
-                    if (geometryAbiMissing && pass->supportsExpandedGeometry && dynamicAllowed && end >= index + 2)
+                    if (geometryAbiMissing && pass->supportsExpandedGeometry && dynamicAllowed
+                        && end >= index + 2 && !instancingRequested)
                     {
                         ReportMissingGeometryAbi(shader, *pass, GeometryMode::Expanded, first);
                     }

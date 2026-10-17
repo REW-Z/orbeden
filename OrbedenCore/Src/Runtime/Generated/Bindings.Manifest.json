@@ -9660,6 +9660,25 @@
           "Parameters": []
         },
         {
+          "Name": "meshDynamicBatchingEnabled",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "particleRenderer",
           "Type": "ParticleRenderer*",
           "Access": "private",
@@ -9704,6 +9723,50 @@
           "IsMethod": false,
           "IsStatic": false,
           "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetMeshDynamicBatchingEnabled",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IsMeshDynamicBatchingEnabled",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
           "IsVirtual": false,
           "IsTemplate": false,
           "Serialize": false,
@@ -14439,6 +14502,50 @@
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "SetMeshDynamicBatchingEnabled",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IsMeshDynamicBatchingEnabled",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         },
         {
           "Name": "Initialize",
@@ -28730,8 +28837,27 @@
           "Parameters": []
         },
         {
-          "Name": "uniformLocations",
-          "Type": "std::unordered_map\u003Cuint32,std::unordered_map\u003Cstd::string,int32\u003E\u003E",
+          "Name": "programUniforms",
+          "Type": "std::unordered_map\u003Cuint32,ProgramUniformState\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "currentUniforms",
+          "Type": "ProgramUniformState*",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -30432,33 +30558,8 @@
           ]
         },
         {
-          "Name": "GetUniformLocation",
-          "Type": "int32",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "GetUniformLocation",
-          "Type": "int32",
+          "Name": "GetUniformState",
+          "Type": "UniformState*",
           "Access": "private",
           "IsMethod": true,
           "IsStatic": false,
@@ -30482,6 +30583,46 @@
             {
               "Name": "name",
               "Type": "const char*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "UpdateUniformValue",
+          "Type": "int32",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "type",
+              "Type": "UniformValueType",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "data",
+              "Type": "const void*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "size",
+              "Type": "usize",
               "DefaultValue": ""
             }
           ]
@@ -30701,6 +30842,194 @@
         }
       ],
       "EnumValues": []
+    },
+    {
+      "Name": "ProgramUniformState",
+      "QualifiedName": "OpenGLRenderBackend::ProgramUniformState",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "names",
+          "Type": "std::unordered_map\u003Cstd::string,UniformState*,UniformNameHash,std::equal_to\u003C\u003E\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "locations",
+          "Type": "std::unordered_map\u003Cint32,UniformState\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "UniformNameHash",
+      "QualifiedName": "OpenGLRenderBackend::UniformNameHash",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": []
+    },
+    {
+      "Name": "UniformState",
+      "QualifiedName": "OpenGLRenderBackend::UniformState",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "location",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "type",
+          "Type": "UniformValueType",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "sizeof",
+          "Type": "uint8 value[16*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "arg0",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "UniformValueType",
+      "QualifiedName": "OpenGLRenderBackend::UniformValueType",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint8",
+      "IsExported": false,
+      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "None",
+          "Value": ""
+        },
+        {
+          "Key": "Matrix4",
+          "Value": ""
+        },
+        {
+          "Key": "Vector3",
+          "Value": ""
+        },
+        {
+          "Key": "Color",
+          "Value": ""
+        },
+        {
+          "Key": "Int",
+          "Value": ""
+        },
+        {
+          "Key": "Float",
+          "Value": ""
+        }
+      ]
     },
     {
       "Name": "OrbEvent",
@@ -51638,6 +51967,50 @@
         {
           "Name": "GetBatchStats",
           "Type": "const RenderBatchStats\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetMeshDynamicBatchingEnabled",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "IsMeshDynamicBatchingEnabled",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": false,

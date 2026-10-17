@@ -5,6 +5,7 @@
 #include "Rendering/DrawBatchBuilder.h"
 #include <glad/gl.h>
 
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -180,7 +181,8 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     boundInstanceOffset = 0;
     boundTexture2Ds.clear();
     boundCubeTextures.clear();
-    uniformLocations.clear();
+    programUniforms.clear();
+    currentUniforms = nullptr;
 
     //实例化能力在此判定一次：网格顶点 4 个属性加实例属性 10 个，共需 14 个 attribute 槽位。
     instancingSupported = false;
@@ -237,7 +239,8 @@ void OpenGLRenderBackend::Shutdown()
     vertexInputLayouts.clear();
     boundTexture2Ds.clear();
     boundCubeTextures.clear();
-    uniformLocations.clear();
+    programUniforms.clear();
+    currentUniforms = nullptr;
     currentVertexInput = GpuVertexInputID();
     currentShaderProgram = GpuShaderProgramID();
     currentTextureSlot = 0;
@@ -783,10 +786,11 @@ void OpenGLRenderBackend::DeleteShaderProgram(GpuShaderProgramID id)
     {
         glUseProgram(0);
         currentShaderProgram = GpuShaderProgramID();
+        currentUniforms = nullptr;
     }
 
     glDeleteProgram(id.id);
-    uniformLocations.erase(id.id);
+    programUniforms.erase(id.id);
 }
 
 void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
@@ -794,13 +798,15 @@ void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
     if (currentShaderProgram.id == id.id) return;
 
     currentShaderProgram = id;
+    currentUniforms = id.IsValid() ? &programUniforms[id.id] : nullptr;
     glUseProgram(id.id);
 }
 
 //查询指定程序实际使用的 uniform
 bool OpenGLRenderBackend::HasShaderUniform(GpuShaderProgramID program, const char* name)
 {
-    return GetUniformLocation(program, name) >= 0;
+    const UniformState* state = GetUniformState(program, name);
+    return state && state->location >= 0;
 }
 
 void OpenGLRenderBackend::BindVertexInput(GpuVertexInputID id)
@@ -836,7 +842,7 @@ void OpenGLRenderBackend::BindCubeTexture(uint32 slot, GpuCubeTextureID id)
 
 void OpenGLRenderBackend::SetUniformMatrix4(const char* name, const matrix4x4& value)
 {
-    int32 location = GetUniformLocation(name);
+    int32 location = UpdateUniformValue(name, UniformValueType::Matrix4, value.m, sizeof(value.m));
     if (location < 0) return;
 
     glUniformMatrix4fv(location, 1, GL_FALSE, value.m);
@@ -844,7 +850,8 @@ void OpenGLRenderBackend::SetUniformMatrix4(const char* name, const matrix4x4& v
 
 void OpenGLRenderBackend::SetUniformVector3(const char* name, const vector3& value)
 {
-    int32 location = GetUniformLocation(name);
+    const float32 components[] = { value.x, value.y, value.z };
+    int32 location = UpdateUniformValue(name, UniformValueType::Vector3, components, sizeof(components));
     if (location < 0) return;
 
     glUniform3f(location, value.x, value.y, value.z);
@@ -852,7 +859,8 @@ void OpenGLRenderBackend::SetUniformVector3(const char* name, const vector3& val
 
 void OpenGLRenderBackend::SetUniformColor(const char* name, const color& value)
 {
-    int32 location = GetUniformLocation(name);
+    const float32 components[] = { value.r, value.g, value.b, value.a };
+    int32 location = UpdateUniformValue(name, UniformValueType::Color, components, sizeof(components));
     if (location < 0) return;
 
     glUniform4f(location, value.r, value.g, value.b, value.a);
@@ -860,7 +868,7 @@ void OpenGLRenderBackend::SetUniformColor(const char* name, const color& value)
 
 void OpenGLRenderBackend::SetUniformInt(const char* name, int32 value)
 {
-    int32 location = GetUniformLocation(name);
+    int32 location = UpdateUniformValue(name, UniformValueType::Int, &value, sizeof(value));
     if (location < 0) return;
 
     glUniform1i(location, value);
@@ -868,7 +876,7 @@ void OpenGLRenderBackend::SetUniformInt(const char* name, int32 value)
 
 void OpenGLRenderBackend::SetUniformFloat(const char* name, float32 value)
 {
-    int32 location = GetUniformLocation(name);
+    int32 location = UpdateUniformValue(name, UniformValueType::Float, &value, sizeof(value));
     if (location < 0) return;
 
     glUniform1f(location, value);
@@ -1312,23 +1320,37 @@ void OpenGLRenderBackend::InvalidateTexture2D(uint32 texture)
     }
 }
 
-int32 OpenGLRenderBackend::GetUniformLocation(const char* name)
+//获取指定程序的 uniform 缓存
+OpenGLRenderBackend::UniformState* OpenGLRenderBackend::GetUniformState(GpuShaderProgramID program, const char* name)
 {
-    return GetUniformLocation(currentShaderProgram, name);
-}
+    if (!program.IsValid() || !name) return nullptr;
 
-//缓存指定程序的 uniform 位置
-int32 OpenGLRenderBackend::GetUniformLocation(GpuShaderProgramID program, const char* name)
-{
-    if (!program.IsValid() || !name) return -1;
-
-    auto& locations = uniformLocations[program.id];
-    auto it = locations.find(name);
-    if (it != locations.end()) return it->second;
+    ProgramUniformState& uniforms = program.id == currentShaderProgram.id && currentUniforms
+        ? *currentUniforms : programUniforms[program.id];
+    auto found = uniforms.names.find(std::string_view(name));
+    if (found != uniforms.names.end()) return found->second;
 
     int32 location = glGetUniformLocation(program.id, name);
-    locations.emplace(name, location);
-    return location;
+    UniformState* state = nullptr;
+    if (location >= 0)
+    {
+        state = &uniforms.locations[location];
+        state->location = location;
+    }
+    uniforms.names.emplace(name, state);
+    return state;
+}
+
+//缓存变化的 uniform 值并返回待提交位置
+int32 OpenGLRenderBackend::UpdateUniformValue(const char* name, UniformValueType type, const void* data, usize size)
+{
+    UniformState* state = GetUniformState(currentShaderProgram, name);
+    if (!state || state->location < 0) return -1;
+    if (state->type == type && std::memcmp(state->value, data, size) == 0) return -1;
+
+    std::memcpy(state->value, data, size);
+    state->type = type;
+    return state->location;
 }
 
 /// <summary>绘制不受光照影响的调试线，使用相机矩阵进行三维裁剪。</summary>

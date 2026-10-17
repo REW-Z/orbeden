@@ -44,17 +44,20 @@
 - 在 Rendering/RenderTypes.h 定义 `DrawStrategy : uint32 { Auto=0, Individual=1, GpuInstancing=2, DynamicBatching=3 }`。
 - StaticMeshRenderer 删除 enableInstancing，新增 `DrawStrategy drawStrategy=Auto`；Material 不新增字段。
 - Individual：仅 Uniform，作为排序屏障；GpuInstancing：只允许 Instanced，否则 Uniform；DynamicBatching：只允许 Expanded 动态批，否则 Uniform。
-- Auto（主画面）：先使用有效静态批；剩余项先组成实例批；剩余符合预算的项组成动态批；其余 Uniform。
+- Auto（主画面）：先使用有效静态批；剩余项先组成实例批；剩余符合预算的项组成动态批；其余 Uniform。动态收集不得占用后面兼容且允许实例化的连续组；实例能力不足时，在策略与展开程序允许的前提下继续尝试动态批。
+- Dev 面板的 `Mesh CPU Dynamic Batching` 是默认开启、仅当前 Editor 会话生效的对比开关。关闭时，普通 Renderer 不尝试 CPU 动态合批，包含显式 DynamicBatching 策略；实例选择与排序规则保持原样，未实例化项回退 Uniform。持久静态批、粒子和显式实例提交不受此开关影响，不写回 Renderer 策略或场景。主画面构建记录 `Render/Batching/MeshDynamicOn`／`MeshDynamicOff`，用于区分导出结果。
 - Auto（阴影）：先使用有效静态批；其余普通网格在阴影绘制项内按 GpuInstancing 策略选择实例或 Uniform，直接复用 GPU 网格，不逐级联执行 CPU 动态展开。显式 DynamicBatching、粒子与显式实例提交保持各自路径，Renderer 保存的策略不变。
 - static+GpuInstancing 使用实例批；static+Individual 使用单绘制；static+DynamicBatching 使用动态批，保持 static 变换约束。
-- 普通 Renderer 合批必须至少包含两个绘制项；显式实例提交与粒子指定 Instanced 时，单实例仍允许走 Instanced。
+- 普通 Renderer 实例批至少包含两个绘制项，CPU 动态批至少包含八个兼容的小网格绘制项；显式实例提交与粒子指定 Instanced 时，单实例仍允许走 Instanced。
 - GPU 实例批要求同 Mesh、子网格索引区间、Material、Pass、队列、最终渲染状态与 receiveShadows；每批最多 65536 实例。
 - 动态/静态展开批不要求相同 Mesh；要求同 Material、单 Pass、队列、最终渲染状态与 receiveShadows。
 - 多 Pass Renderer 始终逐对象完成全部 Pass，不进入任何合批；不改变现有粒子/显式实例对多 Pass 的限制。
 - 不透明项仅在允许重排的连续区域中分组；Individual、多 Pass、特殊深度/混合状态构成屏障，不跨越屏障聚合。
+- 可重排区间按 Shader 基础程序、Material 聚集网格组；同材质的网格组按最近距离排列，组内仍近到远。基础程序只用于稳定的 Shader 分组，最终 Uniform／Instanced／Expanded 程序仍由批次决策选择。`Sort/ByMaterial` 单独记录组排序，不改变透明、折射或屏障的顺序。
 - Transparent、Refraction 先按现有规则排序，只合并连续兼容项；不得为合批移动透明对象的顺序。
-- 动态合批采用确定预算：每项最多 1024 个有效引用顶点；每批最多 4096 个有效引用顶点、12288 个索引，达到任一上限即拆批。
-- 每项先统计去重后的索引引用顶点；只展开被引用顶点；只剩一个项的普通动态批退回 Uniform。
+- 普通 Renderer 的 CPU 动态合批采用保守预算：每项最多 128 个有效引用顶点、384 个索引；每批至少 8 项，最多 1024 个有效引用顶点、3072 个索引。Auto 和显式 DynamicBatching 使用相同门槛；这是待 Profile 验证的初始预算，不限制 GPU Instancing、静态缓存或粒子路径。
+- 数量预算按单个子网格绘制项计算；先拒绝索引超限项，再统计去重后的引用顶点，只展开被引用顶点。遇到大网格、状态屏障、后续实例组或容量上限时结束收集，未达到八项的剩余段回退 Uniform，不跨越这些边界补足数量。
+- 展开变换按绘制项准备位置矩阵、法线余子式、UV 与 tint；x64／启用 SSE2 的 x86 使用 SSE2 并行计算向量分量，其他目标保留相同阈值的标量路径。内部准备数据按 16 字节对齐，不改变引擎 vector3 或 GPU 顶点 ABI；顶点通道通过已验证的原始数组指针读取，缺失通道保留原默认值。保留齐次除法、归一化与非法矩阵处理，不使用近似倒数平方根。
 - ParticleSystem 保留 Instanced/DynamicBatch 显式路径；Standard 允许普通 Billboard/Mesh 的两条路径；拖尾实例仍要求 Particle。
 - Expanded 不兼容时普通 Renderer 退回 Uniform；粒子显式选择不兼容路径时显示明确错误，不悄悄改成另一模式。
 
@@ -101,6 +104,7 @@
 - DrawItem 携带 drawStrategy、静态组句柄/索引范围；DrawBatch 新增 `bool persistentGeometry=false` 及静态组句柄。
 - DrawBatchBuilder 将静态缓存项与剩余项分开处理；实例/动态键比较独立实现，禁止继续用必须相同 Mesh 的键筛选动态批。
 - ExecuteExpandedBatch 对动态批执行展开上传；对持久批绑定缓存 VAO 并绘制范围；二者共用材质状态与 Expanded Program。
+- OpenGL 复用按程序和实际位置保存的 uniform 类型／值缓存，完全相同时跳过驱动提交；名称异构查找不创建命中路径上的临时字符串，数组名称别名指向同一个位置缓存。缓存随程序删除或后端关闭清理，不依赖 Material 指针相同，也不跳过改变的模型、材质、相机和阴影数据。不引入 UBO 或改变 Shader 输入契约。
 - 每帧 CPU 展开结果按批保存，在该帧多相机/阴影输入相同时复用；键包含有序成员、几何版本、变换、tint 和 UV。
 - CSM 每次相机渲染通过 CollectShadowCandidates 一次收集普通网格与显式实例，再由各级联的 BuildShadowItems 独立裁剪；同一 Renderer 的连续子网格共享包围盒判断。候选容器与投射物分区包围盒复用容量，不跨帧复用内容。
 - 持久静态批仍按每个成员的级联可见性生成索引区间，Opaque Mesh 粒子仍按原路径逐级追加；不复用主相机可见范围，遵守 castShadows、layer、Opaque、无效包围盒与当前阴影轮廓语义。

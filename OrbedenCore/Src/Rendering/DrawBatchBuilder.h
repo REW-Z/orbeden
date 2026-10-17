@@ -244,6 +244,8 @@ private:
     GpuResourceManager* gpuResources = nullptr;
     //后端实例能力，初始化时确定；不支持时自动来源全部退回普通绘制
     bool instancingAvailable = false;
+    //普通网格的 CPU 动态合批开关
+    bool meshDynamicBatchingEnabled = true;
     //粒子几何由渲染器产生，builder 只负责按相机追加
     ParticleRenderer* particleRenderer = nullptr;
     //静态几何缓存，非拥有型；构建相机项时跳过已收编的渲染器并追加持久批
@@ -252,6 +254,12 @@ private:
     std::unordered_set<uint64> reportedMissingGeometryAbi;
 
 public:
+    //切换普通网格的 CPU 动态合批
+    void SetMeshDynamicBatchingEnabled(bool value) { meshDynamicBatchingEnabled = value; }
+
+    //读取普通网格的 CPU 动态合批开关
+    bool IsMeshDynamicBatchingEnabled() const { return meshDynamicBatchingEnabled; }
+
     //注入本帧使用的 GPU 资源管理器、后端实例能力与粒子渲染器
     void Initialize(GpuResourceManager* resources, bool instancing, ParticleRenderer* particles,
         StaticBatchCache* staticCache = nullptr);

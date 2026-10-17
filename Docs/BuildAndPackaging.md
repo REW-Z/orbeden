@@ -572,6 +572,18 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 93：收窄普通 Renderer 的 CPU 动态合批范围：单个子网格绘制项最多 128 个有效引用顶点、384 个索引，连续兼容项至少 8 个才组批；整批最多 1024 个有效引用顶点、3072 个索引。先检查索引数量，超限项不进入引用顶点统计；不足 8 项或超预算时回退原 GPU 网格绘制。该规则同时约束 Auto 与显式 DynamicBatching，GPU Instancing 的两项门槛和大网格支持、持久静态缓存、粒子与显式实例路径不变。保留 Dev 面板的 CPU 动态合批对比开关。
+
+提交优化：仅在既有不透明可重排区间内，按 Shader 基础程序、Material 聚集网格组，再按组内最近距离排列同材质网格组；同网格组内仍近到远，Individual、多 Pass、特殊深度／混合状态屏障和透明／折射顺序不变。增加 `Render/Batching/Sort/ByMaterial` 采样。OpenGL 按程序与实际 uniform 位置缓存最近提交的类型和值，跳过完全相同的 glUniform 调用；名称使用 C++20 异构查找，命中时不构造临时字符串，当前程序缓存表通过稳定指针复用。数组首元素的不同名称共享同一位置缓存；首次零值仍提交，材质／相机／灯光参数、模型矩阵、纹理槽或阴影参数变化时重新提交，不使用浮点近似比较。程序删除时清除该程序的缓存，后端初始化／Shutdown 时全部清空，Shader 热更新沿用程序重建与释放流程。不新增 UBO、Indirect Draw 或 Shader ABI；材质排序会改变不透明物体跨材质的近远顺序，需同时关注 GPU 遮挡与整帧耗时，预算仍为待实测的初始值。
+
+需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块和 Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移，不手改生成绑定。仅做静态检查，未编译或运行测试，实际收益与画面回归需在重建后验证。
+
+版本 92：Dev 面板新增默认勾选的 `Mesh CPU Dynamic Batching` 临时对比开关。取消后，普通 StaticMeshRenderer 的 CPU 动态合批关闭；Auto 仍优先使用 GPU Instancing，无法实例化时逐项 Uniform 绘制，显式 DynamicBatching 策略也回退 Uniform。保留排序、持久静态缓存、粒子与显式实例提交路径；不修改 Renderer 字段、不保存场景或项目设置，重启 Editor 恢复默认开启。主画面批次构建追加 `Render/Batching/MeshDynamicOn`／`MeshDynamicOff` 采样，导出 JSON 可识别模式；该作用域只表示批次构建区间，需结合顶点展开、提交、GPU 等待及整帧耗时比较。Editor 桥接在根函数表尾追加两个回调并同步尺寸与偏移检查。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块和 Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试，尚无本次对比的性能结论。
+
+对比步骤：在相同场景、相机、窗口尺寸、阴影、面板布局和构建配置下，先勾选上述开关，等待资源与拓扑缓存预热后清空 Profile 历史，录制并导出一组稳态帧；停止录制，取消勾选，等待切换稳定后再次清空、录制并导出。两组应同时比较多帧整体耗时与相关渲染作用域，不以 Draw Call 数或单次构建作用域判定收益。Profiler 现有 GPU 等待点会影响 CPU／GPU 重叠，当前事件为 CPU 墙钟计时，不能当作独立 GPU 时间；需要最终评估 GPU 成本时再加入 GPU 时间戳测量。建议在 Release 中复核，当前阶段不自动改变合批预算或默认策略。
+
+版本 91：动态展开按绘制项一次准备位置、法线余子式、UV 与 tint，顶点循环通过已校验的原始通道指针读取；x64／启用 SSE2 的 x86 使用 SSE2 并行计算向量分量，其他目标保留标量路径，不要求 AVX。沿用原齐次除法、归一化阈值、奇异矩阵拒绝及缺失通道默认值，不使用近似倒数平方根；新增 PrepareTransform 采样，保留 TransformVertices、拓扑缓存及缓冲回收。动态批不再占用后面允许且可执行 GPU Instancing 的连续组；实例能力不足时，策略与展开能力允许则继续尝试动态批。材质／状态兼容规则、透明顺序、持久静态缓存、显式实例／粒子策略、1024／4096／12288 预算、32 位索引和 GPU 顶点 ABI 不变。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块和 Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试；SIMD 的实际提速及浮点结果需在重建后验证。
+
 版本 90：GeometryExpander 按 Mesh 运行时 ID、对象地址、内容版本、顶点／索引数量和索引区间缓存引用顺序与局部索引，复用合批预算和展开阶段的统计结果；索引校验及映射只在缓存失效后重建。顶点仍按原首次引用顺序逐次转换，位置／法线／切线公式、非法输入回滚、未组成完整三角形的尾部索引处理与 32 位索引格式不变。追加前按几何增长预留容量，索引批量复制后加顶点基址；ParticleRenderer 回收已消费展开块的容量供后续批次复用，保留 Billboard／拖尾构造、分块上限和 GPU 提交顺序。每帧清理已销毁 Mesh 的缓存，资源失效或 Shutdown 时清空拓扑与回收池；不修改 Mesh 的既有版本接口、合批策略、场景或资源格式。保留现有采样并新增 GetTopology、BuildTopology、ReserveBuffers；首次构建缓存会有额外开销，需比较后续帧。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块和 Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
 
 版本 89：仅细分普通 Pass 的 Profile：绘制项收集、排序和批次生成；排序中的距离排序、按键分组、组构造和组重排；按 Uniform／Instanced／Expanded／TrailInstanced 区分绘制路径；展开中的旧块清理、GPU 网格查询、引用顶点统计、索引校验、顶点转换、索引重排、块提交、状态绑定和 Draw 提交。保留原有采样名称和全部几何算法、索引格式、合批策略及渲染顺序，不逐顶点计时。原生与托管每帧事件上限从 1024 同步升至 4096，保留 1024 帧历史，原生事件数组约 160 MiB；录制仍包含原有 glFinish 诊断，CPU 作用域数据不等同于 GPU 计时。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK，清空并重新录制后检查 DroppedEventCount。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。

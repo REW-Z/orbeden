@@ -3,13 +3,47 @@
 #include "Rendering/Backend/OpenGLContext.h"
 #include "Rendering/Backend/RenderBackend.h"
 
+#include <functional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 //OpenGL 渲染后端
 class OpenGLRenderBackend : public RenderBackend
 {
 private:
+    enum class UniformValueType : uint8
+    {
+        None,
+        Matrix4,
+        Vector3,
+        Color,
+        Int,
+        Float,
+    };
+
+    struct UniformState
+    {
+        int32 location = -1;
+        UniformValueType type = UniformValueType::None;
+        uint8 value[16 * sizeof(float32)] = {};
+    };
+
+    struct UniformNameHash
+    {
+        using is_transparent = void;
+
+        //直接计算 uniform 名称的哈希
+        usize operator()(std::string_view name) const noexcept { return std::hash<std::string_view>{}(name); }
+    };
+
+    struct ProgramUniformState
+    {
+        std::unordered_map<std::string, UniformState*, UniformNameHash, std::equal_to<>> names;
+        //不同名称可能指向同一 uniform 位置
+        std::unordered_map<int32, UniformState> locations;
+    };
+
     OpenGLContext context;
     struct DepthDistributionState
     {
@@ -51,7 +85,9 @@ private:
     std::unordered_map<uint32, GpuVertexLayout> vertexInputLayouts;
     std::unordered_map<uint32, uint32> boundTexture2Ds;
     std::unordered_map<uint32, uint32> boundCubeTextures;
-    std::unordered_map<uint32, std::unordered_map<std::string, int32>> uniformLocations;
+    //按程序保存 uniform 位置和最近提交值
+    std::unordered_map<uint32, ProgramUniformState> programUniforms;
+    ProgramUniformState* currentUniforms = nullptr;
 
 public:
     bool Initialize(IWindow* window) override;
@@ -130,9 +166,10 @@ private:
     void ActivateTextureSlot(uint32 slot);
     void BindTexture2D(uint32 slot, uint32 texture);
     void InvalidateTexture2D(uint32 texture);
-    int32 GetUniformLocation(const char* name);
-    //缓存指定程序的 uniform 位置
-    int32 GetUniformLocation(GpuShaderProgramID program, const char* name);
+    //获取指定程序的 uniform 缓存
+    UniformState* GetUniformState(GpuShaderProgramID program, const char* name);
+    //缓存变化的 uniform 值并返回待提交位置
+    int32 UpdateUniformValue(const char* name, UniformValueType type, const void* data, usize size);
 
     //按容量分配或覆盖顶点缓冲存储
     bool WriteVertexBuffer(uint32 buffer, const void* data, usize size, usize capacity);

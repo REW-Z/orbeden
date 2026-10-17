@@ -82,6 +82,12 @@ private:
     void ReportMissingGeometryVariant(Material* source, const GpuShader& shader, const char* variant);
 
 public:
+    //切换普通网格的 CPU 动态合批
+    void SetMeshDynamicBatchingEnabled(bool value) { batchBuilder.SetMeshDynamicBatchingEnabled(value); }
+
+    //读取普通网格的 CPU 动态合批开关
+    bool IsMeshDynamicBatchingEnabled() const { return batchBuilder.IsMeshDynamicBatchingEnabled(); }
+
     //初始化后端引用并等待首次绘制时加载内置 shader。
     void Initialize(RenderBackend* renderBackend);
 
