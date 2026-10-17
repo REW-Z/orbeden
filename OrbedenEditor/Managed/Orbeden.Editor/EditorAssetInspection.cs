@@ -8,7 +8,9 @@ internal static class EditorAssetInspection
 {
     internal sealed record Field(string Name, string TypeName, string Value);
     internal sealed record Asset(string Key, string TypeName, string BlobName, List<Field> Fields);
-    internal sealed record Result(IReadOnlyList<Asset> Objects, IReadOnlyList<string> Messages, bool IsStale = false, bool IsLoading = false);
+    internal sealed record ModelNode(string Name, int ParentIndex, string LocalMatrix, string MeshKey, List<string> MaterialKeys);
+    internal sealed record Result(IReadOnlyList<Asset> Objects, IReadOnlyList<string> Messages, bool IsStale = false, bool IsLoading = false,
+        IReadOnlyList<ModelNode>? ModelNodes = null);
     private static string contentRoot = string.Empty;
     internal static string SourcePath { get; private set; } = string.Empty;
     internal static string ObjectKey { get; private set; } = string.Empty;
@@ -75,7 +77,7 @@ internal static class EditorAssetInspection
         None,
         /// <summary>图片：一个文件对应一个 Texture2D，设置颜色空间。</summary>
         Texture,
-        /// <summary>模型：设置网格缩放倍率与源坐标系上轴。</summary>
+        /// <summary>模型：设置网格缩放倍率、源坐标系上轴及材质和纹理导入。</summary>
         Mesh,
         /// <summary>字体：设置字体面、字形表示及预烘焙图集参数。</summary>
         Font,
@@ -170,6 +172,17 @@ internal static class EditorAssetInspection
                 ("Z", "Z-up -> Y-up"),
             ]);
             EditorGUI.Label("The engine is Y-up. Z-up converts Blender and CAD exports on import.");
+            bool importMaterials = DraftText("importMaterials") != "false";
+            if (EditorGUI.Checkbox("Import Materials", ref importMaterials))
+                SetDraft("importMaterials", importMaterials ? null : "false");
+            EditorGUI.BeginDisabled(!importMaterials);
+            try
+            {
+                bool importTextures = DraftText("importTextures") != "false";
+                if (EditorGUI.Checkbox("Import Textures", ref importTextures))
+                    SetDraft("importTextures", importTextures ? null : "false");
+            }
+            finally { EditorGUI.EndDisabled(); }
             break;
 
         case ImportSettingsKind.Font:

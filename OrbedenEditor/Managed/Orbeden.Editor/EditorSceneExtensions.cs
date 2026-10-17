@@ -28,14 +28,14 @@ public interface IEditorSceneExtension
 /// <summary>场景扩展注册表；编辑器只接收命中结果，不依赖具体 UI 组件类型。</summary>
 public static class EditorSceneExtensions
 {
-    private static readonly Dictionary<string, IEditorSceneExtension> extensions = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (IEditorSceneExtension Extension, byte[] ProfileName)> extensions = new(StringComparer.Ordinal);
 
     /// <summary>登记或替换场景扩展。</summary>
     public static void Register(string id, IEditorSceneExtension extension)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
         ArgumentNullException.ThrowIfNull(extension);
-        extensions[id] = extension;
+        extensions[id] = (extension, InteropText.EncodeUtf8("Editor/SceneExtensions/" + id));
     }
 
     /// <summary>移除场景扩展并释放程序集引用。</summary>
@@ -44,9 +44,13 @@ public static class EditorSceneExtensions
     //绘制各个扩展的公共辅助内容
     internal static void DrawOverlay()
     {
-        foreach (IEditorSceneExtension extension in extensions.Values)
+        foreach (var registration in extensions.Values)
         {
-            try { extension.DrawOverlay(); }
+            try
+            {
+                using EditorProfileScope profile = new(registration.ProfileName);
+                registration.Extension.DrawOverlay();
+            }
             catch (Exception exception) { Console.Error.WriteLine($"Scene overlay failed: {exception}"); }
         }
     }
@@ -57,11 +61,11 @@ public static class EditorSceneExtensions
         hit = default;
         float closest = ray.MaximumDistance;
         bool found = false;
-        foreach (IEditorSceneExtension extension in extensions.Values)
+        foreach (var registration in extensions.Values)
         {
             try
             {
-                if (!extension.TryPick(ray, out EditorScenePickHit candidate) || candidate.Ens.IsNull) continue;
+                if (!registration.Extension.TryPick(ray, out EditorScenePickHit candidate) || candidate.Ens.IsNull) continue;
                 vector3 p = candidate.Position;
                 float distance = (p.x - ray.Origin.x) * ray.Direction.x
                     + (p.y - ray.Origin.y) * ray.Direction.y + (p.z - ray.Origin.z) * ray.Direction.z;

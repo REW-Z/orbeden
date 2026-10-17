@@ -62,6 +62,9 @@ public:
     //注册资源对象之间的依赖关系
     static bool RegisterDependency(const std::string& ownerKey, const std::string& dependencyKey);
 
+    //移除指定资源依赖，未找到时返回 false
+    static bool UnregisterDependency(const std::string& ownerKey, const std::string& dependencyKey);
+
     //递归标记对象依赖
     static void MarkObjectGraph(Object* object, std::unordered_set<int32>& marked);
 

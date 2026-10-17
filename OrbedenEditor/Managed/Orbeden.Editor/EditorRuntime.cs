@@ -5,6 +5,14 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
+/// <summary>与原生桥共用的场景辅助绘制阶段。</summary>
+internal enum SceneGizmoPass : byte
+{
+    Extensions = 0,
+    ComponentEditors = 1,
+    CommitEdits = 2,
+}
+
 /// <summary>Editor 托管入口，由 C++ EditorSystem 调用。</summary>
 public static class EditorRuntime
 {
@@ -23,6 +31,8 @@ public static class EditorRuntime
         public EditorAssetReimportNativeApi Reimport;
         public EditorInputNativeApi Input;
         public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> ExportProfilerFrameText;
+        public delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> BeginProfileSample;
+        public delegate* unmanaged[Cdecl]<EditorProfileScope*, void> EndProfileSample;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -59,7 +69,7 @@ public static class EditorRuntime
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
             NativeEditorLog.Initialize(api.Log);
-            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText);
+            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText, api.BeginProfileSample, api.EndProfileSample);
 
             //面板注册期间的警告也要进 Console 面板，所以先装日志通道
             EditorConsole.Install();
@@ -359,18 +369,25 @@ public static class EditorRuntime
         }
     }
 
-    /// <summary>绘制 C# Scene Handles，并提交原生手柄产生的编辑。</summary>
+    /// <summary>执行指定阶段的场景扩展、组件编辑器或手柄改动提交。</summary>
     [UnmanagedCallersOnly]
-    public static void DrawSceneGizmos(byte commitOnly)
+    public static void DrawSceneGizmos(byte pass)
     {
         try
         {
-            //原生侧每帧调用一次，正好用来轮询已松手的手柄拖拽
-            while (Gizmos.TakeEdit(out EditorGizmoEdit edit)) CommitGizmoEdit(edit);
-            if (commitOnly == 0)
+            switch ((SceneGizmoPass)pass)
             {
-                EditorSceneExtensions.DrawOverlay();
-                CustomEditorRegistry.DrawScene();
+                case SceneGizmoPass.Extensions:
+                    EditorSceneExtensions.DrawOverlay();
+                    break;
+                case SceneGizmoPass.ComponentEditors:
+                    CustomEditorRegistry.DrawScene();
+                    break;
+                case SceneGizmoPass.CommitEdits:
+                    while (Gizmos.TakeEdit(out EditorGizmoEdit edit)) CommitGizmoEdit(edit);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(pass), pass, "Unknown scene Gizmo pass.");
             }
         }
         catch (Exception ex)
@@ -520,7 +537,11 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 180);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 182);
+        ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 180 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 181 * IntPtr.Size)
+            throw new TypeLoadException("Editor profiler sampling ABI layout mismatch.");
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);
         ValidateSize<EditorPropertyAbi>(nameof(EditorPropertyAbi), 80);

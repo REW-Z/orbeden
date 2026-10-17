@@ -266,10 +266,13 @@ public:
     //按排序结果顺序扫描生成批次，同时决定每个批次使用哪种几何模式
     void BuildBatches(const List<DrawItem>& items, List<DrawBatch>& batches, RenderBatchStats& stats);
 
-    //从完整场景、全部显式实例与 Opaque Mesh 粒子收集阴影候选，不使用主相机的可见集合
-    void BuildShadowItems(const RenderScene& scene, const List<InstanceSubmission>& submissions,
-        const ParticleFrameSnapshot& particles, const RenderCamera& camera, const frustum& lightFrustum,
-        List<DrawItem>& items);
+    //收集当前相机的普通网格与显式实例阴影候选，不按级联视锥裁剪
+    void CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+        const RenderCamera& camera, List<DrawItem>& candidates);
+
+    //筛选当前级联的共享候选，再追加逐级裁剪的持久静态批和 Opaque Mesh 粒子
+    void BuildShadowItems(const List<DrawItem>& candidates, const ParticleFrameSnapshot& particles,
+        const RenderCamera& camera, const frustum& lightFrustum, List<DrawItem>& items);
 
     //按阴影键分组生成批次，键不含材质，深度 program 由外部给定
     void BuildShadowBatches(const List<DrawItem>& items, const GpuShader& depthShader,

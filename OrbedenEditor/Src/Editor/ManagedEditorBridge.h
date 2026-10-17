@@ -11,6 +11,14 @@ class EditorGUI;
 class PanelManager;
 struct EditorGizmoApi;
 
+//与托管入口共用的场景辅助绘制阶段
+enum class SceneGizmoPass : uint8
+{
+    Extensions = 0,
+    ComponentEditors = 1,
+    CommitEdits = 2,
+};
+
 //Editor 托管桥，负责 C++ 与 C# Editor Runtime 之间的调用。
 class ManagedEditorBridge
 {
@@ -86,8 +94,8 @@ public:
     // 卸载用户游戏程序集引用。
     void UnloadGameAssembly();
 
-    //绘制 C# Scene Handles。
-    void DrawSceneGizmos(bool commitOnly = false);
+    //执行指定阶段的场景扩展、组件编辑器或手柄改动提交
+    void DrawSceneGizmos(SceneGizmoPass pass);
 
     //将场景射线交给托管源码包进行拾取
     bool PickScene(const vector3& origin, const vector3& direction, float32 maximumDistance,

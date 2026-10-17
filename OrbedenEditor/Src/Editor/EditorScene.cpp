@@ -19,6 +19,7 @@
 #include "Application.h"
 #include "Editor/ManagedEditorBridge.h"
 #include "Platform/GlfwWindow.h"
+#include "Profiler/Profiler.h"
 #include "Rendering/RenderMath.h"
 #include "Rendering/RenderSystem.h"
 #include "Runtime/Object/Ens.h"
@@ -662,6 +663,7 @@ void EditorScene::RefreshSceneViewTarget(World& world)
 //显示包含选中描边的场景视口图像并叠加 Handles。
 void EditorScene::DrawSceneView()
 {
+    PROFILE("Editor/Panels/Scene/Viewport");
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 viewMin = ImGui::GetCursorScreenPos();
     ImVec2 viewSize = ImGui::GetContentRegionAvail();
@@ -689,7 +691,11 @@ void EditorScene::DrawSceneView()
     else
         ImGui::Dummy(viewSize);
 
+    //保存视口图像的投放目标
+    ImGuiContext* context = ImGui::GetCurrentContext();
+    ImGuiLastItemData viewportItem = context->LastItemData;
     DrawSceneOverlay();
+    context->LastItemData = viewportItem;
 }
 
 //在场景视口叠加托管 Gizmos 与 Handles。
@@ -701,16 +707,43 @@ void EditorScene::DrawSceneOverlay()
 
     const RenderScene& scene = renderSystem->GetCurrentScene();
     //手柄与托管 Gizmo 共用渲染这张离屏图用的相机矩阵；手柄的写入必须早于拾取
-    PrepareGizmoView(scene);
-    DrawGizmoToolbar();
-    DrawManagedGizmos();
-    UpdateGizmoHandles(world);
-    managedBridge.DrawSceneGizmos(true);
-    HandleSelection(scene);
-    componentGizmos.Draw(world, *this, gizmoView, scene);
-    DrawGizmoHandles();
+    {
+        PROFILE("Editor/Panels/Scene/PrepareView");
+        PrepareGizmoView(scene);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/Toolbar");
+        DrawGizmoToolbar();
+    }
+    {
+        PROFILE("Editor/Panels/Scene/ManagedGizmos");
+        DrawManagedGizmos();
+    }
+    {
+        PROFILE("Editor/Panels/Scene/UpdateHandles");
+        UpdateGizmoHandles(world);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/CommitHandles");
+        managedBridge.DrawSceneGizmos(SceneGizmoPass::CommitEdits);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/Selection");
+        HandleSelection(scene);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/ComponentGizmos");
+        componentGizmos.Draw(world, *this, gizmoView, scene);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/DrawHandles");
+        DrawGizmoHandles();
+    }
     //罗盘是视口部件而非组件 Gizmo：放在最后画，且不受 Gizmos 开关影响
-    EditorGizmoHandles::DrawAxisCompass(gizmoView);
+    {
+        PROFILE("Editor/Panels/Scene/Compass");
+        EditorGizmoHandles::DrawAxisCompass(gizmoView);
+    }
 }
 
 //更新编辑器观察相机。
@@ -1560,7 +1593,16 @@ void EditorScene::DrawManagedGizmos()
     ImGui::SetCursorScreenPos(ImVec2(sceneView.renderPosition.x + 8, sceneView.renderPosition.y + 40));
     ImGui::BeginGroup();
     CurrentGizmoScene = this;
-    managedBridge.DrawSceneGizmos();
+    //提交上一轮手柄改动并分别采样两类托管绘制
+    managedBridge.DrawSceneGizmos(SceneGizmoPass::CommitEdits);
+    {
+        PROFILE("Editor/Panels/Scene/ManagedGizmos/Extensions");
+        managedBridge.DrawSceneGizmos(SceneGizmoPass::Extensions);
+    }
+    {
+        PROFILE("Editor/Panels/Scene/ManagedGizmos/ComponentEditors");
+        managedBridge.DrawSceneGizmos(SceneGizmoPass::ComponentEditors);
+    }
     if (CurrentGizmoScene == this) CurrentGizmoScene = nullptr;
     ImGui::EndGroup();
 

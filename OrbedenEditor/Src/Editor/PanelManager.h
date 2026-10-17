@@ -16,6 +16,8 @@ private:
     {
     public:
         EditorPanelInfo info;
+        //注册时缓存面板采样名
+        std::string profileName;
         std::unique_ptr<IEditorPanel> panel;
         bool visible = false;
         bool hasPosition = false;

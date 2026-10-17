@@ -6,7 +6,10 @@ namespace OrbedenEditor;
 /// <summary>管理自定义编辑器注册、实例缓存和三类绘制回调。</summary>
 internal static class CustomEditorRegistry
 {
-    private sealed record Registration(Type Component, Type Editor, bool Children);
+    private sealed record Registration(Type Component, Type Editor, bool Children, bool HasSceneGui, bool HasDrawGizmos)
+    {
+        internal readonly byte[] ProfileName = InteropText.EncodeUtf8("Editor/ComponentEditors/" + Editor.Name);
+    }
     private sealed class Instance
     {
         internal ComponentEditor Editor = null!;
@@ -15,6 +18,9 @@ internal static class CustomEditorRegistry
     private static readonly List<Registration> registrations = [];
     private static readonly Dictionary<string, Type> scripts = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Instance> instances = new(StringComparer.Ordinal);
+    //按组件类型缓存编辑器匹配结果
+    private static readonly Dictionary<(bool IsManaged, string TypeName), Registration?> registrationMatches = [];
+    private static uint registryGeneration;
     //按程序集去重，重复注册同一个程序集不会产生重复项
     private static readonly HashSet<Assembly> registeredAssemblies = [];
 
@@ -30,6 +36,7 @@ internal static class CustomEditorRegistry
     internal static void Register(Assembly assembly)
     {
         if (!registeredAssemblies.Add(assembly)) return;
+        registrationMatches.Clear();
         Type[] types;
         try { types = assembly.GetTypes(); }
         catch (ReflectionTypeLoadException exception) { types = exception.Types.OfType<Type>().ToArray(); }
@@ -43,7 +50,9 @@ internal static class CustomEditorRegistry
             { Console.Error.WriteLine($"Invalid CustomEditor: {editor.FullName}"); continue; }
             if (registrations.Any(entry => entry.Component == attribute.ComponentType))
             { Console.Error.WriteLine($"Duplicate CustomEditor for {attribute.ComponentType.FullName}: {editor.FullName}"); continue; }
-            registrations.Add(new(attribute.ComponentType, editor, attribute.EditorForChildClasses));
+            bool hasSceneGui = editor.GetMethod(nameof(ComponentEditor.OnSceneGui), Type.EmptyTypes)!.DeclaringType != typeof(ComponentEditor);
+            bool hasDrawGizmos = editor.GetMethod(nameof(ComponentEditor.OnDrawGizmos), Type.EmptyTypes)!.DeclaringType != typeof(ComponentEditor);
+            registrations.Add(new(attribute.ComponentType, editor, attribute.EditorForChildClasses, hasSceneGui, hasDrawGizmos));
         }
     }
 
@@ -51,16 +60,26 @@ internal static class CustomEditorRegistry
     internal static void Clear()
     {
         instances.Clear();
+        registrationMatches.Clear();
+        registryGeneration = 0;
         scripts.Clear();
         registrations.Clear();
         registeredAssemblies.Clear();
     }
 
-    /// <summary>按组件最近的注册基类选择编辑器。</summary>
-    private static Instance? Resolve(IReadOnlyList<ComponentEditorTarget> targets)
+    /// <summary>查找并缓存组件最近的编辑器注册。</summary>
+    private static Registration? FindRegistration(ComponentEditorTarget target)
     {
-        ComponentEditorTarget primary = targets[0];
-        Type? component = primary.IsManaged ? scripts.GetValueOrDefault(primary.TypeName) : null;
+        uint generation = EditorNativeComponents.RegistryGeneration;
+        if (registryGeneration != generation)
+        {
+            registrationMatches.Clear();
+            registryGeneration = generation;
+        }
+        var key = (target.IsManaged, target.TypeName);
+        if (registrationMatches.TryGetValue(key, out Registration? cached)) return cached;
+
+        Type? component = target.IsManaged ? scripts.GetValueOrDefault(target.TypeName) : null;
         Registration? registration = null;
         for (Type? current = component; current != null; current = current.BaseType)
         {
@@ -70,20 +89,28 @@ internal static class CustomEditorRegistry
             if (registration != null) break;
         }
         //原生类型按真实反射继承链匹配，不依赖游戏包装的模块初始化器是否已执行。
-        if (!primary.IsManaged)
+        if (!target.IsManaged)
         {
             int bestDepth = -1;
             foreach (Registration candidate in registrations)
             {
                 if (NativeBindingRuntime.IsManagedScript(candidate.Component)) continue;
                 string name = NativeBindingRuntime.GetNativeTypeName(candidate.Component) ?? candidate.Component.Name;
-                if (name == primary.TypeName) { registration = candidate; break; }
-                if (!candidate.Children || !EditorNativeComponents.MatchesComponentType(primary.ObjectId, name)) continue;
+                if (name == target.TypeName) { registration = candidate; break; }
+                if (!candidate.Children || !EditorNativeComponents.MatchesComponentType(target.ObjectId, name)) continue;
                 int depth = 0;
                 for (Type? current = candidate.Component; current != null; current = current.BaseType) ++depth;
                 if (depth > bestDepth) { bestDepth = depth; registration = candidate; }
             }
         }
+        registrationMatches[key] = registration;
+        return registration;
+    }
+
+    /// <summary>获取或创建目标对应的编辑器实例。</summary>
+    private static Instance? Resolve(IReadOnlyList<ComponentEditorTarget> targets)
+    {
+        Registration? registration = FindRegistration(targets[0]);
         if (registration == null) return null;
         string key = registration.Editor.FullName + ":" + string.Join(',', targets.Select(target => target.ObjectId));
         if (instances.TryGetValue(key, out Instance? found)) return found;
@@ -99,6 +126,7 @@ internal static class CustomEditorRegistry
         {
             Console.Error.WriteLine($"Cannot create CustomEditor {registration.Editor.FullName}: {exception}");
             registrations.Remove(registration);
+            registrationMatches.Clear();
             return null;
         }
     }
@@ -113,9 +141,19 @@ internal static class CustomEditorRegistry
         EditorGUI.PushId(callback + ":" + string.Join(',', instance.Editor.Targets.Select(target => target.ObjectId)));
         try
         {
-            draw();
-            if (instance.Editor.Properties.HasPendingChanges && !instance.Editor.Properties.ApplyChanges($"Edit {instance.Editor.Target.TypeName}"))
-                throw new InvalidOperationException("CustomEditor property write failed.");
+            ReadOnlySpan<byte> callbackProfile = callback switch
+            {
+                nameof(ComponentEditor.OnDrawGizmos) => "Editor/ComponentEditors/OnDrawGizmos"u8,
+                nameof(ComponentEditor.OnSceneGui) => "Editor/ComponentEditors/OnSceneGui"u8,
+                _ => default,
+            };
+            using (new EditorProfileScope(callbackProfile)) draw();
+            if (instance.Editor.Properties.HasPendingChanges)
+            {
+                using EditorProfileScope applyProfile = new(callbackProfile.IsEmpty ? default : "Editor/ComponentEditors/ApplyChanges"u8);
+                if (!instance.Editor.Properties.ApplyChanges($"Edit {instance.Editor.Target.TypeName}"))
+                    throw new InvalidOperationException("CustomEditor property write failed.");
+            }
             return true;
         }
         catch (Exception exception)
@@ -148,25 +186,55 @@ internal static class CustomEditorRegistry
     internal static void DrawScene()
     {
         if (registrations.Count == 0) return;
+        bool gizmosVisible = Gizmos.Visible;
         HashSet<int> alive = [];
-        foreach (EnsId ens in EditorNativeComponents.GetWorldEns())
+        EnsId[] worldEns;
+        using (new EditorProfileScope("Editor/ComponentEditors/EnumerateEns"u8))
+            worldEns = EditorNativeComponents.GetWorldEns();
+        foreach (EnsId ens in worldEns)
         {
-            bool selected = Gizmos.IsSelected(ens);
-            bool active = Ens.FromId(ens).WorldActive;
-            foreach (NativeComponentInfo info in EditorNativeComponents.GetComponents(ens))
+            bool selected, active;
+            using (new EditorProfileScope("Editor/ComponentEditors/ReadEnsState"u8))
+            {
+                selected = Gizmos.IsSelected(ens);
+                active = Ens.FromId(ens).WorldActive;
+            }
+            List<NativeComponentInfo> components;
+            using (new EditorProfileScope("Editor/ComponentEditors/EnumerateComponents"u8))
+                components = EditorNativeComponents.GetComponents(ens);
+            foreach (NativeComponentInfo info in components)
             {
                 alive.Add(info.ObjectId);
                 if (!active && !selected) continue;
-                if (!selected && !Gizmos.Visible) continue;
-                Instance? instance = Resolve([new(info.ObjectId, ens, info.TypeName, info.IsManaged)]);
+                if (!selected && !gizmosVisible) continue;
+
+                //筛选本帧实际需要执行的场景回调
+                ComponentEditorTarget target = new(info.ObjectId, ens, info.TypeName, info.IsManaged);
+                Registration? registration;
+                using (new EditorProfileScope("Editor/ComponentEditors/MatchRegistration"u8))
+                    registration = FindRegistration(target);
+                if (registration == null) continue;
+                bool drawGizmos = gizmosVisible && registration.HasDrawGizmos;
+                bool drawSceneGui = selected && registration.HasSceneGui;
+                if (!drawGizmos && !drawSceneGui) continue;
+
+                using EditorProfileScope editorProfile = new(registration.ProfileName);
+                Instance? instance;
+                using (new EditorProfileScope("Editor/ComponentEditors/ResolveInstance"u8))
+                    instance = Resolve([target]);
                 if (instance == null) continue;
+                drawGizmos &= !instance.FailedCallbacks.Contains(nameof(ComponentEditor.OnDrawGizmos));
+                drawSceneGui &= !instance.FailedCallbacks.Contains(nameof(ComponentEditor.OnSceneGui));
+                if (!drawGizmos && !drawSceneGui) continue;
                 instance.Editor.IsSelected = selected;
-                instance.Editor.Properties.Update();
-                if (Gizmos.Visible) Invoke(instance, nameof(ComponentEditor.OnDrawGizmos), instance.Editor.OnDrawGizmos);
-                if (selected) Invoke(instance, nameof(ComponentEditor.OnSceneGui), instance.Editor.OnSceneGui);
+                using (new EditorProfileScope("Editor/ComponentEditors/RefreshProperties"u8))
+                    instance.Editor.Properties.Update();
+                if (drawGizmos) Invoke(instance, nameof(ComponentEditor.OnDrawGizmos), instance.Editor.OnDrawGizmos);
+                if (drawSceneGui) Invoke(instance, nameof(ComponentEditor.OnSceneGui), instance.Editor.OnSceneGui);
             }
         }
-        foreach (string key in instances.Where(pair => pair.Value.Editor.Targets.Any(target => !alive.Contains(target.ObjectId))).Select(pair => pair.Key).ToArray())
-            instances.Remove(key);
+        using (new EditorProfileScope("Editor/ComponentEditors/Cleanup"u8))
+            foreach (string key in instances.Where(pair => pair.Value.Editor.Targets.Any(target => !alive.Contains(target.ObjectId))).Select(pair => pair.Key).ToArray())
+                instances.Remove(key);
     }
 }

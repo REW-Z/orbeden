@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Rendering/RenderTypes.h"
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Texture2D.h"
 #include "Runtime/Object/Font.h"
@@ -38,6 +39,12 @@ public:
     bool hasMeshUpAxis = false;
     MeshUpAxis meshUpAxis = MeshUpAxis::Y;
 
+    //导入模型材质及其纹理；未指定时开启
+    bool importMaterials = true;
+
+    //导入模型引用的纹理；未指定时开启
+    bool importTextures = true;
+
     //TTC 里的字体面下标；未指定时取 0。越界时导入失败。
     bool hasFontFaceIndex = false;
     uint32 fontFaceIndex = 0;
@@ -58,6 +65,17 @@ public:
     static AssetImportSettings Lookup(const std::string& table, const std::string& sourceKey);
 };
 
+//模型节点及其渲染资源，父节点在列表中先于子节点
+struct AssetModelNode
+{
+public:
+    std::string name;
+    int32 parentIndex = -1;
+    matrix4x4 localMatrix;
+    std::string meshKey;
+    List<std::string> materialKeys;
+};
+
 //一次导入产生的复合资源集合
 class AssetCollection
 {
@@ -69,6 +87,7 @@ public:
     List<std::string> mainKeys;
     List<std::string> warnings;
     List<std::string> errors;
+    List<AssetModelNode> modelNodes;
 
     //判断导入是否成功
     bool Succeeded() const;

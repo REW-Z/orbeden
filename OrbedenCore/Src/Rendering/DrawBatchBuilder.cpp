@@ -483,12 +483,11 @@ void DrawBatchBuilder::BuildBatches(const List<DrawItem>& items, List<DrawBatch>
     EmitBatches(items, nullptr, batches, stats);
 }
 
-//从完整场景、全部显式实例与 Opaque Mesh 粒子收集阴影候选
-void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<InstanceSubmission>& submissions,
-    const ParticleFrameSnapshot& particles, const RenderCamera& camera, const frustum& lightFrustum,
-    List<DrawItem>& items)
+//收集当前相机的普通网格与显式实例阴影候选
+void DrawBatchBuilder::CollectShadowCandidates(const RenderScene& scene, const List<InstanceSubmission>& submissions,
+    const RenderCamera& camera, List<DrawItem>& candidates)
 {
-    items.clear();
+    candidates.clear();
 
     //阴影候选来自完整静态场景，与主相机的可见集合无关
     for (StaticMeshRenderer* renderer : scene.renderers)
@@ -500,7 +499,6 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
 
         const StaticMeshRendererRenderState& state = renderer->renderState;
         if (!state.mesh || !state.worldBounds.valid) continue;
-        if (!RenderMath::Intersects(lightFrustum, state.worldBounds)) continue;
         if (!IsFiniteMatrix(state.localToWorld)) continue;
 
         for (usize subIndex = 0; subIndex < state.mesh->subMeshes.size(); ++subIndex)
@@ -527,8 +525,10 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
             item.mode = GeometryMode::Uniform;
             item.model = state.localToWorld;
             item.worldBounds = state.worldBounds;
-            item.strategy = renderer->drawStrategy;
-            items.push_back(item);
+            //阴影 Auto 复用 GPU 网格，按兼容性选择实例或单绘制
+            item.strategy = renderer->drawStrategy == DrawStrategy::Auto
+                ? DrawStrategy::GpuInstancing : renderer->drawStrategy;
+            candidates.push_back(item);
         }
     }
 
@@ -558,7 +558,6 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
             if (!IsFiniteMatrix(model)) continue;
 
             bounds3 worldBounds = localBounds.valid ? RenderMath::TransformBounds(model, localBounds) : bounds3();
-            if (worldBounds.valid && !RenderMath::Intersects(lightFrustum, worldBounds)) continue;
 
             DrawItem item;
             item.source = DrawSource::ExplicitInstance;
@@ -575,8 +574,34 @@ void DrawBatchBuilder::BuildShadowItems(const RenderScene& scene, const List<Ins
             item.model = model;
             item.worldBounds = worldBounds;
             item.strategy = DrawStrategy::GpuInstancing;
-            items.push_back(item);
+            candidates.push_back(item);
         }
+    }
+
+}
+
+//筛选当前级联的共享候选并追加静态批与粒子
+void DrawBatchBuilder::BuildShadowItems(const List<DrawItem>& candidates, const ParticleFrameSnapshot& particles,
+    const RenderCamera& camera, const frustum& lightFrustum, List<DrawItem>& items)
+{
+    items.clear();
+    items.reserve(candidates.size());
+    usize begin = 0;
+    while (begin < candidates.size())
+    {
+        const DrawItem& first = candidates[begin];
+        usize end = begin + 1;
+        //同一渲染器的子网格共享一次包围盒判断
+        if (first.source == DrawSource::StaticMesh)
+        {
+            while (end < candidates.size() && candidates[end].source == DrawSource::StaticMesh
+                && candidates[end].sourceObjectId == first.sourceObjectId)
+                ++end;
+        }
+        if (!first.worldBounds.valid || RenderMath::Intersects(lightFrustum, first.worldBounds))
+            items.insert(items.end(), candidates.begin() + static_cast<isize>(begin),
+                candidates.begin() + static_cast<isize>(end));
+        begin = end;
     }
 
     //持久静态批按级联视锥单独裁剪，不复用主相机可见范围

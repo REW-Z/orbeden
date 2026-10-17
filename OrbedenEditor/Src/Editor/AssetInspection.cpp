@@ -16,7 +16,12 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <iomanip>
+#include <limits>
+#include <locale>
+#include <sstream>
 #include <string_view>
+#include <utility>
 std::string AssetInspection::Inspect(const std::string& sourceKey, const std::string& outputDirectory,
     const std::string& settingsTable)
 {
@@ -55,6 +60,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
     bool cooked = extension == ".orbo";
     List<Object*> objects;
+    List<AssetModelNode> modelNodes;
     auto collect = [&]()
     {
         objects.clear();
@@ -85,6 +91,7 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
         else if (AssetPipeline::SelectImporter(key) != AssetImporter::None)
         {
             AssetCollection collection = AssetPipeline::ImportSource(key, AssetImportSettings::Lookup(settingsTable, key));
+            modelNodes = std::move(collection.modelNodes);
             sourceFiles.insert(sourceFiles.end(), collection.sourceFiles.begin(), collection.sourceFiles.end());
             objects.clear();
             for (Object* object : collection.objects)
@@ -151,6 +158,23 @@ std::string AssetInspection::Inspect(const std::string& sourceKey, const std::st
             result += std::string("field") + '\0' + field->name + '\0'
                 + (field->typeName ? field->typeName : "") + '\0' + value + '\0';
         }
+    }
+    //写出模型层级和按槽位排列的渲染资源
+    for (const AssetModelNode& node : modelNodes)
+    {
+        std::ostringstream matrix;
+        matrix.imbue(std::locale::classic());
+        matrix << std::setprecision(std::numeric_limits<float32>::max_digits10);
+        for (int32 index = 0; index < 16; ++index)
+        {
+            if (index != 0) matrix << ' ';
+            matrix << node.localMatrix.m[index];
+        }
+        result += std::string("node") + '\0' + std::to_string(node.parentIndex) + '\0' + node.name + '\0' + matrix.str() + '\0';
+        if (node.meshKey.empty()) continue;
+        result += std::string("nodeMesh") + '\0' + node.meshKey + '\0' + '\0' + '\0';
+        for (const std::string& materialKey : node.materialKeys)
+            result += std::string("nodeMaterial") + '\0' + materialKey + '\0' + '\0' + '\0';
     }
     return result;
 }

@@ -34,7 +34,7 @@ internal sealed class ProfilerPanel : EditorPanel
     private static readonly string[] SortNames = { "Tree", "Total", "Self", "Calls" };
 
     //每帧事件上限，与原生 FrameEventCapacity 一致
-    private const int MaxFrameEvents = 128;
+    private const int MaxFrameEvents = 1024;
 
     //每帧最多画 6 个分类分段加空闲与选中高亮，一次批量提交要放得下整个走势图
     private const int MaxChartRects = MaxTrendFrames * (CategoryCount + 2) + 64;

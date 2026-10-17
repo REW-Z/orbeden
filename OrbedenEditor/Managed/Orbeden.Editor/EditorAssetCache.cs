@@ -46,7 +46,7 @@ internal static class EditorAssetCache
     private const string MetadataExtension = ".resinfo";
     private const string SettingsFileNameSuffix = ".import.settings";
     private const string ImportStatusFileNameSuffix = ".import.status";
-    internal const int CurrentVersion = 8;
+    internal const int CurrentVersion = 9;
 
     /// <summary>将文件路径转换为 Content 相对路径。</summary>
     private static string GetRelativePath(string path) => Path.GetRelativePath(root, Path.GetFullPath(path)).Replace('\\', '/');
@@ -155,7 +155,8 @@ internal static class EditorAssetCache
         try
         {
             return value.Version == CurrentVersion && value.Source == GetRelativePath(path)
-                && value.Settings != null && value.Dependencies != null && value.Blobs != null && value.Data?.Objects != null
+                && value.Settings != null && value.Dependencies != null && value.Blobs != null
+                && value.Data?.Objects != null && value.Data.ModelNodes != null
                 && value.ImportStatus?.Inputs is { Count: 1 }
                 && value.Dependencies.All(dependency => !string.IsNullOrEmpty(dependency) && !Path.IsPathRooted(dependency)
                     && dependency != ".." && !dependency.StartsWith("../", StringComparison.Ordinal))
@@ -166,7 +167,15 @@ internal static class EditorAssetCache
                 && entry.CachedImport.ImportStatus.SettingsHash == value.ImportStatus.SettingsHash
                 && entry.CachedImport.ImportStatus.ContentHash == ComputeContentHash(ReadInputStamps(path, value))
                 && value.Blobs.All(blob => IsBlobName(path, blob) && File.Exists(Path.Combine(GetBlobDirectory(path), blob)))
-                && value.Data.Objects.All(asset => asset != null && value.Blobs.Contains(asset.BlobName));
+                && value.Data.Objects.All(asset => asset != null && value.Blobs.Contains(asset.BlobName))
+                && value.Data.ModelNodes.Select((node, index) => node != null && node.Name != null && node.LocalMatrix != null
+                    && node.ParentIndex >= -1 && node.ParentIndex < index && node.MeshKey != null && node.MaterialKeys != null
+                    && (node.MeshKey.Length == 0
+                        ? node.MaterialKeys.Count == 0
+                        : value.Data.Objects.Any(asset => asset.Key == node.MeshKey && asset.TypeName == nameof(Mesh)))
+                    && node.MaterialKeys.All(key => key != null && (key.Length == 0
+                        || value.Data.Objects.Any(asset => asset.Key == key && asset.TypeName == nameof(Material)))))
+                    .All(valid => valid);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         { return false; }
@@ -210,11 +219,13 @@ internal static class EditorAssetCache
         {
             string output = completed.Output.GetAwaiter().GetResult();
             string error = completed.Error.GetAwaiter().GetResult();
-            if (completed.Process.ExitCode != 0) throw new IOException("Asset importer failed. " + error + output);
+            if (completed.Process.ExitCode != 0)
+                throw new IOException($"Asset importer failed (exit code {completed.Process.ExitCode}, 0x{completed.Process.ExitCode:X8}). " + error + output);
             string[] values = output.Split('\0');
             if (values.Length < 5 || (values.Length - 1) % 4 != 0 || values[^1].Length != 0)
                 throw new IOException("Asset inspection output is incomplete.");
             List<EditorAssetInspection.Asset> objects = [];
+            List<EditorAssetInspection.ModelNode> modelNodes = [];
             List<string> messages = [];
             List<string> blobs = [];
             HashSet<string> dependencies = new(StringComparer.OrdinalIgnoreCase) { completed.Source };
@@ -225,6 +236,18 @@ internal static class EditorAssetCache
                     case "blob": blobs.Add(values[index + 1]); break;
                     case "object": objects.Add(new(values[index + 2], values[index + 3], values[index + 1], [])); break;
                     case "field" when objects.Count != 0: objects[^1].Fields.Add(new(values[index + 1], values[index + 2], values[index + 3])); break;
+                    case "node":
+                        if (!int.TryParse(values[index + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parentIndex)
+                            || parentIndex < -1 || parentIndex >= modelNodes.Count)
+                            throw new IOException("Model node parent is invalid.");
+                        modelNodes.Add(new(values[index + 2], parentIndex, values[index + 3], string.Empty, []));
+                        break;
+                    case "nodeMesh" when modelNodes.Count != 0:
+                        modelNodes[^1] = modelNodes[^1] with { MeshKey = values[index + 1] };
+                        break;
+                    case "nodeMaterial" when modelNodes.Count != 0 && modelNodes[^1].MeshKey.Length != 0:
+                        modelNodes[^1].MaterialKeys.Add(values[index + 1]);
+                        break;
                     case "message": messages.Add(values[index + 1]); break;
                     case "error": throw new IOException(values[index + 1]);
                     case "dependency": dependencies.Add(Path.GetFullPath(Path.IsPathRooted(values[index + 1])
@@ -246,7 +269,8 @@ internal static class EditorAssetCache
             Stamp source = ReadStamp(completed.Source, previous?.ImportStatus?.Inputs.FirstOrDefault());
             string settingsHash = ComputeSettingsHash(settings);
             Manifest manifest = new(CurrentVersion, sourceKey, settings,
-                paths, blobs.Order(StringComparer.Ordinal).ToList(), new(objects.OrderBy(asset => asset.Key, StringComparer.Ordinal).ToList(), messages),
+                paths, blobs.Order(StringComparer.Ordinal).ToList(), new(objects.OrderBy(asset => asset.Key, StringComparer.Ordinal).ToList(), messages,
+                    ModelNodes: modelNodes),
                 new([source], settingsHash, ComputeContentHash([source])));
             List<Stamp> inputs = ReadInputStamps(completed.Source, manifest);
             CachedImport cached = new(CurrentVersion, new(inputs, settingsHash, ComputeContentHash(inputs)));
@@ -531,7 +555,7 @@ internal static class EditorAssetCache
                 entry.NeedsImport = true;
                 //只清对象产物，伴生文件里的导入设置要留给导入器使用
                 DeleteBlobs(path);
-                entry.MetadataStamp = null;
+                entry.MetadataStamp = ReadFileStamp(file);
                 string directory = GetBlobDirectory(path);
                 Directory.CreateDirectory(directory);
 

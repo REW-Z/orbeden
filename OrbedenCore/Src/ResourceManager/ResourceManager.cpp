@@ -352,6 +352,18 @@ bool ResourceManager::RegisterDependency(const std::string& ownerKey, const std:
     return true;
 }
 
+//移除指定资源依赖
+bool ResourceManager::UnregisterDependency(const std::string& ownerKey, const std::string& dependencyKey)
+{
+    ResourceRecord* owner = FindRecordMutable(ownerKey);
+    if (!owner) return false;
+
+    auto dependency = std::find(owner->dependencies.begin(), owner->dependencies.end(), ToResourceKey(dependencyKey));
+    if (dependency == owner->dependencies.end()) return false;
+    owner->dependencies.erase(dependency);
+    return true;
+}
+
 //递归标记对象依赖
 void ResourceManager::MarkObjectGraph(Object* object, std::unordered_set<int32>& marked)
 {

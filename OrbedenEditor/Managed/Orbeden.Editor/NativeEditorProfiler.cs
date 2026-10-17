@@ -20,6 +20,24 @@ internal unsafe struct EditorProfilerNativeApi
 }
 #pragma warning restore CS0649
 
+/// <summary>自动结束托管代码段的性能采样。</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+public struct EditorProfileScope : IDisposable
+{
+    internal IntPtr Sample;
+    internal long StartedAtNanoseconds;
+
+    /// <summary>开始指定名称的性能采样。</summary>
+    public EditorProfileScope(ReadOnlySpan<byte> name)
+    {
+        this = default;
+        NativeEditorProfiler.BeginSample(name, ref this);
+    }
+
+    /// <summary>结束当前性能采样。</summary>
+    public void Dispose() => NativeEditorProfiler.EndSample(ref this);
+}
+
 /// <summary>一帧内的一次采样调用，字段顺序与原生侧一一对应。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal struct ProfileEvent
@@ -77,14 +95,36 @@ internal static unsafe class NativeEditorProfiler
     private static EditorProfilerNativeApi api;
     private static bool initialized;
     private static delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> exportFrameText;
+    private static delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> beginSample;
+    private static delegate* unmanaged[Cdecl]<EditorProfileScope*, void> endSample;
 
     /// <summary>保存剖析函数表。</summary>
     internal static void Initialize(EditorProfilerNativeApi value,
-        delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> exportText = null)
+        delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> exportText = null,
+        delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> begin = null,
+        delegate* unmanaged[Cdecl]<EditorProfileScope*, void> end = null)
     {
         api = value;
         exportFrameText = exportText;
+        beginSample = begin;
+        endSample = end;
         initialized = api.SetCapturing != null;
+    }
+
+    /// <summary>开始计时并保存原生采样句柄。</summary>
+    internal static void BeginSample(ReadOnlySpan<byte> name, ref EditorProfileScope scope)
+    {
+        if (!initialized || beginSample == null || name.IsEmpty) return;
+        fixed (byte* text = name)
+        fixed (EditorProfileScope* pointer = &scope)
+            beginSample(text, name.Length, pointer);
+    }
+
+    /// <summary>结束计时并清空原生采样句柄。</summary>
+    internal static void EndSample(ref EditorProfileScope scope)
+    {
+        if (scope.Sample == IntPtr.Zero || endSample == null) return;
+        fixed (EditorProfileScope* pointer = &scope) endSample(pointer);
     }
 
     /// <summary>通过原生 FileSystem 写入 UTF-8 帧分析文本。</summary>

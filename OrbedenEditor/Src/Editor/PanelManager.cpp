@@ -3,6 +3,7 @@
 #include "Editor/EditorGUI.h"
 
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 
 #include <imgui.h>
 
@@ -60,6 +61,7 @@ bool PanelManager::RegisterPanel(std::unique_ptr<IEditorPanel> panel)
     PanelEntry entry;
     entry.info = info;
     if (entry.info.title.empty()) entry.info.title = entry.info.id;
+    entry.profileName = "Editor/Panels/" + entry.info.title;
     entry.panel = std::move(panel);
     entry.visible = info.defaultVisible;
     entry.size = info.defaultSize;
@@ -179,7 +181,11 @@ void PanelManager::DrawStandalonePanel(const char* id)
     bool visible = ImGui::Begin("##standalone_workspace", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove
         | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
     ImGui::PopStyleVar(3);
-    if (visible) entry->panel->DrawPanel();
+    if (visible)
+    {
+        PROFILE(entry->profileName.c_str());
+        entry->panel->DrawPanel();
+    }
     ImGui::End();
 }
 
@@ -897,7 +903,10 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
         bool panelFocused = false;
         if (open && active && active->visible && active->panel)
         {
-            active->panel->DrawPanel();
+            {
+                PROFILE(active->profileName.c_str());
+                active->panel->DrawPanel();
+            }
 
             //内容子窗口刚结束，带 ChildWindows 查就能覆盖到它
             panelFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows);
@@ -1171,7 +1180,11 @@ void PanelManager::DrawFloatingPanel(PanelEntry& entry)
         if (ImGui::MenuItem("Close")) pendingClosePanel = entry.info.id;
         ImGui::EndPopup();
     }
-    if (open) entry.panel->DrawPanel();
+    if (open)
+    {
+        PROFILE(entry.profileName.c_str());
+        entry.panel->DrawPanel();
+    }
     position = ToVector2(ImGui::GetWindowPos());
     size = ToVector2(ImGui::GetWindowSize());
     ClampPanelRect(position, size);
@@ -1318,6 +1331,7 @@ void PanelManager::DrawFloatingOsPanel(PanelEntry& entry)
     std::string windowTitle = entry.info.title + "###Panel" + entry.info.id;
     if (ImGui::Begin(windowTitle.c_str(), nullptr, flags))
     {
+        PROFILE(entry.profileName.c_str());
         entry.panel->DrawPanel();
     }
     ImGui::End();

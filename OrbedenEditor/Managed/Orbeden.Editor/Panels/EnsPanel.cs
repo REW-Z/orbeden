@@ -2,10 +2,11 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>绘制 Ens 层级并处理选择、移动和预制体投放。</summary>
+/// <summary>绘制 Ens 层级并处理选择、移动及资源投放。</summary>
 internal sealed class EnsPanel : EditorPanel
 {
     private readonly Dictionary<EnsId, List<Ens>> children = [];
+    private readonly Stack<List<Ens>> childLists = [];
     private Action? pendingDrop;
     private EnsId selectedEns = EnsId.Null;
     private EnsId renamingEns = EnsId.Null;
@@ -44,19 +45,35 @@ internal sealed class EnsPanel : EditorPanel
         if (EditorApplication.IsPlaying) EndRename();
         RevealRequestedEns();
 
-        children.Clear();
         pendingDrop = null;
-        foreach (EnsId id in EditorNativeComponents.GetWorldEns())
+        using (new EditorProfileScope("Editor/EnsPanel/BuildHierarchy"u8))
         {
-            Ens ens = Ens.FromId(id);
-            if (!ens.IsValid) continue;
-            EnsId parent = ens.Transform.GetParent();
-            if (!children.TryGetValue(parent, out List<Ens>? siblings)) children[parent] = siblings = [];
-            siblings.Add(ens);
+            //回收上一帧的父子关系列表
+            foreach (List<Ens> siblings in children.Values)
+            {
+                siblings.Clear();
+                childLists.Push(siblings);
+            }
+            children.Clear();
+            foreach (EnsId id in EditorNativeComponents.GetWorldEns())
+            {
+                Ens ens = Ens.FromId(id);
+                if (!ens.IsValid) continue;
+                EnsId parent = ens.Transform.GetParent();
+                if (!children.TryGetValue(parent, out List<Ens>? siblings))
+                {
+                    siblings = childLists.Count > 0 ? childLists.Pop() : [];
+                    children[parent] = siblings;
+                }
+                siblings.Add(ens);
+            }
         }
-        if (children.TryGetValue(EnsId.Null, out List<Ens>? roots))
-            foreach (Ens ens in roots) DrawNode(ens, context);
-        else EditorGUI.Label("No Ens objects.");
+        using (new EditorProfileScope("Editor/EnsPanel/DrawHierarchy"u8))
+        {
+            if (children.TryGetValue(EnsId.Null, out List<Ens>? roots))
+                foreach (Ens ens in roots) DrawNode(ens, context);
+            else EditorGUI.Label("No Ens objects.");
+        }
 
         int state = NativeEditorGUI.FillRemainingArea();
         if ((state & 1) != 0 && (state & 2) == 0) EditorNativeComponents.SelectEns(EnsId.Null);
@@ -100,19 +117,20 @@ internal sealed class EnsPanel : EditorPanel
     //绘制节点并记录选择或投放操作；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
     private void DrawNode(Ens ens, EditorPanelContext context, bool forceExpand = false)
     {
+        string key = ens.ResourceKey;
         bool hasChildren = children.TryGetValue(ens.Id, out List<Ens>? descendants);
         bool renaming = renamingEns.Equals(ens.Id);
-        bool forceOpen = forceExpand || revealKeys.Contains(ens.ResourceKey);
+        bool forceOpen = forceExpand || revealKeys.Contains(key);
         //Alt 折叠的待办在这里被消费一次：本次先把节点压回折叠，之后交回 ImGui 自己记状态。
         //定位展开是刚发生的指名操作，优先于更早的折叠请求，待办就此作废
-        bool forceCollapse = collapsedKeys.Remove(ens.ResourceKey) && !forceOpen;
+        bool forceCollapse = collapsedKeys.Remove(key) && !forceOpen;
         //重命名时把名称让给输入框。隐藏标签后节点宽度仍是「箭头+标签宽」，输入框正好从原名称的位置开始。
         //灰显看层级生效状态：父节点被禁用时整棵子树一起变灰，和运行时的实际行为一致
-        int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + ens.ResourceKey,
+        int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + key,
             context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse,
             dimmed: !ens.WorldActive);
         //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
-        if (ens.ResourceKey == scrollKey)
+        if (key == scrollKey)
         {
             scrollKey = string.Empty;
             NativeEditorGUI.SetScrollHereY(0.5f);
@@ -131,8 +149,8 @@ internal sealed class EnsPanel : EditorPanel
         if ((state & 64) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
         if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
-        NativeEditorGUI.DragSource(1, ens.ResourceKey);
-        if (EditorGUI.BeginPopupContextItem("##ens_menu_" + ens.ResourceKey))
+        NativeEditorGUI.DragSource(1, key);
+        if (EditorGUI.BeginPopupContextItem("##ens_menu_" + key))
         {
             try { DrawContextMenu(ens); }
             finally { EditorGUI.EndPopup(); }
@@ -434,8 +452,10 @@ internal sealed class EnsPanel : EditorPanel
             }
         }
         Ens source = kind == 1 ? Ens.Find(key) : Ens.Null;
+        bool prefab = key.EndsWith(".prefab", StringComparison.Ordinal);
+        bool model = Path.GetExtension(key).ToLowerInvariant() is ".obj" or ".gltf" or ".glb";
         bool valid = !EditorApplication.IsPlaying && (kind == 2
-            ? key.EndsWith(".prefab", StringComparison.Ordinal)
+            ? prefab || model
             : source.IsValid && !source.Id.Equals(parent) && !source.Id.Equals(before));
         if (kind == 1)
         {
@@ -443,8 +463,10 @@ internal sealed class EnsPanel : EditorPanel
                 if (ancestor.Id.Equals(source.Id)) valid = false;
         }
         if (!NativeEditorGUI.AcceptDrag(valid, placement)) return;
-        pendingDrop = kind == 2 ? () => EditorPrefabActions.Instantiate(key, parent, before, false, default)
-            : () => Move(source, parent, before);
+        if (kind == 2)
+            pendingDrop = model ? () => EditorModelActions.Instantiate(key, parent, before, false, default)
+                : () => EditorPrefabActions.Instantiate(key, parent, before, false, default);
+        else pendingDrop = () => Move(source, parent, before);
     }
 
     //捕获节点的稳定层级位置和局部变换

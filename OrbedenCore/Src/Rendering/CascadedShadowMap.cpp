@@ -4,6 +4,7 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/Object/StaticMeshRenderer.h"
 #include "Log/Log.h"
+#include "Profiler/Profiler.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -23,6 +24,8 @@ void CascadedShadowMap::Shutdown()
         backend->DeleteDepthTexture(atlas);
     }
     histories.clear();
+    shadowCandidates.clear();
+    casterBounds.clear();
     target = {};
     atlas = {};
     atlasWidth = atlasHeight = 0;
@@ -33,6 +36,8 @@ void CascadedShadowMap::Shutdown()
 void CascadedShadowMap::BeginFrame(const RenderScene& scene)
 {
     ready = false;
+    shadowCandidates.clear();
+    casterBounds.clear();
     if (!backend) return;
     //移除已销毁相机的统计资源
     for (auto iterator = histories.begin(); iterator != histories.end();)
@@ -195,9 +200,15 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
     history.settings = settings;
     history.initialized = true;
 
-    //收集全场景同层不透明投射物，用于分区包围盒与阴影候选
-    List<StaticMeshRenderer*> casters;
-    List<bounds3> bounds;
+    //收集当前相机的共享阴影候选
+    {
+        PROFILE("Render/Shadows/CollectItems");
+        builder.CollectShadowCandidates(scene, submissions, camera, shadowCandidates);
+    }
+
+    //收集全场景同层不透明投射物的分区包围盒
+    casterBounds.clear();
+    casterBounds.reserve(scene.renderers.size());
     for (StaticMeshRenderer* renderer : scene.renderers)
     {
         if (!renderer || !renderer->IsRenderSceneEligible() || !renderer->castShadows ||
@@ -215,23 +226,30 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
             }
         }
         if (!hasOpaqueMaterial) continue;
-        casters.push_back(renderer);
-        bounds.push_back(renderer->renderState.worldBounds);
+        casterBounds.push_back(renderer->renderState.worldBounds);
     }
 
     //绘制各级局部 atlas
     for (int32 index = 0; index < settings.count; ++index)
     {
+        PROFILE("Render/Shadows/Cascade");
         float32 sliceNear = index == 0 ? camera.nearPlane : cascades[index-1].blendStart;
         float32 logicalNear = index == 0 ? camera.nearPlane : splits[index-1];
         cascades[index] = ShadowCascadeBuilder::BuildCascade(camera.worldMatrix, camera.projectionMatrix,
-            light.direction, sliceNear, splits[index], settings, bounds);
+            light.direction, sliceNear, splits[index], settings, casterBounds);
         cascades[index].blendStart = splits[index] - (splits[index]-logicalNear) * settings.blendRatio;
 
-        //每级从完整候选独立剔除并独立成批，不复用主相机的可见结果
-        builder.BuildShadowItems(scene, submissions, particles, camera, cascades[index].lightFrustum, shadowItems);
-        builder.BuildShadowBatches(shadowItems, *shader, shadowBatches, stats);
+        //每级独立裁剪共享候选并成批，不复用主相机的可见结果
+        {
+            PROFILE("Render/Shadows/BuildItems");
+            builder.BuildShadowItems(shadowCandidates, particles, camera, cascades[index].lightFrustum, shadowItems);
+        }
+        {
+            PROFILE("Render/Shadows/BuildBatches");
+            builder.BuildShadowBatches(shadowItems, *shader, shadowBatches, stats);
+        }
 
+        PROFILE("Render/Shadows/DrawBatches");
         RenderPassDesc pass;
         pass.renderTarget = target;
         pass.x = (index % 2)*settings.resolution;

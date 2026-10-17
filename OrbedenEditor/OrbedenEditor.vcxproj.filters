@@ -163,6 +163,9 @@
     <None Include="Managed\Orbeden.Editor\Gizmos.cs">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="Managed\Orbeden.Editor\EditorModelActions.cs">
+      <Filter>资源文件</Filter>
+    </None>
     <None Include="Managed\Orbeden.Editor\Panels\**\*.cs">
       <Filter>资源文件</Filter>
     </None>

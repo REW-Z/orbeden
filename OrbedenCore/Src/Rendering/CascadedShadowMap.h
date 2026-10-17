@@ -32,7 +32,10 @@ class CascadedShadowMap
     ShadowCascadeSettings settings;
     ShadowCascade cascades[ShadowCascadeSettings::MaxCascades];
     List<CameraHistory> histories;
-    //阴影候选与批次共用临时容器，稳态只清空不收缩
+    //当前相机的共享候选与投射物包围盒，逐次重建并复用容量
+    List<DrawItem> shadowCandidates;
+    List<bounds3> casterBounds;
+    //当前级联的绘制项与批次，稳态只清空不收缩
     List<DrawItem> shadowItems;
     List<DrawBatch> shadowBatches;
     List<GpuMeshInstance> shadowInstances;

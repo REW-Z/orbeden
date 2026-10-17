@@ -44,7 +44,8 @@
 - 在 Rendering/RenderTypes.h 定义 `DrawStrategy : uint32 { Auto=0, Individual=1, GpuInstancing=2, DynamicBatching=3 }`。
 - StaticMeshRenderer 删除 enableInstancing，新增 `DrawStrategy drawStrategy=Auto`；Material 不新增字段。
 - Individual：仅 Uniform，作为排序屏障；GpuInstancing：只允许 Instanced，否则 Uniform；DynamicBatching：只允许 Expanded 动态批，否则 Uniform。
-- Auto：先使用有效静态批；剩余项先组成实例批；剩余符合预算的项组成动态批；其余 Uniform。
+- Auto（主画面）：先使用有效静态批；剩余项先组成实例批；剩余符合预算的项组成动态批；其余 Uniform。
+- Auto（阴影）：先使用有效静态批；其余普通网格在阴影绘制项内按 GpuInstancing 策略选择实例或 Uniform，直接复用 GPU 网格，不逐级联执行 CPU 动态展开。显式 DynamicBatching、粒子与显式实例提交保持各自路径，Renderer 保存的策略不变。
 - static+GpuInstancing 使用实例批；static+Individual 使用单绘制；static+DynamicBatching 使用动态批，保持 static 变换约束。
 - 普通 Renderer 合批必须至少包含两个绘制项；显式实例提交与粒子指定 Instanced 时，单实例仍允许走 Instanced。
 - GPU 实例批要求同 Mesh、子网格索引区间、Material、Pass、队列、最终渲染状态与 receiveShadows；每批最多 65536 实例。
@@ -98,7 +99,8 @@
 - DrawBatchBuilder 将静态缓存项与剩余项分开处理；实例/动态键比较独立实现，禁止继续用必须相同 Mesh 的键筛选动态批。
 - ExecuteExpandedBatch 对动态批执行展开上传；对持久批绑定缓存 VAO 并绘制范围；二者共用材质状态与 Expanded Program。
 - 每帧 CPU 展开结果按批保存，在该帧多相机/阴影输入相同时复用；键包含有序成员、几何版本、变换、tint 和 UV。
-- CSM 从完整投影候选集单独裁剪静态成员，不能复用主相机可见范围；遵守 castShadows、layer、Opaque 与当前阴影轮廓语义。
+- CSM 每次相机渲染通过 CollectShadowCandidates 一次收集普通网格与显式实例，再由各级联的 BuildShadowItems 独立裁剪；同一 Renderer 的连续子网格共享包围盒判断。候选容器与投射物分区包围盒复用容量，不跨帧复用内容。
+- 持久静态批仍按每个成员的级联可见性生成索引区间，Opaque Mesh 粒子仍按原路径逐级追加；不复用主相机可见范围，遵守 castShadows、layer、Opaque、无效包围盒与当前阴影轮廓语义。
 - Shadow Expanded 不可用则从保留的源成员逐对象 Uniform 绘制阴影；这属于模式能力处理，不恢复 Legacy 类别。
 - 不合并跨对象的多 Pass 阴影语义；选中描边继续从原 Renderer 与源 Mesh 绘制，静态缓存不替换对象身份。
 

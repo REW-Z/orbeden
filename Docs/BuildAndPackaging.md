@@ -572,6 +572,20 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 88：级联阴影每次相机渲染只收集一次普通网格与显式实例候选，各级联独立裁剪并成批；同一 Renderer 的子网格共享一次包围盒判断，投射物分区包围盒和候选列表复用存储容量。候选只用于本次相机渲染，不跨帧缓存；持久静态批仍按成员裁剪索引区间，Opaque Mesh 粒子保留逐级追加，原有无效包围盒处理、层掩码、投影开关、候选顺序和阴影质量参数不变。增加 Render/Shadows/CollectItems 计时，BuildItems 改为记录级联筛选与静态批／粒子追加；沿用版本 87 的阴影 Auto GPU 网格路径，主画面流程不变。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块及 Player 并重新 Build Player。无需重新导入模型，无模板内容变动，无需重置 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
+
+版本 87：只调整阴影 Auto 普通网格的合批策略，在临时阴影绘制项中按 GpuInstancing 选择兼容实例批或原 GPU 网格的单绘制，停止逐级联 CPU 动态几何展开；Renderer 保存的策略、主画面合批、持久静态缓存、显式 DynamicBatching、粒子与显式实例路径保持不变。新增 Render/Shadows 总入口及每级联 Cascade、BuildItems、BuildBatches、DrawBatches 计时，DrawBatches 包含 Pass 建立、状态设置、提交与结束，仍是 CPU 作用域时间；阴影级联数、分辨率、距离、偏移与剔除规则不变。此调整可能增加阴影 DrawCall，以减少重复 CPU 顶点处理和上传。需重建 Core、Editor，通过 Update Project 同步 SDK；使用 Player 时重建游戏原生模块及 Player 并重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景迁移或模型重新导入。仅做静态检查，未编译或运行测试。
+
+版本 86：场景扩展按注册 ID 分别采样，采样名称在注册时缓存；EnsPanel 复用父子关系列表并在单次节点绘制内复用稳定 ID，继续逐帧读取真实层级，新增 BuildHierarchy 与 DrawHierarchy 计时。AviatorSage 的机身编辑预览按定义文本、截面身份／序号／局部变换、采样数和材料版本复用机身及序列化结果，预览刷新与 Gizmos 共用已准备的数据；输入变化后从原定义重新应用变换，子机身节点补齐与渲染器检查仍逐帧执行。公开 GetFuselage 的独立副本语义、Player 构建流程、采样密度、拖拽和撤销流程保持不变。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK 后重建游戏 Editor 扩展，再录制比较采样。无模板内容变动，无需重置 Builtin／Examples，无场景格式迁移。仅做静态检查，未编译或运行测试。
+
+版本 85：公开现有 EditorProfileScope 类型和 UTF-8 名称构造函数，供游戏 Editor 扩展用 using 将代码段接入引擎 Profiler；内部计时句柄、采样实现和接口布局保持不变。AviatorSage 的机身轮廓绘制仅增加 GetFuselage、SampleSection、TransformPoints、DrawPolyline 四组采样，区分数据获取、曲线采样、世界坐标转换和折线提交，不改变原算法、采样密度或调用顺序。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK 后重建游戏 Editor 扩展，再清空并重新录制采样。无模板内容变动，无需重置 Builtin／Examples，无场景格式迁移。仅做静态检查，未编译或运行测试。
+
+版本 84：修复 SceneView 绘制 Gizmo 叠加层后投放目标被覆盖、模型与预制体无法正常接收拖拽的问题。EnsPanel 接入 OBJ/glTF/GLB 投放：节点中部作为子级，节点上下边缘按指示线插入同级，空白处放到 World 根；模型创建及重做保留父节点和同级插入位置。SceneView 投放继续按鼠标命中位置创建 World 根模型。需重建 Core、Editor，通过 Update Project 同步 SDK 后重建游戏模块；沿用版本 83 的缓存版本 9，无需重新导入已有有效模型缓存或重新同步 Builtin／Examples，无场景迁移。仅做静态检查，未编译或运行测试。
+
+版本 83：OBJ、glTF、GLB 的 Import Settings 新增默认开启的 Import Materials；关闭后跳过材质及纹理，Import Textures 保留原设置并禁用控件。导入清单新增模型节点层级、局部矩阵、网格及材质槽映射，缓存版本升至 9，旧缓存自动重建并保留设置；模型的 Scale、Up Axis 同时转换节点与几何。ScenePanel 支持从 Project 拖入这些模型，创建文件名根 Ens 及网格子节点，glTF/GLB 保留默认场景层级和局部变换，共享网格继续复用；投放位置作用于根节点，支持整体撤销、重做和创建失败回滚。导入材质缺少 Shader 时绑定内置 blinn_phong，未导入材质时使用新增的 `Content/Builtin/Materials/default.orbmat` 显示白色网格。需重建 Core、Editor，通过 Update Project 同步 SDK 及 Builtin 后重建游戏原生模块和 Player；手动同步时需复制新增的 default.orbmat，Examples 无需重置，无场景格式迁移，发布包重新 Build Player。仅做静态代码检查，未编译或运行测试。
+
+版本 82：glTF/GLB 同一图片按颜色空间分别导入 Texture2D，首次使用保留原资源 Key，另一颜色空间追加 `_SRGB` 或 `_Linear` 后缀，材质引用对应变体。OBJ、glTF、GLB 的 Import Settings 新增默认勾选的 Import Textures；关闭后保留网格与材质参数，跳过纹理读取并清除材质原有纹理引用及依赖，设置保存到 `.resinfo` 的 `importTextures` 键。ResourceManager 新增 UnregisterDependency 供重导清理指定依赖。修复已有 `.resinfo` 时后台导入失败反复重试、错误被 Importing 提示覆盖的问题；工作进程异常退出时显示十进制与十六进制退出码。需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player，受影响模型重新导入，发布包重新 Build Player。无需同步 Builtin／Examples 模板或迁移场景；未执行编译和运行测试。
+
 版本 81：新增可选的 `Content/RawContent/`，打包时原样复制全部内容并排除资源导入、Cook、脚本编译和绑定扫描。C++ 与 C# 同名提供 `FileSystem.ReadRawContent(path, out content)`，读取相对 RawContent 的原始字节。引擎原生 API 主版本升至 4，文件系统函数表追加在尾部。需重建 Core、Editor，通过 Update Project 同步 SDK、`Lib/Orbeden.Bindings.targets` 引用的 SDK 工具和 `Orbeden.Native.targets`，重建游戏托管／原生模块与 Player；重新 Build Player。无需重置 Builtin／Examples，无场景迁移；RawContent 由开发者自行创建。
 
 版本 80：相机渲染扩展可替换场景几何绘制，后续选择描边、调试线、UI 与颜色输出继续使用正常相机流程。编辑器线框复用主渲染后端、GPU 网格和可见集合，移除独立资源管理器、描边网格副本、逐三角形 CPU 展开和独立输出目标；相同子网格使用实例批次，粒子与拖尾不绘制线框。切回 Shaded 时释放线框 Shader、实例缓冲与临时数据。需重建 Core、Editor，通过 Update Project 同步 SDK 并重建游戏原生模块与 Player；Builtin／Examples 无变更，无场景迁移。

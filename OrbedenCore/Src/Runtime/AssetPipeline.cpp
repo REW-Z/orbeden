@@ -16,6 +16,7 @@
 #include "FileSystem/PathDefines.h"
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
+#include "Rendering/RenderMath.h"
 #include "Runtime/AssetPipeline.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Reflection.h"
@@ -99,6 +100,18 @@ AssetImportSettings AssetImportSettings::Lookup(const std::string& table, const 
             else if (value == "Z") { settings.hasMeshUpAxis = true; settings.meshUpAxis = MeshUpAxis::Z; }
             else Log::Warning(("Unknown import setting value for upAxis: " + value).c_str());
         }
+        else if (name == "importMaterials")
+        {
+            if (value == "true") settings.importMaterials = true;
+            else if (value == "false") settings.importMaterials = false;
+            else Log::Warning(("Unknown import setting value for importMaterials: " + value).c_str());
+        }
+        else if (name == "importTextures")
+        {
+            if (value == "true") settings.importTextures = true;
+            else if (value == "false") settings.importTextures = false;
+            else Log::Warning(("Unknown import setting value for importTextures: " + value).c_str());
+        }
         else if (name == "faceIndex")
         {
             uint32 parsed = 0;
@@ -169,8 +182,7 @@ namespace
         return TextureColorSpace::SRGB;
     }
 
-    //按导入设置调整集合里的全部网格：缩放倍率与源坐标系上轴。
-    //两者都在网格成形之后统一施加，与文件里自带的节点变换是叠加关系。
+    //按缩放和上轴设置转换网格与模型节点
     void ApplyMeshImportSettings(AssetCollection& collection, const AssetImportSettings& settings)
     {
         if (!settings.hasMeshScale && !settings.hasMeshUpAxis) return;
@@ -201,7 +213,29 @@ namespace
                 mesh->normals[index] = normal;
             }
 
+            //转换网格切线方向
+            if (convertUpAxis)
+                for (vector3& tangent : mesh->tangents) tangent = { tangent.x, tangent.z, -tangent.y };
+
             mesh->MarkDirty();
+        }
+
+        //转换节点局部坐标系和位移
+        matrix4x4 axisConversion;
+        if (convertUpAxis)
+        {
+            axisConversion.m[5] = 0.0f;
+            axisConversion.m[6] = -1.0f;
+            axisConversion.m[9] = 1.0f;
+            axisConversion.m[10] = 0.0f;
+        }
+        matrix4x4 inverseAxis = RenderMath::Inverse(axisConversion);
+        for (AssetModelNode& node : collection.modelNodes)
+        {
+            if (convertUpAxis)
+                node.localMatrix = RenderMath::Mul(RenderMath::Mul(axisConversion, node.localMatrix), inverseAxis);
+            if (settings.hasMeshScale)
+                for (int32 index = 12; index < 15; ++index) node.localMatrix.m[index] *= settings.meshScale;
         }
     }
 
@@ -973,6 +1007,23 @@ namespace
         return object;
     }
 
+    //给缺少 Shader 的模型材质绑定内置 Shader
+    void SetModelMaterialShader(Material* material, const std::string& materialKey, AssetCollection& collection)
+    {
+        if (material->shader.GetInstanceId().IsValid()) return;
+
+        const std::string shaderKey = "Builtin/Shaders/blinn_phong.orbshader";
+        Shader* shader = ResourceManager::Load<Shader>(shaderKey);
+        if (!shader)
+        {
+            collection.AddError("Model material shader could not be loaded: " + shaderKey);
+            return;
+        }
+        material->SetShader(shader);
+        ResourceManager::RegisterDependency(materialKey, shaderKey);
+        collection.AddSourceFile(PathDefines::GetContentFilePath(shaderKey));
+    }
+
     //导入图片到指定ObjectKey。inferredColorSpace 是按语义推断的值，用户设置优先于它。
     Texture2D* ImportImageAsKey(const std::string& filePath, const std::string& objectKey, AssetCollection& collection,
         TextureColorSpace inferredColorSpace, const AssetImportSettings& settings)
@@ -1131,14 +1182,14 @@ namespace
         return texture;
     }
 
-    //按需导入glTF纹理，复用相同的image资源
+    //按图片和颜色空间复用glTF纹理
     GltfTextureImportInfo GetOrImportGltfTexture(
         const cgltf_data* data,
         const cgltf_texture_view& view,
         const std::string& sourceKey,
         const std::string& sourcePath,
         AssetCollection& collection,
-        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures,
+        std::unordered_map<const cgltf_image*, std::unordered_map<TextureColorSpace, GltfTextureImportInfo>>& importedTextures,
         TextureColorSpace inferredColorSpace, const AssetImportSettings& settings)
     {
         if (!view.texture) return {};
@@ -1160,23 +1211,17 @@ namespace
         //用户设置优先于本调用点的语义推断
         const TextureColorSpace colorSpace = settings.hasTextureColorSpace ? settings.textureColorSpace : inferredColorSpace;
 
-        //同一张图被不同语义引用时颜色空间会冲突（例如既当基础色又当法线）。
-        //标记是纹理级属性，无法同时满足两种用途，必须让作者拆开这两张图。
-        auto found = importedTextures.find(image);
-        if (found != importedTextures.end())
-        {
-            if (found->second.texture && found->second.texture->colorSpace != colorSpace)
-            {
-                collection.AddError("glTF image is used with conflicting color spaces: " + found->second.key);
-            }
-            return found->second;
-        }
+        //查找当前图片的颜色空间变体
+        auto& imageTextures = importedTextures[image];
+        auto found = imageTextures.find(colorSpace);
+        if (found != imageTextures.end()) return found->second;
 
         usize imageIndex = static_cast<usize>(cgltf_image_index(data, image));
         std::string fallbackName = "Texture_" + std::to_string(imageIndex);
         std::string imageName = image->name && image->name[0] ? image->name : fallbackName;
         std::string textureKey = AssetPipeline::GetImportedObjectKey(sourceKey, Texture2D::StaticType(),
             std::to_string(imageIndex) + "_" + SanitizeKeyName(imageName, fallbackName));
+        if (!imageTextures.empty()) textureKey += colorSpace == TextureColorSpace::SRGB ? "_SRGB" : "_Linear";
         Texture2D* texture = nullptr;
 
         if (image->buffer_view)
@@ -1211,7 +1256,7 @@ namespace
         }
 
         GltfTextureImportInfo result = { texture, textureKey };
-        importedTextures[image] = result;
+        imageTextures[colorSpace] = result;
         return result;
     }
 
@@ -1285,7 +1330,8 @@ namespace
     }
 
     //解析MTL材质库
-    std::unordered_map<std::string, MaterialImportInfo> ParseMtlFiles(const std::string& sourceKey, const List<std::string>& mtlFiles, AssetCollection& collection)
+    std::unordered_map<std::string, MaterialImportInfo> ParseMtlFiles(const std::string& sourceKey, const List<std::string>& mtlFiles,
+        AssetCollection& collection, bool importTextures)
     {
         std::unordered_map<std::string, MaterialImportInfo> materials;
 
@@ -1322,6 +1368,13 @@ namespace
                     }
 
                     currentMaterial->name = currentMaterialName;
+
+                    //清除原材质的纹理引用和依赖
+                    for (const MaterialTextureSlot& slot : currentMaterial->textureSlots)
+                        ResourceManager::UnregisterDependency(currentMaterialKey, slot.texture.GetInstanceId().GetPath());
+                    currentMaterial->textureSlots.clear();
+                    currentMaterial->MarkDirty();
+
                     materials[currentMaterialName] = { currentMaterial, currentMaterialKey };
                     collection.AddObject(currentMaterialKey, currentMaterial);
                     continue;
@@ -1357,7 +1410,7 @@ namespace
                     currentMaterial->SetShader(StringId(shaderKey));
                     ResourceManager::RegisterDependency(currentMaterialKey, shaderKey);
                 }
-                else if (command == "map_Kd" || command == "map_Bump" || command == "bump")
+                else if (importTextures && (command == "map_Kd" || command == "map_Bump" || command == "bump"))
                 {
                     std::string textureFile;
                     stream >> textureFile;
@@ -1387,6 +1440,8 @@ namespace
             }
         }
 
+        for (const auto& pair : materials)
+            SetModelMaterialShader(pair.second.material, pair.second.key, collection);
         return materials;
     }
 
@@ -1440,7 +1495,8 @@ namespace
         const std::string& sourceKey,
         const std::string& sourcePath,
         AssetCollection& collection,
-        std::unordered_map<const cgltf_image*, GltfTextureImportInfo>& importedTextures)
+        std::unordered_map<const cgltf_image*, std::unordered_map<TextureColorSpace, GltfTextureImportInfo>>& importedTextures,
+        bool importTextures)
     {
         std::string fallbackName = "Material_" + std::to_string(materialIndex);
         std::string materialName = sourceMaterial->name && sourceMaterial->name[0] ? sourceMaterial->name : fallbackName;
@@ -1454,6 +1510,10 @@ namespace
         }
 
         material->name = materialName;
+
+        //清除原材质的纹理引用和依赖
+        for (const MaterialTextureSlot& slot : material->textureSlots)
+            ResourceManager::UnregisterDependency(materialKey, slot.texture.GetInstanceId().GetPath());
         material->textureSlots.clear();
         material->colorSlots.clear();
         material->floatSlots.clear();
@@ -1502,6 +1562,9 @@ namespace
         material->SetFloat(MaterialShininessSlot, shininess);
         collection.AddObject(materialKey, material);
 
+        SetModelMaterialShader(material, materialKey, collection);
+        if (!importTextures) return { material, materialKey };
+
         if (diffuseTexture)
         {
             //glTF 的子贴图没有独立的设置文件，按语义推断
@@ -1543,6 +1606,7 @@ namespace
         material->SetColor(MaterialEmissionColorSlot, { 0.0f, 0.0f, 0.0f, 1.0f });
         material->SetFloat(MaterialShininessSlot, 32.0f);
         collection.AddObject(materialKey, material);
+        SetModelMaterialShader(material, materialKey, collection);
         return { material, materialKey };
     }
 
@@ -2023,8 +2087,7 @@ AssetCollection AssetPipeline::ImportSource(std::string path, const AssetImportS
 {
     std::string sourceKey = ResourceManager::GetSourceKey(path);
 
-    //设置按源文件生效：图片源看 colorSpace，模型源看网格缩放与坐标轴。
-    //复合资源里的子贴图不受源级设置影响——它们各有语义，一个文件级的键表达不了。
+    //按源文件应用设置，模型子贴图按用途选择颜色空间
     switch (SelectImporter(sourceKey))
     {
     case AssetImporter::Image: return Import_IMG(sourceKey, settings);
@@ -2459,18 +2522,18 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
         collection.AddWarning("glTF animation data is not supported by AssetPipeline and was ignored: " + sourceKey);
     }
 
-    std::unordered_map<const cgltf_image*, GltfTextureImportInfo> importedTextures;
+    std::unordered_map<const cgltf_image*, std::unordered_map<TextureColorSpace, GltfTextureImportInfo>> importedTextures;
     std::unordered_map<const cgltf_material*, MaterialImportInfo> materials;
-    for (cgltf_size index = 0; index < data->materials_count; ++index)
+    for (cgltf_size index = 0; settings.importMaterials && index < data->materials_count; ++index)
     {
         const cgltf_material* sourceMaterial = &data->materials[index];
         MaterialImportInfo material = ImportGltfMaterial(
-            data.get(), sourceMaterial, static_cast<usize>(index), sourceKey, sourcePath, collection, importedTextures);
+            data.get(), sourceMaterial, static_cast<usize>(index), sourceKey, sourcePath, collection, importedTextures, settings.importTextures);
         if (material.material) materials[sourceMaterial] = material;
     }
 
     bool needsDefaultMaterial = false;
-    for (cgltf_size meshIndex = 0; meshIndex < data->meshes_count && !needsDefaultMaterial; ++meshIndex)
+    for (cgltf_size meshIndex = 0; settings.importMaterials && meshIndex < data->meshes_count && !needsDefaultMaterial; ++meshIndex)
     {
         const cgltf_mesh& sourceMesh = data->meshes[meshIndex];
         for (cgltf_size primitiveIndex = 0; primitiveIndex < sourceMesh.primitives_count; ++primitiveIndex)
@@ -2484,6 +2547,8 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
     }
     MaterialImportInfo defaultMaterial = needsDefaultMaterial ? CreateDefaultGltfMaterial(sourceKey, collection) : MaterialImportInfo();
 
+    List<std::string> meshKeys(static_cast<usize>(data->meshes_count));
+    List<List<std::string>> meshMaterialKeys(static_cast<usize>(data->meshes_count));
     for (cgltf_size meshIndex = 0; meshIndex < data->meshes_count; ++meshIndex)
     {
         const cgltf_mesh& sourceMesh = data->meshes[meshIndex];
@@ -2502,6 +2567,7 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
 
         mesh->name = meshName;
         mesh->ClearGeometry();
+        meshKeys[static_cast<usize>(meshIndex)] = meshKey;
         bool needsNormals = false;
         bool needsTangents = false;
         for (cgltf_size primitiveIndex = 0; primitiveIndex < sourceMesh.primitives_count; ++primitiveIndex)
@@ -2517,9 +2583,17 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
                 collection.AddWarning("glTF morph targets are not supported and were ignored: " + meshKey);
             }
 
+            usize previousSubMeshCount = mesh->subMeshes.size();
             if (!AppendGltfPrimitive(primitive, *mesh, meshKey, materials, collection, needsNormals, needsTangents))
             {
                 break;
+            }
+            if (mesh->subMeshes.size() != previousSubMeshCount)
+            {
+                auto material = materials.find(primitive.material);
+                std::string materialKey = material != materials.end() ? material->second.key
+                    : (primitive.material ? std::string() : defaultMaterial.key);
+                meshMaterialKeys[static_cast<usize>(meshIndex)].push_back(materialKey);
             }
         }
 
@@ -2545,6 +2619,61 @@ AssetCollection AssetPipeline::Import_GLTF(std::string path, const AssetImportSe
         collection.AddWarning("glTF contains no meshes: " + sourceKey);
     }
 
+    //按默认场景的父子顺序保存模型节点
+    const cgltf_scene* sourceScene = data->scene ? data->scene : (data->scenes_count > 0 ? &data->scenes[0] : nullptr);
+    List<std::pair<const cgltf_node*, int32>> pendingNodes;
+    if (sourceScene)
+    {
+        for (cgltf_size index = sourceScene->nodes_count; index > 0; --index)
+            pendingNodes.push_back({ sourceScene->nodes[index - 1], -1 });
+    }
+    else
+    {
+        for (cgltf_size index = data->nodes_count; index > 0; --index)
+            if (!data->nodes[index - 1].parent) pendingNodes.push_back({ &data->nodes[index - 1], -1 });
+    }
+    List<bool> visited(static_cast<usize>(data->nodes_count), false);
+    while (!pendingNodes.empty())
+    {
+        auto [sourceNode, parentIndex] = pendingNodes.back();
+        pendingNodes.pop_back();
+        usize sourceIndex = static_cast<usize>(cgltf_node_index(data.get(), sourceNode));
+        if (visited[sourceIndex] || collection.modelNodes.size() >= static_cast<usize>(std::numeric_limits<int32>::max()))
+        {
+            collection.AddError("glTF model hierarchy is invalid or too large: " + sourceKey);
+            break;
+        }
+        visited[sourceIndex] = true;
+
+        AssetModelNode node;
+        node.name = sourceNode->name && sourceNode->name[0] ? sourceNode->name : "Node_" + std::to_string(sourceIndex);
+        node.parentIndex = parentIndex;
+        cgltf_node_transform_local(sourceNode, node.localMatrix.m);
+        if (sourceNode->mesh)
+        {
+            usize meshIndex = static_cast<usize>(cgltf_mesh_index(data.get(), sourceNode->mesh));
+            node.meshKey = meshKeys[meshIndex];
+            node.materialKeys = meshMaterialKeys[meshIndex];
+        }
+        int32 nodeIndex = static_cast<int32>(collection.modelNodes.size());
+        collection.modelNodes.push_back(std::move(node));
+        for (cgltf_size index = sourceNode->children_count; index > 0; --index)
+            pendingNodes.push_back({ sourceNode->children[index - 1], nodeIndex });
+    }
+
+    //为不含场景节点的网格库生成独立模型节点
+    if (data->nodes_count == 0)
+        for (usize index = 0; index < meshKeys.size(); ++index)
+        {
+            if (meshKeys[index].empty()) continue;
+            AssetModelNode node;
+            const cgltf_mesh& sourceMesh = data->meshes[index];
+            node.name = sourceMesh.name && sourceMesh.name[0] ? sourceMesh.name : "Mesh_" + std::to_string(index);
+            node.meshKey = meshKeys[index];
+            node.materialKeys = meshMaterialKeys[index];
+            collection.modelNodes.push_back(std::move(node));
+        }
+
     ApplyMeshImportSettings(collection, settings);
     return collection;
 }
@@ -2564,8 +2693,12 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path, const AssetImportSet
         return collection;
     }
 
-    List<std::string> mtlFiles = FindMtlFiles(objPath);
-    std::unordered_map<std::string, MaterialImportInfo> materials = ParseMtlFiles(sourceKey, mtlFiles, collection);
+    std::unordered_map<std::string, MaterialImportInfo> materials;
+    if (settings.importMaterials)
+    {
+        List<std::string> mtlFiles = FindMtlFiles(objPath);
+        materials = ParseMtlFiles(sourceKey, mtlFiles, collection, settings.importTextures);
+    }
 
     std::string meshKey = GetImportedObjectKey(sourceKey, Mesh::StaticType());
     Mesh* mesh = CreateImportedObject<Mesh>(meshKey);
@@ -2723,6 +2856,17 @@ AssetCollection AssetPipeline::Import_OBJ(std::string path, const AssetImportSet
     {
         collection.AddWarning("OBJ imported without triangles: " + sourceKey);
     }
+
+    //记录 OBJ 网格及其子网格材质槽
+    AssetModelNode node;
+    node.name = mesh->name;
+    node.meshKey = meshKey;
+    for (const SubMesh& subMesh : mesh->subMeshes)
+    {
+        auto material = materials.find(subMesh.name);
+        node.materialKeys.push_back(material != materials.end() ? material->second.key : std::string());
+    }
+    collection.modelNodes.push_back(std::move(node));
 
     mesh->MarkDirty();
     collection.AddObject(meshKey, mesh, true);

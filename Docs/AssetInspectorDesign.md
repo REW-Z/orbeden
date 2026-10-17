@@ -45,7 +45,7 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 
 ### `.resinfo` 的数据分区
 
-采用 UTF-8 JSON，当前 Version=8。字段分两类：**Settings 是用户数据，其余全部是生成数据**。
+采用 UTF-8 JSON，当前 Version=9。字段分两类：**Settings 是用户数据，其余全部是生成数据**。
 
 | 字段 | 类别 | 职责 |
 | --- | --- | --- |
@@ -56,6 +56,7 @@ Reimport 只删除旧 `.orbo` 产物，**伴生文件里的导入设置要保留
 | Blobs | 生成 | 本次生成的全部对象文件名，包括可达依赖 |
 | Data.Objects | 生成 | 完整资源 Key、原生类型、BlobName、反射摘要 |
 | Data.Messages | 生成 | 导入器警告 |
+| Data.ModelNodes | 生成 | 按父子顺序排列的模型节点：名称、父索引、局部矩阵、网格 Key 与按子网格槽位排列的材质 Key |
 | ImportStatus | 生成 | 源文件自身的导入状态：Inputs、SettingsHash、ContentHash；不记录依赖内容 |
 
 **重新导入只重建生成部分，`Settings` 原样保留**——这是伴生文件与纯缓存的根本区别。
@@ -153,8 +154,14 @@ brick.png                    ← 文件名
 | 图片（png/jpg/jpeg/tga/bmp） | Color Space | `Auto (by usage)` / `sRGB (color)` / `Linear (data)` |
 | 模型（obj/gltf/glb） | Scale | 正浮点，默认 1 |
 | | Up Axis | `Y-up (engine native)` / `Z-up -> Y-up` |
+| | Import Materials | 复选框，默认勾选；关闭时只导入网格，同时跳过材质和纹理 |
+| | Import Textures | 复选框，默认勾选；关闭时保留网格与材质参数，跳过纹理导入 |
 
-**Scale 与 Up Axis** 在网格成形之后统一施加于该源产出的全部网格：缩放是统一倍率，因此不改变法线方向；Z-up 转换是纯旋转 `(x,y,z) → (x,z,-y)`，法线同样变换。引擎是 Y-up（XZ 为地面平面），Blender 与多数 CAD 导出是 Z-up，勾选后即可直接对齐。
+**Import Textures** 共用于 OBJ、glTF 与 GLB。关闭时在 `Settings` 中保存 `"importTextures": "false"`，开启时删除该键，缺键默认开启。重新导入会清除材质原有的纹理引用和对应资源依赖，再按当前开关决定是否读取纹理；后台产物与清单按当前导入集合重建。glTF/GLB 内同一图片按颜色空间分别生成 Texture2D，首次使用保留原资源 Key，另一颜色空间追加 `_SRGB` 或 `_Linear` 后缀。
+
+**Import Materials** 同样共用于 OBJ、glTF 与 GLB。关闭时保存 `"importMaterials": "false"`，开启时删除该键，缺键默认开启。关闭材质时禁用 Import Textures 控件并保留其草稿和保存值；重新开启材质后沿用原纹理设置。关闭后新的导入清单不生成模型材质或纹理，网格及其子网格区间继续保留。
+
+**Scale 与 Up Axis** 在网格成形之后统一施加于该源产出的全部网格：缩放是统一倍率，因此不改变法线方向；Z-up 转换是纯旋转 `(x,y,z) → (x,z,-y)`，法线和切线同样变换。模型节点的局部矩阵按同一轴变换共轭转换，节点位移也乘以统一倍率，保持层级组合后的几何结果一致。引擎是 Y-up（XZ 为地面平面）。
 
 **改动流程**：草稿累积 → Apply → 写回伴生文件的 `Settings` → 让缓存失效 → 进程内 Reimport 让运行时对象立刻与新设置一致 → 后台工作进程重新生成清单与产物。Inspector 里的值、运行时对象、磁盘产物三者同步更新。
 
@@ -162,11 +169,21 @@ brick.png                    ← 文件名
 
 `Auto` / 空值 是**删除该键**而不是写入一个特殊值：缺键即"按文件原样 / 按语义推断"，这样新增设置项不需要迁移老文件。
 
-设置按**源文件**生效。复合资源里的子贴图不受源级设置影响——一个 `.gltf` 里的多张贴图各有用途，文件级的单个 `colorSpace` 键表达不了，它们仍按语义推断。
+设置按**源文件**生效。复合资源里的子贴图颜色空间仍按用途推断，一个 `.gltf` 内的不同贴图可分别使用 sRGB 或 Linear；Import Materials 与 Import Textures 控制是否导入。
 
 播放中禁止编辑（与资源重命名、保存材质同一条件）。
 
 设置写入不会误标记 World dirty，也不进入组件 Undo；Ens 和组件仍通过原有 PropertyDocument 编辑。对象清单部分仍然只读。
+
+### 模型拖入 ScenePanel 或 EnsPanel
+
+Project 面板的 `.obj`、`.gltf`、`.glb` 源文件可投放到 ScenePanel。导入完成后，从缓存中的 ModelNodes 创建一个以文件名命名的根 Ens；根位于鼠标投放位置。glTF/GLB 使用默认场景（没有默认场景时选第一个场景）的节点层级、本地变换和共享网格；没有场景时使用无父节点的节点，没有任何节点时按网格生成节点。OBJ 在根下创建一个网格节点，按 `usemtl` 对应子网格材质槽。
+
+同一模型源文件也可投放到 EnsPanel：节点中部创建为该节点的子级，上下边缘按指示线插入同级，空白处放到 World 根。层级投放的模型根保留零局部位置；撤销和重做记录目标父级及同级插入位置。SceneView 绘制叠加层后恢复视口图像的 ImGui 条目状态，投放命中范围继续覆盖整个视口图像。
+
+每个带网格的节点挂载 StaticMeshRenderer，按槽位引用本次导入的材质。材质为空的槽使用 `Builtin/Materials/default.orbmat`，关闭材质导入时也能显示白色网格；导入材质没有指定 Shader 时绑定内置 `Builtin/Shaders/blinn_phong.orbshader`。默认材质是引擎资源，不写入模型自己的材质清单。
+
+拖拽复用缓存对象，不在 UI 里重新解析模型。导入未完成时提示等待完成后重试；创建失败时回滚全部新节点。创建成功后选择根 Ens，整个模型记录为一次撤销事务；重做按对象快照恢复原稳定身份。Play 期间禁用模型投放，不建立模型预制体链接。
 
 ## Project 选择、展开与引用
 

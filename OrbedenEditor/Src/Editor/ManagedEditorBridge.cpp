@@ -38,10 +38,13 @@
 #include <coreclr_delegates.h>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstring>
 #include <deque>
 #include <filesystem>
+#include <functional>
 #include <memory>
+#include <set>
 #include <utility>
 
 namespace
@@ -256,6 +259,13 @@ namespace
         void* isKeyPressed = nullptr;
     };
 
+    //托管作用域的采样节点和开始时间
+    struct EditorProfileScopeAbi
+    {
+        ProfileSample* sample = nullptr;
+        int64 startedAtNanoseconds = 0;
+    };
+
     //传给 Editor C# 的原生函数表。
     struct EditorManagedApi
     {
@@ -272,6 +282,8 @@ namespace
         EditorAssetReimportNativeApi reimport;
         EditorInputNativeApi input;
         void* exportProfilerFrameText = nullptr;
+        void* beginProfileSample = nullptr;
+        void* endProfileSample = nullptr;
     };
 
     #pragma pack(pop)
@@ -287,7 +299,8 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 180);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 182);
+    static_assert(sizeof(EditorProfileScopeAbi) == 16);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 91);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 107);
@@ -299,6 +312,8 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 175);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 177);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 179);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 180);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 181);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -1978,6 +1993,33 @@ namespace
         }
     }
 
+    //开始托管代码段的性能采样
+    void ORBEDEN_NATIVE_CALL EditorProfilerBeginSample(const uint8* name, int32 length, EditorProfileScopeAbi* scope)
+    {
+        if (!scope) return;
+        *scope = {};
+        if (!name || length <= 0) return;
+
+        //驻留托管采样名
+        static std::set<std::string, std::less<>> names;
+        std::string_view text(reinterpret_cast<const char*>(name), static_cast<usize>(length));
+        auto stored = names.find(text);
+        if (stored == names.end()) stored = names.emplace(text).first;
+        scope->sample = Profiler::StartSample(stored->c_str());
+        scope->startedAtNanoseconds = static_cast<int64>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    }
+
+    //结束托管代码段的性能采样
+    void ORBEDEN_NATIVE_CALL EditorProfilerEndSample(EditorProfileScopeAbi* scope)
+    {
+        if (!scope || !scope->sample) return;
+        int64 endedAtNanoseconds = static_cast<int64>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        Profiler::StoreSample(nullptr, (endedAtNanoseconds - scope->startedAtNanoseconds) / 1000, scope->sample);
+        *scope = {};
+    }
+
     //切换性能采样采集状态
     void ORBEDEN_NATIVE_CALL EditorProfilerSetCapturing(uint8 value)
     {
@@ -2194,6 +2236,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.profiler.getNameCount = reinterpret_cast<void*>(&EditorProfilerGetNameCount);
     editorApi.profiler.copyName = reinterpret_cast<void*>(&EditorProfilerCopyName);
     editorApi.exportProfilerFrameText = reinterpret_cast<void*>(&EditorProfilerExportFrameText);
+    editorApi.beginProfileSample = reinterpret_cast<void*>(&EditorProfilerBeginSample);
+    editorApi.endProfileSample = reinterpret_cast<void*>(&EditorProfilerEndSample);
     editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);
     editorApi.input.isKeyPressed = reinterpret_cast<void*>(&EditorInputIsKeyPressed);
     if (initializeEditor(&editorApi) == 0)
@@ -2348,12 +2392,12 @@ bool ManagedEditorBridge::PickScene(const vector3& origin, const vector3& direct
     return !ens.IsNull();
 }
 
-void ManagedEditorBridge::DrawSceneGizmos(bool commitOnly)
+void ManagedEditorBridge::DrawSceneGizmos(SceneGizmoPass pass)
 {
     if (!initialized || !DrawSceneGizmosFunction) return;
 
     ManagedDrawSceneGizmosFn drawSceneGizmos = reinterpret_cast<ManagedDrawSceneGizmosFn>(DrawSceneGizmosFunction);
-    drawSceneGizmos(commitOnly ? 1 : 0);
+    drawSceneGizmos(static_cast<uint8>(pass));
 }
 
 void ManagedEditorBridge::DrawStatusBar()

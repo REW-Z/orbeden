@@ -1,0 +1,6 @@
+#模型投放的默认白色材质
+shader Builtin/Shaders/blinn_phong.orbshader
+drawqueue Auto
+color u_DiffuseColor 1 1 1 1
+color u_SpecularColor 0.04 0.04 0.04 1
+float u_Shininess 32

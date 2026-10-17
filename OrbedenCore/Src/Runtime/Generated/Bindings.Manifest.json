@@ -1451,6 +1451,25 @@
           "Parameters": []
         },
         {
+          "Name": "modelNodes",
+          "Type": "List\u003CAssetModelNode\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Succeeded",
           "Type": "bool",
           "Access": "public",
@@ -1729,6 +1748,44 @@
           "Parameters": []
         },
         {
+          "Name": "importMaterials",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "importTextures",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "hasFontFaceIndex",
           "Type": "bool",
           "Access": "public",
@@ -1987,6 +2044,117 @@
           "Value": ""
         }
       ]
+    },
+    {
+      "Name": "AssetModelNode",
+      "QualifiedName": "AssetModelNode",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Runtime/AssetPipeline.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "parentIndex",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "localMatrix",
+          "Type": "matrix4x4",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "meshKey",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "materialKeys",
+          "Type": "List\u003Cstd::string\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
     },
     {
       "Name": "AssetPipeline",
@@ -5894,6 +6062,44 @@
           "Parameters": []
         },
         {
+          "Name": "shadowCandidates",
+          "Type": "List\u003CDrawItem\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "casterBounds",
+          "Type": "List\u003Cbounds3\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "shadowItems",
           "Type": "List\u003CDrawItem\u003E",
           "Access": "private",
@@ -9656,7 +9862,7 @@
           ]
         },
         {
-          "Name": "BuildShadowItems",
+          "Name": "CollectShadowCandidates",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -9681,6 +9887,41 @@
             {
               "Name": "submissions",
               "Type": "const List\u003CInstanceSubmission\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "camera",
+              "Type": "const RenderCamera\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "candidates",
+              "Type": "List\u003CDrawItem\u003E\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BuildShadowItems",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "candidates",
+              "Type": "const List\u003CDrawItem\u003E\u0026",
               "DefaultValue": ""
             },
             {
@@ -52263,6 +52504,36 @@
         },
         {
           "Name": "RegisterDependency",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "ownerKey",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "dependencyKey",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "UnregisterDependency",
           "Type": "bool",
           "Access": "public",
           "IsMethod": true,

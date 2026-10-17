@@ -249,6 +249,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     //生成当前相机的级联阴影
     if (shadowLight)
     {
+        PROFILE("Render/Shadows");
         //阴影与主 Pass 共用同一份流式缓冲，必须在阴影之前就绪
         PrepareDrawStream();
         Shader* depthShader = GetOrLoadBuiltinShader(shadowDepthShader,

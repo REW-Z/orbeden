@@ -18,6 +18,8 @@ v44 删除 `Shaders/skybox_clear.orbshader`：浓雾改成闭合解后代码量�
 
 Project 面板选择 `.orbmat` 材质资产，放入 `StaticMeshRenderer.materials` 对应子网格槽位。一个 `.orbmat` 文件就是一个 Material，对象名称取自文件名，资源 Key 直接使用内容根相对路径，例如 `Builtin/Materials/rain_glass.orbmat`。`.mtl` 仅是 OBJ 的附属原始文件；通用对象产物使用 `.orbo`。
 
+`Materials/default.orbmat` 是模型拖入 ScenePanel 时使用的白色默认材质。关闭 Import Materials 或模型子网格没有对应材质时，渲染器使用它显示网格。
+
 | 材质文件（Materials/） | 对象名称 | 队列 | 用途 |
 |---|---|---|---|
 | rain_glass.orbmat | rain_glass | Refraction | 持续向下流动的双层雨滴、水痕、背景扭曲和主光高光 |
