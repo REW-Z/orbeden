@@ -10,7 +10,8 @@ internal static class EditorModelActions
     /// <summary>在指定层级或投放位置创建模型并记录撤销。</summary>
     internal static void Instantiate(string sourceKey, EnsId parent, EnsId before, bool placeAtPosition, vector3 position)
     {
-        if (EditorApplication.IsPlaying || !EditorAssetsNative.CanModifyAssets()) return;
+        if (EditorApplication.IsPlaying || !EditorAssetsNative.CanModifyAssets()
+            || !EditorPrefabSession.CanModify(Ens.FromId(parent), EditorPrefabEditOperation.Structure)) return;
         Ens root = Ens.Null;
         List<Ens> instances = [];
         try

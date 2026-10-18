@@ -52,6 +52,7 @@ public static class EditorRuntime
             if (editorApi == IntPtr.Zero)
             {
                 EditorAssetCache.Stop();
+                EditorPrefabSession.Clear();
                 OrbedenCoreRuntime.InitializeEngineBindings(IntPtr.Zero);
                 NativeEditorGUI.Initialize(default);
                 NativeEditorLog.Initialize(default);
@@ -181,6 +182,18 @@ public static class EditorRuntime
     {
         try { return EditorPropertyHistory.Redo() ? (byte)1 : (byte)0; }
         catch (Exception ex) { Console.Error.WriteLine($"Redo failed: {ex}"); return 0; }
+    }
+
+    /// <summary>在层级面板定位场景选中的节点</summary>
+    [UnmanagedCallersOnly]
+    public static void RevealSelectedEns(EnsId ens)
+    {
+        try
+        {
+            Ens target = Ens.FromId(ens);
+            EnsPanel.Ping(target.IsValid ? target.ResourceKey : string.Empty, select: false);
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"Hierarchy reveal failed: {ex}"); }
     }
 
     /// <summary>请求当前聚焦的面板开始重命名选中项。</summary>
@@ -489,6 +502,27 @@ public static class EditorRuntime
         return succeeded ? (byte)1 : (byte)0;
     }
 
+    /// <summary>处理编辑场景文件和运行场景产物</summary>
+    [UnmanagedCallersOnly]
+    public static unsafe byte ProcessWorldFile(byte operation, byte* source, int sourceLength,
+        byte* target, int targetLength, byte* error, int errorCapacity)
+    {
+        try
+        {
+            return EditorPrefabSession.ProcessWorldFile((EditorWorldFileOperation)operation,
+                ReadUtf8(source, sourceLength), ReadUtf8(target, targetLength)) ? (byte)1 : (byte)0;
+        }
+        catch (Exception ex) { WriteUtf8(error, errorCapacity, ex.Message); Console.Error.WriteLine(ex.Message); return 0; }
+    }
+
+    /// <summary>校验预制体实例编辑操作</summary>
+    [UnmanagedCallersOnly]
+    public static byte CanModifyPrefab(EnsId ens, byte operation)
+    {
+        try { return EditorPrefabSession.CanModify(Ens.FromId(ens), (EditorPrefabEditOperation)operation) ? (byte)1 : (byte)0; }
+        catch (Exception ex) { Console.Error.WriteLine(ex.Message); return 0; }
+    }
+
     //从 C++ 传入的 UTF-8 指针读取字符串。
     private static unsafe string ReadUtf8(byte* text, int length)
     {
@@ -533,19 +567,19 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorApplicationNativeApi>(nameof(EditorApplicationNativeApi), 16);
         ValidateFunctionTable<EditorGizmoApi>(nameof(EditorGizmoApi), 9);
         ValidateFunctionTable<EditorPanelNativeApi>(nameof(EditorPanelNativeApi), 2);
-        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 19);
+        ValidateFunctionTable<EditorAssetNativeApi>(nameof(EditorAssetNativeApi), 21);
         ValidateFunctionTable<EditorComponentNativeApi>(nameof(EditorComponentNativeApi), 25);
         ValidateFunctionTable<EditorLogNativeApi>(nameof(EditorLogNativeApi), 5);
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 184);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 186);
         ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 180 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 181 * IntPtr.Size)
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 182 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 183 * IntPtr.Size)
             throw new TypeLoadException("Editor profiler sampling ABI layout mismatch.");
-        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 182 * IntPtr.Size
-            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 183 * IntPtr.Size)
+        if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.GetMeshDynamicBatching)).ToInt32() != 184 * IntPtr.Size
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.SetMeshDynamicBatching)).ToInt32() != 185 * IntPtr.Size)
             throw new TypeLoadException("Editor mesh batching ABI layout mismatch.");
         ValidateSize<EditorTextAbi>(nameof(EditorTextAbi), 16);
         ValidateSize<EditorValueAbi>(nameof(EditorValueAbi), 24);

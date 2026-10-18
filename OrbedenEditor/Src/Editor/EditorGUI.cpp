@@ -368,7 +368,14 @@ namespace
         float32 iconSize = ImGui::GetFontSize();
         //灰显连箭头一起压暗；取色走主题的 TextDisabled，与瓦片箭头、面板标签页一致
         bool dimmed = (options & 32) != 0;
-        if (dimmed) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        bool prefabBound = (options & 64) != 0;
+        if (prefabBound)
+        {
+            float32 brightness = dimmed ? 0.55f : 1.0f;
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(168.0f / 255.0f * brightness,
+                216.0f / 255.0f * brightness, 160.0f / 255.0f * brightness, 1.0f));
+        }
+        else if (dimmed) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         bool expanded;
         if (texture != 0)
         {
@@ -380,7 +387,7 @@ namespace
                 ImVec2(iconPosition.x + iconSize, iconPosition.y + iconSize));
         }
         else expanded = ImGui::TreeNodeEx(identity.c_str(), flags);
-        if (dimmed) ImGui::PopStyleColor();
+        if (dimmed || prefabBound) ImGui::PopStyleColor();
         bool toggled = ImGui::IsItemToggledOpen();
         bool doubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
         return (expanded ? 1 : 0) | (ImGui::IsItemClicked() && !toggled ? 2 : 0)
@@ -439,10 +446,10 @@ namespace
     }
 
     //绘制按钮
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiButton(const uint8* text, int32 length)
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiButton(const uint8* text, int32 length, float32 width)
     {
         std::string value = ReadUtf8Text(text, length);
-        return ImGui::Button(value.c_str()) ? 1 : 0;
+        return ImGui::Button(value.c_str(), ImVec2(width > 0.0f ? width : 0.0f, 0.0f)) ? 1 : 0;
     }
 
     //量出按钮将要占用的宽度：与 EditorGuiButton 同一套文本测量与内边距，

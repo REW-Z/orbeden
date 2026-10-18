@@ -230,7 +230,8 @@ internal static class CustomEditorRegistry
                 using (new EditorProfileScope("Editor/ComponentEditors/RefreshProperties"u8))
                     instance.Editor.Properties.Update();
                 if (drawGizmos) Invoke(instance, nameof(ComponentEditor.OnDrawGizmos), instance.Editor.OnDrawGizmos);
-                if (drawSceneGui) Invoke(instance, nameof(ComponentEditor.OnSceneGui), instance.Editor.OnSceneGui);
+                if (drawSceneGui && EditorPrefabSession.CanModify(Ens.FromId(ens), EditorPrefabEditOperation.Structure))
+                    Invoke(instance, nameof(ComponentEditor.OnSceneGui), instance.Editor.OnSceneGui);
             }
         }
         using (new EditorProfileScope("Editor/ComponentEditors/Cleanup"u8))

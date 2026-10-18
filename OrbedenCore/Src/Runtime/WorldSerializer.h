@@ -19,6 +19,10 @@ public:
     //在主线程准备尚未激活的世界内容
     static std::unique_ptr<World> PrepareWorld(const World& current, const WorldDocument& document, std::string& error);
 
+    //重映射文档中的对象身份和引用
+    static std::string RemapObjectIdentities(const std::string& xml,
+        const List<std::pair<std::string, std::string>>& identities, bool clearExternal, std::string& error);
+
     //捕获指定 Ens 子树
     static std::string CaptureEns(Ens& ens);
 
@@ -45,6 +49,9 @@ public:
 
     //从 XML 文件反序列化 World
     static bool LoadXml(World& world, const std::string& path);
+
+    //捕获完整世界的普通场景文本
+    static std::string CaptureWorld(const World& world);
 
     //将 World 序列化到 XML 文件
     static bool SaveXml(const World& world, const std::string& path);

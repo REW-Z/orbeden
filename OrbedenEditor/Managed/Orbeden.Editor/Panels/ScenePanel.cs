@@ -13,6 +13,7 @@ internal sealed class ScenePanel : EditorPanel
     //绘制原生场景视口并接收预制体和模型投放
     protected override void DrawContent(EditorPanelContext context)
     {
+        EditorPrefabSession.DrawEditToolbar();
         EditorGUI.DrawSceneView();
         DrawDropTarget();
     }
@@ -25,7 +26,7 @@ internal sealed class ScenePanel : EditorPanel
 
         bool prefab = key.EndsWith(".prefab", StringComparison.Ordinal);
         bool model = Path.GetExtension(key).ToLowerInvariant() is ".obj" or ".gltf" or ".glb";
-        bool valid = !EditorApplication.IsPlaying && kind == 2 && (prefab || model);
+        bool valid = !EditorApplication.IsPlaying && !EditorPrefabSession.IsEditing && kind == 2 && (prefab || model);
         if (!NativeEditorGUI.AcceptDrag(valid)) return;
 
         //释放位置在提交时才解析，避免悬停期间反复投射

@@ -58,11 +58,14 @@ public static class UICreationMenu
     /// </summary>
     public static void Create(EnsContext context, UIWidgetKind kind)
     {
+        if (!EditorPrefabSession.CanModify(Ens.FromId(context.Id), EditorPrefabEditOperation.Structure)) return;
         List<Ens> created = [];
         List<Action> configure = [];
         try
         {
             Ens parent = ResolveParent(context, kind, created, configure);
+            if (!EditorPrefabSession.CanModify(parent, EditorPrefabEditOperation.Structure))
+                throw new InvalidOperationException("Unpack the prefab before changing its structure.");
             //世界空间画布可以挂在场景根上：它不在任何画布的逻辑矩形里。
             if (!parent.IsValid && kind is not (UIWidgetKind.Canvas or UIWidgetKind.WorldSpaceCanvas))
                 throw new InvalidOperationException("No usable parent node.");
@@ -103,6 +106,7 @@ public static class UICreationMenu
     private static void Create(EnsId parentId, UIWidgetKind kind)
     {
         Ens parent = Ens.FromId(parentId);
+        if (!EditorPrefabSession.CanModify(parent, EditorPrefabEditOperation.Structure)) return;
         if (!parent.IsValid && kind is not (UIWidgetKind.Canvas or UIWidgetKind.WorldSpaceCanvas)) return;
 
         List<Ens> created = [];

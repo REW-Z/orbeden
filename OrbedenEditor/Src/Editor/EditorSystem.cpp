@@ -605,6 +605,8 @@ EditorSystem::EditorSystem(Application& application, const char* startupExecutab
             editorScene.GetGizmoApi(),
             executablePath);
     }
+    project.SetWorldFileProcessor([this](EditorWorldFileOperation operation, const std::string& source, const std::string& target, std::string& error)
+    { return managedBridge.ProcessWorldFile(operation, source, target, error); });
 }
 
 EditorSystem::~EditorSystem()
@@ -646,6 +648,7 @@ void EditorSystem::Update(World& world, float deltaTime)
 
     if (!pendingProjectFile.empty())
     {
+        if (project.IsTemporaryWorld() && !SaveCurrentWorld()) { pendingProjectFile.clear(); return; }
         std::string path = std::exchange(pendingProjectFile, std::string());
         ProjectVersionProbe probe;
         std::string error;
@@ -884,6 +887,7 @@ void EditorSystem::ApplyEditorGuiConfig()
 //加载一个项目
 void EditorSystem::LoadProjectFromFolder(const std::string& folder)
 {
+    if (project.IsTemporaryWorld() && !SaveCurrentWorld()) return;
     //构建完成时会按启动时的项目重载程序集，中途换项目会加载到不存在的那一份
     if (scriptBuildRunning)
     {
@@ -1321,6 +1325,7 @@ bool EditorSystem::BuildNativeGameModule(bool saveWorldBeforeReload)
 
 void EditorSystem::RequestPlay()
 {
+    if (project.IsTemporaryWorld()) { projectStatus = "Apply and return from prefab editing before Play."; return; }
     if (playMode.IsPlaying()) return;
     if (!project.HasProject())
     {
@@ -1355,6 +1360,7 @@ void EditorSystem::RequestPlay()
 //进入 Play-In-Editor；产物检查由调用方完成
 void EditorSystem::StartPlayMode()
 {
+    if (project.IsTemporaryWorld()) return;
     std::string assemblyPath = GetProjectGameAssemblyPath();
     if (!FileExists(assemblyPath))
     {
@@ -1446,6 +1452,7 @@ void EditorSystem::RequestStop()
 
 void EditorSystem::RequestBuildPlayer()
 {
+    if (project.IsTemporaryWorld()) { projectStatus = "Apply and return from prefab editing before building."; return; }
     if (playMode.IsPlaying())
     {
         RequestStop();
@@ -1631,7 +1638,9 @@ bool EditorSystem::CookPlayerContent(std::string& error)
     PathDefines::SetContentRoot(project.GetContentRootPath());
 
     std::string cacheRoot = ToCleanPath(InteropText::PathFromUtf8(project.GetProjectRoot()) / ProjectLayout::PlayerResourceCacheFolder);
-    bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error, settingsTable);
+    bool cooked = PlayerContentCooker::Cook(project.GetContentRootPath(), cacheRoot, error, settingsTable,
+        [this](const std::string& source, const std::string& target, std::string& failure)
+        { return managedBridge.ProcessWorldFile(EditorWorldFileOperation::Cook, source, target, failure); });
 
     //cook 导入的全部资源都是一次性的，释放后由场景重载重新取用。
     ResourceManager::Shutdown();
@@ -2085,7 +2094,7 @@ bool EditorSystem::SaveCurrentWorld()
         bool managedSaved = managedBridge.SaveProjectState();
         bool worldSaved = managedSaved && project.SaveWorld();
         saved = managedSaved && worldSaved;
-        projectStatus = saved ? ("Saved: " + project.GetWorldPath())
+        projectStatus = saved ? (project.IsTemporaryWorld() ? "Saved prefab." : "Saved: " + project.GetWorldPath())
             : (managedSaved ? project.GetLastError() : "Managed project data save failed.");
         if (hadEditorCamera) editorScene.RestoreCamera(world);
     }
@@ -2583,6 +2592,7 @@ void EditorSystem::DrawNewProjectDialog()
 
     if (ImGui::Button("Create"))
     {
+        if (project.IsTemporaryWorld() && !SaveCurrentWorld()) { ImGui::EndPopup(); return; }
         std::string runtimeDllPath = FindRuntimeCSharpDll();
         if (runtimeDllPath.empty())
         {

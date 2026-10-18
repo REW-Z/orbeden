@@ -37,6 +37,9 @@ public static class EditorGUI
     /// <summary>绘制按钮。</summary>
     public static bool Button(string text) => NativeEditorGUI.Button(text);
 
+    /// <summary>绘制指定宽度的按钮</summary>
+    public static bool Button(string text, float width) => NativeEditorGUI.Button(text, width);
+
     /// <summary>借用控件持有的已准备文本绘制按钮。</summary>
     public static bool Button(GuiContent content) => NativeEditorGUI.Button(content);
 

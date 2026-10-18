@@ -478,6 +478,31 @@
           ]
         },
         {
+          "Name": "LoadWorldDocument",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "document",
+              "Type": "const WorldDocument\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "Current",
           "Type": "Application*",
           "Access": "public",
@@ -74174,6 +74199,46 @@
           ]
         },
         {
+          "Name": "RemapObjectIdentities",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "xml",
+              "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "identities",
+              "Type": "const List\u003Cstd::pair\u003Cstd::string,std::string\u003E\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "clearExternal",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "error",
+              "Type": "std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "CaptureEns",
           "Type": "std::string",
           "Access": "public",
@@ -74458,6 +74523,31 @@
             {
               "Name": "path",
               "Type": "const std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CaptureWorld",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "world",
+              "Type": "const World\u0026",
               "DefaultValue": ""
             }
           ]

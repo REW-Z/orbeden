@@ -199,7 +199,16 @@ bool Application::LoadWorld(const std::string& path)
     if (!Initialize()) return false;
     std::string error;
     auto document = WorldSerializer::ReadDocument(path, error);
-    auto prepared = document ? WorldSerializer::PrepareWorld(world, *document, error) : nullptr;
+    if (!document) { Log::Error(error.c_str()); return false; }
+    return LoadWorldDocument(*document);
+}
+
+//加载已解析的内存场景
+bool Application::LoadWorldDocument(const WorldDocument& document)
+{
+    if (!Initialize()) return false;
+    std::string error;
+    auto prepared = WorldSerializer::PrepareWorld(world, document, error);
     if (!prepared) { Log::Error(error.c_str()); return false; }
     ScriptSystem* scripts = GetSystem<ScriptSystem>();
     bool restart = scripts && scripts->IsInitialized();

@@ -10,7 +10,7 @@ namespace OrbedenEditor;
 internal unsafe struct EditorGuiNativeApi
 {
     public delegate* unmanaged[Cdecl]<byte*, int, void> Label;
-    public delegate* unmanaged[Cdecl]<byte*, int, byte> Button;
+    public delegate* unmanaged[Cdecl]<byte*, int, float, byte> Button;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, void> BeginComponentBlock;
     public delegate* unmanaged[Cdecl]<void> EndComponentBlock;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, byte, byte, byte*, byte> BeginCollapsibleComponentBlock;
@@ -238,7 +238,7 @@ internal static unsafe class NativeEditorGUI
 
     //绘制目录节点。返回值：1 展开、2 按下点击、4 Ctrl、8 双击、16 Alt、32 本次刚切换、64 松开点击
     internal static int TreeNode(string label, bool selected, bool leaf = false, bool defaultOpen = false,
-        bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false)
+        bool forceOpen = false, bool forceCollapse = false, string? icon = null, bool dimmed = false, bool prefabBound = false)
     {
         byte[] bytes = InteropText.EncodeUtf8(label ?? string.Empty);
         byte[] iconBytes = InteropText.EncodeUtf8(icon ?? string.Empty);
@@ -246,7 +246,7 @@ internal static unsafe class NativeEditorGUI
         fixed (byte* pointer = bytes)
         {
             return api.TreeNode(pointer, bytes.Length, (byte)((selected ? 1 : 0) | (leaf ? 2 : 0)
-                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0) | (dimmed ? 32 : 0)),
+                | (defaultOpen ? 4 : 0) | (forceOpen ? 8 : 0) | (forceCollapse ? 16 : 0) | (dimmed ? 32 : 0) | (prefabBound ? 64 : 0)),
                 iconPointer, iconBytes.Length);
         }
     }
@@ -308,15 +308,15 @@ internal static unsafe class NativeEditorGUI
     {
         if (!initialized || api.Button == null) return false;
         ReadOnlySpan<byte> bytes = content.Utf8;
-        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length) != 0;
+        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length, 0.0f) != 0;
     }
 
     //绘制按钮
-    internal static bool Button(string? text)
+    internal static bool Button(string? text, float width = 0.0f)
     {
         if (!initialized || api.Button == null) return false;
         byte[] bytes = InteropText.EncodeUtf8(text ?? string.Empty);
-        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length) != 0;
+        fixed (byte* pointer = bytes) return api.Button(pointer, bytes.Length, width) != 0;
     }
 
     //开始组件块

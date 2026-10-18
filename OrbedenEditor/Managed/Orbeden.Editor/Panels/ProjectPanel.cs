@@ -1003,6 +1003,12 @@ internal sealed class ProjectPanel : EditorPanel
             return;
         }
 
+        if (Path.GetExtension(entry).Equals(".prefab", StringComparison.OrdinalIgnoreCase))
+        {
+            EditorWorldActions.RequestOpen(EditorAssetCatalog.Instance.ToResourceKey(entry));
+            return;
+        }
+
         //场景由编辑器自己打开：交给系统默认程序只会用文本编辑器打开 XML。
         if (string.Equals(Path.GetExtension(entry), ".world", StringComparison.OrdinalIgnoreCase))
         {

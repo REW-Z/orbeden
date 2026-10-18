@@ -13,7 +13,7 @@
 
 namespace
 {
-    //场景保持 XML，原样复制而不 cook。
+    //场景沿用 XML 格式并由编辑器处理绑定
     constexpr const char* WorldExtension = ".world";
 
     //GLSL 源对的两种后缀
@@ -58,7 +58,7 @@ namespace
     {
         for (const std::string& key : contentKeys)
         {
-            //场景文件按原样复制，不参与 cook。
+            //场景文件进入独立的 World 构建流程
             //项目级设置（层与碰撞矩阵等）在项目根的 GameSettings.ini 里，不在内容根内，
             //由打包时单独镜像到包根，走不到这里
             if (InteropText::PathToUtf8(InteropText::PathFromUtf8(key).extension()) == WorldExtension)
@@ -80,22 +80,6 @@ namespace
 
         std::sort(sourceKeys.begin(), sourceKeys.end());
         sourceKeys.erase(std::unique(sourceKeys.begin(), sourceKeys.end()), sourceKeys.end());
-    }
-
-    //复制场景文件并保留原目录结构
-    bool CopyWorldFile(const std::filesystem::path& sourcePath, const std::filesystem::path& targetPath, std::string& error)
-    {
-        std::error_code code;
-        if (targetPath.has_parent_path()) std::filesystem::create_directories(targetPath.parent_path(), code);
-
-        std::filesystem::copy_file(sourcePath, targetPath, std::filesystem::copy_options::overwrite_existing, code);
-        if (code)
-        {
-            error = "World file could not be copied while packaging: " + InteropText::PathToUtf8(sourcePath);
-            return false;
-        }
-
-        return true;
     }
 
     //复制可选的原始内容目录
@@ -152,7 +136,8 @@ namespace
 
 //把源内容根内的资源全部 cook 到输出目录
 bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::string& cookedOutputRoot, std::string& error,
-    const std::string& settingsTable)
+    const std::string& settingsTable,
+    const std::function<bool(const std::string&, const std::string&, std::string&)>& cookWorld)
 {
     error.clear();
 
@@ -200,7 +185,8 @@ bool PlayerContentCooker::Cook(const std::string& sourceContentRoot, const std::
     for (const std::string& worldKey : worldKeys)
     {
         std::filesystem::path worldSource = contentRoot / InteropText::PathFromUtf8(worldKey);
-        if (!CopyWorldFile(worldSource, outputRoot / InteropText::PathFromUtf8(worldKey), error)) return false;
+        if (!cookWorld(InteropText::PathToUtf8(worldSource),
+            InteropText::PathToUtf8(outputRoot / InteropText::PathFromUtf8(worldKey)), error)) return false;
     }
 
     List<std::string> cookedKeys;

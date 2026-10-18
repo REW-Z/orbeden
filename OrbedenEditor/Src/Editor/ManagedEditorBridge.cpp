@@ -3,6 +3,8 @@
 #include "Editor/EditorScene.h"
 #include "Editor/EditorSystem.h"
 #include "Editor/NewProjectTemplate.h"
+#include "Editor/ProjectLayout.h"
+#include <sstream>
 #include "Editor/EditorGUI.h"
 #include "Editor/PanelManager.h"
 #include "Editor/Panels/ManagedPanelAdapter.h"
@@ -50,6 +52,7 @@
 
 namespace
 {
+    ManagedEditorBridge* prefabBridge = nullptr;
     using ManagedInitializeEditorFn = uint8(CORECLR_DELEGATE_CALLTYPE*)(void*);
     using ManagedGetInitializationErrorFn = void*(CORECLR_DELEGATE_CALLTYPE*)(int32*);
     using ManagedDrawPanelFn = void(CORECLR_DELEGATE_CALLTYPE*)(
@@ -149,6 +152,8 @@ namespace
         void* reimportAllAssets = nullptr;
         void* loadCachedAsset = nullptr;
         void* saveMaterial = nullptr;
+        void* remapObjectIdentities = nullptr;
+        void* changeWorldSnapshot = nullptr;
     };
 
     //传给 Editor C# 的原生组件检查函数表。
@@ -292,7 +297,7 @@ namespace
     #pragma pack(pop)
 
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorPanelNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 19);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorAssetNativeApi, 21);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorApplicationNativeApi, 16);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorComponentNativeApi, 25);
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorLogNativeApi, 5);
@@ -302,23 +307,23 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 184);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 186);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 91);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 107);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, panels, 116);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, assets, 118);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 137);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 162);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 167);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 175);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 177);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 179);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 180);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 181);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 182);
-    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 183);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, components, 139);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, log, 164);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, profiler, 169);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, reimport, 177);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, input, 179);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, exportProfilerFrameText, 181);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, beginProfileSample, 182);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 183);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 184);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 185);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -469,6 +474,59 @@ namespace
             && editor->GetProject().RemapWorldKeys(ReadUtf8(oldKey, oldLength), ReadUtf8(newKey, newLength), prefix != 0) ? 1 : 0;
     }
 
+    //重映射文档中的对象身份和引用
+    int32 ORBEDEN_NATIVE_CALL RemapManagedObjectIdentities(void*, const uint8* xml, int32 xmlLength,
+        const uint8* mapping, int32 mappingLength, uint8 clearExternal, uint8* output, int32 capacity)
+    {
+        List<std::pair<std::string, std::string>> identities;
+        std::istringstream rows(ReadUtf8(mapping, mappingLength));
+        std::string row;
+        while (std::getline(rows, row))
+        {
+            usize split = row.find('\t');
+            if (split == std::string::npos) return -1;
+            identities.emplace_back(row.substr(0, split), row.substr(split + 1));
+        }
+        std::string error;
+        std::string result = WorldSerializer::RemapObjectIdentities(ReadUtf8(xml, xmlLength), identities, clearExternal != 0, error);
+        if (result.empty()) { Log::Error(error.c_str()); return -1; }
+        return CopyUtf8(result, output, capacity);
+    }
+
+    //捕获或切换编辑场景快照
+    int32 ORBEDEN_NATIVE_CALL ChangeManagedWorldSnapshot(void* context, uint8 operation, const uint8* xml, int32 length,
+        uint8* output, int32 capacity)
+    {
+        EditorSystem* editor = static_cast<EditorSystem*>(context);
+        if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
+        EditorProject& project = editor->GetProject();
+        bool success = false;
+        if (operation == 0)
+        {
+            World& world = editor->GetWorld();
+            World::DirtySuppressionScope suppression(world);
+            bool camera = editor->GetEditorScene().RemoveCameraForSerialization(world);
+            std::string snapshot = project.CaptureWorldSnapshot();
+            if (camera) editor->GetEditorScene().RestoreCamera(world);
+            return CopyUtf8(snapshot, output, capacity);
+        }
+        if (operation == 1) success = project.RestoreWorldSnapshot(ReadUtf8(xml, length));
+        else if (operation == 2)
+        {
+            bool camera;
+            {
+                World::DirtySuppressionScope suppression(editor->GetWorld());
+                camera = editor->GetEditorScene().RemoveCameraForSerialization(editor->GetWorld());
+            }
+            success = project.OpenTemporaryWorld(ReadUtf8(xml, length));
+            if (!success && camera) editor->GetEditorScene().RestoreCamera(editor->GetWorld());
+        }
+        else if (operation == 3) success = project.CloseTemporaryWorld();
+        if (success) editor->GetEditorScene().ClearSceneState();
+        if (success) editor->RequestRepaint();
+        return success ? 1 : 0;
+    }
+
     //把当前 World 的 Ens 子树保存为独立预制体
     uint8 ORBEDEN_NATIVE_CALL SaveManagedPrefab(void* context, const uint8* source, int32 sourceLength,
         const uint8* key, int32 keyLength)
@@ -511,6 +569,7 @@ namespace
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || editor->IsPlaying() || !editor->GetWorld().IsAlive(root)
             || editor->GetEditorScene().IsTemporaryEns(root)) return 0;
+        if (prefabBridge && !prefabBridge->CanModifyPrefab(root, 4)) return 0;
         World& world = editor->GetWorld();
         List<EnsId> tree { root };
         for (usize index = 0; index < tree.size(); ++index)
@@ -557,6 +616,8 @@ namespace
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || editor->IsPlaying() || !editor->HasProject()) return 0;
         World& world = editor->GetWorld();
+        if (prefabBridge && !prefabBridge->CanModifyPrefab(parent, 2)) return 0;
+        if (kind == 0 && editor->GetProject().IsTemporaryWorld()) return 0;
         if ((!parent.IsNull() && (!world.IsAlive(parent) || editor->GetEditorScene().IsTemporaryEns(parent)))
             || (!before.IsNull() && (!world.IsAlive(before) || world.GetTransform(before)->parent != parent))) return 0;
         std::string value = ReadUtf8(text, length), error;
@@ -1506,6 +1567,7 @@ namespace
         using S = ScriptInterop::InteropStatus;
         Component* component = FindEditorComponent(context, objectId);
         if (!component) return S::NotFound;
+        if (prefabBridge && !prefabBridge->CanModifyPrefab(component->GetEnsId(), component->Is(Transform::StaticType()) ? 0 : 2)) return S::InvocationFailed;
         if (!input || !name || length <= 0) return S::InvalidArgument;
         Reflection::Value value;
         if (!DecodeEditorValue(*input, value)) return S::TypeMismatch;
@@ -1756,6 +1818,7 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         if (!editor || editor->IsPlaying()) return 0;
+        if (prefabBridge && (!prefabBridge->CanModifyPrefab(child, 3) || !prefabBridge->CanModifyPrefab(parent, 2))) return 0;
         bool moved = editor->GetEditorScene().MoveEns(editor->GetWorld(), child, parent, before, preserveWorld != 0);
         if (moved) editor->RequestRepaint();
         return moved ? 1 : 0;
@@ -1786,7 +1849,7 @@ namespace
         uint8 inspectorVisible)
     {
         Script* host = AsManagedScriptHost(FindEditorComponent(context, objectId));
-        if (!host) return 0;
+        if (!host || (prefabBridge && !prefabBridge->CanModifyPrefab(host->GetEnsId(), 2))) return 0;
         std::string fieldType = ReadUtf8(typeName, typeNameLength);
         return host->SetManagedField(
             ReadUtf8(name, nameLength),
@@ -1830,7 +1893,7 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         Ens* ens = editor ? editor->GetWorld().GetEns({ ensId, ensVersion }) : nullptr;
-        if (!ens) return 0;
+        if (!ens || (prefabBridge && !prefabBridge->CanModifyPrefab(ens->GetId(), 2))) return 0;
 
         std::string requestedType = ReadUtf8(typeName, typeNameLength);
         Type* type = Object::FindType(requestedType);
@@ -1855,7 +1918,7 @@ namespace
         Component* component = FindEditorComponent(context, objectId);
         if (!component || component->GetType() == Transform::StaticType()) return 0;
         Ens* ens = component->GetEns();
-        return ens && ens->RemoveComponent(component) ? 1 : 0;
+        return ens && (!prefabBridge || prefabBridge->CanModifyPrefab(ens->GetId(), 2)) && ens->RemoveComponent(component) ? 1 : 0;
     }
 
     int32 ORBEDEN_NATIVE_CALL CaptureManagedComponent(void* context, int32 objectId, uint8* buffer, int32 size)
@@ -1868,7 +1931,7 @@ namespace
     {
         Component* component = FindEditorComponent(context, objectId);
         Ens* ens = component ? component->GetEns() : nullptr;
-        if (!ens) return 0;
+        if (!ens || (prefabBridge && !prefabBridge->CanModifyPrefab(ens->GetId(), 2))) return 0;
         return ens->MoveComponent(component, index) ? 1 : 0;
     }
 
@@ -1895,6 +1958,7 @@ namespace
     {
         EditorSystem* editor = static_cast<EditorSystem*>(context);
         Ens* ens = editor ? editor->GetWorld().GetEns({ id, version }) : nullptr;
+        if (ens && prefabBridge && !prefabBridge->CanModifyPrefab(ens->GetId(), 2)) return 0;
         Component* component = ens ? WorldSerializer::RestoreComponent(*ens, ReadUtf8(snapshot, length), index) : nullptr;
         return component ? component->GetObjectId() : 0;
     }
@@ -2151,6 +2215,9 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawStatusBarMethod, &DrawStatusBarFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorDrawProgressOverlayMethod, &DrawProgressOverlayFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorPublishGameAotMethod, &PublishGameAotFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, "RevealSelectedEns", &RevealSelectedEnsFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, "ProcessWorldFile", &ProcessWorldFileFunction)
+        || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, "CanModifyPrefab", &CanModifyPrefabFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorSaveProjectStateMethod, &SaveProjectStateFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorUndoMethod, &UndoFunction)
         || !clrHost->BindFunction(editorAssemblyPath, EditorTypeName, EditorRedoMethod, &RedoFunction)
@@ -2216,6 +2283,8 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.assets.reimportAllAssets = reinterpret_cast<void*>(&ReimportAllManagedAssets);
     editorApi.assets.loadCachedAsset = reinterpret_cast<void*>(&LoadCachedManagedAsset);
     editorApi.assets.saveMaterial = reinterpret_cast<void*>(&SaveManagedMaterial);
+    editorApi.assets.remapObjectIdentities = reinterpret_cast<void*>(&RemapManagedObjectIdentities);
+    editorApi.assets.changeWorldSnapshot = reinterpret_cast<void*>(&ChangeManagedWorldSnapshot);
     editorApi.components.context = &editor;
     editorApi.components.readComponentSnapshot = reinterpret_cast<void*>(&ReadComponentSnapshot);
     editorApi.components.setComponentProperty = reinterpret_cast<void*>(&SetComponentProperty);
@@ -2275,6 +2344,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     }
 
     initialized = true;
+    prefabBridge = this;
     return true;
 }
 
@@ -2302,6 +2372,10 @@ void ManagedEditorBridge::Shutdown()
     UnloadGameAssemblyFunction = nullptr;
     PublishGameAotFunction = nullptr;
     SaveProjectStateFunction = nullptr;
+    ProcessWorldFileFunction = nullptr;
+    CanModifyPrefabFunction = nullptr;
+    RevealSelectedEnsFunction = nullptr;
+    if (prefabBridge == this) prefabBridge = nullptr;
     UndoFunction = nullptr;
     RedoFunction = nullptr;
     RequestRenameSelectedFunction = nullptr;
@@ -2429,6 +2503,30 @@ void ManagedEditorBridge::DrawStatusBar()
     drawStatusBar();
 }
 
+//处理编辑场景文件和运行场景产物
+bool ManagedEditorBridge::ProcessWorldFile(EditorWorldFileOperation operation, const std::string& source,
+    const std::string& target, std::string& error)
+{
+    error.clear();
+    if (!initialized || !ProcessWorldFileFunction) { error = "Editor world processor is unavailable."; return false; }
+    using Function = uint8(CORECLR_DELEGATE_CALLTYPE*)(uint8, const uint8*, int32, const uint8*, int32, uint8*, int32);
+    char buffer[4096]{};
+    bool success = reinterpret_cast<Function>(ProcessWorldFileFunction)(static_cast<uint8>(operation),
+        reinterpret_cast<const uint8*>(source.data()), static_cast<int32>(source.size()),
+        reinterpret_cast<const uint8*>(target.data()), static_cast<int32>(target.size()),
+        reinterpret_cast<uint8*>(buffer), sizeof(buffer)) != 0;
+    if (!success) error = buffer;
+    return success;
+}
+
+//校验预制体实例编辑操作
+bool ManagedEditorBridge::CanModifyPrefab(EnsId ens, uint8 operation)
+{
+    if (!initialized || !CanModifyPrefabFunction) return true;
+    using Function = uint8(CORECLR_DELEGATE_CALLTYPE*)(EnsId, uint8);
+    return reinterpret_cast<Function>(CanModifyPrefabFunction)(ens, operation) != 0;
+}
+
 bool ManagedEditorBridge::SaveProjectState()
 {
     if (!initialized || !SaveProjectStateFunction) return true;
@@ -2466,6 +2564,14 @@ bool ManagedEditorBridge::Redo()
     if (!initialized || !RedoFunction) return false;
     ManagedCommandFn redo = reinterpret_cast<ManagedCommandFn>(RedoFunction);
     return redo() != 0;
+}
+
+//在层级面板定位场景选中的节点
+void ManagedEditorBridge::RevealSelectedEns(EnsId ens)
+{
+    if (!initialized || !RevealSelectedEnsFunction) return;
+    using Function = void(CORECLR_DELEGATE_CALLTYPE*)(EnsId);
+    reinterpret_cast<Function>(RevealSelectedEnsFunction)(ens);
 }
 
 void ManagedEditorBridge::RequestRenameSelected()

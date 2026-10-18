@@ -11,6 +11,7 @@ internal static class EditorWorldActions
     internal static void RequestOpen(string key)
     {
         if (EditorApplication.IsPlaying || pendingKey != null) return;
+        if (EditorPrefabSession.IsEditing && !EditorPrefabSession.EndEdit()) return;
         pendingKey = key;
         Status = string.Empty;
         //面板草稿在提交前不属于世界，WorldDirty 看不见它，必须单独问一次
@@ -23,7 +24,9 @@ internal static class EditorWorldActions
     {
         if (pendingKey == null) return false;
         string key = pendingKey;
-        if (!EditorAssetsNative.OpenWorld(key))
+        bool opened = key.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
+            ? EditorPrefabSession.BeginEdit(key) : EditorAssetsNative.OpenWorld(key);
+        if (!opened)
         {
             Status = EditorAssetsNative.GetProjectError();
             if (string.IsNullOrEmpty(Status)) Status = "Failed to open World: " + key;
@@ -58,7 +61,12 @@ internal static class EditorWorldActions
                 if (pendingKey == null) NativeEditorGUI.ClosePopup();
             }
             EditorGUI.SameLine();
-            if (EditorGUI.Button("Discard") && CommitOpen()) NativeEditorGUI.ClosePopup();
+            if (EditorGUI.Button("Discard"))
+            {
+                bool discarded = pendingKey == null || !pendingKey.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
+                    || EditorAssetsNative.OpenWorld(EditorAssetsNative.GetWorldKey(false));
+                if (discarded && CommitOpen()) NativeEditorGUI.ClosePopup();
+            }
             EditorGUI.SameLine();
             if (EditorGUI.Button("Cancel"))
             {

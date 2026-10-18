@@ -5,8 +5,12 @@
 
 #include <string>
 #include <utility>
+#include <functional>
 
 class Application;
+
+enum class EditorWorldFileOperation : uint8 { PrepareOpen, CommitOpen, Save, Cook };
+using EditorWorldFileProcessor = std::function<bool(EditorWorldFileOperation, const std::string&, const std::string&, std::string&)>;
 
 //项目存档版本与当前引擎的比对结果。
 enum class ProjectVersionStatus
@@ -60,9 +64,25 @@ private:
     EditorGuiConfigState editorGuiConfig;
     std::string lastError;
     bool worldLoaded = false;
+    std::string temporaryWorldSnapshot;
+    std::string originalWorldSnapshot;
+    EditorWorldFileProcessor worldFileProcessor;
 
 public:
     explicit EditorProject(Application& application);
+
+    //设置编辑场景文件处理入口
+    void SetWorldFileProcessor(EditorWorldFileProcessor processor);
+    //捕获普通场景快照
+    std::string CaptureWorldSnapshot();
+    //恢复普通场景快照
+    bool RestoreWorldSnapshot(const std::string& xml);
+    //进入缓存中的临时场景
+    bool OpenTemporaryWorld(const std::string& xml);
+    //返回原编辑场景
+    bool CloseTemporaryWorld();
+    //判断当前是否编辑临时场景
+    bool IsTemporaryWorld() const { return !temporaryWorldSnapshot.empty(); }
 
     //只读探测项目版本；不改变任何编辑器状态，加载前的版本比对使用。
     static bool ProbeProjectFile(const std::string& projectFile, ProjectVersionProbe& outProbe, std::string& outError);

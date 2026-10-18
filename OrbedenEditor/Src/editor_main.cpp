@@ -17,6 +17,8 @@
 #include <glad/gl.h>
 #include "Platform/GlfwWindow.h"
 #include "InputManager/InputManager.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 #include <chrono>
 
@@ -88,8 +90,13 @@ int wmain(int argc, wchar_t** argv)
         constexpr int32 IdleWakeGraceMilliseconds = 2100;
         auto idleWakeDeadline = previousTime;
 
-        while (!window.ShouldClose())
+        while (true)
         {
+            if (window.ShouldClose())
+            {
+                if (!editorSystem.GetProject().IsTemporaryWorld() || editorSystem.SaveCurrentWorld()) break;
+                glfwSetWindowShouldClose(window.GetGlfwWindow(), GLFW_FALSE);
+            }
             bool continuousRepaint = editorSystem.NeedsContinuousRepaint();
             bool repaintRequested = editorSystem.TakeRepaintRequest();
             bool waitedForEvent = !continuousRepaint && !repaintRequested;
@@ -100,7 +107,7 @@ int wmain(int argc, wchar_t** argv)
             if (!waitedForEvent) window.PollEvents();
             else if (Clock::now() < idleWakeDeadline) window.WaitEventsTimeout(IdleWakeSeconds);
             else window.WaitEvents();
-            if (window.ShouldClose()) break;
+            if (window.ShouldClose()) continue;
 
             //空闲唤醒帧不把等待时间传入 Simulation
             auto frameStartTime = Clock::now();

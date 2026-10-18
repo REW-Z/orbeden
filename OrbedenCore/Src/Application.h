@@ -1,5 +1,7 @@
 #pragma once
 
+struct WorldDocument;
+
 #include <chrono>
 #include <future>
 #include <unordered_map>
@@ -124,6 +126,9 @@ public:
 
     //从 XML 文件读取 World，失败时保留空 World 继续运行
     bool LoadWorld(const std::string& path);
+
+    //加载已解析的内存场景
+    bool LoadWorldDocument(const WorldDocument& document);
 
     //获取当前运行时应用
     static Application* Current();

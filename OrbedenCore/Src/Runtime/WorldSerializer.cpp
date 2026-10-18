@@ -984,27 +984,11 @@ bool WorldSerializer::LoadXml(World& world, const std::string& path)
     return true;
 }
 
-//将 World 序列化到 XML 文件
-bool WorldSerializer::SaveXml(const World& world, const std::string& path)
+//捕获完整世界的普通场景文本
+std::string WorldSerializer::CaptureWorld(const World& world)
 {
     Reflection::RegisterGeneratedReflection();
-
-    //创建目标目录
-    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
-    if (filePath.has_parent_path())
-    {
-        std::filesystem::create_directories(filePath.parent_path());
-    }
-
-    //二进制模式：文本模式会把每个 \n 写成 \r\n，存一次盘就把整个场景文件的行尾翻掉，
-    //没有改动的场景也会在版本控制里显示成全文件重写。
-    std::ofstream output(filePath, std::ios::out | std::ios::trunc | std::ios::binary);
-    if (!output)
-    {
-        Log::Error(("Save world XML failed: " + path).c_str());
-        return false;
-    }
-
+    std::ostringstream output;
     //写入 World 根节点和所有根 Ens
     output << "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
     output << "<World>\n";
@@ -1040,6 +1024,17 @@ bool WorldSerializer::SaveXml(const World& world, const std::string& path)
         });
 
     output << "</World>\n";
+    return output.str();
+}
+
+//将世界文本写入场景文件
+bool WorldSerializer::SaveXml(const World& world, const std::string& path)
+{
+    std::filesystem::path filePath = InteropText::PathFromUtf8(path);
+    if (filePath.has_parent_path()) std::filesystem::create_directories(filePath.parent_path());
+    std::ofstream output(filePath, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!output) { Log::Error(("Save world XML failed: " + path).c_str()); return false; }
+    output << CaptureWorld(world);
     output.flush();
     return static_cast<bool>(output);
 }
@@ -1295,6 +1290,20 @@ std::unique_ptr<World> WorldSerializer::PrepareWorld(const World& current,
             prepared->preparedObjectPaths.emplace_back(object, StringId(entry.first));
     }
     return prepared;
+}
+
+//重映射文档中的对象身份和引用
+std::string WorldSerializer::RemapObjectIdentities(const std::string& xml,
+    const List<std::pair<std::string, std::string>>& identities, bool clearExternal, std::string& error)
+{
+    auto document = ParseDocument(xml, error);
+    if (!document) return {};
+    try
+    {
+        std::unordered_map<std::string, std::string> paths(identities.begin(), identities.end());
+        return WriteDocument(*document, paths, clearExternal);
+    }
+    catch (const std::exception& exception) { error = exception.what(); return {}; }
 }
 
 //捕获完整 Ens 子树

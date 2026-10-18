@@ -214,12 +214,16 @@ internal sealed class InspectorPanel : EditorPanel
             cachedSelection = selection.ToArray();
         }
         Ens active = Ens.FromId(context.SelectedEns);
+        EditorPrefabSession.DrawControls(active);
+        if (!active.IsValid) return;
         DrawObjectHeader(active, selection, context.SelectedStableId);
         if (!string.IsNullOrWhiteSpace(status) && !status.StartsWith("Loaded:", StringComparison.Ordinal))
             EditorGUI.Warning($"C# Assembly: {status}");
         if (propertyError.Length != 0) EditorGUI.Warning(propertyError);
         DrawComponents(selection);
-        DrawAddComponent(selection);
+        EditorGUI.BeginDisabled(selection.Any(id => !EditorPrefabSession.CanModify(Ens.FromId(id), EditorPrefabEditOperation.Structure)));
+        try { DrawAddComponent(selection); }
+        finally { EditorGUI.EndDisabled(); }
     }
 
     //从统一会话里缓存可添加的具体 C# 脚本类型。
@@ -462,6 +466,7 @@ internal sealed class InspectorPanel : EditorPanel
     //绘制对象名称与运行时身份。卡片默认折叠：平时只是确认选中的是谁，读 Id 细节时才展开。
     private void DrawObjectHeader(Ens active, IReadOnlyList<EnsId> selection, string stableId)
     {
+        bool readOnly = selection.Any(id => !EditorPrefabSession.CanModify(Ens.FromId(id), EditorPrefabEditOperation.Header));
         if (headerDocument == null)
         {
             List<IPropertyTarget> targets = selection
@@ -474,6 +479,7 @@ internal sealed class InspectorPanel : EditorPanel
                             () => InteropValue.From(value.Name),
                             updated =>
                             {
+                                if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
                                 if (!updated.TryGet(out string name)) return InteropStatus.TypeMismatch;
                                 value.Name = name;
                                 return InteropStatus.Ok;
@@ -483,6 +489,7 @@ internal sealed class InspectorPanel : EditorPanel
                             () => InteropValue.From(value.LocalActive),
                             updated =>
                             {
+                                if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
                                 if (!updated.TryGet(out bool active)) return InteropStatus.TypeMismatch;
                                 value.LocalActive = active;
                                 return InteropStatus.Ok;
@@ -492,6 +499,7 @@ internal sealed class InspectorPanel : EditorPanel
                             () => InteropValue.From(value.Static),
                             updated =>
                             {
+                                if (!EditorPrefabSession.CanModify(value, EditorPrefabEditOperation.Header)) return InteropStatus.InvocationFailed;
                                 if (!updated.TryGet(out bool isStatic)) return InteropStatus.TypeMismatch;
                                 return value.Static == isStatic || value.TrySetStatic(isStatic)
                                     ? InteropStatus.Ok : InteropStatus.InvocationFailed;
@@ -513,39 +521,45 @@ internal sealed class InspectorPanel : EditorPanel
         bool toggled = false;
         bool toggledStatic = false;
         bool pendingStatic = false;
-        bool expanded = EditorGUI.BeginCollapsibleComponentBlock("Selected Ens", "Other", "ens_header",
-            localActive, false, out toggled);
+        bool expanded = readOnly
+            ? EditorGUI.BeginCollapsibleComponentBlock("Selected Ens", "Other", "ens_header")
+            : EditorGUI.BeginCollapsibleComponentBlock("Selected Ens", "Other", "ens_header", localActive, false, out toggled);
         try
         {
             if (expanded)
             {
-                DrawPropertyDocument(headerDocument, "Ens", "",
-                    hasLocalActive ? LocalActiveProperty : string.Empty);
-                //Id 用只读输入框显示：与上面的字段同一套行布局，读数比裸标签整齐
-                string runtimeId = $"{active.Id.id}:{active.Id.version}";
-                EditorGUI.InputText("Runtime Id", ref runtimeId, readOnly: true);
-                if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
-                string stable = string.IsNullOrEmpty(stableId) ? "<none>" : stableId;
-                EditorGUI.InputText("Stable Id", ref stable, readOnly: true);
-
-                //Play 与暂停期间 static 只读，原生 setter 仍是最终保护
-                bool staticValue = false;
-                bool hasStatic = headerDocument.FindProperty(StaticProperty) is { IsReadable: true, Kind: InteropValueKind.Bool } property
-                    && property.Value.TryGet(out staticValue);
-                if (hasStatic)
+                EditorGUI.BeginDisabled(readOnly);
+                try
                 {
-                    EditorGUI.BeginDisabled(EditorApplication.IsPlaying);
-                    try
+                    DrawPropertyDocument(headerDocument, "Ens", "",
+                        hasLocalActive && !readOnly ? LocalActiveProperty : string.Empty, additionalSkipProperty: StaticProperty);
+                    //Id 用只读输入框显示：与上面的字段同一套行布局，读数比裸标签整齐
+                    string runtimeId = $"{active.Id.id}:{active.Id.version}";
+                    EditorGUI.InputText("Runtime Id", ref runtimeId, readOnly: true);
+                    if (selection.Count > 1) EditorGUI.Label($"Selected: {selection.Count} Ens");
+                    string stable = string.IsNullOrEmpty(stableId) ? "<none>" : stableId;
+                    EditorGUI.InputText("Stable Id", ref stable, readOnly: true);
+
+                    //Play 与暂停期间 static 只读，原生 setter 仍是最终保护
+                    bool staticValue = false;
+                    bool hasStatic = headerDocument.FindProperty(StaticProperty) is { IsReadable: true, Kind: InteropValueKind.Bool } property
+                        && property.Value.TryGet(out staticValue);
+                    if (hasStatic)
                     {
-                        bool edited = staticValue;
-                        if (EditorGUI.Checkbox("Static", ref edited))
+                        EditorGUI.BeginDisabled(EditorApplication.IsPlaying);
+                        try
                         {
-                            toggledStatic = true;
-                            pendingStatic = edited;
+                            bool edited = staticValue;
+                            if (EditorGUI.Checkbox("Static", ref edited))
+                            {
+                                toggledStatic = true;
+                                pendingStatic = edited;
+                            }
                         }
+                        finally { EditorGUI.EndDisabled(); }
                     }
-                    finally { EditorGUI.EndDisabled(); }
                 }
+                finally { EditorGUI.EndDisabled(); }
             }
         }
         finally
@@ -593,7 +607,12 @@ internal sealed class InspectorPanel : EditorPanel
                 matches.Add(match);
             }
             if (matches.Count != selection.Count) continue;
-            DrawComponent(selection, matches, occurrence);
+            bool transform = component.TypeName == "Transform" && !component.IsManaged;
+            bool locked = selection.Any(id => !EditorPrefabSession.CanModify(Ens.FromId(id),
+                transform ? EditorPrefabEditOperation.RootTransform : EditorPrefabEditOperation.Structure));
+            EditorGUI.BeginDisabled(locked);
+            try { DrawComponent(selection, matches, occurrence); }
+            finally { EditorGUI.EndDisabled(); }
         }
     }
 
@@ -660,7 +679,9 @@ internal sealed class InspectorPanel : EditorPanel
                     hasEnabled ? EnabledProperty : string.Empty, refresh: false);
                 ComponentEditorTarget[] targets = components.Select((component, index) => new ComponentEditorTarget(
                     component.ObjectId, selection[index], component.TypeName, component.IsManaged)).ToArray();
-                if (!CustomEditorRegistry.DrawInspector(targets, document.Document, DrawDefault)) DrawDefault();
+                bool locked = selection.Any(id => !EditorPrefabSession.CanModify(Ens.FromId(id),
+                    primary.TypeName == "Transform" && !primary.IsManaged ? EditorPrefabEditOperation.RootTransform : EditorPrefabEditOperation.Structure));
+                if (locked || !CustomEditorRegistry.DrawInspector(targets, document.Document, DrawDefault)) DrawDefault();
             }
         }
         finally
@@ -815,7 +836,7 @@ internal sealed class InspectorPanel : EditorPanel
 
     //绘制 PropertyDocument 支持的全部基础值。
     private static void DrawPropertyDocument(PropertyDocument document, string undoPrefix, string nativeType = "",
-        string skipProperty = "", bool refresh = true)
+        string skipProperty = "", bool refresh = true, string additionalSkipProperty = "")
     {
         if (refresh) document.Update();
         foreach (PropertyValue property in document.GetDrawProperties(nativeType))
@@ -825,8 +846,9 @@ internal sealed class InspectorPanel : EditorPanel
             int bracket = property.Name.LastIndexOf('[');
             if (bracket > 0 && property.Name.EndsWith(']')
                 && document.FindProperty(property.Name[..bracket])?.Kind == InteropValueKind.Array) continue;
-            //挪到卡片标题行上的字段不在正文里再画一遍
+            //跳过已单独绘制的字段
             if (skipProperty.Length != 0 && string.Equals(property.Name, skipProperty, StringComparison.Ordinal)) continue;
+            if (additionalSkipProperty.Length != 0 && string.Equals(property.Name, additionalSkipProperty, StringComparison.Ordinal)) continue;
             //显示名优先用 Label：槽位的标识是 uniform 名，直接展示太生硬
             string title = property.Label.Length != 0 ? property.Label : property.Name;
             string label = property.HasMultipleDifferentValues ? $"{title} (Mixed)" : title;

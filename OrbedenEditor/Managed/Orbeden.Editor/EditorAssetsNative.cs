@@ -28,6 +28,8 @@ internal unsafe struct EditorAssetNativeApi
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, int> ReimportAllAssets;
     public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, int> LoadCachedAsset;
     public delegate* unmanaged[Cdecl]<IntPtr, int, byte*, int, byte> SaveMaterial;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte*, int, byte*, int, byte, byte*, int, int> RemapObjectIdentities;
+    public delegate* unmanaged[Cdecl]<IntPtr, byte, byte*, int, byte*, int, int> ChangeWorldSnapshot;
 }
 #pragma warning restore CS0649
 
@@ -61,10 +63,28 @@ internal static unsafe class EditorAssetsNative
     //实例化预制体、恢复子树快照或按快照复制子树
     internal static Ens InstantiatePrefab(string text, PrefabSource source, EnsId parent, EnsId before)
     {
-        byte[] bytes = InteropText.EncodeUtf8(text);
+        if (EditorPrefabSession.IsEditing && (source == PrefabSource.File || text.Contains("<PrefabBindings", StringComparison.Ordinal))
+            || !EditorPrefabSession.CanModify(Ens.FromId(parent), EditorPrefabEditOperation.Structure)) return Ens.Null;
+        string payload = source == PrefabSource.File ? text : EditorPrefabSession.PrepareSnapshot(text);
+        byte[] bytes = InteropText.EncodeUtf8(payload);
+        Ens root;
         fixed (byte* pointer = bytes)
-            return NativeBindingRuntime.Wrap<Ens>(api.InstantiatePrefab(api.Context, pointer, bytes.Length,
+            root = NativeBindingRuntime.Wrap<Ens>(api.InstantiatePrefab(api.Context, pointer, bytes.Length,
                 (byte)source, parent, before)) ?? Ens.Null;
+        if (!root.IsValid) return root;
+        try
+        {
+            if (source == PrefabSource.File) EditorPrefabSession.RegisterInstance(text, root);
+            else EditorPrefabSession.RestoreBindings(text, root, source == PrefabSource.SnapshotCopy);
+            return root;
+        }
+        catch
+        {
+            EditorPrefabSession.Updating = true;
+            try { DestroyEnsTree(root.Id); }
+            finally { EditorPrefabSession.Updating = false; }
+            throw;
+        }
     }
 
     //把材质资产写回它的源文件；失败原因由原生侧写进 Console
@@ -81,11 +101,59 @@ internal static unsafe class EditorAssetsNative
         int length = api.CaptureEns(api.Context, root, null, 0);
         byte[] bytes = new byte[length];
         fixed (byte* pointer = bytes) api.CaptureEns(api.Context, root, pointer, length);
-        return InteropText.DecodeUtf8(bytes);
+        return EditorPrefabSession.CaptureBindings(InteropText.DecodeUtf8(bytes));
     }
 
     //销毁子树中的全部对象
-    internal static bool DestroyEnsTree(EnsId root) => api.DestroyEnsTree(api.Context, root) != 0;
+    internal static bool DestroyEnsTree(EnsId root)
+    {
+        if (!EditorPrefabSession.CanModify(Ens.FromId(root), EditorPrefabEditOperation.Delete)) return false;
+        string snapshot = CaptureEns(root);
+        if (api.DestroyEnsTree(api.Context, root) == 0) return false;
+        EditorPrefabSession.RemoveBindings(snapshot);
+        return true;
+    }
+
+    //重映射文档对象身份和引用
+    internal static string RemapObjectIdentities(string xml, IReadOnlyDictionary<string, string> identities, bool clearExternal)
+    {
+        byte[] source = InteropText.EncodeUtf8(xml);
+        byte[] mapping = InteropText.EncodeUtf8(string.Join('\n', identities.Select(p => p.Key + "\t" + p.Value)));
+        fixed (byte* sourcePointer = source)
+        fixed (byte* mappingPointer = mapping)
+        {
+            int length = api.RemapObjectIdentities(api.Context, sourcePointer, source.Length, mappingPointer, mapping.Length,
+                clearExternal ? (byte)1 : (byte)0, null, 0);
+            if (length < 0) throw new InvalidDataException("Object reference remapping failed.");
+            byte[] output = new byte[length];
+            fixed (byte* target = output)
+                if (api.RemapObjectIdentities(api.Context, sourcePointer, source.Length, mappingPointer, mapping.Length,
+                    clearExternal ? (byte)1 : (byte)0, target, length) != length)
+                    throw new InvalidDataException("Object reference remapping failed.");
+            return InteropText.DecodeUtf8(output);
+        }
+    }
+
+    //捕获或切换编辑场景快照
+    internal static bool ChangeWorldSnapshot(EditorWorldSnapshotOperation operation, string xml)
+    {
+        ScriptRuntimeRegistry.FlushHostFields();
+        byte[] bytes = InteropText.EncodeUtf8(xml);
+        fixed (byte* pointer = bytes) return api.ChangeWorldSnapshot(api.Context, (byte)operation, pointer, bytes.Length, null, 0) > 0;
+    }
+
+    //捕获当前普通场景的内存快照
+    internal static string CaptureWorldSnapshot()
+    {
+        ScriptRuntimeRegistry.FlushHostFields();
+        int length = api.ChangeWorldSnapshot(api.Context, (byte)EditorWorldSnapshotOperation.Capture, null, 0, null, 0);
+        if (length <= 0) throw new InvalidOperationException("Cannot capture world snapshot.");
+        byte[] bytes = new byte[length];
+        fixed (byte* output = bytes)
+            if (api.ChangeWorldSnapshot(api.Context, (byte)EditorWorldSnapshotOperation.Capture, null, 0, output, length) != length)
+                throw new InvalidOperationException("World snapshot changed during capture.");
+        return InteropText.DecodeUtf8(bytes);
+    }
 
     //在当前 World 根下创建空 Ens
     internal static Ens CreateEns(string name)
@@ -118,11 +186,16 @@ internal static unsafe class EditorAssetsNative
     //保存 Ens 子树为独立预制体
     internal static bool SavePrefab(string source, string key)
     {
+        Ens ens = Ens.Find(source);
+        if (!ens.IsValid || EditorPrefabSession.IsEditing || CaptureEns(ens.Id).Contains("<PrefabBindings", StringComparison.Ordinal)) return false;
         ScriptRuntimeRegistry.FlushHostFields();
         byte[] sourceBytes = InteropText.EncodeUtf8(source), keyBytes = InteropText.EncodeUtf8(key);
+        bool saved;
         fixed (byte* sourcePointer = sourceBytes)
         fixed (byte* keyPointer = keyBytes)
-            return api.SavePrefab(api.Context, sourcePointer, sourceBytes.Length, keyPointer, keyBytes.Length) != 0;
+            saved = api.SavePrefab(api.Context, sourcePointer, sourceBytes.Length, keyPointer, keyBytes.Length) != 0;
+        if (saved) EditorPrefabSession.RegisterInstance(key, ens);
+        return saved;
     }
 
     //读取当前编辑或启动 World 的资源 Key
@@ -183,6 +256,7 @@ internal static unsafe class EditorAssetsNative
     internal static int RemapLiveReferences(string oldKey, string newKey, bool prefix)
     {
         if (api.RemapLiveReferences == null || string.IsNullOrEmpty(oldKey)) return 0;
+        EditorPrefabSession.RemapAssetKeys(oldKey, newKey, prefix);
 
         byte[] oldBytes = InteropText.EncodeUtf8(oldKey);
         byte[] newBytes = InteropText.EncodeUtf8(newKey ?? string.Empty);

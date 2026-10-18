@@ -750,6 +750,8 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     //内容根换成项目之后重建 UI 着色器程序：项目里的 ui_surface.orbshader 这样才会生效。
     if (renderSystem) renderSystem->GetUIRenderer().InvalidateShaderPrograms();
 
+    temporaryWorldSnapshot.clear();
+    originalWorldSnapshot.clear();
     projectRoot = parsedProjectRoot;
     projectName = parsedName;
     startupWorld = parsedStartupWorld;
@@ -766,8 +768,59 @@ bool EditorProject::LoadProjectFile(const std::string& projectFile)
     return true;
 }
 
+//设置编辑场景文件处理入口
+void EditorProject::SetWorldFileProcessor(EditorWorldFileProcessor processor)
+{
+    worldFileProcessor = std::move(processor);
+}
+
+//捕获普通场景快照
+std::string EditorProject::CaptureWorldSnapshot()
+{
+    return WorldSerializer::CaptureWorld(app.GetWorld());
+}
+
+//恢复普通场景快照
+bool EditorProject::RestoreWorldSnapshot(const std::string& xml)
+{
+    auto document = WorldSerializer::ParseDocument(xml, lastError);
+    if (!document) return false;
+    app.CancelWorldLoad();
+    if (!app.LoadWorldDocument(*document)) { lastError = "Cannot restore world snapshot."; return false; }
+    worldLoaded = true;
+    return true;
+}
+
+//进入内存临时场景
+bool EditorProject::OpenTemporaryWorld(const std::string& xml)
+{
+    if (IsTemporaryWorld() || !HasProject()) return false;
+    std::string previous = CaptureWorldSnapshot();
+    if (!RestoreWorldSnapshot(xml)) return false;
+    originalWorldSnapshot = std::move(previous);
+    temporaryWorldSnapshot = xml;
+    return true;
+}
+
+//返回原编辑场景
+bool EditorProject::CloseTemporaryWorld()
+{
+    if (!IsTemporaryWorld()) return true;
+    if (!RestoreWorldSnapshot(originalWorldSnapshot)) return false;
+    temporaryWorldSnapshot.clear();
+    originalWorldSnapshot.clear();
+    return true;
+}
+
 bool EditorProject::SaveWorld()
 {
+    if (IsTemporaryWorld())
+    {
+        std::string snapshot = CaptureWorldSnapshot();
+        if (!worldFileProcessor || !worldFileProcessor(EditorWorldFileOperation::Save, snapshot, {}, lastError)) return false;
+        temporaryWorldSnapshot = std::move(snapshot);
+        return true;
+    }
     if (!HasProject())
     {
         lastError = "No project is open.";
@@ -789,13 +842,20 @@ bool EditorProject::SaveWorld()
         return false;
     }
 
-    if (!app.SaveWorld(worldPath))
+    std::string staging = worldFileProcessor ? worldPath + ".raw.pending" : worldPath;
+    if (!app.SaveWorld(staging))
     {
         lastError = "World save failed: " + worldPath;
         Log::Error(lastError.c_str());
         return false;
     }
 
+    if (worldFileProcessor && !worldFileProcessor(EditorWorldFileOperation::Save, staging, worldPath, lastError))
+    {
+        Log::Error(lastError.c_str());
+        return false;
+    }
+    if (worldFileProcessor) { std::error_code ignored; std::filesystem::remove(InteropText::PathFromUtf8(staging), ignored); }
     lastError.clear();
     Log::Info(("World saved: " + worldPath).c_str());
     return true;
@@ -804,6 +864,7 @@ bool EditorProject::SaveWorld()
 //重新读取当前场景
 bool EditorProject::ReloadWorld()
 {
+    if (IsTemporaryWorld()) return RestoreWorldSnapshot(temporaryWorldSnapshot);
     if (!HasProject())
     {
         lastError = "No project is open.";
@@ -824,6 +885,7 @@ bool EditorProject::ReloadWorld()
 //切换到项目内的另一个场景并加载
 bool EditorProject::OpenWorld(const std::string& relativePath)
 {
+    if (IsTemporaryWorld()) { lastError = "Apply and return from prefab editing first."; return false; }
     if (!HasProject())
     {
         lastError = "No project is open.";
@@ -854,7 +916,13 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
 
     app.CancelWorldLoad();
 
-    if (!app.LoadWorld(worldPath))
+    std::string preparedPath = worldPath;
+    if (worldFileProcessor)
+    {
+        preparedPath = ToCleanPath(InteropText::PathFromUtf8(projectRoot) / ProjectLayout::ResourceCacheFolder / "Editor" / "open.world");
+        if (!worldFileProcessor(EditorWorldFileOperation::PrepareOpen, worldPath, preparedPath, lastError)) return false;
+    }
+    if (!app.LoadWorld(preparedPath))
     {
         //加载失败时不改当前场景记录，避免下次保存写到没打开的路径上。
         lastError = "World load failed: " + worldPath;
@@ -865,6 +933,7 @@ bool EditorProject::OpenWorld(const std::string& relativePath)
         return false;
     }
 
+    if (worldFileProcessor && !worldFileProcessor(EditorWorldFileOperation::CommitOpen, preparedPath, {}, lastError)) return false;
     currentWorld = ToCleanPath(InteropText::PathFromUtf8(relativePath));
     worldLoaded = true;
     lastError.clear();
@@ -1089,6 +1158,7 @@ std::string EditorProject::GetNativeBuildPath() const
 
 std::string EditorProject::GetWorldPath() const
 {
+    if (IsTemporaryWorld()) return {};
     if (projectRoot.empty() || currentWorld.empty()) return std::string();
     return ToCleanPath(InteropText::PathFromUtf8(GetContentRootPath()) / InteropText::PathFromUtf8(currentWorld));
 }

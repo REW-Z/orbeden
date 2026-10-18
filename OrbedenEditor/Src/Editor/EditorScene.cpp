@@ -711,6 +711,14 @@ void EditorScene::DrawSceneOverlay()
         PROFILE("Editor/Panels/Scene/PrepareView");
         PrepareGizmoView(scene);
     }
+
+    //裁剪视口叠加层并分离控件绘制层
+    ImGui::PushClipRect(ImVec2(sceneView.renderPosition.x, sceneView.renderPosition.y),
+        ImVec2(sceneView.renderPosition.x + sceneView.renderSize.x, sceneView.renderPosition.y + sceneView.renderSize.y), true);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImDrawListSplitter overlayLayers;
+    overlayLayers.Split(drawList, 2);
+    overlayLayers.SetCurrentChannel(drawList, 1);
     {
         PROFILE("Editor/Panels/Scene/Toolbar");
         DrawGizmoToolbar();
@@ -732,6 +740,8 @@ void EditorScene::DrawSceneOverlay()
         HandleSelection(scene);
     }
     {
+        //绘制控件下方的组件和变换手柄
+        overlayLayers.SetCurrentChannel(drawList, 0);
         PROFILE("Editor/Panels/Scene/ComponentGizmos");
         componentGizmos.Draw(world, *this, gizmoView, scene);
     }
@@ -742,8 +752,11 @@ void EditorScene::DrawSceneOverlay()
     //罗盘是视口部件而非组件 Gizmo：放在最后画，且不受 Gizmos 开关影响
     {
         PROFILE("Editor/Panels/Scene/Compass");
+        overlayLayers.SetCurrentChannel(drawList, 1);
         EditorGizmoHandles::DrawAxisCompass(gizmoView);
     }
+    overlayLayers.Merge(drawList);
+    ImGui::PopClipRect();
 }
 
 //更新编辑器观察相机。
@@ -1339,6 +1352,7 @@ void EditorScene::HandleSelection(const RenderScene& scene)
     }
     else if (!hit.IsNull()) SelectEns(hit);
     else ClearSelection();
+    if (!selectionCtrl || !hit.IsNull()) managedBridge.RevealSelectedEns(activeEns);
 }
 
 //投射鼠标射线并返回最近命中的对象与命中点。
@@ -1764,6 +1778,8 @@ void EditorScene::UpdateGizmoHandles(World& world)
         return;
     }
 
+    for (EnsId selected : selectedEns)
+        if (!managedBridge.CanModifyPrefab(selected, 0)) { gizmoHandles.CancelDrag(world); return; }
     ImGuiIO& io = ImGui::GetIO();
     bool overSceneView = IsMouseOverSceneView();
     bool interactive = !playModeActive
@@ -1781,6 +1797,7 @@ void EditorScene::UpdateGizmoHandles(World& world)
 void EditorScene::DrawGizmoHandles()
 {
     if (!gizmoViewValid || playModeActive) return;
+    for (EnsId selected : selectedEns) if (!managedBridge.CanModifyPrefab(selected, 0)) return;
     gizmoHandles.Draw(app.GetWorld(), gizmoView);
 }
 

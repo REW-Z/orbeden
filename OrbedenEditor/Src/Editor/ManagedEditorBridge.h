@@ -10,6 +10,7 @@ class EditorSystem;
 class EditorGUI;
 class PanelManager;
 struct EditorGizmoApi;
+enum class EditorWorldFileOperation : uint8;
 
 //与托管入口共用的场景辅助绘制阶段
 enum class SceneGizmoPass : uint8
@@ -57,9 +58,19 @@ private:
     void* RequestPasteSelectedFunction = nullptr;
     void* RequestToggleActiveSelectedFunction = nullptr;
     void* RequestScriptBuildFunction = nullptr;
+    void* ProcessWorldFileFunction = nullptr;
+    void* CanModifyPrefabFunction = nullptr;
+    void* RevealSelectedEnsFunction = nullptr;
     bool initialized = false;
 
 public:
+    //在层级面板定位场景选中的节点
+    void RevealSelectedEns(EnsId ens);
+    //处理编辑场景文件和运行场景产物
+    bool ProcessWorldFile(EditorWorldFileOperation operation, const std::string& source,
+        const std::string& target, std::string& error);
+    //校验预制体实例编辑操作
+    bool CanModifyPrefab(EnsId ens, uint8 operation);
     //初始化 Editor 托管桥
     bool Initialize(EditorClrHost& host,
         EditorSystem& editor,

@@ -156,7 +156,7 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
 
 5. **打包资源**：Player 构建成功后，Editor 接着把内容根内的资源打成发布产物，`Build Player` 结束即得到完整发布目录。
    - 内容根内每个可导入的源文件经 `AssetPipeline` 导入，产生的**每个资源对象**序列化为一个 `.orbo`（`Orbeden::Object` 二进制），先写入 `{ProjectRoot}/ResourceCache/Player/`，再整体同步到 `{ProjectRoot}/Build/windows-x64/bin/Content/`。
-   - `.world` 场景**不 cook**，保持 XML 原样复制，并保留其相对内容根的目录结构。
+   - `.world` 场景沿用 XML 格式：有绑定实例时经 World Cook 更新并移除编辑关联；无绑定实例时按字节原样复制。两者都保留相对内容根的目录结构。
    - `.oeproj` 复制到包根，供 Player 读取启动场景；项目根的游戏设置 `GameSettings.ini` 按项目当前状态镜像到包根——项目里有就覆盖，没有就删掉包里的旧副本（Player 随后用默认值）；没有导入器的文件（脚本、C++ 源码、`.mtl`、`.orbinc`）不进入发布包。
    - 打包会把内容根内全部资源导入当前进程，因此 `Build Player` 会保存并**重载一次当前场景**。`ResourceCache/Player/` 是本次 cook 重建的暂存区；`ResourceCache/Imported/` 保存编辑器导入产物与 `.import.status` 校验记录。整个 ResourceCache 可删除重建，不纳入版本管理；Content 中的 `.resinfo` 承载导入设置，必须保留并提交。
 
@@ -409,7 +409,7 @@ flowchart LR
 
 - `OrbedenGame`
 - `Content/` 下的资源产物 `.orbo`（`Orbeden::Object` 二进制）与清单 `cooked.index`
-- `Content/` 下原样复制的 `.world` 场景
+- `Content/` 下经 World Cook 处理的 `.world` 场景（无绑定实例时原样复制）
 - 包根的 `.oeproj` 项目配置
 - 包根的 `GameSettings.ini` 游戏设置（镜像项目根，项目里没有就不保留）
 - 平台需要的原生依赖
@@ -571,6 +571,8 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 95：新增单层 Prefab 绑定与更新传播。源场景继续保存完整实例，并附加 Editor 管理的来源和对象身份映射；实例只开放根节点的局部位置、旋转和缩放。双击 Prefab 在纯内存 World 中编辑，保存或退出时写回源文件；支持整棵解绑、绑定浅绿色显示及按来源强制更新引用场景。场景打开时更新实例，World Cook 更新实例后移除关联信息；没有绑定实例的场景按字节原样复制。需重建 Core、Editor，通过 Update Project 同步 SDK 后重建游戏原生模块和托管程序集；不需要同步 Builtin／Examples。已有普通场景无需迁移，旧的无关联对象不会自动推断来源。验证范围为 Windows x64 Debug 编译与静态检查，未运行功能测试。
 
 版本 94：内置 `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 四个表面 Shader 显式声明 `Default` Pass 和 `Cull Back`，默认剔除背面。保留原队列、Standard 几何契约、展开能力、GLSL 源码和默认深度／混合状态；Uniform、Instanced、Expanded 共用相同 Pass 剔除状态。天空盒、大气、UI、粒子、雨玻璃、热尾流和阴影 Pass 保持原状态；自定义 Shader 的 `Cull Auto` 仍解析为 None，不修改全局正面绕序或自动补偿负缩放。双面表面需使用显式 `Cull None` 的自定义 Shader。
 

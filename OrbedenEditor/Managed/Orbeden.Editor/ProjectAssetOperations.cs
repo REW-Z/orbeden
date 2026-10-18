@@ -587,6 +587,14 @@ internal sealed class ReferenceRewritePlan
     //更新 world 中的 Ref<> value 属性。
     private string RewriteWorld(string content)
     {
+        content = Regex.Replace(content, @"<Instance\b[^>]*>", tag =>
+            Regex.Replace(tag.Value, @"(?<prefix>\bsource="")(?<value>[^""]*)(?<suffix>"")", reference =>
+            {
+                string value = WebUtility.HtmlDecode(reference.Groups["value"].Value);
+                if (!TryMapSoftReference(value, out string mapped) || mapped.Length == 0) return reference.Value;
+                ChangedReferenceCount++;
+                return reference.Groups["prefix"].Value + (SecurityElement.Escape(mapped) ?? string.Empty) + reference.Groups["suffix"].Value;
+            }, RegexOptions.CultureInvariant), RegexOptions.CultureInvariant);
         content = RenderSettingsTagRegex.Replace(content, tag => EnvironmentReferenceRegex.Replace(tag.Value, reference =>
         {
             string value = WebUtility.HtmlDecode(reference.Groups["value"].Value);

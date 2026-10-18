@@ -15,6 +15,7 @@ internal sealed class EnsPanel : EditorPanel
     private bool panelFocused;
     //待消费的定位请求，以及本次绘制要强制展开、要滚过去的节点
     private static string pingKey = string.Empty;
+    private static bool selectPingTarget = true;
     private readonly HashSet<string> revealKeys = [];
     private string scrollKey = string.Empty;
     //Alt 折叠的待办：节点一合上，子树这一帧就不再被提交，只能等它们各自被画到时再逐个压回折叠
@@ -27,11 +28,11 @@ internal sealed class EnsPanel : EditorPanel
     public override EditorPanelInfo Info => new("ens_view", "EnsView", true,
         new vector2(320, 420), PanelDockPlacement.Left, 0.22f, 200);
 
-    //请求在层级里定位一个 Ens：选中它，展开它的祖先，并滚动到看得见。
-    //请求只在这里挂起，等本面板下一次绘制再消费——面板隐藏时一帧都不画。
-    internal static void Ping(string resourceKey)
+    //请求定位节点并按选项更新选择
+    internal static void Ping(string resourceKey, bool select = true)
     {
         pingKey = resourceKey;
+        selectPingTarget = select;
         EditorApplication.RequestRepaint();
     }
 
@@ -90,7 +91,7 @@ internal sealed class EnsPanel : EditorPanel
         action?.Invoke();
     }
 
-    //消费一次定位请求：选中目标，并把目标与它所有祖先标记为要强制展开
+    //定位目标并展开祖先节点
     private void RevealRequestedEns()
     {
         revealKeys.Clear();
@@ -102,7 +103,7 @@ internal sealed class EnsPanel : EditorPanel
         Ens target = Ens.Find(key);
         if (!target.IsValid) return;
 
-        EditorNativeComponents.SelectEns(target.Id);
+        if (selectPingTarget) EditorNativeComponents.SelectEns(target.Id);
         scrollKey = target.ResourceKey;
         //折叠节点的子孙根本不会被提交，所以要让目标可见必须逐级打开它和它的祖先
         for (EnsId ancestor = target.Transform.GetParent(); !ancestor.IsNull;)
@@ -128,7 +129,7 @@ internal sealed class EnsPanel : EditorPanel
         //灰显看层级生效状态：父节点被禁用时整棵子树一起变灰，和运行时的实际行为一致
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : ens.Name) + "##ens_" + key,
             context.SelectedEnsList.Contains(ens.Id), !hasChildren, true, forceOpen, forceCollapse,
-            dimmed: !ens.WorldActive);
+            dimmed: !ens.WorldActive, prefabBound: EditorPrefabSession.FindBinding(ens) != null);
         //滚动必须紧跟着节点提交：SetScrollHereY 取的是「上一行」的光标位置，中间不能插别的条目
         if (key == scrollKey)
         {
@@ -218,7 +219,7 @@ internal sealed class EnsPanel : EditorPanel
     private void BeginRename(EnsId id)
     {
         Ens ens = Ens.FromId(id);
-        if (!ens.IsValid) return;
+        if (!ens.IsValid || !EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) return;
         renamingEns = id;
         renameBuffer = ens.Name;
         renameFocusRequested = true;
@@ -271,13 +272,13 @@ internal sealed class EnsPanel : EditorPanel
     private static void SetEnsName(string key, string name)
     {
         Ens ens = Ens.Find(key);
-        if (ens.IsValid) ens.Name = name;
+        if (ens.IsValid && EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) ens.Name = name;
     }
 
     //切换激活状态并记一次撤销事务
     private void ToggleActive(Ens ens)
     {
-        if (!ens.IsValid) return;
+        if (!ens.IsValid || !EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) return;
 
         string key = ens.ResourceKey;
         bool previous = ens.LocalActive;
@@ -293,7 +294,7 @@ internal sealed class EnsPanel : EditorPanel
     private static void SetEnsLocalActive(string key, bool active)
     {
         Ens ens = Ens.Find(key);
-        if (ens.IsValid) ens.LocalActive = active;
+        if (ens.IsValid && EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Header)) ens.LocalActive = active;
     }
 
     //名称会作为属性写进 world XML，空白名与不可见字符读回来会被规范化，直接拒绝
@@ -309,15 +310,19 @@ internal sealed class EnsPanel : EditorPanel
     private void DrawContextMenu(Ens target)
     {
         bool canModify = !EditorApplication.IsPlaying;
+        bool structure = canModify && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Structure);
+        bool header = canModify && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Header);
+        bool copy = canModify && target.IsValid && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Copy);
         string label = target.IsValid ? $"Create Empty Ens under {target.Name}" : "Create Empty Ens";
-        if (EditorGUI.MenuItem(label, canModify)) CreateEmptyEns(target);
-        if (EditorGUI.MenuItem("Rename", canModify && target.IsValid)) BeginRename(target.Id);
-        if (EditorGUI.MenuItem("Duplicate", canModify && target.IsValid)) DuplicateEns(target);
-        if (EditorGUI.MenuItem("Copy", canModify && target.IsValid)) CopyEns(target);
+        if (EditorGUI.MenuItem(label, structure)) CreateEmptyEns(target);
+        if (EditorGUI.MenuItem("Rename", header && target.IsValid)) BeginRename(target.Id);
+        if (EditorGUI.MenuItem("Duplicate", copy)) DuplicateEns(target);
+        if (EditorGUI.MenuItem("Copy", copy)) CopyEns(target);
         if (EditorGUI.MenuItem(target.IsValid ? $"Paste under {target.Name}" : "Paste",
-            canModify && EditorEnsClipboard.HasEntry)) PasteEns(target);
-        if (EditorGUI.MenuItem("Toggle Active", canModify && target.IsValid)) ToggleActive(target);
-        if (EditorGUI.MenuItem("Delete", canModify && target.IsValid)) DeleteEns(target);
+            structure && EditorEnsClipboard.HasEntry)) PasteEns(target);
+        if (EditorGUI.MenuItem("Toggle Active", header && target.IsValid)) ToggleActive(target);
+        if (EditorGUI.MenuItem("Delete", canModify && target.IsValid && EditorPrefabSession.CanModify(target, EditorPrefabEditOperation.Delete))) DeleteEns(target);
+        if (EditorPrefabSession.FindBinding(target) != null && EditorGUI.MenuItem("Unpack Prefab", canModify)) EditorPrefabSession.Unpack(target);
         EnsContextMenuRegistry.Draw(new EnsContext(target.Id, target.IsValid ? target.ResourceKey : string.Empty,
             target.IsValid ? target.Name : string.Empty, target.IsValid), EditorConsole.Error);
     }
@@ -325,6 +330,7 @@ internal sealed class EnsPanel : EditorPanel
     //在目标节点下创建空 Ens，撤销删除、重做按快照恢复
     private void CreateEmptyEns(Ens parent)
     {
+        if (!EditorPrefabSession.CanModify(parent, EditorPrefabEditOperation.Structure)) return;
         Ens created = EditorAssetsNative.CreateEns("Ens");
         if (!created.IsValid) return;
         if (parent.IsValid && !EditorNativeComponents.MoveEns(created.Id, parent.Id, EnsId.Null, true))
@@ -350,11 +356,13 @@ internal sealed class EnsPanel : EditorPanel
     //在同级位置复制子树，撤销删除副本、重做按快照恢复
     private static void DuplicateEns(Ens source)
     {
+        if (!EditorPrefabSession.CanModify(source, EditorPrefabEditOperation.Copy)) return;
         string snapshot = EditorAssetsNative.CaptureEns(source.Id);
         if (snapshot.Length == 0) return;
         EnsId parent = source.Transform.GetParent();
         Ens copy = EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotCopy, parent, source.Id);
         if (!copy.IsValid) return;
+        snapshot = EditorAssetsNative.CaptureEns(copy.Id);
         string key = copy.ResourceKey;
         string parentKey = parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey;
         EditorPropertyHistory.PushAction("Duplicate Ens",
@@ -369,7 +377,7 @@ internal sealed class EnsPanel : EditorPanel
     //把子树快照放进剪贴板，等粘贴时按快照重建。成功不留任何回执：对着树按 Ctrl+C 的人不需要
     private void CopyEns(Ens source)
     {
-        if (!source.IsValid) return;
+        if (!source.IsValid || !EditorPrefabSession.CanModify(source, EditorPrefabEditOperation.Copy)) return;
         string snapshot = EditorAssetsNative.CaptureEns(source.Id);
         if (snapshot.Length == 0)
         {
@@ -390,6 +398,7 @@ internal sealed class EnsPanel : EditorPanel
         Ens copy = EditorAssetsNative.InstantiatePrefab(snapshot, PrefabSource.SnapshotCopy, target.Id, EnsId.Null);
         if (!copy.IsValid) return;
 
+        snapshot = EditorAssetsNative.CaptureEns(copy.Id);
         string key = copy.ResourceKey;
         string parentKey = target.IsValid ? target.ResourceKey : string.Empty;
         EditorPropertyHistory.PushAction("Paste Ens",
@@ -457,8 +466,11 @@ internal sealed class EnsPanel : EditorPanel
         bool valid = !EditorApplication.IsPlaying && (kind == 2
             ? prefab || model
             : source.IsValid && !source.Id.Equals(parent) && !source.Id.Equals(before));
+        valid &= EditorPrefabSession.CanModify(Ens.FromId(parent), EditorPrefabEditOperation.Structure);
+        if (prefab && EditorPrefabSession.IsEditing) valid = false;
         if (kind == 1)
         {
+            valid &= EditorPrefabSession.CanModify(source, EditorPrefabEditOperation.Move);
             for (Ens ancestor = Ens.FromId(parent); valid && ancestor.IsValid; ancestor = Ens.FromId(ancestor.Transform.GetParent()))
                 if (ancestor.Id.Equals(source.Id)) valid = false;
         }
