@@ -572,6 +572,10 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 94：内置 `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 四个表面 Shader 显式声明 `Default` Pass 和 `Cull Back`，默认剔除背面。保留原队列、Standard 几何契约、展开能力、GLSL 源码和默认深度／混合状态；Uniform、Instanced、Expanded 共用相同 Pass 剔除状态。天空盒、大气、UI、粒子、雨玻璃、热尾流和阴影 Pass 保持原状态；自定义 Shader 的 `Cull Auto` 仍解析为 None，不修改全局正面绕序或自动补偿负缩放。双面表面需使用显式 `Cull None` 的自定义 Shader。
+
+需重建 Core 和 Editor 以更新项目版本，通过 Update Project 同步 `Content/Builtin/Shaders/blinn_phong.orbshader`、`pbs_metallic.orbshader`、`transparent.orbshader`、`refraction.orbshader`，并完成这四个 Shader 的重新导入。无需重新导入模型，无场景或材质字段迁移，无需重置 Examples；Builtin 按既有更新规则镜像同步，目录内的项目定制应先移到自有内容目录。使用 Player 时同步 SDK、重新导入并重新打包 Shader 内容。仅做静态检查，未编译或运行测试；开启单面绘制后，背面不可见是预期变化，实际画面及性能需在重建和同步后验证。
+
 版本 93：收窄普通 Renderer 的 CPU 动态合批范围：单个子网格绘制项最多 128 个有效引用顶点、384 个索引，连续兼容项至少 8 个才组批；整批最多 1024 个有效引用顶点、3072 个索引。先检查索引数量，超限项不进入引用顶点统计；不足 8 项或超预算时回退原 GPU 网格绘制。该规则同时约束 Auto 与显式 DynamicBatching，GPU Instancing 的两项门槛和大网格支持、持久静态缓存、粒子与显式实例路径不变。保留 Dev 面板的 CPU 动态合批对比开关。
 
 提交优化：仅在既有不透明可重排区间内，按 Shader 基础程序、Material 聚集网格组，再按组内最近距离排列同材质网格组；同网格组内仍近到远，Individual、多 Pass、特殊深度／混合状态屏障和透明／折射顺序不变。增加 `Render/Batching/Sort/ByMaterial` 采样。OpenGL 按程序与实际 uniform 位置缓存最近提交的类型和值，跳过完全相同的 glUniform 调用；名称使用 C++20 异构查找，命中时不构造临时字符串，当前程序缓存表通过稳定指针复用。数组首元素的不同名称共享同一位置缓存；首次零值仍提交，材质／相机／灯光参数、模型矩阵、纹理槽或阴影参数变化时重新提交，不使用浮点近似比较。程序删除时清除该程序的缓存，后端初始化／Shutdown 时全部清空，Shader 热更新沿用程序重建与释放流程。不新增 UBO、Indirect Draw 或 Shader ABI；材质排序会改变不透明物体跨材质的近远顺序，需同时关注 GPU 遮挡与整帧耗时，预算仍为待实测的初始值。

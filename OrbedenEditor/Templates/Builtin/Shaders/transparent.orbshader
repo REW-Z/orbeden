@@ -1,6 +1,8 @@
 --------queue Transparent
 
---------geometry Standard
+--------pass Default
+Cull Back
+geometry Standard
 
 --------vert
 #version 430 core

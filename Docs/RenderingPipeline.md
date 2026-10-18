@@ -95,9 +95,11 @@ ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 
 
 排序规则：
 
-- Opaque：近到远，Material 和 Mesh 作为稳定的次级排序。
+- Opaque：初始近到远排序；`DrawBatchBuilder` 随后在连续可重排区间内按 Shader 基础程序、Material 聚集网格组，同材质的组按最近距离排列，组内仍近到远。
 - Transparent：远到近。
 - Refraction：远到近。
+
+不透明重排仅用于单 Pass Standard、深度测试开、深度写开且混合关的项。`Individual`、多 Pass、特殊深度／混合状态项构成排序屏障，不跨区间聚合。相同 Material 的不同网格在可重排区间内保持相邻；Shader 基础程序用于分组，最终绘制仍选择各自的 Uniform／Instanced／Expanded 变体。材质排序的提交行为见下文「材质排序与 Uniform 提交」。
 
 队列是离散语义标记，不提供自定义数值优先级。已有序列化数值保持 `Opaque=0`、`Transparent=1`，原生折射使用 `Refraction=2`。
 
@@ -149,7 +151,7 @@ OrbShader 在所有 Pass/阶段之前声明一次全局队列，适用于该 Sha
 
 场景缓冲是每相机独立的，首帧没有可保留的内容，所以 `DepthOnly` 与 `None` 会先把最终目标的当前内容复制进场景缓冲。深度不做这种保留：最终目标（尤其编辑器显示目标）的深度从未被写入，复制它没有意义。清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
 
-绘制时，同一 Shader Program 的相机/灯光 Uniform 每个相机只设置一次。Material 参数会对每个 Pass Program 分别写入。
+绘制时，`configuredPrograms` 对每个相机、每个绘制队列中的每个 Shader Program 只准备一次相机／灯光等公共参数。Material 参数会按批次对相应 Pass Program 设置，实际 glUniform 提交再由后端的值缓存过滤。各几何变体是独立 Program，分别保存参数状态。
 
 Refraction Pass 是引擎原生阶段。进入该阶段前，管线一次性冻结相机颜色和深度，并自动绑定：
 
@@ -210,13 +212,34 @@ Pass 名称区分大小写且必须唯一；分段和状态关键字不区分大
 - `depthTest`、`depthWrite`、`blend`：`auto`、`on`、`off`。
 - `cull`：`auto`、`none`、`front`、`back`。
 
+内置表面 Shader `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 在 `Default` Pass 中显式使用 `Cull Back`，Uniform／Instanced／Expanded 变体沿用同一 Pass 状态。正面为 OpenGL 默认的 CCW 绕序，背面不进入光栅着色；该设置不会省去已提交顶点的变换工作。负缩放改变绕序时沿用现有处理，不自动翻转正面定义。
+
+天空盒、大气、UI、粒子、雨玻璃、热尾流以及阴影 Pass 保持原剔除状态。自定义 Shader 省略 Cull 或使用 `Cull Auto` 时仍按 None 处理；需要双面显示的表面可使用显式声明 `Cull None` 的自定义 Shader。现有项目需同步 Builtin 模板并重新导入上述四个 Shader，材质引用与模型资源无需修改。
+
 ## GPU 资源缓存
 
 Mesh、Texture、Skybox、Shader、Material 在第一次使用时上传到 GPU。Shader 的所有 Pass 会作为一个整体编译和缓存，任一 Pass 编译失败都会使整个 Shader 无效。
 
 缓存有效时直接返回；无缓存或版本变化时创建/刷新 GPU 对象。每帧开头的 `ReleaseDestroyedResources` 释放已销毁 CPU 对象对应的 GPU 对象和缓存项。
 
-Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Uniform Location。OpenGL 按程序与实际 uniform 位置保存最近提交的类型和值，完全相同时跳过 glUniform；名称使用异构查找，命中时不构造临时字符串，当前程序直接复用缓存表指针。数组名与首元素名等别名共享位置记录；首次零值仍提交。参数改变时按原接口提交，程序删除时移除记录，后端初始化或 Shutdown 时清空；不使用近似浮点比较，不改变 Shader ABI。
+Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Uniform Location，过滤重复绑定与状态设置。Uniform 的值缓存与材质排序共同构成下面的提交策略。
+
+## 材质排序与 Uniform 提交
+
+当前采用 `glUniform + Shader／Material 排序 + uniform 位置与值缓存`。排序聚集兼容状态，后端复用程序已经持有的参数值，减少重复驱动调用；网格仍按最终批次提交，对象变换沿用原绘制路径。
+
+| 层次 | 当前处理方式 |
+| --- | --- |
+| 公共参数 | 相机、灯光、环境等参数按相机、绘制队列和 Program 准备一次，避免逐 Mesh 重复准备 |
+| 材质参数 | `GpuResourceManager` 缓存材质值及各 Program 实际使用的绑定项；按排序后的批次设置参数，后端跳过值未改变的提交 |
+| 对象参数 | 单绘制继续设置各对象的模型矩阵；实例绘制从实例缓冲读取，展开绘制使用世界空间顶点 |
+| 后端过滤 | uniform 按 Program 与实际位置缓存最近提交的类型和值，类型与数值字节完全相同时跳过 glUniform |
+
+名称使用异构查找，缓存命中时不构造临时字符串，当前程序直接复用缓存表指针。数组名与首元素名等名称别名共享同一位置记录；首次设置零值仍会提交，比较不使用浮点近似。材质、模型矩阵、相机、光源或 sampler 槽位值改变时重新提交；纹理对象的实际绑定由独立的纹理状态缓存管理。程序切换后使用对应程序的记录，程序删除时移除记录，后端初始化或 Shutdown 时全部清空。
+
+`Render/Batching/Sort/ByMaterial` 记录不透明网格组的材质排序耗时。状态聚集会改变跨材质的严格近远顺序，需要结合 GPU 等待与整帧耗时评估遮挡成本。uniform 缓存仍有 CPU 查找、比较与参数遍历开销，逐对象绘制也仍有模型参数、网格绑定和 Draw Call 提交成本；不能仅用材质切换次数或 Draw Call 数判断性能。
+
+当前保留以上提交机制，尚未建立材质／对象的通用 UBO 提交路径。后续是否采用参数缓冲，以 Profile 证实的瓶颈为依据，并比较缓冲绑定、更新、对齐和同步的成本。UBO 不作为既定升级步骤，现有机制也不等同于完整的 SRP Batcher。
 
 ## 当前边界
 
@@ -237,8 +260,6 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 展开几何的引用计数与局部索引按 Mesh 内容版本缓存，首次构建同时完成索引校验和首次引用顺序映射；网格修改后重建，销毁后清理，资源失效时清空。每批仍重新计算世界空间顶点；位置、法线、切线公式和 32 位索引格式不变。索引输出直接复制缓存映射并加顶点基址，已消费的展开块回收容量供后续批次复用。新增 `GetTopology`／`BuildTopology`／`ReserveBuffers` 采样；`ValidateIndices` 包含拓扑缓存读取或重建，首次录制需区分冷缓存和后续帧。
 
 CPU 展开按绘制项准备共享变换系数，`PrepareTransform` 记录准备耗时；`TransformVertices` 记录顶点计算与写入。x64／启用 SSE2 的 x86 使用 SSE2 并行计算位置、法线、切线与 UV 分量，其他目标使用标量路径；不要求 AVX，不修改公共向量布局或 GPU 顶点格式。合批判定优先保留后续可实例化的连续组，实例能力不足时继续尝试策略允许的动态批。普通 Renderer 的动态批只接收单项不超过 128 个引用顶点、384 个索引的小网格绘制项，连续兼容项至少 8 个才组批，整批最多 1024 个引用顶点、3072 个索引；不足门槛或超限时复用原 GPU 网格绘制。预算按子网格绘制项计算，先拒绝索引超限项，再读取引用顶点统计；Auto 与显式 DynamicBatching 共用门槛，GPU Instancing、持久静态缓存和粒子／显式实例路径不变。预算数值仍需在实际场景测量。
-
-不透明可重排区间内先按批次键收集网格组，再按 Shader 基础程序、Material 和组最近距离排列；组内仍近到远。相同 Material 的不同网格保持相邻，减少材质参数和 Shader 切换，`Render/Batching/Sort/ByMaterial` 记录组排序。Individual、多 Pass、特殊深度／混合状态屏障仍保持位置，不跨区间聚合；透明与折射沿用远到近排序。跨材质的严格近远顺序让位于状态聚集，需结合 GPU 等待和整帧耗时评估遮挡成本，不以 Draw Call 数单独判断收益。
 
 ## 主要源码
 
