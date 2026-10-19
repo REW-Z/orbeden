@@ -11,6 +11,8 @@ enum class WindowGraphicsApi
     Vulkan,
 };
 
+class IWindow;
+
 struct WindowDesc
 {
     int32 width = 1280;
@@ -20,6 +22,8 @@ struct WindowDesc
     bool resizable = true;
     bool visible = true;
     bool vsync = false;
+    IWindow* sharedResourcesWindow = nullptr;
+    bool receivesEngineInput = true;
 };
 
 class IWindowResizeListener
@@ -54,8 +58,8 @@ public:
     //唤醒等待中的平台事件循环
     virtual void WakeEventLoop() = 0;
 
-    //提交当前帧显示
-    virtual void Present() = 0;
+    //读取窗口的垂直同步配置
+    virtual bool GetVsync() const = 0;
 
     //判断窗口是否请求关闭
     virtual bool ShouldClose() const = 0;

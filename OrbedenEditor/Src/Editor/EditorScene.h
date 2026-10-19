@@ -104,6 +104,9 @@ public:
     /// <summary>释放编辑器描边资源。</summary>
     void ReleaseResources(RenderBackend& backend) override;
 
+    //释放场景视口的离屏目标
+    void ReleaseSceneViewTarget();
+
     /// <summary>获取当前活动的编辑器场景。</summary>
     static EditorScene* GetActiveScene();
 
@@ -236,9 +239,6 @@ private:
 
     //在场景视口叠加托管 Gizmos 与 Handles。
     void DrawSceneOverlay();
-
-    //释放场景视口的离屏目标。
-    void ReleaseSceneViewTarget();
 
     //记录当前编辑器观察相机状态。
     void CaptureCameraState(World& world);

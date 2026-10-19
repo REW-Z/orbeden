@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Application.h"
-#include "Rendering/Backend/OpenGLRenderBackend.h"
+#include "Rendering/Backend/RenderBackend.h"
 #include "Rendering/ForwardPipeline.h"
+#include "Rendering/DebugLineRenderer.h"
 #include "Rendering/ImGuiLayer.h"
 #include "Rendering/OutputPass.h"
 #include "Rendering/InstanceDrawData.h"
@@ -83,8 +84,9 @@ private:
     World* debugLineWorld = nullptr;
     List<DebugLine> debugLines;
 
-    //OpenGL 后端
-    OpenGLRenderBackend backend;
+    //活动渲染后端
+    std::unique_ptr<RenderBackend> backend;
+    DebugLineRenderer debugLineRenderer;
     //GPU 资源管理器
     GpuResourceManager gpuResourceManager;
 
@@ -200,6 +202,11 @@ public:
     void DrawLine(World& world, const vector3& start, const vector3& end, const color& tint,
         bool depthTest = false, uint32 drawLayer = 1u);
 
+    //获取活动渲染后端
+    RenderBackend& GetBackend() { return *backend; }
+    //提交主窗口显示
+    void Present();
+
     //获取资源依赖并初始化窗口渲染后端
     bool OnInitialize(Application& app) override;
 
@@ -207,7 +214,10 @@ public:
     void OnShutdown() override;
 
     //初始化
-    bool Initialize(IWindow* renderWindow);
+    bool Initialize(IWindow* renderWindow, std::unique_ptr<RenderBackend> initializedBackend = nullptr);
+
+    //切换窗口后端并重建离屏目标，保留逻辑目标 ID
+    bool ChangeWindow(IWindow* renderWindow);
 
     //按资源依赖顺序关闭渲染系统并释放所有资源
     void Shutdown();

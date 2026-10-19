@@ -2,6 +2,7 @@
 
 #include "Defines/Version.h"
 #include "Editor/EditorLayoutState.h"
+#include "Platform/Window.h"
 
 #include <string>
 #include <utility>
@@ -31,6 +32,8 @@ public:
     std::string font;
     //字号（像素）；只对非点阵字体有意义
     float32 fontSize = 16.0f;
+    //编辑器渲染后端；不影响 Player 的渲染配置
+    WindowGraphicsApi graphicsApi = WindowGraphicsApi::OpenGL;
 };
 
 //只读探测得到的项目版本信息。

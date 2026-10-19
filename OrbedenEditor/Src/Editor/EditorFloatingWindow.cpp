@@ -4,10 +4,10 @@
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
 
-#include <glad/gl.h>
+#include "Application.h"
+#include "Rendering/RenderSystem.h"
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -19,7 +19,7 @@ EditorFloatingWindow::~EditorFloatingWindow()
     Destroy();
 }
 
-//创建共享主窗口 OpenGL 上下文的独立面板窗口
+//创建共享主窗口设备资源的独立面板窗口
 bool EditorFloatingWindow::Create(const std::string& title, const vector2& position, const vector2& size)
 {
     Destroy();
@@ -29,15 +29,17 @@ bool EditorFloatingWindow::Create(const std::string& title, const vector2& posit
     ImFontAtlas* sharedFonts = EditorGUI::GetFontAtlas();
     if (!mainWindow || !mainContext || !sharedFonts) return false;
 
-    //与主窗口一致的 GLFW 提示，并以主窗口为共享上下文
-    glfwDefaultWindowHints();
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    window = glfwCreateWindow(std::max(static_cast<int32>(size.x), 160), std::max(static_cast<int32>(size.y), 120),
-        title.c_str(), nullptr, mainWindow);
+    backend = &RenderSystem::Current()->GetBackend();
+    IWindow* main = Application::Current()->GetWindow();
+    WindowDesc desc;
+    desc.title = title;
+    desc.width = std::max(static_cast<int32>(size.x), 160);
+    desc.height = std::max(static_cast<int32>(size.y), 120);
+    desc.graphicsApi = main->GetGraphicsApi();
+    desc.sharedResourcesWindow = main;
+    desc.receivesEngineInput = false;
+    platformWindow = std::make_unique<GlfwWindow>();
+    if (platformWindow->Create(desc)) window = platformWindow->GetGlfwWindow();
     if (!window)
     {
         Log::Error("Editor floating window create failed.");
@@ -47,7 +49,6 @@ bool EditorFloatingWindow::Create(const std::string& title, const vector2& posit
     }
 
     glfwSetWindowPos(window, static_cast<int32>(position.x), static_cast<int32>(position.y));
-    glfwMakeContextCurrent(window);
 
     //独立窗口使用专属 ImGui 上下文并共享主上下文的字体图集
     context = ImGui::CreateContext(sharedFonts);
@@ -56,18 +57,21 @@ bool EditorFloatingWindow::Create(const std::string& title, const vector2& posit
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
     ImGui::StyleColorsDark();
-    if (!ImGui_ImplGlfw_InitForOpenGL(window, true) || !ImGui_ImplOpenGL3_Init("#version 430"))
+    platformInitialized = ImGui_ImplGlfw_InitForOther(window, true);
+    if (!platformInitialized || !renderer.Initialize(*backend))
     {
         Log::Error("Editor floating window ImGui backend initialize failed.");
         Destroy();
         return false;
     }
 
+    surface = backend->CreateSurface(platformWindow.get());
+    if (!surface.IsValid()) { Destroy(); return false; }
     EditorGUI::RegisterDragWindow(window);
     glfwGetWindowPos(window, &lastWindowX, &lastWindowY);
 
-    //创建发生在主上下文帧内，必须同时恢复 GL 与 ImGui 上下文
-    glfwMakeContextCurrent(mainWindow);
+    //恢复主窗口与 ImGui 上下文
+    backend->SetSurface({});
     if (mainContext) ImGui::SetCurrentContext(mainContext);
     return true;
 }
@@ -84,18 +88,20 @@ void EditorFloatingWindow::Destroy()
 
     EditorGUI::UnregisterDragWindow(window);
 
-    //两个后端都必须在自己的上下文为当前时关闭，字体图集由主上下文持有
-    glfwMakeContextCurrent(window);
+    //释放窗口的绘制与输入资源
     ImGui::SetCurrentContext(context);
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    renderer.Shutdown();
+    if (platformInitialized) ImGui_ImplGlfw_Shutdown();
+    platformInitialized = false;
     ImGui::DestroyContext(context);
     context = nullptr;
 
-    //独立窗口不参与主窗口的 glfwTerminate 引用计数，此处绝不调用 glfwTerminate
-    glfwDestroyWindow(window);
+    //释放呈现表面与平台窗口
+    if (backend) backend->DeleteSurface(surface);
+    surface = {};
+    platformWindow.reset();
     window = nullptr;
-    if (mainWindow) glfwMakeContextCurrent(mainWindow);
+    if (backend) backend->SetSurface({});
     if (mainContext) ImGui::SetCurrentContext(mainContext);
 
     mainWindow = nullptr;
@@ -131,11 +137,10 @@ bool EditorFloatingWindow::BeginFrame()
     lastWindowX = windowX;
     lastWindowY = windowY;
 
-    glfwMakeContextCurrent(window);
     ImGui::SetCurrentContext(context);
     EditorGUI::ApplyTheme();
     ImGui_ImplGlfw_NewFrame();
-    ImGui_ImplOpenGL3_NewFrame();
+    renderer.BeginFrame();
     ImGui::NewFrame();
     return true;
 }
@@ -151,30 +156,14 @@ void EditorFloatingWindow::EndFrame()
     int32 framebufferWidth = 0;
     int32 framebufferHeight = 0;
     glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, framebufferWidth, framebufferHeight);
+    backend->SetSurface(surface);
     {
         PROFILE("Render/FloatingWindow/DrawGui");
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    }
-    if (Profiler::IsCapturing())
-    {
-        {
-            PROFILE("Render/FloatingWindow/FlushCommands");
-            glFlush();
-        }
-        {
-            PROFILE("Render/FloatingWindow/WaitForGpu");
-            glFinish();
-        }
-    }
-    {
-        PROFILE("Render/FloatingWindow/Present");
-        glfwSwapBuffers(window);
+        renderer.Render(ImGui::GetDrawData());
     }
 
     //后续渲染与绘制始终以主窗口为准
-    if (mainWindow) glfwMakeContextCurrent(mainWindow);
+    if (backend) backend->SetSurface({});
     if (mainContext) ImGui::SetCurrentContext(mainContext);
 }
 

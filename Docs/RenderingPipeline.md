@@ -1,6 +1,6 @@
 # Orbeden 渲染管线概览
 
-Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲染组件主动注册到持久 `RenderScene`，每帧增量刷新变换和资源版本，再为各相机执行裁剪、SubMesh 展开、排序和绘制。
+Orbeden 使用单线程 Forward Renderer，通过公共 `RenderBackend` 接口执行 OpenGL 4.3 与 Vulkan 1.3 后端。渲染组件主动注册到持久 `RenderScene`，每帧增量刷新变换和资源版本，再为各相机执行裁剪、SubMesh 展开、排序和绘制。
 
 ## 核心模块
 
@@ -14,7 +14,10 @@ Orbeden 当前使用单线程、立即提交式的 OpenGL Forward Renderer。渲
 | `ForwardPipeline` | 阴影、天空盒、环境反射绑定、Forward Main Pass 与原生 Refraction Pass |
 | `AtmosphereRenderer` | 太阳透光率、空气透视图集、程序化天空三张查找表与表面加雾参数 |
 | `GpuResourceManager` | GPU 资源按需上传、缓存和释放 |
-| `OpenGLRenderBackend` | OpenGL Pass、状态、Uniform 和 Draw 调用 |
+| `RenderBackend` | 资源、参数块、管线状态、Pass、裁剪与多窗口呈现接口 |
+| `OpenGLRenderBackend` / `VulkanRenderBackend` | 各 API 的资源、命令与同步实现 |
+| `ShaderCompiler` | 共同 GLSL 的 Vulkan 编译、跨阶段链接与布局反射 |
+| `ImGuiRenderer` | 通过公共接口提交编辑器、调试 Overlay 和浮动窗口 |
 
 ## 单帧总流程
 
@@ -79,7 +82,7 @@ ForwardPipeline 选择第一个开启阴影的方向光，由 CascadedShadowMap 
 - 投射物从完整场景收集，遵守 layer mask、castShadows 与 Opaque 队列，包含相机外上游遮挡物。
 - shadowBias 使用世界单位，shadowNormalBias 使用本级纹素倍数。实际接收范围不超过相机 farPlane。
 - shadowAdaptive=false 使用固定 CSM 分区；true 使用冻结相机深度的 64 桶对数直方图调整内部边界。
-- OpenGL compute 在主绘制后提交，fence 零超时轮询；没有有效统计时仍保持完整 CSM 覆盖，不等待 GPU。
+- 后端 compute 在主绘制后提交，完成状态零超时轮询；没有有效统计时仍保持完整 CSM 覆盖，不等待 GPU。
 - 任意材质 alpha discard、顶点位移没有自动的 ShadowCaster Pass，当前只保证不透明几何轮廓一致性。
 
 配置、算法、Shader ABI、验证清单见 [SDSM / CSM 详细方案](CascadedShadows.md)。
@@ -151,7 +154,7 @@ OrbShader 在所有 Pass/阶段之前声明一次全局队列，适用于该 Sha
 
 场景缓冲是每相机独立的，首帧没有可保留的内容，所以 `DepthOnly` 与 `None` 会先把最终目标的当前内容复制进场景缓冲。深度不做这种保留：最终目标（尤其编辑器显示目标）的深度从未被写入，复制它没有意义。清屏使用 Scissor 限制在当前 Viewport，因此分屏相机不会互相清除画面。
 
-绘制时，`configuredPrograms` 对每个相机、每个绘制队列中的每个 Shader Program 只准备一次相机／灯光等公共参数。Material 参数会按批次对相应 Pass Program 设置，实际 glUniform 提交再由后端的值缓存过滤。各几何变体是独立 Program，分别保存参数状态。
+绘制时，`configuredPrograms` 对每个相机、每个绘制队列中的每个 Shader Program 只准备一次相机／灯光等公共参数。Material 参数在材质、GPU 绑定版本或 Pass Program 变化时设置，先写入公共 `ShaderParameters`；后端在 Draw 时提交变化值或上传参数快照。各几何变体是独立 Program，分别保存参数状态。
 
 Refraction Pass 是引擎原生阶段。进入该阶段前，管线一次性冻结相机颜色和深度，并自动绑定：
 
@@ -212,7 +215,7 @@ Pass 名称区分大小写且必须唯一；分段和状态关键字不区分大
 - `depthTest`、`depthWrite`、`blend`：`auto`、`on`、`off`。
 - `cull`：`auto`、`none`、`front`、`back`。
 
-内置表面 Shader `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 在 `Default` Pass 中显式使用 `Cull Back`，Uniform／Instanced／Expanded 变体沿用同一 Pass 状态。正面为 OpenGL 默认的 CCW 绕序，背面不进入光栅着色；该设置不会省去已提交顶点的变换工作。负缩放改变绕序时沿用现有处理，不自动翻转正面定义。
+内置表面 Shader `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 在 `Default` Pass 中显式使用 `Cull Back`，Uniform／Instanced／Expanded 变体沿用同一 Pass 状态。正面为 引擎约定的 CCW 绕序，背面不进入光栅着色；该设置不会省去已提交顶点的变换工作。负缩放改变绕序时沿用现有处理，不自动翻转正面定义。
 
 天空盒、大气、UI、粒子、雨玻璃、热尾流以及阴影 Pass 保持原剔除状态。自定义 Shader 省略 Cull 或使用 `Cull Auto` 时仍按 None 处理；需要双面显示的表面可使用显式声明 `Cull None` 的自定义 Shader。现有项目需同步 Builtin 模板并重新导入上述四个 Shader，材质引用与模型资源无需修改。
 
@@ -226,24 +229,35 @@ Backend 还会缓存 Program、VAO、Texture Slot、Depth/Blend 状态和 Unifor
 
 ## 材质排序与 Uniform 提交
 
-当前采用 `glUniform + Shader／Material 排序 + uniform 位置与值缓存`。排序聚集兼容状态，后端复用程序已经持有的参数值，减少重复驱动调用；网格仍按最终批次提交，对象变换沿用原绘制路径。
+公共层按 Program 保存 `ShaderParameters`，按绘制提交 `PipelineState`。Shader／Material 排序继续聚集兼容绘制；每个相机、队列与 Program 分别准备公共参数，连续相同材质且 GPU 绑定版本未变时复用材质参数与纹理绑定。对象矩阵、实例 tint／UV、接收阴影及加性混合标记仍随批次更新。调用方写入的是 CPU 数据，不执行原生图形 API。
 
-| 层次 | 当前处理方式 |
+参数写入先比较 CPU 值，只把变化项加入待提交列表；重复写入同一项只排队一次。后端消费列表后清空标记，不逐绘制遍历全部参数。数组名和首元素名（如 `u_Colors` 与 `u_Colors[0]`）指向同一个缓存项。
+
+| 后端 | 参数与状态提交 |
 | --- | --- |
-| 公共参数 | 相机、灯光、环境等参数按相机、绘制队列和 Program 准备一次，避免逐 Mesh 重复准备 |
-| 材质参数 | `GpuResourceManager` 缓存材质值及各 Program 实际使用的绑定项；按排序后的批次设置参数，后端跳过值未改变的提交 |
-| 对象参数 | 单绘制继续设置各对象的模型矩阵；实例绘制从实例缓冲读取，展开绘制使用世界空间顶点 |
-| 后端过滤 | uniform 按 Program 与实际位置缓存最近提交的类型和值，类型与数值字节完全相同时跳过 glUniform |
+| OpenGL | 只消费变化列表，再按实际 uniform 位置和值过滤；缓存深度、混合、剔除、线框及深度偏移状态；顶点输入的原生 VAO 按窗口上下文分别创建 |
+| Vulkan | glslang 把独立参数归入 set 0 / binding 0 的动态 Uniform Buffer；反射偏移与 CPU 参数项只关联一次，变化项增量更新 std140 布局。参数变化后上传帧内不可变快照，以动态偏移选择当前绘制数据；同一帧的相同缓冲页、采样器、图像和存储缓冲组合复用 Descriptor Set。采样器绑定从 1 起自动分配 |
+| 固定功能状态 | 深度、混合、剔除、线框、图元类型与深度偏移共用 `PipelineState`；Vulkan 按 Shader、输入布局、附件格式和状态缓存管线 |
 
-名称使用异构查找，缓存命中时不构造临时字符串，当前程序直接复用缓存表指针。数组名与首元素名等名称别名共享同一位置记录；首次设置零值仍会提交，比较不使用浮点近似。材质、模型矩阵、相机、光源或 sampler 槽位值改变时重新提交；纹理对象的实际绑定由独立的纹理状态缓存管理。程序切换后使用对应程序的记录，程序删除时移除记录，后端初始化或 Shutdown 时全部清空。
+Vulkan 使用三帧资源池、帧 fence、逐交换链图像的呈现信号量，以及 Synchronization2 图像／缓冲依赖。流式数据保留最新 CPU 内容，跨帧按需复制到当前帧的上传区间；同帧后续写入不会覆盖已录制绘制读取的数据。删除对象的原生资源延迟到引用它的 GPU 帧完成后释放。
 
-`Render/Batching/Sort/ByMaterial` 记录不透明网格组的材质排序耗时。状态聚集会改变跨材质的严格近远顺序，需要结合 GPU 等待与整帧耗时评估遮挡成本。uniform 缓存仍有 CPU 查找、比较与参数遍历开销，逐对象绘制也仍有模型参数、网格绑定和 Draw Call 提交成本；不能仅用材质切换次数或 Draw Call 数判断性能。
+连续绘制复用最近的图形管线与资源组合；纹理绑定、采样槽参数、图像访问状态或缓冲页变化时重新检查资源依赖。原生命令只更新变化的管线、Descriptor Set／动态偏移、顶点／索引缓冲与深度偏移；每次开始新的命令缓冲时清空命令绑定缓存。GPU 完成等待只提交已记录的新命令；空检查点复用已完成状态，有未完成帧时仍等待队列，不重复执行设备等待。Profiler 中仍保留全部阶段等待作用域。
 
-当前保留以上提交机制，尚未建立材质／对象的通用 UBO 提交路径。后续是否采用参数缓冲，以 Profile 证实的瓶颈为依据，并比较缓冲绑定、更新、对齐和同步的成本。UBO 不作为既定升级步骤，现有机制也不等同于完整的 SRP Batcher。
+相机的天空／不透明／透明绘制结束后，再复制颜色与深度；存在折射批次时以 Load 语义开始折射绘制。后端也处理 UI 中间目标、采样转换、深度读取与统计的资源访问，不依赖 OpenGL 的隐式 Pass 边界。ImGui 复用 CPU 暂存数组，共用投影与绘制绑定按提交设置，在用户回调后恢复。
+
+### 后端选择与坐标契约
+
+Editor 在 **Editor Settings → Rendering Backend** 选择 OpenGL 或 Vulkan，按 Apply 在当前会话切换，不需要启动参数或重启。选择写入项目文件的 `<EditorGuiConfig graphicsBackend="OpenGL|Vulkan">`，项目打开后自动应用；旧项目默认 OpenGL。Play 期间禁用切换。切换发生在帧边界：先验证新设备，再释放并重建 GUI、浮动窗口及 GPU 缓存；World、未保存编辑、选中状态与面板布局保留。离屏目标保持逻辑 ID，设备上的图像内容重新生成。目标设备初始化失败时保留原后端，设置面板显示错误。Player 暂时通过 `--graphics-api vulkan` 或 `--graphics-api opengl` 选择，默认 OpenGL。Vulkan 要求 1.3、Dynamic Rendering、Synchronization2，以及当前编辑器线框所需的非实心填充能力；初始化不支持时报告失败。
+
+世界空间、CPU 投影、视锥、阴影矩阵及 Shader 传递的逻辑裁剪坐标继续使用右手系与 `[-1,1]` 深度。Vulkan 编译入口在最终位置上做 `z = (z + w) / 2`，显示窗口使用负高度 viewport；离屏纹理保留原来的 UV 约定。默认片元坐标与 Y 导数由生成的共享入口统一适配。现有深度还原、折射 UV 和阴影采样公式继续使用逻辑约定。
+
+Vulkan 的深度附件使用 D32F；OpenGL 保留普通 Depth24 与阴影 D32F。颜色目标继续使用线性 HDR RGBA16F，窗口使用 UNORM SDR 格式，由输出 Pass 做唯一一次显示编码。
+
+ImGui 的 `ImTextureID` 保存引擎纹理 ID，由 `ImGuiRenderer` 经公共接口采样。图标上传、线框、调试线和浮动窗口不再直接调用 GL；附加窗口通过 Surface 共享设备资源。
 
 ## 当前边界
 
-- 当前只有 OpenGL Backend。
+- 提供 OpenGL 4.3 与 Vulkan 1.3；当前窗口平台为 GLFW。
 - 实际只使用一个主方向光；各相机顺序重绘并复用级联 atlas。
 - CSM 每级默认 2048²、4 级，可选择固定分区或异步 SDSM；VSM、云阴影和屏幕空间接触阴影尚未实现。
 - 相机裁剪仍为线性扫描，没有 BVH 或 GPU Culling。
@@ -267,4 +281,6 @@ CPU 展开按绘制项准备共享变换系数，`PrepareTransform` 记录准备
 - 持久场景：`OrbedenCore/Src/Rendering/RenderScene.cpp`
 - 阴影与主 Pass：`OrbedenCore/Src/Rendering/ForwardPipeline.cpp`
 - GPU 缓存：`OrbedenCore/Src/Rendering/GpuResourceManager.cpp`
-- OpenGL Backend：`OrbedenCore/Src/Rendering/Backend/OpenGLRenderBackend.cpp`
+- 渲染接口与后端：`OrbedenCore/Src/Rendering/Backend/`
+- GLSL / SPIR-V 编译：`OrbedenCore/Src/Rendering/ShaderCompiler.cpp`
+- 基础验证：`Tools/OrbedenRenderSmoke/README.md`

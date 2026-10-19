@@ -15,7 +15,7 @@ Orbeden 是一个游戏引擎项目。核心原生代码在 `OrbedenCore/`，托
 | Backward（后） | `+Z` | `z` |
 | **Forward（前）** | **`-Z`** | `z`（取负） |
 
-**Forward 是局部 `-Z`。** 这是右手系加 OpenGL 投影的必然结果，不是随手挑的。三轴的颜色（红 `+X`、绿 `+Y`、蓝 `+Z`）按**轴**分配而不是按方向，所以蓝轴指的是 Backward，Forward 是它的反方向。不要为了迁就「蓝=前」的直觉把蓝轴翻成 `-Z`，那会让手柄和 Inspector 的 `x/y/z` 字段对不上。
+**Forward 是局部 `-Z`。** 这是引擎相机与投影采用的约定，两种渲染后端共用。三轴的颜色（红 `+X`、绿 `+Y`、蓝 `+Z`）按**轴**分配而不是按方向，所以蓝轴指的是 Backward，Forward 是它的反方向。不要为了迁就「蓝=前」的直觉把蓝轴翻成 `-Z`，那会让手柄和 Inspector 的 `x/y/z` 字段对不上。
 
 ## 判据
 
@@ -62,7 +62,7 @@ R = Ry(yaw) · Rx(pitch) · Rz(roll)
 - **`DirectionalLight` 的照射方向**取所属 Ens 的 Transform 前向，即局部 `-Z` 经世界变换。光沿 Forward 传播，与 Unity 语义相同——两边都是「光沿前向走」，只是前向落在不同轴上。
 - **绕 `+Y` 的正向旋转**，从上方俯视为逆时针。Unity 为顺时针，迁移代码时注意 yaw 符号。
 - **不在引擎里迁就外部工具的坐标系**。源格式的差异在导入层解决，见 [资源检视设计](AssetInspectorDesign.md) 的 **Up Axis** 选项（Blender 与 CAD 的 Z-up 转引擎 Y-up）。
-- **引入 Vulkan 后端时**：Vulkan 不强制手性，生态默认与 OpenGL 一致，保持右手系可复用现有矩阵约定。不要为了对齐 NDC z ∈ `[0, 1]` 顺手翻手性，那是两件独立的事。
+- **Vulkan 后端**：保留右手系、Forward `-Z` 与 CPU 逻辑投影的 NDC z ∈ `[-1, 1]`。编译入口只在最终 `gl_Position` 上把 z 转为 Vulkan 的 `[0, 1]`，相机与阴影的逻辑裁剪坐标不变。呈现目标的 viewport、片元坐标与 Y 导数由后端统一适配；上层不按 API 翻矩阵、UV 或手性。
 
 ---
 
@@ -233,7 +233,7 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 
 产库由 [Tools/OrbedenThirdParty](../Tools/OrbedenThirdParty/README.md) 承担：第三方源码放它的 `vendor/`，由它编成静态库并把 include 与 lib 发布到 `Src/ThirdParty/`。它不挂在任何工程的构建链上，换第三方版本或改编译选项时**手动生成**；自身有增量跳过，库已就位时几乎不耗时。
 
-现有的 `glad` 与 `imgui` 仍是源码依赖，属待整理项；未来的目标是也纳入同一个生成器。
+`glad`、`imgui` 与 `glslang` 同样由第三方生成器产库；Core、Editor 和 Player 不编译这些库的上游源码。
 
 ## 其他
 

@@ -16,6 +16,25 @@
       "IsFinal": false,
       "Members": [
         {
+          "Name": "AttachWindowInput",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "world",
           "Type": "World",
           "Access": "private",
@@ -1088,7 +1107,7 @@
         },
         {
           "Name": "SetWindow",
-          "Type": "void",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": false,
@@ -7752,6 +7771,136 @@
       ]
     },
     {
+      "Name": "CompiledShader",
+      "QualifiedName": "CompiledShader",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderCompiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "vertex",
+          "Type": "List\u003Cuint32\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "fragment",
+          "Type": "List\u003Cuint32\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "compute",
+          "Type": "List\u003Cuint32\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "parameters",
+          "Type": "List\u003CShaderParameterLayout\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "samplers",
+          "Type": "List\u003CShaderSamplerLayout\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "parameterSize",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "Component",
       "QualifiedName": "Component",
       "BaseName": "Object",
@@ -8802,6 +8951,215 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "DebugLineRenderer",
+      "QualifiedName": "DebugLineRenderer",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/DebugLineRenderer.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "backend",
+          "Type": "RenderBackend*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "program",
+          "Type": "GpuShaderProgramID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertices",
+          "Type": "GpuVertexBufferID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "indices",
+          "Type": "GpuIndexBufferID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "input",
+          "Type": "GpuVertexInputID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "capacity",
+          "Type": "usize",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Initialize",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "RenderBackend*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Shutdown",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Render",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "lines",
+              "Type": "const List\u003CDebugLine\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "viewProjection",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "layerMask",
+              "Type": "uint32",
+              "DefaultValue": ""
+            }
+          ]
         }
       ],
       "EnumValues": []
@@ -13975,6 +14333,63 @@
           "Parameters": []
         },
         {
+          "Name": "boundMaterial",
+          "Type": "const GpuMaterial*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "boundMaterialRevision",
+          "Type": "uint64",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "boundMaterialProgram",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "shadowDepthShader",
           "Type": "Ref\u003CShader\u003E",
           "Access": "private",
@@ -15787,25 +16202,6 @@
           "Parameters": []
         },
         {
-          "Name": "wasCapturingPresent",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "Create",
           "Type": "bool",
           "Access": "public",
@@ -15932,12 +16328,12 @@
           "Parameters": []
         },
         {
-          "Name": "Present",
-          "Type": "void",
+          "Name": "GetVsync",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": false,
-          "IsConst": false,
+          "IsConst": true,
           "IsVirtual": true,
           "IsTemplate": false,
           "Serialize": false,
@@ -17450,6 +17846,25 @@
         {
           "Name": "storageIndex",
           "Type": "usize",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "bindingRevision",
+          "Type": "uint64",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -20216,6 +20631,60 @@
       "EnumValues": []
     },
     {
+      "Name": "GpuSurfaceID",
+      "QualifiedName": "GpuSurfaceID",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/GpuResourceIDs.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "id",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "IsValid",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "GpuTextureDesc",
       "QualifiedName": "GpuTextureDesc",
       "BaseName": "",
@@ -20325,6 +20794,25 @@
         },
         {
           "Name": "clampToEdge",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "generateMipmaps",
           "Type": "bool",
           "Access": "public",
           "IsMethod": false,
@@ -20724,6 +21212,14 @@
         {
           "Key": "UI",
           "Value": "4"
+        },
+        {
+          "Key": "Position",
+          "Value": "5"
+        },
+        {
+          "Key": "ImGui",
+          "Value": "6"
         }
       ]
     },
@@ -22532,12 +23028,12 @@
           "Parameters": []
         },
         {
-          "Name": "Present",
-          "Type": "void",
+          "Name": "GetVsync",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": true,
           "IsStatic": false,
-          "IsConst": false,
+          "IsConst": true,
           "IsVirtual": true,
           "IsTemplate": false,
           "Serialize": false,
@@ -22991,6 +23487,25 @@
           "Parameters": []
         },
         {
+          "Name": "renderer",
+          "Type": "ImGuiRenderer",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Initialize",
           "Type": "bool",
           "Access": "public",
@@ -23011,6 +23526,11 @@
             {
               "Name": "window",
               "Type": "IWindow*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "backend",
+              "Type": "RenderBackend\u0026",
               "DefaultValue": ""
             }
           ]
@@ -23109,6 +23629,330 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ImGuiRenderer",
+      "QualifiedName": "ImGuiRenderer",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ImGuiRenderer.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "backend",
+          "Type": "RenderBackend*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "context",
+          "Type": "ImGuiContext*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "program",
+          "Type": "GpuShaderProgramID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertices",
+          "Type": "GpuVertexBufferID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "indices",
+          "Type": "GpuIndexBufferID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "input",
+          "Type": "GpuVertexInputID",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertexCapacity",
+          "Type": "usize",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "indexCapacity",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertexData",
+          "Type": "List\u003Cuint8\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "indexData",
+          "Type": "List\u003Cuint32\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "UpdateTexture",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "texture",
+              "Type": "ImTextureData\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Initialize",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "RenderBackend\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Shutdown",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "BeginFrame",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Render",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "data",
+              "Type": "ImDrawData*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "beginPass",
+              "Type": "bool",
+              "DefaultValue": "true"
+            }
+          ]
         }
       ],
       "EnumValues": []
@@ -28349,63 +29193,6 @@
           "Parameters": []
         },
         {
-          "Name": "debugLineShader",
-          "Type": "GpuShaderProgramID",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "debugLineVertexArray",
-          "Type": "uint32",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
-          "Name": "debugLineVertexBuffer",
-          "Type": "uint32",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "currentShaderProgram",
           "Type": "GpuShaderProgramID",
           "Access": "private",
@@ -28539,25 +29326,6 @@
           "Parameters": []
         },
         {
-          "Name": "polygonOffsetEnabled",
-          "Type": "bool",
-          "Access": "private",
-          "IsMethod": false,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": []
-        },
-        {
           "Name": "cullMode",
           "Type": "CullMode",
           "Access": "private",
@@ -28617,6 +29385,101 @@
         {
           "Name": "blendMode",
           "Type": "BlendMode",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "rasterStateValid",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "polygonMode",
+          "Type": "PolygonMode",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBiasEnabled",
+          "Type": "bool",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBiasSlope",
+          "Type": "float32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBiasConstant",
+          "Type": "float32",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -29026,7 +29889,70 @@
           "Parameters": []
         },
         {
-          "Name": "ProfileGpuWait",
+          "Name": "WaitForIdle",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Present",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CreateSurface",
+          "Type": "GpuSurfaceID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "window",
+              "Type": "IWindow*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteSurface",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -29044,8 +29970,78 @@
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "name",
-              "Type": "const char*",
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetSurface",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetScissor",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "enabled",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "x",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "y",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "width",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
               "DefaultValue": ""
             }
           ]
@@ -29750,7 +30746,7 @@
           ]
         },
         {
-          "Name": "HasShaderUniform",
+          "Name": "HasShaderParameter",
           "Type": "bool",
           "Access": "public",
           "IsMethod": true,
@@ -29780,7 +30776,7 @@
           ]
         },
         {
-          "Name": "BindShaderProgram",
+          "Name": "OnBindShaderProgram",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -29915,341 +30911,6 @@
             {
               "Name": "id",
               "Type": "GpuCubeTextureID",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformMatrix4",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "const matrix4x4\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformVector3",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "const vector3\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformColor",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "const color\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformInt",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "int32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformFloat",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "float32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthTest",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthCompare",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "compare",
-              "Type": "DepthCompare",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthWrite",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetPolygonOffset",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "factor",
-              "Type": "float32",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "units",
-              "Type": "float32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetBlend",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetBlendMode",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "mode",
-              "Type": "BlendMode",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetCullMode",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "mode",
-              "Type": "CullMode",
               "DefaultValue": ""
             }
           ]
@@ -30468,9 +31129,9 @@
           ]
         },
         {
-          "Name": "DrawLines",
+          "Name": "SetUniformMatrix4",
           "Type": "void",
-          "Access": "public",
+          "Access": "private",
           "IsMethod": true,
           "IsStatic": false,
           "IsConst": false,
@@ -30486,18 +31147,561 @@
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "lines",
-              "Type": "const List\u003CDebugLine\u003E\u0026",
+              "Name": "name",
+              "Type": "const char*",
               "DefaultValue": ""
             },
             {
-              "Name": "viewProjection",
+              "Name": "value",
               "Type": "const matrix4x4\u0026",
               "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetUniformVector3",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
             },
             {
-              "Name": "layerMask",
-              "Type": "uint32",
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetUniformColor",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const color\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetUniformInt",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetUniformFloat",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetDepthTest",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "enabled",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetDepthCompare",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "compare",
+              "Type": "DepthCompare",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetDepthWrite",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "enabled",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetBlend",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "enabled",
+              "Type": "bool",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetBlendMode",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mode",
+              "Type": "BlendMode",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetCullMode",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "mode",
+              "Type": "CullMode",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ApplyDrawState",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "ApplyParameters",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "window",
+          "Type": "IWindow*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "currentSurface",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "nextSurface",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "nextVertexInput",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "surfaces",
+          "Type": "std::unordered_map\u003Cuint32,IWindow*\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "pendingSurfaces",
+          "Type": "std::unordered_set\u003Cuint32\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertexInputDescriptions",
+          "Type": "std::unordered_map\u003Cuint32,GpuVertexInputDesc\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "vertexArrays",
+          "Type": "std::unordered_map\u003Cuint32,std::unordered_map\u003Cuint32,uint32\u003E\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "textureInfo",
+          "Type": "std::unordered_map\u003Cuint32,TextureInfo\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "ownedTextures",
+          "Type": "std::unordered_set\u003Cuint32\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CreateVertexArray",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuVertexInputDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetVertexArray",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexInputID",
               "DefaultValue": ""
             }
           ]
@@ -30733,31 +31937,6 @@
           ]
         },
         {
-          "Name": "GetInstanceRecordSize",
-          "Type": "uint32",
-          "Access": "private",
-          "IsMethod": true,
-          "IsStatic": true,
-          "IsConst": false,
-          "IsVirtual": false,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "layout",
-              "Type": "GpuVertexLayout",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
           "Name": "ValidateInstancedRange",
           "Type": "bool",
           "Access": "private",
@@ -30903,6 +32082,60 @@
         {
           "Name": "locations",
           "Type": "std::unordered_map\u003Cint32,UniformState\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "TextureInfo",
+      "QualifiedName": "OpenGLRenderBackend::TextureInfo",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/OpenGLRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "channels",
+          "Type": "int32 width,height,",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "mipmaps",
+          "Type": "bool",
           "Access": "public",
           "IsMethod": false,
           "IsStatic": false,
@@ -43491,6 +44724,279 @@
       "EnumValues": []
     },
     {
+      "Name": "PipelineState",
+      "QualifiedName": "PipelineState",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/PipelineState.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "depthTest",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthWrite",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthCompare",
+          "Type": "DepthCompare",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "blend",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "blendMode",
+          "Type": "BlendMode",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cull",
+          "Type": "CullMode",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "polygonMode",
+          "Type": "PolygonMode",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "topology",
+          "Type": "PrimitiveTopology",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBias",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBiasSlope",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "depthBiasConstant",
+          "Type": "float32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "PolygonMode",
+      "QualifiedName": "PolygonMode",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint8",
+      "IsExported": false,
+      "Include": "Rendering/PipelineState.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Fill",
+          "Value": ""
+        },
+        {
+          "Key": "Line",
+          "Value": ""
+        }
+      ]
+    },
+    {
+      "Name": "PrimitiveTopology",
+      "QualifiedName": "PrimitiveTopology",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint8",
+      "IsExported": false,
+      "Include": "Rendering/PipelineState.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Triangles",
+          "Value": ""
+        },
+        {
+          "Key": "Lines",
+          "Value": ""
+        }
+      ]
+    },
+    {
       "Name": "ProfileCategory",
       "QualifiedName": "ProfileCategory",
       "BaseName": "",
@@ -46146,6 +47652,66 @@
       "IsFinal": false,
       "Members": [
         {
+          "Name": "Create",
+          "Type": "std::unique_ptr\u003CRenderBackend\u003E",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "api",
+              "Type": "WindowGraphicsApi",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReadGraphicsApi",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "arguments",
+              "Type": "std::span\u003Cconst std::string_view\u003E",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "api",
+              "Type": "WindowGraphicsApi\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "error",
+              "Type": "std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "GetMaxTextureSize",
           "Type": "int32",
           "Access": "public",
@@ -46207,6 +47773,132 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "shaderParameters",
+          "Type": "std::unordered_map\u003Cuint32,ShaderParameters\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "activeParameters",
+          "Type": "ShaderParameters*",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "activeParameterProgram",
+          "Type": "uint32",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "pipelineState",
+          "Type": "PipelineState",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "OnBindShaderProgram",
+          "Type": "void",
+          "Access": "protected",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReleaseShaderParameters",
+          "Type": "void",
+          "Access": "protected",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "Initialize",
@@ -46289,6 +47981,119 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "Present",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "WaitForIdle",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CreateSurface",
+          "Type": "GpuSurfaceID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "window",
+              "Type": "IWindow*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteSurface",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetSurface",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "BeginPass",
@@ -46994,7 +48799,7 @@
           ]
         },
         {
-          "Name": "HasShaderUniform",
+          "Name": "HasShaderParameter",
           "Type": "bool",
           "Access": "public",
           "IsMethod": true,
@@ -47030,7 +48835,7 @@
           "IsMethod": true,
           "IsStatic": false,
           "IsConst": false,
-          "IsVirtual": true,
+          "IsVirtual": false,
           "IsTemplate": false,
           "Serialize": false,
           "IgnoreBinding": false,
@@ -47047,6 +48852,44 @@
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "GetParameters",
+          "Type": "ShaderParameters\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "GetPipelineState",
+          "Type": "PipelineState\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         },
         {
           "Name": "BindVertexInput",
@@ -47164,7 +49007,7 @@
           ]
         },
         {
-          "Name": "SetUniformMatrix4",
+          "Name": "SetScissor",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -47182,319 +49025,29 @@
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "name",
-              "Type": "const char*",
+              "Name": "enabled",
+              "Type": "bool",
               "DefaultValue": ""
             },
             {
-              "Name": "value",
-              "Type": "const matrix4x4\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformVector3",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "const vector3\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformColor",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
-              "Type": "const color\u0026",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformInt",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
-            },
-            {
-              "Name": "value",
+              "Name": "x",
               "Type": "int32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetUniformFloat",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "name",
-              "Type": "const char*",
-              "DefaultValue": ""
+              "DefaultValue": "0"
             },
             {
-              "Name": "value",
-              "Type": "float32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthTest",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthCompare",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "compare",
-              "Type": "DepthCompare",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetDepthWrite",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetPolygonOffset",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
+              "Name": "y",
+              "Type": "int32",
+              "DefaultValue": "0"
             },
             {
-              "Name": "factor",
-              "Type": "float32",
-              "DefaultValue": ""
+              "Name": "width",
+              "Type": "int32",
+              "DefaultValue": "0"
             },
             {
-              "Name": "units",
-              "Type": "float32",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetBlend",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "enabled",
-              "Type": "bool",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetBlendMode",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "mode",
-              "Type": "BlendMode",
-              "DefaultValue": ""
-            }
-          ]
-        },
-        {
-          "Name": "SetCullMode",
-          "Type": "void",
-          "Access": "public",
-          "IsMethod": true,
-          "IsStatic": false,
-          "IsConst": false,
-          "IsVirtual": true,
-          "IsTemplate": false,
-          "Serialize": false,
-          "IgnoreBinding": false,
-          "Changed": "",
-          "Getter": "",
-          "Setter": "",
-          "Buffer": "",
-          "Count": "",
-          "FixedArray": false,
-          "Parameters": [
-            {
-              "Name": "mode",
-              "Type": "CullMode",
-              "DefaultValue": ""
+              "Name": "height",
+              "Type": "int32",
+              "DefaultValue": "0"
             }
           ]
         },
@@ -47758,7 +49311,7 @@
           "IsMethod": true,
           "IsStatic": false,
           "IsConst": false,
-          "IsVirtual": true,
+          "IsVirtual": false,
           "IsTemplate": false,
           "Serialize": false,
           "IgnoreBinding": false,
@@ -50597,7 +52150,26 @@
         },
         {
           "Name": "backend",
-          "Type": "OpenGLRenderBackend",
+          "Type": "std::unique_ptr\u003CRenderBackend\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "debugLineRenderer",
+          "Type": "DebugLineRenderer",
           "Access": "private",
           "IsMethod": false,
           "IsStatic": false,
@@ -51539,6 +53111,44 @@
           ]
         },
         {
+          "Name": "GetBackend",
+          "Type": "RenderBackend\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Present",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "OnInitialize",
           "Type": "bool",
           "Access": "public",
@@ -51584,6 +53194,36 @@
         },
         {
           "Name": "Initialize",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "renderWindow",
+              "Type": "IWindow*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "initializedBackend",
+              "Type": "std::unique_ptr\u003CRenderBackend\u003E",
+              "DefaultValue": "nullptr"
+            }
+          ]
+        },
+        {
+          "Name": "ChangeWindow",
           "Type": "bool",
           "Access": "public",
           "IsMethod": true,
@@ -60337,6 +61977,92 @@
       "EnumValues": []
     },
     {
+      "Name": "ShaderCompiler",
+      "QualifiedName": "ShaderCompiler",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderCompiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "CompileGraphics",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "source",
+              "Type": "const GpuShaderProgramDesc\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "output",
+              "Type": "CompiledShader\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "error",
+              "Type": "std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CompileCompute",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "source",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "output",
+              "Type": "CompiledShader\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "error",
+              "Type": "std::string\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "ShaderFloatSlot",
       "QualifiedName": "ShaderFloatSlot",
       "BaseName": "",
@@ -60436,6 +62162,674 @@
           "Value": "2"
         }
       ]
+    },
+    {
+      "Name": "ShaderParameterLayout",
+      "QualifiedName": "ShaderParameterLayout",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderCompiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "type",
+          "Type": "ShaderParameterType",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "offset",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "count",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "stride",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ShaderParameterType",
+      "QualifiedName": "ShaderParameterType",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint8",
+      "IsExported": false,
+      "Include": "Rendering/ShaderParameters.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Matrix4",
+          "Value": ""
+        },
+        {
+          "Key": "Vector3",
+          "Value": ""
+        },
+        {
+          "Key": "Color",
+          "Value": ""
+        },
+        {
+          "Key": "Int",
+          "Value": ""
+        },
+        {
+          "Key": "Float",
+          "Value": ""
+        }
+      ]
+    },
+    {
+      "Name": "ShaderParameterValue",
+      "QualifiedName": "ShaderParameterValue",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderParameters.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "name",
+          "Type": "const char*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "index",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "type",
+          "Type": "ShaderParameterType",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "sizeof",
+          "Type": "std::array\u003Cuint8,",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "arg0",
+              "Type": "matrix4x4",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "revision",
+          "Type": "uint64",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "changed",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Read",
+          "Type": "T",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": true,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ShaderParameters",
+      "QualifiedName": "ShaderParameters",
+      "BaseName": "",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderParameters.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "values",
+          "Type": "std::unordered_map\u003Cstd::string,ShaderParameterValue,NameHash,std::equal_to\u003C\u003E\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "changes",
+          "Type": "List\u003CShaderParameterValue*\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "revision",
+          "Type": "uint64",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Write",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "type",
+              "Type": "ShaderParameterType",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "data",
+              "Type": "const void*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "size",
+              "Type": "usize",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetOrCreate",
+          "Type": "ShaderParameterValue\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetMatrix4",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetVector3",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetColor",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "const color\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetInt",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetFloat",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "value",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Find",
+          "Type": "const ShaderParameterValue*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "std::string_view",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetChanges",
+          "Type": "const auto\u0026",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "ClearChanges",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "NameHash",
+      "QualifiedName": "ShaderParameters::NameHash",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderParameters.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": []
     },
     {
       "Name": "ShaderPass",
@@ -60686,6 +63080,79 @@
           "Value": ""
         }
       ]
+    },
+    {
+      "Name": "ShaderSamplerLayout",
+      "QualifiedName": "ShaderSamplerLayout",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/ShaderCompiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "name",
+          "Type": "std::string",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "binding",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "cube",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
     },
     {
       "Name": "ShaderTextureDimension",
@@ -70203,6 +72670,184 @@
       ]
     },
     {
+      "Name": "VertexAttribute",
+      "QualifiedName": "VertexAttribute",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/VertexLayout.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "location",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "binding",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "format",
+          "Type": "VertexAttributeFormat",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "offset",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "VertexAttributeFormat",
+      "QualifiedName": "VertexAttributeFormat",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "uint8",
+      "IsExported": false,
+      "Include": "Rendering/VertexLayout.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Float2",
+          "Value": ""
+        },
+        {
+          "Key": "Float3",
+          "Value": ""
+        },
+        {
+          "Key": "Float4",
+          "Value": ""
+        },
+        {
+          "Key": "UNorm8x4",
+          "Value": ""
+        }
+      ]
+    },
+    {
+      "Name": "VertexLayout",
+      "QualifiedName": "VertexLayout",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/VertexLayout.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "attributes",
+          "Type": "List\u003CVertexAttribute\u003E",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "instanceStride",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
       "Name": "VisibleItem",
       "QualifiedName": "VisibleItem",
       "BaseName": "",
@@ -70344,6 +72989,1407 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "VulkanRenderBackend",
+      "QualifiedName": "VulkanRenderBackend",
+      "BaseName": "RenderBackend",
+      "Kind": "class",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Rendering/Backend/VulkanRenderBackend.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "state",
+          "Type": "std::unique_ptr\u003CState\u003E",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "OnBindShaderProgram",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Initialize",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "window",
+              "Type": "IWindow*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "Shutdown",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "BeginFrame",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "EndFrame",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "Present",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "WaitForIdle",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CreateSurface",
+          "Type": "GpuSurfaceID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "window",
+              "Type": "IWindow*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteSurface",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SetSurface",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuSurfaceID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BeginPass",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const RenderPassDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "EndPass",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetScissor",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "enabled",
+              "Type": "bool",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "x",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "y",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "width",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateVertexBuffer",
+          "Type": "GpuVertexBufferID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuBufferDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteVertexBuffer",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexBufferID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateIndexBuffer",
+          "Type": "GpuIndexBufferID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuBufferDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteIndexBuffer",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuIndexBufferID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateVertexInput",
+          "Type": "GpuVertexInputID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuVertexInputDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteVertexInput",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexInputID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateTexture",
+          "Type": "GpuTextureID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuTextureDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "UploadTextureRegion",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuTextureID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "x",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "y",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "width",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "height",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "channels",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "pixels",
+              "Type": "const uint8*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "rowStride",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateDepthTexture",
+          "Type": "GpuDepthTextureID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuDepthTextureDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteDepthTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuDepthTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateDepthDistribution",
+          "Type": "GpuDepthDistributionID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "DeleteDepthDistribution",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuDepthDistributionID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SubmitDepthDistribution",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuDepthDistributionID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depth",
+              "Type": "GpuDepthTextureID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "inverseProjection",
+              "Type": "const matrix4x4\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "nearPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "farPlane",
+              "Type": "float32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "TryReadDepthDistribution",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuDepthDistributionID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "distribution",
+              "Type": "GpuDepthDistribution\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateCubeTexture",
+          "Type": "GpuCubeTextureID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuCubeTextureDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteCubeTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuCubeTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateRenderTarget",
+          "Type": "GpuRenderTargetID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuRenderTargetDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "AttachRenderTargetDepthTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "target",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depthTexture",
+              "Type": "GpuDepthTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteRenderTarget",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetRenderTargetColorTexture",
+          "Type": "GpuTextureID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CopyRenderTarget",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuRenderTargetCopyDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CreateShaderProgram",
+          "Type": "GpuShaderProgramID",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "desc",
+              "Type": "const GpuShaderProgramDesc\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DeleteShaderProgram",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "HasShaderParameter",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "program",
+              "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindVertexInput",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexInputID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "slot",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "id",
+              "Type": "GpuTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindDepthTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "slot",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "id",
+              "Type": "GpuDepthTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindCubeTexture",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "slot",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "id",
+              "Type": "GpuCubeTextureID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DrawIndexed",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "indexStart",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "indexCount",
+              "Type": "uint32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "DrawIndexedInstanced",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "indexStart",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "indexCount",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "instanceCount",
+              "Type": "uint32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "SupportsInstancing",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "GetFragmentTextureUnitCount",
+          "Type": "uint32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "UploadVertexBuffer",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexBufferID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "data",
+              "Type": "const void*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "size",
+              "Type": "usize",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "capacity",
+              "Type": "usize",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "UploadIndexBuffer",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuIndexBufferID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "data",
+              "Type": "const uint32*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "count",
+              "Type": "uint32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "capacity",
+              "Type": "uint32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "ReadDepthPixel",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "target",
+              "Type": "GpuRenderTargetID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "x",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "y",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "depth",
+              "Type": "float32\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "BindInstanceBuffer",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "id",
+              "Type": "GpuVertexBufferID",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "byteOffset",
+              "Type": "usize",
+              "DefaultValue": ""
+            }
+          ]
         }
       ],
       "EnumValues": []
@@ -70835,6 +74881,44 @@
         },
         {
           "Name": "vsync",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "sharedResourcesWindow",
+          "Type": "IWindow*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "receivesEngineInput",
           "Type": "bool",
           "Access": "public",
           "IsMethod": false,

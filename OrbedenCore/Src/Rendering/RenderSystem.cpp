@@ -54,12 +54,6 @@ bool RenderSystem::OnInitialize(Application& app)
         Log::Error("RenderSystem initialize failed: window is missing.");
         return false;
     }
-    if (renderWindow->GetGraphicsApi() != WindowGraphicsApi::OpenGL)
-    {
-        Log::Error("RenderSystem initialize failed: graphics API is not supported.");
-        return false;
-    }
-
     if (!Initialize(renderWindow)) return false;
 
     scene.BindWorld(app.GetWorld());
@@ -75,7 +69,7 @@ void RenderSystem::OnShutdown()
     cameraRenderExtensions.clear();
 }
 
-bool RenderSystem::Initialize(IWindow* renderWindow)
+bool RenderSystem::Initialize(IWindow* renderWindow, std::unique_ptr<RenderBackend> initializedBackend)
 {
     //处理重复初始化
     if (initialized) return true;
@@ -93,17 +87,21 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
     framebufferHeight = window->GetFramebufferHeight();
 
     //初始化渲染后端和管线
-    if (!backend.Initialize(window))
+    bool prepared = initializedBackend != nullptr;
+    backend = prepared ? std::move(initializedBackend) : RenderBackend::Create(window->GetGraphicsApi());
+    if (!backend || (!prepared && !backend->Initialize(window)))
     {
         Log::Error("RenderSystem initialize failed: backend initialize failed.");
         return false;
     }
+    backend->SetSurface({});
 
-    gpuResourceManager.Initialize(&backend);
-    forwardPipeline.Initialize(&backend);
-    outputPass.Initialize(&backend);
+    debugLineRenderer.Initialize(backend.get());
+    gpuResourceManager.Initialize(backend.get());
+    forwardPipeline.Initialize(backend.get());
+    outputPass.Initialize(backend.get());
     //UI 渲染器失败不影响场景渲染：RetainedGUI 不显示，其余照常。
-    if (!uiRenderer.Initialize(backend, gpuResourceManager))
+    if (!uiRenderer.Initialize(*backend, gpuResourceManager))
     {
         Log::Warning("RenderSystem initialize warning: RetainedGUI renderer is disabled.");
     }
@@ -115,7 +113,7 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
     elapsedTime = 0.0f;
 
     //初始化 ImGui 覆盖层
-    if (!imguiLayer.Initialize(window))
+    if (!imguiLayer.Initialize(window, *backend))
     {
         Log::Warning("RenderSystem initialize warning: ImGui overlay is disabled.");
     }
@@ -125,8 +123,53 @@ bool RenderSystem::Initialize(IWindow* renderWindow)
     return true;
 }
 
+//验证新后端并重建窗口渲染资源
+bool RenderSystem::ChangeWindow(IWindow* renderWindow)
+{
+    if (!renderWindow) { Shutdown(); return true; }
+    if (window == renderWindow) return true;
+    std::unique_ptr<RenderBackend> nextBackend = RenderBackend::Create(renderWindow->GetGraphicsApi());
+    List<ManagedRenderTarget> targets = renderTargets;
+    bool succeeded = false;
+    try
+    {
+        succeeded = nextBackend && nextBackend->Initialize(renderWindow);
+        //在新设备上分配离屏目标
+        if (succeeded) for (ManagedRenderTarget& target : targets)
+        {
+            GpuDepthTextureDesc depthDesc;
+            depthDesc.width = target.width;
+            depthDesc.height = target.height;
+            target.depthTexture = nextBackend->CreateDepthTexture(depthDesc);
+            GpuRenderTargetDesc targetDesc;
+            targetDesc.width = target.width;
+            targetDesc.height = target.height;
+            targetDesc.depthTexture = target.depthTexture;
+            target.renderTarget = nextBackend->CreateRenderTarget(targetDesc);
+            if (!target.depthTexture.IsValid() || !target.renderTarget.IsValid()) { succeeded = false; break; }
+        }
+    }
+    catch (const std::exception& error)
+    {
+        Log::Error((std::string("Render backend switch failed: ") + error.what()).c_str());
+        succeeded = false;
+    }
+    if (!succeeded) nextBackend.reset();
+    if (backend) backend->SetSurface({});
+    if (!succeeded) return false;
+
+    //保存离屏目标描述并释放旧设备
+    float32 previousElapsedTime = elapsedTime;
+    Shutdown();
+    if (!Initialize(renderWindow, std::move(nextBackend))) return false;
+    renderTargets = std::move(targets);
+    elapsedTime = previousElapsedTime;
+    return true;
+}
+
 void RenderSystem::Shutdown()
 {
+    if (!backend) return;
     if (currentRenderSystem == this) currentRenderSystem = nullptr;
     debugLines.clear();
     debugLineWorld = nullptr;
@@ -136,14 +179,17 @@ void RenderSystem::Shutdown()
     //UI 渲染器必须在资源管理器之前释放：它持有网格缓冲与覆盖率池。
     uiRenderer.Shutdown();
     //释放相机扩展资源
-    for (const auto& entry : cameraRenderExtensions) entry.second.extension->ReleaseResources(backend);
+    for (const auto& entry : cameraRenderExtensions) entry.second.extension->ReleaseResources(*backend);
     ReleaseCameraFrameTextures();
     ReleaseRenderTargets();
+    ClearUIEditorPreviewTarget();
     forwardPipeline.Shutdown();
     //输出 Pass 必须在后端关闭之前释放它持有的 shader 与顶点缓冲
     outputPass.Shutdown();
     gpuResourceManager.Shutdown();
-    backend.Shutdown();
+    debugLineRenderer.Shutdown();
+    if (backend) backend->Shutdown();
+    backend.reset();
     initialized = false;
     window = nullptr;
     elapsedTime = 0.0f;
@@ -169,7 +215,7 @@ void RenderSystem::SetCameraRenderExtension(EnsId cameraEns, ICameraRenderExtens
             found->second.replaceSceneRendering = replaceSceneRendering;
             return;
         }
-        found->second.extension->ReleaseResources(backend);
+        found->second.extension->ReleaseResources(*backend);
         cameraRenderExtensions.erase(found);
     }
     if (extension) cameraRenderExtensions.emplace(cameraKey, CameraRenderExtension { extension, replaceSceneRendering });
@@ -222,7 +268,7 @@ RenderTargetID RenderSystem::CreateRenderTarget(int32 width, int32 height)
     GpuDepthTextureDesc depthDesc;
     depthDesc.width = width;
     depthDesc.height = height;
-    GpuDepthTextureID depthTexture = backend.CreateDepthTexture(depthDesc);
+    GpuDepthTextureID depthTexture = backend->CreateDepthTexture(depthDesc);
     if (!depthTexture.IsValid()) return RenderTargetID();
 
     //创建颜色渲染目标
@@ -230,10 +276,10 @@ RenderTargetID RenderSystem::CreateRenderTarget(int32 width, int32 height)
     targetDesc.width = width;
     targetDesc.height = height;
     targetDesc.depthTexture = depthTexture;
-    GpuRenderTargetID renderTarget = backend.CreateRenderTarget(targetDesc);
+    GpuRenderTargetID renderTarget = backend->CreateRenderTarget(targetDesc);
     if (!renderTarget.IsValid())
     {
-        backend.DeleteDepthTexture(depthTexture);
+        backend->DeleteDepthTexture(depthTexture);
         return RenderTargetID();
     }
 
@@ -261,23 +307,23 @@ bool RenderSystem::ResizeRenderTarget(RenderTargetID id, int32 width, int32 heig
     GpuDepthTextureDesc depthDesc;
     depthDesc.width = width;
     depthDesc.height = height;
-    GpuDepthTextureID depthTexture = backend.CreateDepthTexture(depthDesc);
+    GpuDepthTextureID depthTexture = backend->CreateDepthTexture(depthDesc);
     if (!depthTexture.IsValid()) return false;
 
     GpuRenderTargetDesc targetDesc;
     targetDesc.width = width;
     targetDesc.height = height;
     targetDesc.depthTexture = depthTexture;
-    GpuRenderTargetID renderTarget = backend.CreateRenderTarget(targetDesc);
+    GpuRenderTargetID renderTarget = backend->CreateRenderTarget(targetDesc);
     if (!renderTarget.IsValid())
     {
-        backend.DeleteDepthTexture(depthTexture);
+        backend->DeleteDepthTexture(depthTexture);
         return false;
     }
 
     //替换 RenderTarget 资源
-    backend.DeleteRenderTarget(target->renderTarget);
-    backend.DeleteDepthTexture(target->depthTexture);
+    backend->DeleteRenderTarget(target->renderTarget);
+    backend->DeleteDepthTexture(target->depthTexture);
     target->renderTarget = renderTarget;
     target->depthTexture = depthTexture;
     target->width = width;
@@ -295,15 +341,15 @@ void RenderSystem::DeleteRenderTarget(RenderTargetID id)
     if (it == renderTargets.end()) return;
 
     //删除 RenderTarget 资源
-    backend.DeleteRenderTarget(it->renderTarget);
-    backend.DeleteDepthTexture(it->depthTexture);
+    backend->DeleteRenderTarget(it->renderTarget);
+    backend->DeleteDepthTexture(it->depthTexture);
     renderTargets.erase(it);
 }
 
 GpuTextureID RenderSystem::GetRenderTargetTexture(RenderTargetID id) const
 {
     const ManagedRenderTarget* target = FindRenderTarget(id);
-    return target ? backend.GetRenderTargetColorTexture(target->renderTarget) : GpuTextureID();
+    return target ? backend->GetRenderTargetColorTexture(target->renderTarget) : GpuTextureID();
 }
 
 //获取持久渲染场景的只读视图
@@ -342,7 +388,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     }
 
     //本帧批次统计从零开始，无相机与早退路径也会保留清零结果
-    backend.ProfileGpuWait("Render/GpuWait/BeforeScene");
+    backend->ProfileGpuWait("Render/GpuWait/BeforeScene");
     forwardPipeline.ResetBatchStats();
 
     //累加 Shader 时间
@@ -350,6 +396,9 @@ void RenderSystem::Render(World& world, float deltaTime)
     {
         elapsedTime += deltaTime;
     }
+
+    //开始后端帧
+    backend->BeginFrame();
 
     //释放已销毁对象的 GPU 资源
     gpuResourceManager.ReleaseDestroyedResources();
@@ -365,9 +414,7 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     scene.BeginRead();
 
-    //开始渲染帧
-    backend.BeginFrame();
-    backend.ProfileGpuWait("Render/GpuWait/ResourcesAndTargets");
+    backend->ProfileGpuWait("Render/GpuWait/ResourcesAndTargets");
 
 
     //绘制无相机场景
@@ -385,13 +432,13 @@ void RenderSystem::Render(World& world, float deltaTime)
         passDesc.height = framebufferHeight;
         passDesc.clearMode = ClearMode::SolidColor;
         passDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-        backend.BeginPass(passDesc);
-        backend.EndPass();
+        backend->BeginPass(passDesc);
+        backend->EndPass();
 
         //无相机场景：离屏与屏幕画布照常绘制，只是没有世界空间画布。
         uiRenderer.RenderOffscreen();
         RenderOverlayPass();
-        backend.EndFrame();
+        backend->EndFrame();
         scene.EndRead();
         debugLines.clear();
         debugLineWorld = nullptr;
@@ -401,14 +448,14 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     //离屏画布在相机之前绘制：它们的结果可能被世界空间或屏幕画布采样。
     uiRenderer.RenderOffscreen();
-    backend.ProfileGpuWait("Render/GpuWait/OffscreenUI");
+    backend->ProfileGpuWait("Render/GpuWait/OffscreenUI");
 
     //准备共享阴影资源
     warnedMissingCamera = false;
     forwardPipeline.SetFrameWorld(&world);
     forwardPipeline.SetDrawSubmissions(&activeInstanceSubmissions);
     forwardPipeline.PrepareFrame(scene, gpuResourceManager);
-    backend.ProfileGpuWait("Render/GpuWait/SharedResources");
+    backend->ProfileGpuWait("Render/GpuWait/SharedResources");
 
     //绘制活动相机
     for (const RenderCamera& camera : scene.cameras)
@@ -427,7 +474,7 @@ void RenderSystem::Render(World& world, float deltaTime)
             seedDesc.width = camera.viewportWidth;
             seedDesc.height = camera.viewportHeight;
             seedDesc.colorOnly = true;
-            backend.CopyRenderTarget(seedDesc);
+            backend->CopyRenderTarget(seedDesc);
         }
 
         {
@@ -444,7 +491,7 @@ void RenderSystem::Render(World& world, float deltaTime)
         {
             PROFILE("Render/Pipeline");
             if (replaceSceneRendering)
-                extension->second.extension->RenderCameraScene(backend, gpuResourceManager, world, camera,
+                extension->second.extension->RenderCameraScene(*backend, gpuResourceManager, world, camera,
                     visibleSet, activeInstanceSubmissions);
             else forwardPipeline.Render(scene, visibleSet, gpuResourceManager);
         }
@@ -452,8 +499,8 @@ void RenderSystem::Render(World& world, float deltaTime)
         //执行当前相机绑定的渲染扩展
         if (extension != cameraRenderExtensions.end())
         {
-            extension->second.extension->RenderCameraEffects(backend, gpuResourceManager, world, camera, visibleSet);
-            backend.ProfileGpuWait("Render/GpuWait/CameraExtension");
+            extension->second.extension->RenderCameraEffects(*backend, gpuResourceManager, world, camera, visibleSet);
+            backend->ProfileGpuWait("Render/GpuWait/CameraExtension");
         }
         if (debugLineWorld == &world && !debugLines.empty())
         {
@@ -465,27 +512,27 @@ void RenderSystem::Render(World& world, float deltaTime)
             pass.width = camera.viewportWidth;
             pass.height = camera.viewportHeight;
             pass.clearMode = ClearMode::None;
-            backend.BeginPass(pass);
-            backend.DrawLines(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
-            backend.EndPass();
+            backend->BeginPass(pass);
+            debugLineRenderer.Render(debugLines, camera.viewProjectionMatrix, camera.drawLayerMask);
+            backend->EndPass();
         }
 
         //世界空间画布写在输出 Pass 之前，与场景一起被转换到显示空间。
-        backend.ProfileGpuWait("Render/GpuWait/DebugLines");
+        backend->ProfileGpuWait("Render/GpuWait/DebugLines");
         uiRenderer.RenderWorldSpace(camera);
         if (hasEditorPreviewTarget && camera.finalRenderTarget.id == editorPreviewTarget.renderTarget.id)
             uiRenderer.RenderEditorPreview(camera);
-        backend.ProfileGpuWait("Render/GpuWait/WorldUI");
+        backend->ProfileGpuWait("Render/GpuWait/WorldUI");
 
         //转换完成扩展绘制、调试线与世界 UI 的场景缓冲
         RenderOutputPass(camera);
-        backend.ProfileGpuWait("Render/GpuWait/Output");
+        backend->ProfileGpuWait("Render/GpuWait/Output");
     }
 
     //结束渲染帧
     RenderOverlayPass();
-    backend.ProfileGpuWait("Render/GpuWait/OverlayUI");
-    backend.EndFrame();
+    backend->ProfileGpuWait("Render/GpuWait/OverlayUI");
+    backend->EndFrame();
     scene.EndRead();
     debugLines.clear();
     debugLineWorld = nullptr;
@@ -525,7 +572,7 @@ bool RenderSystem::SubmitInstances(World& world, const InstanceDrawOptions& opti
 {
     //渲染读取期间、世界准备阶段与不支持实例化的后端都拒绝接收
     if (readingDrawSubmissions || !initialized || !window) return false;
-    if (world.IsPreparing() || !backend.SupportsInstancing()) return false;
+    if (world.IsPreparing() || !backend->SupportsInstancing()) return false;
     //本帧预算按累计量判定，超出时整次提交失败，不接收前半段
     if (instances.size() > MaximumSubmittedInstances) return false;
     if (pendingSubmittedInstanceCount + instances.size() > MaximumSubmittedInstances) return false;
@@ -586,8 +633,8 @@ void RenderSystem::ReleaseRenderTargets()
     //释放离屏 RenderTarget
     for (ManagedRenderTarget& target : renderTargets)
     {
-        backend.DeleteRenderTarget(target.renderTarget);
-        backend.DeleteDepthTexture(target.depthTexture);
+        backend->DeleteRenderTarget(target.renderTarget);
+        backend->DeleteDepthTexture(target.depthTexture);
     }
 
     renderTargets.clear();
@@ -598,10 +645,10 @@ void RenderSystem::ReleaseCameraFrameTextures()
 {
     for (ManagedCameraFrameTextures& textures : cameraFrameTextures)
     {
-        backend.DeleteRenderTarget(textures.sceneRenderTarget);
-        backend.DeleteDepthTexture(textures.sceneDepthTexture);
-        backend.DeleteRenderTarget(textures.renderTarget);
-        backend.DeleteDepthTexture(textures.depthTexture);
+        backend->DeleteRenderTarget(textures.sceneRenderTarget);
+        backend->DeleteDepthTexture(textures.sceneDepthTexture);
+        backend->DeleteRenderTarget(textures.renderTarget);
+        backend->DeleteDepthTexture(textures.depthTexture);
     }
 
     cameraFrameTextures.clear();
@@ -698,8 +745,8 @@ void RenderSystem::PrepareCameraRenderData()
             depthDesc.width = camera.viewportWidth;
             depthDesc.height = camera.viewportHeight;
             depthDesc.floatingPoint = true;
-            GpuDepthTextureID newSceneDepthTexture = backend.CreateDepthTexture(depthDesc);
-            GpuDepthTextureID newDepthTexture = backend.CreateDepthTexture(depthDesc);
+            GpuDepthTextureID newSceneDepthTexture = backend->CreateDepthTexture(depthDesc);
+            GpuDepthTextureID newDepthTexture = backend->CreateDepthTexture(depthDesc);
 
             //场景缓冲承载线性 HDR；折射快照必须同级格式，否则 blit 会把高光钳到 [0,1]
             GpuRenderTargetID newSceneRenderTarget;
@@ -710,7 +757,7 @@ void RenderSystem::PrepareCameraRenderData()
                 sceneDesc.height = camera.viewportHeight;
                 sceneDesc.depthTexture = newSceneDepthTexture;
                 sceneDesc.format = GpuRenderTargetFormat::RGBA16F;
-                newSceneRenderTarget = backend.CreateRenderTarget(sceneDesc);
+                newSceneRenderTarget = backend->CreateRenderTarget(sceneDesc);
             }
 
             GpuRenderTargetID newRenderTarget;
@@ -722,19 +769,19 @@ void RenderSystem::PrepareCameraRenderData()
                 targetDesc.depthTexture = newDepthTexture;
                 targetDesc.linearColorFilter = true;
                 targetDesc.format = GpuRenderTargetFormat::RGBA16F;
-                newRenderTarget = backend.CreateRenderTarget(targetDesc);
+                newRenderTarget = backend->CreateRenderTarget(targetDesc);
             }
 
             if (newSceneRenderTarget.IsValid() && newRenderTarget.IsValid())
             {
                 //替换相机纹理资源
-                backend.DeleteRenderTarget(textures->sceneRenderTarget);
-                backend.DeleteDepthTexture(textures->sceneDepthTexture);
-                backend.DeleteRenderTarget(textures->renderTarget);
-                backend.DeleteDepthTexture(textures->depthTexture);
+                backend->DeleteRenderTarget(textures->sceneRenderTarget);
+                backend->DeleteDepthTexture(textures->sceneDepthTexture);
+                backend->DeleteRenderTarget(textures->renderTarget);
+                backend->DeleteDepthTexture(textures->depthTexture);
                 textures->sceneRenderTarget = newSceneRenderTarget;
                 textures->sceneDepthTexture = newSceneDepthTexture;
-                textures->sceneColorTexture = backend.GetRenderTargetColorTexture(newSceneRenderTarget);
+                textures->sceneColorTexture = backend->GetRenderTargetColorTexture(newSceneRenderTarget);
                 textures->renderTarget = newRenderTarget;
                 textures->depthTexture = newDepthTexture;
                 textures->width = camera.viewportWidth;
@@ -742,10 +789,10 @@ void RenderSystem::PrepareCameraRenderData()
             }
             else
             {
-                backend.DeleteRenderTarget(newSceneRenderTarget);
-                backend.DeleteDepthTexture(newSceneDepthTexture);
-                backend.DeleteRenderTarget(newRenderTarget);
-                backend.DeleteDepthTexture(newDepthTexture);
+                backend->DeleteRenderTarget(newSceneRenderTarget);
+                backend->DeleteDepthTexture(newSceneDepthTexture);
+                backend->DeleteRenderTarget(newRenderTarget);
+                backend->DeleteDepthTexture(newDepthTexture);
                 Log::Error("RenderSystem camera texture setup failed: GPU resource creation failed.");
             }
         }
@@ -759,7 +806,7 @@ void RenderSystem::PrepareCameraRenderData()
             camera.sceneColorTexture = textures->sceneColorTexture;
             camera.sceneDepthTexture = textures->sceneDepthTexture;
             camera.cameraTextureTarget = textures->renderTarget;
-            camera.cameraColorTexture = backend.GetRenderTargetColorTexture(textures->renderTarget);
+            camera.cameraColorTexture = backend->GetRenderTargetColorTexture(textures->renderTarget);
             camera.cameraDepthTexture = textures->depthTexture;
         }
     }
@@ -774,10 +821,10 @@ void RenderSystem::PrepareCameraRenderData()
             continue;
         }
 
-        backend.DeleteRenderTarget(textures->sceneRenderTarget);
-        backend.DeleteDepthTexture(textures->sceneDepthTexture);
-        backend.DeleteRenderTarget(textures->renderTarget);
-        backend.DeleteDepthTexture(textures->depthTexture);
+        backend->DeleteRenderTarget(textures->sceneRenderTarget);
+        backend->DeleteDepthTexture(textures->sceneDepthTexture);
+        backend->DeleteRenderTarget(textures->renderTarget);
+        backend->DeleteDepthTexture(textures->depthTexture);
         textures = cameraFrameTextures.erase(textures);
     }
 }
@@ -801,7 +848,7 @@ void RenderSystem::RenderOverlayPass()
     passDesc.width = framebufferWidth;
     passDesc.height = framebufferHeight;
     passDesc.clearMode = ClearMode::None;
-    backend.BeginPass(passDesc);
+    backend->BeginPass(passDesc);
 
     imguiLayer.BeginFrame();
 
@@ -817,7 +864,7 @@ void RenderSystem::RenderOverlayPass()
 
     //结束 GUI 覆盖层 Pass
     imguiLayer.Render();
-    backend.EndPass();
+    backend->EndPass();
 }
 
 //命中快照的深度回读入口；由 RetainedGuiFrame 的函数指针转进来。
@@ -878,4 +925,10 @@ void RenderSystem::RenderOutputPass(const RenderCamera& camera)
     parameters.height = camera.viewportHeight;
     parameters.exposure = camera.exposure;
     outputPass.Render(parameters);
+}
+
+//提交主窗口显示
+void RenderSystem::Present()
+{
+    if (initialized && backend) backend->Present();
 }

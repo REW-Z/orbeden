@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstdio>
-#include <glad/gl.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -327,7 +326,9 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     }
 
-    window = glfwCreateWindow(desc.width, desc.height, desc.title.c_str(), nullptr, nullptr);
+    GlfwWindow* shared = dynamic_cast<GlfwWindow*>(desc.sharedResourcesWindow);
+    window = glfwCreateWindow(desc.width, desc.height, desc.title.c_str(), nullptr,
+        desc.graphicsApi == WindowGraphicsApi::OpenGL && shared ? shared->GetGlfwWindow() : nullptr);
     if (!window)
     {
         Log::Error("GLFW window create failed.");
@@ -342,13 +343,16 @@ bool GlfwWindow::Create(const WindowDesc& newDesc)
 
     glfwWindowCount++;
     glfwSetWindowUserPointer(window, this);
-    glfwSetKeyCallback(window, KeyCallback);
-    glfwSetMouseButtonCallback(window, MouseButtonCallback);
-    glfwSetCursorPosCallback(window, CursorPosCallback);
     glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
-    glfwSetScrollCallback(window, ScrollCallback);
-    glfwSetCharCallback(window, CharCallback);
-    glfwSetWindowFocusCallback(window, WindowFocusCallback);
+    if (desc.receivesEngineInput)
+    {
+        glfwSetKeyCallback(window, KeyCallback);
+        glfwSetMouseButtonCallback(window, MouseButtonCallback);
+        glfwSetCursorPosCallback(window, CursorPosCallback);
+        glfwSetScrollCallback(window, ScrollCallback);
+        glfwSetCharCallback(window, CharCallback);
+        glfwSetWindowFocusCallback(window, WindowFocusCallback);
+    }
 
     if (desc.graphicsApi == WindowGraphicsApi::OpenGL)
     {
@@ -412,55 +416,10 @@ void GlfwWindow::WakeEventLoop()
     glfwPostEmptyEvent();
 }
 
-//提交当前帧显示
-void GlfwWindow::Present()
+//读取窗口的垂直同步配置
+bool GlfwWindow::GetVsync() const
 {
-    if (!window) return;
-
-    if (desc.graphicsApi == WindowGraphicsApi::OpenGL)
-    {
-        const bool capturing = Profiler::IsCapturing();
-        const bool currentContext = glfwGetCurrentContext() == window;
-        //记录录制开始时的呈现环境
-        if (capturing && !wasCapturingPresent)
-        {
-            int32 swapInterval = -999;
-#ifdef _WIN32
-            using GetSwapInterval = int32 (__stdcall*)();
-            auto getSwapInterval = reinterpret_cast<GetSwapInterval>(glfwGetProcAddress("wglGetSwapIntervalEXT"));
-            if (currentContext && getSwapInterval) swapInterval = getSwapInterval();
-#endif
-            char message[768];
-            const GLubyte* renderer = currentContext && glGetString ? glGetString(GL_RENDERER) : nullptr;
-            snprintf(message, sizeof(message),
-                "Present diagnostic: GPU=%s framebuffer=%dx%d requestedVsync=%d swapInterval=%d "
-                "focused=%d iconified=%d currentContext=%d. Capture inserts glFlush/glFinish before swap; "
-                "WaitForGpu is CPU blocking time, not total GPU execution time. swapInterval=-999 means unavailable.",
-                renderer ? reinterpret_cast<const char*>(renderer) : "unavailable", framebufferWidth, framebufferHeight,
-                desc.vsync ? 1 : 0, swapInterval, glfwGetWindowAttrib(window, GLFW_FOCUSED),
-                glfwGetWindowAttrib(window, GLFW_ICONIFIED), currentContext ? 1 : 0);
-            Log::Info(message);
-        }
-        wasCapturingPresent = capturing;
-
-        PROFILE("Render/SwapBuffers");
-        //仅在录制期间拆开已提交绘制的等待与交换缓冲
-        if (capturing && currentContext && glFlush && glFinish)
-        {
-            {
-                PROFILE("Render/SwapBuffers/FlushCommands");
-                glFlush();
-            }
-            {
-                PROFILE("Render/SwapBuffers/WaitForGpu");
-                glFinish();
-            }
-        }
-        {
-            PROFILE("Render/SwapBuffers/Present");
-            glfwSwapBuffers(window);
-        }
-    }
+    return desc.vsync;
 }
 
 //判断窗口是否请求关闭

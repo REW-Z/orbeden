@@ -38,10 +38,17 @@ Orbeden 自有代码采用根 LICENSE 中的 MIT 许可。以下第三方组件�
 
 ## GLAD 与 Khronos
 
-本项目选用 CC0-1.0 AND Apache-2.0。保留生成代码中的 SPDX 声明、CC0-1.0.txt、LICENSE-APACHE-2.0.txt 和 KHRONOS.txt。生成器的许可与生成代码的许可分别保存。生成规格固定为 OpenGL 4.3 core、零扩展、启用 loader，使用生成器内置规范。
+本项目选用 CC0-1.0 AND Apache-2.0。保留生成代码中的 SPDX 声明、CC0-1.0.txt、LICENSE-APACHE-2.0.txt 和 KHRONOS.txt。生成器的许可与生成代码的许可分别保存。生成规格固定为 OpenGL 4.3 core（零扩展）与 Vulkan 1.3（VK_KHR_surface、VK_KHR_swapchain），启用 loader，使用生成器内置规范。
 
 ## .NET 与字体
 
 .NET 宿主包的 LICENSE.TXT 与 THIRD-PARTY-NOTICES.TXT 都随产物复制。主机安装的 .NET runtime/SDK 是独立前置条件；若将运行时纳入发行包，还须附带所分发运行时自己的声明。
 
 默认字体按 OFL-1.1 分发，版权声明和保留字体名称见原文。字体字节不修改；内置字体目录继续保留 OFL.txt。重新打包内容时不能删掉字体许可。
+
+## glslang
+
+- 版本：15.1.0，固定提交 `1062752a891c95b2bfeed9e356562d88f9df84ac`。
+- 来源：https://github.com/KhronosGroup/glslang
+- 用途：把共同的 GLSL 源码编译为 Vulkan SPIR-V，并反射参数布局。
+- 授权与版权声明：见 `Tools/OrbedenThirdParty/licenses/glslang/LICENSE.txt` 及 `gl_types.h` 中的完整声明；随 SDK 和 Player 分发同一组许可文件。

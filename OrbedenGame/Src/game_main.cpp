@@ -2,6 +2,7 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Platform/GlfwWindow.h"
+#include "Rendering/Backend/RenderBackend.h"
 #include "FileSystem/PathDefines.h"
 #include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
@@ -118,6 +119,14 @@ int main(int argc, char** argv)
     GlfwWindow window;
     WindowDesc windowDesc;
     windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
+    List<std::string_view> arguments;
+    for (int32 index = 1; index < argc; ++index) arguments.push_back(argv[index]);
+    std::string graphicsError;
+    if (!RenderBackend::ReadGraphicsApi(arguments, windowDesc.graphicsApi, graphicsError))
+    {
+        Log::Error(graphicsError.c_str());
+        return 1;
+    }
 
     if (!window.Create(windowDesc))
     {

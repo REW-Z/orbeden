@@ -680,6 +680,8 @@ namespace
         case 7: text = editor->GetSourceTemplateRoot(); break;
         case 8: text = editor->GetProjectStatusText(); break;
         case 10: text = editor->GetProject().GetProjectFilePath(); break;
+        case 11: text = editor->GetGraphicsBackendName(); break;
+        case 12: text = editor->GetGraphicsBackendStatus(); break;
         case 9:
             for (int32 index = 0; index < editor->GetPlayerTargetPlatformCount(); ++index)
             {

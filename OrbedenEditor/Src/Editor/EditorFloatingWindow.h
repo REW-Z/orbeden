@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Runtime/EngineTypes.h"
+#include "Rendering/ImGuiRenderer.h"
+#include "Platform/GlfwWindow.h"
 
 #include <string>
 
@@ -11,6 +13,11 @@ struct ImGuiContext;
 class EditorFloatingWindow
 {
 private:
+    std::unique_ptr<GlfwWindow> platformWindow;
+    RenderBackend* backend = nullptr;
+    GpuSurfaceID surface;
+    ImGuiRenderer renderer;
+    bool platformInitialized = false;
     GLFWwindow* mainWindow = nullptr;
     GLFWwindow* window = nullptr;
     ImGuiContext* mainContext = nullptr;
@@ -32,7 +39,7 @@ public:
     /// <summary>销毁独立窗口与专属 ImGui 上下文。</summary>
     ~EditorFloatingWindow();
 
-    /// <summary>创建共享主窗口 OpenGL 上下文的独立面板窗口。</summary>
+    /// <summary>创建共享主窗口设备资源的独立面板窗口。</summary>
     bool Create(const std::string& title, const vector2& position, const vector2& size);
 
     /// <summary>销毁独立窗口与专属 ImGui 上下文。</summary>

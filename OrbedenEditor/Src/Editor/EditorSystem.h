@@ -14,6 +14,7 @@
 #include <string>
 
 class ManagedPanelAdapter;
+class GlfwWindow;
 
 //编辑器快捷键的生效范围
 enum class EditorShortcutScope
@@ -83,6 +84,8 @@ private:
     bool scriptBuildRunning = false;
     //托管侧改完编辑器外观配置后的重建请求；帧边界处理
     bool editorGuiConfigPending = false;
+    WindowGraphicsApi pendingGraphicsApi = WindowGraphicsApi::None;
+    std::string graphicsBackendStatus;
     bool scriptBuildCompleted = false;
     bool pendingPlayAfterScriptBuild = false;
     ScriptBuildResult pendingScriptBuildResult;
@@ -133,9 +136,17 @@ public:
     //请求刷新：重导已加载资源，脚本过期时重新编译并重载程序集
     void RequestRefresh();
 
-    //请求按项目文件里的 <EditorGuiConfig> 重设标签列宽度与字体。
-    //托管侧在画面板时提出请求，真正重建推迟到帧边界（重建字体图集要清掉正在用的字体）。
+    //请求在帧边界应用项目的外观与渲染后端配置
     void RequestEditorGuiConfig();
+
+    //在帧边界重建主窗口与编辑器 GPU 资源
+    bool ApplyPendingGraphicsBackend(std::unique_ptr<GlfwWindow>& mainWindow);
+
+    //读取后端切换结果
+    const std::string& GetGraphicsBackendStatus() const { return graphicsBackendStatus; }
+
+    //读取当前活动的渲染后端名称
+    const char* GetGraphicsBackendName() const;
 
     //接收托管侧后台脚本构建的结算；只记结果，帧边界才应用
     void CompleteScriptBuild(bool succeeded, bool cancelled, bool compiled, int32 reimportedCount);

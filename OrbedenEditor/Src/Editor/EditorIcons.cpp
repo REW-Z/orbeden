@@ -3,7 +3,7 @@
 #include "Runtime/Native/InteropText.h"
 #include "Log/Log.h"
 
-#include <glad/gl.h>
+#include "Rendering/RenderSystem.h"
 
 //编辑器与 OrbedenCore 各自持有实现，静态链接避免与核心库的同名符号冲突
 #define STB_IMAGE_STATIC
@@ -35,19 +35,11 @@ namespace
             static_cast<int32>(bytes.size()), &width, &height, &channels, 4);
         if (!pixels) return 0;
 
-        GLuint texture = 0;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        GpuTextureDesc desc;
+        desc.width = width; desc.height = height; desc.channels = 4; desc.pixels = pixels; desc.clampToEdge = true; desc.generateMipmaps = true;
+        GpuTextureID texture = RenderSystem::Current()->GetBackend().CreateTexture(desc);
         stbi_image_free(pixels);
-        return static_cast<ImTextureID>(texture);
+        return static_cast<ImTextureID>(texture.id);
     }
 
 }
@@ -79,8 +71,7 @@ void EditorIcons::Shutdown()
 {
     for (const auto& pair : iconTextures)
     {
-        GLuint texture = static_cast<GLuint>(pair.second);
-        if (texture != 0) glDeleteTextures(1, &texture);
+        if (RenderSystem::Current()) RenderSystem::Current()->GetBackend().DeleteTexture({ static_cast<uint32>(pair.second) });
     }
     iconTextures.clear();
 }

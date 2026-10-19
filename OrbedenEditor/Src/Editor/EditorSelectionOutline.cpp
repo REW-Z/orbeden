@@ -214,13 +214,15 @@ void EditorSelectionOutline::Render(RenderBackend& backend, GpuResourceManager& 
     maskPass.renderTarget = outlineMaskTarget;
     maskPass.clearMode = ClearMode::None;
     backend.BeginPass(maskPass);
-    backend.SetDepthTest(true);
+    backend.GetPipelineState().depthTest = true;
     //场景刚写入的深度与被描边几何同层，必须用 LessEqual 才能通过深度测试
-    backend.SetDepthCompare(DepthCompare::LessEqual);
-    backend.SetDepthWrite(false);
-    backend.SetBlend(false);
-    backend.SetCullMode(CullMode::Back);
-    backend.SetPolygonOffset(true, -1.0f, -2.0f);
+    backend.GetPipelineState().depthCompare = DepthCompare::LessEqual;
+    backend.GetPipelineState().depthWrite = false;
+    backend.GetPipelineState().blend = false;
+    backend.GetPipelineState().cull = CullMode::Back;
+    backend.GetPipelineState().depthBias = true;
+    backend.GetPipelineState().depthBiasSlope = -1.0f;
+    backend.GetPipelineState().depthBiasConstant = -2.0f;
     backend.BindShaderProgram(outlineMaskProgram);
 
     bool drewAny = false;
@@ -233,16 +235,18 @@ void EditorSelectionOutline::Render(RenderBackend& backend, GpuResourceManager& 
         if (!mesh || !mesh->IsValid() || item.indexCount == 0) continue;
 
         backend.BindVertexInput(mesh->vertexInput);
-        backend.SetUniformMatrix4("u_Model", item.localToWorld);
-        backend.SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
-        backend.SetUniformColor("u_Tint", tint);
+        backend.GetParameters().SetMatrix4("u_Model", item.localToWorld);
+        backend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        backend.GetParameters().SetColor("u_Tint", tint);
         backend.DrawIndexed(item.indexStart, item.indexCount);
         drewAny = true;
     }
     backend.EndPass();
-    backend.SetPolygonOffset(false, 0.0f, 0.0f);
-    backend.SetDepthCompare(DepthCompare::Less);
-    backend.SetDepthWrite(true);
+    backend.GetPipelineState().depthBias = false;
+    backend.GetPipelineState().depthBiasSlope = 0.0f;
+    backend.GetPipelineState().depthBiasConstant = 0.0f;
+    backend.GetPipelineState().depthCompare = DepthCompare::Less;
+    backend.GetPipelineState().depthWrite = true;
     if (!drewAny) return;
 
     //第二遍：把遮罩轮廓按覆盖度混合到场景缓冲，物体自身保持原色
@@ -255,26 +259,26 @@ void EditorSelectionOutline::Render(RenderBackend& backend, GpuResourceManager& 
     compositePass.renderTarget = camera.renderTarget;
     compositePass.clearMode = ClearMode::None;
     backend.BeginPass(compositePass);
-    backend.SetDepthTest(false);
-    backend.SetDepthWrite(false);
-    backend.SetBlend(true);
-    backend.SetCullMode(CullMode::None);
+    backend.GetPipelineState().depthTest = false;
+    backend.GetPipelineState().depthWrite = false;
+    backend.GetPipelineState().blend = true;
+    backend.GetPipelineState().cull = CullMode::None;
     backend.BindShaderProgram(outlineCompositeProgram);
     backend.BindTexture(0, outlineMaskTexture);
-    backend.SetUniformInt("u_Mask", 0);
-    backend.SetUniformVector3("u_TexelSize", vector3 {
+    backend.GetParameters().SetInt("u_Mask", 0);
+    backend.GetParameters().SetVector3("u_TexelSize", vector3 {
         1.0f / static_cast<float32>(viewportWidth),
         1.0f / static_cast<float32>(viewportHeight),
         0.0f });
-    backend.SetUniformFloat("u_CoreRadius", OutlineCoreRadius);
-    backend.SetUniformFloat("u_GlowRadius", OutlineGlowRadius);
-    backend.SetUniformFloat("u_GlowAlpha", OutlineGlowAlpha);
+    backend.GetParameters().SetFloat("u_CoreRadius", OutlineCoreRadius);
+    backend.GetParameters().SetFloat("u_GlowRadius", OutlineGlowRadius);
+    backend.GetParameters().SetFloat("u_GlowAlpha", OutlineGlowAlpha);
     backend.BindVertexInput(outlineQuad.GetVertexInput());
     backend.DrawIndexed(0, 6);
     backend.EndPass();
 
     //恢复后续绘制依赖的常规状态
-    backend.SetDepthTest(true);
-    backend.SetBlend(false);
-    backend.SetCullMode(CullMode::Back);
+    backend.GetPipelineState().depthTest = true;
+    backend.GetPipelineState().blend = false;
+    backend.GetPipelineState().cull = CullMode::Back;
 }

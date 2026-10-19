@@ -713,6 +713,8 @@ namespace
         {
             lineNumber++;
 
+            if (!currentSource && Trim(line).starts_with("//")) continue;
+
             std::string directive;
             std::string argument;
             if (ParseOrbShaderHeader(line, directive, argument))

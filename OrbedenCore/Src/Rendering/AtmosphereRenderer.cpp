@@ -294,20 +294,20 @@ void AtmosphereRenderer::BindLutUniforms()
     const float32 atlasWidth = static_cast<float32>(quality.aerialWidth * quality.atlasColumns);
     const float32 atlasHeight = static_cast<float32>(quality.aerialHeight * (quality.aerialSlices / quality.atlasColumns));
 
-    backend->SetUniformFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
-    backend->SetUniformVector3("u_AtmosphereCameraUp", frame.cameraUp);
-    backend->SetUniformVector3("u_AtmosphereSunDirection", frame.sunDirection);
-    backend->SetUniformColor("u_AtmosphereSunRadiance", frame.sunRadiance);
-    backend->SetUniformFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
-    backend->SetUniformFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
-    backend->SetUniformMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
-    backend->SetUniformMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
-    backend->SetUniformColor("u_AtmosphereAtlas",
+    backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
+    backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
+    backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);
+    backend->GetParameters().SetColor("u_AtmosphereSunRadiance", frame.sunRadiance);
+    backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
+    backend->GetParameters().SetFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
+    backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
+    backend->GetParameters().SetMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
+    backend->GetParameters().SetColor("u_AtmosphereAtlas",
         { static_cast<float32>(quality.aerialWidth), static_cast<float32>(quality.aerialHeight),
           static_cast<float32>(quality.aerialSlices), static_cast<float32>(quality.atlasColumns) });
-    backend->SetUniformColor("u_AtmosphereTransSize",
+    backend->GetParameters().SetColor("u_AtmosphereTransSize",
         { static_cast<float32>(quality.transWidth), static_cast<float32>(quality.transHeight), 0.0f, 0.0f });
-    backend->SetUniformColor("u_AtmosphereSkySize",
+    backend->GetParameters().SetColor("u_AtmosphereSkySize",
         { static_cast<float32>(quality.skyWidth), static_cast<float32>(quality.skyHeight), 0.0f, 0.0f });
 }
 
@@ -329,19 +329,19 @@ bool AtmosphereRenderer::RenderLut(GpuRenderTargetID target, int32 width, int32 
     backend->BeginPass(passDesc);
 
     //查找表是线性数据，不需要深度测试、混合与剔除
-    backend->SetDepthTest(false);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(false);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().depthTest = false;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = false;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->BindShaderProgram(program);
-    backend->SetUniformInt("u_AtmosphereStepCount", stepCount);
-    backend->SetUniformInt("u_AtmosphereOutputKind", outputKind);
+    backend->GetParameters().SetInt("u_AtmosphereStepCount", stepCount);
+    backend->GetParameters().SetInt("u_AtmosphereOutputKind", outputKind);
     BindLutUniforms();
 
     //太阳透光率供图集与天空查询；生成它自己的那一趟不能采样自身
     if (target.id != transmittanceTarget.id && transmittanceTexture.IsValid())
     {
-        backend->SetUniformInt("u_AtmosphereTransmittanceTexture", 0);
+        backend->GetParameters().SetInt("u_AtmosphereTransmittanceTexture", 0);
         backend->BindTexture(0, transmittanceTexture);
     }
 
@@ -643,20 +643,20 @@ void AtmosphereRenderer::BindMaterialUniforms()
     if (!backend) return;
 
     const AtmosphereQualityDesc quality = GetQualityDesc(frame.quality);
-    backend->SetUniformInt("u_AtmosphereFogEnabled", frame.fogActive ? 1 : 0);
-    backend->SetUniformFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
-    backend->SetUniformFloat("u_AtmosphereMetersPerWorldUnit", frame.settings.metersPerWorldUnit);
-    backend->SetUniformFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
-    backend->SetUniformVector3("u_AtmosphereCameraUp", frame.cameraUp);
-    backend->SetUniformInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
-    backend->SetUniformInt("u_AtmosphereDenseFogMode", frame.denseFogDistanceMode ? 1 : 0);
-    backend->SetUniformFloat("u_AtmosphereDenseFogExtinction", frame.denseFogExtinction);
-    backend->SetUniformColor("u_AtmosphereDenseFogScattering", frame.denseFogScattering);
-    backend->SetUniformColor("u_AtmosphereDenseFogProfile", frame.denseFogProfile);
-    backend->SetUniformFloat("u_AtmosphereDenseFogTopFade", frame.denseFogTopFadeKm);
-    backend->SetUniformColor("u_AtmosphereViewport",
+    backend->GetParameters().SetInt("u_AtmosphereFogEnabled", frame.fogActive ? 1 : 0);
+    backend->GetParameters().SetFloat("u_AtmosphereMaxDistanceKm", frame.maxDistanceKm);
+    backend->GetParameters().SetFloat("u_AtmosphereMetersPerWorldUnit", frame.settings.metersPerWorldUnit);
+    backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
+    backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
+    backend->GetParameters().SetInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
+    backend->GetParameters().SetInt("u_AtmosphereDenseFogMode", frame.denseFogDistanceMode ? 1 : 0);
+    backend->GetParameters().SetFloat("u_AtmosphereDenseFogExtinction", frame.denseFogExtinction);
+    backend->GetParameters().SetColor("u_AtmosphereDenseFogScattering", frame.denseFogScattering);
+    backend->GetParameters().SetColor("u_AtmosphereDenseFogProfile", frame.denseFogProfile);
+    backend->GetParameters().SetFloat("u_AtmosphereDenseFogTopFade", frame.denseFogTopFadeKm);
+    backend->GetParameters().SetColor("u_AtmosphereViewport",
         { static_cast<float32>(frame.viewportWidth), static_cast<float32>(frame.viewportHeight), 0.0f, 0.0f });
-    backend->SetUniformColor("u_AtmosphereAtlas",
+    backend->GetParameters().SetColor("u_AtmosphereAtlas",
         { static_cast<float32>(quality.aerialWidth), static_cast<float32>(quality.aerialHeight),
           static_cast<float32>(quality.aerialSlices), static_cast<float32>(quality.atlasColumns) });
 }
@@ -673,12 +673,12 @@ void AtmosphereRenderer::BindMaterialTextures(int32 radianceSlot, int32 opticalD
 
     if (radianceSlot >= 0)
     {
-        backend->SetUniformInt("u_AtmosphereRadianceTexture", radianceSlot);
+        backend->GetParameters().SetInt("u_AtmosphereRadianceTexture", radianceSlot);
         backend->BindTexture(static_cast<uint32>(radianceSlot), radiance);
     }
     if (opticalDepthSlot >= 0)
     {
-        backend->SetUniformInt("u_AtmosphereOpticalDepthTexture", opticalDepthSlot);
+        backend->GetParameters().SetInt("u_AtmosphereOpticalDepthTexture", opticalDepthSlot);
         backend->BindTexture(static_cast<uint32>(opticalDepthSlot), opticalDepth);
     }
 }
@@ -692,33 +692,33 @@ bool AtmosphereRenderer::RenderSky()
     const AtmosphereQualityDesc quality = GetQualityDesc(frame.quality);
 
     //天空在主 Pass 内绘制，不写深度也不参与深度测试
-    backend->SetDepthTest(false);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(false);
+    backend->GetPipelineState().depthTest = false;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = false;
     backend->BindShaderProgram(skyPass);
-    backend->SetUniformFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
-    backend->SetUniformMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
-    backend->SetUniformMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
-    backend->SetUniformFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
-    backend->SetUniformVector3("u_AtmosphereCameraUp", frame.cameraUp);
-    backend->SetUniformVector3("u_AtmosphereSunDirection", frame.sunDirection);
-    backend->SetUniformColor("u_AtmosphereSunRadiance", frame.sunRadiance);
+    backend->GetParameters().SetFloat("u_AtmosphereAerosolDensity", frame.settings.aerosolDensity);
+    backend->GetParameters().SetMatrix4("u_AtmosphereInverseProjection", frame.inverseProjection);
+    backend->GetParameters().SetMatrix4("u_AtmosphereCameraWorldRotation", frame.cameraWorldRotation);
+    backend->GetParameters().SetFloat("u_AtmosphereCameraHeightKm", frame.cameraHeightKm);
+    backend->GetParameters().SetVector3("u_AtmosphereCameraUp", frame.cameraUp);
+    backend->GetParameters().SetVector3("u_AtmosphereSunDirection", frame.sunDirection);
+    backend->GetParameters().SetColor("u_AtmosphereSunRadiance", frame.sunRadiance);
     //地球底板由天空着色器按像素合成，查找表里不再烘焙
-    backend->SetUniformColor("u_AtmosphereGroundBackground", frame.groundBackground);
-    backend->SetUniformColor("u_AtmosphereSkySize",
+    backend->GetParameters().SetColor("u_AtmosphereGroundBackground", frame.groundBackground);
+    backend->GetParameters().SetColor("u_AtmosphereSkySize",
         { static_cast<float32>(quality.skyWidth), static_cast<float32>(quality.skyHeight), 0.0f, 0.0f });
-    backend->SetUniformColor("u_AtmosphereTransSize",
+    backend->GetParameters().SetColor("u_AtmosphereTransSize",
         { static_cast<float32>(quality.transWidth), static_cast<float32>(quality.transHeight), 0.0f, 0.0f });
-    backend->SetUniformInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
-    backend->SetUniformInt("u_AtmosphereDenseFogMode", frame.denseFogDistanceMode ? 1 : 0);
-    backend->SetUniformFloat("u_AtmosphereDenseFogExtinction", frame.denseFogExtinction);
-    backend->SetUniformColor("u_AtmosphereDenseFogScattering", frame.denseFogScattering);
-    backend->SetUniformColor("u_AtmosphereDenseFogProfile", frame.denseFogProfile);
-    backend->SetUniformFloat("u_AtmosphereDenseFogTopFade", frame.denseFogTopFadeKm);
+    backend->GetParameters().SetInt("u_AtmosphereDenseFogEnabled", frame.denseFogExtinction > 0.0f ? 1 : 0);
+    backend->GetParameters().SetInt("u_AtmosphereDenseFogMode", frame.denseFogDistanceMode ? 1 : 0);
+    backend->GetParameters().SetFloat("u_AtmosphereDenseFogExtinction", frame.denseFogExtinction);
+    backend->GetParameters().SetColor("u_AtmosphereDenseFogScattering", frame.denseFogScattering);
+    backend->GetParameters().SetColor("u_AtmosphereDenseFogProfile", frame.denseFogProfile);
+    backend->GetParameters().SetFloat("u_AtmosphereDenseFogTopFade", frame.denseFogTopFadeKm);
     //槽 0 是天空查找表，槽 1 是太阳盘查询需要的透光率
-    backend->SetUniformInt("u_AtmosphereSkyTexture", 0);
+    backend->GetParameters().SetInt("u_AtmosphereSkyTexture", 0);
     backend->BindTexture(0, skyTexture);
-    backend->SetUniformInt("u_AtmosphereTransmittanceTexture", 1);
+    backend->GetParameters().SetInt("u_AtmosphereTransmittanceTexture", 1);
     backend->BindTexture(1, transmittanceTexture);
     backend->BindVertexInput(quad.GetVertexInput());
     {
@@ -729,7 +729,7 @@ bool AtmosphereRenderer::RenderSky()
     //恢复主 Pass 基线
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
-    backend->SetDepthWrite(true);
-    backend->SetDepthTest(true);
+    backend->GetPipelineState().depthWrite = true;
+    backend->GetPipelineState().depthTest = true;
     return true;
 }

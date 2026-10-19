@@ -488,19 +488,19 @@ void UIRenderer::DrawCommand(const UIDrawCommand& command, const matrix4x4* matr
 
     backend->BindVertexInput(mesh->vertexInput);
     BindCommandProgram(command);
-    backend->SetUniformMatrix4("u_Model", matrices[command.matrixIndex]);
-    backend->SetUniformInt("u_MaterialKind", static_cast<int32>(command.materialKind));
-    backend->SetUniformFloat("u_DistanceRange", command.distanceRange);
-    backend->SetUniformColor("u_Tint", command.tint);
-    backend->SetUniformInt("u_CoverageEnabled", currentCoverage >= 0 ? 1 : 0);
+    backend->GetParameters().SetMatrix4("u_Model", matrices[command.matrixIndex]);
+    backend->GetParameters().SetInt("u_MaterialKind", static_cast<int32>(command.materialKind));
+    backend->GetParameters().SetFloat("u_DistanceRange", command.distanceRange);
+    backend->GetParameters().SetColor("u_Tint", command.tint);
+    backend->GetParameters().SetInt("u_CoverageEnabled", currentCoverage >= 0 ? 1 : 0);
     if (currentCoverage >= 0)
     {
         backend->BindTexture(CoverageSlot, coveragePool[currentCoverage].texture);
-        backend->SetUniformInt("u_Coverage", static_cast<int32>(CoverageSlot));
+        backend->GetParameters().SetInt("u_Coverage", static_cast<int32>(CoverageSlot));
     }
 
     backend->BindTexture(TextureSlot, texture);
-    backend->SetUniformInt("u_Texture", static_cast<int32>(TextureSlot));
+    backend->GetParameters().SetInt("u_Texture", static_cast<int32>(TextureSlot));
     backend->DrawIndexed(command.firstIndex, command.indexCount);
     ++drawCommandCount;
 }
@@ -542,15 +542,15 @@ void UIRenderer::PushCoverage(const UIDrawCommand& command, const matrix4x4* mat
     pass.clearColor = { 0.0f, 0.0f, 0.0f, 0.0f };
     backend->BeginPass(pass);
 
-    backend->SetDepthTest(false);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(false);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().depthTest = false;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = false;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->BindShaderProgram(coverageProgram);
-    backend->SetUniformMatrix4("u_ViewProjection", currentViewProjection);
-    backend->SetUniformMatrix4("u_Model", matrices[command.matrixIndex]);
+    backend->GetParameters().SetMatrix4("u_ViewProjection", currentViewProjection);
+    backend->GetParameters().SetMatrix4("u_Model", matrices[command.matrixIndex]);
     //覆盖率 Pass 的目标就是视口本身，原点为零。
-    backend->SetUniformVector3("u_ViewportSize", vector3(static_cast<float32>(coverage.width),
+    backend->GetParameters().SetVector3("u_ViewportSize", vector3(static_cast<float32>(coverage.width),
         static_cast<float32>(coverage.height), 0.0f));
 
     int32 channelMode = ChannelModeRectangle;
@@ -572,13 +572,13 @@ void UIRenderer::PushCoverage(const UIDrawCommand& command, const matrix4x4* mat
     }
 
     backend->BindTexture(TextureSlot, shapeTexture);
-    backend->SetUniformInt("u_ShapeTexture", static_cast<int32>(TextureSlot));
-    backend->SetUniformInt("u_ShapeChannelMode", channelMode);
-    backend->SetUniformInt("u_ParentCoverageEnabled", parent >= 0 ? 1 : 0);
+    backend->GetParameters().SetInt("u_ShapeTexture", static_cast<int32>(TextureSlot));
+    backend->GetParameters().SetInt("u_ShapeChannelMode", channelMode);
+    backend->GetParameters().SetInt("u_ParentCoverageEnabled", parent >= 0 ? 1 : 0);
     if (parent >= 0)
     {
         backend->BindTexture(CoverageSlot, coveragePool[parent].texture);
-        backend->SetUniformInt("u_ParentCoverage", static_cast<int32>(CoverageSlot));
+        backend->GetParameters().SetInt("u_ParentCoverage", static_cast<int32>(CoverageSlot));
     }
 
     const MeshGpu* shape = EnsureMesh(command.meshId, syncedFrame);
@@ -646,12 +646,12 @@ void UIRenderer::RestoreSurfaceState()
     clearNextPass = false;
     backend->BeginPass(pass);
 
-    backend->SetDepthTest(currentTarget.depthTest);
-    backend->SetDepthCompare(DepthCompare::LessEqual);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(true);
-    backend->SetBlendMode(BlendMode::PremultipliedAlpha);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().depthTest = currentTarget.depthTest;
+    backend->GetPipelineState().depthCompare = DepthCompare::LessEqual;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = true;
+    backend->GetPipelineState().blendMode = BlendMode::PremultipliedAlpha;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->BindShaderProgram(surfaceProgram);
     boundProgram = surfaceProgram;
     SetFrameUniforms();
@@ -660,10 +660,10 @@ void UIRenderer::RestoreSurfaceState()
 //矩阵与视口这些帧级 uniform：换绘制程序之后必须重设一次。
 void UIRenderer::SetFrameUniforms()
 {
-    backend->SetUniformMatrix4("u_ViewProjection", currentViewProjection);
-    backend->SetUniformVector3("u_ViewportSize", vector3(static_cast<float32>(currentTarget.width),
+    backend->GetParameters().SetMatrix4("u_ViewProjection", currentViewProjection);
+    backend->GetParameters().SetVector3("u_ViewportSize", vector3(static_cast<float32>(currentTarget.width),
         static_cast<float32>(currentTarget.height), 0.0f));
-    backend->SetUniformVector3("u_ViewportOrigin", vector3(static_cast<float32>(currentTarget.x),
+    backend->GetParameters().SetVector3("u_ViewportOrigin", vector3(static_cast<float32>(currentTarget.x),
         static_cast<float32>(currentTarget.y), 0.0f));
 }
 
@@ -688,20 +688,20 @@ void UIRenderer::BindCommandProgram(const UIDrawCommand& command)
             for (const GpuMaterialTextureBinding& binding : material->textureBindings)
             {
                 if (IsReservedUniform(binding.uniformName)) continue;
-                backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
-                backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+                backend->GetParameters().SetInt(binding.uniformName.c_str(), static_cast<int32>(slot));
+                backend->GetParameters().SetInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
                 backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
                 ++slot;
             }
             for (const GpuMaterialColorBinding& binding : material->colorBindings)
             {
                 if (IsReservedUniform(binding.uniformName)) continue;
-                backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
+                backend->GetParameters().SetColor(binding.uniformName.c_str(), binding.value);
             }
             for (const GpuMaterialFloatBinding& binding : material->floatBindings)
             {
                 if (IsReservedUniform(binding.uniformName)) continue;
-                backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
+                backend->GetParameters().SetFloat(binding.uniformName.c_str(), binding.value);
             }
         }
         return;

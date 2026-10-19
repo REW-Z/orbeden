@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Defines/types.h"
+#include "Rendering/ImGuiRenderer.h"
 #include "Runtime/EngineTypes.h"
 #include "Runtime/Native/NativeApiAbi.h"
 
@@ -126,6 +127,7 @@ private:
     IWindow* window = nullptr;
     GLFWwindow* glfwWindow = nullptr;
     ImGuiContext* context = nullptr;
+    ImGuiRenderer renderer;
     std::array<GLFWcursor*, ImGuiMouseCursor_COUNT> mouseCursors{};
     GLFWwindowfocusfun previousWindowFocusCallback = nullptr;
     GLFWcursorenterfun previousCursorEnterCallback = nullptr;

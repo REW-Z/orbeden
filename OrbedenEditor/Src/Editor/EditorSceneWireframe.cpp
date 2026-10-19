@@ -6,7 +6,6 @@
 #include "Rendering/RenderMath.h"
 #include "Runtime/World.h"
 
-#include <glad/gl.h>
 
 #include <algorithm>
 #include <cmath>
@@ -41,36 +40,7 @@ void main()
 }
 )";
 
-    //保存并恢复后端未缓存的光栅化状态
-    struct SavedRasterState
-    {
-        GLint polygonMode[2];
-        GLfloat lineWidth, polygonFactor, polygonUnits;
-        GLboolean lineSmooth, multisample, polygonOffsetLine;
 
-        //读取线框光栅化状态
-        SavedRasterState()
-        {
-            glGetIntegerv(GL_POLYGON_MODE, polygonMode);
-            glGetFloatv(GL_LINE_WIDTH, &lineWidth);
-            glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &polygonFactor);
-            glGetFloatv(GL_POLYGON_OFFSET_UNITS, &polygonUnits);
-            lineSmooth = glIsEnabled(GL_LINE_SMOOTH);
-            multisample = glIsEnabled(GL_MULTISAMPLE);
-            polygonOffsetLine = glIsEnabled(GL_POLYGON_OFFSET_LINE);
-        }
-
-        //恢复线框光栅化状态
-        ~SavedRasterState()
-        {
-            glPolygonMode(GL_FRONT_AND_BACK, polygonMode[0]);
-            glLineWidth(lineWidth);
-            glPolygonOffset(polygonFactor, polygonUnits);
-            if (lineSmooth) glEnable(GL_LINE_SMOOTH); else glDisable(GL_LINE_SMOOTH);
-            if (multisample) glEnable(GL_MULTISAMPLE); else glDisable(GL_MULTISAMPLE);
-            if (polygonOffsetLine) glEnable(GL_POLYGON_OFFSET_LINE); else glDisable(GL_POLYGON_OFFSET_LINE);
-        }
-    };
 }
 
 //创建线框 Shader
@@ -149,7 +119,7 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
     pass.height = camera.viewportHeight;
     pass.clearMode = overlay ? ClearMode::None : camera.clearMode;
     pass.clearColor = camera.clearColor;
-    renderBackend.SetDepthWrite(true);
+    renderBackend.GetPipelineState().depthWrite = true;
     renderBackend.BeginPass(pass);
     if (!PrepareResources(renderBackend))
     {
@@ -186,29 +156,25 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
     });
 
     //绘制一像素三角形边线
-    SavedRasterState saved;
-    renderBackend.SetDepthWrite(false);
-    renderBackend.SetDepthTest(overlay);
-    renderBackend.SetDepthCompare(DepthCompare::LessEqual);
-    renderBackend.SetBlend(false);
-    renderBackend.SetCullMode(CullMode::None);
-    renderBackend.SetPolygonOffset(false, 0.0f, 0.0f);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.0f);
-    glDisable(GL_LINE_SMOOTH);
-    glDisable(GL_MULTISAMPLE);
-    if (overlay)
-    {
-        glEnable(GL_POLYGON_OFFSET_LINE);
-        glPolygonOffset(-1.0f, -2.0f);
-    }
-    else glDisable(GL_POLYGON_OFFSET_LINE);
+    PipelineState saved = renderBackend.GetPipelineState();
+    renderBackend.GetPipelineState().depthWrite = false;
+    renderBackend.GetPipelineState().depthTest = overlay;
+    renderBackend.GetPipelineState().depthCompare = DepthCompare::LessEqual;
+    renderBackend.GetPipelineState().blend = false;
+    renderBackend.GetPipelineState().cull = CullMode::None;
+    renderBackend.GetPipelineState().depthBias = false;
+    renderBackend.GetPipelineState().depthBiasSlope = 0.0f;
+    renderBackend.GetPipelineState().depthBiasConstant = 0.0f;
+    renderBackend.GetPipelineState().polygonMode = PolygonMode::Line;
+    renderBackend.GetPipelineState().depthBias = overlay;
+    renderBackend.GetPipelineState().depthBiasSlope = -1.0f;
+    renderBackend.GetPipelineState().depthBiasConstant = -2.0f;
     renderBackend.BindShaderProgram(program);
-    renderBackend.SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+    renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
     if (instancedProgram.IsValid())
     {
         renderBackend.BindShaderProgram(instancedProgram);
-        renderBackend.SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        renderBackend.GetParameters().SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
     }
     for (usize start = 0; start < draws.size();)
     {
@@ -228,7 +194,7 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
                 renderBackend.BindVertexInput(mesh->vertexInput);
                 for (usize index = start; index < end; ++index)
                 {
-                    renderBackend.SetUniformMatrix4("u_Model", draws[index].model);
+                    renderBackend.GetParameters().SetMatrix4("u_Model", draws[index].model);
                     renderBackend.DrawIndexed(draw.indexStart, draw.indexCount);
                 }
             }
@@ -238,10 +204,11 @@ void EditorSceneWireframe::Render(RenderBackend& renderBackend, GpuResourceManag
 
     //恢复后续相机绘制使用的状态
     renderBackend.BindVertexInput({});
-    renderBackend.SetDepthWrite(true);
-    renderBackend.SetDepthTest(true);
-    renderBackend.SetDepthCompare(DepthCompare::Less);
-    renderBackend.SetCullMode(CullMode::Back);
+    renderBackend.GetPipelineState().depthWrite = true;
+    renderBackend.GetPipelineState().depthTest = true;
+    renderBackend.GetPipelineState().depthCompare = DepthCompare::Less;
+    renderBackend.GetPipelineState().cull = CullMode::Back;
+    renderBackend.GetPipelineState() = saved;
     renderBackend.EndPass();
 }
 

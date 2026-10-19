@@ -175,6 +175,7 @@ public:
     //反向记录来源和活动容器位置，CPU Material 只保存非拥有型指针。
     Material* source = nullptr;
     usize storageIndex = static_cast<usize>(-1);
+    uint64 bindingRevision = 0;
 
     const GpuShader* shader = nullptr;
 

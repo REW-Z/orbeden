@@ -17,6 +17,10 @@ class ForwardPipeline
 private:
     //后端接口，用于创建资源并提交绘制命令。
     RenderBackend* backend = nullptr;
+    //当前队列已提交的材质参数与纹理
+    const GpuMaterial* boundMaterial = nullptr;
+    uint64 boundMaterialRevision = 0;
+    uint32 boundMaterialProgram = 0;
 
     //管线内置 shader，分别用于阴影深度和天空盒绘制。
     Ref<Shader> shadowDepthShader;

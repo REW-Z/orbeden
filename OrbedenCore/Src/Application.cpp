@@ -133,6 +133,7 @@ bool Application::Initialize()
     }
 
     initialized = true;
+    AttachWindowInput();
     //Player 没有编辑器那步 SetSimulationEnabled，初始化完成即进入运行态
     world.SetRuntimeActive(simulationEnabled);
     return true;
@@ -447,7 +448,7 @@ void Application::Render(float deltaTime)
 void Application::Present()
 {
     if (!window) return;
-    window->Present();
+    if (RenderSystem* renderer = GetSystem<RenderSystem>()) renderer->Present();
 }
 
 //运行应用主循环
@@ -513,6 +514,8 @@ void Application::Quit()
     quitRequested = true;
     initialized = false;
 
+    WindowsTextInputDetail::Instance().Detach();
+    WindowsPointerInputDetail::Instance().Detach();
     ShutdownSystems();
     SetWindow(nullptr);
     Object::UnloadUnusedObjects(nullptr, 0);
@@ -639,39 +642,44 @@ void Application::SetMaxFixedStepsPerFrame(uint32 value)
     maxFixedStepsPerFrame = value;
 }
 
-//绑定外部创建的窗口
-void Application::SetWindow(IWindow* newWindow)
+//绑定外部窗口并切换渲染后端
+bool Application::SetWindow(IWindow* newWindow)
 {
-    if (window == newWindow) return;
+    if (window == newWindow) return true;
 
     RenderSystem* renderSystem = initialized ? GetSystem<RenderSystem>() : nullptr;
-    if (renderSystem) renderSystem->Shutdown();
-
+    //解除旧窗口上的系统输入钩子
+    WindowsTextInputDetail::Instance().Detach();
+    WindowsPointerInputDetail::Instance().Detach();
+    if (renderSystem && !renderSystem->ChangeWindow(newWindow))
+    {
+        AttachWindowInput();
+        return false;
+    }
     if (window)
     {
         window->SetResizeListener(nullptr);
     }
 
-    //平台输入挂到窗口上：文本输入法、触摸，共用同一条子类入口。
-    //拿不到原生句柄（例如无头模式）时只是没有这些能力，不影响其余部分。
     window = newWindow;
-    if (void* nativeHandle = newWindow ? newWindow->GetNativeHandle() : nullptr)
+    if (initialized) AttachWindowInput();
+    if (!window) return true;
+
+    window->SetResizeListener(this);
+    OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
+
+    return true;
+}
+
+//在 GUI 平台回调之上挂接输入法与指针处理器
+void Application::AttachWindowInput()
+{
+    if (void* nativeHandle = window ? window->GetNativeHandle() : nullptr)
     {
         if (!WindowsTextInputDetail::Instance().Attach(nativeHandle))
             Log::Warning("Application: text input hook is unavailable.");
         if (!WindowsPointerInputDetail::Instance().Attach(nativeHandle))
             Log::Warning("Application: pointer input hook is unavailable.");
-    }
-    if (!window) return;
-
-    window->SetResizeListener(this);
-    OnWindowResize(window->GetFramebufferWidth(), window->GetFramebufferHeight());
-
-    //重建窗口渲染后端
-    if (renderSystem && (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL || !renderSystem->Initialize(window)))
-    {
-        Log::Error("Application window does not provide a supported graphics API.");
-        RequestQuit();
     }
 }
 

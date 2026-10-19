@@ -49,8 +49,9 @@ OrbedenThirdParty.csproj 是唯一工程。Program.cs 负责下载与还原，Li
 | FreeType | 2.14.3 | FTL；关闭外部 ZLIB/BZIP2/PNG/HARFBUZZ/BROTLI |
 | msdfgen | 1.13 | core-only；关闭 standalone、Skia、OpenMP、SVG/PNG |
 | GLFW | 3.4 | 动态库；不建示例、文档与测试 |
-| Dear ImGui | 1.92.8 | 静态库；后端通过 Orbeden 包装使用 GLAD |
-| GLAD | 2.0.8 | 使用生成器内置规范，GL 4.3 core、零扩展、loader |
+| Dear ImGui | 1.92.8 | 静态库；只构建 GLFW 输入后端，绘制由公共 ImGuiRenderer 提交 |
+| GLAD | 2.0.8 | 使用生成器内置规范，GL 4.3 core（零扩展）和 Vulkan 1.3（KHR_surface / KHR_swapchain）、loader |
+| glslang | 15.1.0 | GLSL 前端与 SPIR-V 生成器；关闭 HLSL、外部优化器、工具和上游测试 |
 | cgltf | 1.15 | 单头库，实现位于 BuildAdapters/cgltf_impl.c |
 | stb_image | 2.30 | 固定提交，选 MIT，实现位于 BuildAdapters/stb_image_impl.c |
 | PhysX | 5.9.0 | 上游官方生成器；静态库、CPU-only、Ninja |
@@ -59,7 +60,7 @@ OrbedenThirdParty.csproj 是唯一工程。Program.cs 负责下载与还原，Li
 | CPython embedded | 3.13.9，Windows x64 | 自动还原到 vendor/python-runtime，仅运行上游 GLAD 生成器 |
 | Cubic 11（俐方體11號） | 1.500，锁文件固定提交 | 字体字节不修改，OFL-1.1；默认 Bitmap 导入 |
 
-GLFW 的全局状态由 glfw3.dll 统一持有。ImGui 和 GLAD 按 dllexport 编译，由 OrbedenCore.dll 导出，编辑器从导入库引用；保留现有进程内共享状态的行为。运行时使用 /MDd 或 /MD。
+GLFW 的全局状态由 glfw3.dll 统一持有。ImGui 按 dllexport 编译，由 OrbedenCore.dll 导出，编辑器从导入库引用同一组上下文。GLAD 的 OpenGL / Vulkan 入口表由 Core 后端持有，上层不引用原生图形入口。运行时使用 /MDd 或 /MD。
 
 ## 校验、增量和离线
 

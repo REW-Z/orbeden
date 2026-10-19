@@ -2,10 +2,15 @@
 
 #include "Log/Log.h"
 #include "Profiler/Profiler.h"
-#include "Rendering/DrawBatchBuilder.h"
+#include "Rendering/DepthDistributionShader.h"
+#include "Rendering/VertexLayout.h"
+#include "Platform/GlfwWindow.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 #include <glad/gl.h>
 
 #include <cstring>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -48,7 +53,7 @@ namespace
     //GLsizei 能表达的最大元素或实例数量上界
     constexpr uint32 MaxGlSizei = 0x7FFFFFFFu;
 
-    uint32 CreateOpenGLBuffer(GLenum target, const GpuBufferDesc& desc)
+    uint32 CreateOpenGLBuffer(const GpuBufferDesc& desc)
     {
         if (desc.size == 0) return 0;
         //静态缓冲必须一次给足数据；流式缓冲允许只按容量分配，之后由流式上传填充。
@@ -56,10 +61,12 @@ namespace
 
         GLuint id = 0;
         glGenBuffers(1, &id);
-        glBindBuffer(target, id);
-        glBufferData(target, static_cast<GLsizeiptr>(desc.size), desc.data,
+        GLint previous = 0;
+        glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &previous);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, id);
+        glBufferData(GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>(desc.size), desc.data,
             desc.usage == GpuBufferUsage::Stream ? GL_STREAM_DRAW : GL_STATIC_DRAW);
-        glBindBuffer(target, 0);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<uint32>(previous));
         return id;
     }
 
@@ -151,6 +158,8 @@ namespace
 bool OpenGLRenderBackend::Initialize(IWindow* window)
 {
     if (!context.Initialize(window)) return false;
+    this->window = window;
+    surfaces[0] = window;
 
     std::string rendererInfo = "OpenGL renderer: ";
     rendererInfo += ToOpenGLString(glGetString(GL_VENDOR));
@@ -170,6 +179,7 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
     glActiveTexture(GL_TEXTURE0);
 
     currentShaderProgram = GpuShaderProgramID();
+    rasterStateValid = false;
     currentVertexInput = GpuVertexInputID();
     currentTextureSlot = 0;
     depthTestEnabled = true;
@@ -210,15 +220,18 @@ bool OpenGLRenderBackend::Initialize(IWindow* window)
 
 void OpenGLRenderBackend::Shutdown()
 {
+    if (!window) return;
+    SetSurface({});
+    for (auto& [surface, arrays] : vertexArrays)
+    {
+        SetSurface({ surface });
+        for (auto& [input, array] : arrays) glDeleteVertexArrays(1, &array);
+    }
+    vertexArrays.clear(); vertexInputDescriptions.clear();
+    SetSurface({});
     while (!depthDistributions.empty()) DeleteDepthDistribution({ depthDistributions.begin()->first });
     DeleteShaderProgram(depthDistributionShader);
     depthDistributionShader = {};
-    DeleteShaderProgram(debugLineShader);
-    debugLineShader = {};
-    if (debugLineVertexArray) glDeleteVertexArrays(1, &debugLineVertexArray);
-    if (debugLineVertexBuffer) glDeleteBuffers(1, &debugLineVertexBuffer);
-    debugLineVertexArray = 0;
-    debugLineVertexBuffer = 0;
     for (auto& pair : renderTargetColorAttachments)
     {
         GLuint framebuffer = pair.first;
@@ -227,9 +240,17 @@ void OpenGLRenderBackend::Shutdown()
         {
             GLuint texture = pair.second;
             glDeleteTextures(1, &texture);
+            ownedTextures.erase(texture);
+            textureInfo.erase(texture);
         }
     }
 
+    for (uint32 texture : ownedTextures) glDeleteTextures(1, &texture);
+    ownedTextures.clear(); textureInfo.clear();
+    for (const auto& [id, capacity] : vertexBufferCapacities) glDeleteBuffers(1, &id);
+    for (const auto& [id, capacity] : indexBufferCapacities) glDeleteBuffers(1, &id);
+    while (!programUniforms.empty()) DeleteShaderProgram({ programUniforms.begin()->first });
+    renderTargetFormats.clear();
     renderTargetColorAttachments.clear();
     indexBufferCounts.clear();
     vertexBufferCapacities.clear();
@@ -252,29 +273,51 @@ void OpenGLRenderBackend::Shutdown()
     boundInstanceBuffer = GpuVertexBufferID();
     boundInstanceOffset = 0;
     instancingSupported = false;
+    surfaces.clear(); pendingSurfaces.clear();
+    window = nullptr;
 }
 
 void OpenGLRenderBackend::BeginFrame()
 {
-    //每帧基线是普通 Alpha 混合，避免上一帧的加法方程污染天空盒、描边与 GUI。
-    SetBlendMode(BlendMode::Alpha);
+    GetPipelineState().blendMode = BlendMode::Alpha;
 }
 
 void OpenGLRenderBackend::EndFrame()
 {
 }
 
-//仅在录制期间分段统计 GPU 完成等待
-void OpenGLRenderBackend::ProfileGpuWait(const char* name)
+//等待已提交 GPU 工作完成
+void OpenGLRenderBackend::WaitForIdle()
 {
-    if (!Profiler::IsCapturing()) return;
-    PROFILE(name);
     glFinish();
+}
+
+//提交主窗口显示
+void OpenGLRenderBackend::Present()
+{
+    if (Profiler::IsCapturing()) WaitForIdle();
+    for (uint32 id : pendingSurfaces)
+    {
+        auto platform = dynamic_cast<GlfwWindow*>(surfaces.at(id));
+        glfwMakeContextCurrent(platform->GetGlfwWindow());
+        glfwSwapBuffers(platform->GetGlfwWindow());
+    }
+    pendingSurfaces.clear();
+    SetSurface({});
+    pendingSurfaces.clear();
+}
+
+//设置像素裁剪区域
+void OpenGLRenderBackend::SetScissor(bool enabled, int32 x, int32 y, int32 width, int32 height)
+{
+    if (enabled) { glEnable(GL_SCISSOR_TEST); glScissor(x, y, width, height); }
+    else glDisable(GL_SCISSOR_TEST);
 }
 
 void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
 {
     PROFILE("Render/BeginPass");
+    pendingSurfaces.insert(currentSurface);
     glBindFramebuffer(GL_FRAMEBUFFER, desc.renderTarget.id);
     ProfileGpuWait("Render/GpuWait/BindFramebuffer");
     glViewport(desc.x, desc.y, desc.width, desc.height);
@@ -315,7 +358,7 @@ void OpenGLRenderBackend::EndPass()
 
 GpuVertexBufferID OpenGLRenderBackend::CreateVertexBuffer(const GpuBufferDesc& desc)
 {
-    uint32 id = CreateOpenGLBuffer(GL_ARRAY_BUFFER, desc);
+    uint32 id = CreateOpenGLBuffer(desc);
     if (id != 0) vertexBufferCapacities[id] = desc.size;
     return { id };
 }
@@ -329,7 +372,7 @@ void OpenGLRenderBackend::DeleteVertexBuffer(GpuVertexBufferID id)
 
 GpuIndexBufferID OpenGLRenderBackend::CreateIndexBuffer(const GpuBufferDesc& desc)
 {
-    uint32 id = CreateOpenGLBuffer(GL_ARRAY_BUFFER, desc);
+    uint32 id = CreateOpenGLBuffer(desc);
     if (id != 0)
     {
         indexBufferCounts[id] = static_cast<uint32>(desc.size / sizeof(uint32));
@@ -345,70 +388,50 @@ void OpenGLRenderBackend::DeleteIndexBuffer(GpuIndexBufferID id)
     DeleteOpenGLBuffer(id.id);
 }
 
+//创建共享顶点输入描述
 GpuVertexInputID OpenGLRenderBackend::CreateVertexInput(const GpuVertexInputDesc& desc)
 {
-    if (!desc.vertexBuffer.IsValid() || !desc.indexBuffer.IsValid() || desc.stride == 0) return GpuVertexInputID();
+    if (!desc.vertexBuffer.IsValid() || !desc.indexBuffer.IsValid() || !desc.stride) return {};
+    auto count = indexBufferCounts.find(desc.indexBuffer.id);
+    if (count == indexBufferCounts.end()) return {};
+    uint32 id = nextVertexInput++;
+    vertexInputDescriptions[id] = desc;
+    vertexInputIndexBuffers[id] = desc.indexBuffer.id;
+    vertexInputIndexCounts[id] = count->second;
+    vertexInputLayouts[id] = desc.layout;
+    return { id };
+}
 
-    auto indexCountIt = indexBufferCounts.find(desc.indexBuffer.id);
-    if (indexCountIt == indexBufferCounts.end() || indexCountIt->second == 0) return GpuVertexInputID();
-
-    //展开顶点固定 5 个属性，最大的属性在偏移 44、长 16 字节，步长必须容得下整条记录。
-    if (desc.layout == GpuVertexLayout::Expanded && desc.stride < static_cast<uint32>(sizeof(float32) * 15))
-    {
-        Log::Error("OpenGL vertex input creation failed: expanded layout stride is too small.");
-        return GpuVertexInputID();
-    }
-
-    GLuint id = 0;
+//创建当前窗口的原生顶点输入
+uint32 OpenGLRenderBackend::CreateVertexArray(const GpuVertexInputDesc& desc)
+{
+    uint32 id;
     glGenVertexArrays(1, &id);
     glBindVertexArray(id);
     glBindBuffer(GL_ARRAY_BUFFER, desc.vertexBuffer.id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, desc.indexBuffer.id);
+    for (const VertexAttribute& attribute : GetVertexLayout(desc.layout).attributes)
+    {
+        if (attribute.binding != 0) continue;
+        bool packed = attribute.format == VertexAttributeFormat::UNorm8x4;
+        int32 components = attribute.format == VertexAttributeFormat::Float2 ? 2 : attribute.format == VertexAttributeFormat::Float3 ? 3 : 4;
+        glVertexAttribPointer(attribute.location, components, packed ? GL_UNSIGNED_BYTE : GL_FLOAT, packed ? GL_TRUE : GL_FALSE,
+            desc.stride, reinterpret_cast<void*>(static_cast<uintptr>(attribute.offset)));
+        glEnableVertexAttribArray(attribute.location);
+    }
+    return id;
+}
 
-    if (desc.layout == GpuVertexLayout::Expanded)
-    {
-        //展开顶点已经是世界空间，只读自己的顶点缓冲，不引用实例缓冲。
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(12));
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(24));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(32));
-        glEnableVertexAttribArray(3);
-        glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(44));
-        glEnableVertexAttribArray(4);
-    }
-    else if (desc.layout == GpuVertexLayout::UI)
-    {
-        //UI 顶点：位置、UV、顶点色，与 UIVertex 的内存布局一一对应。
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(12));
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(20));
-        glEnableVertexAttribArray(2);
-    }
-    else
-    {
-        //网格顶点属性。实例布局在这里只建立这一半，实例属性留给 BindInstanceBuffer，
-        //普通 Mesh 布局也不会被 divisor 污染：两种布局使用各自的 VAO。
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(0));
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 3));
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 6));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, desc.stride, reinterpret_cast<void*>(sizeof(float32) * 8));
-        glEnableVertexAttribArray(3);
-    }
-
-    glBindVertexArray(currentVertexInput.id);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    vertexInputIndexBuffers[id] = desc.indexBuffer.id;
-    vertexInputIndexCounts[id] = indexCountIt->second;
-    vertexInputLayouts[id] = desc.layout;
-    return { id };
+//获取当前窗口的原生顶点输入
+uint32 OpenGLRenderBackend::GetVertexArray(GpuVertexInputID id)
+{
+    if (!id.IsValid()) return 0;
+    auto& arrays = vertexArrays[currentSurface];
+    auto found = arrays.find(id.id);
+    if (found != arrays.end()) return found->second;
+    uint32 array = CreateVertexArray(vertexInputDescriptions.at(id.id));
+    arrays.emplace(id.id, array);
+    return array;
 }
 
 void OpenGLRenderBackend::DeleteVertexInput(GpuVertexInputID id)
@@ -425,26 +448,42 @@ void OpenGLRenderBackend::DeleteVertexInput(GpuVertexInputID id)
     vertexInputIndexBuffers.erase(id.id);
     vertexInputIndexCounts.erase(id.id);
     vertexInputLayouts.erase(id.id);
-    GLuint vertexInput = id.id;
-    glDeleteVertexArrays(1, &vertexInput);
+    uint32 previousSurface = currentSurface;
+    for (auto& [surface, arrays] : vertexArrays)
+    {
+        auto found = arrays.find(id.id);
+        if (found == arrays.end()) continue;
+        SetSurface({ surface });
+        glDeleteVertexArrays(1, &found->second);
+        arrays.erase(found);
+    }
+    vertexInputDescriptions.erase(id.id);
+    SetSurface({ previousSurface });
 }
 
 GpuTextureID OpenGLRenderBackend::CreateTexture(const GpuTextureDesc& desc)
 {
-    if (desc.width <= 0 || desc.height <= 0 || !desc.pixels) return GpuTextureID();
+    if (desc.width <= 0 || desc.height <= 0 || !desc.pixels || (desc.channels != 1 && desc.channels != 3 && desc.channels != 4)) return GpuTextureID();
 
     GLenum format = ToTextureFormat(desc.channels);
     //像素字节保持不变，sRGB 内部格式让采样阶段由硬件解码到线性。
     GLenum internalFormat = desc.srgb ? ToSrgbTextureFormat(desc.channels) : format;
     GLuint id = 0;
     glGenTextures(1, &id);
+    ownedTextures.insert(id);
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, desc.generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     GLint wrap = desc.clampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+    GLint unpackAlignment;
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, desc.width, desc.height, 0, format, GL_UNSIGNED_BYTE, desc.pixels);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
+    if (desc.generateMipmaps) glGenerateMipmap(GL_TEXTURE_2D);
+    textureInfo[id] = { desc.width, desc.height, desc.channels, desc.generateMipmaps };
     glBindTexture(GL_TEXTURE_2D, 0);
     boundTexture2Ds[currentTextureSlot] = 0;
     return { id };
@@ -457,6 +496,17 @@ bool OpenGLRenderBackend::UploadTextureRegion(GpuTextureID id, int32 x, int32 y,
     if (!id.IsValid() || !pixels || width <= 0 || height <= 0 || rowStride <= 0) return false;
     if (channels != 1 && channels != 3 && channels != 4) return false;
     if (rowStride < width * channels) return false;
+
+    auto info = textureInfo.find(id.id);
+    if (info == textureInfo.end() || info->second.channels != channels || x < 0 || y < 0 || x + width > info->second.width || y + height > info->second.height) return false;
+    List<uint8> packed;
+    if (rowStride % channels != 0)
+    {
+        packed.resize(static_cast<usize>(width) * height * channels);
+        for (int32 row = 0; row < height; ++row)
+            std::memcpy(packed.data() + static_cast<usize>(row) * width * channels, pixels + static_cast<usize>(row) * rowStride, static_cast<usize>(width) * channels);
+        pixels = packed.data(); rowStride = width * channels;
+    }
 
     GLint previousRowLength = 0;
     GLint previousAlignment = 0;
@@ -476,6 +526,7 @@ bool OpenGLRenderBackend::UploadTextureRegion(GpuTextureID id, int32 x, int32 y,
     uint32 previousTexture = boundTexture2Ds[currentTextureSlot];
     BindTexture2D(currentTextureSlot, id.id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, ToTextureFormat(channels), GL_UNSIGNED_BYTE, pixels);
+    if (info->second.mipmaps) glGenerateMipmap(GL_TEXTURE_2D);
     BindTexture2D(currentTextureSlot, previousTexture);
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, previousRowLength);
@@ -505,6 +556,8 @@ void OpenGLRenderBackend::DeleteTexture(GpuTextureID id)
     InvalidateTexture2D(id.id);
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
+    ownedTextures.erase(texture);
+    textureInfo.erase(texture);
 }
 
 GpuDepthTextureID OpenGLRenderBackend::CreateDepthTexture(const GpuDepthTextureDesc& desc)
@@ -520,6 +573,7 @@ GpuDepthTextureID OpenGLRenderBackend::CreateDepthTexture(const GpuDepthTextureD
 
     GLuint id = 0;
     glGenTextures(1, &id);
+    ownedTextures.insert(id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -538,6 +592,8 @@ void OpenGLRenderBackend::DeleteDepthTexture(GpuDepthTextureID id)
     InvalidateTexture2D(id.id);
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
+    ownedTextures.erase(texture);
+    textureInfo.erase(texture);
 }
 
 GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc& desc)
@@ -549,6 +605,7 @@ GpuCubeTextureID OpenGLRenderBackend::CreateCubeTexture(const GpuCubeTextureDesc
     GLenum internalFormat = desc.srgb ? ToSrgbTextureFormat(desc.channels) : format;
     GLuint id = 0;
     glGenTextures(1, &id);
+    ownedTextures.insert(id);
     glBindTexture(GL_TEXTURE_CUBE_MAP, id);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, desc.generateMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -582,6 +639,8 @@ void OpenGLRenderBackend::DeleteCubeTexture(GpuCubeTextureID id)
 
     GLuint texture = id.id;
     glDeleteTextures(1, &texture);
+    ownedTextures.erase(texture);
+    textureInfo.erase(texture);
 }
 
 GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetDesc& desc)
@@ -597,6 +656,7 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     if (!desc.depthOnly)
     {
         glGenTextures(1, &colorTexture);
+        ownedTextures.insert(colorTexture);
         glBindTexture(GL_TEXTURE_2D, colorTexture);
         GLint colorFilter = desc.linearColorFilter ? GL_LINEAR : GL_NEAREST;
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, colorFilter);
@@ -609,6 +669,9 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
         boundTexture2Ds[currentTextureSlot] = 0;
     }
 
+    GLint previousRead = 0, previousDraw = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousRead);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousDraw);
     GLuint id = 0;
     glGenFramebuffers(1, &id);
     glBindFramebuffer(GL_FRAMEBUFFER, id);
@@ -626,12 +689,13 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
     }
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, previousRead);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previousDraw);
     if (status != GL_FRAMEBUFFER_COMPLETE)
     {
         Log::Error("OpenGL framebuffer creation failed.");
         glDeleteFramebuffers(1, &id);
-        if (colorTexture != 0) glDeleteTextures(1, &colorTexture);
+        if (colorTexture != 0) { glDeleteTextures(1, &colorTexture); ownedTextures.erase(colorTexture); }
         return GpuRenderTargetID();
     }
 
@@ -644,8 +708,11 @@ GpuRenderTargetID OpenGLRenderBackend::CreateRenderTarget(const GpuRenderTargetD
 void OpenGLRenderBackend::AttachRenderTargetDepthTexture(GpuRenderTargetID target, GpuDepthTextureID depthTexture)
 {
     if (!target.IsValid()) return;
-    glBindFramebuffer(GL_FRAMEBUFFER, target.id);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture.id, 0);
+    GLint previous = 0;
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previous);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.id);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture.id, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previous);
 }
 
 void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
@@ -663,6 +730,7 @@ void OpenGLRenderBackend::DeleteRenderTarget(GpuRenderTargetID id)
         {
             InvalidateTexture2D(colorTexture);
             glDeleteTextures(1, &colorTexture);
+            ownedTextures.erase(colorTexture);
         }
         renderTargetColorAttachments.erase(it);
     }
@@ -706,6 +774,9 @@ bool OpenGLRenderBackend::CopyRenderTarget(const GpuRenderTargetCopyDesc& desc)
         }
     }
 
+    GLint previousRead = 0, previousDraw = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousRead);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousDraw);
     //拷贝颜色和深度附件
     glBindFramebuffer(GL_READ_FRAMEBUFFER, desc.sourceRenderTarget.id);
     glReadBuffer(desc.sourceRenderTarget.IsValid() ? GL_COLOR_ATTACHMENT0 : GL_BACK);
@@ -727,16 +798,9 @@ bool OpenGLRenderBackend::CopyRenderTarget(const GpuRenderTargetCopyDesc& desc)
 
     GLenum error = glGetError();
 
-    //恢复主 Pass 帧缓冲
-    glBindFramebuffer(GL_FRAMEBUFFER, desc.sourceRenderTarget.id);
-    if (desc.sourceRenderTarget.IsValid())
-    {
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-    }
-    else
-    {
-        glReadBuffer(GL_BACK);
-    }
+    //恢复调用方的附件绑定
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, previousRead);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, previousDraw);
 
     if (error == GL_NO_ERROR) return true;
 
@@ -775,6 +839,7 @@ GpuShaderProgramID OpenGLRenderBackend::CreateShaderProgram(const GpuShaderProgr
         return GpuShaderProgramID();
     }
 
+    programUniforms.try_emplace(program);
     return { program };
 }
 
@@ -791,9 +856,10 @@ void OpenGLRenderBackend::DeleteShaderProgram(GpuShaderProgramID id)
 
     glDeleteProgram(id.id);
     programUniforms.erase(id.id);
+    ReleaseShaderParameters(id);
 }
 
-void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
+void OpenGLRenderBackend::OnBindShaderProgram(GpuShaderProgramID id)
 {
     if (currentShaderProgram.id == id.id) return;
 
@@ -803,7 +869,7 @@ void OpenGLRenderBackend::BindShaderProgram(GpuShaderProgramID id)
 }
 
 //查询指定程序实际使用的 uniform
-bool OpenGLRenderBackend::HasShaderUniform(GpuShaderProgramID program, const char* name)
+bool OpenGLRenderBackend::HasShaderParameter(GpuShaderProgramID program, const char* name)
 {
     const UniformState* state = GetUniformState(program, name);
     return state && state->location >= 0;
@@ -817,7 +883,7 @@ void OpenGLRenderBackend::BindVertexInput(GpuVertexInputID id)
     //实例 attribute 属于 VAO 自身状态，换 VAO 后原来的实例缓冲只对旧 VAO 有效。
     boundInstanceBuffer = GpuVertexBufferID();
     boundInstanceOffset = 0;
-    glBindVertexArray(id.id);
+    glBindVertexArray(GetVertexArray(id));
 }
 
 void OpenGLRenderBackend::BindTexture(uint32 slot, GpuTextureID id)
@@ -904,19 +970,6 @@ void OpenGLRenderBackend::SetDepthCompare(DepthCompare compare)
 
     glDepthFunc(compare == DepthCompare::LessEqual ? GL_LEQUAL : GL_LESS);
     depthCompare = compare;
-}
-
-void OpenGLRenderBackend::SetPolygonOffset(bool enabled, float32 factor, float32 units)
-{
-    if (polygonOffsetEnabled != enabled)
-    {
-        if (enabled) glEnable(GL_POLYGON_OFFSET_FILL);
-        else glDisable(GL_POLYGON_OFFSET_FILL);
-        polygonOffsetEnabled = enabled;
-    }
-
-    //偏移量每帧都可能不同，启用时每次都提交
-    if (enabled) glPolygonOffset(factor, units);
 }
 
 void OpenGLRenderBackend::SetDepthWrite(bool enabled)
@@ -1010,15 +1063,8 @@ void OpenGLRenderBackend::DrawIndexed(uint32 indexStart, uint32 indexCount)
     }
 
     const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset);
-}
-
-//实例布局的每条实例记录字节数
-uint32 OpenGLRenderBackend::GetInstanceRecordSize(GpuVertexLayout layout)
-{
-    if (layout == GpuVertexLayout::InstancedMesh) return static_cast<uint32>(sizeof(GpuMeshInstance));
-    if (layout == GpuVertexLayout::InstancedTrail) return static_cast<uint32>(sizeof(GpuTrailInstance));
-    return 0;
+    ApplyDrawState();
+    glDrawElements(GetPipelineState().topology == PrimitiveTopology::Lines ? GL_LINES : GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset);
 }
 
 //实例化绘制的范围校验
@@ -1055,7 +1101,7 @@ bool OpenGLRenderBackend::ValidateInstancedRange(uint32 indexStart, uint32 index
     auto layoutIt = vertexInputLayouts.find(currentVertexInput.id);
     if (layoutIt != vertexInputLayouts.end()) layout = layoutIt->second;
 
-    uint32 recordSize = GetInstanceRecordSize(layout);
+    uint32 recordSize = GetVertexLayout(layout).instanceStride;
     if (recordSize != 0)
     {
         if (!boundInstanceBuffer.IsValid())
@@ -1094,7 +1140,8 @@ void OpenGLRenderBackend::DrawIndexedInstanced(uint32 indexStart, uint32 indexCo
     if (!ValidateInstancedRange(indexStart, indexCount, instanceCount)) return;
 
     const void* offset = reinterpret_cast<const void*>(static_cast<uintptr>(indexStart) * sizeof(uint32));
-    glDrawElementsInstanced(GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset,
+    ApplyDrawState();
+    glDrawElementsInstanced(GetPipelineState().topology == PrimitiveTopology::Lines ? GL_LINES : GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT, offset,
         static_cast<GLsizei>(instanceCount));
 }
 
@@ -1211,7 +1258,7 @@ bool OpenGLRenderBackend::BindInstanceBuffer(GpuVertexBufferID id, usize byteOff
     auto layoutIt = vertexInputLayouts.find(currentVertexInput.id);
     if (layoutIt != vertexInputLayouts.end()) layout = layoutIt->second;
 
-    uint32 recordSize = GetInstanceRecordSize(layout);
+    uint32 recordSize = GetVertexLayout(layout).instanceStride;
     if (recordSize == 0)
     {
         Log::Error("OpenGL instance buffer bind skipped: the bound vertex input is not an instanced layout.");
@@ -1234,60 +1281,14 @@ bool OpenGLRenderBackend::BindInstanceBuffer(GpuVertexBufferID id, usize byteOff
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previousBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, id.id);
 
-    if (layout == GpuVertexLayout::InstancedMesh)
+    for (const VertexAttribute& attribute : GetVertexLayout(layout).attributes)
     {
-        //模型四列，零平移偏移在 OrbedenGetModel 里由填充列补足。
-        for (uint32 column = 0; column < 4; ++column)
-        {
-            uint32 location = 5 + column;
-            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
-                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + column * 16)));
-            glEnableVertexAttribArray(location);
-            glVertexAttribDivisor(location, 1);
-        }
-        //法线三列，每列补齐到 vec4。
-        for (uint32 column = 0; column < 3; ++column)
-        {
-            uint32 location = 9 + column;
-            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
-                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 64 + column * 16)));
-            glEnableVertexAttribArray(location);
-            glVertexAttribDivisor(location, 1);
-        }
-        glVertexAttribPointer(12, 4, GL_FLOAT, GL_FALSE, recordSize,
-            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 112)));
-        glEnableVertexAttribArray(12);
-        glVertexAttribDivisor(12, 1);
-        glVertexAttribPointer(13, 4, GL_FLOAT, GL_FALSE, recordSize,
-            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 128)));
-        glEnableVertexAttribArray(13);
-        glVertexAttribDivisor(13, 1);
+        if (attribute.binding != 1) continue;
+        glVertexAttribPointer(attribute.location, 4, GL_FLOAT, GL_FALSE, recordSize,
+            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + attribute.offset)));
+        glEnableVertexAttribArray(attribute.location);
+        glVertexAttribDivisor(attribute.location, 1);
     }
-    else
-    {
-        //拖尾：四个角点、两端颜色、uv 区间。
-        for (uint32 corner = 0; corner < 4; ++corner)
-        {
-            uint32 location = 5 + corner;
-            glVertexAttribPointer(location, 4, GL_FLOAT, GL_FALSE, recordSize,
-                reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + corner * 16)));
-            glEnableVertexAttribArray(location);
-            glVertexAttribDivisor(location, 1);
-        }
-        glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, recordSize,
-            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 64)));
-        glEnableVertexAttribArray(9);
-        glVertexAttribDivisor(9, 1);
-        glVertexAttribPointer(10, 4, GL_FLOAT, GL_FALSE, recordSize,
-            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 80)));
-        glEnableVertexAttribArray(10);
-        glVertexAttribDivisor(10, 1);
-        glVertexAttribPointer(11, 4, GL_FLOAT, GL_FALSE, recordSize,
-            reinterpret_cast<void*>(static_cast<uintptr>(byteOffset + 96)));
-        glEnableVertexAttribArray(11);
-        glVertexAttribDivisor(11, 1);
-    }
-
     glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(previousBuffer));
     boundInstanceBuffer = id;
     boundInstanceOffset = byteOffset;
@@ -1354,85 +1355,14 @@ int32 OpenGLRenderBackend::UpdateUniformValue(const char* name, UniformValueType
 }
 
 /// <summary>绘制不受光照影响的调试线，使用相机矩阵进行三维裁剪。</summary>
-void OpenGLRenderBackend::DrawLines(const List<DebugLine>& lines, const matrix4x4& viewProjection, uint32 layerMask)
-{
-    if (lines.empty()) return;
-    if (!debugLineShader.IsValid())
-    {
-        GpuShaderProgramDesc desc;
-        desc.vertexSource = "#version 430 core\nlayout(location=0) in vec3 a_Position; uniform mat4 u_ViewProjection; void main(){gl_Position=u_ViewProjection*vec4(a_Position,1.0);}";
-        desc.fragmentSource = "#version 430 core\nuniform vec4 u_Color; out vec4 FragColor; void main(){FragColor=u_Color;}";
-        debugLineShader = CreateShaderProgram(desc);
-        if (!debugLineShader.IsValid()) return;
-        glGenVertexArrays(1, &debugLineVertexArray);
-        glGenBuffers(1, &debugLineVertexBuffer);
-        glBindVertexArray(debugLineVertexArray);
-        glBindBuffer(GL_ARRAY_BUFFER, debugLineVertexBuffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * 2, nullptr, GL_STREAM_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vector3), nullptr);
-        glEnableVertexAttribArray(0);
-    }
-
-    BindShaderProgram(debugLineShader);
-    SetUniformMatrix4("u_ViewProjection", viewProjection);
-    SetDepthWrite(false);
-    SetBlend(true);
-    SetCullMode(CullMode::None);
-    glBindVertexArray(debugLineVertexArray);
-    glBindBuffer(GL_ARRAY_BUFFER, debugLineVertexBuffer);
-    for (const DebugLine& line : lines)
-    {
-        if ((line.drawLayer & layerMask) == 0) continue;
-        const vector3 points[2] = { line.start, line.end };
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
-        SetDepthTest(line.depthTest);
-        SetUniformColor("u_Color", line.tint);
-        glDrawArrays(GL_LINES, 0, 2);
-    }
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(currentVertexInput.id);
-}
-
-
-//创建异步深度统计资源
 GpuDepthDistributionID OpenGLRenderBackend::CreateDepthDistribution()
 {
     //编译组内归约直方图程序
     if (!depthDistributionShader.IsValid())
     {
-        const char* source = R"(#version 430 core
-layout(local_size_x=16, local_size_y=16) in;
-layout(std430, binding=0) buffer Distribution { uint bins[64]; };
-uniform sampler2D u_Depth;
-uniform mat4 u_InverseProjection;
-uniform float u_Near;
-uniform float u_Far;
-shared uint localBins[64];
-void main()
-{
-    uint lane = gl_LocalInvocationIndex;
-    if (lane < 64u) localBins[lane] = 0u;
-    barrier();
-    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 size = textureSize(u_Depth, 0);
-    if (all(lessThan(pixel, size)))
-    {
-        float depth = texelFetch(u_Depth, pixel, 0).r;
-        if (depth >= 0.0 && depth < 1.0)
-        {
-            vec2 uv = (vec2(pixel) + 0.5) / vec2(size);
-            vec4 view = u_InverseProjection * vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-            float distance = -view.z / view.w;
-            if (!isnan(distance) && !isinf(distance) && distance >= u_Near && distance <= u_Far)
-            {
-                int bin = clamp(int(log(distance/u_Near) / log(u_Far/u_Near) * 64.0), 0, 63);
-                atomicAdd(localBins[bin], 1u);
-            }
-        }
-    }
-    barrier();
-    if (lane < 64u && localBins[lane] != 0u) atomicAdd(bins[lane], localBins[lane]);
-})";
+        std::string text = DepthDistributionSource;
+        text.insert(text.find('\n') + 1, "#define ORBEDEN_DISTRIBUTION_BINDING 0\n");
+        const char* source = text.c_str();
         uint32 shader = CompileShader(GL_COMPUTE_SHADER, source);
         if (!shader) return {};
         uint32 program = glCreateProgram();
@@ -1497,10 +1427,11 @@ bool OpenGLRenderBackend::SubmitDepthDistribution(GpuDepthDistributionID id, Gpu
     glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, id.id);
     BindShaderProgram(depthDistributionShader);
-    SetUniformInt("u_Depth", 0);
-    SetUniformMatrix4("u_InverseProjection", inverseProjection);
-    SetUniformFloat("u_Near", nearPlane);
-    SetUniformFloat("u_Far", farPlane);
+    GetParameters().SetInt("u_Depth", 0);
+    GetParameters().SetMatrix4("u_InverseProjection", inverseProjection);
+    GetParameters().SetFloat("u_Near", nearPlane);
+    GetParameters().SetFloat("u_Far", farPlane);
+    ApplyParameters();
     glDispatchCompute((width + 15) / 16, (height + 15) / 16, 1);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
     found->second.fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -1538,4 +1469,100 @@ bool OpenGLRenderBackend::TryReadDepthDistribution(GpuDepthDistributionID id, Gp
     distribution.nearPlane = found->second.nearPlane;
     distribution.farPlane = found->second.farPlane;
     return true;
+}
+
+//提交当前着色器参数
+void OpenGLRenderBackend::ApplyParameters()
+{
+    if (!currentShaderProgram.IsValid()) return;
+    ShaderParameters& parameters = GetParameters();
+    for (const ShaderParameterValue* entry : parameters.GetChanges())
+    {
+        const ShaderParameterValue& value = *entry;
+        switch (value.type)
+        {
+        case ShaderParameterType::Matrix4: SetUniformMatrix4(value.name, value.Read<matrix4x4>()); break;
+        case ShaderParameterType::Vector3: SetUniformVector3(value.name, value.Read<vector3>()); break;
+        case ShaderParameterType::Color: SetUniformColor(value.name, value.Read<color>()); break;
+        case ShaderParameterType::Int: SetUniformInt(value.name, value.Read<int32>()); break;
+        case ShaderParameterType::Float: SetUniformFloat(value.name, value.Read<float32>()); break;
+        }
+    }
+    parameters.ClearChanges();
+}
+
+//提交参数块与绘制状态
+void OpenGLRenderBackend::ApplyDrawState()
+{
+    const PipelineState& state = GetPipelineState();
+    SetDepthTest(state.depthTest);
+    SetDepthWrite(state.depthWrite);
+    SetDepthCompare(state.depthCompare);
+    SetBlend(state.blend);
+    SetBlendMode(state.blendMode);
+    SetCullMode(state.cull);
+    bool modeChanged = !rasterStateValid || polygonMode != state.polygonMode;
+    if (modeChanged)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, state.polygonMode == PolygonMode::Line ? GL_LINE : GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+    }
+    if (modeChanged || depthBiasEnabled != state.depthBias)
+    {
+        GLenum offset = state.polygonMode == PolygonMode::Line ? GL_POLYGON_OFFSET_LINE : GL_POLYGON_OFFSET_FILL;
+        if (state.depthBias) glEnable(offset); else glDisable(offset);
+    }
+    if (!rasterStateValid || depthBiasSlope != state.depthBiasSlope || depthBiasConstant != state.depthBiasConstant)
+        glPolygonOffset(state.depthBiasSlope, state.depthBiasConstant);
+    polygonMode = state.polygonMode;
+    depthBiasEnabled = state.depthBias;
+    depthBiasSlope = state.depthBiasSlope;
+    depthBiasConstant = state.depthBiasConstant;
+    rasterStateValid = true;
+    ApplyParameters();
+}
+
+//创建附加窗口呈现表面
+GpuSurfaceID OpenGLRenderBackend::CreateSurface(IWindow* target)
+{
+    if (!dynamic_cast<GlfwWindow*>(target) || target->GetGraphicsApi() != WindowGraphicsApi::OpenGL) return {};
+    uint32 id = nextSurface++;
+    surfaces.emplace(id, target);
+    return { id };
+}
+
+//释放附加窗口的顶点输入
+void OpenGLRenderBackend::DeleteSurface(GpuSurfaceID id)
+{
+    if (!id.IsValid() || !surfaces.contains(id.id)) return;
+    SetSurface(id);
+    for (auto& [input, array] : vertexArrays[id.id]) glDeleteVertexArrays(1, &array);
+    vertexArrays.erase(id.id);
+    SetSurface({});
+    pendingSurfaces.erase(id.id);
+    surfaces.erase(id.id);
+}
+
+//切换窗口上下文与绑定缓存
+void OpenGLRenderBackend::SetSurface(GpuSurfaceID id)
+{
+    if (!surfaces.contains(id.id)) throw std::invalid_argument("OpenGL surface handle is invalid.");
+    auto target = dynamic_cast<GlfwWindow*>(surfaces.at(id.id));
+    if (currentSurface == id.id && glfwGetCurrentContext() == target->GetGlfwWindow()) return;
+    glfwMakeContextCurrent(target->GetGlfwWindow());
+    glfwSwapInterval(target->GetVsync() ? 1 : 0);
+    currentSurface = id.id;
+    rasterStateValid = false;
+    currentShaderProgram = {}; currentVertexInput = {}; currentUniforms = nullptr;
+    boundInstanceBuffer = {}; boundInstanceOffset = 0;
+    boundTexture2Ds.clear(); boundCubeTextures.clear(); currentTextureSlot = 0;
+    glUseProgram(0); glBindVertexArray(0); glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_DEPTH_TEST); depthTestEnabled = true;
+    glDepthMask(GL_TRUE); depthWriteEnabled = true;
+    glDepthFunc(GL_LESS); depthCompare = DepthCompare::Less;
+    glDisable(GL_BLEND); blendEnabled = false;
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); blendMode = BlendMode::Alpha;
+    glDisable(GL_CULL_FACE); cullMode = CullMode::None;
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 }

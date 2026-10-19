@@ -5,20 +5,13 @@
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
 
-bool ImGuiLayer::Initialize(IWindow* window)
+bool ImGuiLayer::Initialize(IWindow* window, RenderBackend& backend)
 {
     if (initialized) return true;
     if (!window)
     {
         Log::Warning("ImGuiLayer initialize skipped: window is missing.");
-        return false;
-    }
-
-    if (window->GetGraphicsApi() != WindowGraphicsApi::OpenGL)
-    {
-        Log::Warning("ImGuiLayer initialize skipped: only OpenGL is supported now.");
         return false;
     }
 
@@ -38,7 +31,7 @@ bool ImGuiLayer::Initialize(IWindow* window)
 
     ImGui::StyleColorsDark();
 
-    if (!ImGui_ImplGlfw_InitForOpenGL(glfwWindow->GetGlfwWindow(), true))
+    if (!ImGui_ImplGlfw_InitForOther(glfwWindow->GetGlfwWindow(), true))
     {
         Log::Warning("ImGuiLayer initialize skipped: GLFW backend initialize failed.");
         ImGui::DestroyContext(context);
@@ -46,9 +39,9 @@ bool ImGuiLayer::Initialize(IWindow* window)
         return false;
     }
 
-    if (!ImGui_ImplOpenGL3_Init("#version 430"))
+    if (!renderer.Initialize(backend))
     {
-        Log::Warning("ImGuiLayer initialize skipped: OpenGL3 backend initialize failed.");
+        Log::Warning("ImGuiLayer initialize skipped: renderer initialize failed.");
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext(context);
         context = nullptr;
@@ -64,7 +57,7 @@ void ImGuiLayer::Shutdown()
     if (!initialized) return;
 
     ImGui::SetCurrentContext(context);
-    ImGui_ImplOpenGL3_Shutdown();
+    renderer.Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext(context);
     context = nullptr;
@@ -76,7 +69,7 @@ void ImGuiLayer::BeginFrame()
     if (!initialized) return;
 
     ImGui::SetCurrentContext(context);
-    ImGui_ImplOpenGL3_NewFrame();
+    renderer.BeginFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 }
@@ -112,7 +105,7 @@ void ImGuiLayer::Render()
 
     ImGui::SetCurrentContext(context);
     ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    renderer.Render(ImGui::GetDrawData(), false);
 }
 
 bool ImGuiLayer::IsInitialized() const

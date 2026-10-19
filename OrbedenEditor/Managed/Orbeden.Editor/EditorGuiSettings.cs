@@ -4,7 +4,7 @@ using System.Globalization;
 namespace OrbedenEditor;
 
 /// <summary>
-/// 项目级编辑器外观配置：属性行标签列宽度、界面字体与字号。
+/// 项目级编辑器配置：渲染后端、属性行标签列宽度、界面字体与字号。
 /// 存在项目文件（.oeproj）的 &lt;EditorGuiConfig&gt; 块里，与面板布局 &lt;EditorLayout&gt; 同级。
 ///
 /// 原生侧 EditorProject.cpp 的 ReadEditorGuiConfig / BuildEditorGuiConfigBlock 读写的是同一个块，
@@ -34,6 +34,9 @@ internal static class EditorGuiSettings
 
     /// <summary>字号。</summary>
     internal static float FontSize { get; private set; } = DefaultFontSize;
+
+    /// <summary>保存的编辑器渲染后端。</summary>
+    internal static string GraphicsBackend { get; private set; } = "OpenGL";
 
     /// <summary>最近一次读取或写入的错误。</summary>
     internal static string Error { get; private set; } = string.Empty;
@@ -85,7 +88,7 @@ internal static class EditorGuiSettings
     }
 
     /// <summary>把配置写回项目文件的配置块；其它内容原样保留。</summary>
-    internal static bool Save(float labelWidth, string font, float fontSize, out string error)
+    internal static bool Save(float labelWidth, string font, float fontSize, string graphicsBackend, out string error)
     {
         error = string.Empty;
         if (!EditorAssetsNative.CanModifyAssets())
@@ -105,6 +108,12 @@ internal static class EditorGuiSettings
             return false;
         }
 
+        if (graphicsBackend is not ("OpenGL" or "Vulkan"))
+        {
+            error = "Unknown rendering backend.";
+            return false;
+        }
+
         string path = ProjectFilePath();
         if (path.Length == 0)
         {
@@ -114,10 +123,11 @@ internal static class EditorGuiSettings
 
         //内置点阵锁 13：值写进文件也照锁，读回来时说的和实际用的是同一个数
         float storedSize = bitmap ? BitmapFontSize : fontSize;
-        string text = ReplaceBlock(ReadText(path), labelWidth, font ?? string.Empty, storedSize);
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
+            string text = ReplaceBlock(File.ReadAllText(path, InteropText.CreateUtf8Encoding(false)),
+                labelWidth, font ?? string.Empty, storedSize, graphicsBackend);
             File.WriteAllText(temporary, text, InteropText.CreateUtf8Encoding(false));
             File.Move(temporary, path, true);
         }
@@ -135,8 +145,8 @@ internal static class EditorGuiSettings
         Error = string.Empty;
         loadedPath = "\0";
         Refresh();
-        //原生按新的配置重读一遍项目文件，再重建字体图集、重设标签列宽度
-        EditorApplication.RequestEditorAction(EditorRequestKind.EditorAppearance);
+        //请求原生在帧边界应用外观与渲染后端
+        EditorApplication.RequestEditorAction(EditorRequestKind.EditorSettings);
         EditorApplication.RequestRepaint();
         return true;
     }
@@ -147,6 +157,7 @@ internal static class EditorGuiSettings
         LabelWidth = DefaultLabelWidth;
         Font = string.Empty;
         FontSize = DefaultFontSize;
+        GraphicsBackend = "OpenGL";
         Error = string.Empty;
     }
 
@@ -168,6 +179,7 @@ internal static class EditorGuiSettings
         if (token.Length == 0) return;
         LabelWidth = ReadFloat(token, "labelWidth", DefaultLabelWidth);
         Font = ReadAttribute(token, "font");
+        GraphicsBackend = ReadAttribute(token, "graphicsBackend") == "Vulkan" ? "Vulkan" : "OpenGL";
         FontSize = ReadFloat(token, "fontSize", DefaultFontSize);
         if (UsesBitmapFont) FontSize = BitmapFontSize;
         //@ 前缀用来挡 Windows 的 \\?\ 长路径语义，值本身不该带
@@ -175,9 +187,9 @@ internal static class EditorGuiSettings
     }
 
     //替换或追加配置块，其余内容逐字保留
-    private static string ReplaceBlock(string content, float labelWidth, string font, float fontSize)
+    private static string ReplaceBlock(string content, float labelWidth, string font, float fontSize, string graphicsBackend)
     {
-        string block = $"    <EditorGuiConfig labelWidth=\"{Format(labelWidth)}\" font=\"{Escape(font)}\" fontSize=\"{Format(fontSize)}\" />";
+        string block = $"    <EditorGuiConfig labelWidth=\"{Format(labelWidth)}\" font=\"{Escape(font)}\" fontSize=\"{Format(fontSize)}\" graphicsBackend=\"{graphicsBackend}\" />";
         int start = content.IndexOf("<EditorGuiConfig", StringComparison.Ordinal);
         if (start >= 0)
         {
@@ -194,26 +206,18 @@ internal static class EditorGuiSettings
         }
 
         int close = content.LastIndexOf("</OrbedenProject>", StringComparison.Ordinal);
-        if (close < 0) return content;
+        if (close < 0)
+        {
+            int root = content.IndexOf("<OrbedenProject", StringComparison.Ordinal);
+            int end = root < 0 ? -1 : content.IndexOf('>', root);
+            int slash = end - 1;
+            while (slash > root && char.IsWhiteSpace(content[slash])) --slash;
+            if (end < 0 || slash <= root || content[slash] != '/')
+                throw new InvalidDataException("The project root element is missing or incomplete.");
+            return content[..slash] + ">\n" + block + "\n</OrbedenProject>" + content[(end + 1)..];
+        }
         string prefix = close > 0 && content[close - 1] != '\n' ? "\n" : string.Empty;
         return content[..close] + prefix + block + "\n" + content[close..];
-    }
-
-    //读取文本文件；失败返回空串，调用方按"没有块"处理
-    private static string ReadText(string path)
-    {
-        try
-        {
-            return File.ReadAllText(path, InteropText.CreateUtf8Encoding(false));
-        }
-        catch (IOException)
-        {
-            return string.Empty;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return string.Empty;
-        }
     }
 
     //取一个浮点属性

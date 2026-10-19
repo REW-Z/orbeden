@@ -14,7 +14,7 @@
 #include "Log/Log.h"
 #include "Memory/MemoryManager.h"
 #include "Profiler/Profiler.h"
-#include <glad/gl.h>
+#include "Rendering/RenderSystem.h"
 #include "Platform/GlfwWindow.h"
 #include "InputManager/InputManager.h"
 #define GLFW_INCLUDE_NONE
@@ -56,19 +56,18 @@ int wmain(int argc, wchar_t** argv)
         ResourceManager::Shutdown();
         return succeeded ? 0 : 1;
     }
-    GlfwWindow window;
+    auto window = std::make_unique<GlfwWindow>();
     WindowDesc windowDesc;
     windowDesc.title = "Orbeden Editor";
     windowDesc.graphicsApi = WindowGraphicsApi::OpenGL;
-
-    if (!window.Create(windowDesc))
+    if (!window->Create(windowDesc))
     {
         Log::Error("Editor startup failed: window create failed.");
         return 1;
     }
 
     Application app(ScriptRuntimeMode::CLR);
-    app.SetWindow(&window);
+    app.SetWindow(window.get());
     app.SetTargetFrameRate(60);
     app.SetSimulationEnabled(false);
     if (!app.Initialize())
@@ -92,10 +91,15 @@ int wmain(int argc, wchar_t** argv)
 
         while (true)
         {
-            if (window.ShouldClose())
+            if (!editorSystem.ApplyPendingGraphicsBackend(window))
+            {
+                Log::Error("Editor backend switch failed: GUI could not be restored.");
+                break;
+            }
+            if (window->ShouldClose())
             {
                 if (!editorSystem.GetProject().IsTemporaryWorld() || editorSystem.SaveCurrentWorld()) break;
-                glfwSetWindowShouldClose(window.GetGlfwWindow(), GLFW_FALSE);
+                glfwSetWindowShouldClose(window->GetGlfwWindow(), GLFW_FALSE);
             }
             bool continuousRepaint = editorSystem.NeedsContinuousRepaint();
             bool repaintRequested = editorSystem.TakeRepaintRequest();
@@ -104,10 +108,10 @@ int wmain(int argc, wchar_t** argv)
 
             //清理瞬时输入后按当前重绘状态轮询、限时等待或阻塞等待事件
             InputManager::BeginFrame();
-            if (!waitedForEvent) window.PollEvents();
-            else if (Clock::now() < idleWakeDeadline) window.WaitEventsTimeout(IdleWakeSeconds);
-            else window.WaitEvents();
-            if (window.ShouldClose()) continue;
+            if (!waitedForEvent) window->PollEvents();
+            else if (Clock::now() < idleWakeDeadline) window->WaitEventsTimeout(IdleWakeSeconds);
+            else window->WaitEvents();
+            if (window->ShouldClose()) continue;
 
             //空闲唤醒帧不把等待时间传入 Simulation
             auto frameStartTime = Clock::now();
@@ -123,7 +127,7 @@ int wmain(int argc, wchar_t** argv)
             if (Profiler::IsCapturing())
             {
                 PROFILE("Render/WaitForSceneGpu");
-                glFinish();
+                app.GetSystem<RenderSystem>()->GetBackend().WaitForIdle();
             }
             editorSystem.RenderEditorGUI();
             app.Present();

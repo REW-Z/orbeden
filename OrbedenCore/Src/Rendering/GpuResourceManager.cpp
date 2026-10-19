@@ -201,7 +201,7 @@ namespace
     GpuShaderBindings BuildShaderBindings(RenderBackend* backend, GpuShaderProgramID program, const Shader& shader)
     {
         GpuShaderBindings bindings;
-        auto uses = [&](const char* name) { return backend->HasShaderUniform(program, name); };
+        auto uses = [&](const char* name) { return backend->HasShaderParameter(program, name); };
         auto usesAny = [&](std::initializer_list<const char*> names)
         {
             for (const char* name : names)
@@ -915,6 +915,7 @@ const GpuMaterial* GpuResourceManager::GetMaterial(Material* material)
     gpuMaterial->textureBindings = std::move(uploaded.textureBindings);
     gpuMaterial->colorBindings = std::move(uploaded.colorBindings);
     gpuMaterial->floatBindings = std::move(uploaded.floatBindings);
+    ++gpuMaterial->bindingRevision;
     material->ClearDirty();
     return gpuMaterial;
 }

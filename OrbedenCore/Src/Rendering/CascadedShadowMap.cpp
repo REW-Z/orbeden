@@ -257,21 +257,23 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
         pass.width = pass.height = settings.resolution;
         pass.clearMode = ClearMode::DepthOnly;
         backend->BeginPass(pass);
-        backend->SetDepthTest(true);
-        backend->SetDepthCompare(DepthCompare::Less);
-        backend->SetDepthWrite(true);
-        backend->SetBlend(false);
+        backend->GetPipelineState().depthTest = true;
+        backend->GetPipelineState().depthCompare = DepthCompare::Less;
+        backend->GetPipelineState().depthWrite = true;
+        backend->GetPipelineState().blend = false;
         //深度 Pass 不使用加法混合，显式回到基线以免上一批留下加法方程
-        backend->SetBlendMode(BlendMode::Alpha);
-        backend->SetCullMode(CullMode::None);
-        backend->SetPolygonOffset(false, 0.0f, 0.0f);
+        backend->GetPipelineState().blendMode = BlendMode::Alpha;
+        backend->GetPipelineState().cull = CullMode::None;
+        backend->GetPipelineState().depthBias = false;
+    backend->GetPipelineState().depthBiasSlope = 0.0f;
+    backend->GetPipelineState().depthBiasConstant = 0.0f;
 
         //深度变体按批次模式切换，u_LightViewProjection 是逐 program 的 uniform，换 program 之后必须重设
         const GpuShaderPass& depthPass = shader->passes[0];
         auto bindDepthProgram = [&](const GpuShaderProgramID& program)
         {
             backend->BindShaderProgram(program);
-            backend->SetUniformMatrix4("u_LightViewProjection", cascades[index].worldToShadow);
+            backend->GetParameters().SetMatrix4("u_LightViewProjection", cascades[index].worldToShadow);
         };
 
         for (const DrawBatch& batch : shadowBatches)
@@ -379,7 +381,7 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
                     continue;
                 }
 
-                backend->SetUniformMatrix4("u_Model", item.model);
+                backend->GetParameters().SetMatrix4("u_Model", item.model);
                 backend->BindVertexInput(mesh->vertexInput);
                 backend->DrawIndexed(item.indexStart, item.indexCount);
                 ++stats.ordinaryDraws;
@@ -396,27 +398,27 @@ void CascadedShadowMap::Render(const RenderScene& scene, const List<InstanceSubm
 
 void CascadedShadowMap::BindUniforms(const RenderCamera& camera)
 {
-    backend->SetUniformInt("u_ShadowCascadeCount", ready ? settings.count : 0);
-    backend->SetUniformMatrix4("u_ShadowView", camera.viewMatrix);
-    backend->SetUniformFloat("u_ShadowBias", settings.depthBias);
-    backend->SetUniformFloat("u_ShadowNormalBias", settings.normalBias);
+    backend->GetParameters().SetInt("u_ShadowCascadeCount", ready ? settings.count : 0);
+    backend->GetParameters().SetMatrix4("u_ShadowView", camera.viewMatrix);
+    backend->GetParameters().SetFloat("u_ShadowBias", settings.depthBias);
+    backend->GetParameters().SetFloat("u_ShadowNormalBias", settings.normalBias);
     for (int32 index = 0; ready && index < settings.count; ++index)
     {
         std::string suffix = "[" + std::to_string(index) + "]";
-        backend->SetUniformMatrix4(("u_ShadowMatrices"+suffix).c_str(), cascades[index].worldToShadow);
-        backend->SetUniformColor(("u_ShadowRects"+suffix).c_str(),
+        backend->GetParameters().SetMatrix4(("u_ShadowMatrices"+suffix).c_str(), cascades[index].worldToShadow);
+        backend->GetParameters().SetColor(("u_ShadowRects"+suffix).c_str(),
             {0.5f,static_cast<float32>(settings.resolution)/atlasHeight,
             static_cast<float32>(index%2)*0.5f,static_cast<float32>((index/2)*settings.resolution)/atlasHeight});
-        backend->SetUniformColor(("u_ShadowParams"+suffix).c_str(),
+        backend->GetParameters().SetColor(("u_ShadowParams"+suffix).c_str(),
             {cascades[index].splitDepth,cascades[index].blendStart,cascades[index].texelWorldSize,cascades[index].depthRange});
     }
 }
 
 void CascadedShadowMap::BindTexture(int32 slot)
 {
-    backend->SetUniformInt("u_UseShadowMap", ready ? 1 : 0);
+    backend->GetParameters().SetInt("u_UseShadowMap", ready ? 1 : 0);
     if (slot < 0) return;
-    backend->SetUniformInt("u_ShadowMap", slot);
+    backend->GetParameters().SetInt("u_ShadowMap", slot);
     backend->BindDepthTexture(static_cast<uint32>(slot), ready ? atlas : GpuDepthTextureID{});
 }
 

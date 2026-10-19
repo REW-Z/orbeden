@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <string>
 
-//编辑器自带图标：从资源目录读取 PNG 并上传为 OpenGL 纹理
+//编辑器自带图标：从资源目录读取 PNG 并经公共后端上传为纹理
 class EditorIcons
 {
 public:

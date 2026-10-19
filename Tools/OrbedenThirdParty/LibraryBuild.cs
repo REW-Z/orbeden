@@ -35,7 +35,7 @@ internal static partial class Program
 
         //配置并编译 CMake 库
         if (await RunProcess(cmake, root, ["-S", root, "-B", cmakeBuild, "-A", "x64", $"-DCMAKE_GENERATOR_INSTANCE={vsInstall}"]) != 0 ||
-            await RunProcess(cmake, root, ["--build", cmakeBuild, "--config", configuration, "--target", "freetype", "msdfgen-core", "glfw", "imgui", "glad", "cgltf", "stb"]) != 0)
+            await RunProcess(cmake, root, ["--build", cmakeBuild, "--config", configuration, "--target", "freetype", "msdfgen-core", "glfw", "imgui", "glad", "cgltf", "stb", "glslang", "glslang-default-resource-limits"]) != 0)
             throw new InvalidOperationException($"Third-party {configuration} CMake build failed.");
 
         //编译官方 PhysX 目标
@@ -64,11 +64,19 @@ internal static partial class Program
         files.Add((Path.Combine(cmakeBuild, "msdfgen-config.h"), Path.Combine(publish, "msdfgen", "include", "msdfgen", "msdfgen-config.h")));
         files.Add((Path.Combine(vendor, "cgltf", "cgltf.h"), Path.Combine(publish, "cgltf", "cgltf.h")));
         files.Add((Path.Combine(vendor, "stb", "stb_image.h"), Path.Combine(publish, "stb", "stb_image.h")));
+        AddHeaders(files, Path.Combine(vendor, "glslang", "glslang"), Path.Combine(publish, "glslang", "include", "glslang"), onlyHeaders: true);
+        AddHeaders(files, Path.Combine(vendor, "glslang", "SPIRV"), Path.Combine(publish, "glslang", "include", "SPIRV"), onlyHeaders: true);
+        files.Add((Path.Combine(cmakeBuild, "include", "glslang", "build_info.h"), Path.Combine(publish, "glslang", "include", "glslang", "build_info.h")));
         string libraryOutput = Path.Combine(build, "lib", configuration);
         string freetypeFile = configuration == "Debug" ? "freetyped.lib" : "freetype.lib";
         files.Add((Path.Combine(libraryOutput, freetypeFile), Path.Combine(publish, "freetype", "lib", "WindowsX64", configuration, "freetype.lib")));
         foreach (var library in new[] { ("msdfgen", "msdfgen-core.lib"), ("glfw", "glfw3dll.lib"), ("glfw", "glfw3.dll"), ("imgui", "imgui.lib"), ("glad", "glad.lib"), ("cgltf", "cgltf.lib"), ("stb", "stb.lib") })
             files.Add((Path.Combine(libraryOutput, library.Item2), Path.Combine(publish, library.Item1, "lib", "WindowsX64", configuration, library.Item2)));
+        foreach (string library in new[] { "glslang", "glslang-default-resource-limits" })
+        {
+            string source = library + (configuration == "Debug" ? "d" : "") + ".lib";
+            files.Add((Path.Combine(libraryOutput, source), Path.Combine(publish, "glslang", "lib", "WindowsX64", configuration, library + ".lib")));
+        }
         string physxOutput = Path.Combine(vendor, "physx", "physx", "bin", "win.x86_64.vc143.md", physxConfiguration);
         foreach (string library in new[] { "PhysX", "PhysXCommon", "PhysXFoundation", "PhysXExtensions", "PhysXPvdSDK", "PhysXCooking", "PhysXCharacterKinematic", "PhysXVehicle" })
         {
@@ -84,7 +92,7 @@ internal static partial class Program
 
         //清理上一版头文件并发布当前产物
         Directory.CreateDirectory(publish);
-        foreach (string library in new[] { "freetype", "msdfgen", "glfw", "glad", "PhysX" })
+        foreach (string library in new[] { "freetype", "msdfgen", "glfw", "glad", "glslang", "PhysX" })
             RemoveDirectory(Path.Combine(publish, library, "include"), publish);
         string imgui = Path.Combine(publish, "imgui");
         if (Directory.Exists(imgui))

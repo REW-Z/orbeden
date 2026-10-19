@@ -561,4 +561,21 @@
     <ClInclude Include="Src\Runtime\GameSettingsFile.h" />
     <ClCompile Include="Src\Runtime\GameSettingsFile.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Src\Rendering\ShaderParameters.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\ShaderParameters.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Src\Rendering\PipelineState.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Src\Rendering\DebugLineRenderer.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\DebugLineRenderer.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClCompile Include="Src\Rendering\Backend\RenderBackend.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Src\Rendering\ShaderCompiler.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\ShaderCompiler.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Src\Rendering\VertexLayout.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\VertexLayout.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Src\Rendering\DepthDistributionShader.h"><Filter>头文件</Filter></ClInclude>
+    <ClInclude Include="Src\Rendering\ImGuiRenderer.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\ImGuiRenderer.cpp"><Filter>源文件</Filter></ClCompile>
+    <ClInclude Include="Src\Rendering\Backend\VulkanRenderBackend.h"><Filter>头文件</Filter></ClInclude>
+    <ClCompile Include="Src\Rendering\Backend\VulkanRenderBackend.cpp"><Filter>源文件</Filter></ClCompile>
+  </ItemGroup>
 </Project>

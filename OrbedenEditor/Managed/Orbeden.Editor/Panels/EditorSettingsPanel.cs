@@ -3,7 +3,7 @@ using Orbeden;
 namespace OrbedenEditor;
 
 /// <summary>
-/// 编辑器自身的外观设置：属性行标签列宽度、界面字体与字号。
+/// 编辑器自身的设置：渲染后端、属性行标签列宽度、界面字体与字号。
 /// 存在项目文件的 &lt;EditorGuiConfig&gt; 块里（见 EditorGuiSettings），随项目走，
 /// 与「游戏设置」那类随包发布的配置分开。
 /// </summary>
@@ -13,6 +13,7 @@ internal sealed class EditorSettingsPanel : EditorPanel
     private float labelWidth = EditorGuiSettings.DefaultLabelWidth;
     private float fontSize = EditorGuiSettings.DefaultFontSize;
     private bool fontDirty;
+    private string graphicsBackend = "OpenGL";
     private string font = string.Empty;
     private string status = string.Empty;
     //OS 字体目录只在首次展开下拉时枚举一次，之后复用
@@ -35,13 +36,14 @@ internal sealed class EditorSettingsPanel : EditorPanel
 
     //草稿与已保存值是否不同
     private bool Dirty => fontDirty || labelWidth != EditorGuiSettings.LabelWidth
+        || graphicsBackend != EditorGuiSettings.GraphicsBackend
         || fontSize != EditorGuiSettings.FontSize
         || !string.Equals(font, EditorGuiSettings.Font, StringComparison.Ordinal);
 
     //把草稿写回项目文件；生效由原生按新配置重建负责
     private bool Apply()
     {
-        if (!EditorGuiSettings.Save(labelWidth, font, fontSize, out string error))
+        if (!EditorGuiSettings.Save(labelWidth, font, fontSize, graphicsBackend, out string error))
         {
             status = error;
             return false;
@@ -49,6 +51,7 @@ internal sealed class EditorSettingsPanel : EditorPanel
         labelWidth = EditorGuiSettings.LabelWidth;
         font = EditorGuiSettings.Font;
         fontSize = EditorGuiSettings.FontSize;
+        graphicsBackend = EditorGuiSettings.GraphicsBackend;
         fontDirty = false;
         status = "Editor settings applied.";
         return true;
@@ -62,12 +65,13 @@ internal sealed class EditorSettingsPanel : EditorPanel
         labelWidth = EditorGuiSettings.LabelWidth;
         font = EditorGuiSettings.Font;
         fontSize = EditorGuiSettings.FontSize;
+        graphicsBackend = EditorGuiSettings.GraphicsBackend;
         fontSearch = string.Empty;
         fontDirty = false;
         status = string.Empty;
     }
 
-    /// <summary>绘制三个外观项与 Apply / Revert。</summary>
+    /// <summary>绘制渲染后端、外观与 Apply / Revert。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
         if (string.IsNullOrWhiteSpace(PathDefines.ContentRoot)) { EditorGUI.Label("No project loaded."); return; }
@@ -82,6 +86,21 @@ internal sealed class EditorSettingsPanel : EditorPanel
             EditorGUI.SameLine();
             if (EditorGUI.Button("Revert")) Reload();
             if (status.Length != 0) EditorGUI.Label(status);
+            EditorGUI.Separator();
+
+            if (EditorGUI.BeginCombo("Rendering Backend", graphicsBackend))
+            {
+                try
+                {
+                    foreach (string backend in GraphicsBackends)
+                        if (EditorGUI.Selectable(backend, graphicsBackend == backend)) graphicsBackend = backend;
+                }
+                finally { EditorGUI.EndCombo(); }
+            }
+            EditorGUI.Label("Active backend: " + EditorApplication.GetProjectText(EditorProjectField.GraphicsBackend));
+            EditorGUI.Label("Apply switches the backend in this session and saves it for this project. Stop Play mode before switching.");
+            string backendStatus = EditorApplication.GetProjectText(EditorProjectField.GraphicsBackendStatus);
+            if (backendStatus.Length != 0) EditorGUI.Label(backendStatus);
             EditorGUI.Separator();
 
             if (EditorGUI.InputFloat("Label Width", ref labelWidth)) labelWidth = Math.Clamp(labelWidth, 1.0f, 600.0f);
@@ -166,6 +185,7 @@ internal sealed class EditorSettingsPanel : EditorPanel
         }
     }
 
+    private static readonly string[] GraphicsBackends = ["OpenGL", "Vulkan"];
     private const string BuiltinBitmapLabel = "Built-in (ProggyClean, 13 px)";
     private const string BuiltinVectorLabel = "Built-in (ProggyForever, scalable)";
 }

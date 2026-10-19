@@ -115,7 +115,7 @@ public:
     uint64 transparentBatchBreaks = 0;
 };
 
-//轻量矩阵，按 OpenGL 习惯使用列主序
+//轻量矩阵，采用列主序存储
 struct matrix4x4
 {
 public:

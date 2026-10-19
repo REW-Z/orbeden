@@ -82,7 +82,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -90,7 +90,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
@@ -113,7 +113,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -121,7 +121,7 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OrbedenCore.lib;glfw3dll.lib;nethost.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x86\nethost.dll" "$(TargetDir)"
@@ -139,18 +139,18 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"
@@ -172,18 +172,18 @@ xcopy /Y /E /I "$(ProjectDir)Resources" "$(TargetDir)Resources"
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;GLAD_API_CALL_EXPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;ORBEDEN_EDITOR;GLFW_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glad\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Src;$(ProjectDir)..\OrbedenCore\Src;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\include;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui;$(ProjectDir)..\OrbedenCore\Src\ThirdParty\imgui\backends;$(ProjectDir)Src\ThirdParty\dotnet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\glad\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OrbedenEditorCoreLibDir);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\PhysX\lib\WindowsX64\$(Configuration);$(ProjectDir)..\OrbedenCore\Src\ThirdParty\glfw\lib\WindowsX64\$(Configuration);$(ProjectDir)Src\ThirdParty\dotnet\lib\win-x64;$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\imgui\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\cgltf\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\stb\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\freetype\lib\WindowsX64\$(Configuration);$(ProjectDir)\..\OrbedenCore\Src\ThirdParty\msdfgen\lib\WindowsX64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OrbedenCore.lib;stb.lib;PhysX_static_64.lib;PhysXCommon_static_64.lib;PhysXFoundation_static_64.lib;PhysXExtensions_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCooking_static_64.lib;PhysXCharacterKinematic_static_64.lib;PhysXVehicle_static_64.lib;glfw3dll.lib;nethost.lib;gdi32.lib;user32.lib;shell32.lib;advapi32.lib;ole32.lib;uuid.lib;dwmapi.lib;winmm.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(OrbedenEditorCoreLibDir)OrbedenCore.dll" "$(TargetDir)"

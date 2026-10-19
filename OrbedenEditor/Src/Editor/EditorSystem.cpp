@@ -13,6 +13,7 @@
 #include "Runtime/GameSettingsFile.h"
 #include "Runtime/Native/InteropText.h"
 #include "Platform/ExecutablePath.h"
+#include "Platform/GlfwWindow.h"
 #include "Rendering/RenderSystem.h"
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/Particles/ParticleSimulationSystem.h"
@@ -30,6 +31,8 @@
 #include <sstream>
 #include <unordered_set>
 #include <utility>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 namespace
 {
@@ -882,6 +885,87 @@ void EditorSystem::ApplyEditorGuiConfig()
     editorGUI.SetPropertyLabelWidth(config.labelWidth);
     //字体图集在这里重建：ImGui 上下文与浮动窗都共享它，重建后两边一起换字体
     editorGUI.ApplyFontConfig(config.font, config.fontSize);
+    graphicsBackendStatus.clear();
+    pendingGraphicsApi = config.graphicsApi;
+    RequestRepaint();
+}
+
+//读取当前活动的渲染后端名称
+const char* EditorSystem::GetGraphicsBackendName() const
+{
+    return app.GetWindow()->GetGraphicsApi() == WindowGraphicsApi::Vulkan ? "Vulkan" : "OpenGL";
+}
+
+//在完整帧之间切换窗口、GUI 与场景渲染资源
+bool EditorSystem::ApplyPendingGraphicsBackend(std::unique_ptr<GlfwWindow>& mainWindow)
+{
+    WindowGraphicsApi api = std::exchange(pendingGraphicsApi, WindowGraphicsApi::None);
+    if (api == WindowGraphicsApi::None || api == mainWindow->GetGraphicsApi()) return true;
+    if (IsPlaying())
+    {
+        graphicsBackendStatus = "Stop Play mode before switching the rendering backend.";
+        return true;
+    }
+
+    //创建替换窗口并保留主窗口位置与尺寸
+    WindowDesc desc;
+    desc.title = windowTitle.empty() ? "Orbeden Editor" : windowTitle;
+    desc.width = mainWindow->GetWidth();
+    desc.height = mainWindow->GetHeight();
+    desc.graphicsApi = api;
+    desc.vsync = mainWindow->GetVsync();
+    desc.visible = false;
+    auto nextWindow = std::make_unique<GlfwWindow>();
+    bool created = nextWindow->Create(desc);
+    RenderSystem* renderSystem = app.GetSystem<RenderSystem>();
+    renderSystem->GetBackend().SetSurface({});
+    if (!created)
+    {
+        graphicsBackendStatus = "Backend switch failed: the requested window could not be created. Current backend retained.";
+        Log::Error(graphicsBackendStatus.c_str());
+        return true;
+    }
+    int32 x = 0, y = 0;
+    glfwGetWindowPos(mainWindow->GetGlfwWindow(), &x, &y);
+    glfwSetWindowPos(nextWindow->GetGlfwWindow(), x, y);
+    bool maximized = glfwGetWindowAttrib(mainWindow->GetGlfwWindow(), GLFW_MAXIMIZED) != 0;
+
+    //保存布局并释放依赖旧设备的编辑器资源
+    EditorLayoutState layout;
+    panelManager.WriteLayout(layout);
+    editorScene.CancelInteraction();
+    renderSystem->GetBackend().WaitForIdle();
+    panelManager.DestroyFloatingOsWindows();
+    editorScene.ReleaseSceneViewTarget();
+    editorGUI.Shutdown();
+
+    //切换渲染设备并重建编辑器上下文
+    bool switched = app.SetWindow(nextWindow.get());
+    bool guiReady = editorGUI.Initialize(app.GetWindow());
+    if (!guiReady && switched)
+    {
+        switched = false;
+        if (!app.SetWindow(mainWindow.get()) || !editorGUI.Initialize(mainWindow.get())) return false;
+        guiReady = true;
+    }
+    if (!guiReady) return false;
+    if (switched)
+    {
+        glfwHideWindow(mainWindow->GetGlfwWindow());
+        mainWindow = std::move(nextWindow);
+    }
+    else nextWindow.reset();
+    renderSystem->GetBackend().SetSurface({});
+    panelManager.ApplyLayout(layout);
+    graphicsBackendStatus = switched
+        ? std::string("Rendering backend switched to ") + GetGraphicsBackendName() + "."
+        : "Backend switch failed: initialization failed. Current backend retained.";
+    if (!switched) Log::Error(graphicsBackendStatus.c_str());
+    if (maximized) glfwMaximizeWindow(mainWindow->GetGlfwWindow());
+    glfwShowWindow(mainWindow->GetGlfwWindow());
+    glfwFocusWindow(mainWindow->GetGlfwWindow());
+    RequestRepaint();
+    return true;
 }
 
 //加载一个项目

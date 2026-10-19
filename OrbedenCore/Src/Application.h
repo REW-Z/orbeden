@@ -72,6 +72,9 @@ struct WorldLoadOperation
 class Application : public IWindowResizeListener
 {
 private:
+    //在窗口 GUI 平台回调就绪后挂接系统输入
+    void AttachWindowInput();
+
     struct EngineSystemEntry
     {
     public:
@@ -211,8 +214,8 @@ public:
     //设置单帧最多补跑 FixedUpdate 的次数
     void SetMaxFixedStepsPerFrame(uint32 value);
 
-    //绑定外部创建的窗口，Application 不拥有窗口生命周期
-    void SetWindow(IWindow* newWindow);
+    //绑定外部窗口；后端初始化失败时保留原窗口，窗口生命周期由调用者管理
+    bool SetWindow(IWindow* newWindow);
 
     //获取当前绑定窗口
     IWindow* GetWindow() const;

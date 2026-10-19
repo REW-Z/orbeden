@@ -330,6 +330,7 @@ namespace
         config.labelWidth = GetFloatAttribute(token, "labelWidth", config.labelWidth);
         config.font = GetAttribute(token, "font");
         config.fontSize = GetFloatAttribute(token, "fontSize", config.fontSize);
+        if (GetAttribute(token, "graphicsBackend") == "Vulkan") config.graphicsApi = WindowGraphicsApi::Vulkan;
     }
 
     //移除旧编辑器 GUI 配置块。
@@ -372,6 +373,7 @@ namespace
         output << "    <EditorGuiConfig labelWidth=\"" << ToFloatText(config.labelWidth)
             << "\" font=\"" << EscapeXml(config.font)
             << "\" fontSize=\"" << ToFloatText(config.fontSize)
+            << "\" graphicsBackend=\"" << (config.graphicsApi == WindowGraphicsApi::Vulkan ? "Vulkan" : "OpenGL")
             << "\" />\n";
         return output.str();
     }

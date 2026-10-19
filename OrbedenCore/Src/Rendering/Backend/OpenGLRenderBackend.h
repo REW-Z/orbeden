@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 //OpenGL 渲染后端
 class OpenGLRenderBackend : public RenderBackend
@@ -53,9 +54,6 @@ private:
     };
     GpuShaderProgramID depthDistributionShader;
     std::unordered_map<uint32, DepthDistributionState> depthDistributions;
-    GpuShaderProgramID debugLineShader;
-    uint32 debugLineVertexArray = 0;
-    uint32 debugLineVertexBuffer = 0;
     GpuShaderProgramID currentShaderProgram;
     GpuVertexInputID currentVertexInput;
     uint32 currentTextureSlot = 0;
@@ -63,7 +61,6 @@ private:
     bool depthWriteEnabled = false;
     bool blendEnabled = false;
     DepthCompare depthCompare = DepthCompare::Less;
-    bool polygonOffsetEnabled = false;
     CullMode cullMode = CullMode::None;
     //实例化能力，初始化时按 GL_MAX_VERTEX_ATTRIBS 判定一次
     bool instancingSupported = false;
@@ -71,6 +68,11 @@ private:
     uint32 fragmentTextureUnitCount = 0;
     //当前混合方程，BeginFrame 重设为 Alpha 基线
     BlendMode blendMode = BlendMode::Alpha;
+    bool rasterStateValid = false;
+    PolygonMode polygonMode = PolygonMode::Fill;
+    bool depthBiasEnabled = false;
+    float32 depthBiasSlope = 0.0f;
+    float32 depthBiasConstant = 0.0f;
     //当前顶点输入绑定的实例缓冲及其字节偏移，用于绘制前校验范围
     GpuVertexBufferID boundInstanceBuffer;
     usize boundInstanceOffset = 0;
@@ -90,6 +92,8 @@ private:
     ProgramUniformState* currentUniforms = nullptr;
 
 public:
+    //释放后端持有的 GPU 资源
+    ~OpenGLRenderBackend() override { Shutdown(); }
     bool Initialize(IWindow* window) override;
     void Shutdown() override;
     void BeginFrame() override;
@@ -97,7 +101,12 @@ public:
     void BeginPass(const RenderPassDesc& desc) override;
     void EndPass() override;
     //仅在录制期间等待此前 OpenGL 工作完成并记录 CPU 阻塞耗时
-    void ProfileGpuWait(const char* name) override;
+    void WaitForIdle() override;
+    void Present() override;
+    GpuSurfaceID CreateSurface(IWindow* window) override;
+    void DeleteSurface(GpuSurfaceID id) override;
+    void SetSurface(GpuSurfaceID id) override;
+    void SetScissor(bool enabled, int32 x, int32 y, int32 width, int32 height) override;
 
     GpuVertexBufferID CreateVertexBuffer(const GpuBufferDesc& desc) override;
     void DeleteVertexBuffer(GpuVertexBufferID id) override;
@@ -131,25 +140,13 @@ public:
     bool CopyRenderTarget(const GpuRenderTargetCopyDesc& desc) override;
     GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) override;
     void DeleteShaderProgram(GpuShaderProgramID id) override;
-    bool HasShaderUniform(GpuShaderProgramID program, const char* name) override;
+    bool HasShaderParameter(GpuShaderProgramID program, const char* name) override;
 
-    void BindShaderProgram(GpuShaderProgramID id) override;
+    void OnBindShaderProgram(GpuShaderProgramID id) override;
     void BindVertexInput(GpuVertexInputID id) override;
     void BindTexture(uint32 slot, GpuTextureID id) override;
     void BindDepthTexture(uint32 slot, GpuDepthTextureID id) override;
     void BindCubeTexture(uint32 slot, GpuCubeTextureID id) override;
-    void SetUniformMatrix4(const char* name, const matrix4x4& value) override;
-    void SetUniformVector3(const char* name, const vector3& value) override;
-    void SetUniformColor(const char* name, const color& value) override;
-    void SetUniformInt(const char* name, int32 value) override;
-    void SetUniformFloat(const char* name, float32 value) override;
-    void SetDepthTest(bool enabled) override;
-    void SetDepthCompare(DepthCompare compare) override;
-    void SetDepthWrite(bool enabled) override;
-    void SetPolygonOffset(bool enabled, float32 factor, float32 units) override;
-    void SetBlend(bool enabled) override;
-    void SetBlendMode(BlendMode mode) override;
-    void SetCullMode(CullMode mode) override;
     void DrawIndexed(uint32 indexStart, uint32 indexCount) override;
     void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) override;
 
@@ -159,10 +156,37 @@ public:
     bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) override;
     bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) override;
 
-    /// <summary>在当前相机目标绘制世界空间调试线。</summary>
-    void DrawLines(const List<DebugLine>& lines, const matrix4x4& viewProjection, uint32 layerMask);
-
 private:
+    void SetUniformMatrix4(const char* name, const matrix4x4& value);
+    void SetUniformVector3(const char* name, const vector3& value);
+    void SetUniformColor(const char* name, const color& value);
+    void SetUniformInt(const char* name, int32 value);
+    void SetUniformFloat(const char* name, float32 value);
+    void SetDepthTest(bool enabled);
+    void SetDepthCompare(DepthCompare compare);
+    void SetDepthWrite(bool enabled);
+    void SetBlend(bool enabled);
+    void SetBlendMode(BlendMode mode);
+    void SetCullMode(CullMode mode);
+    //提交参数块与绘制状态
+    void ApplyDrawState();
+    //提交当前着色器参数
+    void ApplyParameters();
+    IWindow* window = nullptr;
+    uint32 currentSurface = 0;
+    uint32 nextSurface = 1;
+    uint32 nextVertexInput = 1;
+    std::unordered_map<uint32, IWindow*> surfaces;
+    std::unordered_set<uint32> pendingSurfaces;
+    std::unordered_map<uint32, GpuVertexInputDesc> vertexInputDescriptions;
+    std::unordered_map<uint32, std::unordered_map<uint32, uint32>> vertexArrays;
+    struct TextureInfo { int32 width, height, channels; bool mipmaps; };
+    std::unordered_map<uint32, TextureInfo> textureInfo;
+    std::unordered_set<uint32> ownedTextures;
+    //创建当前窗口的原生顶点输入
+    uint32 CreateVertexArray(const GpuVertexInputDesc& desc);
+    //获取当前窗口的原生顶点输入
+    uint32 GetVertexArray(GpuVertexInputID id);
     void ActivateTextureSlot(uint32 slot);
     void BindTexture2D(uint32 slot, uint32 texture);
     void InvalidateTexture2D(uint32 texture);
@@ -175,8 +199,6 @@ private:
     bool WriteVertexBuffer(uint32 buffer, const void* data, usize size, usize capacity);
     //按容量分配或覆盖索引缓冲存储，并刷新引用它的顶点输入缓存
     bool WriteIndexBuffer(uint32 buffer, const uint32* data, uint32 count, uint32 capacity);
-    //实例布局的每条实例记录字节数，非实例布局返回 0
-    static uint32 GetInstanceRecordSize(GpuVertexLayout layout);
     //在实例化绘制前校验索引范围、实例缓冲范围和 GL 上界，失败时写入日志
     bool ValidateInstancedRange(uint32 indexStart, uint32 indexCount, uint32 instanceCount);
 };

@@ -15,8 +15,6 @@
 //颜色字段原语在核心层，标签列宽度推给它才能跟编辑器这一侧的属性行对齐
 #include "Runtime/Gui/RuntimeGuiBridge.h"
 
-#include <glad/gl.h>
-#include <imgui_impl_opengl3.h>
 #include <imgui_internal.h>
 
 #include <algorithm>
@@ -1699,10 +1697,9 @@ bool EditorGUI::Initialize(IWindow* editorWindow)
     if (initialized) return true;
 
     GlfwWindow* platformWindow = dynamic_cast<GlfwWindow*>(editorWindow);
-    if (!platformWindow || editorWindow->GetGraphicsApi() != WindowGraphicsApi::OpenGL
-        || !platformWindow->GetGlfwWindow())
+    if (!platformWindow || !platformWindow->GetGlfwWindow() || !RenderSystem::Current())
     {
-        Log::Error("EditorGUI initialize failed: OpenGL GLFW window is missing.");
+        Log::Error("EditorGUI initialize failed: render window is missing.");
         return false;
     }
 
@@ -1729,9 +1726,9 @@ bool EditorGUI::Initialize(IWindow* editorWindow)
     ImGui::GetMainViewport()->PlatformHandle = glfwWindow;
     ImGui::StyleColorsDark();
 
-    if (!ImGui_ImplOpenGL3_Init("#version 430"))
+    if (!renderer.Initialize(RenderSystem::Current()->GetBackend()))
     {
-        Log::Error("EditorGUI initialize failed: OpenGL3 backend initialize failed.");
+        Log::Error("EditorGUI initialize failed: renderer initialize failed.");
         ImGui::DestroyContext(context);
         context = nullptr;
         window = nullptr;
@@ -1784,7 +1781,7 @@ void EditorGUI::Shutdown()
 
     EditorIcons::Shutdown();
     ImGui::SetCurrentContext(context);
-    ImGui_ImplOpenGL3_Shutdown();
+    renderer.Shutdown();
     for (GLFWcursor*& cursor : mouseCursors)
     {
         if (cursor) glfwDestroyCursor(cursor);
@@ -1991,7 +1988,7 @@ void EditorGUI::BeginFrame()
     }
 
     ApplyTheme();
-    ImGui_ImplOpenGL3_NewFrame();
+    renderer.BeginFrame();
     ImGui::NewFrame();
 }
 
@@ -2016,11 +2013,9 @@ void EditorGUI::Render()
     int32 framebufferWidth = 0;
     int32 framebufferHeight = 0;
     glfwGetFramebufferSize(glfwWindow, &framebufferWidth, &framebufferHeight);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, framebufferWidth, framebufferHeight);
     {
         PROFILE("Render/EditorGui/SubmitDraw");
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        renderer.Render(ImGui::GetDrawData());
     }
 }
 
@@ -2034,11 +2029,12 @@ void EditorGUI::ClearMainFramebuffer()
     glfwGetFramebufferSize(glfwWindow, &framebufferWidth, &framebufferHeight);
 
     ImVec4 background = ToImVec4(theme.background);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, framebufferWidth, framebufferHeight);
-    glDisable(GL_SCISSOR_TEST);
-    glClearColor(background.x, background.y, background.z, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    RenderPassDesc pass;
+    pass.width = framebufferWidth; pass.height = framebufferHeight;
+    pass.clearColor = { background.x, background.y, background.z, background.w };
+    RenderBackend& backend = RenderSystem::Current()->GetBackend();
+    backend.BeginPass(pass);
+    backend.EndPass();
 }
 
 EditorGuiNativeApi EditorGUI::GetNativeApi() const

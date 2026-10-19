@@ -572,6 +572,14 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 96：渲染系统改为公共资源、参数块、管线状态、Pass 与多窗口呈现接口，增加 Vulkan 1.3 后端。Editor 通过 Editor Settings 的 Rendering Backend 选择并 Apply，在当前会话重建后端，配置随项目保存；项目打开后自动应用，默认 OpenGL。Player 通过 `--graphics-api opengl|vulkan` 选择，默认 OpenGL。保留共同 GLSL、材质参数名、场景与 Cooked 源码载荷；Vulkan 在运行时编译 SPIR-V。glslang 和 Vulkan 加载器纳入锁定依赖，Player 静态链接增加 glslang 库；ImGui 绘制统一走引擎接口。
+
+提交路径沿用材质排序与 Uniform 值缓存，公共参数以变化列表提交；连续相同材质复用参数与纹理绑定。Vulkan 反射布局只关联一次，以动态 Uniform Buffer 偏移选择不可变快照，并复用帧内相同资源组合的 Descriptor Set。OpenGL 缓存线框及深度偏移状态；空折射阶段不重开 Pass，ImGui 复用 CPU 暂存数组。性能对比工具与范围见 `Tools/OrbedenRenderSmoke/README.md`，固定负载结果不代表完整 Editor 场景帧率。
+
+Vulkan 继续缓存连续绘制的管线、资源组合及原生绑定，在新命令缓冲开始时清空绑定状态；等待检查点只提交新命令，并复用已完成的队列状态，保留原有 GPU 等待诊断。冒烟增加采样槽切换、纹理更新和重复等待后的继续绘制检查。
+
+先为目标配置构建 OrbedenThirdParty，再重建 Core、原生及托管 Editor。通过 Update Project 同步 SDK 和当前脚手架，使用原生渲染扩展的游戏模块需迁移到 `GetParameters()` / `GetPipelineState()` 并重建；Player 需重新 Build Player。无需重置 Examples，无场景或材质格式迁移；Builtin 模板内容不变，更新仍遵循既有镜像规则。验证范围为编译及两个后端的基础渲染冒烟，未做完整功能回归。
+
 版本 95：新增单层 Prefab 绑定与更新传播。源场景继续保存完整实例，并附加 Editor 管理的来源和对象身份映射；实例只开放根节点的局部位置、旋转和缩放。双击 Prefab 在纯内存 World 中编辑，保存或退出时写回源文件；支持整棵解绑、绑定浅绿色显示及按来源强制更新引用场景。场景打开时更新实例，World Cook 更新实例后移除关联信息；没有绑定实例的场景按字节原样复制。需重建 Core、Editor，通过 Update Project 同步 SDK 后重建游戏原生模块和托管程序集；不需要同步 Builtin／Examples。已有普通场景无需迁移，旧的无关联对象不会自动推断来源。验证范围为 Windows x64 Debug 编译与静态检查，未运行功能测试。
 
 版本 94：内置 `blinn_phong`、`pbs_metallic`、`transparent`、`refraction` 四个表面 Shader 显式声明 `Default` Pass 和 `Cull Back`，默认剔除背面。保留原队列、Standard 几何契约、展开能力、GLSL 源码和默认深度／混合状态；Uniform、Instanced、Expanded 共用相同 Pass 剔除状态。天空盒、大气、UI、粒子、雨玻璃、热尾流和阴影 Pass 保持原状态；自定义 Shader 的 `Cull Auto` 仍解析为 None，不修改全局正面绕序或自动补偿负缩放。双面表面需使用显式 `Cull None` 的自定义 Shader。

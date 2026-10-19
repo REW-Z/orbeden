@@ -292,10 +292,10 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         Log::Info(message);
     }
     backend->BeginPass(passDesc);
-    backend->SetDepthTest(true);
-    backend->SetDepthWrite(true);
-    backend->SetBlend(false);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().depthTest = true;
+    backend->GetPipelineState().depthWrite = true;
+    backend->GetPipelineState().blend = false;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->ProfileGpuWait("Render/GpuWait/MainPassState");
 
     //绘制 [天空盒或程序化天空]，程序化天空不可用时退回天空盒
@@ -316,6 +316,9 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
     backend->ProfileGpuWait("Render/GpuWait/Transparent");
 
+    //结束透明渲染阶段
+    backend->EndPass();
+
     //复制相机颜色和深度纹理
     bool cameraTexturesReady = false;
     if (camera.cameraTextureTarget.IsValid() && camera.cameraColorTexture.IsValid() && camera.cameraDepthTexture.IsValid())
@@ -334,17 +337,24 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
 
     //绘制 [折射队列]
     backend->ProfileGpuWait("Render/GpuWait/CopyCameraTextures");
-    ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
+    bool hasRefraction = std::any_of(cameraBatches.begin(), cameraBatches.end(),
+        [](const DrawBatch& batch) { return batch.key.queue == DrawQueue::Refraction; });
+    if (hasRefraction)
+    {
+        passDesc.clearMode = ClearMode::None;
+        backend->BeginPass(passDesc);
+        ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
+        backend->EndPass();
+    }
     backend->ProfileGpuWait("Render/GpuWait/Refraction");
 
     //结束相机主 Pass
-    backend->SetBlend(false);
-    backend->SetDepthWrite(true);
-    backend->SetDepthTest(true);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().blend = false;
+    backend->GetPipelineState().depthWrite = true;
+    backend->GetPipelineState().depthTest = true;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
-    backend->EndPass();
     if (cameraTexturesReady) shadows.CaptureDepth(camera);
     backend->ProfileGpuWait("Render/GpuWait/DepthDistribution");
 }
@@ -379,6 +389,8 @@ void ForwardPipeline::ExecuteQueueBatches(const RenderScene& scene, const Render
         : drawQueue == DrawQueue::Transparent ? "Render/DrawBatches/Transparent"
         : "Render/DrawBatches/Refraction");
     std::unordered_set<uint32> configuredPrograms;
+    boundMaterial = nullptr;
+    boundMaterialProgram = 0;
     for (const DrawBatch& batch : cameraBatches)
     {
         if (batch.key.queue != drawQueue) continue;
@@ -492,7 +504,6 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
             ++batchStats.invalidResources;
             return false;
         }
-        backend->BindShaderProgram(shaderPass.expandedProgram);
         backend->BindVertexInput(group->vertexInput);
         backend->DrawIndexed(batch.key.indexStart, batch.key.indexCount);
         ++batchStats.dynamicBatchDraws;
@@ -515,7 +526,6 @@ bool ForwardPipeline::ExecuteExpandedBatch(const DrawBatch& batch, const RenderS
             ++batchStats.invalidResources;
             return false;
         }
-        backend->BindShaderProgram(shaderPass.expandedProgram);
         backend->BindVertexInput(drawStream.GetExpandedVertexInput());
     }
 
@@ -588,7 +598,6 @@ bool ForwardPipeline::ExecuteTrailInstancedBatch(const DrawBatch& batch, const R
         ++batchStats.invalidResources;
         return false;
     }
-    backend->BindShaderProgram(shaderPass.trailInstancedProgram);
     backend->BindVertexInput(particleRenderer.GetQuadVertexInput(GeometryMode::TrailInstanced));
     if (!backend->BindInstanceBuffer(drawStream.GetInstanceBuffer(), 0))
     {
@@ -630,8 +639,7 @@ bool ForwardPipeline::ExecuteUniformBatch(const DrawBatch& batch, const RenderSc
                 ++batchStats.invalidResources;
                 return drew;
             }
-            backend->BindShaderProgram(shaderPass.shaderProgram);
-            backend->SetUniformMatrix4("u_Model", item.model);
+            backend->GetParameters().SetMatrix4("u_Model", item.model);
             backend->BindVertexInput(mesh->vertexInput);
             backend->DrawIndexed(item.indexStart, item.indexCount);
             ++batchStats.ordinaryDraws;
@@ -702,7 +710,6 @@ bool ForwardPipeline::ExecuteInstancedBatch(const DrawBatch& batch, const Render
         ++batchStats.invalidResources;
         return false;
     }
-    backend->BindShaderProgram(shaderPass.instancedProgram);
     backend->BindVertexInput(instancedInput);
     if (!backend->BindInstanceBuffer(drawStream.GetInstanceBuffer(), 0))
     {
@@ -741,89 +748,97 @@ bool ForwardPipeline::BindDrawState(const DrawBatch& batch, const RenderScene& s
 
     //uniform 只对当前绑定生效，必须在这一步就把目标 program 绑上
     backend->BindShaderProgram(GpuShaderProgramID{ programId });
-    backend->SetDepthTest(batch.key.depthTest != 0);
-    backend->SetDepthWrite(batch.key.depthWrite != 0);
-    backend->SetBlend(batch.key.blend != 0);
+    ShaderParameters& parameters = backend->GetParameters();
+    backend->GetPipelineState().depthTest = batch.key.depthTest != 0;
+    backend->GetPipelineState().depthWrite = batch.key.depthWrite != 0;
+    backend->GetPipelineState().blend = batch.key.blend != 0;
     //混合方程由来源与队列共同决定，材质无法覆盖
-    backend->SetBlendMode(batch.key.blendMode);
-    backend->SetCullMode(ConvertCullModeForBackend(static_cast<CullMode>(batch.key.cull)));
+    backend->GetPipelineState().blendMode = batch.key.blendMode;
+    backend->GetPipelineState().cull = ConvertCullModeForBackend(static_cast<CullMode>(batch.key.cull));
 
     //相机、光照与环境反射对本队列的每个 program 只提交一次
     if (configuredPrograms.insert(programId).second)
     {
-        if (bindings.useViewProjection) backend->SetUniformMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
+        if (bindings.useViewProjection) parameters.SetMatrix4("u_ViewProjection", camera.viewProjectionMatrix);
         if (bindings.useShadowUniforms) shadows.BindUniforms(camera);
-        if (bindings.useCameraPosition) backend->SetUniformVector3("u_CameraPosition", camera.position);
-        if (bindings.useCameraNearPlane) backend->SetUniformFloat("u_CameraNearPlane", camera.nearPlane);
-        if (bindings.useCameraFarPlane) backend->SetUniformFloat("u_CameraFarPlane", camera.farPlane);
-        if (bindings.useTime) backend->SetUniformFloat("u_Time", camera.elapsedTime);
+        if (bindings.useCameraPosition) parameters.SetVector3("u_CameraPosition", camera.position);
+        if (bindings.useCameraNearPlane) parameters.SetFloat("u_CameraNearPlane", camera.nearPlane);
+        if (bindings.useCameraFarPlane) parameters.SetFloat("u_CameraFarPlane", camera.farPlane);
+        if (bindings.useTime) parameters.SetFloat("u_Time", camera.elapsedTime);
         if (bindings.useCameraTextures)
-            backend->SetUniformInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
-        if (bindings.useAmbientColor) backend->SetUniformColor("u_AmbientColor", scene.renderSettings.ambientColor);
-        if (bindings.useEnvironmentIntensity) backend->SetUniformFloat("u_EnvironmentIntensity", environmentReflection.intensity);
-        if (bindings.useEnvironmentMaxLod) backend->SetUniformFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
+            parameters.SetInt("u_UseCameraTextures", batch.key.queue == DrawQueue::Refraction && cameraTexturesReady ? 1 : 0);
+        if (bindings.useAmbientColor) parameters.SetColor("u_AmbientColor", scene.renderSettings.ambientColor);
+        if (bindings.useEnvironmentIntensity) parameters.SetFloat("u_EnvironmentIntensity", environmentReflection.intensity);
+        if (bindings.useEnvironmentMaxLod) parameters.SetFloat("u_EnvironmentMaxLod", environmentReflection.maxLod);
         if (bindings.useLightDirection)
-            backend->SetUniformVector3("u_LightDirection", mainLight ? mainLight->direction : vector3{ 0.0f, -1.0f, 0.0f });
+            parameters.SetVector3("u_LightDirection", mainLight ? mainLight->direction : vector3{ 0.0f, -1.0f, 0.0f });
         if (bindings.useLightColor)
-            backend->SetUniformColor("u_LightColor", mainLight ? mainLight->color : color{ 1.0f, 1.0f, 1.0f, 1.0f });
-        if (bindings.useLightIntensity) backend->SetUniformFloat("u_LightIntensity", mainLight ? mainLight->intensity : 0.0f);
+            parameters.SetColor("u_LightColor", mainLight ? mainLight->color : color{ 1.0f, 1.0f, 1.0f, 1.0f });
+        if (bindings.useLightIntensity) parameters.SetFloat("u_LightIntensity", mainLight ? mainLight->intensity : 0.0f);
         if (bindings.useShadowStrength)
-            backend->SetUniformFloat("u_ShadowStrength", mainLight ? std::clamp(mainLight->shadowStrength, 0.0f, 1.0f) : 0.0f);
+            parameters.SetFloat("u_ShadowStrength", mainLight ? std::clamp(mainLight->shadowStrength, 0.0f, 1.0f) : 0.0f);
         if (bindings.useAtmosphereUniforms) atmosphere.BindMaterialUniforms();
     }
 
     //以下参数随批次变化，即使 program 已经配置过也必须重设。
     //实例模式的每实例 tint 与 uv 走顶点属性，这两个 uniform 不会被声明。
-    if (bindings.useInstanceTint) backend->SetUniformColor("u_InstanceTint", { 1.0f, 1.0f, 1.0f, 1.0f });
-    if (bindings.useInstanceUvRect) backend->SetUniformColor("u_InstanceUvRect", { 0.0f, 0.0f, 1.0f, 1.0f });
+    if (bindings.useInstanceTint) parameters.SetColor("u_InstanceTint", { 1.0f, 1.0f, 1.0f, 1.0f });
+    if (bindings.useInstanceUvRect) parameters.SetColor("u_InstanceUvRect", { 0.0f, 0.0f, 1.0f, 1.0f });
     //加性与 Alpha 混合的加雾方式不同，不能共用缓存值
     if (bindings.useAtmosphereAdditive)
-        backend->SetUniformInt("u_AtmosphereAdditive", batch.key.blendMode == BlendMode::Additive ? 1 : 0);
+        parameters.SetInt("u_AtmosphereAdditive", batch.key.blendMode == BlendMode::Additive ? 1 : 0);
 
+    if (bindings.useReceiveShadows) parameters.SetInt("u_ReceiveShadows", batch.key.receiveShadows ? 1 : 0);
+    if (boundMaterial == &material && boundMaterialRevision == material.bindingRevision && boundMaterialProgram == programId)
+        return true;
+
+    //提交变化的材质参数与纹理
     for (uint32 index : bindings.colorBindingIndices)
     {
         const GpuMaterialColorBinding& binding = material.colorBindings[index];
-        backend->SetUniformColor(binding.uniformName.c_str(), binding.value);
+        parameters.SetColor(binding.uniformName.c_str(), binding.value);
     }
     for (uint32 index : bindings.floatBindingIndices)
     {
         const GpuMaterialFloatBinding& binding = material.floatBindings[index];
-        backend->SetUniformFloat(binding.uniformName.c_str(), binding.value);
+        parameters.SetFloat(binding.uniformName.c_str(), binding.value);
     }
 
     for (uint32 index : bindings.texturePresenceBindingIndices)
     {
         const GpuMaterialTextureBinding& binding = material.textureBindings[index];
-        backend->SetUniformInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
+        parameters.SetInt(binding.presenceUniformName.c_str(), binding.hasTexture ? 1 : 0);
     }
     for (uint32 slot = 0; slot < bindings.textureBindingIndices.size(); ++slot)
     {
         const GpuMaterialTextureBinding& binding = material.textureBindings[bindings.textureBindingIndices[slot]];
-        backend->SetUniformInt(binding.uniformName.c_str(), static_cast<int32>(slot));
+        parameters.SetInt(binding.uniformName.c_str(), static_cast<int32>(slot));
         backend->BindTexture(slot, binding.hasTexture ? binding.texture : GpuTextureID());
     }
 
     //绑定程序实际使用的公共纹理
     if (bindings.shadowTextureSlot >= 0 || bindings.useShadowMap) shadows.BindTexture(bindings.shadowTextureSlot);
-    if (bindings.useReceiveShadows) backend->SetUniformInt("u_ReceiveShadows", batch.key.receiveShadows ? 1 : 0);
     if (bindings.environmentSlot >= 0)
     {
-        backend->SetUniformInt("u_EnvironmentTexture", bindings.environmentSlot);
+        parameters.SetInt("u_EnvironmentTexture", bindings.environmentSlot);
         backend->BindCubeTexture(static_cast<uint32>(bindings.environmentSlot), environmentReflection.texture);
     }
     bool useCameraTextures = batch.key.queue == DrawQueue::Refraction && cameraTexturesReady;
     if (bindings.cameraColorSlot >= 0)
     {
-        backend->SetUniformInt("u_CameraColorTexture", bindings.cameraColorSlot);
+        parameters.SetInt("u_CameraColorTexture", bindings.cameraColorSlot);
         backend->BindTexture(static_cast<uint32>(bindings.cameraColorSlot), useCameraTextures ? camera.cameraColorTexture : GpuTextureID());
     }
     if (bindings.cameraDepthSlot >= 0)
     {
-        backend->SetUniformInt("u_CameraDepthTexture", bindings.cameraDepthSlot);
+        parameters.SetInt("u_CameraDepthTexture", bindings.cameraDepthSlot);
         backend->BindDepthTexture(static_cast<uint32>(bindings.cameraDepthSlot), useCameraTextures ? camera.cameraDepthTexture : GpuDepthTextureID());
     }
     if (bindings.atmosphereRadianceSlot >= 0 || bindings.atmosphereOpticalDepthSlot >= 0)
         atmosphere.BindMaterialTextures(bindings.atmosphereRadianceSlot, bindings.atmosphereOpticalDepthSlot);
+    boundMaterial = &material;
+    boundMaterialRevision = material.bindingRevision;
+    boundMaterialProgram = programId;
     return true;
 }
 
@@ -966,20 +981,20 @@ void ForwardPipeline::RenderSkybox(const RenderScene& scene, const RenderCamera&
     matrix4x4 viewProjection = RenderMath::Mul(camera.projectionMatrix, view);
 
     //绘制天空盒立方体
-    backend->SetDepthTest(false);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(false);
+    backend->GetPipelineState().depthTest = false;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = false;
     const GpuShaderPass& shaderPass = shader->passes[0];
     backend->BindShaderProgram(shaderPass.shaderProgram);
-    backend->SetUniformMatrix4("u_ViewProjection", viewProjection);
+    backend->GetParameters().SetMatrix4("u_ViewProjection", viewProjection);
     //六面天空同样受浓雾遮蔽，参数与材质共用同一套；浓雾关闭时这里写入的是关闭态
     atmosphere.BindMaterialUniforms();
-    backend->SetUniformInt("u_SkyboxTexture", 0);
+    backend->GetParameters().SetInt("u_SkyboxTexture", 0);
     backend->BindCubeTexture(0, cubeTexture);
     backend->BindVertexInput(skyboxMesh.vertexInput);
     backend->DrawIndexed(0, skyboxMesh.indexCount);
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
-    backend->SetDepthWrite(true);
-    backend->SetDepthTest(true);
+    backend->GetPipelineState().depthWrite = true;
+    backend->GetPipelineState().depthTest = true;
 }

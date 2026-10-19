@@ -3,6 +3,12 @@
 #include "Platform/Window.h"
 #include "Rendering/Backend/GpuResourceIDs.h"
 #include "Rendering/RenderTypes.h"
+#include "Rendering/PipelineState.h"
+#include "Rendering/ShaderParameters.h"
+
+#include <memory>
+#include <unordered_map>
+#include <span>
 
 //渲染目标颜色格式。管线约定场景在 RGBA16F 线性空间计算，只有显示目标用 RGBA8。
 enum class GpuRenderTargetFormat
@@ -26,6 +32,10 @@ enum class GpuVertexLayout : uint32
     InstancedTrail = 3,
     //UI 顶点：位置 vec3、UV vec2、颜色 vec4，偏移 0/12/20，stride 为 36 字节。
     UI = 4,
+    //调试线顶点：位置 vec3
+    Position = 5,
+    //ImGui 顶点：位置 vec2、UV vec2、RGBA8
+    ImGui = 6,
 };
 
 //GPU 缓冲用途。Stream 允许先按容量创建、之后重复流式覆盖。
@@ -68,6 +78,7 @@ public:
     bool srgb = false;
     //UI 纹理（字形图集、遮罩）必须夹边采样：越界取重复色会让遮罩边缘绕回另一侧。
     bool clampToEdge = false;
+    bool generateMipmaps = false;
 };
 
 //GPU 深度纹理创建描述，描述阴影图等深度贴图尺寸。
@@ -159,6 +170,10 @@ public:
 class RenderBackend
 {
 public:
+    //按窗口图形 API 创建后端
+    static std::unique_ptr<RenderBackend> Create(WindowGraphicsApi api);
+    //读取启动参数中的图形 API 选项
+    static bool ReadGraphicsApi(std::span<const std::string_view> arguments, WindowGraphicsApi& api, std::string& error);
     //进程内活动后端的最大纹理边长。后端在初始化时写入，供与具体 API 无关的
     //上层（动态纹理、字体图集）在分配前判断能否容纳；未初始化时为 0。
     static int32 GetMaxTextureSize() { return activeMaxTextureSize; }
@@ -166,6 +181,16 @@ public:
 
 private:
     inline static int32 activeMaxTextureSize = 0;
+    std::unordered_map<uint32, ShaderParameters> shaderParameters;
+    ShaderParameters* activeParameters = nullptr;
+    uint32 activeParameterProgram = 0;
+    PipelineState pipelineState;
+
+protected:
+    //绑定原生着色器对象
+    virtual void OnBindShaderProgram(GpuShaderProgramID id) = 0;
+    //移除着色器参数缓存
+    void ReleaseShaderParameters(GpuShaderProgramID id);
 
 public:
     virtual ~RenderBackend() = default;
@@ -174,6 +199,16 @@ public:
     virtual void Shutdown() = 0;
     virtual void BeginFrame() = 0;
     virtual void EndFrame() = 0;
+    //提交主窗口显示
+    virtual void Present() = 0;
+    //等待已提交 GPU 工作完成
+    virtual void WaitForIdle() = 0;
+    //创建共享设备资源的窗口呈现表面
+    virtual GpuSurfaceID CreateSurface(IWindow* window) = 0;
+    //释放附加呈现表面
+    virtual void DeleteSurface(GpuSurfaceID id) = 0;
+    //选择后续默认目标所对应的窗口
+    virtual void SetSurface(GpuSurfaceID id) = 0;
     virtual void BeginPass(const RenderPassDesc& desc) = 0;
     virtual void EndPass() = 0;
 
@@ -212,27 +247,20 @@ public:
     virtual GpuShaderProgramID CreateShaderProgram(const GpuShaderProgramDesc& desc) = 0;
     virtual void DeleteShaderProgram(GpuShaderProgramID id) = 0;
     //查询链接后实际使用的 uniform
-    virtual bool HasShaderUniform(GpuShaderProgramID program, const char* name) = 0;
+    virtual bool HasShaderParameter(GpuShaderProgramID program, const char* name) = 0;
 
-    virtual void BindShaderProgram(GpuShaderProgramID id) = 0;
+    //选择着色器与对应参数块
+    void BindShaderProgram(GpuShaderProgramID id);
+    //获取当前着色器参数块
+    ShaderParameters& GetParameters();
+    //获取当前绘制的管线状态
+    PipelineState& GetPipelineState() { return pipelineState; }
     virtual void BindVertexInput(GpuVertexInputID id) = 0;
     virtual void BindTexture(uint32 slot, GpuTextureID id) = 0;
     virtual void BindDepthTexture(uint32 slot, GpuDepthTextureID id) = 0;
     virtual void BindCubeTexture(uint32 slot, GpuCubeTextureID id) = 0;
-    virtual void SetUniformMatrix4(const char* name, const matrix4x4& value) = 0;
-    virtual void SetUniformVector3(const char* name, const vector3& value) = 0;
-    virtual void SetUniformColor(const char* name, const color& value) = 0;
-    virtual void SetUniformInt(const char* name, int32 value) = 0;
-    virtual void SetUniformFloat(const char* name, float32 value) = 0;
-    virtual void SetDepthTest(bool enabled) = 0;
-    virtual void SetDepthCompare(DepthCompare compare) = 0;
-    virtual void SetDepthWrite(bool enabled) = 0;
-    //多边形深度偏移：与已有表面同层绘制时用它压过浮点误差
-    virtual void SetPolygonOffset(bool enabled, float32 factor, float32 units) = 0;
-    virtual void SetBlend(bool enabled) = 0;
-    //设置混合方程。Alpha 与 Additive 的 RGB/Alpha 因子成对切换，由后端缓存并去重。
-    virtual void SetBlendMode(BlendMode mode) = 0;
-    virtual void SetCullMode(CullMode mode) = 0;
+    //设置像素裁剪区域，坐标以目标左下角为原点
+    virtual void SetScissor(bool enabled, int32 x = 0, int32 y = 0, int32 width = 0, int32 height = 0) = 0;
     virtual void DrawIndexed(uint32 indexStart, uint32 indexCount) = 0;
     //实例化索引绘制，实例数据由 BindInstanceBuffer 提供。
     virtual void DrawIndexedInstanced(uint32 indexStart, uint32 indexCount, uint32 instanceCount) = 0;
@@ -250,5 +278,5 @@ public:
     //按当前顶点输入的实例布局设置实例 attribute 指针与 divisor。
     virtual bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) = 0;
     //仅在录制期间等待此前 GPU 工作完成并记录 CPU 阻塞耗时
-    virtual void ProfileGpuWait(const char* name) = 0;
+    void ProfileGpuWait(const char* name);
 };

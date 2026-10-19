@@ -14,7 +14,6 @@ private:
     int32 height = 0;
     int32 framebufferWidth = 0;
     int32 framebufferHeight = 0;
-    bool wasCapturingPresent = false;
 
 public:
     GlfwWindow() = default;
@@ -42,8 +41,8 @@ public:
     //唤醒等待中的 GLFW 事件循环
     void WakeEventLoop() override;
 
-    //提交当前帧显示
-    void Present() override;
+    //读取窗口的垂直同步配置
+    bool GetVsync() const override;
 
     //判断窗口是否请求关闭
     bool ShouldClose() const override;

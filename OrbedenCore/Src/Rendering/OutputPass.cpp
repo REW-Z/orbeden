@@ -132,14 +132,14 @@ bool OutputPass::Render(const Parameters& parameters)
     passDesc.clearMode = ClearMode::None;
     backend->BeginPass(passDesc);
 
-    backend->SetDepthTest(false);
-    backend->SetDepthWrite(false);
-    backend->SetBlend(false);
-    backend->SetCullMode(CullMode::None);
+    backend->GetPipelineState().depthTest = false;
+    backend->GetPipelineState().depthWrite = false;
+    backend->GetPipelineState().blend = false;
+    backend->GetPipelineState().cull = CullMode::None;
     backend->BindShaderProgram(program);
-    backend->SetUniformInt("u_SourceTexture", 0);
-    backend->SetUniformFloat("u_Exposure", parameters.exposure);
-    backend->SetUniformInt("u_Mode", static_cast<int32>(parameters.mode));
+    backend->GetParameters().SetInt("u_SourceTexture", 0);
+    backend->GetParameters().SetFloat("u_Exposure", parameters.exposure);
+    backend->GetParameters().SetInt("u_Mode", static_cast<int32>(parameters.mode));
     backend->BindTexture(0, parameters.sourceTexture);
     backend->BindVertexInput(quad.GetVertexInput());
     backend->DrawIndexed(0, 6);

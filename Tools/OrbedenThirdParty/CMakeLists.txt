@@ -71,16 +71,14 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/glfw glfw)
 
 # ---- Dear ImGui ----
-#上游文件由锁文件还原到 vendor/；imgui_impl_opengl3.cpp 由 BuildAdapters/ 下的 Orbeden 包装 include，
-# 以便使用引擎的 GLAD2 而不是 imgui 自带的加载器。
+#构建 ImGui 核心与 GLFW 输入后端，绘制由引擎公共渲染接口提交
 add_library(imgui STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_draw.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_tables.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui_widgets.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/misc/cpp/imgui_stdlib.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_glfw.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/BuildAdapters/imgui_impl_opengl3_orbeden.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends/imgui_impl_glfw.cpp")
 target_include_directories(imgui PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/backends"
@@ -94,12 +92,12 @@ target_compile_definitions(imgui PRIVATE "IMGUI_API=__declspec(dllexport)")
 #生成产物由锁定版本的生成器按固定规格本地生成
 # glad 的 GL 函数指针表同样是全局状态，只允许 OrbedenCore.dll 里初始化过的那一份：
 # 这里按 dllexport 编译，编辑器用 GLAD_API_CALL_EXPORT（dllimport）从 DLL 取。
-add_library(glad STATIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/src/gl.c")
+add_library(glad STATIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/src/gl.c" "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/src/vulkan.c")
 target_include_directories(glad PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glad/include")
 target_compile_definitions(glad PRIVATE GLAD_API_CALL_EXPORT GLAD_API_CALL_EXPORT_BUILD)
 
-# imgui 的 GLFW 与 OpenGL3 后端分别要这两家的头文件与库。
-target_link_libraries(imgui PUBLIC glfw glad)
+#链接 GLFW 输入后端
+target_link_libraries(imgui PUBLIC glfw)
 
 # ---- cgltf / stb_image ----
 # 单头库：实现放在 BuildAdapters/ 下的编译单元里，引擎只 include 头文件。
@@ -108,3 +106,12 @@ target_include_directories(cgltf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/cglt
 
 add_library(stb STATIC "${CMAKE_CURRENT_SOURCE_DIR}/BuildAdapters/stb_image_impl.c")
 target_include_directories(stb PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb")
+
+#编译 GLSL 前端与 SPIR-V 生成器
+set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
+set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
+set(GLSLANG_TESTS OFF CACHE BOOL "" FORCE)
+set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTERNAL OFF CACHE BOOL "" FORCE)
+add_subdirectory(vendor/glslang glslang)

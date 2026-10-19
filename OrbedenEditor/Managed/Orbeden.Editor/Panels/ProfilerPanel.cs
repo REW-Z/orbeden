@@ -281,10 +281,10 @@ internal sealed class ProfilerPanel : EditorPanel
                 ExportedAtUtc = exportedAt.ToString("O"),
                 Timing = "CPU scope wall time, not GPU timing. All durations and start offsets are in microseconds.",
                 PresentDiagnostic = events.Take(selectedFrameEventCount).Any(sample => GetName(sample.NameId).EndsWith("/WaitForGpu", StringComparison.Ordinal))
-                    ? "Capture inserts glFlush/glFinish before swap. WaitForGpu measures CPU waiting for prior GPU work; Present measures the subsequent swap call. This changes CPU/GPU overlap; compare captures using the same diagnostic mode."
+                    ? "Capture inserts backend GPU completion waits before presentation. WaitForGpu measures CPU waiting for prior GPU work; Present measures the subsequent presentation call. This changes CPU/GPU overlap; compare captures using the same diagnostic mode."
                     : "No pre-swap GPU wait diagnostic was recorded.",
                 SceneDiagnostic = events.Take(selectedFrameEventCount).Any(sample => GetName(sample.NameId).StartsWith("Render/GpuWait/", StringComparison.Ordinal))
-                    ? "Scene stages are separated by glFinish. GpuWait nodes measure remaining CPU blocking time since the previous checkpoint, not full GPU stage duration. Rendering stages no longer overlap normally."
+                    ? "Scene stages are separated by backend GPU completion waits. GpuWait nodes measure remaining CPU blocking time since the previous checkpoint, not full GPU stage duration. Recording changes normal CPU/GPU overlap."
                     : "No per-stage scene GPU waits were recorded.",
                 Notes = "Node totals include children; do not sum nested totals. Self time subtracts recorded direct children and may be overstated when events are dropped.",
                 Frame = new

@@ -296,3 +296,12 @@ geometry Standard
 公共宏随引擎版本 78 提供。已有项目通过 **Update Project** 同步 Builtin 和 SDK 文档，或手动同步 `surface_effects.orbinc`、`shadow_common.orbinc`、`atmosphere_sampling.orbinc` 及它们引用的公共片段，再重新导入依赖它们的 Shader。Builtin 重置会覆盖其中的自定义内容，自己的 Shader 应放在其他目录。
 
 这份手册随 SDK 发布到游戏项目 `Lib/Docs/ShaderDevelopment.md`；该目录由引擎刷新，自己的笔记放在 `Content/` 内。发布游戏前重新 **Build Player**，把新导入的 Shader 与材质打包进发布资源。
+
+
+## OpenGL 与 Vulkan
+
+同一份 `.orbshader` / `.orbinc` 同时供 OpenGL 4.3 和 Vulkan 1.3 使用，继续写普通 GLSL 参数。Vulkan 编译器负责跨阶段链接、分配 location / sampler binding，把数值参数转换为参数块并反射偏移；不要给这些参数手写 Vulkan descriptor set。现有材质槽名称、Pass 状态与几何变体保持一致。
+
+数值提交接口支持 mat4、vec3、vec4、float、int / bool 及其按元素命名的数组。引擎公共接口未提供任意 UBO、SSBO 或采样器数组绑定；自定义资源布局不属于当前 Shader 契约，编译时会报告不支持的布局。深度统计的 SSBO 由后端私有实现管理。
+
+世界与逻辑裁剪空间不随后端改变；相机、阴影、屏幕 UV 与深度还原继续按本手册的逻辑约定编写。Vulkan 编译入口适配最终位置、窗口片元坐标与 Y 导数，不在材质 Shader 中重复翻转。显示编码继续只由输出 Pass 完成。
