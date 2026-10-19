@@ -5,6 +5,7 @@
 #include "Rendering/ShaderCompiler.h"
 #include "Rendering/VertexLayout.h"
 #include "Rendering/DepthDistributionShader.h"
+#include "Profiler/Profiler.h"
 
 #include <glad/vulkan.h>
 #define GLFW_INCLUDE_NONE
@@ -13,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstring>
 #include <functional>
 #include <limits>
 #include <stdexcept>
@@ -22,6 +24,7 @@ namespace
 {
     constexpr uint32 FrameCount = 3;
     constexpr VkDeviceSize UploadPageSize = 8 * 1024 * 1024;
+    constexpr uint32 TimestampCapacity = 256;
 
     //检查 Vulkan 调用结果
     void Check(VkResult result, const char* operation)
@@ -54,6 +57,13 @@ struct VulkanRenderBackend::State
         bool stream = false;
         List<uint8> contents;
         uint64 uploadSerial = 0;
+    };
+    struct VertexInput
+    {
+        GpuVertexInputDesc desc;
+        Buffer* vertices = nullptr;
+        Buffer* indices = nullptr;
+        uint32 instanceStride = 0;
     };
     struct Image
     {
@@ -115,6 +125,8 @@ struct VulkanRenderBackend::State
         VkBuffer lastParameterBuffer = VK_NULL_HANDLE;
         VkDescriptorBufferInfo lastStorage = {};
         uint64 textureBindingsRevision = 0, imageAccessRevision = 0;
+        const ShaderParameterValue* framebufferParameter = nullptr;
+        uint64 framebufferInfoRevision = 0, framebufferParameterRevision = 0;
     };
     struct DrawBindings
     {
@@ -141,6 +153,13 @@ struct VulkanRenderBackend::State
         List<Buffer> uploads;
         List<std::function<void()>> retired;
         uint64 serial = 0;
+        VkQueryPool timestamps = VK_NULL_HANDLE;
+        std::array<int32, TimestampCapacity> timestampNames = {};
+        uint32 timestampCount = 0;
+        int32 droppedTimestamps = 0;
+        int64 profileFrameIndex = -1;
+        uint64 profileGeneration = 0;
+        bool timestampsSubmitted = false;
     };
     struct Surface
     {
@@ -171,6 +190,7 @@ struct VulkanRenderBackend::State
     VkDevice device = VK_NULL_HANDLE;
     VkQueue queue = VK_NULL_HANDLE;
     uint32 queueFamily = 0;
+    uint32 timestampValidBits = 0;
     VkPhysicalDeviceProperties properties = {};
     VkPhysicalDeviceMemoryProperties memoryProperties = {};
     VkPipelineCache pipelineCache = VK_NULL_HANDLE;
@@ -182,9 +202,17 @@ struct VulkanRenderBackend::State
     DrawBindings drawBindings;
     uint64 textureBindingsRevision = 0, imageAccessRevision = 0;
     RenderPassDesc pass;
+    Image* passColor = nullptr;
+    Image* passDepth = nullptr;
+    bool passAttachmentsCached = false;
+    vector3 framebufferInfo = {};
+    uint64 framebufferInfoRevision = 1;
     uint32 currentSurface = 0;
     uint32 nextId = 1;
     uint32 currentProgram = 0, currentInput = 0, instanceBuffer = 0;
+    Program* programBinding = nullptr;
+    const VertexInput* inputBinding = nullptr;
+    Buffer* instanceBinding = nullptr;
     usize instanceOffset = 0;
     bool scissorEnabled = false;
     VkRect2D scissor = {};
@@ -192,7 +220,7 @@ struct VulkanRenderBackend::State
     std::unordered_map<uint32, Buffer> buffers;
     std::unordered_map<uint32, Image> images;
     std::unordered_map<uint32, Target> targets;
-    std::unordered_map<uint32, GpuVertexInputDesc> inputs;
+    std::unordered_map<uint32, VertexInput> inputs;
     std::unordered_map<uint32, Program> programs;
     std::unordered_map<uint32, uint32> textures;
     std::unordered_map<uint32, Distribution> distributions;
@@ -200,6 +228,51 @@ struct VulkanRenderBackend::State
 
     //绑定后端接口
     explicit State(VulkanRenderBackend& value) : backend(value) {}
+
+    //写入帧内 GPU 时间检查点
+    void WriteTimestamp(const char* name, bool final = false)
+    {
+        Frame& frame = frames[frameIndex];
+        if (frame.profileFrameIndex < 0 || !frame.timestamps) return;
+        if (frame.timestampCount >= TimestampCapacity - (final ? 0u : 1u))
+        {
+            ++frame.droppedTimestamps;
+            return;
+        }
+        frame.timestampNames[frame.timestampCount] = Profiler::GetGpuNameId(name);
+        vkCmdWriteTimestamp2(RecordCommands(), VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            frame.timestamps, frame.timestampCount++);
+    }
+
+    //读取已完成帧的 GPU 检查点区间
+    void ReadTimestamps(Frame& frame)
+    {
+        if (!frame.timestampsSubmitted) return;
+        struct TimestampResult { uint64 ticks = 0, available = 0; };
+        std::array<TimestampResult, TimestampCapacity> results;
+        VkResult result = vkGetQueryPoolResults(device, frame.timestamps, 0, frame.timestampCount,
+            sizeof(TimestampResult) * frame.timestampCount, results.data(), sizeof(TimestampResult),
+            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+        if (result != VK_NOT_READY) Check(result, "vkGetQueryPoolResults(timestamps)");
+        std::array<ProfileGpuEvent, TimestampCapacity> events;
+        int32 count = 0;
+        float64 elapsed = 0;
+        uint64 mask = timestampValidBits == 64 ? UINT64_MAX : (uint64{1} << timestampValidBits) - 1;
+        if (result == VK_SUCCESS)
+        {
+            for (uint32 index = 1; index < frame.timestampCount; ++index)
+            {
+                if (!results[index - 1].available || !results[index].available) { count = 0; break; }
+                uint64 ticks = (results[index].ticks - results[index - 1].ticks) & mask;
+                float64 duration = static_cast<float64>(ticks) * properties.limits.timestampPeriod / 1000.0;
+                events[count++] = { frame.timestampNames[index], elapsed, duration };
+                elapsed += duration;
+            }
+        }
+        Profiler::StoreGpuEvents(frame.profileGeneration, frame.profileFrameIndex,
+            events.data(), count, frame.droppedTimestamps);
+        frame.timestampsSubmitted = false;
+    }
 
     //获取并标记当前录制的命令缓冲
     VkCommandBuffer RecordCommands()
@@ -382,6 +455,7 @@ struct VulkanRenderBackend::State
         uint32 height = static_cast<uint32>(std::max(surface.window->GetFramebufferHeight(), 0));
         if (!width || !height) return false;
         backend.WaitForIdle();
+        ClearPassAttachments();
         VkSurfaceCapabilitiesKHR capabilities;
         Check(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical, surface.handle, &capabilities), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR");
         uint32 count = 0;
@@ -471,12 +545,37 @@ struct VulkanRenderBackend::State
         return { target->second.color ? &images.at(target->second.color) : nullptr, target->second.depth ? &images.at(target->second.depth) : nullptr };
     }
 
+    //清空当前 Pass 的附件引用
+    void ClearPassAttachments()
+    {
+        passColor = passDepth = nullptr;
+        passAttachmentsCached = false;
+    }
+
+    //缓存当前 Pass 的附件与帧缓冲参数
+    void CachePassAttachments()
+    {
+        if (passAttachmentsCached) return;
+        auto [color, depth] = GetAttachments(pass.renderTarget);
+        passColor = color; passDepth = depth;
+        passAttachmentsCached = color || depth;
+        Image* extent = color ? color : depth;
+        vector3 info = { extent ? static_cast<float32>(extent->height) : 0.0f, pass.renderTarget.IsValid() ? 0.0f : 1.0f, 0.0f };
+        if (info.x != framebufferInfo.x || info.y != framebufferInfo.y)
+        {
+            framebufferInfo = info;
+            ++framebufferInfoRevision;
+        }
+    }
+
     //开始或恢复当前渲染范围
     bool StartRendering()
     {
         if (rendering) return true;
         if (!passActive || pass.width <= 0 || pass.height <= 0) return false;
-        auto [color, depth] = GetAttachments(pass.renderTarget);
+        CachePassAttachments();
+        Image* color = passColor;
+        Image* depth = passDepth;
         if (!color && !depth) return false;
         if (color) UseImage(*color, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
         if (depth) UseImage(*depth, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
@@ -680,7 +779,7 @@ bool VulkanRenderBackend::Initialize(IWindow* window)
                 Check(vkGetPhysicalDeviceSurfaceSupportKHR(candidate, family, s.surfaces.at(0).handle, &present), "vkGetPhysicalDeviceSurfaceSupportKHR");
                 if (!present || (families[family].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) != (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) continue;
                 int32 score = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
-                if (score > bestScore) { bestScore = score; s.physical = candidate; s.queueFamily = family; s.properties = properties; }
+                if (score > bestScore) { bestScore = score; s.physical = candidate; s.queueFamily = family; s.properties = properties; s.timestampValidBits = families[family].timestampValidBits; }
             }
         }
         if (!s.physical) throw std::runtime_error("Vulkan 1.3 device with graphics, compute, presentation and wireframe support was not found.");
@@ -739,11 +838,15 @@ void VulkanRenderBackend::Shutdown()
         vkDeviceWaitIdle(s.device);
         for (auto& frame : s.frames)
         {
+            s.ReadTimestamps(frame);
+            if (frame.profileFrameIndex >= 0 && !frame.timestampsSubmitted && s.recording && &frame == &s.frames[s.frameIndex])
+                Profiler::StoreGpuEvents(frame.profileGeneration, frame.profileFrameIndex, nullptr, 0, 0);
             for (auto& release : frame.retired) release();
             for (auto& upload : frame.uploads) s.DestroyBuffer(upload);
             for (auto pool : frame.descriptorPools) vkDestroyDescriptorPool(s.device, pool, nullptr);
             if (frame.pool) vkDestroyCommandPool(s.device, frame.pool, nullptr);
             if (frame.fence) vkDestroyFence(s.device, frame.fence, nullptr);
+            if (frame.timestamps) vkDestroyQueryPool(s.device, frame.timestamps, nullptr);
         }
         for (auto& [id, distribution] : s.distributions) s.DestroyBuffer(distribution.bins);
         for (auto& [id, program] : s.programs) { s.DestroyProgram(std::move(program)); ReleaseShaderParameters({ id }); }
@@ -772,9 +875,18 @@ void VulkanRenderBackend::BeginFrame()
 {
     auto& s = *state;
     if (s.recording || !s.device) return;
+    //回收已完成帧的 GPU 计时
+    for (auto& completed : s.frames)
+    {
+        if (!completed.timestampsSubmitted) continue;
+        VkResult status = vkGetFenceStatus(s.device, completed.fence);
+        if (status == VK_SUCCESS) s.ReadTimestamps(completed);
+        else if (status != VK_NOT_READY) Check(status, "vkGetFenceStatus(timestamps)");
+    }
     s.frameIndex = (s.frameIndex + 1) % FrameCount;
     auto& frame = s.frames[s.frameIndex];
     Check(vkWaitForFences(s.device, 1, &frame.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(frame)");
+    s.ReadTimestamps(frame);
     s.completedSerial = std::max(s.completedSerial, frame.serial);
     for (auto& release : frame.retired) release();
     frame.retired.clear();
@@ -794,6 +906,36 @@ void VulkanRenderBackend::BeginFrame()
     s.commandsPending = false;
     s.drawBindings = {};
     GetPipelineState() = {};
+    //开始当前采集帧的 GPU 计时
+    frame.timestampCount = 0;
+    frame.droppedTimestamps = 0;
+    frame.profileFrameIndex = Profiler::GetCaptureFrameIndex();
+    frame.profileGeneration = Profiler::GetCaptureGeneration();
+    if (s.timestampValidBits && frame.profileFrameIndex >= 0)
+    {
+        if (!frame.timestamps)
+        {
+            VkQueryPoolCreateInfo queries = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+            queries.queryType = VK_QUERY_TYPE_TIMESTAMP; queries.queryCount = TimestampCapacity;
+            Check(vkCreateQueryPool(s.device, &queries, nullptr, &frame.timestamps), "vkCreateQueryPool(timestamps)");
+        }
+        vkCmdResetQueryPool(s.RecordCommands(), frame.timestamps, 0, TimestampCapacity);
+        s.WriteTimestamp("FrameStart");
+        Profiler::MarkGpuPending(frame.profileGeneration, frame.profileFrameIndex);
+    }
+    else frame.profileFrameIndex = -1;
+}
+
+//记录当前采集帧的 GPU 阶段检查点
+void VulkanRenderBackend::RecordGpuCheckpoint(const char* name)
+{
+    BeginFrame();
+    auto& s = *state;
+    const auto& frame = s.frames[s.frameIndex];
+    if (frame.profileGeneration != Profiler::GetCaptureGeneration()
+        || frame.profileFrameIndex != Profiler::GetCaptureFrameIndex()) return;
+    const char* label = std::strrchr(name, '/');
+    s.WriteTimestamp(label ? label + 1 : name);
 }
 
 //结束场景阶段的渲染范围
@@ -825,6 +967,7 @@ void VulkanRenderBackend::Present()
         surface.acquired = surface.waitPending = false;
     }
     auto& frame = s.frames[s.frameIndex];
+    s.WriteTimestamp("EditorGuiAndFinalize", true);
     Check(vkEndCommandBuffer(frame.commands), "vkEndCommandBuffer");
     VkCommandBufferSubmitInfo commands = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO }; commands.commandBuffer = frame.commands;
     VkSubmitInfo2 submit = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
@@ -833,6 +976,7 @@ void VulkanRenderBackend::Present()
     submit.commandBufferInfoCount = 1; submit.pCommandBufferInfos = &commands;
     Check(vkResetFences(s.device, 1, &frame.fence), "vkResetFences");
     Check(vkQueueSubmit2(s.queue, 1, &submit, frame.fence), "vkQueueSubmit2");
+    frame.timestampsSubmitted = frame.timestampCount > 0;
     frame.serial = ++s.submittedSerial;
     s.recording = false;
     s.commandsPending = false;
@@ -889,6 +1033,7 @@ void VulkanRenderBackend::DeleteSurface(GpuSurfaceID id)
     if (!id.IsValid() || found == s.surfaces.end()) return;
     if (found->second.acquired) Present();
     WaitForIdle();
+    s.ClearPassAttachments();
     auto& surface = found->second;
     for (auto& image : surface.images) s.DestroyImage(image);
     for (auto semaphore : surface.finished) vkDestroySemaphore(s.device, semaphore, nullptr);
@@ -921,6 +1066,7 @@ void VulkanRenderBackend::BeginPass(const RenderPassDesc& desc)
 void VulkanRenderBackend::EndPass()
 {
     state->PauseRendering(); state->passActive = false;
+    state->ClearPassAttachments();
 }
 
 //设置像素裁剪区域
@@ -979,6 +1125,12 @@ void VulkanRenderBackend::DeleteVertexBuffer(GpuVertexBufferID id)
 {
     auto& s = *state; auto found = s.buffers.find(id.id);
     if (found == s.buffers.end()) return;
+    for (auto& [inputId, input] : s.inputs)
+    {
+        if (input.vertices == &found->second) input.vertices = nullptr;
+        if (input.indices == &found->second) input.indices = nullptr;
+    }
+    if (s.instanceBinding == &found->second) s.instanceBinding = nullptr;
     auto buffer = found->second; s.buffers.erase(found);
     if (buffer.owned && buffer.handle) s.Retire([&s, buffer] { s.DestroyBuffer(buffer); });
 }
@@ -995,15 +1147,25 @@ void VulkanRenderBackend::DeleteIndexBuffer(GpuIndexBufferID id) { DeleteVertexB
 //创建顶点输入描述
 GpuVertexInputID VulkanRenderBackend::CreateVertexInput(const GpuVertexInputDesc& desc)
 {
-    if (!state->buffers.contains(desc.vertexBuffer.id) || !state->buffers.contains(desc.indexBuffer.id) || !desc.stride) return {};
-    uint32 id = state->nextId++; state->inputs.emplace(id, desc);
+    auto& s = *state;
+    auto vertices = s.buffers.find(desc.vertexBuffer.id);
+    auto indices = s.buffers.find(desc.indexBuffer.id);
+    if (vertices == s.buffers.end() || indices == s.buffers.end() || !desc.stride) return {};
+    uint32 id = s.nextId++;
+    s.inputs.emplace(id, State::VertexInput{ desc, &vertices->second, &indices->second, GetVertexLayout(desc.layout).instanceStride });
     return { id };
 }
 
 //释放顶点输入描述
 void VulkanRenderBackend::DeleteVertexInput(GpuVertexInputID id)
 {
-    state->inputs.erase(id.id); if (state->currentInput == id.id) state->currentInput = 0;
+    auto& s = *state;
+    if (s.currentInput == id.id)
+    {
+        s.currentInput = 0;
+        s.inputBinding = nullptr;
+    }
+    s.inputs.erase(id.id);
 }
 
 //上传帧内不可变的顶点数据
@@ -1030,7 +1192,15 @@ bool VulkanRenderBackend::UploadIndexBuffer(GpuIndexBufferID id, const uint32* d
 //选择顶点输入
 void VulkanRenderBackend::BindVertexInput(GpuVertexInputID id)
 {
-    state->currentInput = id.id; state->instanceBuffer = 0; state->instanceOffset = 0;
+    auto& s = *state;
+    s.instanceBuffer = 0; s.instanceOffset = 0; s.instanceBinding = nullptr;
+    if (s.currentInput == id.id && s.inputBinding) return;
+    s.currentInput = id.id;
+    s.inputBinding = nullptr;
+    if (!id.IsValid()) return;
+    auto input = s.inputs.find(id.id);
+    if (input == s.inputs.end()) return;
+    s.inputBinding = &input->second;
 }
 
 //选择实例数据区间
@@ -1039,6 +1209,7 @@ bool VulkanRenderBackend::BindInstanceBuffer(GpuVertexBufferID id, usize byteOff
     auto& s = *state; auto found = s.buffers.find(id.id);
     if (found == s.buffers.end() || byteOffset >= found->second.used) return false;
     s.instanceBuffer = id.id; s.instanceOffset = byteOffset;
+    s.instanceBinding = &found->second;
     return true;
 }
 
@@ -1119,6 +1290,7 @@ void VulkanRenderBackend::DeleteTexture(GpuTextureID id)
 {
     auto& s = *state; auto found = s.images.find(id.id);
     if (found == s.images.end()) return;
+    if (s.passColor == &found->second || s.passDepth == &found->second) s.ClearPassAttachments();
     auto image = found->second; s.images.erase(found);
     ++s.imageAccessRevision;
     s.Retire([&s, image] { s.DestroyImage(image); });
@@ -1190,6 +1362,7 @@ void VulkanRenderBackend::AttachRenderTargetDepthTexture(GpuRenderTargetID id, G
     auto& s = *state; auto target = s.targets.find(id.id); auto image = s.images.find(depth.id);
     if (target == s.targets.end() || image == s.images.end() || target->second.width != image->second.width || target->second.height != image->second.height) return;
     s.PauseRendering(); target->second.depth = depth.id;
+    if (s.passActive && s.pass.renderTarget.id == id.id) s.ClearPassAttachments();
 }
 
 //释放附件组合与拥有的颜色纹理
@@ -1253,9 +1426,10 @@ GpuShaderProgramID VulkanRenderBackend::CreateShaderProgram(const GpuShaderProgr
 void VulkanRenderBackend::DeleteShaderProgram(GpuShaderProgramID id)
 {
     auto& s = *state; auto found = s.programs.find(id.id); if (found == s.programs.end()) return;
+    if (s.currentProgram == id.id) { s.currentProgram = 0; s.programBinding = nullptr; }
     auto program = std::move(found->second); s.programs.erase(found);
     s.Retire([&s, program = std::move(program)]() mutable { s.DestroyProgram(std::move(program)); });
-    ReleaseShaderParameters(id); if (s.currentProgram == id.id) s.currentProgram = 0;
+    ReleaseShaderParameters(id);
 }
 
 //查询链接后的参数
@@ -1270,7 +1444,15 @@ bool VulkanRenderBackend::HasShaderParameter(GpuShaderProgramID id, const char* 
 }
 
 //选择图形或计算着色器
-void VulkanRenderBackend::OnBindShaderProgram(GpuShaderProgramID id) { state->currentProgram = id.id; }
+void VulkanRenderBackend::OnBindShaderProgram(GpuShaderProgramID id)
+{
+    auto& s = *state;
+    if (s.currentProgram == id.id && s.programBinding) return;
+    s.currentProgram = id.id;
+    if (!id.IsValid()) { s.programBinding = nullptr; return; }
+    auto program = s.programs.find(id.id);
+    s.programBinding = program != s.programs.end() ? &program->second : nullptr;
+}
 
 //绑定二维采样资源
 void VulkanRenderBackend::BindTexture(uint32 slot, GpuTextureID id)
@@ -1303,9 +1485,16 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     ShaderParameters& parameters = backend.GetParameters();
     if (!program.compute)
     {
-        auto [color, depth] = GetAttachments(pass.renderTarget);
-        Image* image = color ? color : depth;
-        parameters.SetVector3("u_OrbedenFramebufferInfo", { image ? static_cast<float32>(image->height) : 0.0f, pass.renderTarget.IsValid() ? 0.0f : 1.0f, 0.0f });
+        CachePassAttachments();
+        if (!program.framebufferParameter)
+            program.framebufferParameter = &parameters.GetOrCreate("u_OrbedenFramebufferInfo");
+        if (program.framebufferInfoRevision != framebufferInfoRevision
+            || program.framebufferParameterRevision != program.framebufferParameter->revision)
+        {
+            parameters.SetVector3("u_OrbedenFramebufferInfo", framebufferInfo);
+            program.framebufferInfoRevision = framebufferInfoRevision;
+            program.framebufferParameterRevision = program.framebufferParameter->revision;
+        }
     }
 
     //注册反射参数的稳定索引与缓冲偏移
@@ -1363,7 +1552,9 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
     if (program.compiled.parameterSize)
     {
         if (program.parameterSerial != submittedSerial + 1 || program.uploadedParameterRevision != program.parameterRevision)
+        {
             program.parameterData = Upload(program.parameterBytes.data(), program.compiled.parameterSize, properties.limits.minUniformBufferOffsetAlignment);
+        }
         program.parameterSerial = submittedSerial + 1;
         program.uploadedParameterRevision = program.parameterRevision;
         parameterInfo = { program.parameterData.handle, 0, program.compiled.parameterSize };
@@ -1449,7 +1640,8 @@ VkDescriptorSet VulkanRenderBackend::State::PrepareDescriptors(Program& program,
 //获取当前固定功能状态对应的图形管线
 VkPipeline VulkanRenderBackend::State::GetGraphicsPipeline(Program& program, const GpuVertexInputDesc& input)
 {
-    auto [color, depth] = GetAttachments(pass.renderTarget);
+    Image* color = passColor;
+    Image* depth = passDepth;
     const PipelineState& state = backend.GetPipelineState();
     GraphicsPipelineKey pipelineKey;
     pipelineKey.layout = input.layout; pipelineKey.stride = input.stride;
@@ -1531,41 +1723,40 @@ VkPipeline VulkanRenderBackend::State::GetGraphicsPipeline(Program& program, con
 void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint32 instanceCount)
 {
     if (!indexCount || !instanceCount || !passActive) return;
-    auto shader = programs.find(currentProgram); auto vertexInput = inputs.find(currentInput);
-    if (shader == programs.end() || vertexInput == inputs.end()) return;
-    const auto& input = vertexInput->second;
-    auto vertices = buffers.find(input.vertexBuffer.id), indices = buffers.find(input.indexBuffer.id);
-    if (vertices == buffers.end() || indices == buffers.end()) return;
-    RefreshBuffer(vertices->second);
-    RefreshBuffer(indices->second);
-    if (static_cast<uint64>(indexStart) + indexCount > indices->second.used / sizeof(uint32)) throw std::out_of_range("Vulkan index range exceeds buffer contents.");
-    std::array<VkBuffer, 2> vertexBuffers = { vertices->second.handle, VK_NULL_HANDLE };
-    std::array<VkDeviceSize, 2> offsets = { vertices->second.offset, 0 };
+    if (!programBinding || !inputBinding || !inputBinding->vertices || !inputBinding->indices) return;
+    Program& program = *programBinding;
+    const auto& input = inputBinding->desc;
+    Buffer& vertices = *inputBinding->vertices;
+    Buffer& indices = *inputBinding->indices;
+    RefreshBuffer(vertices);
+    RefreshBuffer(indices);
+    if (static_cast<uint64>(indexStart) + indexCount > indices.used / sizeof(uint32)) throw std::out_of_range("Vulkan index range exceeds buffer contents.");
+    std::array<VkBuffer, 2> vertexBuffers = { vertices.handle, VK_NULL_HANDLE };
+    std::array<VkDeviceSize, 2> offsets = { vertices.offset, 0 };
     uint32 count = 1;
-    uint32 stride = GetVertexLayout(input.layout).instanceStride;
+    uint32 stride = inputBinding->instanceStride;
     if (stride)
     {
-        auto instances = buffers.find(instanceBuffer);
-        if (instances == buffers.end() || instanceOffset + static_cast<uint64>(instanceCount) * stride > instances->second.used) throw std::out_of_range("Vulkan instance range exceeds buffer contents.");
-        RefreshBuffer(instances->second);
-        vertexBuffers[1] = instances->second.handle; offsets[1] = instances->second.offset + instanceOffset; count = 2;
+        if (!instanceBinding || instanceOffset + static_cast<uint64>(instanceCount) * stride > instanceBinding->used) throw std::out_of_range("Vulkan instance range exceeds buffer contents.");
+        RefreshBuffer(*instanceBinding);
+        vertexBuffers[1] = instanceBinding->handle; offsets[1] = instanceBinding->offset + instanceOffset; count = 2;
     }
-    VkDescriptorSet descriptors = PrepareDescriptors(shader->second);
+    VkDescriptorSet descriptors = PrepareDescriptors(program);
     if (!StartRendering()) return;
-    VkPipeline pipeline = GetGraphicsPipeline(shader->second, input);
+    VkPipeline pipeline = GetGraphicsPipeline(program, input);
     VkCommandBuffer commands = RecordCommands();
     if (drawBindings.pipeline != pipeline)
     {
         vkCmdBindPipeline(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         drawBindings.pipeline = pipeline;
     }
-    uint32 parameterOffset = static_cast<uint32>(shader->second.parameterData.offset);
-    uint32 parameterCount = shader->second.compiled.parameterSize ? 1 : 0;
-    if (drawBindings.layout != shader->second.layout || drawBindings.descriptors != descriptors
+    uint32 parameterOffset = static_cast<uint32>(program.parameterData.offset);
+    uint32 parameterCount = program.compiled.parameterSize ? 1 : 0;
+    if (drawBindings.layout != program.layout || drawBindings.descriptors != descriptors
         || drawBindings.parameterCount != parameterCount || drawBindings.parameterOffset != parameterOffset)
     {
-        vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->second.layout, 0, 1, &descriptors, parameterCount, &parameterOffset);
-        drawBindings.layout = shader->second.layout; drawBindings.descriptors = descriptors;
+        vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, program.layout, 0, 1, &descriptors, parameterCount, &parameterOffset);
+        drawBindings.layout = program.layout; drawBindings.descriptors = descriptors;
         drawBindings.parameterCount = parameterCount; drawBindings.parameterOffset = parameterOffset;
     }
     const PipelineState& raster = backend.GetPipelineState();
@@ -1580,10 +1771,10 @@ void VulkanRenderBackend::State::Draw(uint32 indexStart, uint32 indexCount, uint
         vkCmdBindVertexBuffers(commands, 0, count, vertexBuffers.data(), offsets.data());
         drawBindings.vertexCount = count; drawBindings.vertexBuffers = vertexBuffers; drawBindings.vertexOffsets = offsets;
     }
-    if (drawBindings.indexBuffer != indices->second.handle || drawBindings.indexOffset != indices->second.offset)
+    if (drawBindings.indexBuffer != indices.handle || drawBindings.indexOffset != indices.offset)
     {
-        vkCmdBindIndexBuffer(commands, indices->second.handle, indices->second.offset, VK_INDEX_TYPE_UINT32);
-        drawBindings.indexBuffer = indices->second.handle; drawBindings.indexOffset = indices->second.offset;
+        vkCmdBindIndexBuffer(commands, indices.handle, indices.offset, VK_INDEX_TYPE_UINT32);
+        drawBindings.indexBuffer = indices.handle; drawBindings.indexOffset = indices.offset;
     }
     vkCmdDrawIndexed(commands, indexCount, instanceCount, indexStart, 0, 0);
 }

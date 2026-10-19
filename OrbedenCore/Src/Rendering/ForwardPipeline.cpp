@@ -244,7 +244,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     if (!backend) return;
 
     //选择相机和主方向光
-    backend->ProfileGpuWait("Render/GpuWait/CameraSetup");
+    backend->ProfileGpuStage("Render/GpuStage/CameraSetup");
     const RenderCamera& camera = visibleSet.camera;
     const RenderDirectionalLight* shadowLight = FindShadowLight(scene);
     const RenderDirectionalLight* mainLight = shadowLight ? shadowLight : FindMainLight(scene);
@@ -264,9 +264,9 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     }
 
     //准备本相机的大气查找表，必须在主 Pass 之前完成
-    backend->ProfileGpuWait("Render/GpuWait/Shadows");
+    backend->ProfileGpuStage("Render/GpuStage/Shadows");
     atmosphere.PrepareCamera(scene, camera, mainLight, gpuResourceManager);
-    backend->ProfileGpuWait("Render/GpuWait/AtmosphereLuts");
+    backend->ProfileGpuStage("Render/GpuStage/AtmosphereLuts");
 
     //开始相机主 Pass。
     //目标是引擎分配的场景缓冲，尺寸就等于视口且原点在 0，视口原点只属于最终输出目标。
@@ -296,7 +296,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->GetPipelineState().depthWrite = true;
     backend->GetPipelineState().blend = false;
     backend->GetPipelineState().cull = CullMode::None;
-    backend->ProfileGpuWait("Render/GpuWait/MainPassState");
+    backend->ProfileGpuStage("Render/GpuStage/MainPassState");
 
     //绘制 [天空盒或程序化天空]，程序化天空不可用时退回天空盒
     if (camera.clearMode == ClearMode::SolidColor)
@@ -305,16 +305,16 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     }
 
     //合并本相机的可见项为统一绘制项与批次
-    backend->ProfileGpuWait("Render/GpuWait/Sky");
+    backend->ProfileGpuStage("Render/GpuStage/Sky");
     BuildFrameBatches(scene, visibleSet, gpuResourceManager);
 
     //绘制 [不透明队列]
     ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Opaque, mainLight, false);
-    backend->ProfileGpuWait("Render/GpuWait/Opaque");
+    backend->ProfileGpuStage("Render/GpuStage/Opaque");
 
     //绘制 [普通透明队列]
     ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Transparent, mainLight, false);
-    backend->ProfileGpuWait("Render/GpuWait/Transparent");
+    backend->ProfileGpuStage("Render/GpuStage/Transparent");
 
     //结束透明渲染阶段
     backend->EndPass();
@@ -336,7 +336,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     }
 
     //绘制 [折射队列]
-    backend->ProfileGpuWait("Render/GpuWait/CopyCameraTextures");
+    backend->ProfileGpuStage("Render/GpuStage/CopyCameraTextures");
     bool hasRefraction = std::any_of(cameraBatches.begin(), cameraBatches.end(),
         [](const DrawBatch& batch) { return batch.key.queue == DrawQueue::Refraction; });
     if (hasRefraction)
@@ -346,7 +346,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
         ExecuteQueueBatches(scene, camera, gpuResourceManager, DrawQueue::Refraction, mainLight, cameraTexturesReady);
         backend->EndPass();
     }
-    backend->ProfileGpuWait("Render/GpuWait/Refraction");
+    backend->ProfileGpuStage("Render/GpuStage/Refraction");
 
     //结束相机主 Pass
     backend->GetPipelineState().blend = false;
@@ -356,7 +356,7 @@ void ForwardPipeline::Render(const RenderScene& scene, const VisibleSet& visible
     backend->BindVertexInput(GpuVertexInputID());
     backend->BindShaderProgram(GpuShaderProgramID());
     if (cameraTexturesReady) shadows.CaptureDepth(camera);
-    backend->ProfileGpuWait("Render/GpuWait/DepthDistribution");
+    backend->ProfileGpuStage("Render/GpuStage/DepthDistribution");
 }
 
 //把当前相机的可见项合并为统一的绘制项与批次

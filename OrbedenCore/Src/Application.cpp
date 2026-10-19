@@ -447,6 +447,7 @@ void Application::Render(float deltaTime)
 //提交窗口显示
 void Application::Present()
 {
+    PROFILE("Render/Present");
     if (!window) return;
     if (RenderSystem* renderer = GetSystem<RenderSystem>()) renderer->Present();
 }

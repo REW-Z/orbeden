@@ -50,6 +50,22 @@ struct ProfileEvent
     int64 durationMicroseconds = 0;
 };
 
+//GPU 检查点之间的时间区间
+struct ProfileGpuEvent
+{
+    int32 nameId = -1;
+    float64 startMicroseconds = 0;
+    float64 durationMicroseconds = 0;
+};
+
+//GPU 计时结果状态
+enum class ProfileGpuStatus : int32
+{
+    Unavailable = 0,
+    Pending = 1,
+    Ready = 2,
+};
+
 //一帧的采样摘要
 struct ProfileFrameSummary
 {
@@ -63,6 +79,9 @@ struct ProfileFrameSummary
 
     int32 eventCount = 0;
     int32 droppedEventCount = 0;
+    int32 gpuEventCount = 0;
+    int32 droppedGpuEventCount = 0;
+    ProfileGpuStatus gpuStatus = ProfileGpuStatus::Unavailable;
 };
 
 //性能剖析器
@@ -103,6 +122,19 @@ public:
 
     //判断是否正在按帧采集
     static bool IsCapturing();
+
+    //读取当前采集帧编号
+    static int64 GetCaptureFrameIndex();
+    //读取采集历史的代次
+    static uint64 GetCaptureGeneration();
+    //驻留 GPU 检查点名称
+    static int32 GetGpuNameId(const char* name);
+    //标记原始帧的 GPU 计时结果待回填
+    static void MarkGpuPending(uint64 generation, int64 frameIndex);
+    //回填原始帧的 GPU 计时结果
+    static void StoreGpuEvents(uint64 generation, int64 frameIndex, const ProfileGpuEvent* events, int32 count, int32 dropped);
+    //拷贝指定帧的 GPU 检查点区间
+    static int32 CopyFrameGpuEvents(int64 frameIndex, ProfileGpuEvent* output, int32 capacity);
 
     //释放采集缓冲并清空帧历史
     static void ReleaseCapture();

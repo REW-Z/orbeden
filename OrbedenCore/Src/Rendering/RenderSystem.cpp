@@ -388,7 +388,7 @@ void RenderSystem::Render(World& world, float deltaTime)
     }
 
     //本帧批次统计从零开始，无相机与早退路径也会保留清零结果
-    backend->ProfileGpuWait("Render/GpuWait/BeforeScene");
+    backend->ProfileGpuStage("Render/GpuStage/BeforeScene");
     forwardPipeline.ResetBatchStats();
 
     //累加 Shader 时间
@@ -414,7 +414,7 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     scene.BeginRead();
 
-    backend->ProfileGpuWait("Render/GpuWait/ResourcesAndTargets");
+    backend->ProfileGpuStage("Render/GpuStage/ResourcesAndTargets");
 
 
     //绘制无相机场景
@@ -448,14 +448,14 @@ void RenderSystem::Render(World& world, float deltaTime)
 
     //离屏画布在相机之前绘制：它们的结果可能被世界空间或屏幕画布采样。
     uiRenderer.RenderOffscreen();
-    backend->ProfileGpuWait("Render/GpuWait/OffscreenUI");
+    backend->ProfileGpuStage("Render/GpuStage/OffscreenUI");
 
     //准备共享阴影资源
     warnedMissingCamera = false;
     forwardPipeline.SetFrameWorld(&world);
     forwardPipeline.SetDrawSubmissions(&activeInstanceSubmissions);
     forwardPipeline.PrepareFrame(scene, gpuResourceManager);
-    backend->ProfileGpuWait("Render/GpuWait/SharedResources");
+    backend->ProfileGpuStage("Render/GpuStage/SharedResources");
 
     //绘制活动相机
     for (const RenderCamera& camera : scene.cameras)
@@ -500,7 +500,7 @@ void RenderSystem::Render(World& world, float deltaTime)
         if (extension != cameraRenderExtensions.end())
         {
             extension->second.extension->RenderCameraEffects(*backend, gpuResourceManager, world, camera, visibleSet);
-            backend->ProfileGpuWait("Render/GpuWait/CameraExtension");
+            backend->ProfileGpuStage("Render/GpuStage/CameraExtension");
         }
         if (debugLineWorld == &world && !debugLines.empty())
         {
@@ -518,20 +518,20 @@ void RenderSystem::Render(World& world, float deltaTime)
         }
 
         //世界空间画布写在输出 Pass 之前，与场景一起被转换到显示空间。
-        backend->ProfileGpuWait("Render/GpuWait/DebugLines");
+        backend->ProfileGpuStage("Render/GpuStage/DebugLines");
         uiRenderer.RenderWorldSpace(camera);
         if (hasEditorPreviewTarget && camera.finalRenderTarget.id == editorPreviewTarget.renderTarget.id)
             uiRenderer.RenderEditorPreview(camera);
-        backend->ProfileGpuWait("Render/GpuWait/WorldUI");
+        backend->ProfileGpuStage("Render/GpuStage/WorldUI");
 
         //转换完成扩展绘制、调试线与世界 UI 的场景缓冲
         RenderOutputPass(camera);
-        backend->ProfileGpuWait("Render/GpuWait/Output");
+        backend->ProfileGpuStage("Render/GpuStage/Output");
     }
 
     //结束渲染帧
     RenderOverlayPass();
-    backend->ProfileGpuWait("Render/GpuWait/OverlayUI");
+    backend->ProfileGpuStage("Render/GpuStage/OverlayUI");
     backend->EndFrame();
     scene.EndRead();
     debugLines.clear();

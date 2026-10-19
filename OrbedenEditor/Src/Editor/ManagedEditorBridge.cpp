@@ -292,6 +292,7 @@ namespace
         void* endProfileSample = nullptr;
         void* getMeshDynamicBatching = nullptr;
         void* setMeshDynamicBatching = nullptr;
+        void* copyProfilerGpuEvents = nullptr;
     };
 
     #pragma pack(pop)
@@ -307,8 +308,10 @@ namespace
     //application 表扩容后，排在它后面的每张表偏移也都跟着后移
     //新表一律追加在表尾，既有表的偏移才不会跟着动
     ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorInputNativeApi, 2);
-    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 186);
+    ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorManagedApi, 187);
     static_assert(sizeof(EditorProfileScopeAbi) == 16);
+    static_assert(sizeof(ProfileFrameSummary) == 104);
+    static_assert(sizeof(ProfileGpuEvent) == 24);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, engineApi, 0);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, application, 91);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, gizmo, 107);
@@ -324,6 +327,7 @@ namespace
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, endProfileSample, 183);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, getMeshDynamicBatching, 184);
     ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, setMeshDynamicBatching, 185);
+    ORBEDEN_ASSERT_NATIVE_API_SLOT(EditorManagedApi, copyProfilerGpuEvents, 186);
 
     //复制 C# 传入的 UTF-8 文本
     std::string ReadUtf8(const uint8* text, int32 length)
@@ -2117,6 +2121,12 @@ namespace
         return Profiler::IsCapturing() ? 1 : 0;
     }
 
+    //拷贝原始帧的 GPU 检查点区间
+    int32 ORBEDEN_NATIVE_CALL EditorProfilerCopyGpuEvents(int64 frameIndex, ProfileGpuEvent* output, int32 capacity)
+    {
+        return Profiler::CopyFrameGpuEvents(frameIndex, output, capacity);
+    }
+
     //清空帧历史
     void ORBEDEN_NATIVE_CALL EditorProfilerClearFrames()
     {
@@ -2328,6 +2338,7 @@ bool ManagedEditorBridge::Initialize(EditorClrHost& host,
     editorApi.exportProfilerFrameText = reinterpret_cast<void*>(&EditorProfilerExportFrameText);
     editorApi.beginProfileSample = reinterpret_cast<void*>(&EditorProfilerBeginSample);
     editorApi.endProfileSample = reinterpret_cast<void*>(&EditorProfilerEndSample);
+    editorApi.copyProfilerGpuEvents = reinterpret_cast<void*>(&EditorProfilerCopyGpuEvents);
     editorApi.getMeshDynamicBatching = reinterpret_cast<void*>(&GetManagedMeshDynamicBatching);
     editorApi.setMeshDynamicBatching = reinterpret_cast<void*>(&SetManagedMeshDynamicBatching);
     editorApi.input.isKeyDown = reinterpret_cast<void*>(&EditorInputIsKeyDown);

@@ -35,12 +35,14 @@ internal sealed class ProfilerPanel : EditorPanel
 
     //每帧事件上限，与原生 FrameEventCapacity 一致
     private const int MaxFrameEvents = 4096;
+    private const int MaxGpuFrameEvents = 256;
 
     //每帧最多画 6 个分类分段加空闲与选中高亮，一次批量提交要放得下整个走势图
     private const int MaxChartRects = MaxTrendFrames * (CategoryCount + 2) + 64;
 
     private readonly ProfileFrameSummary[] frames = new ProfileFrameSummary[MaxTrendFrames];
     private readonly ProfileEvent[] events = new ProfileEvent[MaxFrameEvents];
+    private readonly ProfileGpuEvent[] gpuEvents = new ProfileGpuEvent[MaxGpuFrameEvents];
 
     //甘特图里每次调用的横向区间，画条与写名字共用
     private readonly float[] eventLeft = new float[MaxFrameEvents];
@@ -59,10 +61,13 @@ internal sealed class ProfilerPanel : EditorPanel
 
     private int frameCount;
     private int selectedFrameEventCount;
+    private int selectedFrameGpuEventCount;
+    private ProfileFrameSummary selectedFrameSummary;
     private long selectedFrame = -1;
     private long selectedFrameMicroseconds;
     private bool followLatest = true;
     private bool timelineView;
+    private bool gpuView;
     private float timelineZoom = 1.0f;
     private long timelinePan;
     private int sortMode;
@@ -149,6 +154,8 @@ internal sealed class ProfilerPanel : EditorPanel
         {
             selectedFrame = -1;
             selectedFrameEventCount = 0;
+            selectedFrameGpuEventCount = 0;
+            selectedFrameSummary = default;
             nodeRows.Clear();
             return;
         }
@@ -157,6 +164,15 @@ internal sealed class ProfilerPanel : EditorPanel
         long oldest = frames[0].FrameIndex;
         long newest = frames[displayCount - 1].FrameIndex;
         if (followLatest || selectedFrame < oldest || selectedFrame > newest) selectedFrame = newest;
+        if (followLatest && gpuView)
+        {
+            for (int index = displayCount - 1; index >= 0; --index)
+            {
+                if (frames[index].GpuStatus != ProfileGpuStatus.Ready) continue;
+                selectedFrame = frames[index].FrameIndex;
+                break;
+            }
+        }
 
         selectedFrameMicroseconds = 0;
         for (int index = 0; index < displayCount; index++)
@@ -164,10 +180,12 @@ internal sealed class ProfilerPanel : EditorPanel
             if (frames[index].FrameIndex != selectedFrame) continue;
 
             selectedFrameMicroseconds = frames[index].DeltaTimeMicroseconds;
+            selectedFrameSummary = frames[index];
             break;
         }
 
         selectedFrameEventCount = NativeEditorProfiler.CopyFrameEvents(selectedFrame, events);
+        selectedFrameGpuEventCount = NativeEditorProfiler.CopyFrameGpuEvents(selectedFrame, gpuEvents);
         BuildNodeRows();
         UpdateChartScale(displayCount);
     }
@@ -228,6 +246,13 @@ internal sealed class ProfilerPanel : EditorPanel
         if (EditorGUI.Button(timelineView ? "Hierarchy##profiler_view" : "Timeline##profiler_view")) timelineView = !timelineView;
 
         EditorGUI.SameLine();
+        if (EditorGUI.Button(gpuView ? "CPU##profiler_gpu_view" : "GPU##profiler_gpu_view"))
+        {
+            gpuView = !gpuView;
+            RequestImmediateRefresh();
+        }
+
+        EditorGUI.SameLine();
         EditorGUI.BeginDisabled(selectedFrame < 0);
         try
         {
@@ -277,15 +302,12 @@ internal sealed class ProfilerPanel : EditorPanel
             DateTime exportedAt = DateTime.UtcNow;
             var report = new
             {
-                Format = "Orbeden.Profiler.Frame.v1",
+                Format = "Orbeden.Profiler.Frame.v2",
                 ExportedAtUtc = exportedAt.ToString("O"),
-                Timing = "CPU scope wall time, not GPU timing. All durations and start offsets are in microseconds.",
-                PresentDiagnostic = events.Take(selectedFrameEventCount).Any(sample => GetName(sample.NameId).EndsWith("/WaitForGpu", StringComparison.Ordinal))
-                    ? "Capture inserts backend GPU completion waits before presentation. WaitForGpu measures CPU waiting for prior GPU work; Present measures the subsequent presentation call. This changes CPU/GPU overlap; compare captures using the same diagnostic mode."
-                    : "No pre-swap GPU wait diagnostic was recorded.",
-                SceneDiagnostic = events.Take(selectedFrameEventCount).Any(sample => GetName(sample.NameId).StartsWith("Render/GpuWait/", StringComparison.Ordinal))
-                    ? "Scene stages are separated by backend GPU completion waits. GpuWait nodes measure remaining CPU blocking time since the previous checkpoint, not full GPU stage duration. Recording changes normal CPU/GPU overlap."
-                    : "No per-stage scene GPU waits were recorded.",
+                Timing = "CPU scope wall time, not GPU timing. CPU timeline durations and start offsets are in microseconds.",
+                CaptureMode = "Normal",
+                PresentDiagnostic = "No diagnostic GPU completion waits. Render/Present measures CPU time in submission and presentation, not display latency.",
+                SceneDiagnostic = "No per-stage scene GPU waits. GPU-clock intervals are exported separately in GpuTiming.",
                 Notes = "Node totals include children; do not sum nested totals. Self time subtracts recorded direct children and may be overstated when events are dropped.",
                 Frame = new
                 {
@@ -304,6 +326,25 @@ internal sealed class ProfilerPanel : EditorPanel
                     Name = CategoryNames[category],
                     TotalMicroseconds = frame.GetCategoryMicroseconds(category),
                 }).ToArray(),
+                GpuTiming = new
+                {
+                    Status = frame.GpuStatus.ToString(),
+                    Source = "Vulkan timestamp queries; OpenGL GPU timestamps are not implemented.",
+                    Timing = "Elapsed GPU-clock intervals between completion checkpoints, relative to the first GPU timestamp. Separate clock from CPU events. Includes idle or scheduling gaps between checkpoints; excludes presentation/display latency.",
+                    TotalMicroseconds = gpuEvents.Take(selectedFrameGpuEventCount).Sum(sample => sample.DurationMicroseconds),
+                    frame.GpuEventCount,
+                    ExportedEventCount = selectedFrameGpuEventCount,
+                    frame.DroppedGpuEventCount,
+                    SamplesComplete = frame.GpuStatus == ProfileGpuStatus.Ready
+                        && frame.DroppedGpuEventCount == 0 && selectedFrameGpuEventCount == frame.GpuEventCount,
+                    Events = gpuEvents.Take(selectedFrameGpuEventCount).Select((sample, index) => new
+                    {
+                        Index = index,
+                        Name = GetName(sample.NameId),
+                        sample.StartMicroseconds,
+                        sample.DurationMicroseconds,
+                    }).ToArray(),
+                },
                 Nodes = nodeRows.Select(row => new
                 {
                     row.NodeId, row.ParentNodeId, row.Depth,
@@ -517,6 +558,12 @@ internal sealed class ProfilerPanel : EditorPanel
             return;
         }
 
+        if (gpuView)
+        {
+            DrawGpuTimings();
+            return;
+        }
+
         if (nodeRows.Count == 0)
         {
             EditorGUI.Label("No samples in the selected frame.");
@@ -525,6 +572,44 @@ internal sealed class ProfilerPanel : EditorPanel
 
         if (timelineView) DrawTimeline();
         else DrawHierarchy();
+    }
+
+    //绘制独立的 GPU 检查点区间表
+    private void DrawGpuTimings()
+    {
+        if (selectedFrameSummary.GpuStatus != ProfileGpuStatus.Ready)
+        {
+            EditorGUI.Label(selectedFrameSummary.GpuStatus == ProfileGpuStatus.Pending
+                ? "GPU results pending. Results arrive after this frame completes."
+                : "GPU timing unavailable for this frame. Timestamp capture currently supports Vulkan only.");
+            return;
+        }
+        double total = gpuEvents.Take(selectedFrameGpuEventCount).Sum(sample => sample.DurationMicroseconds);
+        EditorGUI.Label($"GPU elapsed {total / 1000.0:F3} ms  |  CPU frame {ToMilliseconds(selectedFrameMicroseconds):F3} ms");
+        EditorGUI.Label("GPU intervals use a separate clock and include idle gaps; presentation latency is excluded.");
+        if (selectedFrameSummary.DroppedGpuEventCount > 0)
+            EditorGUI.TextColored($"{selectedFrameSummary.DroppedGpuEventCount} GPU checkpoints dropped; intervals may cover multiple stages.", EditorTheme.Current.LogWarning);
+
+        if (!EditorGUI.BeginTable("##profiler_gpu_events", 3)) return;
+        try
+        {
+            EditorGUI.TableSetupColumn("Checkpoint");
+            EditorGUI.TableSetupColumn("Elapsed ms", 100.0f, true);
+            EditorGUI.TableSetupColumn("Start ms", 100.0f, true);
+            EditorGUI.TableHeadersRow();
+            for (int index = 0; index < selectedFrameGpuEventCount; ++index)
+            {
+                ProfileGpuEvent sample = gpuEvents[index];
+                EditorGUI.TableNextRow();
+                EditorGUI.TableSetColumnIndex(0);
+                EditorGUI.Label(GetName(sample.NameId));
+                EditorGUI.TableSetColumnIndex(1);
+                EditorGUI.Label($"{sample.DurationMicroseconds / 1000.0:F3}");
+                EditorGUI.TableSetColumnIndex(2);
+                EditorGUI.Label($"{sample.StartMicroseconds / 1000.0:F3}");
+            }
+        }
+        finally { EditorGUI.EndTable(); }
     }
 
     //绘制层级表

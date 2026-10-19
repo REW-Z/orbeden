@@ -572,6 +572,14 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+版本 100：移除 Profiler 的 GPU wait diagnostics、Vulkan CPU detail 勾选和 CPU Breakdown 入口，删除专用 CPU 计时器、缓冲、导出字段及原生／托管接口；普通采集不再存在强制等待诊断分支。保留普通 CPU 层级／时间线、异步 GPU 时间戳及版本 99 的 Vulkan 资源缓存优化。GPU 阶段入口改为 ProfileGpuStage，旧 ProfileGpuWait 不再保留；原生扩展如有调用需同步改名。v2 导出继续提供 CPU 与 GpuTiming，CaptureMode 固定为 Normal。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；原生游戏模块及 Player 按现有流程重建，发布包重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景或材质迁移。验证仅做 Windows x64 Debug 编译检查，不运行冒烟或功能回归。
+
+版本 99：Vulkan 在顶点输入创建时缓存缓冲对象引用与实例步长，绑定切换时缓存顶点输入和着色器引用；Draw 不再逐次查找程序、顶点输入及顶点／索引缓冲，流式刷新后仍从对象读取最新句柄、容量与偏移。删除缓冲时清除所有相关顶点输入引用，删除输入／程序时清除活动绑定；重复绑定顶点输入仍重置实例绑定。Pass 缓存附件引用，结束 Pass、改挂深度、删除附件、删除表面或重建交换链时失效；固定帧缓冲参数按值版本与参数修订号更新，保留外部写入后的恢复语义。Shader、公共接口、OpenGL、上传结构、GPU 命令与同步流程保持不变，保留版本 98 的细分计时。需重建 Core、Editor，通过 Update Project 同步 SDK；原生游戏模块及 Player 按现有流程重建，发布包重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景或材质迁移。验证仅做 Windows x64 Debug 编译检查，不运行冒烟或功能回归；性能收益需同场景复测。
+
+版本 98：Profiler 新增默认关闭的 Vulkan CPU detail 开关，从下一采集帧开始按帧聚合细分 CPU 计时。Depth／Color／Window／Compute／Transfer 分组记录绘制准备、参数更新与上传、描述符缓存查找与写入、渲染范围恢复、管线查找与创建、命令录制，以及上传页选择、Buffer 复制和数据拷贝；保存纳秒累计值、调用次数和字节数，不增加逐绘制时间线事件。CPU Breakdown 独立展示，v2 单帧导出追加 CpuBreakdown，父子累计值和字节数有重叠；采集会增加 CPU 开销。Vulkan 缓冲结构、参数布局、Shader、资源生命周期与同步流程保持不变，OpenGL 后端不作额外调整。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；使用原生扩展的游戏模块及 Player 需重建，发布包重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景或材质迁移。验证仅做 Windows x64 Debug 编译检查，不运行冒烟或功能回归。
+
+版本 97：Profiler 普通采集默认不插入 GPU 强制等待，新增 GPU wait diagnostics 开关，模式在下一采集帧生效并随帧保存；保留原有阶段等待诊断。Vulkan 通过帧内 timestamp query 记录阶段检查点，在已有帧 fence 完成后异步回填原始帧；CPU 与 GPU 数据分别展示和导出，GPU 区间包含检查点之间的空闲与调度间隔，不包含呈现／显示延迟。OpenGL 后端仅调整 Present 的采集等待判断，不新增 GPU timestamp 实现。导出格式升至 Orbeden.Profiler.Frame.v2，增加 CaptureMode、GpuTiming 及待完成／不可用／丢失状态，CPU 呈现提交新增 Render/Present 作用域。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；使用原生扩展的游戏模块及 Player 需重建，发布包重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景或材质迁移。验证仅做 Windows x64 Debug 编译检查，不运行冒烟或功能回归。
+
 版本 96：渲染系统改为公共资源、参数块、管线状态、Pass 与多窗口呈现接口，增加 Vulkan 1.3 后端。Editor 通过 Editor Settings 的 Rendering Backend 选择并 Apply，在当前会话重建后端，配置随项目保存；项目打开后自动应用，默认 OpenGL。Player 通过 `--graphics-api opengl|vulkan` 选择，默认 OpenGL。保留共同 GLSL、材质参数名、场景与 Cooked 源码载荷；Vulkan 在运行时编译 SPIR-V。glslang 和 Vulkan 加载器纳入锁定依赖，Player 静态链接增加 glslang 库；ImGui 绘制统一走引擎接口。
 
 提交路径沿用材质排序与 Uniform 值缓存，公共参数以变化列表提交；连续相同材质复用参数与纹理绑定。Vulkan 反射布局只关联一次，以动态 Uniform Buffer 偏移选择不可变快照，并复用帧内相同资源组合的 Descriptor Set。OpenGL 缓存线框及深度偏移状态；空折射阶段不重开 Pass，ImGui 复用 CPU 暂存数组。性能对比工具与范围见 `Tools/OrbedenRenderSmoke/README.md`，固定负载结果不代表完整 Editor 场景帧率。

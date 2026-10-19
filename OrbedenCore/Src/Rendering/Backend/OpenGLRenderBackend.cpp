@@ -295,7 +295,6 @@ void OpenGLRenderBackend::WaitForIdle()
 //提交主窗口显示
 void OpenGLRenderBackend::Present()
 {
-    if (Profiler::IsCapturing()) WaitForIdle();
     for (uint32 id : pendingSurfaces)
     {
         auto platform = dynamic_cast<GlfwWindow*>(surfaces.at(id));
@@ -319,9 +318,7 @@ void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
     PROFILE("Render/BeginPass");
     pendingSurfaces.insert(currentSurface);
     glBindFramebuffer(GL_FRAMEBUFFER, desc.renderTarget.id);
-    ProfileGpuWait("Render/GpuWait/BindFramebuffer");
     glViewport(desc.x, desc.y, desc.width, desc.height);
-    ProfileGpuWait("Render/GpuWait/SetViewport");
 
     GLbitfield clearMask = 0;
     if (desc.clearMode == ClearMode::SolidColor)
@@ -348,7 +345,6 @@ void OpenGLRenderBackend::BeginPass(const RenderPassDesc& desc)
         glClear(clearMask);
         glDisable(GL_SCISSOR_TEST);
         if (restoreDepthMask) glDepthMask(GL_FALSE);
-        ProfileGpuWait("Render/GpuWait/ClearAttachments");
     }
 }
 

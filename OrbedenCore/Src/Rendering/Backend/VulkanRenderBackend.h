@@ -11,6 +11,8 @@ private:
 
     //选择着色器对象
     void OnBindShaderProgram(GpuShaderProgramID id) override;
+    //写入当前渲染阶段的 GPU 时间检查点
+    void RecordGpuCheckpoint(const char* name) override;
 
 public:
     //创建后端状态

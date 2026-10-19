@@ -191,6 +191,8 @@ protected:
     virtual void OnBindShaderProgram(GpuShaderProgramID id) = 0;
     //移除着色器参数缓存
     void ReleaseShaderParameters(GpuShaderProgramID id);
+    //记录后端 GPU 时间检查点
+    virtual void RecordGpuCheckpoint(const char* name) {}
 
 public:
     virtual ~RenderBackend() = default;
@@ -277,6 +279,6 @@ public:
     virtual bool UploadIndexBuffer(GpuIndexBufferID id, const uint32* data, uint32 count, uint32 capacity) = 0;
     //按当前顶点输入的实例布局设置实例 attribute 指针与 divisor。
     virtual bool BindInstanceBuffer(GpuVertexBufferID id, usize byteOffset) = 0;
-    //仅在录制期间等待此前 GPU 工作完成并记录 CPU 阻塞耗时
-    void ProfileGpuWait(const char* name);
+    //采集 GPU 阶段时间检查点
+    void ProfileGpuStage(const char* name);
 };

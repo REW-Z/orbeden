@@ -35,6 +35,7 @@ public static class EditorRuntime
         public delegate* unmanaged[Cdecl]<EditorProfileScope*, void> EndProfileSample;
         public delegate* unmanaged[Cdecl]<byte> GetMeshDynamicBatching;
         public delegate* unmanaged[Cdecl]<byte, void> SetMeshDynamicBatching;
+        public delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> CopyProfilerGpuEvents;
     }
 
     //初始化失败原因的非托管副本，供原生侧读取。
@@ -72,7 +73,8 @@ public static class EditorRuntime
             OrbedenCoreRuntime.InitializeEngineBindings(api.EngineApi);
             NativeEditorGUI.Initialize(api.Gui);
             NativeEditorLog.Initialize(api.Log);
-            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText, api.BeginProfileSample, api.EndProfileSample);
+            NativeEditorProfiler.Initialize(api.Profiler, api.ExportProfilerFrameText, api.BeginProfileSample,
+                api.EndProfileSample, api.CopyProfilerGpuEvents);
 
             //面板注册期间的警告也要进 Console 面板，所以先装日志通道
             EditorConsole.Install();
@@ -573,7 +575,7 @@ public static class EditorRuntime
         ValidateFunctionTable<EditorProfilerNativeApi>(nameof(EditorProfilerNativeApi), 8);
         ValidateFunctionTable<EditorAssetReimportNativeApi>(nameof(EditorAssetReimportNativeApi), 2);
         ValidateFunctionTable<EditorInputNativeApi>(nameof(EditorInputNativeApi), 2);
-        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 186);
+        ValidateFunctionTable<EditorManagedApi>(nameof(EditorManagedApi), 187);
         ValidateSize<EditorProfileScope>(nameof(EditorProfileScope), 16);
         if (Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.BeginProfileSample)).ToInt32() != 182 * IntPtr.Size
             || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.EndProfileSample)).ToInt32() != 183 * IntPtr.Size)
@@ -592,7 +594,12 @@ public static class EditorRuntime
         ValidateSize<EditorRectPrimitive>(nameof(EditorRectPrimitive), 36);
         ValidateSize<EditorScenePickHit>(nameof(EditorScenePickHit), 20);
         ValidateSize<ProfileEvent>(nameof(ProfileEvent), 40);
-        ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 88);
+        ValidateSize<ProfileGpuEvent>(nameof(ProfileGpuEvent), 24);
+        ValidateSize<ProfileFrameSummary>(nameof(ProfileFrameSummary), 104);
+        if (Marshal.OffsetOf<ProfileFrameSummary>(nameof(ProfileFrameSummary.GpuEventCount)).ToInt32() != 88
+            || Marshal.OffsetOf<ProfileGpuEvent>(nameof(ProfileGpuEvent.StartMicroseconds)).ToInt32() != 8
+            || Marshal.OffsetOf<EditorManagedApi>(nameof(EditorManagedApi.CopyProfilerGpuEvents)).ToInt32() != 186 * IntPtr.Size)
+            throw new TypeLoadException("Editor GPU profiler ABI layout mismatch.");
     }
 
     //验证全由函数指针槽组成的函数表尺寸。

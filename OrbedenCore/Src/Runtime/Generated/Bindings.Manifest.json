@@ -45334,9 +45334,167 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "gpuEventCount",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "droppedGpuEventCount",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "gpuStatus",
+          "Type": "ProfileGpuStatus",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []
+    },
+    {
+      "Name": "ProfileGpuEvent",
+      "QualifiedName": "ProfileGpuEvent",
+      "BaseName": "",
+      "Kind": "struct",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Profiler/Profiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [
+        {
+          "Name": "nameId",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "startMicroseconds",
+          "Type": "float64",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "durationMicroseconds",
+          "Type": "float64",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        }
+      ],
+      "EnumValues": []
+    },
+    {
+      "Name": "ProfileGpuStatus",
+      "QualifiedName": "ProfileGpuStatus",
+      "BaseName": "",
+      "Kind": "enum",
+      "EnumBase": "int32",
+      "IsExported": false,
+      "Include": "Profiler/Profiler.h",
+      "IsObject": false,
+      "IsAbstract": false,
+      "IsUnique": false,
+      "IsFinal": false,
+      "Members": [],
+      "EnumValues": [
+        {
+          "Key": "Unavailable",
+          "Value": "0"
+        },
+        {
+          "Key": "Pending",
+          "Value": "1"
+        },
+        {
+          "Key": "Ready",
+          "Value": "2"
+        }
+      ]
     },
     {
       "Name": "ProfileSample",
@@ -45881,6 +46039,179 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "GetCaptureFrameIndex",
+          "Type": "int64",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "GetCaptureGeneration",
+          "Type": "uint64",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "GetGpuNameId",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "MarkGpuPending",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "generation",
+              "Type": "uint64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "frameIndex",
+              "Type": "int64",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "StoreGpuEvents",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "generation",
+              "Type": "uint64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "frameIndex",
+              "Type": "int64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "events",
+              "Type": "const ProfileGpuEvent*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "count",
+              "Type": "int32",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "dropped",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "CopyFrameGpuEvents",
+          "Type": "int32",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": true,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "frameIndex",
+              "Type": "int64",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "output",
+              "Type": "ProfileGpuEvent*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "capacity",
+              "Type": "int32",
+              "DefaultValue": ""
+            }
+          ]
         },
         {
           "Name": "ReleaseCapture",
@@ -47901,6 +48232,31 @@
           ]
         },
         {
+          "Name": "RecordGpuCheckpoint",
+          "Type": "void",
+          "Access": "protected",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
           "Name": "Initialize",
           "Type": "bool",
           "Access": "public",
@@ -49305,7 +49661,7 @@
           ]
         },
         {
-          "Name": "ProfileGpuWait",
+          "Name": "ProfileGpuStage",
           "Type": "void",
           "Access": "public",
           "IsMethod": true,
@@ -73046,6 +73402,31 @@
             {
               "Name": "id",
               "Type": "GpuShaderProgramID",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "RecordGpuCheckpoint",
+          "Type": "void",
+          "Access": "private",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": true,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "name",
+              "Type": "const char*",
               "DefaultValue": ""
             }
           ]

@@ -3,6 +3,7 @@
 #include "Runtime/Native/InteropText.h"
 #include "Memory/MemoryManager.h"
 
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -20,6 +21,7 @@ namespace
 
     //每帧事件上限，超出只丢事件并计数，分类耗时不受影响
     constexpr int32 FrameEventCapacity = 4096;
+    constexpr int32 FrameGpuEventCapacity = 256;
 
     //名字驻留表容量
     constexpr int32 NameCapacity = 512;
@@ -45,8 +47,10 @@ namespace
     struct CaptureState
     {
         bool capturing = false;
+        uint64 generation = 1;
         ProfileFrameSummary* frames = nullptr;
         ProfileEvent* events = nullptr;
+        ProfileGpuEvent* gpuEvents = nullptr;
 
         int64 nextFrameIndex = 0;
         int64 currentFrameIndex = -1;
@@ -70,6 +74,16 @@ namespace
     {
         static CaptureState state;
         return state;
+    }
+
+    //查找仍保留在历史中的指定帧
+    ProfileFrameSummary* FindFrame(int64 frameIndex)
+    {
+        CaptureState& state = GetCaptureState();
+        if (!state.frames || frameIndex < 0 || frameIndex >= state.nextFrameIndex
+            || frameIndex < state.nextFrameIndex - FrameWindowCapacity) return nullptr;
+        ProfileFrameSummary& frame = state.frames[frameIndex % FrameWindowCapacity];
+        return frame.frameIndex == frameIndex ? &frame : nullptr;
     }
 
     //获取下一个采样节点编号
@@ -296,7 +310,8 @@ namespace
 }
 
 static_assert(sizeof(ProfileEvent) == 40);
-static_assert(sizeof(ProfileFrameSummary) == 88);
+static_assert(sizeof(ProfileFrameSummary) == 104);
+static_assert(sizeof(ProfileGpuEvent) == 24);
 
 //应用关闭时写出并清空采样数据
 void Profiler::OnShutdown()
@@ -483,6 +498,10 @@ void Profiler::SetCapturing(bool value)
         {
             state.events = new ProfileEvent[FrameWindowCapacity * FrameEventCapacity];
         }
+        if (!state.gpuEvents)
+        {
+            state.gpuEvents = new ProfileGpuEvent[FrameWindowCapacity * FrameGpuEventCapacity];
+        }
 
         state.mainThreadBound = false;
         state.capturing = true;
@@ -509,11 +528,14 @@ void Profiler::ReleaseCapture()
     state.eventCount = 0;
     state.mainThreadBound = false;
     state.nextFrameIndex = 0;
+    ++state.generation;
 
     delete[] state.frames;
     delete[] state.events;
+    delete[] state.gpuEvents;
     state.frames = nullptr;
     state.events = nullptr;
+    state.gpuEvents = nullptr;
 }
 
 //判断是否正在按帧采集
@@ -522,11 +544,68 @@ bool Profiler::IsCapturing()
     return GetCaptureState().capturing;
 }
 
+//读取当前采集帧编号
+int64 Profiler::GetCaptureFrameIndex()
+{
+    CaptureState& state = GetCaptureState();
+    return state.capturing ? state.currentFrameIndex : -1;
+}
+
+//读取采集历史代次
+uint64 Profiler::GetCaptureGeneration()
+{
+    return GetCaptureState().generation;
+}
+
+//驻留 GPU 检查点名称
+int32 Profiler::GetGpuNameId(const char* name)
+{
+    int32 nameId = -1;
+    InternName(name, nameId);
+    return nameId;
+}
+
+//标记原始帧的 GPU 结果待回填
+void Profiler::MarkGpuPending(uint64 generation, int64 frameIndex)
+{
+    if (generation != GetCaptureState().generation) return;
+    if (ProfileFrameSummary* frame = FindFrame(frameIndex)) frame->gpuStatus = ProfileGpuStatus::Pending;
+}
+
+//回填原始帧的 GPU 时间区间
+void Profiler::StoreGpuEvents(uint64 generation, int64 frameIndex, const ProfileGpuEvent* events, int32 count, int32 dropped)
+{
+    CaptureState& state = GetCaptureState();
+    if (generation != state.generation || !state.gpuEvents) return;
+    ProfileFrameSummary* frame = FindFrame(frameIndex);
+    if (!frame) return;
+    int32 written = events && count > 0 ? std::min(count, FrameGpuEventCapacity) : 0;
+    if (written > 0)
+        std::memcpy(state.gpuEvents + (frameIndex % FrameWindowCapacity) * FrameGpuEventCapacity,
+            events, static_cast<usize>(written) * sizeof(ProfileGpuEvent));
+    frame->gpuEventCount = written;
+    frame->droppedGpuEventCount = dropped + std::max(count - written, 0);
+    frame->gpuStatus = written > 0 ? ProfileGpuStatus::Ready : ProfileGpuStatus::Unavailable;
+}
+
+//拷贝指定帧的 GPU 时间区间
+int32 Profiler::CopyFrameGpuEvents(int64 frameIndex, ProfileGpuEvent* output, int32 capacity)
+{
+    CaptureState& state = GetCaptureState();
+    ProfileFrameSummary* frame = FindFrame(frameIndex);
+    if (!frame || !state.gpuEvents || !output || capacity <= 0) return 0;
+    int32 count = std::min(frame->gpuEventCount, capacity);
+    std::memcpy(output, state.gpuEvents + (frameIndex % FrameWindowCapacity) * FrameGpuEventCapacity,
+        static_cast<usize>(count) * sizeof(ProfileGpuEvent));
+    return count;
+}
+
 //清空帧历史
 void Profiler::ClearFrames()
 {
     CaptureState& state = GetCaptureState();
     state.nextFrameIndex = 0;
+    ++state.generation;
     state.currentFrameIndex = -1;
     state.currentFrameSlot = -1;
     state.eventCount = 0;

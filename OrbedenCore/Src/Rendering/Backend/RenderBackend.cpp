@@ -64,10 +64,9 @@ void RenderBackend::ReleaseShaderParameters(GpuShaderProgramID id)
     shaderParameters.erase(found);
 }
 
-//记录 GPU 完成等待耗时
-void RenderBackend::ProfileGpuWait(const char* name)
+//记录 GPU 阶段时间检查点
+void RenderBackend::ProfileGpuStage(const char* name)
 {
     if (!Profiler::IsCapturing()) return;
-    PROFILE(name);
-    WaitForIdle();
+    RecordGpuCheckpoint(name);
 }

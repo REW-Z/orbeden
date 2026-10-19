@@ -123,12 +123,6 @@ int wmain(int argc, wchar_t** argv)
             app.Tick(deltaTime);
             editorSystem.Update(app.GetWorld(), deltaTime);
             app.Render(deltaTime);
-            //录制期间单独统计场景 GPU 完成等待
-            if (Profiler::IsCapturing())
-            {
-                PROFILE("Render/WaitForSceneGpu");
-                app.GetSystem<RenderSystem>()->GetBackend().WaitForIdle();
-            }
             editorSystem.RenderEditorGUI();
             app.Present();
 

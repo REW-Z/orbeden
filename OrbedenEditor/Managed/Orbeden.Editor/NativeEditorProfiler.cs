@@ -51,6 +51,23 @@ internal struct ProfileEvent
     public long DurationMicroseconds;
 }
 
+/// <summary>GPU 检查点之间的时间区间</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 8)]
+internal struct ProfileGpuEvent
+{
+    public int NameId;
+    public double StartMicroseconds;
+    public double DurationMicroseconds;
+}
+
+/// <summary>GPU 计时结果状态</summary>
+internal enum ProfileGpuStatus : int
+{
+    Unavailable = 0,
+    Pending = 1,
+    Ready = 2,
+}
+
 /// <summary>一帧的采样摘要，字段顺序与原生侧一一对应。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 internal struct ProfileFrameSummary
@@ -71,6 +88,9 @@ internal struct ProfileFrameSummary
 
     public int EventCount;
     public int DroppedEventCount;
+    public int GpuEventCount;
+    public int DroppedGpuEventCount;
+    public ProfileGpuStatus GpuStatus;
 
     /// <summary>读取指定分类的耗时。</summary>
     internal readonly long GetCategoryMicroseconds(int category) => category switch
@@ -97,17 +117,20 @@ internal static unsafe class NativeEditorProfiler
     private static delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> exportFrameText;
     private static delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> beginSample;
     private static delegate* unmanaged[Cdecl]<EditorProfileScope*, void> endSample;
+    private static delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> copyGpuEvents;
 
     /// <summary>保存剖析函数表。</summary>
     internal static void Initialize(EditorProfilerNativeApi value,
         delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte> exportText = null,
         delegate* unmanaged[Cdecl]<byte*, int, EditorProfileScope*, void> begin = null,
-        delegate* unmanaged[Cdecl]<EditorProfileScope*, void> end = null)
+        delegate* unmanaged[Cdecl]<EditorProfileScope*, void> end = null,
+        delegate* unmanaged[Cdecl]<long, ProfileGpuEvent*, int, int> copyGpu = null)
     {
         api = value;
         exportFrameText = exportText;
         beginSample = begin;
         endSample = end;
+        copyGpuEvents = copyGpu;
         initialized = api.SetCapturing != null;
     }
 
@@ -151,6 +174,13 @@ internal static unsafe class NativeEditorProfiler
     internal static bool IsCapturing()
     {
         return initialized && api.IsCapturing != null && api.IsCapturing() != 0;
+    }
+
+    /// <summary>读取指定帧的 GPU 检查点区间</summary>
+    internal static int CopyFrameGpuEvents(long frameIndex, ProfileGpuEvent[] events)
+    {
+        if (!initialized || copyGpuEvents == null || events.Length == 0) return 0;
+        fixed (ProfileGpuEvent* pointer = events) return copyGpuEvents(frameIndex, pointer, events.Length);
     }
 
     /// <summary>清空帧历史，不动采样树。</summary>
