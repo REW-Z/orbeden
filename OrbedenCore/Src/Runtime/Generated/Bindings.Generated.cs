@@ -1121,7 +1121,7 @@ internal static class GeneratedBindingRegistration
         NativeBindingRuntime.Register(typeof(global::Orbeden.RigidBody), "RigidBody", 11999458345191868740UL, (ens, pointer) => new global::Orbeden.RigidBody(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.Script), "Script", 4622765495942406386UL, null);
         NativeBindingRuntime.Register(typeof(global::Orbeden.StaticMeshRenderer), "StaticMeshRenderer", 485817780930741050UL, (ens, pointer) => new global::Orbeden.StaticMeshRenderer(ens!, pointer));
-        NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 13157070993901949905UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
+        NativeBindingRuntime.Register(typeof(global::Orbeden.Transform), "Transform", 2832195382186525765UL, (ens, pointer) => new global::Orbeden.Transform(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.WheelCollider), "WheelCollider", 13396853297441896464UL, (ens, pointer) => new global::Orbeden.WheelCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.BoxCollider), "BoxCollider", 3698543718541020963UL, (ens, pointer) => new global::Orbeden.BoxCollider(ens!, pointer));
         NativeBindingRuntime.Register(typeof(global::Orbeden.CapsuleCollider), "CapsuleCollider", 17385821896117399994UL, (ens, pointer) => new global::Orbeden.CapsuleCollider(ens!, pointer));
@@ -5362,66 +5362,110 @@ namespace Orbeden
 public unsafe partial class Transform : global::Orbeden.Component
 {
     protected internal Transform(Ens ens, IntPtr pointer) : base(ens, pointer) { }
-    public global::Orbeden.vector3 @GetLocalPosition()
+    public global::Orbeden.EnsId @firstChild
     {
+        get
+        {
+        global::Orbeden.EnsId result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 0, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.EnsId)result;
+        }
+    }
+    public global::Orbeden.vector3 @localEulerAngles
+    {
+        get
+        {
         global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 0, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 1, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 9, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
     }
-    public global::Orbeden.quaternion @GetLocalRotation()
+    public global::Orbeden.vector3 @localPosition
     {
-        global::Orbeden.quaternion result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 1, this);
-        NativeBindingRuntime.Check(callback(InstanceId, &result));
-        return (global::Orbeden.quaternion)result;
-    }
-    public global::Orbeden.vector3 @GetLocalScale()
-    {
+        get
+        {
         global::Orbeden.vector3 result = default;
         var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 2, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 10, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.quaternion @localRotation
+    {
+        get
+        {
+        global::Orbeden.quaternion result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 3, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.quaternion)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 11, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.vector3 @localScale
+    {
+        get
+        {
+        global::Orbeden.vector3 result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 4, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.vector3)result;
+        }
+        set
+        {
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 12, this);
+        NativeBindingRuntime.Check(callback(InstanceId, @value));
+        }
+    }
+    public global::Orbeden.EnsId @nextSibling
+    {
+        get
+        {
+        global::Orbeden.EnsId result = default;
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 5, this);
+        NativeBindingRuntime.Check(callback(InstanceId, &result));
+        return (global::Orbeden.EnsId)result;
+        }
     }
     public global::Orbeden.EnsId @GetParent()
     {
         global::Orbeden.EnsId result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 3, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 6, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.EnsId)result;
     }
     public global::Orbeden.vector3 @GetWorldPosition()
     {
         global::Orbeden.vector3 result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 4, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 7, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.vector3)result;
     }
     public global::Orbeden.quaternion @GetWorldRotation()
     {
         global::Orbeden.quaternion result = default;
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 5, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion*, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 8, this);
         NativeBindingRuntime.Check(callback(InstanceId, &result));
         return (global::Orbeden.quaternion)result;
     }
-    public void @SetLocalPosition(global::Orbeden.vector3 @value)
-    {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 6, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-    }
-    public void @SetLocalRotation(global::Orbeden.quaternion @value)
-    {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.quaternion, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 7, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-    }
-    public void @SetLocalScale(global::Orbeden.vector3 @value)
-    {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.vector3, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 8, this);
-        NativeBindingRuntime.Check(callback(InstanceId, @value));
-    }
     public void @SetParent(global::Orbeden.EnsId @value)
     {
-        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 9, this);
+        var callback = (delegate* unmanaged[Cdecl]<int, global::Orbeden.EnsId, NativeBindingStatus>)NativeBindingRuntime.GetFunction(typeof(global::Orbeden.Transform), 13, this);
         NativeBindingRuntime.Check(callback(InstanceId, @value));
     }
 }

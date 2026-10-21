@@ -1690,6 +1690,12 @@ namespace
     {
         return ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) ? 1 : 0;
     }
+
+    //读取选择操作的 Ctrl 和 Shift 状态
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiGetSelectionModifiers()
+    {
+        return (ImGui::GetIO().KeyCtrl ? 1 : 0) | (ImGui::GetIO().KeyShift ? 2 : 0);
+    }
 }
 
 bool EditorGUI::Initialize(IWindow* editorWindow)
@@ -2130,6 +2136,7 @@ EditorGuiNativeApi EditorGUI::GetNativeApi() const
     api.textWrappedColored = reinterpret_cast<void*>(&EditorGuiTextWrappedColored);
     api.beginSearchableCombo = reinterpret_cast<void*>(&EditorGuiBeginSearchableCombo);
     api.searchableComboItem = reinterpret_cast<void*>(&EditorGuiSearchableComboItem);
+    api.getSelectionModifiers = reinterpret_cast<void*>(&EditorGuiGetSelectionModifiers);
     return api;
 }
 

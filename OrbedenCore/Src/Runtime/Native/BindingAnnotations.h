@@ -4,6 +4,8 @@
 #define ORBEDEN_BIND_IGNORE
 //字段读写必须经显式 getter/setter；使用 None 表示只读或只写。
 #define ORBEDEN_BIND_ACCESSORS(GETTER, SETTER)
+//把访问方法导出为指定名称的托管属性。
+#define ORBEDEN_BIND_PROPERTY(NAME)
 //把方法的指针参数与长度参数映射为一个托管 Span。
 #define ORBEDEN_BIND_BUFFER(DATA, COUNT)
 

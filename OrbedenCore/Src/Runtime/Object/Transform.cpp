@@ -2,7 +2,50 @@
 
 #include "Runtime/World.h"
 
+#include <algorithm>
+#include <cmath>
+
 OBJECT_TYPE_IMPLEMENT(Transform, Component)
+
+//获取内禀 YXZ 本地欧拉角
+vector3 Transform::GetLocalEulerAngles() const
+{
+    float64 length = std::sqrt(static_cast<float64>(localRotation.x) * localRotation.x
+        + static_cast<float64>(localRotation.y) * localRotation.y
+        + static_cast<float64>(localRotation.z) * localRotation.z
+        + static_cast<float64>(localRotation.w) * localRotation.w);
+    if (!std::isfinite(length) || length < 0.000001) return {};
+    float32 x = static_cast<float32>(localRotation.x / length);
+    float32 y = static_cast<float32>(localRotation.y / length);
+    float32 z = static_cast<float32>(localRotation.z / length);
+    float32 w = static_cast<float32>(localRotation.w / length);
+    float32 sinX = std::clamp(2.0f * (w * x - y * z), -1.0f, 1.0f);
+    float32 sinRoll = 2.0f * (x * y + w * z);
+    float32 cosRoll = 1.0f - 2.0f * (x * x + z * z);
+    float32 cosX = std::sqrt(sinRoll * sinRoll + cosRoll * cosRoll);
+    float32 pitch = std::atan2(sinX, cosX);
+    float32 yaw = cosX > 0.000001f
+        ? std::atan2(2.0f * (x * z + w * y), 1.0f - 2.0f * (x * x + y * y))
+        : std::atan2(2.0f * (w * y - x * z), 1.0f - 2.0f * (y * y + z * z));
+    float32 roll = cosX > 0.000001f ? std::atan2(sinRoll, cosRoll) : 0.0f;
+    constexpr float32 DegreesPerRadian = 57.29577951308232f;
+    return { pitch * DegreesPerRadian, yaw * DegreesPerRadian, roll * DegreesPerRadian };
+}
+
+//将本地欧拉角转换为四元数
+void Transform::SetLocalEulerAngles(const vector3& value)
+{
+    if (!std::isfinite(value.x) || !std::isfinite(value.y) || !std::isfinite(value.z)) return;
+    constexpr float32 HalfRadiansPerDegree = 0.008726646259971648f;
+    float32 pitch = std::fmod(value.x, 360.0f) * HalfRadiansPerDegree;
+    float32 yaw = std::fmod(value.y, 360.0f) * HalfRadiansPerDegree;
+    float32 roll = std::fmod(value.z, 360.0f) * HalfRadiansPerDegree;
+    float32 sx = std::sin(pitch), cx = std::cos(pitch);
+    float32 sy = std::sin(yaw), cy = std::cos(yaw);
+    float32 sz = std::sin(roll), cz = std::cos(roll);
+    SetLocalRotation({ cy * sx * cz + sy * cx * sz, sy * cx * cz - cy * sx * sz,
+        cy * cx * sz - sy * sx * cz, cy * cx * cz + sy * sx * sz });
+}
 
 //获取本地位置
 const vector3& Transform::GetLocalPosition() const

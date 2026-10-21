@@ -11,13 +11,66 @@ namespace OrbedenEditor;
 /// <summary>ProjectPanel 资源文件操作及引用维护。</summary>
 internal static class ProjectAssetOperations
 {
+    /// <summary>批量移动顶层资源到目录，失败时回滚已完成的移动。</summary>
+    public static bool MoveMany(IReadOnlyList<string> sources, string directory,
+        out List<(string Source, string Destination)> moved, out string message)
+    {
+        moved = [];
+        message = string.Empty;
+        if (!Directory.Exists(directory) || !TryValidateDestination(Path.Combine(directory, "asset"), out _, out message))
+        {
+            if (message.Length == 0) message = "Destination folder is missing.";
+            return false;
+        }
+        List<(string Source, string Destination)> plan = [];
+        HashSet<string> targets = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string source in sources.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!TryValidateSource(source, out string path, out message)) return false;
+            if (sources.Any(parent => !string.Equals(parent, path, StringComparison.OrdinalIgnoreCase) && IsSameOrChild(path, parent))) continue;
+            if (string.Equals(Path.GetDirectoryName(path), directory, StringComparison.OrdinalIgnoreCase)) continue;
+            string target = Path.Combine(directory, Path.GetFileName(path));
+            if (IsSameOrChild(directory, path) || !targets.Add(target) || File.Exists(target) || Directory.Exists(target)
+                || File.Exists(target + ".resinfo") || Directory.Exists(target + ".resinfo"))
+            {
+                message = "A destination conflicts with the selected assets: " + target;
+                return false;
+            }
+            plan.Add((path, target));
+        }
+        if (plan.Count == 0) { message = "The selected assets are already in that folder."; return false; }
+        foreach (var entry in plan)
+        {
+            bool succeeded;
+            try { succeeded = Move(entry.Source, entry.Destination, out message); }
+            catch (Exception exception) { succeeded = false; message = "Move failed: " + exception.Message; }
+            if (succeeded) { moved.Add(entry); continue; }
+            string failure = message;
+            List<string> rollbackErrors = [];
+            for (int index = moved.Count - 1; index >= 0; --index)
+            {
+                try
+                {
+                    if (!Move(moved[index].Destination, moved[index].Source, out string error)) rollbackErrors.Add(error);
+                }
+                catch (Exception exception) { rollbackErrors.Add(exception.Message); }
+            }
+            moved.Clear();
+            message = failure + (rollbackErrors.Count == 0 ? " Moves were rolled back." : " Rollback failed: " + string.Join("; ", rollbackErrors));
+            return false;
+        }
+        message = $"Moved {moved.Count} assets and updated their references.";
+        return true;
+    }
+
     /// <summary>移动或重命名资源并更新引用。</summary>
     public static bool Move(string source, string destination, out string message)
     {
         message = string.Empty;
         if (!TryValidateSource(source, out string sourcePath, out message)) return false;
         if (!TryValidateDestination(destination, out string destinationPath, out message)) return false;
-        if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+        if (File.Exists(destinationPath) || Directory.Exists(destinationPath)
+            || File.Exists(destinationPath + ".resinfo") || Directory.Exists(destinationPath + ".resinfo"))
         {
             message = "Destination already exists.";
             return false;
@@ -40,6 +93,7 @@ internal static class ProjectAssetOperations
 
         try
         {
+            EditorAssetCache.Stop();
             MoveSource(sourcePath, destinationPath, directory);
 
             if (!plan.Apply(out message))
@@ -346,11 +400,20 @@ internal static class ProjectAssetOperations
         return true;
     }
 
-    /// <summary>移动源文件或目录，导入缓存由扫描重新建立。</summary>
+    /// <summary>移动源文件及伴生文件，导入缓存由扫描重新建立。</summary>
     private static void MoveSource(string source, string destination, bool directory)
     {
-        if (directory) Directory.Move(source, destination);
-        else File.Move(source, destination);
+        if (directory) { Directory.Move(source, destination); return; }
+        File.Move(source, destination);
+        try
+        {
+            if (File.Exists(source + ".resinfo")) File.Move(source + ".resinfo", destination + ".resinfo");
+        }
+        catch
+        {
+            File.Move(destination, source);
+            throw;
+        }
     }
 
     /// <summary>在同级目录里找出一个不冲突的「&lt;名称&gt; Copy [N]&lt;扩展名&gt;」。</summary>

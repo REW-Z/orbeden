@@ -24,6 +24,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <fstream>
 #include <filesystem>
 #include <imgui.h>
@@ -1091,6 +1092,34 @@ bool EditorSystem::PrepareScriptBuild(std::string& outScriptProject, std::string
 
     if (!NewProjectGenerator::RepairScriptProjectBuildProps(outScriptProject, outError)) return false;
     return RefreshLocalRuntimeDllReference(outScriptProject, FindRuntimeCSharpDll(), outError);
+}
+
+//同步当前项目的 SDK 运行库与构建引用
+void EditorSystem::UpdateProjectSdk()
+{
+    bool succeeded = false;
+    if (!project.HasProject()) projectStatus = "No project is open.";
+    else if (playMode.IsPlaying()) projectStatus = "Stop Play-In-Editor before updating the SDK.";
+    else if (scriptBuildRunning) projectStatus = "Wait for the script build to finish before updating the SDK.";
+    else
+    {
+        try
+        {
+            std::string csproj = GetProjectScriptProjectPath();
+            std::string error;
+            if (csproj.empty()) projectStatus = "No C# project found in script root.";
+            else if (!NewProjectGenerator::SyncRuntimeCSharpDll(csproj, FindRuntimeCSharpDll(), error)) projectStatus = error;
+            else
+            {
+                succeeded = true;
+                projectStatus = "SDK updated. Rebuild Game C++ and Game C# to refresh the game modules.";
+            }
+        }
+        catch (const std::exception& exception) { projectStatus = "Update SDK failed: " + std::string(exception.what()); }
+    }
+    if (succeeded) Log::Info(projectStatus.c_str());
+    else Log::Error(projectStatus.c_str());
+    RequestRepaint();
 }
 
 void EditorSystem::RequestBuildScripts()

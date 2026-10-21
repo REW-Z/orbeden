@@ -25,7 +25,7 @@ public sealed class SampleBehaviour : Script
     /// <summary>脚本启动时调用。</summary>
     private void OnStart()
     {
-        startPosition = Ens.Transform.GetLocalPosition();
+        startPosition = Ens.Transform.localPosition;
 
         //按名称只解析一次；后续通过 ComponentMethod 调用 C++ public 方法。
         nativeSample = Ens.GetNativeComponent("SampleNativeBehaviour");
@@ -43,7 +43,7 @@ public sealed class SampleBehaviour : Script
         Transform transform = Ens.Transform;
         vector3 position = startPosition;
         position.y += MathF.Sin(totalTime) * 0.25f;
-        transform.SetLocalPosition(position);
+        transform.localPosition = position;
 
         StaticMeshRenderer? renderer = Ens.GetComponent<StaticMeshRenderer>();
         if (renderer != null)

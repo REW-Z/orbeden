@@ -35,7 +35,7 @@ internal static class UIMatrix
         while (!parent.IsNull)
         {
             Transform transform = Ens.FromId(parent).Transform;
-            matrix4x4 local = matrix4x4.Trs(transform.GetLocalPosition(), transform.GetLocalRotation(), transform.GetLocalScale());
+            matrix4x4 local = matrix4x4.Trs(transform.localPosition, transform.localRotation, transform.localScale);
             result = matrix4x4.Multiply(local, result);
             parent = transform.GetParent();
         }
@@ -46,8 +46,8 @@ internal static class UIMatrix
     internal static matrix4x4 Local(UINode node)
     {
         Transform transform = Ens.FromId(node.Ens).Transform;
-        vector3 position = node.Layout?.GetResolvedLocalPosition() ?? transform.GetLocalPosition();
-        return matrix4x4.Trs(position, transform.GetLocalRotation(), transform.GetLocalScale());
+        vector3 position = node.Layout?.GetResolvedLocalPosition() ?? transform.localPosition;
+        return matrix4x4.Trs(position, transform.localRotation, transform.localScale);
     }
 
     /// <summary>

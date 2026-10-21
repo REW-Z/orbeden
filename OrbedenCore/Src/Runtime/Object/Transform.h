@@ -54,6 +54,7 @@ public:
     quaternion GetWorldRotation() const;
 
     //获取本地位置；始终返回作者值，派生覆盖不影响它
+    ORBEDEN_BIND_PROPERTY(localPosition)
     const vector3& GetLocalPosition() const;
 
     //写入局部位置的派生覆盖。owner 非零，且已有持有者时必须与它一致。
@@ -74,17 +75,38 @@ public:
     const vector3& GetResolvedLocalPosition() const;
 
     //设置本地位置并通知变换缓存
+    ORBEDEN_BIND_PROPERTY(localPosition)
     void SetLocalPosition(const vector3& value);
 
     //获取本地旋转
+    ORBEDEN_BIND_PROPERTY(localRotation)
     const quaternion& GetLocalRotation() const;
 
     //设置本地旋转并通知变换缓存
+    ORBEDEN_BIND_PROPERTY(localRotation)
     void SetLocalRotation(const quaternion& value);
 
     //获取本地缩放
+    ORBEDEN_BIND_PROPERTY(localScale)
     const vector3& GetLocalScale() const;
 
     //设置本地缩放并通知变换缓存
+    ORBEDEN_BIND_PROPERTY(localScale)
     void SetLocalScale(const vector3& value);
+
+    //获取本地欧拉角，单位为度，次序为内禀 YXZ
+    ORBEDEN_BIND_PROPERTY(localEulerAngles)
+    vector3 GetLocalEulerAngles() const;
+
+    //设置本地欧拉角，单位为度，次序为内禀 YXZ
+    ORBEDEN_BIND_PROPERTY(localEulerAngles)
+    void SetLocalEulerAngles(const vector3& value);
+
+    //获取首个子节点
+    ORBEDEN_BIND_PROPERTY(firstChild)
+    EnsId GetFirstChild() const { return firstChild; }
+
+    //获取下一个同级节点
+    ORBEDEN_BIND_PROPERTY(nextSibling)
+    EnsId GetNextSibling() const { return next; }
 };

@@ -16,7 +16,7 @@ internal static class EditorPrefabActions
             root = EditorAssetsNative.InstantiatePrefab(assetKey, PrefabSource.File, parent, before);
             if (!root.IsValid) return;
             //场景投放只调整根节点的局部位置
-            if (placeAtPosition) root.Transform.SetLocalPosition(position);
+            if (placeAtPosition) root.Transform.localPosition = position;
             string snapshot = EditorAssetsNative.CaptureEns(root.Id);
             if (snapshot.Length == 0) throw new InvalidOperationException("Cannot capture prefab instance.");
             string rootKey = root.ResourceKey;

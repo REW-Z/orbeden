@@ -112,11 +112,12 @@ public:
     void* setSceneRenderMode = nullptr;
     void* beginSearchableCombo = nullptr;
     void* searchableComboItem = nullptr;
+    void* getSelectionModifiers = nullptr;
 };
 
 #pragma pack(pop)
 
-ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 90);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(EditorGuiNativeApi, 91);
 
 //Editor ImGui 绑定层
 class EditorGUI

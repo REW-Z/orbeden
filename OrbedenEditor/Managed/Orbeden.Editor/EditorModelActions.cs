@@ -50,7 +50,7 @@ internal static class EditorModelActions
             //复制模型子树并重映射身份，不建立预制体绑定
             root = EditorAssetsNative.InstantiatePrefab(prefab, PrefabSource.SnapshotCopy, parent, before);
             if (!root.IsValid) throw new InvalidOperationException("Cannot instantiate model prefab.");
-            if (placeAtPosition) root.Transform.SetLocalPosition(position);
+            if (placeAtPosition) root.Transform.localPosition = position;
 
             //记录整个模型的撤销和重做快照
             string snapshot = EditorAssetsNative.CaptureEns(root.Id);

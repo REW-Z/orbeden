@@ -71,9 +71,9 @@ public sealed class UILayoutGizmos
         if (layout.Ens.GetComponent<Canvas>() is Canvas)
         {
             matrix4x4 matrix = start.LocalMatrix;
-            layout.Ens.Transform.SetLocalPosition(new vector3(start.Position.x + matrix[0] * delta.x + matrix[4] * delta.y,
+            layout.Ens.Transform.localPosition = new vector3(start.Position.x + matrix[0] * delta.x + matrix[4] * delta.y,
                 start.Position.y + matrix[1] * delta.x + matrix[5] * delta.y,
-                start.Position.z + matrix[2] * delta.x + matrix[6] * delta.y));
+                start.Position.z + matrix[2] * delta.x + matrix[6] * delta.y);
         }
         else layout.SetOffset(new vector2(start.Offset.x + delta.x, start.Offset.y + delta.y));
     }
@@ -387,8 +387,8 @@ public sealed class UILayoutGizmos
         vector3 translation = new(matrix[0] * compensation.x + matrix[4] * compensation.y,
             matrix[1] * compensation.x + matrix[5] * compensation.y,
             matrix[2] * compensation.x + matrix[6] * compensation.y);
-        layout.Ens.Transform.SetLocalPosition(new vector3(start.Position.x + translation.x,
-            start.Position.y + translation.y, start.Position.z + translation.z));
+        layout.Ens.Transform.localPosition = new vector3(start.Position.x + translation.x,
+            start.Position.y + translation.y, start.Position.z + translation.z);
     }
 
     //按画布模式将节点坐标映射到场景屏幕
@@ -465,10 +465,10 @@ public sealed class UILayoutGizmos
             sizeDelta = layout.GetSizeDelta();
             this.resolved = resolved;
             Transform transform = layout.Ens.Transform;
-            position = transform.GetLocalPosition();
+            position = transform.localPosition;
             //节点自身的缩放就是把布局单位换算到场景单位的比例：画布根是画布刻度，子节点通常是 1。
-            vector3 scale = transform.GetLocalScale();
-            localMatrix = matrix4x4.Trs(default, transform.GetLocalRotation(), scale);
+            vector3 scale = transform.localScale;
+            localMatrix = matrix4x4.Trs(default, transform.localRotation, scale);
         }
 
         internal vector2 Offset => new(position.x, position.y);
@@ -497,7 +497,7 @@ public sealed class UILayoutGizmos
             layout.SetAnchors(anchorMin, anchorMax);
             layout.SetPivot(pivot);
             layout.SetSizeDelta(sizeDelta);
-            layout.Ens.Transform.SetLocalPosition(position);
+            layout.Ens.Transform.localPosition = position;
             ScriptRuntimeRegistry.FlushHostFields();
             EditorApplication.MarkWorldDirty();
         }

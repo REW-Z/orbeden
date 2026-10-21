@@ -170,6 +170,39 @@ Ens* Ens::GetParent() const
     return GetWorld() ? GetWorld()->GetParent(ens) : nullptr;
 }
 
+//从自身或父级开始查找可赋值组件
+Component* Ens::FindComponentInAncestors(Type* type, bool includeSelf) const
+{
+    if (!type || !IsValid()) return nullptr;
+    for (const Ens* current = includeSelf ? this : GetParent(); current; current = current->GetParent())
+        for (Component* component : current->GetComponents())
+            if (component && component->Is(type)) return component;
+    return nullptr;
+}
+
+//按层级顺序收集自身及后代组件
+void Ens::CollectComponentsInDescendants(Type* type, List<Component*>& output, bool includeSelf) const
+{
+    output.clear();
+    if (!type || !IsValid()) return;
+    List<const Ens*> pending { this };
+    while (!pending.empty())
+    {
+        const Ens* current = pending.back();
+        pending.pop_back();
+        if (includeSelf || current != this)
+            for (Component* component : current->GetComponents())
+                if (component && component->Is(type)) output.push_back(component);
+        for (EnsId child = current->Transform()->lastChild; !child.IsNull();)
+        {
+            const Ens* descendant = GetWorld()->GetEns(child);
+            if (!descendant) break;
+            pending.push_back(descendant);
+            child = descendant->Transform()->prev;
+        }
+    }
+}
+
 //添加组件
 Component* Ens::AddComponent(Type* type)
 {

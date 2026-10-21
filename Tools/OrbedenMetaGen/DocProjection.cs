@@ -41,7 +41,19 @@ internal static class DocProjection
             IsAbstract = type.IsAbstract, IsUnique = type.IsUnique, IsFinal = type.IsFinal,
             IsComponent = isComponent(type)
         };
-        foreach (var group in calls[type].GroupBy(call => call.Member))
+        foreach (var property in calls[type].Where(call => call.Member.PropertyName != null).GroupBy(call => call.Member.PropertyName!))
+        {
+            BindingCall first = property.First();
+            bool getter = property.Any(call => call.Parameters.Count == 0);
+            bool setter = property.Any(call => call.Parameters.Count == 1);
+            result.Members.Add(new DocMember
+            {
+                Name = property.Key, Doc = first.Member.Doc, IsMethod = false, IsStatic = first.Member.IsStatic,
+                Type = first.Parameters.Count == 0 ? first.Member.Type : first.Parameters[0].Parameter.Type,
+                Property = (getter ? "get" : "") + (setter ? "set" : "")
+            });
+        }
+        foreach (var group in calls[type].Where(call => call.Member.PropertyName == null).GroupBy(call => call.Member))
         {
             CppMember member = group.Key;
             DocMember entry = new()

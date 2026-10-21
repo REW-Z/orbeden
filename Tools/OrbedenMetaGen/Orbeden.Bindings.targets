@@ -9,6 +9,9 @@
   -->
   <PropertyGroup>
     <OrbedenProjectRoot Condition="'$(OrbedenProjectRoot)' == ''">$(MSBuildProjectDirectory)</OrbedenProjectRoot>
+    <!--程序集通过显式引用查找，跳过内容与构建产物中的同名 DLL。-->
+    <AssemblySearchPaths>$(AssemblySearchPaths.Replace('{CandidateAssemblyFiles}', '').Split(';'))</AssemblySearchPaths>
+    <DesignTimeAssemblySearchPaths>$(DesignTimeAssemblySearchPaths.Replace('{CandidateAssemblyFiles}', '').Split(';'))</DesignTimeAssemblySearchPaths>
     <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
     <OrbedenContentRoot>$(OrbedenProjectRoot)/Content</OrbedenContentRoot>
     <!--MetaGen 扫描内容根，生成物落在内容根之外的原生构建目录。-->

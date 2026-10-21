@@ -12306,6 +12306,71 @@
           ]
         },
         {
+          "Name": "FindComponentInAncestors",
+          "Type": "Component*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "type",
+              "Type": "Type*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "includeSelf",
+              "Type": "bool",
+              "DefaultValue": "true"
+            }
+          ]
+        },
+        {
+          "Name": "CollectComponentsInDescendants",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "type",
+              "Type": "Type*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "output",
+              "Type": "List\u003CComponent*\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "includeSelf",
+              "Type": "bool",
+              "DefaultValue": "true"
+            }
+          ]
+        },
+        {
           "Name": "RemoveComponent",
           "Type": "bool",
           "Access": "public",
@@ -12504,6 +12569,61 @@
           "Count": "",
           "FixedArray": false,
           "Parameters": []
+        },
+        {
+          "Name": "FindComponentInAncestors",
+          "Type": "T*",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": true,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "includeSelf",
+              "Type": "bool",
+              "DefaultValue": "true"
+            }
+          ]
+        },
+        {
+          "Name": "CollectComponentsInDescendants",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": true,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "output",
+              "Type": "List\u003CT*\u003E\u0026",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "includeSelf",
+              "Type": "bool",
+              "DefaultValue": "true"
+            }
+          ]
         },
         {
           "Name": "RemoveComponent",
@@ -67297,6 +67417,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localPosition",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67409,6 +67530,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localPosition",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67434,6 +67556,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localRotation",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67453,6 +67576,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localRotation",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67478,6 +67602,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localScale",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67497,6 +67622,7 @@
           "Changed": "",
           "Getter": "",
           "Setter": "",
+          "PropertyName": "localScale",
           "Buffer": "",
           "Count": "",
           "FixedArray": false,
@@ -67507,6 +67633,92 @@
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "GetLocalEulerAngles",
+          "Type": "vector3",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "PropertyName": "localEulerAngles",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "SetLocalEulerAngles",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "PropertyName": "localEulerAngles",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": [
+            {
+              "Name": "value",
+              "Type": "const vector3\u0026",
+              "DefaultValue": ""
+            }
+          ]
+        },
+        {
+          "Name": "GetFirstChild",
+          "Type": "EnsId",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "PropertyName": "firstChild",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "GetNextSibling",
+          "Type": "EnsId",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "PropertyName": "nextSibling",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         }
       ],
       "EnumValues": []

@@ -53,7 +53,7 @@ R = Ry(yaw) · Rx(pitch) · Rz(roll)
 | Y | yaw | Y |
 | Z | roll | Z |
 
-欧拉角只存在于 Inspector 的显示与输入层，`.world` 里存的是 `type="quaternion"`，**不参与序列化**。因此改动次序不影响已有内容，但所有已调好的旋转会在检视面板里显示成另一组数字。
+欧拉角用于 Inspector 的显示与输入，以及 Transform 的 `GetLocalEulerAngles`／`SetLocalEulerAngles` 接口；托管侧自动生成为 `localEulerAngles` 属性，单位为度。`.world` 里仍存 `type="quaternion"`，欧拉角**不参与序列化**。因此改动次序不影响已有内容，但所有已调好的旋转会在检视面板里显示成另一组数字。
 
 次序只在两个以上角同时非零时才可观察：单轴旋转下所有次序等价，所以这类约定出错，通常只在「同时转了 pitch 与 yaw」的物体上暴露。`cos(pitch) → 0` 时进入万向锁，分解固定 `roll = 0` 并保留仍然可确定的 `yaw`。
 
@@ -193,6 +193,7 @@ MetaGen 通过扫描头文件宏与注解生成 C# 绑定与反射，不解析�
 |---|---|
 | `ORBEDEN_BIND_IGNORE` | 不向托管 API 公开；不影响反射与序列化 |
 | `ORBEDEN_BIND_ACCESSORS(GETTER, SETTER)` | 字段读写必须经显式 getter/setter（`None` 表示只读/只写） |
+| `ORBEDEN_BIND_PROPERTY(NAME)` | 把访问方法导出为同名 C# 属性；无参非 void 方法是 getter，单参 void 方法是 setter；同一属性的类型及 static 状态必须一致，不接受默认参数或重载访问方法 |
 | `ORBEDEN_BIND_BUFFER(DATA, COUNT)` | 把指针+长度参数映射为一个托管 Span |
 | `ORBEDEN_BIND_CHANGED(CALLBACK)` | 字段写入后执行通知，反射与 Binding 共用 |
 | `ORBEDEN_COMPONENT_UNIQUE` | 组件单实例约束 |

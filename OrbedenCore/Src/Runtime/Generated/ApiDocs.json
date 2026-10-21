@@ -4186,46 +4186,76 @@
       "Doc": "Ens\u53D8\u6362\u7EC4\u4EF6\uFF0C\u4FDD\u5B58\u573A\u666F\u5C42\u7EA7\u548C\u672C\u5730\u53D8\u6362",
       "Members": [
         {
-          "Name": "GetLocalPosition",
-          "Doc": "\u83B7\u53D6\u672C\u5730\u4F4D\u7F6E\uFF1B\u59CB\u7EC8\u8FD4\u56DE\u4F5C\u8005\u503C\uFF0C\u6D3E\u751F\u8986\u76D6\u4E0D\u5F71\u54CD\u5B83",
-          "IsMethod": true,
+          "Name": "firstChild",
+          "Doc": "\u83B7\u53D6\u9996\u4E2A\u5B50\u8282\u70B9",
+          "IsMethod": false,
           "IsStatic": false,
-          "Property": "",
+          "Property": "get",
+          "Type": "EnsId",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "localEulerAngles",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u6B27\u62C9\u89D2\uFF0C\u5355\u4F4D\u4E3A\u5EA6\uFF0C\u6B21\u5E8F\u4E3A\u5185\u7980 YXZ",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
+          "Type": "vector3",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
+        },
+        {
+          "Name": "localPosition",
+          "Doc": "\u83B7\u53D6\u672C\u5730\u4F4D\u7F6E\uFF1B\u59CB\u7EC8\u8FD4\u56DE\u4F5C\u8005\u503C\uFF0C\u6D3E\u751F\u8986\u76D6\u4E0D\u5F71\u54CD\u5B83",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "getset",
           "Type": "const vector3\u0026",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
-          "Arities": [
-            0
-          ]
+          "Arities": []
         },
         {
-          "Name": "GetLocalRotation",
+          "Name": "localRotation",
           "Doc": "\u83B7\u53D6\u672C\u5730\u65CB\u8F6C",
-          "IsMethod": true,
+          "IsMethod": false,
           "IsStatic": false,
-          "Property": "",
+          "Property": "getset",
           "Type": "const quaternion\u0026",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
-          "Arities": [
-            0
-          ]
+          "Arities": []
         },
         {
-          "Name": "GetLocalScale",
+          "Name": "localScale",
           "Doc": "\u83B7\u53D6\u672C\u5730\u7F29\u653E",
-          "IsMethod": true,
+          "IsMethod": false,
           "IsStatic": false,
-          "Property": "",
+          "Property": "getset",
           "Type": "const vector3\u0026",
           "Serialize": false,
           "Changed": "",
           "Parameters": [],
-          "Arities": [
-            0
-          ]
+          "Arities": []
+        },
+        {
+          "Name": "nextSibling",
+          "Doc": "\u83B7\u53D6\u4E0B\u4E00\u4E2A\u540C\u7EA7\u8282\u70B9",
+          "IsMethod": false,
+          "IsStatic": false,
+          "Property": "get",
+          "Type": "EnsId",
+          "Serialize": false,
+          "Changed": "",
+          "Parameters": [],
+          "Arities": []
         },
         {
           "Name": "GetParent",
@@ -4267,66 +4297,6 @@
           "Parameters": [],
           "Arities": [
             0
-          ]
-        },
-        {
-          "Name": "SetLocalPosition",
-          "Doc": "\u8BBE\u7F6E\u672C\u5730\u4F4D\u7F6E\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
-          "IsMethod": true,
-          "IsStatic": false,
-          "Property": "",
-          "Type": "void",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [
-            {
-              "Name": "value",
-              "Type": "const vector3\u0026",
-              "Default": ""
-            }
-          ],
-          "Arities": [
-            1
-          ]
-        },
-        {
-          "Name": "SetLocalRotation",
-          "Doc": "\u8BBE\u7F6E\u672C\u5730\u65CB\u8F6C\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
-          "IsMethod": true,
-          "IsStatic": false,
-          "Property": "",
-          "Type": "void",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [
-            {
-              "Name": "value",
-              "Type": "const quaternion\u0026",
-              "Default": ""
-            }
-          ],
-          "Arities": [
-            1
-          ]
-        },
-        {
-          "Name": "SetLocalScale",
-          "Doc": "\u8BBE\u7F6E\u672C\u5730\u7F29\u653E\u5E76\u901A\u77E5\u53D8\u6362\u7F13\u5B58",
-          "IsMethod": true,
-          "IsStatic": false,
-          "Property": "",
-          "Type": "void",
-          "Serialize": false,
-          "Changed": "",
-          "Parameters": [
-            {
-              "Name": "value",
-              "Type": "const vector3\u0026",
-              "Default": ""
-            }
-          ],
-          "Arities": [
-            1
           ]
         },
         {

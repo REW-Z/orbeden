@@ -137,6 +137,14 @@ public:
     ORBEDEN_BIND_IGNORE
     void GetComponentInstances(Type* type, List<Component*>& output) const;
 
+    //从自身或父级开始查找首个可赋值组件，包含未激活节点
+    ORBEDEN_BIND_IGNORE
+    Component* FindComponentInAncestors(Type* type, bool includeSelf = true) const;
+
+    //按深度优先层级顺序收集可赋值组件，包含未激活节点
+    ORBEDEN_BIND_IGNORE
+    void CollectComponentsInDescendants(Type* type, List<Component*>& output, bool includeSelf = true) const;
+
     //移除组件
     ORBEDEN_BIND_IGNORE
     bool RemoveComponent(Type* type);
@@ -186,6 +194,28 @@ public:
     {
         static_assert(std::is_base_of_v<Component, T>);
         return static_cast<T*>(GetComponent(T::StaticType()));
+    }
+
+    //从自身或父级开始查找组件
+    template<typename T>
+    ORBEDEN_BIND_IGNORE
+    T* FindComponentInAncestors(bool includeSelf = true) const
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        return static_cast<T*>(FindComponentInAncestors(T::StaticType(), includeSelf));
+    }
+
+    //收集自身及后代节点的组件
+    template<typename T>
+    ORBEDEN_BIND_IGNORE
+    void CollectComponentsInDescendants(List<T*>& output, bool includeSelf = true) const
+    {
+        static_assert(std::is_base_of_v<Component, T>);
+        List<Component*> components;
+        CollectComponentsInDescendants(T::StaticType(), components, includeSelf);
+        output.clear();
+        output.reserve(components.size());
+        for (Component* component : components) output.push_back(static_cast<T*>(component));
     }
 
     //移除组件

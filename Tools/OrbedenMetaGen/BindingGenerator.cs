@@ -29,6 +29,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
 
         foreach (CppType type in model.ObjectTypes)
         {
+            ValidateProperties(type);
             List<BindingCall> entries = [];
             foreach (CppMember member in model.ExportedMembers(type).OrderBy(member => member.Name, StringComparer.Ordinal).ThenBy(member => string.Join(",", member.Parameters.Select(parameter => parameter.Type)), StringComparer.Ordinal))
             {
@@ -65,7 +66,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
                 throw new InvalidDataException($"{type.File}:{overload.Line}: {type.QualifiedName}.{overload.Name}: overloads with default arguments produce the same managed signature; remove or reorder the defaults");
             }
             calls.Add(type, entries);
-            string schema = "Bindings-v1|" + type.QualifiedName + "|" + type.BaseName + "|" + string.Join("|", entries.Select(call => call.Operation + ":" + call.Name + ":" + DescribeValue(call.Result, []) + ":" + call.Member.IsStatic + ":" + call.Member.IsConst + ":" + call.Member.Changed + ":" + call.Member.Getter + ":" + call.Member.Setter + ":" + call.Member.Buffer + ":" + call.Member.Count + ":" + string.Join(",", call.Parameters.Select(parameter => parameter.Parameter.Type + "=" + parameter.Parameter.DefaultValue + ":" + DescribeValue(parameter.Value, [])))));
+            string schema = "Bindings-v1|" + type.QualifiedName + "|" + type.BaseName + "|" + string.Join("|", entries.Select(call => call.Operation + ":" + call.Name + ":" + DescribeValue(call.Result, []) + ":" + call.Member.IsStatic + ":" + call.Member.IsConst + ":" + call.Member.Changed + ":" + call.Member.Getter + ":" + call.Member.Setter + (call.Member.PropertyName == null ? "" : ":property=" + call.Member.PropertyName) + ":" + call.Member.Buffer + ":" + call.Member.Count + ":" + string.Join(",", call.Parameters.Select(parameter => parameter.Parameter.Type + "=" + parameter.Parameter.DefaultValue + ":" + DescribeValue(parameter.Value, [])))));
             signatures.Add(type, BitConverter.ToUInt64(SHA256.HashData(InteropText.EncodeUtf8(schema))));
         }
         foreach ((CppType type, List<BindingCall> entries) in calls)
@@ -335,6 +336,25 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         output.AppendLine("    }");
     }
 
+    //校验显式属性访问方法及托管名称冲突
+    private void ValidateProperties(CppType type)
+    {
+        CppMember[] exported = model.ExportedMembers(type).ToArray();
+        foreach (var property in exported.Where(member => member.PropertyName != null).GroupBy(member => member.PropertyName!))
+        {
+            CppMember[] getters = property.Where(member => member.IsMethod && member.Parameters.Count == 0 && types.Resolve(member.Type, type).Cpp != "void").ToArray();
+            CppMember[] setters = property.Where(member => member.IsMethod && member.Parameters.Count == 1 && types.Resolve(member.Type, type).Cpp == "void").ToArray();
+            if (getters.Length > 1 || setters.Length > 1 || getters.Length + setters.Length != property.Count()
+                || property.Any(member => member.IsTemplate || member.Buffer.Length != 0 || member.Parameters.Any(parameter => parameter.DefaultValue.Length != 0))
+                || property.Select(member => member.IsStatic).Distinct().Count() != 1
+                || exported.Any(member => member.PropertyName == null && member.Name == property.Key))
+                throw new InvalidDataException($"{type.File}: invalid or conflicting binding property {type.QualifiedName}.{property.Key}");
+            if (getters.Length != 0 && setters.Length != 0
+                && types.Resolve(getters[0].Type, type).Managed != types.Resolve(setters[0].Parameters[0].Type, type).Managed)
+                throw new InvalidDataException($"{type.File}: getter and setter types differ for {type.QualifiedName}.{property.Key}");
+        }
+    }
+
     private void EmitManagedClass(StringBuilder output, CppType type)
     {
         string name = model.ManagedName(type)[8..]; string scope = name[..name.LastIndexOf('.')]; name = name[(name.LastIndexOf('.') + 1)..];
@@ -345,7 +365,21 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         if (!foundation)
             output.AppendLine(IsComponent(type) ? $"    {(type.IsFinal ? "internal" : "protected internal")} {name}(Ens ens, IntPtr pointer) : base(ens, pointer) {{ }}" : $"    {(type.IsFinal ? "internal" : "protected internal")} {name}(IntPtr pointer) : base(pointer) {{ }}");
         List<BindingCall> entries = calls[type];
-        foreach (var group in entries.Select((call, index) => (call, index)).GroupBy(item => item.call.Member))
+        foreach (var property in entries.Select((call, index) => (call, index)).Where(item => item.call.Member.PropertyName != null)
+            .GroupBy(item => item.call.Member.PropertyName!))
+        {
+            BindingCall first = property.First().call;
+            BindingValue value = first.Parameters.Count == 0 ? first.Result : first.Parameters[0].Value;
+            output.AppendLine($"    public {(HidesMember(type, property.Key) ? "new " : "")}{(first.Member.IsStatic ? "static " : "")}{value.Managed} @{property.Key}\n    {{");
+            foreach (var item in property)
+            {
+                output.AppendLine($"        {(item.call.Parameters.Count == 0 ? "get" : "set")}\n        {{");
+                EmitManagedCall(output, type, item.call, item.index);
+                output.AppendLine("        }");
+            }
+            output.AppendLine("    }");
+        }
+        foreach (var group in entries.Select((call, index) => (call, index)).Where(item => item.call.Member.PropertyName == null).GroupBy(item => item.call.Member))
         {
             if (!group.Key.IsMethod)
             {
@@ -371,7 +405,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
         int fixedBlocks = 0;
         foreach (var parameter in call.Parameters)
         {
-            string name = parameter.Parameter.Name; BindingValue value = parameter.Value;
+            string name = call.Member.PropertyName != null ? "value" : parameter.Parameter.Name; BindingValue value = parameter.Value;
             if (name == call.Member.Count) { wireTypes.Add(value.WireManaged); arguments.Add("@" + call.Member.Buffer + ".Length"); continue; }
             if (name == call.Member.Buffer)
             {
@@ -419,7 +453,7 @@ internal sealed class BindingGenerator(BindingModel model, BindingTypes types, b
     private bool HidesMember(CppType type, string name)
     {
         for (CppType? parent = model.Resolve(type.BaseName, type); parent != null; parent = model.Resolve(parent.BaseName, parent))
-            if (model.ExportedMembers(parent).Any(member => member.Name == name)) return true;
+            if (model.ExportedMembers(parent).Any(member => (member.PropertyName == null ? member.Name : member.PropertyName) == name)) return true;
         return false;
     }
 

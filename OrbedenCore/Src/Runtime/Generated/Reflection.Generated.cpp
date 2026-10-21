@@ -5099,6 +5099,56 @@ public:
         return Reflection::Value();
     }
 
+    //调用 Transform.GetLocalEulerAngles 方法
+    static Reflection::Value Invoke_Transform_GetLocalEulerAngles_14(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetLocalEulerAngles();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Transform.SetLocalEulerAngles 方法
+    static Reflection::Value Invoke_Transform_SetLocalEulerAngles_15(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 1) return Reflection::Value();
+
+        vector3 arg0{};
+        if (!args[0].TryGet(arg0)) return Reflection::Value();
+        instance->SetLocalEulerAngles(arg0);
+        success = true;
+        return Reflection::Value();
+    }
+
+    //调用 Transform.GetFirstChild 方法
+    static Reflection::Value Invoke_Transform_GetFirstChild_16(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetFirstChild();
+        success = true;
+        return Reflection::Value(result);
+    }
+
+    //调用 Transform.GetNextSibling 方法
+    static Reflection::Value Invoke_Transform_GetNextSibling_17(Object* object, std::span<const Reflection::Value> args, bool& success)
+    {
+        success = false;
+        Transform* instance = static_cast<Transform*>(object);
+        if (!instance || args.size() != 0) return Reflection::Value();
+
+        auto result = instance->GetNextSibling();
+        success = true;
+        return Reflection::Value(result);
+    }
+
     //读取 WheelCollider.enabled 字段
     static std::string Get_WheelCollider_enabled(Object* object)
     {
@@ -6103,6 +6153,10 @@ namespace Reflection
                 MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_11),
                 MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_12),
                 MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_13),
+                MethodInfo("GetLocalEulerAngles", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalEulerAngles_14),
+                MethodInfo("SetLocalEulerAngles", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalEulerAngles_15),
+                MethodInfo("GetFirstChild", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetFirstChild_16),
+                MethodInfo("GetNextSibling", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetNextSibling_17),
             });
 
         RegisterTypeFields(WheelCollider::StaticType(),

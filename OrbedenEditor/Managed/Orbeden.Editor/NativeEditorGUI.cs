@@ -101,6 +101,7 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<int, void> SetSceneRenderMode;
     public delegate* unmanaged[Cdecl]<byte*, int, byte*, int, byte*, int, int> BeginSearchableCombo;
     public delegate* unmanaged[Cdecl]<byte*, int, int, byte, byte, byte> SearchableComboItem;
+    public delegate* unmanaged[Cdecl]<byte> GetSelectionModifiers;
 }
 #pragma warning restore CS0649
 
@@ -115,6 +116,9 @@ internal struct EditorRectPrimitive
 
 internal static unsafe class NativeEditorGUI
 {
+    //读取选择操作的修饰键：1 Ctrl、2 Shift
+    internal static int SelectionModifiers => initialized && api.GetSelectionModifiers != null ? api.GetSelectionModifiers() : 0;
+
     //读取场景显示模式
     internal static int GetSceneRenderMode() => initialized && api.GetSceneRenderMode != null ? api.GetSceneRenderMode() : 0;
 

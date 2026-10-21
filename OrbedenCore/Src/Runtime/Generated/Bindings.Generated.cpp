@@ -6158,25 +6158,25 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_StaticMeshRenderer_14(int32 objectI
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_0(int32 objectId, vector3* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_0(int32 objectId, EnsId* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<Transform>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<vector3>(instance->GetLocalPosition());
+        *result = static_cast<EnsId>(instance->GetFirstChild());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_1(int32 objectId, quaternion* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_1(int32 objectId, vector3* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<Transform>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<quaternion>(instance->GetLocalRotation());
+        *result = static_cast<vector3>(instance->GetLocalEulerAngles());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -6188,19 +6188,19 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_2(int32 objectId, vector3
     {
         auto* instance = NativeBindings::Require<Transform>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<vector3>(instance->GetLocalScale());
+        *result = static_cast<vector3>(instance->GetLocalPosition());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_3(int32 objectId, EnsId* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_3(int32 objectId, quaternion* result)
 {
     try
     {
         auto* instance = NativeBindings::Require<Transform>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
-        *result = static_cast<EnsId>(instance->GetParent());
+        *result = static_cast<quaternion>(instance->GetLocalRotation());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
@@ -6212,13 +6212,49 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_4(int32 objectId, vector3
     {
         auto* instance = NativeBindings::Require<Transform>(objectId);
         if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<vector3>(instance->GetLocalScale());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_5(int32 objectId, EnsId* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Transform>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<EnsId>(instance->GetNextSibling());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_6(int32 objectId, EnsId* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Transform>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
+        *result = static_cast<EnsId>(instance->GetParent());
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_7(int32 objectId, vector3* result)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Transform>(objectId);
+        if (!result) return NativeBindingStatus::InvalidArgument;
         *result = static_cast<vector3>(instance->GetWorldPosition());
         return NativeBindingStatus::Ok;
     }
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_5(int32 objectId, quaternion* result)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_8(int32 objectId, quaternion* result)
 {
     try
     {
@@ -6230,7 +6266,18 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_5(int32 objectId, quatern
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_6(int32 objectId, vector3 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_9(int32 objectId, vector3 value)
+{
+    try
+    {
+        auto* instance = NativeBindings::Require<Transform>(objectId);
+        instance->SetLocalEulerAngles(value);
+        return NativeBindingStatus::Ok;
+    }
+    catch (const NativeBindingError& error) { return error.status; }
+    catch (...) { return NativeBindingStatus::InvocationFailed; }
+}
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_10(int32 objectId, vector3 value)
 {
     try
     {
@@ -6241,7 +6288,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_6(int32 objectId, vector3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_7(int32 objectId, quaternion value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_11(int32 objectId, quaternion value)
 {
     try
     {
@@ -6252,7 +6299,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_7(int32 objectId, quatern
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_8(int32 objectId, vector3 value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_12(int32 objectId, vector3 value)
 {
     try
     {
@@ -6263,7 +6310,7 @@ NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_8(int32 objectId, vector3
     catch (const NativeBindingError& error) { return error.status; }
     catch (...) { return NativeBindingStatus::InvocationFailed; }
 }
-NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_9(int32 objectId, EnsId value)
+NativeBindingStatus ORBEDEN_NATIVE_CALL Call_Transform_13(int32 objectId, EnsId value)
 {
     try
     {
@@ -6839,8 +6886,8 @@ void RegisterBindings_Orbeden()
     NativeBindings::Register(Script::StaticType(), 4622765495942406386ULL, { functions_Script, 6 });
     static void* functions_StaticMeshRenderer[] = { reinterpret_cast<void*>(&Call_StaticMeshRenderer_0), reinterpret_cast<void*>(&Call_StaticMeshRenderer_1), reinterpret_cast<void*>(&Call_StaticMeshRenderer_2), reinterpret_cast<void*>(&Call_StaticMeshRenderer_3), reinterpret_cast<void*>(&Call_StaticMeshRenderer_4), reinterpret_cast<void*>(&Call_StaticMeshRenderer_5), reinterpret_cast<void*>(&Call_StaticMeshRenderer_6), reinterpret_cast<void*>(&Call_StaticMeshRenderer_7), reinterpret_cast<void*>(&Call_StaticMeshRenderer_8), reinterpret_cast<void*>(&Call_StaticMeshRenderer_9), reinterpret_cast<void*>(&Call_StaticMeshRenderer_10), reinterpret_cast<void*>(&Call_StaticMeshRenderer_11), reinterpret_cast<void*>(&Call_StaticMeshRenderer_12), reinterpret_cast<void*>(&Call_StaticMeshRenderer_13), reinterpret_cast<void*>(&Call_StaticMeshRenderer_14) };
     NativeBindings::Register(StaticMeshRenderer::StaticType(), 485817780930741050ULL, { functions_StaticMeshRenderer, 15 });
-    static void* functions_Transform[] = { reinterpret_cast<void*>(&Call_Transform_0), reinterpret_cast<void*>(&Call_Transform_1), reinterpret_cast<void*>(&Call_Transform_2), reinterpret_cast<void*>(&Call_Transform_3), reinterpret_cast<void*>(&Call_Transform_4), reinterpret_cast<void*>(&Call_Transform_5), reinterpret_cast<void*>(&Call_Transform_6), reinterpret_cast<void*>(&Call_Transform_7), reinterpret_cast<void*>(&Call_Transform_8), reinterpret_cast<void*>(&Call_Transform_9) };
-    NativeBindings::Register(Transform::StaticType(), 13157070993901949905ULL, { functions_Transform, 10 });
+    static void* functions_Transform[] = { reinterpret_cast<void*>(&Call_Transform_0), reinterpret_cast<void*>(&Call_Transform_1), reinterpret_cast<void*>(&Call_Transform_2), reinterpret_cast<void*>(&Call_Transform_3), reinterpret_cast<void*>(&Call_Transform_4), reinterpret_cast<void*>(&Call_Transform_5), reinterpret_cast<void*>(&Call_Transform_6), reinterpret_cast<void*>(&Call_Transform_7), reinterpret_cast<void*>(&Call_Transform_8), reinterpret_cast<void*>(&Call_Transform_9), reinterpret_cast<void*>(&Call_Transform_10), reinterpret_cast<void*>(&Call_Transform_11), reinterpret_cast<void*>(&Call_Transform_12), reinterpret_cast<void*>(&Call_Transform_13) };
+    NativeBindings::Register(Transform::StaticType(), 2832195382186525765ULL, { functions_Transform, 14 });
     static void* functions_WheelCollider[] = { reinterpret_cast<void*>(&Call_WheelCollider_0), reinterpret_cast<void*>(&Call_WheelCollider_1), reinterpret_cast<void*>(&Call_WheelCollider_2), reinterpret_cast<void*>(&Call_WheelCollider_3), reinterpret_cast<void*>(&Call_WheelCollider_4), reinterpret_cast<void*>(&Call_WheelCollider_5), reinterpret_cast<void*>(&Call_WheelCollider_6), reinterpret_cast<void*>(&Call_WheelCollider_7), reinterpret_cast<void*>(&Call_WheelCollider_8), reinterpret_cast<void*>(&Call_WheelCollider_9), reinterpret_cast<void*>(&Call_WheelCollider_10), reinterpret_cast<void*>(&Call_WheelCollider_11), reinterpret_cast<void*>(&Call_WheelCollider_12), reinterpret_cast<void*>(&Call_WheelCollider_13), reinterpret_cast<void*>(&Call_WheelCollider_14), reinterpret_cast<void*>(&Call_WheelCollider_15), reinterpret_cast<void*>(&Call_WheelCollider_16), reinterpret_cast<void*>(&Call_WheelCollider_17), reinterpret_cast<void*>(&Call_WheelCollider_18), reinterpret_cast<void*>(&Call_WheelCollider_19), reinterpret_cast<void*>(&Call_WheelCollider_20), reinterpret_cast<void*>(&Call_WheelCollider_21), reinterpret_cast<void*>(&Call_WheelCollider_22), reinterpret_cast<void*>(&Call_WheelCollider_23), reinterpret_cast<void*>(&Call_WheelCollider_24), reinterpret_cast<void*>(&Call_WheelCollider_25), reinterpret_cast<void*>(&Call_WheelCollider_26), reinterpret_cast<void*>(&Call_WheelCollider_27) };
     NativeBindings::Register(WheelCollider::StaticType(), 13396853297441896464ULL, { functions_WheelCollider, 28 });
     static void* functions_BoxCollider[] = { reinterpret_cast<void*>(&Call_BoxCollider_0), reinterpret_cast<void*>(&Call_BoxCollider_1), reinterpret_cast<void*>(&Call_BoxCollider_2) };

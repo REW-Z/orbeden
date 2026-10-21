@@ -163,6 +163,7 @@ namespace
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)Build\Managed\obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildThisFileDirectory)Build/**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>
 )ORB";

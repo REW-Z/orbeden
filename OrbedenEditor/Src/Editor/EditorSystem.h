@@ -133,6 +133,9 @@ public:
     //请求构建当前项目 C# 脚本
     void RequestBuildScripts();
 
+    //同步当前项目的 SDK 运行库与构建引用
+    void UpdateProjectSdk();
+
     //请求刷新：重导已加载资源，脚本过期时重新编译并重载程序集
     void RequestRefresh();
 

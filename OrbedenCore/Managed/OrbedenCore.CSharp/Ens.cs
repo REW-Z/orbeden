@@ -121,6 +121,34 @@ public sealed partial class Ens : Object, IEquatable<Ens>
         return [.. result];
     }
 
+    /// <summary>从自身或父级开始查找首个匹配组件，包含未激活节点。</summary>
+    public T? FindComponentInAncestors<T>(bool includeSelf = true) where T : Component
+    {
+        if (!IsValid) return null;
+        for (Ens current = includeSelf ? this : FromId(Transform.GetParent()); current.IsValid; current = FromId(current.Transform.GetParent()))
+            if (current.GetComponent<T>() is T component) return component;
+        return null;
+    }
+
+    /// <summary>按深度优先层级顺序收集匹配组件，默认包含自身及未激活节点。</summary>
+    public T[] CollectComponentsInDescendants<T>(bool includeSelf = true) where T : Component
+    {
+        List<T> result = [];
+        if (!IsValid) return [];
+        Stack<Ens> pending = new();
+        pending.Push(this);
+        while (pending.TryPop(out Ens? current))
+        {
+            if (!current.IsValid) continue;
+            if (includeSelf || !current.Id.Equals(Id)) result.AddRange(current.GetComponents<T>());
+            List<Ens> children = [];
+            for (Ens child = FromId(current.Transform.firstChild); child.IsValid; child = FromId(child.Transform.nextSibling))
+                children.Add(child);
+            for (int index = children.Count - 1; index >= 0; --index) pending.Push(children[index]);
+        }
+        return [.. result];
+    }
+
     /// <summary>判断是否拥有指定类型组件。</summary>
     public bool HasComponent<T>() where T : Component => GetComponent<T>() != null;
 

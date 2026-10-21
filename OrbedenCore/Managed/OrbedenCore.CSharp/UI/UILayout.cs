@@ -124,7 +124,7 @@ public class UILayout : Script, IManagedComponentLifecycle
     /// <summary>读取 Transform 局部 X/Y 作为锚点偏移。</summary>
     public vector2 GetOffset()
     {
-        vector3 position = Ens.Transform.GetLocalPosition();
+        vector3 position = Ens.Transform.localPosition;
         return new vector2(position.x, position.y);
     }
 
@@ -133,16 +133,16 @@ public class UILayout : Script, IManagedComponentLifecycle
     {
         if (!UILayoutMath.IsFinite(value)) return;
         Transform transform = Ens.Transform;
-        vector3 position = transform.GetLocalPosition();
+        vector3 position = transform.localPosition;
         if (position.x == value.x && position.y == value.y) return;
-        transform.SetLocalPosition(new vector3(value.x, value.y, position.z));
+        transform.localPosition = new vector3(value.x, value.y, position.z);
         MarkLayoutDirty();
     }
 
     //读取布局落点与 Transform 局部 Z
     internal vector3 GetResolvedLocalPosition()
     {
-        vector3 position = Ens.Transform.GetLocalPosition();
+        vector3 position = Ens.Transform.localPosition;
         if (Ens.GetComponent<Canvas>() != null || !hasResolvedRect) return position;
         return new vector3(resolvedAnchorPoint.x, resolvedAnchorPoint.y, position.z);
     }

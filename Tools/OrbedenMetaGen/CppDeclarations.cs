@@ -26,6 +26,8 @@ internal sealed class CppMember
     public string Changed { get; set; } = "";
     public string Getter { get; set; } = "";
     public string Setter { get; set; } = "";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PropertyName { get; set; }
     public string Buffer { get; set; } = "";
     public string Count { get; set; } = "";
     public bool FixedArray { get; set; }
@@ -189,7 +191,7 @@ internal static class CppDeclarations
     {
         string access = type.Kind == "struct" ? "public" : "private";
         bool ignored = false, serialize = false, template = false;
-        string getter = "", setter = "", buffer = "", count = "", changed = "";
+        string getter = "", setter = "", buffer = "", count = "", changed = "", propertyName = "";
         for (int index = start; index < end;)
         {
             string token = tokens[index].Text;
@@ -201,6 +203,13 @@ internal static class CppDeclarations
                 index = Match(tokens, index + 1, "(", ")") + 1; access = "public"; continue;
             }
             if (token == "ORBEDEN_COMPONENT_UNIQUE") { type.IsUnique = true; ++index; continue; }
+            if (token == "ORBEDEN_BIND_PROPERTY")
+            {
+                int close = Match(tokens, index + 1, "(", ")");
+                propertyName = Join(tokens.GetRange(index + 2, close - index - 2));
+                if (!IsIdentifier(propertyName)) throw new InvalidDataException($"{type.File}:{tokens[index].Line}: invalid binding property name");
+                index = close + 1; continue;
+            }
             if (token == "ORBEDEN_BIND_CHANGED")
             {
                 int close = Match(tokens, index + 1, "(", ")");
@@ -250,13 +259,14 @@ internal static class CppDeclarations
                 {
                     member.Access = access; member.IgnoreBinding = ignored; member.Serialize = serialize;
                     member.Changed = changed; member.Getter = getter; member.Setter = setter; member.Buffer = buffer; member.Count = count; member.IsTemplate = template;
+                    member.PropertyName = propertyName.Length == 0 ? null : propertyName;
                     member.Doc = DocAbove(lines, member.Line);
                     type.Members.Add(member);
                 }
             }
             if (body) index = Match(tokens, index, "{", "}");
             ++index;
-            ignored = serialize = template = false; getter = setter = buffer = count = changed = "";
+            ignored = serialize = template = false; getter = setter = buffer = count = changed = propertyName = "";
         }
     }
 

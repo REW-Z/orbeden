@@ -2,7 +2,7 @@ using Orbeden;
 
 namespace OrbedenEditor;
 
-/// <summary>提供渲染性能对比开关与项目模板同步操作。</summary>
+/// <summary>提供 SDK 同步、渲染性能对比开关与项目模板同步操作。</summary>
 internal sealed class DevPanel : EditorPanel
 {
     private string report = string.Empty;
@@ -10,7 +10,7 @@ internal sealed class DevPanel : EditorPanel
     public override EditorPanelInfo Info => new("dev", "Dev", false,
         new vector2(560, 340), PanelDockPlacement.Floating, 0.25f, 120);
 
-    /// <summary>绘制渲染对比开关与模板同步操作。</summary>
+    /// <summary>绘制 SDK 同步、渲染对比开关与模板同步操作。</summary>
     protected override void DrawContent(EditorPanelContext context)
     {
         string content = EditorApplication.GetProjectText(EditorProjectField.Content);
@@ -19,6 +19,20 @@ internal sealed class DevPanel : EditorPanel
             EditorGUI.Label("No project loaded.");
             return;
         }
+
+        //同步当前项目的 SDK 运行库与构建引用
+        EditorGUI.BeginDisabled(EditorApplication.IsPlaying);
+        try
+        {
+            if (EditorGUI.Button("Update SDK"))
+            {
+                EditorApplication.RequestEditorAction(EditorRequestKind.UpdateSdk);
+                report = EditorApplication.GetProjectText(EditorProjectField.Status);
+            }
+        }
+        finally { EditorGUI.EndDisabled(); }
+        EditorGUI.Label("Sync this project's SDK, then rebuild Game C++ and Game C#.");
+        EditorGUI.Separator();
 
         //切换普通网格的 CPU 动态合批
         bool meshDynamicBatching = EditorApplication.MeshDynamicBatchingEnabled;

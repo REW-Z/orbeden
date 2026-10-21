@@ -105,11 +105,21 @@ internal sealed class ProjectPanel : EditorPanel
     private string currentDirectory = string.Empty;
     private string? selectedEntryPath;
     private string? expandedGridSource;
+    private readonly HashSet<string> selectedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> visibleDirectories = [];
+    private IReadOnlyList<string> visibleAssets = [];
+    private string? selectionAnchor;
+    private Action? pendingDirectorySelection;
+    private Action? pendingDrop;
+    private List<string> operationSources = [];
     private string? selectedPath
     {
         get => selectedEntryPath;
         set
         {
+            selectedPaths.Clear();
+            if (value != null) selectedPaths.Add(value);
+            selectionAnchor = value;
             selectedEntryPath = value;
             EditorAssetInspection.Select(value);
         }
@@ -186,6 +196,12 @@ internal sealed class ProjectPanel : EditorPanel
             EditorGUI.Label("No project loaded.");
             return;
         }
+        selectedPaths.RemoveWhere(path => !File.Exists(path) && !Directory.Exists(path));
+        if (selectedEntryPath != null && !selectedPaths.Contains(selectedEntryPath))
+        {
+            selectedEntryPath = selectedPaths.LastOrDefault();
+            EditorAssetInspection.Select(selectedEntryPath);
+        }
 
         if (Interlocked.Exchange(ref refreshRequested, 0) != 0)
         {
@@ -210,7 +226,11 @@ internal sealed class ProjectPanel : EditorPanel
         if (!string.IsNullOrEmpty(status)) EditorGUI.Label(status);
         if (!string.IsNullOrEmpty(EditorWorldActions.Status)) EditorGUI.Label(EditorWorldActions.Status);
         startupWorld = EditorAssetsNative.GetWorldKey(true);
+        pendingDrop = null;
         DrawAssetBrowser();
+        Action? drop = pendingDrop;
+        pendingDrop = null;
+        drop?.Invoke();
         EditorWorldActions.DrawPendingSwitch();
     }
 
@@ -313,9 +333,13 @@ internal sealed class ProjectPanel : EditorPanel
     //绘制目录树与当前目录的直接子项
     private void DrawAssetBrowser()
     {
+        visibleDirectories.Clear();
+        pendingDirectorySelection = null;
         bool visible = NativeEditorGUI.BeginChild("##project_directories", ref directoryWidth, resizable: true);
         try { if (visible) DrawDirectory(EditorAssetCatalog.Instance.ContentRoot); }
         finally { NativeEditorGUI.EndChild(); }
+        pendingDirectorySelection?.Invoke();
+        pendingDirectorySelection = null;
         EditorGUI.SameLine();
         float remainingWidth = 0;
         visible = NativeEditorGUI.BeginChild("##project_contents", ref remainingWidth);
@@ -338,21 +362,17 @@ internal sealed class ProjectPanel : EditorPanel
     {
         string sourceKey = NativeEditorGUI.ReadDrag(out int kind);
         if (sourceKey.Length == 0) return;
-        bool valid = EditorAssetsNative.CanModifyAssets();
+        bool valid = EditorAssetsNative.CanModifyAssets() && kind is 1 or 2;
         string source = kind == 2 ? Path.GetFullPath(Path.Combine(contentRoot, sourceKey)) : string.Empty;
         if (kind == 2)
-            valid &= !string.Equals(Path.GetDirectoryName(source), destinationDirectory, StringComparison.OrdinalIgnoreCase)
-                && !ProjectAssetOperations.IsSameOrChild(destinationDirectory, source);
+            valid &= !sourceKey.Contains("//", StringComparison.Ordinal) && GetMoveSources(source).Any(path =>
+                !string.Equals(Path.GetDirectoryName(path), destinationDirectory, StringComparison.OrdinalIgnoreCase))
+                && GetMoveSources(source).All(path => !ProjectAssetOperations.IsSameOrChild(destinationDirectory, path));
         if (!NativeEditorGUI.AcceptDrag(valid)) return;
         if (kind == 2)
         {
-            string destination = Path.Combine(destinationDirectory, Path.GetFileName(source));
-            if (ProjectAssetOperations.Move(source, destination, out status))
-            {
-                if (ProjectAssetOperations.IsSameOrChild(currentDirectory, source))
-                    currentDirectory = Path.Combine(destination, Path.GetRelativePath(source, currentDirectory));
-                selectedPath = destination;
-            }
+            List<string> moving = GetMoveSources(source);
+            pendingDrop = () => MoveEntries(moving, destinationDirectory);
             return;
         }
         Ens ens = Ens.Find(sourceKey);
@@ -377,6 +397,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void DrawDirectory(string path, bool forceExpand = false)
     {
         if (EditorAssetCatalog.Instance.IsGeneratedPath(path)) return;
+        visibleDirectories.Add(path);
         string name = GetDirectoryName(path);
         bool renaming = string.Equals(renamingEntry, path, StringComparison.OrdinalIgnoreCase) && RenamesInTree(path);
         //Alt 折叠的待办在这里被消费一次：本次先把目录压回折叠，之后交回 ImGui 自己记状态
@@ -384,7 +405,7 @@ internal sealed class ProjectPanel : EditorPanel
         //没有下级目录的叶子不该显示展开箭头
         //重命名时把名称让给输入框；隐藏标签后节点宽度仍是「箭头+标签」，输入框正好从原名称的位置开始
         int state = NativeEditorGUI.TreeNode((renaming ? string.Empty : name) + "##directory_" + path,
-            string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
+            selectedPaths.Contains(path) || string.Equals(currentDirectory, path, StringComparison.OrdinalIgnoreCase),
             leaf: !HasSubDirectories(path),
             forceOpen: forceExpand,
             forceCollapse: forceCollapse);
@@ -398,16 +419,17 @@ internal sealed class ProjectPanel : EditorPanel
         bool altToggle = (state & 16) != 0 && (state & 32) != 0;
         bool expandSubtree = altToggle && (state & 1) != 0;
         if (altToggle && !expandSubtree) MarkCollapsedSubtree(path);
-        if ((state & 2) != 0)
+        if ((state & 64) != 0)
         {
             currentDirectory = path;
-            //当前选中项就是点中的这个目录：F2 与右键 Rename 都作用在它身上
-            selectedPath = path;
+            int modifiers = NativeEditorGUI.SelectionModifiers;
+            pendingDirectorySelection = () => SelectEntry(path, visibleDirectories, modifiers);
         }
         DrawDirectoryDrop(path);
         NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(path));
         if (EditorGUI.BeginPopupContextItem("##directory_menu_" + path))
         {
+            SelectContextEntry(path);
             try { DrawItemContextMenu(path, true); }
             finally { EditorGUI.EndPopup(); }
         }
@@ -556,6 +578,7 @@ internal sealed class ProjectPanel : EditorPanel
             EditorGUI.Label("Directory read failed: " + ex.Message);
             return;
         }
+        visibleAssets = entries;
 
         if (gridView)
         {
@@ -569,6 +592,9 @@ internal sealed class ProjectPanel : EditorPanel
             }
         }
         else DrawAssetTable(entries);
+
+        int emptyState = NativeEditorGUI.FillRemainingArea();
+        if ((emptyState & 1) != 0 && NativeEditorGUI.SelectionModifiers == 0) selectedPath = null;
 
         if (EditorGUI.BeginPopupContextWindow("##project_background_menu"))
         {
@@ -595,6 +621,66 @@ internal sealed class ProjectPanel : EditorPanel
                 EditorGUI.EndPopup();
             }
         }
+    }
+
+    //按当前显示顺序执行范围选择或增减选择
+    private void SelectEntry(string entry, IReadOnlyList<string> order, int modifiers)
+    {
+        bool toggle = (modifiers & 1) != 0;
+        int start = -1, end = -1;
+        for (int index = 0; index < order.Count; ++index)
+        {
+            if (string.Equals(order[index], selectionAnchor, StringComparison.OrdinalIgnoreCase)) start = index;
+            if (string.Equals(order[index], entry, StringComparison.OrdinalIgnoreCase)) end = index;
+        }
+        if ((modifiers & 2) != 0 && start >= 0 && end >= 0)
+        {
+            if (!toggle) selectedPaths.Clear();
+            for (int index = Math.Min(start, end); index <= Math.Max(start, end); ++index) selectedPaths.Add(order[index]);
+        }
+        else
+        {
+            if (!toggle) { selectedPath = entry; return; }
+            if (!selectedPaths.Add(entry)) selectedPaths.Remove(entry);
+            selectionAnchor = entry;
+        }
+        selectedEntryPath = selectedPaths.Contains(entry) ? entry : selectedPaths.LastOrDefault();
+        EditorAssetInspection.Select(selectedEntryPath);
+    }
+
+    //右键操作保留已有批量选择
+    private void SelectContextEntry(string entry)
+    {
+        if (!selectedPaths.Contains(entry)) selectedPath = entry;
+        else
+        {
+            selectedEntryPath = entry;
+            EditorAssetInspection.Select(entry);
+        }
+    }
+
+    //取得选择中的顶层资源
+    private List<string> GetMoveSources(string source)
+    {
+        IEnumerable<string> paths = selectedPaths.Contains(source) ? selectedPaths : new[] { source };
+        return paths.Where(path => !paths.Any(parent => !string.Equals(parent, path, StringComparison.OrdinalIgnoreCase)
+                && ProjectAssetOperations.IsSameOrChild(path, parent)))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    //移动选中资源并更新目录与批量选择
+    private bool MoveEntries(IReadOnlyList<string> sources, string directory)
+    {
+        if (!ProjectAssetOperations.MoveMany(sources, directory, out var moved, out status)) return false;
+        foreach (var entry in moved)
+            if (ProjectAssetOperations.IsSameOrChild(currentDirectory, entry.Source))
+                currentDirectory = Path.Combine(entry.Destination, Path.GetRelativePath(entry.Source, currentDirectory));
+        selectedPaths.Clear();
+        foreach (var entry in moved) selectedPaths.Add(entry.Destination);
+        selectedEntryPath = moved[^1].Destination;
+        selectionAnchor = selectedEntryPath;
+        EditorAssetInspection.Select(selectedEntryPath);
+        return true;
     }
 
     /// <summary>F2 触发：就地重命名当前选中的资源。</summary>
@@ -797,7 +883,7 @@ internal sealed class ProjectPanel : EditorPanel
     private void DrawAssetTile(string entry, float width)
     {
         bool directory = Directory.Exists(entry);
-        bool selected = string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase);
+        bool selected = selectedPaths.Contains(entry);
         //重命名的瓦片由原生一次画出来：图标照旧，名称那一行就地变成输入框。
         //网格一行一个 SameLine 单元格、一个单元格只能放一个控件，分两次调用会把输入框挤到下一行
         if (string.Equals(renamingEntry, entry, StringComparison.OrdinalIgnoreCase) && !RenamesInTree(entry))
@@ -808,7 +894,7 @@ internal sealed class ProjectPanel : EditorPanel
         }
         int state = NativeEditorGUI.AssetTile(EditorIconCatalog.ForResource(entry, directory), GetDisplayName(entry), entry,
             width, selected, expandable: !directory && EditorAssetCatalog.CanExpandSource(entry), expanded: expandedGridSource == entry);
-        if ((state & 1) != 0) selectedPath = entry;
+        if ((state & 1) != 0) SelectEntry(entry, visibleAssets, NativeEditorGUI.SelectionModifiers);
         if ((state & 2) != 0)
         {
             selectedPath = entry;
@@ -819,7 +905,7 @@ internal sealed class ProjectPanel : EditorPanel
         NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
         if (EditorGUI.BeginPopupContextItem("##project_tile_menu_" + entry))
         {
-            selectedPath = entry;
+            SelectContextEntry(entry);
             try { DrawItemContextMenu(entry, directory); }
             finally { EditorGUI.EndPopup(); }
         }
@@ -854,16 +940,16 @@ internal sealed class ProjectPanel : EditorPanel
             {
                 bool leaf = !EditorAssetCatalog.CanExpandSource(entry);
                 int state = NativeEditorGUI.TreeNode(name + "##" + entry,
-                    string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase), leaf: leaf,
+                    selectedPaths.Contains(entry), leaf: leaf,
                     icon: EditorSourceIconCatalog.ForFile(entry));
                 expanded = !leaf && (state & 1) != 0;
                 if (leaf && (state & 1) != 0) NativeEditorGUI.TreePop();
-                clicked = (state & 2) != 0;
+                clicked = (state & 64) != 0;
             }
             else clicked = EditorGUI.TableSelectable((directory ? "[Folder] " : string.Empty) + name + "##" + entry,
-                string.Equals(selectedPath, entry, StringComparison.OrdinalIgnoreCase));
+                selectedPaths.Contains(entry));
             bool doubleClicked = EditorGUI.IsItemDoubleClicked();
-            if (clicked) selectedPath = entry;
+            if (clicked) SelectEntry(entry, visibleAssets, NativeEditorGUI.SelectionModifiers);
             if (doubleClicked) OpenEntry(entry);
             if (directory) DrawDirectoryDrop(entry);
             NativeEditorGUI.DragSource(2, EditorAssetCatalog.Instance.ToResourceKey(entry));
@@ -871,7 +957,7 @@ internal sealed class ProjectPanel : EditorPanel
 
         if (EditorGUI.BeginPopupContextItem("##project_item_menu_" + entry))
         {
-            selectedPath = entry;
+            SelectContextEntry(entry);
             try
             {
                 DrawItemContextMenu(entry, directory);
@@ -904,7 +990,7 @@ internal sealed class ProjectPanel : EditorPanel
                 leaf: true, icon: EditorIconCatalog.ForReference(asset.TypeName));
             if ((state & 2) != 0)
             {
-                selectedEntryPath = path;
+                selectedPath = path;
                 EditorAssetInspection.Select(path, asset.Key);
             }
             if (!result.IsStale) NativeEditorGUI.DragSource(2, asset.Key);
@@ -966,7 +1052,8 @@ internal sealed class ProjectPanel : EditorPanel
     //开始一个需要确认的文件操作。
     private void BeginOperation(PendingOperation operation, string? path)
     {
-        if (path != null) selectedPath = path;
+        if (path != null) SelectContextEntry(path);
+        operationSources = path == null ? [] : GetMoveSources(path);
         pendingOperation = operation;
         operationValue = operation switch
         {
@@ -984,9 +1071,7 @@ internal sealed class ProjectPanel : EditorPanel
         {
         case PendingOperation.Move when path != null:
             string destinationDirectory = Path.GetFullPath(Path.Combine(contentRoot, operationValue.Replace('/', Path.DirectorySeparatorChar)));
-            string moved = Path.Combine(destinationDirectory, Path.GetFileName(path));
-            succeeded = ProjectAssetOperations.Move(path, moved, out status);
-            if (succeeded) selectedPath = moved;
+            succeeded = MoveEntries(operationSources, destinationDirectory);
             break;
         }
 

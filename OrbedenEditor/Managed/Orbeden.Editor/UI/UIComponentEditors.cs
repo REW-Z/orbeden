@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Orbeden;
@@ -48,7 +48,7 @@ public sealed class CanvasEditor : ComponentEditor
         else if (canvas.GetRenderMode() == CanvasRenderMode.Overlay)
         {
             vector2 size = canvas.GetLayout()?.GetResolvedRect().size ?? default;
-            vector3 scale = canvas.Ens.Transform.GetLocalScale();
+            vector3 scale = canvas.Ens.Transform.localScale;
             EditorGUI.Label($"Scene Preview Size: {size.x:0.#} x {size.y:0.#} logical units -> {size.x * scale.x:0.###} x {size.y * scale.y:0.###} world units");
         }
 
@@ -135,12 +135,12 @@ public sealed class UILayoutEditor : ComponentEditor
             gizmos.End("UI Rectangle");
         }
         EditorGUI.BeginDisabled(Targets.Count != 1);
-        float z = layout.Ens.Transform.GetLocalPosition().z;
+        float z = layout.Ens.Transform.localPosition.z;
         if (EditorGUI.InputFloat("Position Z", ref z) && float.IsFinite(z))
         {
             gizmos.Begin(layout);
-            vector3 position = layout.Ens.Transform.GetLocalPosition();
-            layout.Ens.Transform.SetLocalPosition(new vector3(position.x, position.y, z));
+            vector3 position = layout.Ens.Transform.localPosition;
+            layout.Ens.Transform.localPosition = new vector3(position.x, position.y, z);
             gizmos.End("UI Position Z");
         }
         EditorGUI.EndDisabled();

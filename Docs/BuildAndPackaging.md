@@ -150,6 +150,8 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
 
 2. **构建 Editor**：构建同配置的 `OrbedenEditor.vcxproj`，生成 `OrbedenEditor.exe` 与 `Managed/Orbeden.Editor.dll`，同时复制 GLFW、nethost 和 runtimeconfig。Editor 仅支持 Windows x64。
 
+   SDK 已构建后，可在 Editor 的 Dev 面板点击 `Update SDK`，手动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Bindings.targets` 和 `Lib/OrbedenSdk.path`；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。该操作不依赖项目版本差异，保留 `Content/`，不执行编译或内容重置。结果显示在 Dev 面板和 Console，完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
+
 3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Lib/`。按 `Ctrl+R` 或点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。脚本构建在后台进程里跑，构建期间编辑器不冻结。
 
 4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
@@ -571,6 +573,12 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 104：修复游戏 C# 构建从项目文件候选集中优先选中旧版同名 SDK DLL 的问题。共享绑定目标从普通与设计时程序集搜索路径中移除 `{CandidateAssemblyFiles}`，保留显式 HintPath、框架和其他已配置路径；新建与修复工程的基础属性排除整个 `Build/` 默认文件扫描。当前 SDK 的共享目标已同步，AviatorSage 下次构建直接使用修正后的引用配置，无需删除历史构建目录或改动脚本。正常发布流程需构建 Core 刷新 SDK，构建 Editor 更新工程修复逻辑，再同步项目；没有 ABI、资源格式或场景迁移。已检查 DLL 元数据，并通过 AviatorSage 的 MSBuild 配置求值与程序集引用解析确认 Core 和 Editor 均由 HintPath 选中新 DLL；未编译 Core／Editor／游戏，未运行测试。
+
+版本 103：Dev 面板新增 `Update SDK`，复用现有 SDK 同步入口更新当前项目的 Core C# 运行库、绑定构建转发文件与 SDK 路径；操作结果写入项目状态、Dev 报告与 Console，Play 或后台脚本构建期间拒绝执行。通过已有编辑器请求入口追加操作种类，原生函数表布局不变。按钮使用已经发布的 SDK，保留 Content、场景和项目版本，不编译游戏或重置模板内容。需构建 Core、原生与托管 Editor，发布当前 SDK 后打开项目使用；同步完成后按需重建游戏 C++／C# 模块。无模板内容或资源格式变动，无场景迁移。按用户要求未执行编译或测试。
+
+版本 102：EnsPanel 与 ProjectPanel 支持按可见条目顺序进行 Shift 范围选择、Ctrl 增减选择和批量拖拽移动；同时选择父子项时只移动最外层项，Ens 批量移动作为一次撤销事务。ProjectPanel 的 Move 操作也支持批量资源，移动／重命名单文件时同步搬运 `.resinfo`，目标伴生文件冲突时拒绝移动，失败时回滚；导入设置随资源保留。Editor GUI 表新增选择修饰键入口，原生与托管表尺寸、偏移同步更新。MetaGen 新增 `ORBEDEN_BIND_PROPERTY(NAME)`，Transform 的 Get／SetLocalPosition、Rotation、Scale 在 C# 中改为 `localPosition`、`localRotation`、`localScale` 属性；新增单位为度、内禀 YXZ 次序的 `localEulerAngles` 属性及原生访问方法，场景继续只保存四元数。Ens 原生及托管侧新增 `FindComponentInAncestors`、`CollectComponentsInDescendants`，托管 Component 可直接转发调用，默认包含自身及未激活节点，向下按深度优先层级顺序收集全部匹配组件。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK、MetaGen 工具，再重建游戏模块与 Player；旧 C# Transform Get／Set 调用需改为属性，FlightTraining 模板已同步，已有项目的 Examples 可手工同步相应脚本。无需迁移场景或重导资源。仅构建并运行 MetaGen 刷新生成物，未编译 Core／Editor／游戏，未运行测试。
 
 版本 101：模型导入完成后生成标准 Ens 预制体文档，缓存版本升至 10；`.resinfo` 移除 `Data.ModelNodes`，仅模型写入 `Data.Prefab` 引用，其他资源不产生模型字段。模型投放复用子树复制与身份重映射，生成普通可编辑 Ens 子树，效果等同立即 Unpack，不保留来源绑定，撤销／重做继续使用子树快照。旧版伴生清单和本机缓存自动重建，导入设置保留。模板资源伴生文件按新格式重新生成。需重建 Core 和托管 Editor，通过 Update Project 同步 SDK 与 Builtin；Examples 的伴生文件可随资源手工复制或通过 Reset Examples 同步。现有场景无需迁移，模型层级不会因重导自动更新。按用户要求未执行编译或测试。
 

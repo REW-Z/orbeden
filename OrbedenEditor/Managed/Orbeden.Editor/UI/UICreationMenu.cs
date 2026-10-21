@@ -483,9 +483,9 @@ public static class UICreationMenu
         Ens node = Ens.Create(name);
         if (!node.IsValid) return node;
 
-        node.Transform.SetLocalPosition(new vector3(0.0f, 0.0f, 0.0f));
-        node.Transform.SetLocalRotation(new quaternion(0.0f, 0.0f, 0.0f, 1.0f));
-        node.Transform.SetLocalScale(new vector3(1.0f, 1.0f, 1.0f));
+        node.Transform.localPosition = new vector3(0.0f, 0.0f, 0.0f);
+        node.Transform.localRotation = new quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        node.Transform.localScale = new vector3(1.0f, 1.0f, 1.0f);
         if (parent.IsValid) node.Transform.SetParent(parent.Id);
         created.Add(node);
         return node;
@@ -495,7 +495,7 @@ public static class UICreationMenu
     private static void SetCanvasTransformScale(Ens root, float scale)
     {
         if (!root.IsValid || root.Transform == null) return;
-        root.Transform.SetLocalScale(new vector3(scale, scale, scale));
+        root.Transform.localScale = new vector3(scale, scale, scale);
     }
 
     //子节点双轴拉伸，四周留边距。

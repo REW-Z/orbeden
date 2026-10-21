@@ -8,6 +8,10 @@ internal sealed class EnsPanel : EditorPanel
     private readonly Dictionary<EnsId, List<Ens>> children = [];
     private readonly Stack<List<Ens>> childLists = [];
     private Action? pendingDrop;
+    private Action? pendingSelection;
+    private readonly List<EnsId> visibleEns = [];
+    private IReadOnlyList<EnsId> selectedIds = [];
+    private EnsId selectionAnchor = EnsId.Null;
     private EnsId selectedEns = EnsId.Null;
     private EnsId renamingEns = EnsId.Null;
     private string renameBuffer = string.Empty;
@@ -42,11 +46,15 @@ internal sealed class EnsPanel : EditorPanel
         //F2 与 Delete 由选择系统按焦点派发到这里，重命名还要认得当前选中的是谁
         panelFocused = NativeEditorGUI.IsWindowFocused();
         selectedEns = context.SelectedEns;
+        selectedIds = context.SelectedEnsList;
+        if (selectedIds.Count == 0) selectionAnchor = EnsId.Null;
         EditorSelection.Report(Info.Id, panelFocused, !selectedEns.IsNull);
         if (EditorApplication.IsPlaying) EndRename();
         RevealRequestedEns();
 
         pendingDrop = null;
+        pendingSelection = null;
+        visibleEns.Clear();
         using (new EditorProfileScope("Editor/EnsPanel/BuildHierarchy"u8))
         {
             //回收上一帧的父子关系列表
@@ -77,7 +85,12 @@ internal sealed class EnsPanel : EditorPanel
         }
 
         int state = NativeEditorGUI.FillRemainingArea();
-        if ((state & 1) != 0 && (state & 2) == 0) EditorNativeComponents.SelectEns(EnsId.Null);
+        if ((state & 1) != 0 && (state & 2) == 0)
+        {
+            EditorNativeComponents.SelectEns(EnsId.Null);
+            selectionAnchor = EnsId.Null;
+            pendingSelection = null;
+        }
         //空白处的右键菜单以 World 根为上下文，挂在 FillRemainingArea 的隐形按钮上：
         //这片空白本身就是那个按钮，而窗口版菜单带 NoOpenOverItems，悬停判定会永远命中条目、菜单永远不开
         if (EditorGUI.BeginPopupContextItem("##ens_background_menu"))
@@ -86,6 +99,8 @@ internal sealed class EnsPanel : EditorPanel
             finally { EditorGUI.EndPopup(); }
         }
         DrawDropTarget(Ens.Null, 0);
+        pendingSelection?.Invoke();
+        pendingSelection = null;
         Action? action = pendingDrop;
         pendingDrop = null;
         action?.Invoke();
@@ -118,6 +133,7 @@ internal sealed class EnsPanel : EditorPanel
     //绘制节点并记录选择或投放操作；forceExpand 来自上级的 Alt 展开，要求整棵子树一并展开
     private void DrawNode(Ens ens, EditorPanelContext context, bool forceExpand = false)
     {
+        visibleEns.Add(ens.Id);
         string key = ens.ResourceKey;
         bool hasChildren = children.TryGetValue(ens.Id, out List<Ens>? descendants);
         bool renaming = renamingEns.Equals(ens.Id);
@@ -147,7 +163,12 @@ internal sealed class EnsPanel : EditorPanel
         bool expandSubtree = altToggle && (state & 1) != 0;
         if (altToggle && !expandSubtree) MarkCollapsedSubtree(ens);
         //选中认松开点击：按下就换选中会让检视面板立刻改内容，把节点拖到别的面板时那边已经换掉了
-        if ((state & 64) != 0) EditorNativeComponents.SelectEns(ens.Id, (state & 4) != 0);
+        if ((state & 64) != 0)
+        {
+            int modifiers = NativeEditorGUI.SelectionModifiers;
+            EnsId[] previous = context.SelectedEnsList.ToArray();
+            pendingSelection = () => SelectEns(ens.Id, modifiers, previous);
+        }
         if ((state & 8) != 0) EditorNativeComponents.FocusEns(ens.Id);
         DrawDropTarget(ens, NativeEditorGUI.GetDropPlacement());
         NativeEditorGUI.DragSource(1, key);
@@ -163,6 +184,40 @@ internal sealed class EnsPanel : EditorPanel
                 foreach (Ens child in descendants) DrawNode(child, context, expandSubtree);
         }
         finally { NativeEditorGUI.TreePop(); }
+    }
+
+    //按可见层级顺序执行单选、增减选择或范围选择
+    private void SelectEns(EnsId clicked, int modifiers, IReadOnlyList<EnsId> previous)
+    {
+        bool toggle = (modifiers & 1) != 0;
+        int start = visibleEns.IndexOf(selectionAnchor.IsNull ? selectedEns : selectionAnchor);
+        int end = visibleEns.IndexOf(clicked);
+        if ((modifiers & 2) == 0 || start < 0 || end < 0)
+        {
+            selectionAnchor = clicked;
+            EditorNativeComponents.SelectEns(clicked, toggle);
+            return;
+        }
+        List<EnsId> range = toggle ? previous.ToList() : [];
+        for (int index = Math.Min(start, end); index <= Math.Max(start, end); ++index)
+            if (!range.Contains(visibleEns[index])) range.Add(visibleEns[index]);
+        EditorNativeComponents.SelectEns(EnsId.Null);
+        foreach (EnsId id in range.Where(id => !id.Equals(clicked))) EditorNativeComponents.SelectEns(id, true);
+        EditorNativeComponents.SelectEns(clicked, true);
+    }
+
+    //取得拖拽选择中的最外层节点并保持层级顺序
+    private List<Ens> GetMovingEns(Ens source)
+    {
+        if (!selectedIds.Contains(source.Id)) return source.IsValid ? [source] : [];
+        HashSet<EnsId> selection = selectedIds.ToHashSet();
+        return EditorNativeComponents.GetWorldEns().Where(selection.Contains).Select(Ens.FromId).Where(ens =>
+        {
+            if (!ens.IsValid) return false;
+            for (Ens ancestor = Ens.FromId(ens.Transform.GetParent()); ancestor.IsValid; ancestor = Ens.FromId(ancestor.Transform.GetParent()))
+                if (selection.Contains(ancestor.Id)) return false;
+            return true;
+        }).ToList();
     }
 
     //把整棵子树的键记进待折叠集合，等被折叠挡住的那些节点各自被画到时再压回折叠
@@ -461,6 +516,7 @@ internal sealed class EnsPanel : EditorPanel
             }
         }
         Ens source = kind == 1 ? Ens.Find(key) : Ens.Null;
+        List<Ens> moving = kind == 1 ? GetMovingEns(source) : [];
         bool prefab = key.EndsWith(".prefab", StringComparison.Ordinal);
         bool model = Path.GetExtension(key).ToLowerInvariant() is ".obj" or ".gltf" or ".glb";
         bool valid = !EditorApplication.IsPlaying && (kind == 2
@@ -470,15 +526,16 @@ internal sealed class EnsPanel : EditorPanel
         if (prefab && EditorPrefabSession.IsEditing) valid = false;
         if (kind == 1)
         {
-            valid &= EditorPrefabSession.CanModify(source, EditorPrefabEditOperation.Move);
+            valid &= moving.Count != 0 && moving.All(ens => EditorPrefabSession.CanModify(ens, EditorPrefabEditOperation.Move)
+                && !ens.Id.Equals(before));
             for (Ens ancestor = Ens.FromId(parent); valid && ancestor.IsValid; ancestor = Ens.FromId(ancestor.Transform.GetParent()))
-                if (ancestor.Id.Equals(source.Id)) valid = false;
+                if (moving.Any(ens => ens.Id.Equals(ancestor.Id))) valid = false;
         }
         if (!NativeEditorGUI.AcceptDrag(valid, placement)) return;
         if (kind == 2)
             pendingDrop = model ? () => EditorModelActions.Instantiate(key, parent, before, false, default)
                 : () => EditorPrefabActions.Instantiate(key, parent, before, false, default);
-        else pendingDrop = () => Move(source, parent, before);
+        else pendingDrop = () => Move(moving, parent, before);
     }
 
     //捕获节点的稳定层级位置和局部变换
@@ -496,7 +553,7 @@ internal sealed class EnsPanel : EditorPanel
             if (id.Equals(ens.Id)) found = true;
         }
         return new Position(parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey, before,
-            transform.GetLocalPosition(), transform.GetLocalRotation(), transform.GetLocalScale());
+            transform.localPosition, transform.localRotation, transform.localScale);
     }
 
     //恢复层级顺序与变换并标记场景修改
@@ -509,19 +566,36 @@ internal sealed class EnsPanel : EditorPanel
             || (position.Before.Length != 0 && !before.IsValid)
             || !EditorNativeComponents.MoveEns(ens.Id, parent.Id, before.Id, false))
             throw new InvalidOperationException("Cannot restore Ens hierarchy position.");
-        ens.Transform.SetLocalPosition(position.Translation);
-        ens.Transform.SetLocalRotation(position.Rotation);
-        ens.Transform.SetLocalScale(position.Scale);
+        ens.Transform.localPosition = position.Translation;
+        ens.Transform.localRotation = position.Rotation;
+        ens.Transform.localScale = position.Scale;
     }
 
-    //移动节点并记录一次撤销事务
-    private static void Move(Ens ens, EnsId parent, EnsId before)
+    //按逆序恢复批量移动的层级位置
+    private static void RestorePositions(IReadOnlyList<(string Key, Position Position)> positions)
     {
-        Position previous = CapturePosition(ens);
-        if (!EditorNativeComponents.MoveEns(ens.Id, parent, before, true)) return;
-        Position current = CapturePosition(ens);
-        string key = ens.ResourceKey;
-        EditorPropertyHistory.PushAction("Move Ens",
-            () => RestorePosition(key, previous), () => RestorePosition(key, current));
+        for (int index = positions.Count - 1; index >= 0; --index)
+            RestorePosition(positions[index].Key, positions[index].Position);
+    }
+
+    //批量移动节点并记录一次撤销事务
+    private static void Move(IReadOnlyList<Ens> nodes, EnsId parent, EnsId before)
+    {
+        List<(string Key, Position Position)> previous = nodes.Select(ens => (ens.ResourceKey, CapturePosition(ens))).ToList();
+        try
+        {
+            foreach (Ens ens in nodes)
+                if (!EditorNativeComponents.MoveEns(ens.Id, parent, before, true))
+                    throw new InvalidOperationException("Cannot move the selected Ens objects.");
+        }
+        catch (Exception exception)
+        {
+            EditorConsole.Error(exception.Message);
+            try { RestorePositions(previous); }
+            catch (Exception rollback) { EditorConsole.Error("Cannot roll back Ens movement: " + rollback.Message); }
+            return;
+        }
+        List<(string Key, Position Position)> current = nodes.Select(ens => (ens.ResourceKey, CapturePosition(ens))).ToList();
+        EditorPropertyHistory.PushAction("Move Ens", () => RestorePositions(previous), () => RestorePositions(current));
     }
 }
