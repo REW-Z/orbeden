@@ -94,6 +94,14 @@ public static unsafe class NativeBindingRuntime
     /// <summary>读取托管包装注册的原生类型名。</summary>
     public static string? GetNativeTypeName(Type managedType) => types.TryGetValue(managedType, out Entry? entry) ? entry.Name : null;
 
+    /// <summary>读取原生对象的稳定 Key，不创建托管包装。</summary>
+    public static string GetObjectResourceKey(int objectId)
+    {
+        if (objectId == 0 || api.GetObjectPointer == null) return string.Empty;
+        IntPtr pointer = api.GetObjectPointer(objectId);
+        return pointer == IntPtr.Zero ? string.Empty : Object.GetResourceKey(pointer);
+    }
+
     internal static Object? Wrap(int objectId, Type? requestedType = null)
     {
         if (objectId == 0 || api.GetObjectPointer == null) return null;
@@ -108,14 +116,15 @@ public static unsafe class NativeBindingRuntime
         if (pointer == IntPtr.Zero) return null;
         string? name = InteropText.ReadUtf8Terminated((IntPtr)api.GetObjectTypeName(objectId));
         if (name == "Script") return ScriptRuntime.GetOrCreateHost(pointer);
-        if (name == null || !names.TryGetValue(name, out Entry? entry) || entry.Factory == null)
-            throw new TypeLoadException($"No generated wrapper factory for native type '{name}'.");
+        if (name == null || !names.TryGetValue(name, out Entry? entry)) return null;
         if (requestedType != null)
         {
             Entry? requested = types.Values.FirstOrDefault(candidate => candidate.Name == name
                 && candidate.Type.Assembly == requestedType.Assembly && requestedType.IsAssignableFrom(candidate.Type));
             if (requested != null) entry = requested;
         }
+        if (entry.Factory == null)
+            throw new TypeLoadException($"No generated wrapper factory for native type '{name}'.");
         Resolve(entry.Type);
         EnsId ens = api.GetObjectEns(objectId);
         return entry.Factory(ens.IsNull ? null : Ens.FromId(ens), pointer);

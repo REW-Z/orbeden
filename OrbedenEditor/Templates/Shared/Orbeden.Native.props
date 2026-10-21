@@ -6,7 +6,7 @@
 
     导入位置必须在 Microsoft.Cpp.Default.props 之后、Microsoft.Cpp.props 之前：
     后者按 $(PlatformToolset) 去导入对应工具集的属性表。
-    构建设置（include、link、源文件收集、绑定生成目标）在 Orbeden.Native.targets 中，
+    构建设置（include、link、源文件收集、反射生成目标）在 Orbeden.Native.targets 中，
     那份必须在 Microsoft.Cpp.props 之后才能压过工具集默认值。
   -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -29,11 +29,8 @@
       游戏名从工程文件名推导：原生工程约定叫 <项目名>Native.vcxproj。
       这样工程文件不必写项目名，模板里也就没有占位符。正则锚定结尾，
       工程名不含该后缀时原样返回，不会被误伤。
-      推导结果必须与 C# 侧 $(RootNamespace)（默认是 csproj 基名）一致，
-      否则两边传给 MetaGen 的 namespace 参数不同，游戏脚本引用绑定类型会编译不过。
     -->
     <OrbedenGameName Condition="'$(OrbedenGameName)' == ''">$([System.Text.RegularExpressions.Regex]::Replace('$(MSBuildProjectName)', 'Native$', ''))</OrbedenGameName>
-    <OrbedenBindingNamespace>$(OrbedenGameName).Native</OrbedenBindingNamespace>
     <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
     <OrbedenContentRoot>$(OrbedenProjectRoot)\Content</OrbedenContentRoot>
     <!--原生模块的全部产物，内容根之外。-->

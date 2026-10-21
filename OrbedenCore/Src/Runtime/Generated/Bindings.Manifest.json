@@ -29088,6 +29088,25 @@
           "Parameters": []
         },
         {
+          "Name": "CanCollectManagedWrapper",
+          "Type": "void*",
+          "Access": "public",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "Create",
           "Type": "ObjectBind",
           "Access": "public",
@@ -33025,6 +33044,25 @@
           "Parameters": []
         },
         {
+          "Name": "managedWrapperRelease",
+          "Type": "ManagedWrapperReleaseCallback",
+          "Access": "private",
+          "IsMethod": false,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": false,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
           "Name": "ownerWorld",
           "Type": "World*",
           "Access": "private",
@@ -33365,11 +33403,54 @@
           "FixedArray": false,
           "Parameters": [
             {
-              "Name": "value",
+              "Name": "handle",
               "Type": "void*",
+              "DefaultValue": ""
+            },
+            {
+              "Name": "release",
+              "Type": "ManagedWrapperReleaseCallback",
               "DefaultValue": ""
             }
           ]
+        },
+        {
+          "Name": "ReleaseManagedWrapper",
+          "Type": "void",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": false,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
+        },
+        {
+          "Name": "CanCollectManagedWrapper",
+          "Type": "bool",
+          "Access": "public",
+          "IsMethod": true,
+          "IsStatic": false,
+          "IsConst": true,
+          "IsVirtual": false,
+          "IsTemplate": false,
+          "Serialize": false,
+          "IgnoreBinding": true,
+          "Changed": "",
+          "Getter": "",
+          "Setter": "",
+          "Buffer": "",
+          "Count": "",
+          "FixedArray": false,
+          "Parameters": []
         },
         {
           "Name": "SetInstanceId",

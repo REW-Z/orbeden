@@ -878,9 +878,7 @@ namespace
 
         ImGuiStyle& style = ImGui::GetStyle();
         float32 height = ImGui::GetFrameHeight();
-        //引用框住在属性行的右列：调用方先画标签，这里自己跳到列位。
-        //宽度是项目配置，只有原生这一处持有，托管侧不必跟着同步一个数。
-        ImGui::SameLine(propertyLabelWidth);
+        BeginPropertyRow(identity);
         ImVec2 lineStart = ImGui::GetCursorScreenPos();
         //清空与选择器两个方按钮先占位，引用框只取剩余宽度，与输入框一样贴满卡片
         float32 reserved = 2.0f * (height + style.ItemSpacing.x);
@@ -1165,8 +1163,12 @@ namespace
     {
         std::string text = ReadUtf8Text(label, length);
         ImGui::PushID(text.c_str());
-        ImGui::BeginGroup();
         ImVec2 start = ImGui::GetCursorScreenPos();
+        const ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
+        //按普通属性行的坐标基准定位元素值列
+        float32 valueStart = window->Pos.x - window->Scroll.x + propertyLabelWidth
+            + window->DC.GroupOffset.x + window->DC.ColumnsOffset.x;
+        ImGui::BeginGroup();
         float32 width = std::max(1.0f, ImGui::GetContentRegionAvail().x);
         float32 height = ImGui::GetFrameHeight() + 6.0f;
         float32 button = ImGui::GetFrameHeight();
@@ -1214,7 +1216,9 @@ namespace
             table = ImGui::BeginTable("elements", 2, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_NoSavedSettings, ImVec2(width, 0.0f));
             if (table)
             {
-                ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 3.2f);
+                //扣除两列之间的间距与值列左侧间距
+                float32 indexWidth = std::max(1.0f, valueStart - start.x - ImGui::GetStyle().CellPadding.x * 3.0f);
+                ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, indexWidth);
                 ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
                 if (*count == 0)
                 {

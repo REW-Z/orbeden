@@ -5,7 +5,8 @@ namespace FlightTraining;
 /// <summary>自由飞行 HUD；用 Runtime GUI 自由绘制 API 在屏幕底部绘制 PFD 和仪表盘。</summary>
 public sealed class FlightHud : Script
 {
-    private Native.FlightController? controller;
+    private ComponentProxy? controller;
+    private readonly Dictionary<string, ComponentMethod> controllerMethods = [];
 
     private const float WindowHeight = 232.0f;
     private const float PixelsPerDegree = 3.0f;
@@ -24,7 +25,24 @@ public sealed class FlightHud : Script
 
     private void OnStart()
     {
-        controller = Ens.GetComponent<Native.FlightController>();
+        controller = Ens.GetNativeComponent("FlightController");
+        if (controller == null) return;
+        //缓存飞行状态方法
+        foreach (string name in new[]
+        {
+            "GetAirspeed", "GetThrottle", "GetCrashCount", "GetPitchDegrees", "GetRollDegrees",
+            "GetHeadingDegrees", "GetAltitude", "GetClimbRate", "GetSideslipDegrees",
+            "GetDragNewtons", "GetLiftNewtons", "GetThrustNewtons", "GetWeightNewtons"
+        })
+        {
+            if (controller.TryResolveMethod(name, out ComponentMethod method) != InteropStatus.Ok)
+            {
+                controller = null;
+                controllerMethods.Clear();
+                return;
+            }
+            controllerMethods.Add(name, method);
+        }
     }
 
     private void OnDrawGUI()
@@ -44,25 +62,37 @@ public sealed class FlightHud : Script
             return;
         }
 
-        float airspeed = controller.GetAirspeed();
-        float throttle = controller.GetThrottle();
-        int crashCount = controller.GetCrashCount();
-        float pitch = controller.GetPitchDegrees();
-        float roll = controller.GetRollDegrees();
-        float heading = controller.GetHeadingDegrees();
-        float altitude = controller.GetAltitude();
+        //读取原生飞行状态
+        if (controllerMethods["GetAirspeed"].Invoke(out InteropValue airspeedValue) != InteropStatus.Ok || !airspeedValue.TryGet(out float airspeed)
+            || controllerMethods["GetThrottle"].Invoke(out InteropValue throttleValue) != InteropStatus.Ok || !throttleValue.TryGet(out float throttle)
+            || controllerMethods["GetCrashCount"].Invoke(out InteropValue crashValue) != InteropStatus.Ok || !crashValue.TryGet(out int crashCount)
+            || controllerMethods["GetPitchDegrees"].Invoke(out InteropValue pitchValue) != InteropStatus.Ok || !pitchValue.TryGet(out float pitch)
+            || controllerMethods["GetRollDegrees"].Invoke(out InteropValue rollValue) != InteropStatus.Ok || !rollValue.TryGet(out float roll)
+            || controllerMethods["GetHeadingDegrees"].Invoke(out InteropValue headingValue) != InteropStatus.Ok || !headingValue.TryGet(out float heading)
+            || controllerMethods["GetAltitude"].Invoke(out InteropValue altitudeValue) != InteropStatus.Ok || !altitudeValue.TryGet(out float altitude)
+            || controllerMethods["GetClimbRate"].Invoke(out InteropValue climbValue) != InteropStatus.Ok || !climbValue.TryGet(out float climbRate)
+            || controllerMethods["GetSideslipDegrees"].Invoke(out InteropValue slipValue) != InteropStatus.Ok || !slipValue.TryGet(out float sideslip)
+            || controllerMethods["GetDragNewtons"].Invoke(out InteropValue dragValue) != InteropStatus.Ok || !dragValue.TryGet(out float drag)
+            || controllerMethods["GetLiftNewtons"].Invoke(out InteropValue liftValue) != InteropStatus.Ok || !liftValue.TryGet(out float lift)
+            || controllerMethods["GetThrustNewtons"].Invoke(out InteropValue thrustValue) != InteropStatus.Ok || !thrustValue.TryGet(out float thrust)
+            || controllerMethods["GetWeightNewtons"].Invoke(out InteropValue weightValue) != InteropStatus.Ok || !weightValue.TryGet(out float weight))
+        {
+            GUI.Text("FlightController telemetry is unavailable.", 12.0f, 12.0f, ColorRed);
+            GUI.EndFixedWindow();
+            return;
+        }
 
-        DrawStatusLine(controller.GetClimbRate(), controller.GetSideslipDegrees(), crashCount);
+        DrawStatusLine(climbRate, sideslip, crashCount);
         DrawAirspeedDial(airspeed);
         DrawThrottleDial(width, throttle);
         DrawPfd(width, airspeed, altitude, heading, pitch, roll);
 
         //四色数值与世界空间箭头对应，单位为 kN。
-        GUI.Text($"DRAG {controller.GetDragNewtons() / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
-        GUI.Text($"LIFT {controller.GetLiftNewtons() / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
-        GUI.Text($"THRUST {controller.GetThrustNewtons() / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
+        GUI.Text($"DRAG {drag / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
+        GUI.Text($"LIFT {lift / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
+        GUI.Text($"THRUST {thrust / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
         GUI.RectFilled(width * 0.75f - 4, 199, width - 8, 222, GUI.Rgba(205, 205, 205), 3);
-        GUI.Text($"WEIGHT {controller.GetWeightNewtons() / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
+        GUI.Text($"WEIGHT {weight / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
         GUI.EndFixedWindow();
     }
 

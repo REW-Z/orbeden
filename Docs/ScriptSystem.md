@@ -40,7 +40,15 @@ C++ 根对象的实际类名为 `Orbeden::Object`，头文件通过 `using Orbed
 
 继承关系不要求 TypeRuntimeId 相等。`MoveBehaviour::StaticType()->Is(Script::StaticType())` 为 true，但两个类型的 ID 不同。基类查询可以匹配派生实例，成员解析仍使用实例的 `GetType()`。互操作组件句柄保存的是域、generation 和 ObjectId，并不是 TypeRuntimeId。
 
-MetaGen 为全部 Object 派生类生成强类型 C# 包装、原生调用入口和注册清单。C++ `MoveBehaviour` 会生成同名 C# 包装，可直接 `ens.AddComponent<MoveBehaviour>()`、访问属性和调用方法；基类查询返回派生包装并保持同一原生实例的包装身份。生成的原生脚本包装继承 `Orbeden.Script` 但只参与 Native 生命周期，不作为托管脚本启动；手写托管脚本继承原生包装的声明会被拒绝。`ens.GetNativeComponent("MoveBehaviour")` 的动态代理保留给没有生成 Binding 的 C++ API（非 Object 派生类）。
+MetaGen 只为 Core 的 Object 派生类生成 C# 包装和绑定调用入口。整个游戏原生模块都不生成 C# 绑定，无需额外标记宏。游戏 C++ `MoveBehaviour` 通过 `ens.GetNativeComponent("MoveBehaviour")` 返回的 `ComponentProxy` 访问；C# 的 `GetComponent<T>` / `GetComponents<T>` 只返回具有托管表示的组件，不为游戏 C++ 组件创建基类包装。
+
+游戏模块仍生成完整的类型、字段、方法、序列化访问器和生命周期回调元数据。Inspector、场景存储和跨语言 Proxy 使用这些元数据，不依赖 C# 绑定类。C++ 查询仍能匹配原生派生实例。
+
+### 包装与 GC 生命周期
+
+Core 包装按需创建，后续查询复用同一包装。原生对象关联的强 GC 句柄负责保活包装，局部变量离开作用域或执行普通 GC 不会解除关联。原生对象销毁时释放句柄并使包装失效；程序集卸载及引擎 API 断开时清理对应包装。用户代码仍持有失效包装时，托管内存等到没有引用后再由 GC 回收。
+
+显式 `Resources.UnloadUnusedObjects()` 对可回收对象的包装临时使用弱句柄，执行 GC 后收集真实托管引用，再恢复仍存活包装的强句柄。场景所属对象保持强保活，资源依赖继续由原生回收流程标记。游戏 C++ 对象没有托管包装，不参与句柄保活。
 
 
 ## 2. 编写 C# 脚本
@@ -240,7 +248,7 @@ native?.SetField("speed", InteropValue.From(4.0f));
 
 方法按名称和精确参数种类匹配；不做隐式数值转换。生命周期名称不进入通用方法表。`InteropValue` 中的 ObjectId 和 EnsId 是调用期间的运行时表示，不能直接当作 .world 中的引用文本。
 
-高频互操作应缓存 `MemberHandle` / `ComponentField` / `ComponentMethod`。动态 `Invoke(name)` 只适用于低频通用调用。缓存句柄能避免重复成员查找，但不能消除 ABI 编解码、装箱和通用托管方法反射调用成本；大量每帧调用应使用明确的强类型 Binding 或批量入口。
+高频互操作应缓存 `MemberHandle` / `ComponentField` / `ComponentMethod`。动态 `Invoke(name)` 只适用于低频通用调用。缓存句柄能避免重复成员查找，但不能消除 ABI 编解码、装箱和通用托管方法反射调用成本；大量每帧调用应减少跨域次数，优先在组件所属语言内完成计算或提供批量 Proxy 接口。
 
 ## 9. 重载、CLR 与 NativeAOT
 
@@ -278,11 +286,11 @@ ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改
 
 新项目模板存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、原生 `GameNative.vcxproj` 工程），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
 
-模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 通过生成的 `Native.FlightController` 强类型包装直接读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](Manual/UserManual.md#6-运行和调试)。
+模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 通过 `ComponentProxy` 读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](Manual/UserManual.md#6-运行和调试)。
 
 首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、MSBuild 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
-游戏 C++ 构建步骤先运行 MetaGen 生成反射、生命周期 thunk 和 Binding 注册，再由 MSBuild 编译 `Native` 下的原生工程。Editor 使用 DLL；Player 将游戏源码和生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
+游戏 C++ 构建步骤先运行 MetaGen 生成反射、字段与方法访问器、生命周期 thunk，再由 MSBuild 编译游戏原生工程；不生成 C# 包装或 Binding 注册。Editor 使用 DLL；Player 将游戏源码和反射生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
 
 ### Ens 的独立对象身份
 

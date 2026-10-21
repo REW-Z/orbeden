@@ -14,10 +14,10 @@ namespace NewProjectGenerator
         std::string& outProjectRoot,
         std::string& outError);
 
-    //同步 SDK 生成目标与路径，支持游戏 C# 独立构建。
-    bool SyncBindingBuildFiles(const std::string& scriptProjectPath, const std::string& runtimeDllPath, std::string& outError);
+    //同步游戏构建目标与 SDK 路径
+    bool SyncGameBuildFiles(const std::string& scriptProjectPath, const std::string& runtimeDllPath, std::string& outError);
 
-    //把当前 SDK 的 Core C# 运行库与绑定目标同步进脚本工程。
+    //同步 Core C# 运行库与游戏构建配置
     bool SyncRuntimeCSharpDll(const std::string& scriptProjectPath, const std::string& runtimeDllPath, std::string& outError);
 
     //修复并迁移脚本工程的 MSBuild 配置。

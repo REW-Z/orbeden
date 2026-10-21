@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using System.Text;
@@ -11,9 +12,9 @@ public abstract partial class Object
 {
     private sealed class WrapperEntry
     {
-        public WeakReference<Object> wrapper = null!;
         public IntPtr nativePtr;
         public IntPtr handle;
+        public bool strong = true;
     }
 
     private static readonly object cacheLock = new();
@@ -113,24 +114,29 @@ public abstract partial class Object
         int id = Object.GetInstanceId(pointer);
         if (id == 0) return;
 
-        nativePtr = pointer;
-        instanceId = id;
-        resourceKey = Object.GetResourceKey(pointer);
-        BindingGeneration = NativeBindingRuntime.Generation;
-
         lock (cacheLock)
         {
-            if (cache.TryGetValue(id, out WrapperEntry? oldEntry) && oldEntry.handle != IntPtr.Zero)
+            if (cache.TryGetValue(id, out WrapperEntry? oldEntry))
             {
-                Object.SetManagedWrapper(oldEntry.nativePtr, IntPtr.Zero);
-                GCHandle.FromIntPtr(oldEntry.handle).Free();
+                if (GCHandle.FromIntPtr(oldEntry.handle).Target is Object previous)
+                    previous.DisconnectNative();
+                else
+                {
+                    Object.SetManagedWrapper(oldEntry.nativePtr, IntPtr.Zero);
+                    GCHandle.FromIntPtr(oldEntry.handle).Free();
+                    cache.Remove(id);
+                }
             }
 
-            GCHandle handle = GCHandle.Alloc(this, GCHandleType.Weak);
+            nativePtr = pointer;
+            instanceId = id;
+            resourceKey = Object.GetResourceKey(pointer);
+            BindingGeneration = NativeBindingRuntime.Generation;
+
+            GCHandle handle = GCHandle.Alloc(this, GCHandleType.Normal);
             IntPtr handlePtr = GCHandle.ToIntPtr(handle);
             cache[id] = new WrapperEntry
             {
-                wrapper = new WeakReference<Object>(this),
                 nativePtr = pointer,
                 handle = handlePtr
             };
@@ -147,8 +153,7 @@ public abstract partial class Object
         lock (cacheLock)
         {
             if (cache.TryGetValue(instanceId, out WrapperEntry? entry)
-                && entry.wrapper.TryGetTarget(out Object? target)
-                && ReferenceEquals(target, this))
+                && ReferenceEquals(GCHandle.FromIntPtr(entry.handle).Target, this))
             {
                 if (Object.IsNativeAlive(instanceId)) Object.SetManagedWrapper(entry.nativePtr, IntPtr.Zero);
                 if (entry.handle != IntPtr.Zero) GCHandle.FromIntPtr(entry.handle).Free();
@@ -160,13 +165,57 @@ public abstract partial class Object
         instanceId = 0;
     }
 
-    /// <summary>程序集卸载前断开其包装，释放原生弱句柄并允许新程序集重新包装。</summary>
+    //释放原生对象持有的托管句柄
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void ReleaseManagedWrapper(int objectId, IntPtr handle)
+    {
+        try
+        {
+            lock (cacheLock)
+            {
+                if (!cache.TryGetValue(objectId, out WrapperEntry? entry) || entry.handle != handle) return;
+                cache.Remove(objectId);
+                GCHandle wrapperHandle = GCHandle.FromIntPtr(handle);
+                if (wrapperHandle.Target is Object target)
+                {
+                    target.nativePtr = IntPtr.Zero;
+                    target.instanceId = 0;
+                }
+                wrapperHandle.Free();
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"Object: managed wrapper release failed for {objectId}: {exception}");
+        }
+    }
+
+    //断开引擎持有的全部托管包装
+    internal static void DisconnectAll()
+    {
+        lock (cacheLock)
+        {
+            foreach ((int id, WrapperEntry entry) in cache.ToArray())
+            {
+                if (GCHandle.FromIntPtr(entry.handle).Target is Object target)
+                    target.DisconnectNative();
+                else
+                {
+                    if (Object.IsNativeAlive(id)) Object.SetManagedWrapper(entry.nativePtr, IntPtr.Zero);
+                    GCHandle.FromIntPtr(entry.handle).Free();
+                    cache.Remove(id);
+                }
+            }
+        }
+    }
+
+    /// <summary>程序集卸载前断开其包装并释放强句柄。</summary>
     internal static void DisconnectAssembly(System.Reflection.Assembly assembly)
     {
         lock (cacheLock)
         {
             foreach (WrapperEntry entry in cache.Values.ToArray())
-                if (entry.wrapper.TryGetTarget(out Object? target) && target.GetType().Assembly == assembly)
+                if (GCHandle.FromIntPtr(entry.handle).Target is Object target && target.GetType().Assembly == assembly)
                     target.DisconnectNative();
         }
     }
@@ -178,7 +227,7 @@ public abstract partial class Object
         lock (cacheLock)
         {
             return cache.TryGetValue(id, out WrapperEntry? entry)
-                && entry.wrapper.TryGetTarget(out Object? target)
+                && GCHandle.FromIntPtr(entry.handle).Target is Object target
                 && target.IsAlive
                 ? target
                 : null;
@@ -188,37 +237,71 @@ public abstract partial class Object
     /// <summary>按运行时 ID 返回已存在的托管包装，不创建未知原生派生类型。</summary>
     public static Object? FindLoadedObject(int id) => FindCachedObject(id);
 
+    //切换包装句柄的保活强度
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool SetWrapperHandleStrength(int objectId, bool strong)
+    {
+        lock (cacheLock)
+        {
+            if (!cache.TryGetValue(objectId, out WrapperEntry? entry)) return false;
+            GCHandle previous = GCHandle.FromIntPtr(entry.handle);
+            Object? target = previous.Target as Object;
+            if (target is null || !target.IsAlive)
+            {
+                if (Object.IsNativeAlive(objectId)) Object.SetManagedWrapper(entry.nativePtr, IntPtr.Zero);
+                cache.Remove(objectId);
+                previous.Free();
+                if (target is not null)
+                {
+                    target.nativePtr = IntPtr.Zero;
+                    target.instanceId = 0;
+                }
+                return false;
+            }
+            if (entry.strong == strong) return true;
+
+            GCHandle replacement = GCHandle.Alloc(target, strong ? GCHandleType.Normal : GCHandleType.Weak);
+            IntPtr handle = GCHandle.ToIntPtr(replacement);
+            Object.SetManagedWrapper(entry.nativePtr, handle);
+            entry.handle = handle;
+            entry.strong = strong;
+            previous.Free();
+            return true;
+        }
+    }
+
     //收集当前活跃托管根
     internal static int[] CollectManagedRootIds()
     {
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-
-        List<int> roots = [];
+        int[] candidates;
         lock (cacheLock)
+            candidates = cache.Keys.Where(CanCollectManagedWrapper).ToArray();
+
+        try
         {
-            List<int> staleIds = [];
-            foreach ((int id, WrapperEntry entry) in cache)
+            //临时移除可回收对象的引擎保活引用
+            foreach (int id in candidates) SetWrapperHandleStrength(id, false);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            //收集实际存活的托管包装
+            List<int> roots = [];
+            lock (cacheLock)
             {
-                if (entry.wrapper.TryGetTarget(out Object? target) && target.IsAlive)
+                foreach ((int id, WrapperEntry entry) in cache)
                 {
-                    roots.Add(id);
-                    continue;
+                    if (GCHandle.FromIntPtr(entry.handle).Target is Object target && target.IsAlive)
+                        roots.Add(id);
                 }
-
-                if (Object.IsNativeAlive(id)) Object.SetManagedWrapper(entry.nativePtr, IntPtr.Zero);
-                if (entry.handle != IntPtr.Zero) GCHandle.FromIntPtr(entry.handle).Free();
-                staleIds.Add(id);
             }
-
-            foreach (int id in staleIds)
-            {
-                cache.Remove(id);
-            }
+            return roots.ToArray();
         }
-
-        return roots.ToArray();
+        finally
+        {
+            //恢复存活包装并清理已回收句柄
+            foreach (int id in candidates) SetWrapperHandleStrength(id, true);
+        }
     }
 }
 
@@ -241,9 +324,10 @@ internal unsafe struct ObjectBindApi
     public delegate* unmanaged[Cdecl]<IntPtr, int> GetInstanceId;
     public delegate* unmanaged[Cdecl]<int, byte> IsAlive;
     public delegate* unmanaged[Cdecl]<IntPtr, IntPtr> GetManagedWrapper;
-    public delegate* unmanaged[Cdecl]<IntPtr, IntPtr, void> SetManagedWrapper;
+    public delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, void> SetManagedWrapper;
     public delegate* unmanaged[Cdecl]<IntPtr, byte> Destroy;
     public delegate* unmanaged[Cdecl]<int*, int, uint> UnloadUnusedObjects;
+    public delegate* unmanaged[Cdecl]<int, byte> CanCollectManagedWrapper;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -263,6 +347,7 @@ private static ObjectBindApi api;
     //保存 C++ 传入的 Object 函数表
     internal static void InitializeNativeApi(ObjectBindApi value, ObjectExtensionBindApi extensionValue)
     {
+        if (value.GetInstanceId == null) DisconnectAll();
         api = value;
         extensionApi = extensionValue;
         initialized = api.GetInstanceId != null;
@@ -302,10 +387,18 @@ private static ObjectBindApi api;
         return initialized && pointer != IntPtr.Zero && api.GetManagedWrapper != null ? api.GetManagedWrapper(pointer) : IntPtr.Zero;
     }
 
+    //判断托管包装是否参与未使用对象回收
+    internal static bool CanCollectManagedWrapper(int objectId)
+    {
+        return initialized && api.CanCollectManagedWrapper != null && api.CanCollectManagedWrapper(objectId) != 0;
+    }
+
     //写入托管包装缓存
     internal static void SetManagedWrapper(IntPtr pointer, IntPtr handle)
     {
-        if (initialized && pointer != IntPtr.Zero && api.SetManagedWrapper != null) api.SetManagedWrapper(pointer, handle);
+        if (initialized && pointer != IntPtr.Zero && api.SetManagedWrapper != null)
+            api.SetManagedWrapper(pointer, handle,
+                handle == IntPtr.Zero ? IntPtr.Zero : (IntPtr)(delegate* unmanaged[Cdecl]<int, IntPtr, void>)&ReleaseManagedWrapper);
     }
 
     //销毁原生对象

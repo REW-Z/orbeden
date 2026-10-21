@@ -34,6 +34,11 @@ if (docsPath.Length != 0 && !args.Contains("--bindings", StringComparer.Ordinal)
 }
 
 bool generateBindings = args.Contains("--bindings", StringComparer.Ordinal);
+if (gameModule && generateBindings)
+{
+    Console.Error.WriteLine("Game modules generate reflection metadata only; --game-module cannot be combined with --bindings.");
+    return 1;
+}
 string? bindingNamespaceOption = Option("--namespace");
 List<string> importPaths = Imports();
 
@@ -56,14 +61,20 @@ var headerFiles = Directory.EnumerateFiles(sourceRoot, "*.h", SearchOption.AllDi
 
 //输入没变就整体跳过：头文件清单与内容、导入的 manifest、生成器自身与输出模式共同决定指纹。
 //清单既带文件名也带内容散列，因此删除、改名或改内容都会让指纹失效；C# 文件不参与扫描，也不进入指纹。
-string fingerprintPath = Path.Combine(outputDir, "Bindings.Generated.fingerprint");
+if (gameModule)
+{
+    //清理游戏模块的旧绑定产物
+    foreach (string file in new[] { "Bindings.Generated.cpp", "Bindings.Generated.cs", "Bindings.Manifest.json", "Bindings.Generated.fingerprint" })
+        File.Delete(Path.Combine(outputDir, file));
+}
+string fingerprintPath = Path.Combine(outputDir, gameModule ? "Reflection.Generated.fingerprint" : "Bindings.Generated.fingerprint");
 string fingerprint = ComputeInputFingerprint(sourceRoot, headerFiles, gameModule, generateBindings,
     docsPath.Length != 0, bindingNamespaceOption, importPaths);
 if (File.Exists(fingerprintPath)
     && File.ReadAllText(fingerprintPath).Trim() == fingerprint
     && RequiredOutputs(outputDir, generateBindings, docsPath.Length != 0).All(File.Exists))
 {
-    Console.WriteLine("Bindings are up to date.");
+    Console.WriteLine("Generated metadata is up to date.");
     return 0;
 }
 
@@ -115,35 +126,24 @@ foreach (var classInfo in classes)
     }
 }
 
-//反射与 Binding 共用导入后的类型模型，识别跨模块脚本基类。
-BindingModel? bindings = null;
-if (generateBindings)
+//反射与 Core Binding 共用完整类型模型
+BindingModel bindings;
+try
 {
-    try
-    {
-        bindings = new BindingModel(declarations,
-            bindingNamespaceOption ?? (gameModule ? "Game.Native" : "Orbeden"), importPaths);
-    }
-    catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
+    bindings = new BindingModel(declarations, bindingNamespaceOption ?? "Orbeden", importPaths);
 }
+catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 
 //识别脚本继承关系并校验生命周期函数不能声明为 virtual。
-var classByName = classes.ToDictionary(value => value.CppName, StringComparer.Ordinal);
 bool IsScriptClass(ClassInfo value)
 {
-    if (bindings != null)
+    CppType type = bindings.Types[value.CppName];
+    while (bindings.Resolve(type.BaseName, type) is CppType parent)
     {
-        CppType type = bindings.Types[value.CppName];
-        while (bindings.Resolve(type.BaseName, type) is CppType parent)
-        {
-            if (parent.QualifiedName is "Script" or "Orbeden::Script") return true;
-            type = parent;
-        }
-        return false;
+        if (parent.QualifiedName is "Script" or "Orbeden::Script") return true;
+        type = parent;
     }
-    if (value.BaseName is "Script" or "Orbeden::Script") return true;
-    string scope = value.CppName.Contains("::") ? value.CppName[..value.CppName.LastIndexOf("::", StringComparison.Ordinal)] + "::" : "";
-    return (classByName.TryGetValue(scope + value.BaseName, out ClassInfo? baseClass) || classByName.TryGetValue(value.BaseName, out baseClass)) && IsScriptClass(baseClass);
+    return false;
 }
 foreach (ClassInfo classInfo in classes)
 {
@@ -166,13 +166,11 @@ if (errors.Count > 0)
     return 1;
 }
 
-string? bindingModule = null;
 //生成 Binding 类型清单时严格校验全部公开签名。
-if (bindings != null)
+if (generateBindings)
 {
     try
     {
-        bindingModule = bindings.ManagedNamespace.Replace('.', '_');
         BindingTypes bindingTypes = new(bindings);
         foreach (CppType type in bindings.ObjectTypes)
         foreach (CppMember member in bindings.ExportedMembers(type))
@@ -190,13 +188,13 @@ if (bindings != null)
             foreach (string error in errors) Console.Error.WriteLine(error);
             return 1;
         }
-        new BindingGenerator(bindings, bindingTypes, gameModule).Generate(sourceRoot, outputDir, docsPath);
+        new BindingGenerator(bindings, bindingTypes).Generate(sourceRoot, outputDir, docsPath);
     }
     catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 }
 //生成 C++ 反射注册代码
 var generatedPath = Path.Combine(outputDir, "Reflection.Generated.cpp");
-string reflectionText = GenerateCpp(classes, sourceRoot, gameModule, bindingModule);
+string reflectionText = GenerateCpp(classes, sourceRoot, gameModule);
 if (!File.Exists(generatedPath) || File.ReadAllText(generatedPath) != reflectionText)
     File.WriteAllText(generatedPath, reflectionText, InteropText.CreateUtf8Encoding(false));
 Console.WriteLine($"Generated {generatedPath}");
@@ -493,7 +491,7 @@ static ValueKindInfo? GetValueKind(string type)
 }
 
 //生成 C++ 反射注册源码
-static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameModule, string? bindingModule)
+static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameModule)
 {
     var output = new StringBuilder();
     output.AppendLine("// <auto-generated>");
@@ -689,7 +687,6 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
     output.AppendLine();
     if (gameModule)
     {
-        if (bindingModule != null) output.AppendLine($"void RegisterBindings_{bindingModule}();");
         output.AppendLine("#if defined(_WIN32)");
         output.AppendLine("#define ORBEDEN_GAME_EXPORT __declspec(dllexport)");
         output.AppendLine("#else");
@@ -706,7 +703,6 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
     }
     output.AppendLine("    {");
     if (gameModule) output.AppendLine("        using namespace Reflection;");
-    if (gameModule && bindingModule != null) output.AppendLine($"        RegisterBindings_{bindingModule}();");
     output.AppendLine("        static bool registered = false;");
     output.AppendLine("        if (registered) return;");
     output.AppendLine("        registered = true;");

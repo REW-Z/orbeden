@@ -392,7 +392,8 @@
     <!--固定的桥接源码：游戏模块导出层与 NativeAOT 导出层，由各游戏工程直接引用，不再是项目文件。-->
     <Copy SourceFiles="$(OrbedenSharedBuildDir)GameModule.cpp" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(OrbedenSharedBuildDir)GameAotExports.cs" DestinationFolder="$(OrbedenSharedSdkDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Bindings.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
+    <Delete Files="$(OrbedenMetaGenSdkDir)Orbeden.Bindings.targets" />
+    <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.Game.targets" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\Tools\OrbedenMetaGen\Orbeden.EditorExtensions.csproj" DestinationFolder="$(OrbedenMetaGenSdkDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(OrbedenNativeSdkHeader)" DestinationFiles="@(OrbedenNativeSdkHeader->'$(OrbedenNativeSdkIncludeDir)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
     <!--用户手册：镜像 Docs/Manual（含生成的 Api/），游戏工程构建时从这里刷新进工程。-->

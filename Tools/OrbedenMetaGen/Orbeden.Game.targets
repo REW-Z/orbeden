@@ -1,7 +1,7 @@
 <Project>
   <!--
-    游戏 C# 工程的绑定生成目标。由 Orbeden SDK 发布到 Sdk/Tools/OrbedenMetaGen/，
-    再经游戏工程的 Lib/Orbeden.Bindings.targets 转发进来。
+    游戏 C# 工程的共享构建目标。由 Orbeden SDK 发布到 Sdk/Tools/OrbedenMetaGen/，
+    再经游戏工程的 Lib/Orbeden.Game.targets 转发进来。
     这里是唯一来源：引擎侧改动随 SDK 一起刷新，项目内不再保留副本。
 
     $(OrbedenSdkRoot) 由转发文件或调用方（Editor 的 dotnet build）提供。
@@ -14,10 +14,6 @@
     <DesignTimeAssemblySearchPaths>$(DesignTimeAssemblySearchPaths.Replace('{CandidateAssemblyFiles}', '').Split(';'))</DesignTimeAssemblySearchPaths>
     <!--内容根：美术、音频、场景与代码脚本，内部结构完全自由。-->
     <OrbedenContentRoot>$(OrbedenProjectRoot)/Content</OrbedenContentRoot>
-    <!--MetaGen 扫描内容根，生成物落在内容根之外的原生构建目录。-->
-    <OrbedenNativeSource>$(OrbedenContentRoot)</OrbedenNativeSource>
-    <OrbedenBindingOutput>$(OrbedenProjectRoot)/Build/Native/Generated</OrbedenBindingOutput>
-    <OrbedenBindingNamespace>$(RootNamespace).Native</OrbedenBindingNamespace>
     <!--用户手册随 SDK 刷新，落点与 Lib 下其他 SDK 快照同级。-->
     <OrbedenManualSource>$(OrbedenSdkRoot)/Manual</OrbedenManualSource>
     <OrbedenManualTarget>$(OrbedenProjectRoot)/Lib/Docs</OrbedenManualTarget>
@@ -39,12 +35,6 @@
     <Error Condition="!Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />
   </Target>
   <!--
-    是否包含原生模块，与上面的源根无关：源根是内容根，工程文件则在项目根，不能跟着源根一起改。
-  -->
-  <ItemGroup>
-    <NativeVcxProject Include="$(OrbedenProjectRoot)/*.vcxproj" />
-  </ItemGroup>
-  <!--
     脚本编译项：内容根下的 .cs 自动进入游戏程序集，Editor 文件夹单独编译为编辑器扩展。
     基础属性里的 EnableDefaultCompileItems=false 已关掉 SDK 的默认通配，这里就是全部来源。
     内容根之外按定义不含用户脚本。
@@ -58,20 +48,10 @@
     -->
     <Compile Include="$(OrbedenSdkRoot)/Shared/GameAotExports.cs" />
   </ItemGroup>
-  <Target Name="GenerateOrbedenGameBindings" BeforeTargets="CoreCompile" Condition="'@(NativeVcxProject)' != ''">
-    <Error Condition="!Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll')" Text="Orbeden SDK was not found. Build OrbedenCore to refresh the SDK." />
-    <Exec Command="dotnet &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/OrbedenMetaGen.dll&quot; &quot;$(OrbedenNativeSource)&quot; &quot;$(OrbedenBindingOutput)&quot; --game-module --bindings --namespace &quot;$(OrbedenBindingNamespace)&quot; --import &quot;$(OrbedenSdkRoot)/Native/Bindings.Manifest.json&quot;" />
-    <ItemGroup>
-      <Compile Include="$(OrbedenBindingOutput)/Bindings.Generated.cs" />
-    </ItemGroup>
-  </Target>
   <!-- Editor 代码单独编译；Player/AOT 不引用编辑器程序集。空工程也重建，以清除已删除扩展的旧 DLL。 -->
   <Target Name="BuildOrbedenEditorExtensions" AfterTargets="Build" Condition="'$(PublishAot)' != 'true' and '$(OrbedenBuildEditorExtensions)' != 'false'">
-    <PropertyGroup>
-      <OrbedenEditorBindingNamespace Condition="'@(NativeVcxProject)' != ''">$(OrbedenBindingNamespace)</OrbedenEditorBindingNamespace>
-    </PropertyGroup>
     <Error Condition="'@(OrbedenEditorSource)' != '' and !Exists('$(OrbedenEditorAssembly)')" Text="CustomEditor SDK is missing. Rebuild OrbedenEditor first." />
-    <Exec UseUtf8Encoding="Always" Condition="Exists('$(OrbedenEditorAssembly)')" Command="dotnet build &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.EditorExtensions.csproj&quot; -c $(Configuration) -o &quot;$(TargetDir).&quot; /p:GameBindingNamespace=&quot;$(OrbedenEditorBindingNamespace)&quot; /p:GameAssemblyName=&quot;$(AssemblyName)&quot; /p:GameAssemblyPath=&quot;$(TargetPath)&quot; /p:GameContentRoot=&quot;$(OrbedenContentRoot)&quot; /p:GameRuntimeAssembly=&quot;$(OrbedenSdkRoot)/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll&quot; /p:GameEditorAssembly=&quot;$(OrbedenEditorAssembly)&quot; /p:BaseIntermediateOutputPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot; /p:MSBuildProjectExtensionsPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot;" />
+    <Exec UseUtf8Encoding="Always" Condition="Exists('$(OrbedenEditorAssembly)')" Command="dotnet build &quot;$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.EditorExtensions.csproj&quot; -c $(Configuration) -o &quot;$(TargetDir).&quot; /p:GameAssemblyName=&quot;$(AssemblyName)&quot; /p:GameAssemblyPath=&quot;$(TargetPath)&quot; /p:GameContentRoot=&quot;$(OrbedenContentRoot)&quot; /p:GameRuntimeAssembly=&quot;$(OrbedenSdkRoot)/Managed/OrbedenCore.CSharp/OrbedenCore.CSharp.dll&quot; /p:GameEditorAssembly=&quot;$(OrbedenEditorAssembly)&quot; /p:BaseIntermediateOutputPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot; /p:MSBuildProjectExtensionsPath=&quot;$(OrbedenProjectRoot)/Build/Editor/obj/&quot;" />
   </Target>
   <!--
     用户手册随 SDK 刷新：先清空再铺，和 SDK 头文件发布同一套路，改名或删除后不留残页。

@@ -116,7 +116,7 @@ IDE 的设计时项目加载（`DesignTimeBuild=true`）在未显式设置 `Orbe
 
 `Orbeden.Editor.dll` 通过 `ManagedAssemblySession` 动态加载游戏及其 Editor 扩展，这与游戏的编译引用是两种关系，因此不构成编译循环。Core C# 与 Editor C# 在编辑器托管上下文中常驻；游戏及其 Editor 扩展加载到同一个可回收的 `SessionLoadContext`，并共享宿主已经加载的 Core / Editor 程序集。Inspector、场景回调与脚本域使用同一份游戏类型，重编译时一起卸载和重载。
 
-Core C# 与游戏 C# 通过原生 API 函数表访问 Core 和游戏 C++ 类型，不通过托管程序集引用原生 DLL。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和生成绑定到可执行文件，不分发这个 Editor 模块 DLL。
+Core C# 与游戏 C# 通过原生 API 函数表访问 Core 类型，通过反射 Proxy 访问游戏 C++ 组件，不通过托管程序集引用原生 DLL。游戏原生模块只生成类型、字段、方法与生命周期元数据，不生成 C# 绑定。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和反射生成代码到可执行文件，不分发这个 Editor 模块 DLL。
 
 ## 构建入口与输出
 
@@ -150,7 +150,7 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
 
 2. **构建 Editor**：构建同配置的 `OrbedenEditor.vcxproj`，生成 `OrbedenEditor.exe` 与 `Managed/Orbeden.Editor.dll`，同时复制 GLFW、nethost 和 runtimeconfig。Editor 仅支持 Windows x64。
 
-   SDK 已构建后，可在 Editor 的 Dev 面板点击 `Update SDK`，手动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Bindings.targets` 和 `Lib/OrbedenSdk.path`；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。该操作不依赖项目版本差异，保留 `Content/`，不执行编译或内容重置。结果显示在 Dev 面板和 Console，完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
+   SDK 已构建后，可在 Editor 的 Dev 面板点击 `Update SDK`，手动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Game.targets` 和 `Lib/OrbedenSdk.path`，同时将脚本工程导入迁移到新的共享游戏构建目标并删除旧转发文件；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。该操作不依赖项目版本差异，保留 `Content/`，不执行编译或内容重置。结果显示在 Dev 面板和 Console，完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
 
 3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Lib/`。按 `Ctrl+R` 或点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。脚本构建在后台进程里跑，构建期间编辑器不冻结。
 
@@ -565,7 +565,7 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 除 `RawContent/` 外，脚本、资源、场景放在内容根内任何目录都能生效，新增文件不需要改工程：
 
-- **C#**：`Directory.Build.props` 关掉 SDK 默认编译项通配，由 SDK 的 `Orbeden.Bindings.targets` 收集 `Content/**/*.cs`。
+- **C#**：`Directory.Build.props` 关掉 SDK 默认编译项通配，由 SDK 的 `Orbeden.Game.targets` 收集 `Content/**/*.cs`，不生成或编译游戏 C++ 绑定。
 - **C++**：`Orbeden.Native.targets` 收集 `Content/**/*.cpp`；Player 的 `OrbedenGame.vcxproj` 同样。
 - **场景**：`startupWorld` 与 `EditorProject::OpenWorld` 都以内容根为基准，在 Project 面板双击 `.world` 即可切换。
 - **内置 Shader**：`shadow_depth.orbshader` 与 `skybox.orbshader` 由引擎**按文件名在内容根内查找**（结果缓存），不要求固定位置；新建项目铺到 `Content/Builtin/Shaders/`，之后由 Dev 面板的 `Reset Builtin` 管理。同名多份时引擎取字典序靠前的一份并打一条告警，所以同一内容根内只应保留一份。
@@ -573,6 +573,8 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 105：Core 托管包装改为强 GC 句柄保活，原生对象销毁、程序集卸载和引擎 API 断开时释放；显式未使用对象回收期间临时弱化可回收对象的包装，并恢复仍存活包装的强句柄。引擎原生 API 主版本升至 5，原生游戏模块 ABI 升至 3，Core、Editor、游戏模块和 Player 必须一起重建。整个游戏原生模块停止生成 C# 包装及 Binding 注册，但 MetaGen 继续生成类型、字段、方法、序列化和生命周期元数据，Inspector 与跨语言 Proxy 继续使用它们。游戏泛型组件查询跳过无绑定类型，引用编辑直接使用原生对象 ID 和稳定 Key。共享游戏构建目标改名为 `Orbeden.Game.targets`，更新 SDK 时迁移脚本工程导入并删除旧转发文件；原生构建删除旧游戏绑定生成物，Player 只编译游戏反射生成文件。FlightTraining 的 FlightHud 改为缓存 Proxy 方法句柄，Propeller 删除未使用的旧原生绑定字段。需先构建 Core 和 Editor，更新项目 SDK，再重建游戏 C++／C# 与 Player；已有游戏 C# 对生成原生类型的调用需改为 Proxy，示例需同步 FlightHud 源码。无场景、资源格式迁移。已通过 Windows x64 Debug 的 Core、原生与托管 Editor、FlightTraining 原生与托管模块及编辑器扩展构建；Player 仅完成编译阶段，未执行完整链接。未运行功能、回归或编辑器冒烟测试。
 
 版本 104：修复游戏 C# 构建从项目文件候选集中优先选中旧版同名 SDK DLL 的问题。共享绑定目标从普通与设计时程序集搜索路径中移除 `{CandidateAssemblyFiles}`，保留显式 HintPath、框架和其他已配置路径；新建与修复工程的基础属性排除整个 `Build/` 默认文件扫描。当前 SDK 的共享目标已同步，AviatorSage 下次构建直接使用修正后的引用配置，无需删除历史构建目录或改动脚本。正常发布流程需构建 Core 刷新 SDK，构建 Editor 更新工程修复逻辑，再同步项目；没有 ABI、资源格式或场景迁移。已检查 DLL 元数据，并通过 AviatorSage 的 MSBuild 配置求值与程序集引用解析确认 Core 和 Editor 均由 HintPath 选中新 DLL；未编译 Core／Editor／游戏，未运行测试。
 

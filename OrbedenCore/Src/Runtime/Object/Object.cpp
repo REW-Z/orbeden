@@ -621,9 +621,26 @@ void* Object::GetManagedWrapper() const
 }
 
 //设置托管包装缓存
-void Object::SetManagedWrapper(void* value)
+void Object::SetManagedWrapper(void* handle, ManagedWrapperReleaseCallback release)
 {
-    managedWrapper = value;
+    managedWrapper = handle;
+    managedWrapperRelease = release;
+}
+
+//释放托管包装句柄
+void Object::ReleaseManagedWrapper()
+{
+    void* handle = managedWrapper;
+    ManagedWrapperReleaseCallback release = managedWrapperRelease;
+    managedWrapper = nullptr;
+    managedWrapperRelease = nullptr;
+    if (handle && release) release(objectId, handle);
+}
+
+//判断托管包装是否参与未使用对象回收
+bool Object::CanCollectManagedWrapper() const
+{
+    return ownership != Ownership::WorldOwned && ownerWorld == nullptr;
 }
 
 //设置实例ID
@@ -1030,13 +1047,13 @@ bool Object::DestroyDetachedInstance(Object* object)
         if (listener) listener->OnObjectDestroyed(object);
     }
 
+    object->ReleaseManagedWrapper();
     runtime.objectByPath.erase(object->GetInstanceId().GetPath());
     runtime.objectById.erase(object->GetObjectId());
 
     Type* type = object->GetType();
     object->SetInstanceId(StringId());
     object->objectId = 0;
-    object->SetManagedWrapper(nullptr);
     object->SetOwnership(Ownership::None);
     type->DestroyObject(object);
     return true;

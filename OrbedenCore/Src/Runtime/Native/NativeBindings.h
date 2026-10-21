@@ -79,6 +79,8 @@ namespace NativeBindings
 {
     //由生成模块注册与实际原生类型关联的类型化函数表。
     void Register(Type* type, uint64 signature, std::span<void* const> functions);
+    //判断原生类型是否提供托管绑定
+    bool HasManagedBinding(Type* type);
     void Unregister(Type* type);
     uint32 GetGeneration();
     NativeBindingStatus Resolve(const char* typeName, int32 length, uint64 signature, uint32* typeId, const void*** functions);

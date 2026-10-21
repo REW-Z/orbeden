@@ -73,7 +73,7 @@ internal static class EditorScriptFiles
         return files.FirstOrDefault(file => DeclaresType(file, shortName)) ?? string.Empty;
     }
 
-    //收集内容根下指定扩展名的源文件。代码一律在内容根内——托管脚本见 Orbeden.Bindings.targets，
+    //收集内容根下指定扩展名的源文件。代码一律在内容根内——托管脚本见 Orbeden.Game.targets，
     //原生脚本见 Orbeden.Native.targets。目录规则与 EditorAssetCatalog 一致：跳过以点开头的目录。
     private static List<string> CollectSourceFiles(string root, string[] extensions)
     {

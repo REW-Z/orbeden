@@ -71,7 +71,7 @@
     <!--收集 RawContent 之外的游戏 C++ 源码；GameModule.cpp 由 Editor 模块工程编译。-->
     <ClCompile Include="$(OrbedenContentRoot)\**\*.cpp" Exclude="$(OrbedenContentRoot)\RawContent\**" />
     <!--游戏生成的 .cpp 与 Core 生成文件同名，使用独立 obj 目录避免冲突。-->
-    <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\*.cpp">
+    <ClCompile Include="$(OrbedenProjectDir)\Build\Native\Generated\Reflection.Generated.cpp">
       <ObjectFileName>$(IntDir)GameGenerated\%(Filename).obj</ObjectFileName>
     </ClCompile>
     <ClInclude Include="Src\*.h" />

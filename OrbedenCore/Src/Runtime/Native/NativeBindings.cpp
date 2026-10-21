@@ -20,6 +20,12 @@ void NativeBindings::Register(Type* type, uint64 signature, std::span<void* cons
     Entries().emplace(type, BindingEntry{ signature, { functions.begin(), functions.end() } });
 }
 
+//判断原生类型是否提供托管绑定
+bool NativeBindings::HasManagedBinding(Type* type)
+{
+    return Entries().contains(type);
+}
+
 void NativeBindings::Unregister(Type* type)
 {
     if (!Entries().erase(type)) return;
@@ -91,7 +97,8 @@ namespace
             Ens* owner = world->GetEns(ens);
             if (!requestedType || !owner) return 0;
             for (Component* component : owner->GetComponents())
-                if (component && component->GetType()->Is(requestedType)) components.push_back(component);
+                if (component && component->GetType()->Is(requestedType)
+                    && NativeBindings::HasManagedBinding(component->GetType())) components.push_back(component);
             for (int32 index = 0; index < capacity && index < static_cast<int32>(components.size()); ++index)
                 output[index] = components[index]->GetObjectId();
             return static_cast<int32>(components.size());

@@ -15,6 +15,7 @@ public:
     void* SetManagedWrapper = nullptr;
     void* Destroy = nullptr;
     void* UnloadUnusedObjects = nullptr;
+    void* CanCollectManagedWrapper = nullptr;
 
     //创建 Object 函数表。
     static ObjectBind Create();
@@ -32,5 +33,5 @@ public:
 
 
 #pragma pack(pop)
-ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 6);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectBind, 7);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ObjectExtensionBind, 1);

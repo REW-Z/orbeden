@@ -38,7 +38,7 @@ struct ScriptBindApi
 struct OrbedenNativeApi
 {
 public:
-    uint32 abiVersion = 4;
+    uint32 abiVersion = 5;
     uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;
@@ -65,6 +65,6 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 17);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 114);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 115);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
-static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 59);
+static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 60);

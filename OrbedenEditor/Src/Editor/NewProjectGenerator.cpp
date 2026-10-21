@@ -153,7 +153,7 @@ namespace
 
     //脚本工程的基础属性。由引擎维护并随 SDK 刷新，不要在这里写项目自己的设置。
     //EnableDefaultCompileItems 必须在这里关掉：Directory.Build.props 早于 SDK 的默认项通配，
-    //只有在这里关，项目根的编译项才能完全由 SDK 的绑定目标接管。
+    //只有在这里关，项目根的编译项才能完全由 SDK 的游戏构建目标接管。
     std::string GetDirectoryBuildPropsText()
     {
         return R"ORB(<Project>
@@ -169,15 +169,15 @@ namespace
 )ORB";
     }
 
-    //脚本工程的绑定生成入口。只做转发，实现在 SDK 里，因此引擎刷新绑定目标时无需改动项目内文件。
-    std::string GetBindingsTargetsShimText()
+    //生成脚本工程的共享构建入口
+    std::string GetGameTargetsShimText()
     {
         return R"ORB(<Project>
-  <!--绑定生成入口：实现在 Orbeden SDK 内，这里只把 SDK 路径转进去，不要在这里写逻辑。-->
+  <!--游戏构建入口：实现在 Orbeden SDK 内，这里只传入 SDK 路径。-->
   <PropertyGroup>
     <OrbedenSdkRoot Condition="'$(OrbedenSdkRoot)' == '' and Exists('$(MSBuildThisFileDirectory)OrbedenSdk.path')">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)OrbedenSdk.path').Trim())</OrbedenSdkRoot>
   </PropertyGroup>
-  <Import Project="$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.Bindings.targets" Condition="Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.Bindings.targets')" />
+  <Import Project="$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.Game.targets" Condition="Exists('$(OrbedenSdkRoot)/Tools/OrbedenMetaGen/Orbeden.Game.targets')" />
 </Project>
 )ORB";
     }
@@ -259,7 +259,7 @@ bool NewProjectGenerator::CreateProject(const std::string& parentDirectory,
 
     if (!NewProjectTemplate::GenerateProjectFiles(ToCleanPath(projectRoot), projectName, templateRoot, outError)) return false;
 
-    if (!SyncBindingBuildFiles(ToCleanPath(projectRoot / (projectName + ".csproj")), runtimeDllPath, outError)) return false;
+    if (!SyncGameBuildFiles(ToCleanPath(projectRoot / (projectName + ".csproj")), runtimeDllPath, outError)) return false;
 
     //模板里的 .oeproj 不带版本号，新建项目直接写当前引擎版本，否则首次打开就会提示更新。
     std::string projectFile = ToCleanPath(projectRoot / (projectName + ".oeproj"));
@@ -295,11 +295,12 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
     std::string content = ReadTextFile(projectPath);
     bool hasLateBuildProps = content.find("<MSBuildProjectExtensionsPath>") != std::string::npos;
     bool changed = EnsureRuntimeReferenceCopyLocal(content);
-    if (content.find("Orbeden.Bindings.targets") == std::string::npos)
+    changed = RemoveLinesContaining(content, "Orbeden.Bindings.targets") || changed;
+    if (content.find("Orbeden.Game.targets") == std::string::npos)
     {
         size_t end = content.rfind("</Project>");
         if (end == std::string::npos) { outError = "Invalid script project XML"; return false; }
-        content.insert(end, "  <Import Project=\"Lib/Orbeden.Bindings.targets\" />\n");
+        content.insert(end, "  <Import Project=\"Lib/Orbeden.Game.targets\" />\n");
         changed = true;
     }
     changed = RemoveLinesContaining(content, "Orbeden.ScriptGenerator.dll") || changed;
@@ -324,7 +325,7 @@ bool NewProjectGenerator::RepairScriptProjectBuildProps(const std::string& scrip
     return true;
 }
 
-//把当前 SDK 的 Core C# 运行库同步进脚本工程，并刷新绑定目标与 SDK 路径。
+//同步 Core C# 运行库与游戏构建配置
 bool NewProjectGenerator::SyncRuntimeCSharpDll(const std::string& scriptProjectPath,
     const std::string& runtimeDllPath, std::string& outError)
 {
@@ -353,21 +354,31 @@ bool NewProjectGenerator::SyncRuntimeCSharpDll(const std::string& scriptProjectP
         }
     }
 
-    return SyncBindingBuildFiles(scriptProjectPath, runtimeDllPath, outError);
+    return SyncGameBuildFiles(scriptProjectPath, runtimeDllPath, outError);
 }
 
-//同步项目所需的生成目标；项目内只留转发文件，工具与类型清单始终读取当前 SDK。
-bool NewProjectGenerator::SyncBindingBuildFiles(const std::string& scriptProjectPath,
+//同步游戏构建目标与 SDK 路径
+bool NewProjectGenerator::SyncGameBuildFiles(const std::string& scriptProjectPath,
     const std::string& runtimeDllPath, std::string& outError)
 {
     std::filesystem::path sdkRoot = InteropText::PathFromUtf8(runtimeDllPath).parent_path().parent_path().parent_path();
-    if (!std::filesystem::exists(sdkRoot / "Tools/OrbedenMetaGen/Orbeden.Bindings.targets")
+    if (!std::filesystem::exists(sdkRoot / "Tools/OrbedenMetaGen/Orbeden.Game.targets")
         || !std::filesystem::exists(sdkRoot / "Native/Bindings.Manifest.json"))
     {
-        outError = "Binding SDK was not found. Rebuild OrbedenCore first.";
+        outError = "Game build SDK was not found. Rebuild OrbedenCore first.";
         return false;
     }
     std::filesystem::path library = InteropText::PathFromUtf8(scriptProjectPath).parent_path() / "Lib";
-    return WriteTextFileIfChanged(library / "Orbeden.Bindings.targets", GetBindingsTargetsShimText(), outError)
-        && WriteTextFileIfChanged(library / "OrbedenSdk.path", ToCleanPath(std::filesystem::absolute(sdkRoot)), outError);
+    if (!WriteTextFileIfChanged(library / "Orbeden.Game.targets", GetGameTargetsShimText(), outError)
+        || !WriteTextFileIfChanged(library / "OrbedenSdk.path", ToCleanPath(std::filesystem::absolute(sdkRoot)), outError)
+        || !RepairScriptProjectBuildProps(scriptProjectPath, outError)) return false;
+
+    std::error_code removeError;
+    std::filesystem::remove(library / "Orbeden.Bindings.targets", removeError);
+    if (removeError)
+    {
+        outError = "Remove obsolete game binding target failed: " + removeError.message();
+        return false;
+    }
+    return true;
 }

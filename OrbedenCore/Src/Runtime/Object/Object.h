@@ -2,6 +2,7 @@
 
 #include "Defines/types.h"
 #include "Runtime/Native/BindingAnnotations.h"
+#include "Runtime/Native/NativeCall.h"
 
 #include <string>
 #include <type_traits>
@@ -27,6 +28,7 @@ typedef uint32 TypeRuntimeId;
 typedef Object* (*ObjectConstructorFunction)(IChunk* chunk);
 typedef void (*ObjectDestructorFunction)(Object* object);
 typedef void (*ObjectVisitorFunction)(Object* object, void* userData);
+using ManagedWrapperReleaseCallback = void(ORBEDEN_NATIVE_CALL*)(int32 objectId, void* handle);
 
 //对象销毁监听器，在对象身份失效前接收通知。
 class IObjectDestroyListener
@@ -277,6 +279,7 @@ private:
     StringId instanceId;
     int32 objectId = 0;
     void* managedWrapper = nullptr;
+    ManagedWrapperReleaseCallback managedWrapperRelease = nullptr;
     World* ownerWorld = nullptr;
     Ownership ownership = Ownership::None;
     IChunk* allocationChunk = nullptr;
@@ -328,7 +331,15 @@ public:
 
     //设置托管包装缓存
     ORBEDEN_BIND_IGNORE
-    void SetManagedWrapper(void* value);
+    void SetManagedWrapper(void* handle, ManagedWrapperReleaseCallback release);
+
+    //释放托管包装句柄
+    ORBEDEN_BIND_IGNORE
+    void ReleaseManagedWrapper();
+
+    //判断托管包装是否参与未使用对象回收
+    ORBEDEN_BIND_IGNORE
+    bool CanCollectManagedWrapper() const;
 
     //设置实例ID
     void SetInstanceId(const StringId& id);

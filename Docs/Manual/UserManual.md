@@ -323,9 +323,9 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 
 ### C++ / C# 互操作
 
-Object 派生的 C++ 组件由 MetaGen 自动生成强类型 C# 包装，直接 `ens.AddComponent<MoveBehaviour>()` 并使用类型化成员。对没有生成 Binding 的 C++ API（非 Object 派生类）使用 `ens.GetNativeComponent("MoveBehaviour")` 得到动态代理。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
+游戏原生模块不生成 C# 绑定类，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到 `ComponentProxy`。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。MetaGen 仍为游戏 C++ 类型生成字段、方法和生命周期元数据，Inspector 编辑与场景序列化继续工作。Core 的 `Transform` 等内置类型保留强类型 C# 包装。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
-重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用强类型 Binding 或批量 API。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](../ScriptSystem.md)。
+重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用批量 Proxy 接口，减少跨语言调用次数。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](../ScriptSystem.md)。
 
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 

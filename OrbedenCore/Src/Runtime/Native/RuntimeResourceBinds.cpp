@@ -71,10 +71,10 @@ namespace
     }
 
     //写入托管包装缓存
-    void ORBEDEN_NATIVE_CALL NativeObjectSetManagedWrapper(void* pointer, void* wrapper)
+    void ORBEDEN_NATIVE_CALL NativeObjectSetManagedWrapper(void* pointer, void* wrapper, ManagedWrapperReleaseCallback release)
     {
         Object* object = GetBoundObject(pointer);
-        if (object) object->SetManagedWrapper(wrapper);
+        if (object) object->SetManagedWrapper(wrapper, release);
     }
 
     //销毁对象
@@ -90,6 +90,13 @@ namespace
         return Object::UnloadUnusedObjects(roots, count);
     }
 
+    //判断托管包装是否参与未使用对象回收
+    uint8 ORBEDEN_NATIVE_CALL NativeObjectCanCollectManagedWrapper(int32 objectId)
+    {
+        Object* object = Object::FindObjectById(objectId);
+        return object && object->CanCollectManagedWrapper() ? 1 : 0;
+    }
+
 }
 
 ObjectBind ObjectBind::Create()
@@ -101,6 +108,7 @@ ObjectBind ObjectBind::Create()
     bind.SetManagedWrapper = reinterpret_cast<void*>(&NativeObjectSetManagedWrapper);
     bind.Destroy = reinterpret_cast<void*>(&NativeObjectDestroy);
     bind.UnloadUnusedObjects = reinterpret_cast<void*>(&NativeObjectUnloadUnusedObjects);
+    bind.CanCollectManagedWrapper = reinterpret_cast<void*>(&NativeObjectCanCollectManagedWrapper);
     return bind;
 }
 

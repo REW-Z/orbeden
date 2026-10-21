@@ -12,7 +12,7 @@
 struct OrbedenEngineNativeApi
 {
 public:
-    uint32 abiVersion = 4;
+    uint32 abiVersion = 5;
     uint32 structSize = sizeof(OrbedenEngineNativeApi);
     WorldBind World;
     PathDefinesBind PathDefines;
@@ -34,6 +34,6 @@ public:
 
 #pragma pack(pop)
 
-static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 73);
+static_assert(sizeof(OrbedenEngineNativeApi) == 8 + sizeof(void*) * 74);
 static_assert(offsetof(OrbedenEngineNativeApi, World) == 8);
-static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 27);
+static_assert(offsetof(OrbedenEngineNativeApi, Bindings) == 8 + sizeof(void*) * 28);

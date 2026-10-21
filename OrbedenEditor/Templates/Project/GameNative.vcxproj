@@ -2,7 +2,7 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!--
     游戏原生模块工程。
-    工具集、include、链接库、输出目录、源文件收集与绑定生成全部来自 Orbeden SDK 的共享属性表，
+    工具集、include、链接库、输出目录、源文件收集与反射生成全部来自 Orbeden SDK 的共享属性表，
     本文件只声明项目身份，因此引擎升级时通常不需要改动。
 
     SDK 的导入位置有硬性要求：Orbeden.Native.props 必须在 Microsoft.Cpp.props 之前
