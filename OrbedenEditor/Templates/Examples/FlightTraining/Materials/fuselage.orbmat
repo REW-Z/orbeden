@@ -1,0 +1,6 @@
+#New Material
+shader Builtin/Shaders/pbs_metallic.orbshader
+drawqueue Auto
+color u_DiffuseColor 0.636815906 0.636815906 0.636815906 1
+float u_Metallic 0.200000003
+float u_Roughness 0.100000001

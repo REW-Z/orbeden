@@ -40,13 +40,15 @@ internal static class EditorAssetCache
     //哈希分块读取的复用缓冲区，避免大贴图整块进内存
     private static readonly byte[] hashBuffer = new byte[1 << 20];
     private static readonly byte[] textHashBuffer = new byte[(1 << 20) + 1];
+    //伴生文件随资源进版本管理，缩进输出便于阅读与比对差异；固定 LF，仓库与项目均强制 eol=lf
+    private static readonly JsonSerializerOptions metadataJsonOptions = new() { WriteIndented = true, NewLine = "\n" };
     private static string root = string.Empty;
     private static Job? job;
 
     private const string MetadataExtension = ".resinfo";
     private const string SettingsFileNameSuffix = ".import.settings";
     private const string ImportStatusFileNameSuffix = ".import.status";
-    internal const int CurrentVersion = 9;
+    internal const int CurrentVersion = 10;
 
     /// <summary>将文件路径转换为 Content 相对路径。</summary>
     private static string GetRelativePath(string path) => Path.GetRelativePath(root, Path.GetFullPath(path)).Replace('\\', '/');
@@ -118,10 +120,11 @@ internal static class EditorAssetCache
         return Path.Combine(Path.GetDirectoryName(root)!, "ResourceCache", "Imported", Path.GetDirectoryName(relative)!);
     }
 
-    /// <summary>验证当前源文件独占的对象缓存名称。</summary>
+    /// <summary>验证当前源文件独占的对象或预制体产物名称。</summary>
     private static bool IsBlobName(string source, string? name)
     {
         string prefix = Path.GetFileName(source) + ".";
+        if (EditorModelImport.IsModel(source) && name == prefix + "prefab") return true;
         return name != null && name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".orbo", StringComparison.Ordinal)
             && name.Length == prefix.Length + 21 && name.AsSpan(prefix.Length, 16).ContainsAnyExcept("0123456789abcdef") == false;
     }
@@ -137,6 +140,7 @@ internal static class EditorAssetCache
         string status = Path.Combine(directory, Path.GetFileName(source) + ImportStatusFileNameSuffix);
         File.Delete(status);
         File.Delete(status + ".tmp");
+        File.Delete(Path.Combine(directory, Path.GetFileName(source) + ".prefab.tmp"));
         foreach (string file in Directory.EnumerateFiles(directory))
             if (IsBlobName(source, Path.GetFileName(file))) File.Delete(file);
     }
@@ -156,7 +160,10 @@ internal static class EditorAssetCache
         {
             return value.Version == CurrentVersion && value.Source == GetRelativePath(path)
                 && value.Settings != null && value.Dependencies != null && value.Blobs != null
-                && value.Data?.Objects != null && value.Data.ModelNodes != null
+                && value.Data?.Objects != null
+                && (EditorModelImport.IsModel(path)
+                    ? value.Data.Prefab == Path.GetFileName(path) + ".prefab" && value.Blobs.Contains(value.Data.Prefab)
+                    : value.Data.Prefab == null)
                 && value.ImportStatus?.Inputs is { Count: 1 }
                 && value.Dependencies.All(dependency => !string.IsNullOrEmpty(dependency) && !Path.IsPathRooted(dependency)
                     && dependency != ".." && !dependency.StartsWith("../", StringComparison.Ordinal))
@@ -167,15 +174,8 @@ internal static class EditorAssetCache
                 && entry.CachedImport.ImportStatus.SettingsHash == value.ImportStatus.SettingsHash
                 && entry.CachedImport.ImportStatus.ContentHash == ComputeContentHash(ReadInputStamps(path, value))
                 && value.Blobs.All(blob => IsBlobName(path, blob) && File.Exists(Path.Combine(GetBlobDirectory(path), blob)))
-                && value.Data.Objects.All(asset => asset != null && value.Blobs.Contains(asset.BlobName))
-                && value.Data.ModelNodes.Select((node, index) => node != null && node.Name != null && node.LocalMatrix != null
-                    && node.ParentIndex >= -1 && node.ParentIndex < index && node.MeshKey != null && node.MaterialKeys != null
-                    && (node.MeshKey.Length == 0
-                        ? node.MaterialKeys.Count == 0
-                        : value.Data.Objects.Any(asset => asset.Key == node.MeshKey && asset.TypeName == nameof(Mesh)))
-                    && node.MaterialKeys.All(key => key != null && (key.Length == 0
-                        || value.Data.Objects.Any(asset => asset.Key == key && asset.TypeName == nameof(Material)))))
-                    .All(valid => valid);
+                && value.Data.Objects.All(asset => asset?.BlobName != null && asset.BlobName.EndsWith(".orbo", StringComparison.Ordinal)
+                    && value.Blobs.Contains(asset.BlobName));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         { return false; }
@@ -225,7 +225,7 @@ internal static class EditorAssetCache
             if (values.Length < 5 || (values.Length - 1) % 4 != 0 || values[^1].Length != 0)
                 throw new IOException("Asset inspection output is incomplete.");
             List<EditorAssetInspection.Asset> objects = [];
-            List<EditorAssetInspection.ModelNode> modelNodes = [];
+            List<EditorModelImport.Node> modelNodes = [];
             List<string> messages = [];
             List<string> blobs = [];
             HashSet<string> dependencies = new(StringComparer.OrdinalIgnoreCase) { completed.Source };
@@ -263,6 +263,19 @@ internal static class EditorAssetCache
                 || dependencies.Any(path => ReadFileStamp(path).Modified > completed.Started.Ticks))
                 throw new IOException("Source or dependency changed during import. Refresh to retry.");
 
+            //生成模型的 Ens 预制体产物
+            string? prefab = null;
+            if (EditorModelImport.IsModel(completed.Source))
+            {
+                prefab = Path.GetFileName(completed.Source) + ".prefab";
+                string document = EditorModelImport.CreatePrefab(sourceKey, modelNodes, objects);
+                string target = Path.Combine(GetBlobDirectory(completed.Source), prefab);
+                File.WriteAllText(target + ".tmp", document, InteropText.CreateUtf8Encoding(false));
+                File.Move(target + ".tmp", target, true);
+                blobs.Add(prefab);
+            }
+            else if (modelNodes.Count != 0) throw new InvalidDataException("Unexpected model hierarchy for this source type.");
+
             //记录源文件状态和引用路径
             Manifest? previous = ReadManifest(GetMetadataPath(completed.Source));
             Dictionary<string, string> settings = ReadSettings(completed.Source);
@@ -270,7 +283,7 @@ internal static class EditorAssetCache
             string settingsHash = ComputeSettingsHash(settings);
             Manifest manifest = new(CurrentVersion, sourceKey, settings,
                 paths, blobs.Order(StringComparer.Ordinal).ToList(), new(objects.OrderBy(asset => asset.Key, StringComparer.Ordinal).ToList(), messages,
-                    ModelNodes: modelNodes),
+                    Prefab: prefab),
                 new([source], settingsHash, ComputeContentHash([source])));
             List<Stamp> inputs = ReadInputStamps(completed.Source, manifest);
             CachedImport cached = new(CurrentVersion, new(inputs, settingsHash, ComputeContentHash(inputs)));
@@ -283,7 +296,8 @@ internal static class EditorAssetCache
             completed.Entry.NeedsImport = false;
             completed.Entry.MetadataStamp = ReadFileStamp(GetMetadataPath(completed.Source));
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException
+            or InvalidDataException or System.Xml.XmlException or ArgumentException)
         {
             completed.Entry.Manifest = null;
             completed.Entry.Error = exception.Message;
@@ -465,7 +479,7 @@ internal static class EditorAssetCache
         manifest = manifest with { Settings = manifest.Settings.OrderBy(pair => pair.Key, StringComparer.Ordinal)
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal) };
         string file = GetMetadataPath(path);
-        string json = JsonSerializer.Serialize(manifest);
+        string json = JsonSerializer.Serialize(manifest, metadataJsonOptions) + "\n";
         if (File.Exists(file) && File.ReadAllText(file) == json) return;
         string temporary = file + ".tmp";
         File.WriteAllText(temporary, json, InteropText.CreateUtf8Encoding(false));
@@ -586,6 +600,14 @@ internal static class EditorAssetCache
         if (pending) EditorApplication.RequestRepaint();
         string message = pending ? "Importing resource metadata..." : "Import failed: " + entry.Error;
         return new([], [message], true, pending);
+    }
+
+    //读取当前清单对应的模型预制体文档
+    internal static string ReadModelPrefab(string path, EditorAssetInspection.Result data)
+    {
+        if (data.IsStale || data.IsLoading || !EditorModelImport.IsModel(path) || data.Prefab != Path.GetFileName(path) + ".prefab")
+            throw new InvalidDataException("Model prefab is unavailable. Reimport the model.");
+        return File.ReadAllText(Path.Combine(GetBlobDirectory(path), data.Prefab), InteropText.Utf8);
     }
 
     /// <summary>目录扫描只登记待索引文件，不在扫描阶段解析复合资源。</summary>

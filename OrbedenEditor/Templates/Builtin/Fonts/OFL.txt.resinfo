@@ -1,1 +1,40 @@
-{"Version":8,"Source":"Builtin/Fonts/OFL.txt","Settings":{},"Dependencies":[],"Blobs":["OFL.txt.0dae5e9713151093.orbo"],"Data":{"Objects":[{"Key":"Builtin/Fonts/OFL.txt","TypeName":"TextResource","BlobName":"OFL.txt.0dae5e9713151093.orbo","Fields":[{"Name":"text","TypeName":"std::string","Value":"5364 bytes, 109 lines"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Fonts/OFL.txt","Length":5256,"Modified":639270432698742073,"ContentHash":"2b6e5938e5cffa0b9e183bd05f8c363e174e7ebed1a0556e2855fd1707fa2188"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"abd3cf0a44fd2f2360f4e061e6d1ce9f1d9e58113f3bc9461648b7d7f92b6438"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Fonts/OFL.txt",
+  "Settings": {},
+  "Dependencies": [],
+  "Blobs": [
+    "OFL.txt.0dae5e9713151093.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Fonts/OFL.txt",
+        "TypeName": "TextResource",
+        "BlobName": "OFL.txt.0dae5e9713151093.orbo",
+        "Fields": [
+          {
+            "Name": "text",
+            "TypeName": "std::string",
+            "Value": "5364 bytes, 109 lines"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Fonts/OFL.txt",
+        "Length": 5256,
+        "Modified": 639270432698742073,
+        "ContentHash": "2b6e5938e5cffa0b9e183bd05f8c363e174e7ebed1a0556e2855fd1707fa2188"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "abd3cf0a44fd2f2360f4e061e6d1ce9f1d9e58113f3bc9461648b7d7f92b6438"
+  }
+}

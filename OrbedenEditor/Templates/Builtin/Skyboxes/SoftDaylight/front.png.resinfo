@@ -1,1 +1,70 @@
-{"Version":8,"Source":"Builtin/Skyboxes/SoftDaylight/front.png","Settings":{},"Dependencies":[],"Blobs":["front.png.2a47252a4392e98e.orbo"],"Data":{"Objects":[{"Key":"Builtin/Skyboxes/SoftDaylight/front.png//Texture2D/Main","TypeName":"Texture2D","BlobName":"front.png.2a47252a4392e98e.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"front"},{"Name":"width","TypeName":"int32","Value":"128"},{"Name":"height","TypeName":"int32","Value":"128"},{"Name":"channels","TypeName":"int32","Value":"4"},{"Name":"format","TypeName":"int32","Value":"4"},{"Name":"colorSpace","TypeName":"TextureColorSpace","Value":"sRGB"},{"Name":"pixels","TypeName":"List\u003Cuint8\u003E","Value":"65536 bytes"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Skyboxes/SoftDaylight/front.png","Length":11048,"Modified":639261585075310274,"ContentHash":"41a6dedea58c789fbd3ac8d31fd25d2edf37e365a8432233f9ff1361c36b637a"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"67fce146e8f83340e239282a1bea0ed6032733145183a5e4b708ce4db3dc927e"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Skyboxes/SoftDaylight/front.png",
+  "Settings": {},
+  "Dependencies": [],
+  "Blobs": [
+    "front.png.2a47252a4392e98e.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Skyboxes/SoftDaylight/front.png//Texture2D/Main",
+        "TypeName": "Texture2D",
+        "BlobName": "front.png.2a47252a4392e98e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "front"
+          },
+          {
+            "Name": "width",
+            "TypeName": "int32",
+            "Value": "128"
+          },
+          {
+            "Name": "height",
+            "TypeName": "int32",
+            "Value": "128"
+          },
+          {
+            "Name": "channels",
+            "TypeName": "int32",
+            "Value": "4"
+          },
+          {
+            "Name": "format",
+            "TypeName": "int32",
+            "Value": "4"
+          },
+          {
+            "Name": "colorSpace",
+            "TypeName": "TextureColorSpace",
+            "Value": "sRGB"
+          },
+          {
+            "Name": "pixels",
+            "TypeName": "List\u003Cuint8\u003E",
+            "Value": "65536 bytes"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Skyboxes/SoftDaylight/front.png",
+        "Length": 11048,
+        "Modified": 639261585075310274,
+        "ContentHash": "41a6dedea58c789fbd3ac8d31fd25d2edf37e365a8432233f9ff1361c36b637a"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "67fce146e8f83340e239282a1bea0ed6032733145183a5e4b708ce4db3dc927e"
+  }
+}

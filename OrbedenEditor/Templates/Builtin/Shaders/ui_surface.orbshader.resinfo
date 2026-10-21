@@ -1,0 +1,80 @@
+{
+  "Version": 10,
+  "Source": "Builtin/Shaders/ui_surface.orbshader",
+  "Settings": {},
+  "Dependencies": [],
+  "Blobs": [
+    "ui_surface.orbshader.62d45f0a624f3f22.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Shaders/ui_surface.orbshader",
+        "TypeName": "Shader",
+        "BlobName": "ui_surface.orbshader.62d45f0a624f3f22.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "ui_surface"
+          },
+          {
+            "Name": "vertexPath",
+            "TypeName": "std::string",
+            "Value": "Builtin/Shaders/ui_surface.orbshader"
+          },
+          {
+            "Name": "fragmentPath",
+            "TypeName": "std::string",
+            "Value": "Builtin/Shaders/ui_surface.orbshader"
+          },
+          {
+            "Name": "vertexSource",
+            "TypeName": "std::string",
+            "Value": "#version 430 core\nlayout(location = 0) in vec3 a_Position;\nlayout(location = 1) in vec2 a_Uv;\nlayout(location = 2) in vec4 a_Tint;\n\nuniform mat4 u_Model;\nuniform mat4 u_ViewProjection;\n\nout vec2 v_Uv;\nout vec4 v_Tint;\n\nvoid main()\n{\n    v_Uv = a_Uv;\n    v_Tint = a_Tint;\n    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);\n}\n\n"
+          },
+          {
+            "Name": "fragmentSource",
+            "TypeName": "std::string",
+            "Value": "#version 430 core\nin vec2 v_Uv;\nin vec4 v_Tint;\n\nuniform sampler2D u_Texture;\nuniform sampler2D u_Coverage;\nuniform vec4 u_Tint;\n//\u89C6\u53E3\u5C3A\u5BF8\u4E0E\u539F\u70B9\uFF1Agl_FragCoord \u76F8\u5BF9\u5E27\u7F13\u51B2\u539F\u70B9\uFF0C\u8986\u76D6\u7387\u6309\u89C6\u53E3\u5185\u7684\u76F8\u5BF9\u4F4D\u7F6E\u91C7\u6837\u3002\nuniform vec3 u_ViewportSize;\nuniform vec3 u_ViewportOrigin;\nuniform float u_DistanceRange;\nuniform int u_MaterialKind;\n//0 \u8868\u793A\u6CA1\u6709\u88C1\u526A\u5C42\uFF0C\u8986\u76D6\u7387\u6052\u4E3A 1\u3002\nuniform int u_CoverageEnabled;\n\nout vec4 FragColor;\n\n//MSDF \u7684\u901A\u9053\u53D6\u4E2D\u4F4D\u6570\uFF0CSDF \u76F4\u63A5\u53D6 R\u3002\nfloat Median(vec3 value)\n{\n    return max(min(value.r, value.g), min(max(value.r, value.g), value.b));\n}\n\n//\u8DDD\u79BB\u573A\u8986\u76D6\u7387\uFF1A\u628A\u7EB9\u7406\u503C\u6309\u5C4F\u5E55\u7A7A\u95F4\u53D6\u503C\u8303\u56F4\u8FD8\u539F\u6210 0..1 \u7684\u8986\u76D6\u3002\nfloat DistanceCoverage(float field)\n{\n    vec2 unitRange = vec2(u_DistanceRange) / vec2(textureSize(u_Texture, 0));\n    vec2 screenTexSize = vec2(1.0) / max(fwidth(v_Uv), vec2(1e-8));\n    float screenRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);\n    return clamp(screenRange * (field - 0.5) \u002B 0.5, 0.0, 1.0);\n}\n\nvoid main()\n{\n    vec4 tint = u_Tint * v_Tint;\n    float coverage = 1.0;\n    if (u_CoverageEnabled == 1)\n    {\n        coverage = texture(u_Coverage, (gl_FragCoord.xy - u_ViewportOrigin.xy) / u_ViewportSize.xy).r;\n    }\n\n    vec4 source;\n    //\u6750\u8D28\u79CD\u7C7B\uFF1A0 \u76F4\u901A\u56FE\u7247\u30011 \u9884\u4E58\u56FE\u7247\u30012 \u4F4D\u56FE\u5B57\u5F62\u30013 SDF\u30014 MSDF\u3002\n    if (u_MaterialKind == 3)\n    {\n        source = vec4(1.0, 1.0, 1.0, DistanceCoverage(texture(u_Texture, v_Uv).r));\n    }\n    else if (u_MaterialKind == 4)\n    {\n        source = vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));\n    }\n    else\n    {\n        //\u5B57\u5F62\u56FE\u96C6\u662F R8\uFF0C\u53D6\u6837\u540E\u6309\u767D\u8272\u5904\u7406\u3002\n        vec4 sampled = texture(u_Texture, v_Uv);\n        source = u_MaterialKind == 2 ? vec4(1.0, 1.0, 1.0, sampled.r) : sampled;\n    }\n\n    //Alpha \u8BED\u4E49\uFF1A\u76F4\u901A\u6309\u8986\u76D6\u7387\u6C42\u9884\u4E58\uFF0C\u9884\u4E58\u7EB9\u7406\u4E0D\u80FD\u518D\u4E58\u4E00\u6B21\u81EA\u8EAB Alpha\u3002\n    float alpha = source.a * tint.a * coverage;\n    vec3 rgb = u_MaterialKind == 1\n        ? source.rgb * tint.rgb * tint.a * coverage\n        : source.rgb * tint.rgb * alpha;\n    FragColor = vec4(rgb, alpha);\n}\n"
+          },
+          {
+            "Name": "passes",
+            "TypeName": "List\u003CShaderPass\u003E",
+            "Value": "1 elements\nDefault"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CShaderTextureSlot\u003E",
+            "Value": "2 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CShaderColorSlot\u003E",
+            "Value": "1 elements"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CShaderFloatSlot\u003E",
+            "Value": "1 elements"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Shaders/ui_surface.orbshader",
+        "Length": 2991,
+        "Modified": 639270243029755722,
+        "ContentHash": "aa703b6b21035095835f51ef386a1cd31665746c7efdaa5d9bc83db526a0e621"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "7f5a13572385836725694f9dca4d8096ffad93591fccc31f0d3bc59813c69585"
+  }
+}

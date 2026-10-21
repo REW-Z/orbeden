@@ -519,7 +519,7 @@ MyGame/
 
 两者都相对内容根。`lastWorld` 引用的场景被删或被改名时（改名会随引用重写一起更新），打开项目退回 `startupWorld`。PIE 用的是**当前打开的场景**，与这两个属性都无关。
 
-`ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存带源文件名前缀的 `.orbo` 产物，Project/Inspector 读取伴生文件的清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。产物**不纳入版本管理**，Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
+`ResourceCache/` 与 `Content/` 同级。`Imported/` 按 Content 目录结构保存带源文件名前缀的 `.orbo` 产物及模型的 `<源文件名>.prefab` 子树文档，Project/Inspector 读取伴生文件的清单，ObjectField 可按对象加载缓存；`Player/` 独立保存 cook 暂存产物并同步进发布目录，打包不会清空 Imported。产物**不纳入版本管理**，Reimport 原位置重建，不保留历史代次，进程交换结果不落盘。详见 [资源 Inspector 设计](AssetInspectorDesign.md)。
 
 **每个源文件有一个伴生 `.resinfo`**：与源文件同址同名、只多一个后缀，分两部分——
 
@@ -528,7 +528,7 @@ MyGame/
 | 导入设置 | 用户数据，Inspector 可编辑 | **重新导入时保留**，随资源进版本管理 |
 | 内部隐含资源清单 | 重新生成 | 每次导入重建（对象 Key、类型、依赖、反射摘要） |
 
-伴生文件必须进版本管理：它是导入设置的唯一载体，丢了设置就没了。产物 `.orbo` 与 `ResourceCache/` 都可以全量重建，因此不进版本管理。`*.resinfo.tmp` 是原子写入的中间文件，仍被忽略。
+伴生文件必须进版本管理：它是导入设置的唯一载体，丢了设置就没了。对象 `.orbo`、模型生成的 `.prefab` 及整个 `ResourceCache/` 都可以全量重建，因此不进版本管理。`*.resinfo.tmp` 是原子写入的中间文件，仍被忽略。
 
 `Dependencies` 只保存引用路径；同路径资源内容改变不修改该列表。`ImportStatus` 保存源文件自身的内容状态，完整依赖内容校验记录另存 `ResourceCache/Imported/*.import.status`。文本长度排除回车与换行，内容指纹把 CRLF 按 LF 计算；内容未变时保留 `Modified`，生成 JSON 相同时不写回。项目模板的 `.gitattributes` 使用 `text=auto eol=lf`，覆盖 `core.autocrlf` 的 LF 到 CRLF 检出转换；入库仍统一为 LF，二进制不转换。
 
@@ -571,6 +571,8 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+版本 101：模型导入完成后生成标准 Ens 预制体文档，缓存版本升至 10；`.resinfo` 移除 `Data.ModelNodes`，仅模型写入 `Data.Prefab` 引用，其他资源不产生模型字段。模型投放复用子树复制与身份重映射，生成普通可编辑 Ens 子树，效果等同立即 Unpack，不保留来源绑定，撤销／重做继续使用子树快照。旧版伴生清单和本机缓存自动重建，导入设置保留。模板资源伴生文件按新格式重新生成。需重建 Core 和托管 Editor，通过 Update Project 同步 SDK 与 Builtin；Examples 的伴生文件可随资源手工复制或通过 Reset Examples 同步。现有场景无需迁移，模型层级不会因重导自动更新。按用户要求未执行编译或测试。
 
 版本 100：移除 Profiler 的 GPU wait diagnostics、Vulkan CPU detail 勾选和 CPU Breakdown 入口，删除专用 CPU 计时器、缓冲、导出字段及原生／托管接口；普通采集不再存在强制等待诊断分支。保留普通 CPU 层级／时间线、异步 GPU 时间戳及版本 99 的 Vulkan 资源缓存优化。GPU 阶段入口改为 ProfileGpuStage，旧 ProfileGpuWait 不再保留；原生扩展如有调用需同步改名。v2 导出继续提供 CPU 与 GpuTiming，CaptureMode 固定为 Normal。需重建 Core、原生与托管 Editor，通过 Update Project 同步 SDK；原生游戏模块及 Player 按现有流程重建，发布包重新 Build Player。无模板内容变动，无需重置 Builtin／Examples，无场景或材质迁移。验证仅做 Windows x64 Debug 编译检查，不运行冒烟或功能回归。
 

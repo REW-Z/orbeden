@@ -17,5 +17,9 @@
     <TrimmerRootAssembly Include="$(AssemblyName)" />
     <TrimmerRootAssembly Include="OrbedenCore.CSharp" />
   </ItemGroup>
+  <ItemGroup>
+    <!--项目根的 Build/ 只放构建产物，不参与游戏程序集编译。-->
+    <Compile Remove="Build\**" />
+  </ItemGroup>
   <Import Project="Lib/Orbeden.Bindings.targets" />
 </Project>

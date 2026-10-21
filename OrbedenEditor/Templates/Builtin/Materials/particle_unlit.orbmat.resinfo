@@ -1,1 +1,63 @@
-{"Version":8,"Source":"Builtin/Materials/particle_unlit.orbmat","Settings":{},"Dependencies":["Builtin/Shaders/particle_unlit.orbshader"],"Blobs":["particle_unlit.orbmat.678bddb660915fde.orbo","particle_unlit.orbmat.b6fd3c6b772d02fd.orbo"],"Data":{"Objects":[{"Key":"Builtin/Materials/particle_unlit.orbmat","TypeName":"Material","BlobName":"particle_unlit.orbmat.678bddb660915fde.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"particle_unlit"},{"Name":"textureSlots","TypeName":"List\u003CMaterialTextureSlot\u003E","Value":"0 elements"},{"Name":"colorSlots","TypeName":"List\u003CMaterialColorSlot\u003E","Value":"1 elements\nu_DiffuseColor: 1 1 1 1"},{"Name":"floatSlots","TypeName":"List\u003CMaterialFloatSlot\u003E","Value":"1 elements\nu_Intensity: 1.000000"},{"Name":"shader","TypeName":"Ref\u003CShader\u003E","Value":"Builtin/Shaders/particle_unlit.orbshader"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Materials/particle_unlit.orbmat","Length":124,"Modified":639261585074922408,"ContentHash":"9a3365c7b32f69a4cf38f0b785b9040774c6e161c83a9b2197a7c3d37f583ae2"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"5ef3a7fe41cc42f85f3c32250238be88a23ca0ef2d4d1813ecbe742c2e4ab33e"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Materials/particle_unlit.orbmat",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Shaders/particle_unlit.orbshader"
+  ],
+  "Blobs": [
+    "particle_unlit.orbmat.678bddb660915fde.orbo",
+    "particle_unlit.orbmat.b6fd3c6b772d02fd.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Materials/particle_unlit.orbmat",
+        "TypeName": "Material",
+        "BlobName": "particle_unlit.orbmat.678bddb660915fde.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "particle_unlit"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "1 elements\nu_DiffuseColor: 1 1 1 1"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "1 elements\nu_Intensity: 1.000000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/particle_unlit.orbshader"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Materials/particle_unlit.orbmat",
+        "Length": 124,
+        "Modified": 639261585074922408,
+        "ContentHash": "9a3365c7b32f69a4cf38f0b785b9040774c6e161c83a9b2197a7c3d37f583ae2"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "5ef3a7fe41cc42f85f3c32250238be88a23ca0ef2d4d1813ecbe742c2e4ab33e"
+  }
+}

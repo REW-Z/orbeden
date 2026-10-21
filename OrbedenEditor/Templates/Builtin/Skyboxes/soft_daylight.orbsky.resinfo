@@ -1,1 +1,79 @@
-{"Version":8,"Source":"Builtin/Skyboxes/soft_daylight.orbsky","Settings":{},"Dependencies":[".","Builtin/Skyboxes/SoftDaylight/back.png","Builtin/Skyboxes/SoftDaylight/bottom.png","Builtin/Skyboxes/SoftDaylight/front.png","Builtin/Skyboxes/SoftDaylight/left.png","Builtin/Skyboxes/SoftDaylight/right.png","Builtin/Skyboxes/SoftDaylight/top.png"],"Blobs":["soft_daylight.orbsky.2a47252a4392e98e.orbo","soft_daylight.orbsky.3696ecc3ee678b81.orbo","soft_daylight.orbsky.5a628873cc6764dc.orbo","soft_daylight.orbsky.950d3b05c92bd4c4.orbo","soft_daylight.orbsky.9d62830787205526.orbo","soft_daylight.orbsky.c31fb57d1ab2d9ae.orbo","soft_daylight.orbsky.e2f35faa77b9901f.orbo"],"Data":{"Objects":[{"Key":"Builtin/Skyboxes/soft_daylight.orbsky","TypeName":"Skybox","BlobName":"soft_daylight.orbsky.3696ecc3ee678b81.orbo","Fields":[{"Name":"right","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/right.png//Texture2D/Main"},{"Name":"left","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/left.png//Texture2D/Main"},{"Name":"top","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/top.png//Texture2D/Main"},{"Name":"bottom","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/bottom.png//Texture2D/Main"},{"Name":"front","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/front.png//Texture2D/Main"},{"Name":"back","TypeName":"Ref\u003CTexture2D\u003E","Value":"Builtin/Skyboxes/SoftDaylight/back.png//Texture2D/Main"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Skyboxes/soft_daylight.orbsky","Length":349,"Modified":639261585075320316,"ContentHash":"ea795cae465be7afca0e9127977296b19a2c3d0ca39054e2dd867fa59142d2b1"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"6bf0d5722a1c3d6c9fcb1cccdeffe0c19c27d5b670e0afee7a0e793b57c4fc61"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Skyboxes/soft_daylight.orbsky",
+  "Settings": {},
+  "Dependencies": [
+    ".",
+    "Builtin/Skyboxes/SoftDaylight/back.png",
+    "Builtin/Skyboxes/SoftDaylight/bottom.png",
+    "Builtin/Skyboxes/SoftDaylight/front.png",
+    "Builtin/Skyboxes/SoftDaylight/left.png",
+    "Builtin/Skyboxes/SoftDaylight/right.png",
+    "Builtin/Skyboxes/SoftDaylight/top.png"
+  ],
+  "Blobs": [
+    "soft_daylight.orbsky.2a47252a4392e98e.orbo",
+    "soft_daylight.orbsky.3696ecc3ee678b81.orbo",
+    "soft_daylight.orbsky.5a628873cc6764dc.orbo",
+    "soft_daylight.orbsky.950d3b05c92bd4c4.orbo",
+    "soft_daylight.orbsky.9d62830787205526.orbo",
+    "soft_daylight.orbsky.c31fb57d1ab2d9ae.orbo",
+    "soft_daylight.orbsky.e2f35faa77b9901f.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Skyboxes/soft_daylight.orbsky",
+        "TypeName": "Skybox",
+        "BlobName": "soft_daylight.orbsky.3696ecc3ee678b81.orbo",
+        "Fields": [
+          {
+            "Name": "right",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/right.png//Texture2D/Main"
+          },
+          {
+            "Name": "left",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/left.png//Texture2D/Main"
+          },
+          {
+            "Name": "top",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/top.png//Texture2D/Main"
+          },
+          {
+            "Name": "bottom",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/bottom.png//Texture2D/Main"
+          },
+          {
+            "Name": "front",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/front.png//Texture2D/Main"
+          },
+          {
+            "Name": "back",
+            "TypeName": "Ref\u003CTexture2D\u003E",
+            "Value": "Builtin/Skyboxes/SoftDaylight/back.png//Texture2D/Main"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Skyboxes/soft_daylight.orbsky",
+        "Length": 349,
+        "Modified": 639261585075320316,
+        "ContentHash": "ea795cae465be7afca0e9127977296b19a2c3d0ca39054e2dd867fa59142d2b1"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "6bf0d5722a1c3d6c9fcb1cccdeffe0c19c27d5b670e0afee7a0e793b57c4fc61"
+  }
+}

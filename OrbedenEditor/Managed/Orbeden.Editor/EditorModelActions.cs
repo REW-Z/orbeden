@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Numerics;
+using System.Xml.Linq;
 using Orbeden;
 
 namespace OrbedenEditor;
@@ -13,7 +12,6 @@ internal static class EditorModelActions
         if (EditorApplication.IsPlaying || !EditorAssetsNative.CanModifyAssets()
             || !EditorPrefabSession.CanModify(Ens.FromId(parent), EditorPrefabEditOperation.Structure)) return;
         Ens root = Ens.Null;
-        List<Ens> instances = [];
         try
         {
             string parentKey = parent.IsNull ? string.Empty : Ens.FromId(parent).ResourceKey;
@@ -28,51 +26,31 @@ internal static class EditorModelActions
                 return;
             }
             if (data.IsStale) throw new InvalidOperationException(string.Join("\n", data.Messages));
-            if (data.ModelNodes is not { Count: > 0 } modelNodes)
-                throw new InvalidOperationException("Model hierarchy is unavailable. Reimport the model.");
+            string prefab = EditorAssetCache.ReadModelPrefab(path, data);
+            XElement document = XElement.Parse(prefab);
+            if (document.Name != "Prefab" || document.Elements("Ens").Count() != 1 || document.Descendants("PrefabBindings").Any())
+                throw new InvalidDataException("Expected a single-root imported prefab.");
 
-            //加载节点引用的网格和材质
-            const string defaultMaterialKey = "Builtin/Materials/default.orbmat";
-            string[] meshKeys = modelNodes.Where(node => node.MeshKey.Length != 0)
-                .Select(node => node.MeshKey).Distinct(StringComparer.Ordinal).ToArray();
-            string[] materialKeys = modelNodes.SelectMany(node => node.MaterialKeys)
-                .Select(key => key.Length == 0 ? defaultMaterialKey : key).Distinct(StringComparer.Ordinal).ToArray();
-            Dictionary<string, Mesh> meshes = new(StringComparer.Ordinal);
-            Dictionary<string, Material> materials = new(StringComparer.Ordinal);
+            //加载预制体引用的共享网格和材质
+            XElement[] fields = document.Descendants("Component").Where(component => (string?)component.Attribute("type") == nameof(StaticMeshRenderer))
+                .Elements("Field").ToArray();
+            string[] meshKeys = fields.Where(field => (string?)field.Attribute("name") == "mesh")
+                .Select(field => (string?)field.Attribute("value") ?? string.Empty).Where(key => key.Length != 0).Distinct(StringComparer.Ordinal).ToArray();
+            string[] materialKeys = fields.Where(field => (string?)field.Attribute("name") == "materials")
+                .SelectMany(field => EditorModelImport.ReadMaterialKeys((string?)field.Attribute("value") ?? string.Empty))
+                .Where(key => key.Length != 0).Distinct(StringComparer.Ordinal).ToArray();
             foreach (string key in meshKeys)
-                meshes[key] = EditorAssetCatalog.Instance.Load(typeof(Mesh), key) as Mesh
-                    ?? throw new InvalidOperationException("Cannot load model mesh: " + key);
+                if (EditorAssetCatalog.Instance.Load(typeof(Mesh), key) is not Mesh)
+                    throw new InvalidOperationException("Cannot load model mesh: " + key);
             foreach (string key in materialKeys)
-                materials[key] = EditorAssetCatalog.Instance.Load(typeof(Material), key) as Material
-                    ?? throw new InvalidOperationException("Cannot load model material: " + key);
+                if (EditorAssetCatalog.Instance.Load(typeof(Material), key) is not Material)
+                    throw new InvalidOperationException("Cannot load model material: " + key);
             EditorAssetCache.RecordLoadedImport(path);
 
-            //按父子顺序创建节点和渲染组件
-            root = EditorAssetsNative.CreateEns(Path.GetFileNameWithoutExtension(sourceKey));
-            if (!root.IsValid) throw new InvalidOperationException("Cannot create model root.");
-            if (!EditorNativeComponents.MoveEns(root.Id, parent, before, false))
-                throw new InvalidOperationException("Cannot place model in the requested hierarchy.");
+            //复制模型子树并重映射身份，不建立预制体绑定
+            root = EditorAssetsNative.InstantiatePrefab(prefab, PrefabSource.SnapshotCopy, parent, before);
+            if (!root.IsValid) throw new InvalidOperationException("Cannot instantiate model prefab.");
             if (placeAtPosition) root.Transform.SetLocalPosition(position);
-            for (int index = 0; index < modelNodes.Count; ++index)
-            {
-                EditorAssetInspection.ModelNode node = modelNodes[index];
-                ReadNodeTransform(node.LocalMatrix, out vector3 localPosition, out quaternion localRotation, out vector3 localScale);
-                Ens instance = Ens.Create(node.Name);
-                if (!instance.IsValid) throw new InvalidOperationException("Cannot create model node: " + node.Name);
-                instances.Add(instance);
-                Ens nodeParent = node.ParentIndex < 0 ? root : instances[node.ParentIndex];
-                if (!EditorNativeComponents.MoveEns(instance.Id, nodeParent.Id, EnsId.Null, false))
-                    throw new InvalidOperationException("Cannot attach model node: " + node.Name);
-                instance.Transform.SetLocalPosition(localPosition);
-                instance.Transform.SetLocalRotation(localRotation);
-                instance.Transform.SetLocalScale(localScale);
-                if (node.MeshKey.Length == 0) continue;
-
-                StaticMeshRenderer renderer = instance.AddComponent<StaticMeshRenderer>()
-                    ?? throw new InvalidOperationException("Cannot create model renderer: " + node.Name);
-                renderer.mesh = meshes[node.MeshKey];
-                renderer.materials = node.MaterialKeys.Select(key => (Material?)materials[key.Length == 0 ? defaultMaterialKey : key]).ToArray();
-            }
 
             //记录整个模型的撤销和重做快照
             string snapshot = EditorAssetsNative.CaptureEns(root.Id);
@@ -108,27 +86,7 @@ internal static class EditorModelActions
         catch (Exception exception)
         {
             if (root.IsValid) EditorAssetsNative.DestroyEnsTree(root.Id);
-            foreach (Ens instance in instances)
-                if (instance.IsValid) EditorAssetsNative.DestroyEnsTree(instance.Id);
             EditorConsole.Error("Model instantiation failed: " + exception.Message);
         }
-    }
-
-    /// <summary>将导入节点矩阵分解为本地位置、旋转和缩放。</summary>
-    private static void ReadNodeTransform(string localMatrix, out vector3 position, out quaternion rotation, out vector3 scale)
-    {
-        string[] fields = localMatrix.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (fields.Length != 16) throw new FormatException("Model node matrix must contain 16 numbers.");
-        float[] values = new float[16];
-        for (int index = 0; index < values.Length; ++index)
-            if (!float.TryParse(fields[index], NumberStyles.Float, CultureInfo.InvariantCulture, out values[index]) || !float.IsFinite(values[index]))
-                throw new FormatException("Model node matrix contains an invalid number.");
-        Matrix4x4 matrix = new(values[0], values[1], values[2], values[3], values[4], values[5], values[6], values[7],
-            values[8], values[9], values[10], values[11], values[12], values[13], values[14], values[15]);
-        if (!Matrix4x4.Decompose(matrix, out Vector3 nodeScale, out Quaternion nodeRotation, out Vector3 nodePosition))
-            throw new FormatException("Model node matrix cannot be represented by a Transform.");
-        position = new vector3(nodePosition.X, nodePosition.Y, nodePosition.Z);
-        rotation = new quaternion(nodeRotation.X, nodeRotation.Y, nodeRotation.Z, nodeRotation.W);
-        scale = new vector3(nodeScale.X, nodeScale.Y, nodeScale.Z);
     }
 }

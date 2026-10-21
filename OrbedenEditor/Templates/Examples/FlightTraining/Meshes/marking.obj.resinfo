@@ -1,1 +1,109 @@
-{"Version":8,"Source":"Examples/FlightTraining/Meshes/marking.obj","Settings":{},"Dependencies":["Builtin/Shaders/blinn_phong.orbshader","Examples/FlightTraining/Materials/marking.mtl"],"Blobs":["marking.obj.2b47fe93a1bd4698.orbo","marking.obj.8b40871342033ac4.orbo","marking.obj.f832824b036f78d7.orbo"],"Data":{"Objects":[{"Key":"Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial","TypeName":"Material","BlobName":"marking.obj.2b47fe93a1bd4698.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"MarkingMaterial"},{"Name":"textureSlots","TypeName":"List\u003CMaterialTextureSlot\u003E","Value":"0 elements"},{"Name":"colorSlots","TypeName":"List\u003CMaterialColorSlot\u003E","Value":"2 elements\nu_DiffuseColor: 1 0.620000005 0.0399999991 1\nu_SpecularColor: 0.649999976 0.479999989 0.119999997 1"},{"Name":"floatSlots","TypeName":"List\u003CMaterialFloatSlot\u003E","Value":"1 elements\nu_Shininess: 64.000000"},{"Name":"shader","TypeName":"Ref\u003CShader\u003E","Value":"Builtin/Shaders/blinn_phong.orbshader"}]},{"Key":"Examples/FlightTraining/Meshes/marking.obj//Mesh/Main","TypeName":"Mesh","BlobName":"marking.obj.f832824b036f78d7.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"marking"},{"Name":"vertices","TypeName":"List\u003Cvector3\u003E","Value":"24 elements"},{"Name":"texcoords","TypeName":"List\u003Cvector2\u003E","Value":"24 elements"},{"Name":"normals","TypeName":"List\u003Cvector3\u003E","Value":"24 elements"},{"Name":"tangents","TypeName":"List\u003Cvector3\u003E","Value":"24 elements"},{"Name":"indices","TypeName":"List\u003Cuint32\u003E","Value":"36 elements"},{"Name":"subMeshes","TypeName":"List\u003CSubMesh\u003E","Value":"1 elements\nMarkingMaterial: 36 indices @ 0"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Examples/FlightTraining/Meshes/marking.obj","Length":706,"Modified":639247168536487337,"ContentHash":"63cf202872baf69d41c6a118c2c28d8932f973aee401b8e782328238230bdfa2"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"8a499afb758067f77ab01d3259177f8cd78a279b0e7d57f8f4a37b24389e7b03"}}
+{
+  "Version": 10,
+  "Source": "Examples/FlightTraining/Meshes/marking.obj",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Shaders/blinn_phong.orbshader",
+    "Examples/FlightTraining/Materials/marking.mtl"
+  ],
+  "Blobs": [
+    "marking.obj.2b47fe93a1bd4698.orbo",
+    "marking.obj.8b40871342033ac4.orbo",
+    "marking.obj.f832824b036f78d7.orbo",
+    "marking.obj.prefab"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial",
+        "TypeName": "Material",
+        "BlobName": "marking.obj.2b47fe93a1bd4698.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "MarkingMaterial"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "2 elements\nu_DiffuseColor: 1 0.620000005 0.0399999991 1\nu_SpecularColor: 0.649999976 0.479999989 0.119999997 1"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "1 elements\nu_Shininess: 64.000000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/blinn_phong.orbshader"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/marking.obj//Mesh/Main",
+        "TypeName": "Mesh",
+        "BlobName": "marking.obj.f832824b036f78d7.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "marking"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nMarkingMaterial: 36 indices @ 0"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false,
+    "Prefab": "marking.obj.prefab"
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Examples/FlightTraining/Meshes/marking.obj",
+        "Length": 706,
+        "Modified": 639247168536487337,
+        "ContentHash": "63cf202872baf69d41c6a118c2c28d8932f973aee401b8e782328238230bdfa2"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "8a499afb758067f77ab01d3259177f8cd78a279b0e7d57f8f4a37b24389e7b03"
+  }
+}

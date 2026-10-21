@@ -1,0 +1,6052 @@
+{
+  "Version": 10,
+  "Source": "Examples/FlightTraining/Meshes/Aircraft.glb",
+  "Settings": {
+    "importMaterials": "false",
+    "importTextures": "false"
+  },
+  "Dependencies": [],
+  "Blobs": [
+    "Aircraft.glb.015e28b3350a0cc1.orbo",
+    "Aircraft.glb.042c886ab47c71cb.orbo",
+    "Aircraft.glb.06b7f205db79c22a.orbo",
+    "Aircraft.glb.07804c1daa8f6071.orbo",
+    "Aircraft.glb.07e55b1c65f92746.orbo",
+    "Aircraft.glb.0861bac650d42673.orbo",
+    "Aircraft.glb.09d191fd5af5b74d.orbo",
+    "Aircraft.glb.1243a4db73e8097b.orbo",
+    "Aircraft.glb.149cb517f29b673e.orbo",
+    "Aircraft.glb.14ff9f351eeece65.orbo",
+    "Aircraft.glb.15c1c21163208451.orbo",
+    "Aircraft.glb.1f054cf0e9e9dd8e.orbo",
+    "Aircraft.glb.1f717072436230c9.orbo",
+    "Aircraft.glb.1fb3add3b8f37999.orbo",
+    "Aircraft.glb.240c8fe6a8288e86.orbo",
+    "Aircraft.glb.24a2af77a265d761.orbo",
+    "Aircraft.glb.2564acb7916a30a3.orbo",
+    "Aircraft.glb.271dcad6f9ca991d.orbo",
+    "Aircraft.glb.2cea583ba5c12d79.orbo",
+    "Aircraft.glb.2f312e36623232cc.orbo",
+    "Aircraft.glb.30f4587edc021a3f.orbo",
+    "Aircraft.glb.320f979b5ae6bca8.orbo",
+    "Aircraft.glb.36fa0062cbf4ba8c.orbo",
+    "Aircraft.glb.38d67caf2330860b.orbo",
+    "Aircraft.glb.390164874a87a639.orbo",
+    "Aircraft.glb.3d5fe841212b688e.orbo",
+    "Aircraft.glb.3d8e1afcd8b8144a.orbo",
+    "Aircraft.glb.3ea469983c5018a2.orbo",
+    "Aircraft.glb.3fb313a219ce345b.orbo",
+    "Aircraft.glb.40f31b991e19d1f3.orbo",
+    "Aircraft.glb.432a583825519db5.orbo",
+    "Aircraft.glb.43ceb1649b7232c2.orbo",
+    "Aircraft.glb.43d60555eaaf0d2e.orbo",
+    "Aircraft.glb.45f6e8e767ec6f6f.orbo",
+    "Aircraft.glb.48a1a81418a76d0b.orbo",
+    "Aircraft.glb.48b2ead9d3d60994.orbo",
+    "Aircraft.glb.4b52e00ef384584f.orbo",
+    "Aircraft.glb.4b5ac273be05e192.orbo",
+    "Aircraft.glb.4ca8a33a788a6dd8.orbo",
+    "Aircraft.glb.4e36d01beb93c9ae.orbo",
+    "Aircraft.glb.4e3c61a2ee379dec.orbo",
+    "Aircraft.glb.4f39e951cf6535c7.orbo",
+    "Aircraft.glb.536fb80c49b215a8.orbo",
+    "Aircraft.glb.572571c8bac08f86.orbo",
+    "Aircraft.glb.5b1d07efc9bf7cf5.orbo",
+    "Aircraft.glb.5c41dab52f1f1aff.orbo",
+    "Aircraft.glb.5d49ab21b22f1e10.orbo",
+    "Aircraft.glb.5d8094edd5774053.orbo",
+    "Aircraft.glb.5eaa92e30d312be7.orbo",
+    "Aircraft.glb.617479f1f31bcb49.orbo",
+    "Aircraft.glb.62b1230b099cf786.orbo",
+    "Aircraft.glb.633f065b961c82b2.orbo",
+    "Aircraft.glb.652bf85261aaccb2.orbo",
+    "Aircraft.glb.665ffc1f01f7816c.orbo",
+    "Aircraft.glb.6740d48971ff7e54.orbo",
+    "Aircraft.glb.6774a37945016d93.orbo",
+    "Aircraft.glb.677c34de26234830.orbo",
+    "Aircraft.glb.6d4126e46b560a10.orbo",
+    "Aircraft.glb.6e3c2ee60d2abd21.orbo",
+    "Aircraft.glb.6e41a95a47261716.orbo",
+    "Aircraft.glb.70347a40b84f0257.orbo",
+    "Aircraft.glb.719e9580eee13b7d.orbo",
+    "Aircraft.glb.71b8921433f47cbd.orbo",
+    "Aircraft.glb.7294f87a06623dd1.orbo",
+    "Aircraft.glb.75fca0136e2a094a.orbo",
+    "Aircraft.glb.77a4a5857a062a1f.orbo",
+    "Aircraft.glb.7821eae29cd30838.orbo",
+    "Aircraft.glb.79895412072a9d98.orbo",
+    "Aircraft.glb.7b5f83620f547194.orbo",
+    "Aircraft.glb.7c60fbe22bd56192.orbo",
+    "Aircraft.glb.811b9fa82d4267a9.orbo",
+    "Aircraft.glb.826d58a6c2d5d027.orbo",
+    "Aircraft.glb.82778ea30ceca83d.orbo",
+    "Aircraft.glb.86672afea71daf4a.orbo",
+    "Aircraft.glb.86b8433dac2e0063.orbo",
+    "Aircraft.glb.87d3bfd55b9566b6.orbo",
+    "Aircraft.glb.89f57fa4dd7490a1.orbo",
+    "Aircraft.glb.8aafbb09d29981a7.orbo",
+    "Aircraft.glb.9176e6cb23946371.orbo",
+    "Aircraft.glb.92eeb0cf6b553754.orbo",
+    "Aircraft.glb.94b5f43c07c883db.orbo",
+    "Aircraft.glb.973d1f50597ac778.orbo",
+    "Aircraft.glb.976128d2805b357b.orbo",
+    "Aircraft.glb.9c4cd69007037dfe.orbo",
+    "Aircraft.glb.9d0a080c6b2ce72f.orbo",
+    "Aircraft.glb.9df83d8adbb99e45.orbo",
+    "Aircraft.glb.a1a8af17884648f0.orbo",
+    "Aircraft.glb.a201b25b4ceece10.orbo",
+    "Aircraft.glb.a2703bac97bfa8f4.orbo",
+    "Aircraft.glb.a3cb44b64d2126dc.orbo",
+    "Aircraft.glb.a4aed69fa3cf9bc0.orbo",
+    "Aircraft.glb.a78172e222a2f1eb.orbo",
+    "Aircraft.glb.a85b37e14580b498.orbo",
+    "Aircraft.glb.aa5d9bcbde01abff.orbo",
+    "Aircraft.glb.aac6145c653a8a8d.orbo",
+    "Aircraft.glb.ac1eb06fe1800599.orbo",
+    "Aircraft.glb.aea0d46346319f5f.orbo",
+    "Aircraft.glb.b11b4073fbaf26ed.orbo",
+    "Aircraft.glb.b2caa8c5512cf8d5.orbo",
+    "Aircraft.glb.b44448e27c620739.orbo",
+    "Aircraft.glb.b5f4dacc0cc4390b.orbo",
+    "Aircraft.glb.b9d76b6ecabe8b78.orbo",
+    "Aircraft.glb.bbfb361908eb300a.orbo",
+    "Aircraft.glb.bda51098e3bbe522.orbo",
+    "Aircraft.glb.c199a46fe9952872.orbo",
+    "Aircraft.glb.c25a6abb7fb82051.orbo",
+    "Aircraft.glb.c285ea86b991faa0.orbo",
+    "Aircraft.glb.c42c028659334b86.orbo",
+    "Aircraft.glb.c6b3b0cda605a35a.orbo",
+    "Aircraft.glb.c7d573b07b21868c.orbo",
+    "Aircraft.glb.c8e5836d283c876a.orbo",
+    "Aircraft.glb.ca07c4f881f9a250.orbo",
+    "Aircraft.glb.ca96a8b704cd609b.orbo",
+    "Aircraft.glb.ce23a310e37b13cd.orbo",
+    "Aircraft.glb.cf4a5e121abfc035.orbo",
+    "Aircraft.glb.d0708d13dc6e12df.orbo",
+    "Aircraft.glb.d0cfc902579d157e.orbo",
+    "Aircraft.glb.d0fc1dff3b04b1e1.orbo",
+    "Aircraft.glb.d2d99d939db88244.orbo",
+    "Aircraft.glb.d4e44f71e3271e75.orbo",
+    "Aircraft.glb.d8f684b8cf830914.orbo",
+    "Aircraft.glb.d9e2cffbcf4fc68b.orbo",
+    "Aircraft.glb.dad075d970f54e64.orbo",
+    "Aircraft.glb.db7f27e4508d380e.orbo",
+    "Aircraft.glb.dcf185a22e5f6781.orbo",
+    "Aircraft.glb.e0817cfc0d0f4b71.orbo",
+    "Aircraft.glb.e17034607961fbcc.orbo",
+    "Aircraft.glb.e1847c4b85475e51.orbo",
+    "Aircraft.glb.e2cb66ff060014ac.orbo",
+    "Aircraft.glb.e3bd1deffdbebd21.orbo",
+    "Aircraft.glb.e750295d0cc79375.orbo",
+    "Aircraft.glb.e8ff37487c12720a.orbo",
+    "Aircraft.glb.e90c43d810648f6d.orbo",
+    "Aircraft.glb.eada5f688ac0acfd.orbo",
+    "Aircraft.glb.ee88fd2268af8d7c.orbo",
+    "Aircraft.glb.ef88a360c40c8057.orbo",
+    "Aircraft.glb.f4a936d16c7ef7a7.orbo",
+    "Aircraft.glb.ff121c87c4f913ae.orbo",
+    "Aircraft.glb.ff3ed405c8ab4f88.orbo",
+    "Aircraft.glb.ff8324afc41713a8.orbo",
+    "Aircraft.glb.prefab"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/0__u5e73_u9762.002",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4b5ac273be05e192.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.002"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_White: 12 indices @ 0\nInstrument_Gray: 6 indices @ 12"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/100__u5e73_u9762.020",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.826d58a6c2d5d027.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.020"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "204 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 6 indices @ 0\nDarkGray_Interior: 198 indices @ 6"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/101__u5e73_u9762.012",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.aea0d46346319f5f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.012"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_White: 12 indices @ 0\nInstrument_Gray: 6 indices @ 12"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/102__u67f1_u4f53.027",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.2f312e36623232cc.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.027"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 3570 indices @ 0\nInstrument_VS: 90 indices @ 3570"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/103__u67f1_u4f53.010",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.976128d2805b357b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.010"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "7476 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 7104 indices @ 0\nSilver_interior: 372 indices @ 7104"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/104__u67f1_u4f53.011",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.5c41dab52f1f1aff.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.011"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/105__u7acb_u65b9_u4f53.003",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.3ea469983c5018a2.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.003"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Interior: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/106__u67f1_u4f53.045",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.48b2ead9d3d60994.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.045"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1567 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "7476 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 7104 indices @ 0\nSilver_interior: 372 indices @ 7104"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/107__u67f1_u4f53.046",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a1a8af17884648f0.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.046"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/108__u7acb_u65b9_u4f53.043",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.40f31b991e19d1f3.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.043"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Interior: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/109__u5e73_u9762.008",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.665ffc1f01f7816c.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.008"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4119 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4119 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4119 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4119 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "7752 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "12 elements\nBlack_interior: 5106 indices @ 0\nDarkGray_Interior: 528 indices @ 5106\n_nameplate: 72 indices @ 5634\nGray_Interior: 180 indices @ 5706\nInstrument_Panels: 6 indices @ 5886\nBlack: 756 indices @ 5892\nInstrument_Engine: 84 indices @ 6648\nInstrument_Cockpit: 417 indices @ 6732\nSilver_interior: 219 indices @ 7149\nBlack_Floor: 156 indices @ 7368\nInstrument_FlapsTrim: 156 indices @ 7524\nInstrument_CAUTIONS: 72 indices @ 7680"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/10__u7acb_u65b9_u4f53.017",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4e36d01beb93c9ae.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.017"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/110__u67f1_u4f53",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ff3ed405c8ab4f88.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "9528 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray_Tires: 1920 indices @ 0\nGray_Metal: 2466 indices @ 1920\nDarkGray_Metal: 5142 indices @ 4386"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/111_Cube.001",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.b2caa8c5512cf8d5.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.001"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "846 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "846 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "846 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "846 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1644 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray: 12 indices @ 0\nDarkGray_Metal: 1632 indices @ 12"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/112__u7acb_u65b9_u4f53",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.15c1c21163208451.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6912 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nLeather: 6912 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/113__u7acb_u65b9_u4f53.031",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.43ceb1649b7232c2.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.031"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6912 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nLeather: 6912 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/114__u7acb_u65b9_u4f53.002",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.3fb313a219ce345b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.002"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6912 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nLeather: 6912 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/115__u7acb_u65b9_u4f53.041",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.f4a936d16c7ef7a7.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.041"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1348 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6912 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nLeather: 6912 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/116__u5e73_u9762.022",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4ca8a33a788a6dd8.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.022"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "580 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "580 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "580 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "580 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1716 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 1140 indices @ 0\nGray_Interior: 576 indices @ 1140"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/117_Cube",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c42c028659334b86.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "20267 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "20267 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "20267 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "20267 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "84534 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "7 elements\nGray: 72366 indices @ 0\nGlass: 1398 indices @ 72366\nBlack: 2718 indices @ 73764\nSilver_Metal: 2484 indices @ 76482\nGray2_Interior: 96 indices @ 78966\nLeather: 4728 indices @ 79062\nGlass_Lights: 744 indices @ 83790"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/118__u5e73_u9762",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.6740d48971ff7e54.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4920 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Metal: 3864 indices @ 0\nYellow_Metal: 1056 indices @ 3864"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/119__u5e73_u9762.006",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.09d191fd5af5b74d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.006"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "938 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4920 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Metal: 3864 indices @ 0\nYellow_Metal: 1056 indices @ 3864"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/11__u7acb_u65b9_u4f53.009",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d2d99d939db88244.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.009"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray2_Interior: 30 indices @ 0\nInstrument_AP: 6 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/120__u5e73_u9762.007",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.86672afea71daf4a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.007"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "942 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "942 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "942 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "942 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4920 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Metal: 3870 indices @ 0\nYellow_Metal: 1050 indices @ 3870"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/121_Plane",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.7c60fbe22bd56192.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Plane"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1274 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1274 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1274 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1274 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6912 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nTransparent_DarkGray: 5472 indices @ 0\nTransparent_Yellow: 1440 indices @ 5472"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/122_Cube.002",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e8ff37487c12720a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.002"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1066 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1066 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1066 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1066 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4080 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack: 2508 indices @ 0\nSilver_Metal: 1572 indices @ 2508"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/123_Cylinder.015",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a4aed69fa3cf9bc0.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.015"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "816 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "816 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "816 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "816 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1524 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 1524 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/124_Cylinder.016",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c199a46fe9952872.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.016"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "810 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "810 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "810 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "810 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1524 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 1524 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/125_Cube.003",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c8e5836d283c876a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.003"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "114 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "114 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "114 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "114 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "522 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray: 480 indices @ 0\nBlack: 42 indices @ 480"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/126__u67f1_u4f53.001",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.87d3bfd55b9566b6.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.001"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "9528 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray_Tires: 1920 indices @ 0\nGray_Metal: 2466 indices @ 1920\nDarkGray_Metal: 5142 indices @ 4386"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/127__u67f1_u4f53.002",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.43d60555eaaf0d2e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.002"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "5036 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "9528 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray_Tires: 1920 indices @ 0\nGray_Metal: 2466 indices @ 1920\nDarkGray_Metal: 5142 indices @ 4386"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/128__u5e73_u9762.023",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.b9d76b6ecabe8b78.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.023"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nPaper_Checklist: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/129__u5e73_u9762.024",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4e3c61a2ee379dec.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.024"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nPaper_Checklist: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/12__u5e73_u9762.017",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a78172e222a2f1eb.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.017"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "12 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 12 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/130_Cube.004",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.390164874a87a639.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.004"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2054 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "2054 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2054 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2054 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "11580 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray: 5136 indices @ 0\nGlass: 6444 indices @ 5136"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/131_Cube.005",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.1243a4db73e8097b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.005"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nBlack_Floor: 24 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/132_Cylinder.002",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.62b1230b099cf786.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.002"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1144 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1144 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1144 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1144 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2304 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 2304 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/133_Cylinder.004",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.015e28b3350a0cc1.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.004"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1422 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1422 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1422 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1422 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2718 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 2718 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/134_Cube.006",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ef88a360c40c8057.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.006"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "9144 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "5 elements\nGray: 4845 indices @ 0\nDarkGray_Metal: 564 indices @ 4845\nBlack: 471 indices @ 5409\nSilver_Metal: 180 indices @ 5880\nGlass_Lights: 3084 indices @ 6060"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/135_Cylinder.006",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.617479f1f31bcb49.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.006"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1136 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1136 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1136 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1136 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2304 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 2304 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/136_Cylinder.010",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.432a583825519db5.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.010"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1428 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1428 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1428 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1428 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2718 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 2718 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/137_Cube.007",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.9d0a080c6b2ce72f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.007"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2221 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "9144 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "5 elements\nGray: 4845 indices @ 0\nDarkGray_Metal: 564 indices @ 4845\nBlack: 471 indices @ 5409\nSilver_Metal: 180 indices @ 5880\nGlass_Lights: 3084 indices @ 6060"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/138_Cylinder.012",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.719e9580eee13b7d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cylinder.012"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "689 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "689 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "689 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "689 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1122 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray_ControlFaces: 1122 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/139_Cube.008",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.92eeb0cf6b553754.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "Cube.008"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "18512 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "18512 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "18512 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "18512 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "28182 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray: 26028 indices @ 0\nBlack: 450 indices @ 26028\nGlass_Lights: 1704 indices @ 26478"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/13__u7acb_u65b9_u4f53.039",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ac1eb06fe1800599.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.039"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "62 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "62 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "62 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "62 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "132 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nRed_Interior: 132 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/14__u7acb_u65b9_u4f53.028",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a201b25b4ceece10.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.028"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "388 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "388 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "388 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "388 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "804 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nDarkGray_Interior: 498 indices @ 0\nInstrument_VOLT: 168 indices @ 498\nBlack_interior: 138 indices @ 666"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/15__u5e73_u9762.001",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.77a4a5857a062a1f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.001"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/16__u5e73_u9762.010",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.1f054cf0e9e9dd8e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.010"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 3 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/17__u67f1_u4f53.017",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.75fca0136e2a094a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.017"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_CDI: 192 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/18__u67f1_u4f53.019",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.45f6e8e767ec6f6f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.019"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_CDI: 90 indices @ 0\nBlack: 282 indices @ 90"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/19__u5e73_u9762.009",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.48a1a81418a76d0b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.009"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/1__u67f1_u4f53.003",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.320f979b5ae6bca8.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.003"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 3570 indices @ 0\nInstrument_Airspeed: 90 indices @ 3570"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/20__u67f1_u4f53.016",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.aa5d9bcbde01abff.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.016"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3276 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nBlack_interior: 192 indices @ 0\nDarkGray_Interior: 2994 indices @ 192\nInstrument_CDI: 90 indices @ 3186"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/21__u5e73_u9762.013",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.14ff9f351eeece65.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.013"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/22__u5e73_u9762.015",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.677c34de26234830.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.015"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 3 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/23__u67f1_u4f53.029",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.149cb517f29b673e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.029"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_CDI: 192 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/24__u67f1_u4f53.030",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4b52e00ef384584f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.030"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_CDI: 90 indices @ 0\nBlack: 282 indices @ 90"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/25__u5e73_u9762.014",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.7b5f83620f547194.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.014"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 6 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/26__u67f1_u4f53.028",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a3cb44b64d2126dc.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.028"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1608 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3276 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nBlack_interior: 192 indices @ 0\nDarkGray_Interior: 2994 indices @ 192\nInstrument_CDI: 90 indices @ 3186"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/27__u7acb_u65b9_u4f53.011",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.bbfb361908eb300a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.011"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray_Interior: 30 indices @ 0\nInstrument_NAV_COMM: 6 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/28__u67f1_u4f53.015",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.3d8e1afcd8b8144a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.015"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray2_Interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/29__u67f1_u4f53.014",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.36fa0062cbf4ba8c.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.014"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Metal: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/2__u5e73_u9762.003",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.2564acb7916a30a3.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.003"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_White: 12 indices @ 0\nInstrument_Gray: 6 indices @ 12"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/30__u67f1_u4f53.013",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d0708d13dc6e12df.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.013"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/31__u7acb_u65b9_u4f53.010",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a85b37e14580b498.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.010"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/32__u7acb_u65b9_u4f53.023",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d0fc1dff3b04b1e1.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.023"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray_Interior: 30 indices @ 0\nInstrument_NAV_COMM: 6 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/33__u67f1_u4f53.036",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ce23a310e37b13cd.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.036"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray2_Interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/34__u67f1_u4f53.035",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ca96a8b704cd609b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.035"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Metal: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/35__u67f1_u4f53.034",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.89f57fa4dd7490a1.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.034"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/36__u7acb_u65b9_u4f53.022",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.652bf85261aaccb2.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.022"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/37__u67f1_u4f53.054",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d4e44f71e3271e75.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.054"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/38__u7acb_u65b9_u4f53.018",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.2cea583ba5c12d79.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.018"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "106 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/39__u67f1_u4f53.053",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c6b3b0cda605a35a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.053"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2952 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "5 elements\nRed_Metal: 1884 indices @ 0\nDarkGray_Metal: 648 indices @ 1884\nWhite: 204 indices @ 2532\nBlack: 90 indices @ 2736\nYellow_Metal: 126 indices @ 2826"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/3__u5e73_u9762.004",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d9e2cffbcf4fc68b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.004"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "10 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_White: 12 indices @ 0\nInstrument_Gray: 6 indices @ 12"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/40__u67f1_u4f53.043",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.30f4587edc021a3f.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.043"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "937 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2952 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "5 elements\nRed_Metal: 1884 indices @ 0\nDarkGray_Metal: 648 indices @ 1884\nWhite: 204 indices @ 2532\nBlack: 90 indices @ 2736\nYellow_Metal: 126 indices @ 2826"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/41__u7acb_u65b9_u4f53.026",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ee88fd2268af8d7c.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.026"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "40 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "40 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "40 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "40 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "60 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_White: 30 indices @ 0\nBlack_interior: 30 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/42__u5e73_u9762.018",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.1f717072436230c9.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.018"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "12 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Yellow: 12 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/43__u5e73_u9762.019",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.5d8094edd5774053.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.019"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "12 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Yellow: 12 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/44__u7acb_u65b9_u4f53.027",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.633f065b961c82b2.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.027"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "299 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "299 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "299 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "299 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "624 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 498 indices @ 0\nInstrument_FuelLevel: 126 indices @ 498"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/45__u7acb_u65b9_u4f53.019",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d0cfc902579d157e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.019"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "311 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "311 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "311 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "311 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "708 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack: 54 indices @ 0\nGray_Interior: 654 indices @ 54"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/46__u67f1_u4f53.042",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.06b7f205db79c22a.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.042"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/47__u67f1_u4f53.022",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.1fb3add3b8f37999.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.022"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "64 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Heading: 192 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/48__u67f1_u4f53.023",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.cf4a5e121abfc035.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.023"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Heading: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/49__u67f1_u4f53.021",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.bda51098e3bbe522.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.021"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1320 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1320 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1320 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1320 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2700 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nBlack_interior: 192 indices @ 0\nDarkGray_Interior: 2418 indices @ 192\nInstrument_Heading: 90 indices @ 2610"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/4__u67f1_u4f53.007",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.07804c1daa8f6071.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.007"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 3570 indices @ 0\nInstrument_Altimeter: 90 indices @ 3570"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/50__u67f1_u4f53.018",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.5d49ab21b22f1e10.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.018"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_HeadingBackup: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/51__u7acb_u65b9_u4f53.006",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.eada5f688ac0acfd.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.006"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "420 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "420 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "420 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "420 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "762 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nDarkGray_Interior: 660 indices @ 0\nInstrument_HeadingBackup: 96 indices @ 660\nInstrument_Yellow: 6 indices @ 756"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/52__u7acb_u65b9_u4f53.033",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ff121c87c4f913ae.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.033"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/53__u7acb_u65b9_u4f53.032",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.a2703bac97bfa8f4.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.032"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/54__u7acb_u65b9_u4f53.030",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.9df83d8adbb99e45.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.030"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "206 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "206 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "206 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "206 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "900 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray2_Interior: 30 indices @ 0\nInstrument_Panels: 6 indices @ 30\nSilver_interior: 864 indices @ 36"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/55__u5706_u73af",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.811b9fa82d4267a9.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5706\\u73af"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "90 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Horizontal: 90 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/56__u7acb_u65b9_u4f53.001",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.5eaa92e30d312be7.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.001"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nPrimitive_0: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/57__u67f1_u4f53.009",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.9176e6cb23946371.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.009"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2288 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "2288 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2288 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2288 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4440 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nDarkGray_Interior: 4236 indices @ 0\nInstrument_Horizontal: 192 indices @ 4236\nInstrument_Yellow: 12 indices @ 4428"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/58__u67f1_u4f53.008",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.24a2af77a265d761.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.008"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 90 indices @ 0\nDarkGray_Interior: 3570 indices @ 90"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/59__u7acb_u65b9_u4f53.037",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.b11b4073fbaf26ed.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.037"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/5__u7acb_u65b9_u4f53.016",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.6e3c2ee60d2abd21.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.016"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/60__u7acb_u65b9_u4f53.035",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.86b8433dac2e0063.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.035"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/61__u7acb_u65b9_u4f53.036",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.94b5f43c07c883db.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.036"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/62__u7acb_u65b9_u4f53.038",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.3d5fe841212b688e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.038"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/63__u7acb_u65b9_u4f53.034",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.38d67caf2330860b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.034"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/64__u7acb_u65b9_u4f53.029",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.6e41a95a47261716.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.029"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "479 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "479 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "479 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "479 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "2196 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nGray2_Interior: 30 indices @ 0\nInstrument_Panels: 6 indices @ 30\nSilver_interior: 2160 indices @ 36"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/65__u67f1_u4f53.039",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.aac6145c653a8a8d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.039"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_Gray: 282 indices @ 0\nInstrument_Panels: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/66__u67f1_u4f53.038",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.b44448e27c620739.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.038"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_Gray: 282 indices @ 0\nInstrument_Panels: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/67__u67f1_u4f53.041",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.dad075d970f54e64.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.041"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nSilver_Metal: 282 indices @ 0\nInstrument_Mag: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/68__u67f1_u4f53.040",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c285ea86b991faa0.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.040"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "384 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "384 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "384 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "384 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "756 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nInstrument_Mag: 282 indices @ 0\nSilver_interior: 474 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/69__u7acb_u65b9_u4f53.008",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.07e55b1c65f92746.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.008"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray_Interior: 30 indices @ 0\nInstrument_NAV_COMM: 6 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/6__u7acb_u65b9_u4f53.015",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.6774a37945016d93.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.015"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/70__u67f1_u4f53.006",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.7294f87a06623dd1.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.006"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray2_Interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/71__u67f1_u4f53.005",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.82778ea30ceca83d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.005"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Metal: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/72__u67f1_u4f53.004",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e3bd1deffdbebd21.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.004"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/73__u7acb_u65b9_u4f53.007",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.db7f27e4508d380e.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.007"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/74__u7acb_u65b9_u4f53.021",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.271dcad6f9ca991d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.021"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray_Interior: 30 indices @ 0\nInstrument_NAV_COMM: 6 indices @ 30"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/75__u67f1_u4f53.033",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.536fb80c49b215a8.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.033"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nGray2_Interior: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/76__u67f1_u4f53.032",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e17034607961fbcc.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.032"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDarkGray_Metal: 372 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/77__u67f1_u4f53.031",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.6d4126e46b560a10.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.031"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/78__u7acb_u65b9_u4f53.020",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.240c8fe6a8288e86.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.020"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "101 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/79__u7acb_u65b9_u4f53.051",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.b5f4dacc0cc4390b.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.051"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrumen_Panels_2: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/7__u7acb_u65b9_u4f53.012",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.4f39e951cf6535c7.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.012"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/80__u5e73_u9762.005",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.5b1d07efc9bf7cf5.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.005"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 18 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/81__u67f1_u4f53.012",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e2cb66ff060014ac.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.012"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 3570 indices @ 0\nInstrument_RPM: 90 indices @ 3570"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/82__u67f1_u4f53.047",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e0817cfc0d0f4b71.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.047"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "876 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nBlack: 876 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/83__u67f1_u4f53.048",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.71b8921433f47cbd.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.048"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "876 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nBlack: 876 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/84__u67f1_u4f53.026",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.9c4cd69007037dfe.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.026"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "876 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nBlack: 876 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/85__u67f1_u4f53.037",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.dcf185a22e5f6781.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.037"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "423 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "876 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nBlack: 876 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/86__u67f1_u4f53.025",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e750295d0cc79375.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.025"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "32 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "90 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_Black: 90 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/87__u5e73_u9762.011",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.042c886ab47c71cb.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.011"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "26 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "26 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "26 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "26 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 72 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/88__u67f1_u4f53.024",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.d8f684b8cf830914.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.024"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2120 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "2120 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2120 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "2120 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "4236 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "3 elements\nDarkGray_Interior: 3858 indices @ 0\nInstrument_White: 138 indices @ 3858\nInstrument_Slide: 240 indices @ 3996"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/89__u67f1_u4f53.052",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ff8324afc41713a8.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.052"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/8__u7acb_u65b9_u4f53.013",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.70347a40b84f0257.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.013"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/90__u67f1_u4f53.051",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.0861bac650d42673.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.051"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/91__u67f1_u4f53.050",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e1847c4b85475e51.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.050"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/92__u67f1_u4f53.049",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.973d1f50597ac778.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.049"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "192 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "372 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nBlack_interior: 282 indices @ 0\nInstrument_NAV_COMM: 90 indices @ 282"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/93__u7acb_u65b9_u4f53.025",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.ca07c4f881f9a250.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.025"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "103 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "103 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "103 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "103 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "234 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 120 indices @ 0\nInstrument_NAV_COMM: 114 indices @ 120"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/94__u7acb_u65b9_u4f53.040",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.572571c8bac08f86.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.040"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "72 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "108 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 108 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/95__u7acb_u65b9_u4f53.052",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.79895412072a9d98.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.052"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "88 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "88 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "88 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "88 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "132 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nSilver_Metal: 132 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/96__u5e73_u9762.016",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c7d573b07b21868c.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u5e73\\u9762.016"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "8 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "18 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_White: 18 indices @ 0"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/97__u67f1_u4f53.020",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.7821eae29cd30838.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u67f1\\u4f53.020"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1832 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "3660 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nDarkGray_Interior: 3570 indices @ 0\nInstrument_EGT: 90 indices @ 3570"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/98__u7acb_u65b9_u4f53.005",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.e90c43d810648f6d.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.005"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1052 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "1052 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1052 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "1052 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "1944 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "4 elements\nGray_Metal: 228 indices @ 0\nWhite: 90 indices @ 228\nWhite_Interior: 1152 indices @ 318\nBlack: 474 indices @ 1470"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/99__u7acb_u65b9_u4f53.024",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.c25a6abb7fb82051.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.024"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "354 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "354 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "354 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "354 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "792 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "2 elements\nGray_Metal: 96 indices @ 0\nRed_Interior: 696 indices @ 96"
+          }
+        ]
+      },
+      {
+        "Key": "Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/9__u7acb_u65b9_u4f53.014",
+        "TypeName": "Mesh",
+        "BlobName": "Aircraft.glb.8aafbb09d29981a7.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "\\u7acb\\u65b9\\u4f53.014"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "24 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "36 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nInstrument_AP: 36 indices @ 0"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false,
+    "Prefab": "Aircraft.glb.prefab"
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Examples/FlightTraining/Meshes/Aircraft.glb",
+        "Length": 19453628,
+        "Modified": 639279742421801815,
+        "ContentHash": "9e8e407ed033e2bd2d858626abff31f1c8fd3637e186884a90b6b84c4980647c"
+      }
+    ],
+    "SettingsHash": "47f37544caa81de91239e860969d37a0637aafa64773ccca44e7c83884667ce7",
+    "ContentHash": "08ffa178cc1c81d14fdd0792b3d98c2f0c38200bfbf54cdce0561a87c49d909c"
+  }
+}

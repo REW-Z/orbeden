@@ -1,0 +1,80 @@
+{
+  "Version": 10,
+  "Source": "Builtin/Shaders/ui_custom_template.orbshader",
+  "Settings": {},
+  "Dependencies": [],
+  "Blobs": [
+    "ui_custom_template.orbshader.02df183b183318df.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Shaders/ui_custom_template.orbshader",
+        "TypeName": "Shader",
+        "BlobName": "ui_custom_template.orbshader.02df183b183318df.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "ui_custom_template"
+          },
+          {
+            "Name": "vertexPath",
+            "TypeName": "std::string",
+            "Value": "Builtin/Shaders/ui_custom_template.orbshader"
+          },
+          {
+            "Name": "fragmentPath",
+            "TypeName": "std::string",
+            "Value": "Builtin/Shaders/ui_custom_template.orbshader"
+          },
+          {
+            "Name": "vertexSource",
+            "TypeName": "std::string",
+            "Value": "#version 430 core\n//\u9876\u70B9\u5C5E\u6027\uFF1A0 \u4F4D\u7F6E\uFF08\u753B\u5E03\u672C\u5730\uFF09\u30011 UV\u30012 \u9876\u70B9\u8272\u3002UI \u9876\u70B9\u5E03\u5C40\u56FA\u5B9A\uFF0C\u4E0D\u80FD\u6539\u3002\nlayout(location = 0) in vec3 a_Position;\nlayout(location = 1) in vec2 a_Uv;\nlayout(location = 2) in vec4 a_Tint;\n\nuniform mat4 u_Model;\nuniform mat4 u_ViewProjection;\n\nout vec2 v_Uv;\nout vec4 v_Tint;\n\nvoid main()\n{\n    v_Uv = a_Uv;\n    v_Tint = a_Tint;\n    gl_Position = u_ViewProjection * u_Model * vec4(a_Position, 1.0);\n}\n\n"
+          },
+          {
+            "Name": "fragmentSource",
+            "TypeName": "std::string",
+            "Value": "#version 430 core\nin vec2 v_Uv;\nin vec4 v_Tint;\n\nuniform sampler2D u_Texture;\nuniform sampler2D u_Coverage;\nuniform vec4 u_Tint;\nuniform vec3 u_ViewportSize;\nuniform vec3 u_ViewportOrigin;\nuniform float u_DistanceRange;\nuniform int u_MaterialKind;\nuniform int u_CoverageEnabled;\n\n//\u672C\u6A21\u677F\u7684\u793A\u4F8B\u53C2\u6570\uFF1A\u5728\u6750\u8D28\u8D44\u6E90\u4E0A\u6309\u540D\u5B57\u914D\u7F6E\u3002\n//u_Grayscale 0..1 \u7070\u5EA6\u5F3A\u5EA6\uFF0Cu_Dissolve 0..1 \u6EB6\u89E3\u9608\u503C\uFF0Cu_DissolveEdge \u6EB6\u89E3\u8FB9\u7F18\u5BBD\u5EA6\u3002\nuniform float u_Grayscale;\nuniform float u_Dissolve;\nuniform float u_DissolveEdge;\nuniform vec4 u_DissolveColor;\n\nout vec4 FragColor;\n\n//MSDF \u7684\u901A\u9053\u53D6\u4E2D\u4F4D\u6570\uFF0CSDF \u76F4\u63A5\u53D6 R\u3002\nfloat Median(vec3 value)\n{\n    return max(min(value.r, value.g), min(max(value.r, value.g), value.b));\n}\n\n//\u8DDD\u79BB\u573A\u8986\u76D6\u7387\uFF1A\u628A\u7EB9\u7406\u503C\u6309\u5C4F\u5E55\u7A7A\u95F4\u53D6\u503C\u8303\u56F4\u8FD8\u539F\u6210 0..1 \u7684\u8986\u76D6\u3002\nfloat DistanceCoverage(float field)\n{\n    vec2 unitRange = vec2(u_DistanceRange) / vec2(textureSize(u_Texture, 0));\n    vec2 screenTexSize = vec2(1.0) / max(fwidth(v_Uv), vec2(1e-8));\n    float screenRange = max(0.5 * dot(unitRange, screenTexSize), 1.0);\n    return clamp(screenRange * (field - 0.5) \u002B 0.5, 0.0, 1.0);\n}\n\n//\u6309\u5185\u7F6E\u6A21\u5F0F\u53D6\u672C\u7247\u6BB5\u7684\u6E90\u8272\uFF0C\u76F4\u901A\u4E0E\u9884\u4E58\u7684 Alpha \u8BED\u4E49\u5728\u8FD9\u91CC\u5206\u5F00\u3002\nvec4 SampleSource()\n{\n    if (u_MaterialKind == 3) return vec4(1.0, 1.0, 1.0, DistanceCoverage(texture(u_Texture, v_Uv).r));\n    if (u_MaterialKind == 4) return vec4(1.0, 1.0, 1.0, DistanceCoverage(Median(texture(u_Texture, v_Uv).rgb)));\n    vec4 sampled = texture(u_Texture, v_Uv);\n    return u_MaterialKind == 2 ? vec4(1.0, 1.0, 1.0, sampled.r) : sampled;\n}\n\nvoid main()\n{\n    vec4 source = SampleSource();\n    vec4 tint = u_Tint * v_Tint;\n\n    //\u8F6F\u906E\u7F69\uFF1A\u6CA1\u6709\u88C1\u526A\u5C42\u65F6\u8986\u76D6\u7387\u4E3A 1\uFF0C\u6709\u7684\u5C42\u7531\u8986\u76D6\u7387\u6C60\u63D0\u4F9B\u3002\n    float coverage = 1.0;\n    if (u_CoverageEnabled == 1)\n    {\n        coverage = texture(u_Coverage, (gl_FragCoord.xy - u_ViewportOrigin.xy) / u_ViewportSize.xy).r;\n    }\n\n    //\u7070\u5EA6\uFF1A\u6309\u4EAE\u5EA6\u628A\u989C\u8272\u62C9\u5411\u7070\u9636\u3002\n    float luma = dot(source.rgb, vec3(0.299, 0.587, 0.114));\n    source.rgb = mix(source.rgb, vec3(luma), clamp(u_Grayscale, 0.0, 1.0));\n\n    //\u6EB6\u89E3\uFF1A\u4F4E\u4E8E\u9608\u503C\u7684\u50CF\u7D20\u4E22\u5F03\uFF0C\u8FB9\u7F18\u5E26\u7528 u_DissolveColor \u63CF\u4E00\u5708\u3002\n    float threshold = 1.0 - clamp(u_Dissolve, 0.0, 1.0);\n    float edge = max(u_DissolveEdge, 1e-4);\n    if (u_Dissolve \u003E 0.0)\n    {\n        float noise = fract(sin(dot(v_Uv, vec2(12.9898, 78.233))) * 43758.5453);\n        if (noise \u003C threshold) discard;\n        float edgeMix = smoothstep(threshold, threshold \u002B edge, noise);\n        source = mix(vec4(u_DissolveColor.rgb, 1.0), source, edgeMix);\n    }\n\n    //\u5408\u6210\uFF1AUI \u8F93\u51FA\u4E00\u5F8B\u9884\u4E58\uFF0C\u76F4\u901A\u7EB9\u7406\u6309\u8986\u76D6\u7387\u6C42\u9884\u4E58\uFF0C\u9884\u4E58\u7EB9\u7406\u4E0D\u80FD\u518D\u4E58\u4E00\u6B21\u81EA\u8EAB Alpha\u3002\n    float alpha = source.a * tint.a * coverage;\n    vec3 rgb = u_MaterialKind == 1\n        ? source.rgb * tint.rgb * tint.a * coverage\n        : source.rgb * tint.rgb * alpha;\n    FragColor = vec4(rgb, alpha);\n}\n"
+          },
+          {
+            "Name": "passes",
+            "TypeName": "List\u003CShaderPass\u003E",
+            "Value": "1 elements\nDefault"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CShaderTextureSlot\u003E",
+            "Value": "2 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CShaderColorSlot\u003E",
+            "Value": "2 elements"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CShaderFloatSlot\u003E",
+            "Value": "4 elements"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Shaders/ui_custom_template.orbshader",
+        "Length": 4524,
+        "Modified": 639270243029755722,
+        "ContentHash": "c044c661bbf3c685f94096cdba11e2f33264c40ca712ebe12f847af2af4ad459"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "41ad5ed753cf821b3f37a4aaaf63546b5b174d998062113c87e137ba4ac44f7c"
+  }
+}

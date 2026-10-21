@@ -1,1 +1,63 @@
-{"Version":8,"Source":"Builtin/Materials/pbs_rough_metal.orbmat","Settings":{},"Dependencies":["Builtin/Shaders/pbs_metallic.orbshader"],"Blobs":["pbs_rough_metal.orbmat.503d9fed383a9871.orbo","pbs_rough_metal.orbmat.52458b2dba0a7e32.orbo"],"Data":{"Objects":[{"Key":"Builtin/Materials/pbs_rough_metal.orbmat","TypeName":"Material","BlobName":"pbs_rough_metal.orbmat.52458b2dba0a7e32.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"pbs_rough_metal"},{"Name":"textureSlots","TypeName":"List\u003CMaterialTextureSlot\u003E","Value":"0 elements"},{"Name":"colorSlots","TypeName":"List\u003CMaterialColorSlot\u003E","Value":"1 elements\nu_DiffuseColor: 0.560000002 0.569999993 0.579999983 1"},{"Name":"floatSlots","TypeName":"List\u003CMaterialFloatSlot\u003E","Value":"3 elements\nu_Metallic: 1.000000\nu_Roughness: 0.550000\nu_Occlusion: 1.000000"},{"Name":"shader","TypeName":"Ref\u003CShader\u003E","Value":"Builtin/Shaders/pbs_metallic.orbshader"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Materials/pbs_rough_metal.orbmat","Length":172,"Modified":639258340438177878,"ContentHash":"a86f124cdf578f4d260c09fa3810b430d71d19f4e71752d9adaac88ea439e73e"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"2883c85acdba8193a935478bf851648341c54eafe31ec29beaca5ab89121c0fe"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Materials/pbs_rough_metal.orbmat",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Shaders/pbs_metallic.orbshader"
+  ],
+  "Blobs": [
+    "pbs_rough_metal.orbmat.503d9fed383a9871.orbo",
+    "pbs_rough_metal.orbmat.52458b2dba0a7e32.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Materials/pbs_rough_metal.orbmat",
+        "TypeName": "Material",
+        "BlobName": "pbs_rough_metal.orbmat.52458b2dba0a7e32.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "pbs_rough_metal"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "1 elements\nu_DiffuseColor: 0.560000002 0.569999993 0.579999983 1"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "3 elements\nu_Metallic: 1.000000\nu_Roughness: 0.550000\nu_Occlusion: 1.000000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/pbs_metallic.orbshader"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Materials/pbs_rough_metal.orbmat",
+        "Length": 172,
+        "Modified": 639258340438177878,
+        "ContentHash": "a86f124cdf578f4d260c09fa3810b430d71d19f4e71752d9adaac88ea439e73e"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "2883c85acdba8193a935478bf851648341c54eafe31ec29beaca5ab89121c0fe"
+  }
+}

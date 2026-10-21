@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 using Orbeden;
 
 namespace OrbedenEditor;
@@ -8,9 +9,8 @@ internal static class EditorAssetInspection
 {
     internal sealed record Field(string Name, string TypeName, string Value);
     internal sealed record Asset(string Key, string TypeName, string BlobName, List<Field> Fields);
-    internal sealed record ModelNode(string Name, int ParentIndex, string LocalMatrix, string MeshKey, List<string> MaterialKeys);
     internal sealed record Result(IReadOnlyList<Asset> Objects, IReadOnlyList<string> Messages, bool IsStale = false, bool IsLoading = false,
-        IReadOnlyList<ModelNode>? ModelNodes = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Prefab = null);
     private static string contentRoot = string.Empty;
     internal static string SourcePath { get; private set; } = string.Empty;
     internal static string ObjectKey { get; private set; } = string.Empty;

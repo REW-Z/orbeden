@@ -37,6 +37,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ItemGroup>
+    <!--项目根的 Build/ 只放构建产物；必须在 SDK targets 之前排除，
+        SDK 随后加入的 Build/Native/Generated 源码不受影响。-->
+    <ClCompile Remove="$(MSBuildProjectDirectory)\Build\**" />
+  </ItemGroup>
   <Import Project="$(OrbedenSdkRoot)\Native\Orbeden.Native.targets" Condition="Exists('$(OrbedenSdkRoot)\Native\Orbeden.Native.targets')" />
   <!--共享属性表缺失时提前报错，否则后续会以一堆莫名其妙的编译错误收场。-->
   <Target Name="ValidateOrbedenSdk" BeforeTargets="ClCompile">

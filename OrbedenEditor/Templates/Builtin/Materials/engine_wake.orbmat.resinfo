@@ -1,1 +1,63 @@
-{"Version":8,"Source":"Builtin/Materials/engine_wake.orbmat","Settings":{},"Dependencies":["Builtin/Shaders/heat_wake.orbshader"],"Blobs":["engine_wake.orbmat.3392a041021bc8e4.orbo","engine_wake.orbmat.89217025750ed713.orbo"],"Data":{"Objects":[{"Key":"Builtin/Materials/engine_wake.orbmat","TypeName":"Material","BlobName":"engine_wake.orbmat.3392a041021bc8e4.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"engine_wake"},{"Name":"textureSlots","TypeName":"List\u003CMaterialTextureSlot\u003E","Value":"0 elements"},{"Name":"colorSlots","TypeName":"List\u003CMaterialColorSlot\u003E","Value":"0 elements"},{"Name":"floatSlots","TypeName":"List\u003CMaterialFloatSlot\u003E","Value":"7 elements\nu_DistortionStrength: 0.035000\nu_NoiseScale: 5.000000\nu_DistortionSpeed: 4.000000\nu_EdgeFade: 0.080000\nu_SoftIntersection: 0.500000\nu_WakeShape: 1.000000\nu_Opacity: 1.000000"},{"Name":"shader","TypeName":"Ref\u003CShader\u003E","Value":"Builtin/Shaders/heat_wake.orbshader"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Materials/engine_wake.orbmat","Length":231,"Modified":639258340438147871,"ContentHash":"232eca502983818919d5f0161736a48f00ffeb1121307c02e9e85c66936dde73"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"440f9fe2e99bc1f3392613a906f82986d1adb44c51977e1965a79e6468cc1e4a"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Materials/engine_wake.orbmat",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Shaders/heat_wake.orbshader"
+  ],
+  "Blobs": [
+    "engine_wake.orbmat.3392a041021bc8e4.orbo",
+    "engine_wake.orbmat.89217025750ed713.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Materials/engine_wake.orbmat",
+        "TypeName": "Material",
+        "BlobName": "engine_wake.orbmat.3392a041021bc8e4.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "engine_wake"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "7 elements\nu_DistortionStrength: 0.035000\nu_NoiseScale: 5.000000\nu_DistortionSpeed: 4.000000\nu_EdgeFade: 0.080000\nu_SoftIntersection: 0.500000\nu_WakeShape: 1.000000\nu_Opacity: 1.000000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/heat_wake.orbshader"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Materials/engine_wake.orbmat",
+        "Length": 231,
+        "Modified": 639258340438147871,
+        "ContentHash": "232eca502983818919d5f0161736a48f00ffeb1121307c02e9e85c66936dde73"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "440f9fe2e99bc1f3392613a906f82986d1adb44c51977e1965a79e6468cc1e4a"
+  }
+}

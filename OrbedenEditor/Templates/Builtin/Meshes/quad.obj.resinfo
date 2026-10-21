@@ -1,1 +1,109 @@
-{"Version":8,"Source":"Builtin/Meshes/quad.obj","Settings":{},"Dependencies":["Builtin/Materials/default.mtl","Builtin/Shaders/blinn_phong.orbshader"],"Blobs":["quad.obj.39aefe6b6fb60952.orbo","quad.obj.51baf169891f18f9.orbo","quad.obj.8b40871342033ac4.orbo"],"Data":{"Objects":[{"Key":"Builtin/Meshes/quad.obj//Material/DefaultMaterial","TypeName":"Material","BlobName":"quad.obj.51baf169891f18f9.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"DefaultMaterial"},{"Name":"textureSlots","TypeName":"List\u003CMaterialTextureSlot\u003E","Value":"0 elements"},{"Name":"colorSlots","TypeName":"List\u003CMaterialColorSlot\u003E","Value":"2 elements\nu_DiffuseColor: 0.779999971 0.779999971 0.779999971 1\nu_SpecularColor: 0.319999993 0.319999993 0.319999993 1"},{"Name":"floatSlots","TypeName":"List\u003CMaterialFloatSlot\u003E","Value":"1 elements\nu_Shininess: 32.000000"},{"Name":"shader","TypeName":"Ref\u003CShader\u003E","Value":"Builtin/Shaders/blinn_phong.orbshader"}]},{"Key":"Builtin/Meshes/quad.obj//Mesh/Main","TypeName":"Mesh","BlobName":"quad.obj.39aefe6b6fb60952.orbo","Fields":[{"Name":"name","TypeName":"std::string","Value":"quad"},{"Name":"vertices","TypeName":"List\u003Cvector3\u003E","Value":"4 elements"},{"Name":"texcoords","TypeName":"List\u003Cvector2\u003E","Value":"4 elements"},{"Name":"normals","TypeName":"List\u003Cvector3\u003E","Value":"4 elements"},{"Name":"tangents","TypeName":"List\u003Cvector3\u003E","Value":"4 elements"},{"Name":"indices","TypeName":"List\u003Cuint32\u003E","Value":"6 elements"},{"Name":"subMeshes","TypeName":"List\u003CSubMesh\u003E","Value":"1 elements\nDefaultMaterial: 6 indices @ 0"}]}],"Messages":[],"IsStale":false,"IsLoading":false},"ImportStatus":{"Inputs":[{"Path":"Builtin/Meshes/quad.obj","Length":416,"Modified":639256655744608691,"ContentHash":"64a26fe6b4f611ac32e3aaeab250d4ca814186ba99741a6399eba7b2e2599c2f"}],"SettingsHash":"46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e","ContentHash":"abfc95008ec34a3f3c0255bd624faea81efb540767877cfbc2b1c12cacc2da32"}}
+{
+  "Version": 10,
+  "Source": "Builtin/Meshes/quad.obj",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Materials/default.mtl",
+    "Builtin/Shaders/blinn_phong.orbshader"
+  ],
+  "Blobs": [
+    "quad.obj.39aefe6b6fb60952.orbo",
+    "quad.obj.51baf169891f18f9.orbo",
+    "quad.obj.8b40871342033ac4.orbo",
+    "quad.obj.prefab"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Builtin/Meshes/quad.obj//Material/DefaultMaterial",
+        "TypeName": "Material",
+        "BlobName": "quad.obj.51baf169891f18f9.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "DefaultMaterial"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "2 elements\nu_DiffuseColor: 0.779999971 0.779999971 0.779999971 1\nu_SpecularColor: 0.319999993 0.319999993 0.319999993 1"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "1 elements\nu_Shininess: 32.000000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/blinn_phong.orbshader"
+          }
+        ]
+      },
+      {
+        "Key": "Builtin/Meshes/quad.obj//Mesh/Main",
+        "TypeName": "Mesh",
+        "BlobName": "quad.obj.39aefe6b6fb60952.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "quad"
+          },
+          {
+            "Name": "vertices",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "texcoords",
+            "TypeName": "List\u003Cvector2\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "normals",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "tangents",
+            "TypeName": "List\u003Cvector3\u003E",
+            "Value": "4 elements"
+          },
+          {
+            "Name": "indices",
+            "TypeName": "List\u003Cuint32\u003E",
+            "Value": "6 elements"
+          },
+          {
+            "Name": "subMeshes",
+            "TypeName": "List\u003CSubMesh\u003E",
+            "Value": "1 elements\nDefaultMaterial: 6 indices @ 0"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false,
+    "Prefab": "quad.obj.prefab"
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Builtin/Meshes/quad.obj",
+        "Length": 416,
+        "Modified": 639256655744608691,
+        "ContentHash": "64a26fe6b4f611ac32e3aaeab250d4ca814186ba99741a6399eba7b2e2599c2f"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "abfc95008ec34a3f3c0255bd624faea81efb540767877cfbc2b1c12cacc2da32"
+  }
+}

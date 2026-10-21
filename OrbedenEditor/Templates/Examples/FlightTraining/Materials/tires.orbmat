@@ -1,0 +1,6 @@
+#fuselage Copy
+shader Builtin/Shaders/pbs_metallic.orbshader
+drawqueue Auto
+color u_DiffuseColor 0.0597015023 0.0597015023 0.0597015023 1
+float u_Metallic 0.0199999996
+float u_Roughness 0.899999976

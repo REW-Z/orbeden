@@ -1,0 +1,63 @@
+{
+  "Version": 10,
+  "Source": "Examples/FlightTraining/Materials/tires.orbmat",
+  "Settings": {},
+  "Dependencies": [
+    "Builtin/Shaders/pbs_metallic.orbshader"
+  ],
+  "Blobs": [
+    "tires.orbmat.503d9fed383a9871.orbo",
+    "tires.orbmat.8f0c9a318cddffad.orbo"
+  ],
+  "Data": {
+    "Objects": [
+      {
+        "Key": "Examples/FlightTraining/Materials/tires.orbmat",
+        "TypeName": "Material",
+        "BlobName": "tires.orbmat.8f0c9a318cddffad.orbo",
+        "Fields": [
+          {
+            "Name": "name",
+            "TypeName": "std::string",
+            "Value": "tires"
+          },
+          {
+            "Name": "textureSlots",
+            "TypeName": "List\u003CMaterialTextureSlot\u003E",
+            "Value": "0 elements"
+          },
+          {
+            "Name": "colorSlots",
+            "TypeName": "List\u003CMaterialColorSlot\u003E",
+            "Value": "1 elements\nu_DiffuseColor: 0.0597015023 0.0597015023 0.0597015023 1"
+          },
+          {
+            "Name": "floatSlots",
+            "TypeName": "List\u003CMaterialFloatSlot\u003E",
+            "Value": "2 elements\nu_Metallic: 0.020000\nu_Roughness: 0.900000"
+          },
+          {
+            "Name": "shader",
+            "TypeName": "Ref\u003CShader\u003E",
+            "Value": "Builtin/Shaders/pbs_metallic.orbshader"
+          }
+        ]
+      }
+    ],
+    "Messages": [],
+    "IsStale": false,
+    "IsLoading": false
+  },
+  "ImportStatus": {
+    "Inputs": [
+      {
+        "Path": "Examples/FlightTraining/Materials/tires.orbmat",
+        "Length": 192,
+        "Modified": 639281729502938217,
+        "ContentHash": "ce7e9398b326dbd4208f87dc3bbdb50d6725a4e8b7b5f5ed7d38f02855aff3c1"
+      }
+    ],
+    "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
+    "ContentHash": "2fd088cc3357c6ed41c510a6e50b9e633d6c0e12430943c9cefcc406b3f7e118"
+  }
+}

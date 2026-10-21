@@ -16,7 +16,7 @@
             <Component type="StaticMeshRenderer" stableId="world://preparing/8033961a-61f5-40fb-8082-6a8c876a83fb/StaticMeshRenderer/c0795d56-61e2-4607-8785-f7fec6ea9b25">
                 <Field name="enabled" type="bool" value="true" />
                 <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/ground.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:61:world://runtime/Material/8954ddc0-85c5-49e9-8a95-15b76e283e24" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:61:world://runtime/Material/2260aeb5-c889-4a90-8523-0a770ce19286" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="false" />
                 <Field name="receiveShadows" type="bool" value="true" />
@@ -363,160 +363,550 @@
             <Field name="steeringWheel" type="bool" value="false" />
             <Field name="steerAngle" type="float32" value="0" />
         </Component>
-        <Ens stableId="world://FlightTraining/main/aircraft_body" name="AircraftBody" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_body/Transform/f2031651-4b55-46fd-b643-b2d3e8d88e7a">
-                <Field name="localPosition" type="vector3" value="0 0 0" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.550000012 0.419999987 2.0999999" />
+        <Ens stableId="world://ens/b7c27585-41f2-445c-8671-d3b32d996344" name="FuseLage" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/6e199193-c5c0-4f4c-91a3-f74dc133b810">
+                <Field name="localPosition" type="vector3" value="2.34902996e-06 0.519182682 -0.104167938" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/855311e8-7233-4c77-8a43-cf3ed8412439/StaticMeshRenderer/78e58aaf-37e8-496d-9240-4a93850a1d41">
+            <Component type="StaticMeshRenderer" stableId="world://ens/0aabe80b-d57a-42ae-b36d-946004fcbdf7">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/117_Cube" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="7:49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+                <Field name="drawStrategy" type="DrawStrategy" value="0" />
+            </Component>
+            <Ens stableId="world://ens/2172966b-cf19-4d6a-9025-bbcbcb3d4ac1" name="FrontGear" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/f6b435a3-829a-43df-8cce-32bc76fa27d0">
+                    <Field name="localPosition" type="vector3" value="-0.000376306823 2.78049183 1.18638659" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/ed3cd7a2-ed18-4790-b9fd-03db52ddfdfc">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/111_Cube.001" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+                <Ens stableId="world://ens/36525fff-d738-4b0b-b2ae-bb50f5623999" name="Wheel_Front" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/4e509ba6-fa95-4832-be81-387636b80b55">
+                        <Field name="localPosition" type="vector3" value="0 -0.379879504 0.200670615" />
+                        <Field name="localRotation" type="quaternion" value="0.707106829 0 0 0.707106709" />
+                        <Field name="localScale" type="vector3" value="1 1.00000012 1.00000012" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/b41370f0-8a79-4db6-b7da-722870833682">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/110__u67f1_u4f53" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="3:46:Examples/FlightTraining/Materials/tires.orbmat32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+            <Ens stableId="world://ens/ac85258b-b7ce-4805-bf38-29d7e83e5666" name="Seat_1" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/b2e430d4-1b9b-4d5c-ad4b-b297ef7bb5de">
+                    <Field name="localPosition" type="vector3" value="0.415931314 0.0220804214 -0.452914" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/bf8c430b-87ba-4d9f-bbb9-e9cf8e54067d">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/112__u7acb_u65b9_u4f53" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+            </Ens>
+            <Ens stableId="world://ens/65c01cd2-bed1-42f8-9b22-94e6eb995f6a" name="Seat_1.001" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/b694c291-2359-4953-8d00-1a42a3b674e9">
+                    <Field name="localPosition" type="vector3" value="0.300000042 -1.49897885 -0.397312582" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/d4b0b45c-5408-4842-9c03-ee6304d603fd">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/113__u7acb_u65b9_u4f53.031" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+            </Ens>
+            <Ens stableId="world://ens/34580db9-36f4-4bb1-b856-817948cd9733" name="Seat_2" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/e6c29107-fdeb-4343-9063-2764309700c8">
+                    <Field name="localPosition" type="vector3" value="-0.415931314 0.0220804214 -0.452914" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/28391cad-8d68-4265-b987-b343c7effbff">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/114__u7acb_u65b9_u4f53.002" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+            </Ens>
+            <Ens stableId="world://ens/127f6bf2-8f97-4097-b45b-78e0bb4b86b1" name="Seat_2.001" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/a2337153-10a8-4055-b237-12663b75444e">
+                    <Field name="localPosition" type="vector3" value="-0.300000042 -1.49897885 -0.397312582" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/ec1a4b98-e9b0-425f-a9eb-4ac7c61928f2">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/115__u7acb_u65b9_u4f53.041" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+            </Ens>
+        </Ens>
+        <Ens stableId="world://ens/e6250c24-6ac6-4611-82a9-8a06006222e7" name="Propeller" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/2f7bfbdd-641f-4ca2-8130-5ea96cdfccf6">
+                <Field name="localPosition" type="vector3" value="-0.000735281908 0.872986555 -3.8860054" />
+                <Field name="localRotation" type="quaternion" value="-0.707106829 0 0 0.707106829" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer" stableId="world://ens/8ccf5def-554b-4f5b-b34e-3d606b9e755b">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/122_Cube.002" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+                <Field name="drawStrategy" type="DrawStrategy" value="0" />
+            </Component>
+            <Ens stableId="world://ens/720ff2dd-079e-411f-97ec-11a517129284" name="Rotator" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/720ff2dd-079e-411f-97ec-11a517129284/Transform/37d84e10-1126-4c4b-8ca1-688f127a0c1d">
+                    <Field name="localPosition" type="vector3" value="0 0 0" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Ens stableId="world://ens/7858c3a2-24ab-4857-aaa4-1569ea4ad268" name="Fan1" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/56c75c4e-f166-4a6d-a9a6-37f140321809">
+                        <Field name="localPosition" type="vector3" value="5.82076609e-11 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/91a07f96-77ac-491a-a4ef-16170f40de78">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/118__u5e73_u9762" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:49:Examples/FlightTraining/Materials/fuselage.orbmat32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+                <Ens stableId="world://ens/8d638ea6-918e-4981-b4a8-09781fd7ebf6" name="Fan2" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/fe3ccd85-5ea4-43eb-9744-54e4743967b0">
+                        <Field name="localPosition" type="vector3" value="5.82076609e-11 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/036529e7-cb91-4d53-983c-16ca3e4e88a7">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/119__u5e73_u9762.006" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:49:Examples/FlightTraining/Materials/fuselage.orbmat32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+                <Ens stableId="world://ens/44308c25-96d6-4556-846b-98a417c5558b" name="Fan3" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/133d9270-9894-4d36-b6e1-50be62fe9005">
+                        <Field name="localPosition" type="vector3" value="5.82076609e-11 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/9b820a45-f49b-4862-8f84-f1e3e66c0624">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/120__u5e73_u9762.007" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:49:Examples/FlightTraining/Materials/fuselage.orbmat32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+            <Ens stableId="world://ens/39a9fd0a-1516-4305-9591-d22bbd285600" name="Fans_Rotating" localActive="false" static="false">
+                <Component type="Transform" stableId="world://ens/317a0ad2-6180-4c96-8cda-ddda9b80a651">
+                    <Field name="localPosition" type="vector3" value="0 0 0" />
+                    <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Component type="StaticMeshRenderer" stableId="world://ens/fb8cd31c-939e-48db-8808-0daa3892ec79">
+                    <Field name="enabled" type="bool" value="true" />
+                    <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/121_Plane" />
+                    <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
+                    <Field name="drawLayer" type="uint32" value="1" />
+                    <Field name="castShadows" type="bool" value="true" />
+                    <Field name="receiveShadows" type="bool" value="true" />
+                    <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                </Component>
+            </Ens>
+        </Ens>
+        <Ens stableId="world://ens/f1f6cd0b-a0b2-41bd-9d36-b7f7930d7d54" name="HorTail" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/e9bcfb7d-1e56-4c77-bfc5-23df37f7b051">
+                <Field name="localPosition" type="vector3" value="8.44136196e-07 2.50133896 6.75783539" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer" stableId="world://ens/00bc97ca-0162-4938-a24a-0c63c671857f">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/125_Cube.003" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat" />
+                <Field name="drawLayer" type="uint32" value="1" />
+                <Field name="castShadows" type="bool" value="true" />
+                <Field name="receiveShadows" type="bool" value="true" />
+                <Field name="drawStrategy" type="DrawStrategy" value="0" />
+            </Component>
+            <Ens stableId="world://ens/d1d596c0-ab3c-4611-9877-5aadf0378cfa" name="Axis_ElevatorL" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/21d3b5cc-abbc-482a-bf50-f473e76ce655">
+                    <Field name="localPosition" type="vector3" value="1.19554484 -0.141738012 0" />
+                    <Field name="localRotation" type="quaternion" value="0 0.0370443389 0 0.999313653" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Ens stableId="world://ens/6218dcd3-b222-4dc7-aaf7-9844ad20cf54" name="ControlFace_ElevatorL" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/76c4f5dc-f2ed-4449-ac13-4498ed467063">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/201f5311-7cd5-4458-8525-b64518335bca">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/123_Cylinder.015" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+            <Ens stableId="world://ens/fc922bcf-5d25-4d13-8474-a55b1dd1d101" name="Axis_ElevatorR" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/bcff69d5-94ec-4aba-901e-6a2a79d1ef19">
+                    <Field name="localPosition" type="vector3" value="-1.19553995 -0.141738012 0" />
+                    <Field name="localRotation" type="quaternion" value="0 -0.0370443389 0 0.999313653" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Ens stableId="world://ens/89e520e7-8ba4-4990-910e-695c7c53c8f4" name="ControlFace_ElevatorR" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/ce453b44-722c-4da8-aec1-662136af5bd2">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/7e58f7f8-2487-400c-a80d-4ed00f0f9ecd">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/124_Cylinder.016" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+        </Ens>
+        <Ens stableId="world://ens/57d71d9e-392e-4c8c-b243-86f2177f88c0" name="Wheel_L" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/85e90836-bb15-47ec-ac3a-3557ce89d9b9">
+                <Field name="localPosition" type="vector3" value="-1.51499748 -0.889336586 0.415401459" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer" stableId="world://ens/cdd87227-9cff-4ce0-b2d5-a1e8c556f25d">
+                <Field name="enabled" type="bool" value="true" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/126__u67f1_u4f53.001" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="3:46:Examples/FlightTraining/Materials/tires.orbmat32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/aircraft_nose" name="AircraftNose" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_nose/Transform/9dda6325-cf18-4c47-b6c8-e97283eb724e">
-                <Field name="localPosition" type="vector3" value="0 -0.0500000007 -2.3499999" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.419999987 0.319999993 0.419999987" />
+        <Ens stableId="world://ens/029f1dd7-dc47-4f46-8693-aea18e544a3f" name="Wheel_R" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/f3bdb5bc-ef36-492b-931d-f85c88cb4cb7">
+                <Field name="localPosition" type="vector3" value="1.51500225 -0.867726684 0.415401459" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/9281025b-c10e-4bb7-8160-94c0841e1a26/StaticMeshRenderer/b354b4b3-a8a0-46f7-b2b9-b5be070f0db5">
+            <Component type="StaticMeshRenderer" stableId="world://ens/08a87291-9013-4db5-8e6e-5d6a9b0e8d1a">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/127__u67f1_u4f53.002" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="3:46:Examples/FlightTraining/Materials/tires.orbmat32:Builtin/Materials/default.orbmat32:Builtin/Materials/default.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/aircraft_wing" name="AircraftWing" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_wing/Transform/71207c43-6e0b-4493-9f16-c87f0379da98">
-                <Field name="localPosition" type="vector3" value="0 0 0" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="3.4000001 0.0900000036 0.720000029" />
+        <Ens stableId="world://ens/229b210c-2d89-48ae-ba9c-f6ed9570f0b3" name="Paper_Checklist" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/0c01f49e-4526-4e5b-945e-a3cf6a432f6a">
+                <Field name="localPosition" type="vector3" value="-0.734944463 0.625551939 -0.744709015" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/17f21242-b839-45ce-8efa-32095395c410/StaticMeshRenderer/0af22020-c29a-4d46-94e2-481d928a264c">
+            <Component type="StaticMeshRenderer" stableId="world://ens/b9576887-a9ba-4eb3-8976-07bc7040bf97">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/128__u5e73_u9762.023" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/aircraft_tail_wing" name="AircraftTailWing" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_tail_wing/Transform/93f15a3c-8a0b-4eb8-a551-b26e6f1d9459">
-                <Field name="localPosition" type="vector3" value="0 0.150000006 1.72000003" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="1.35000002 0.0700000003 0.419999987" />
+        <Ens stableId="world://ens/3f578666-4467-4776-a692-465b21bf4b6e" name="Paper_Checklist2" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/67a2e30a-8f49-400b-a97c-f27b4c9a40a5">
+                <Field name="localPosition" type="vector3" value="-0.74189806 0.625897169 -0.744682312" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/db2ea521-5a54-45ce-a3fe-c02658301c92/StaticMeshRenderer/f758ac92-636c-4348-815f-7ddba4bce111">
+            <Component type="StaticMeshRenderer" stableId="world://ens/89cff29e-42f4-42dd-b277-cd9a2f6d9aa8">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/129__u5e73_u9762.024" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/aircraft_tail_fin" name="AircraftTailFin" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_tail_fin/Transform/4aa02484-5f44-418a-9722-a6f4ce227081">
-                <Field name="localPosition" type="vector3" value="0 0.720000029 1.72000003" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.100000001 0.75 0.419999987" />
+        <Ens stableId="world://ens/db9a17a1-9f38-4be0-80dd-0b4905331a62" name="DoorAxis" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/f7f70cbd-251e-409b-960d-855975010b4c">
+                <Field name="localPosition" type="vector3" value="2.26393217e-06 1.26502705 -1.33324432" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/b60d8ac1-d6cd-431f-b2f8-28976fe36c80/StaticMeshRenderer/1ec157a0-59bb-42e5-9edb-515548971d10">
+        </Ens>
+        <Ens stableId="world://ens/1275979b-c5d9-4f82-9358-c2d133a80fab" name="CabinDoor" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/ac521d65-fb2f-46b5-8b4d-d2aa1dfc52a1">
+                <Field name="localPosition" type="vector3" value="2.26393217e-06 1.27664042 -1.33324432" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer" stableId="world://ens/780a85ba-b5ed-472c-ad5d-ed66b014eb35">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/130_Cube.004" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="2:49:Examples/FlightTraining/Materials/fuselage.orbmat45:Examples/FlightTraining/Materials/rain.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/aircraft_cockpit" name="AircraftCockpit" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/aircraft_cockpit/Transform/7be507f7-21ee-4eb1-83ea-00a209da9df4">
-                <Field name="localPosition" type="vector3" value="0 0.479999989 -0.620000005" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.360000014 0.25 0.579999983" />
+        <Ens stableId="world://ens/b4ddf603-27f0-4b5c-9e38-29cff8baf362" name="MassCenter" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/6954b8c0-a8bf-4d71-ae98-5e20155ec2b7">
+                <Field name="localPosition" type="vector3" value="2.34902996e-06 0.519182682 -0.104167938" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/e0e0727b-f5ed-4d83-9a2d-8d63e8070361/StaticMeshRenderer/aaf0d768-3bc2-4583-bb12-650bf8286182">
+        </Ens>
+        <Ens stableId="world://ens/1c16cd93-9451-49e5-915f-beb7f80392bf" name="Floor" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/2ac5599b-bc16-4262-934d-569fa6a2579d">
+                <Field name="localPosition" type="vector3" value="2.34902996e-06 0.519182682 -0.104167938" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
+            </Component>
+            <Component type="StaticMeshRenderer" stableId="world://ens/b7084204-54fb-442a-a2aa-52282e2db34a">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/marking.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:68:Examples/FlightTraining/Meshes/marking.obj//Material/MarkingMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/131_Cube.005" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
                 <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/wheel_nose" name="WheelNose" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/wheel_nose/Transform/793b23c2-5200-4020-bb7c-a5527689a374">
-                <Field name="localPosition" type="vector3" value="0 -0.870000005 -2.1500001" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.119999997 0.239999995 0.239999995" />
+        <Ens stableId="world://ens/4b11d63e-0bdc-4333-bd36-1c5f9ac4c2af" name="WingL" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/ce781ac7-d891-4f74-b948-575f79888ff8">
+                <Field name="localPosition" type="vector3" value="-4.69560957 0.487511516 0.15933609" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/a598188d-e9a2-40f9-8121-351e916ace97/StaticMeshRenderer/d0fb9e5c-69fe-4fb1-a4a0-fbe170caade8">
+            <Component type="StaticMeshRenderer" stableId="world://ens/5463f98c-8501-42ee-b437-27052a0c9d8f">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/134_Cube.006" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="5:49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
+            <Ens stableId="world://ens/eca3ea32-fd7a-4520-a350-54fbf66e03b0" name="Axis_AileronL" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/321f8706-af3f-4b94-9b13-e762a265f930">
+                    <Field name="localPosition" type="vector3" value="0.00560283661 -0.849930286 0.0487964675" />
+                    <Field name="localRotation" type="quaternion" value="-0.00102157251 0.0394366831 -0.0258752778 0.998886466" />
+                    <Field name="localScale" type="vector3" value="0.99999994 1 1" />
+                </Component>
+                <Ens stableId="world://ens/98b59f78-7517-4ffb-ac27-de71e19fc6c1" name="ControlFace_AileronL" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/c2f1211f-1c1b-4015-ae36-a193408fc418">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/dcc0955b-785e-4ba6-9fce-41c29bfeffde">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/132_Cylinder.002" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+            <Ens stableId="world://ens/1ad2a9e9-42c4-4cf5-ac5d-27ff0f5af48e" name="Axis_FlapsL" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/8bb36109-103b-4ae0-b252-fe30fecd321a">
+                    <Field name="localPosition" type="vector3" value="-1.59588575 -0.86250186 0.184513852" />
+                    <Field name="localRotation" type="quaternion" value="-0.00102157251 0.0394366831 -0.0258752778 0.998886466" />
+                    <Field name="localScale" type="vector3" value="0.99999994 1 1" />
+                </Component>
+                <Ens stableId="world://ens/6cc45bb4-116c-4854-9163-2364db1ed88f" name="ControlFace_FlapsL" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/77a6f12f-c5d2-4813-b950-57ed0e325bd3">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/a7c7eb45-fd18-4114-9d08-110228357502">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/133_Cylinder.004" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/wheel_left" name="WheelLeft" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/wheel_left/Transform/f0914fa1-4970-453a-b40e-cbf30a8b3b18">
-                <Field name="localPosition" type="vector3" value="-0.75 -0.810000002 0.550000012" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.119999997 0.300000012 0.300000012" />
+        <Ens stableId="world://ens/21037ced-6d82-47b1-8f7a-ebe0a938a8c5" name="WingR" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/13067c3c-4242-495c-b707-e3f805147728">
+                <Field name="localPosition" type="vector3" value="4.69561434 0.487511516 0.15933609" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/56aa2982-e5f9-4d8f-adcc-a2ebc1b480b3/StaticMeshRenderer/8a2a6945-1ff2-415f-ad3e-6b494e5d960c">
+            <Component type="StaticMeshRenderer" stableId="world://ens/1e79b29b-f558-4ab6-854c-dd5b84913369">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/137_Cube.007" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="5:49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
+            <Ens stableId="world://ens/038529d9-3dd3-404e-85e5-941654ed7d78" name="Axis_AileronR" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/acf288b1-417b-457d-b67c-0a4f2fe36b33">
+                    <Field name="localPosition" type="vector3" value="0.00560283661 -0.849930286 0.0487964675" />
+                    <Field name="localRotation" type="quaternion" value="-0.00102157251 -0.0394366831 0.0258752778 0.998886466" />
+                    <Field name="localScale" type="vector3" value="0.99999994 1 1" />
+                </Component>
+                <Ens stableId="world://ens/e829d110-cda5-42ac-b5fa-3bc0fa645bd3" name="ControlFace_AileronR" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/6891b6e2-0a32-4504-a2ca-3d868c809dbf">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/4ce1823c-8533-443b-b71b-2d7275f0a346">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/135_Cylinder.006" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
+            <Ens stableId="world://ens/4d15187e-6962-4042-90bb-86e49773ff7e" name="Axis_FlapsR" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/b36d7a2d-ae1d-4e9a-98a5-56f4ac0b9307">
+                    <Field name="localPosition" type="vector3" value="1.59589005 -0.86250186 0.184513852" />
+                    <Field name="localRotation" type="quaternion" value="-0.00102157251 -0.0394366831 0.0258752778 0.998886466" />
+                    <Field name="localScale" type="vector3" value="0.99999994 1 1" />
+                </Component>
+                <Ens stableId="world://ens/8f8208d4-dafc-451a-a1f9-7e283f435c4b" name="ControlFace_FlapsR" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/3902f76d-bbe8-402f-acab-9eecba7d8b15">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/a0c44361-4a4e-4943-bf1b-ceb8a053b9c2">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/136_Cylinder.010" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
         </Ens>
-        <Ens stableId="world://FlightTraining/main/wheel_right" name="WheelRight" localActive="true" static="false">
-            <Component type="Transform" stableId="world://FlightTraining/main/wheel_right/Transform/66c543a4-b777-4226-909a-f57662926631">
-                <Field name="localPosition" type="vector3" value="0.75 -0.810000002 0.550000012" />
-                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
-                <Field name="localScale" type="vector3" value="0.119999997 0.300000012 0.300000012" />
+        <Ens stableId="world://ens/fb7cc1bd-bb2d-4692-88b8-ec87719e12a3" name="Tail" localActive="true" static="false">
+            <Component type="Transform" stableId="world://ens/79fc7bf1-7471-4a19-9e19-4c1d6db7db9f">
+                <Field name="localPosition" type="vector3" value="2.98066766e-06 2.32107949 6.8999176" />
+                <Field name="localRotation" type="quaternion" value="3.09086197e-08 -0.707106709 0.707106829 3.09086161e-08" />
+                <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
-            <Component type="StaticMeshRenderer" stableId="world://preparing/5946ef59-e261-4642-a714-d0a5159ca7af/StaticMeshRenderer/174c0609-4766-4202-8e69-adbdf85889da">
+            <Component type="StaticMeshRenderer" stableId="world://ens/60e0117a-348c-4b46-94dd-18c5a38c6e29">
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/cube.obj//Mesh/Main" />
-                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:62:Examples/FlightTraining/Meshes/cube.obj//Material/CubeMaterial" />
+                <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/139_Cube.008" />
+                <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="3:49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat49:Examples/FlightTraining/Materials/fuselage.orbmat" />
                 <Field name="drawLayer" type="uint32" value="1" />
                 <Field name="castShadows" type="bool" value="true" />
-                <Field name="receiveShadows" type="bool" value="false" />
+                <Field name="receiveShadows" type="bool" value="true" />
                 <Field name="drawStrategy" type="DrawStrategy" value="0" />
             </Component>
+            <Ens stableId="world://ens/0e94365b-036d-4c5c-b52b-5b5ef1a6cca9" name="Axis_Rudder" localActive="true" static="false">
+                <Component type="Transform" stableId="world://ens/4c01ed96-f4c2-4cf1-8690-ed34c995f948">
+                    <Field name="localPosition" type="vector3" value="0 -0.0351620056 0.599541128" />
+                    <Field name="localRotation" type="quaternion" value="-0.166596636 0 0 0.986025155" />
+                    <Field name="localScale" type="vector3" value="1 1 1" />
+                </Component>
+                <Ens stableId="world://ens/38168955-8451-4454-b685-29407e1e147a" name="Axis_Rudder.001" localActive="true" static="false">
+                    <Component type="Transform" stableId="world://ens/ccd064ab-b9e2-4b45-b3b6-36fe9e0535b4">
+                        <Field name="localPosition" type="vector3" value="0 0 0" />
+                        <Field name="localRotation" type="quaternion" value="0 0 0 1" />
+                        <Field name="localScale" type="vector3" value="1 1 1" />
+                    </Component>
+                    <Component type="StaticMeshRenderer" stableId="world://ens/99776a3b-86a7-4248-8e74-84164b6a85cf">
+                        <Field name="enabled" type="bool" value="true" />
+                        <Field name="mesh" type="Ref&lt;Mesh&gt;" value="Examples/FlightTraining/Meshes/Aircraft.glb//Mesh/138_Cylinder.012" />
+                        <Field name="materials" type="List&lt;Ref&lt;Material&gt;&gt;" value="1:32:Builtin/Materials/default.orbmat" />
+                        <Field name="drawLayer" type="uint32" value="1" />
+                        <Field name="castShadows" type="bool" value="true" />
+                        <Field name="receiveShadows" type="bool" value="true" />
+                        <Field name="drawStrategy" type="DrawStrategy" value="0" />
+                    </Component>
+                </Ens>
+            </Ens>
         </Ens>
         <Ens stableId="world://FlightTraining/main/flight_camera" name="ChaseCamera" localActive="true" static="false">
             <Component type="Transform" stableId="world://FlightTraining/main/flight_camera/Transform/fab79020-9b48-41bb-b701-6ce2805928a0">
-                <Field name="localPosition" type="vector3" value="0 3.20000005 9" />
-                <Field name="localRotation" type="quaternion" value="-0.130500004 0 0 0.991400003" />
+                <Field name="localPosition" type="vector3" value="0 0 18" />
+                <Field name="localRotation" type="quaternion" value="0 0 0 1" />
                 <Field name="localScale" type="vector3" value="1 1 1" />
             </Component>
             <Component type="FlightOrbitCamera" stableId="world://preparing/51676b64-60bc-4e93-a47e-796b5823dd7e/FlightOrbitCamera/e15d82b6-9737-4b71-b610-541d2c8ccb97">
                 <Field name="domain" type="ScriptDomain" value="Native" />
                 <Field name="enabled" type="bool" value="true" />
-                <Field name="distance" type="float32" value="10" />
+                <Field name="distance" type="float32" value="18" />
                 <Field name="sensitivity" type="float32" value="0.25" />
                 <Field name="defaultElevation" type="float32" value="18" />
             </Component>
