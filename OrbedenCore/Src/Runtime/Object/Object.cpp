@@ -14,6 +14,7 @@
 #include "ResourceManager/ResourceManager.h"
 #include "Runtime/World.h"
 #include "Runtime/Object/Script.h"
+#include "Scripting/ScriptInterop.h"
 
 #include <algorithm>
 #include <array>
@@ -734,6 +735,7 @@ bool Object::EndModuleTypeRegistration(bool commit)
 
 bool Object::UnregisterModuleTypes(void* moduleOwner)
 {
+    if (ScriptInterop::HasActiveCalls()) return false;
     if (!moduleOwner) return false;
 
     ObjectRuntime& runtime = GetObjectRuntime();

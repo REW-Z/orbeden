@@ -3,7 +3,9 @@
 // </auto-generated>
 
 #include "Runtime/Reflection.h"
+#include "Runtime/World.h"
 #include "Runtime/Object/Script.h"
+#include "Scripting/ScriptInteropInvoke.h"
 #include "Runtime/Object/Camera.h"
 #include "Runtime/Object/CharacterController.h"
 #include "Runtime/Object/Collider.h"
@@ -65,6 +67,33 @@ public:
         return true;
     }
 
+    //按具体类型读取 Camera.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->GetEnabled()) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetEnabled(value != 0);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.fieldOfView 字段
     static std::string Get_Camera_fieldOfView(Object* object)
     {
@@ -92,6 +121,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->fieldOfView, value);
+    }
+
+    //按具体类型读取 Camera.fieldOfView
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_fieldOfView(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->fieldOfView;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.fieldOfView，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_fieldOfView(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->fieldOfView = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.nearPlane 字段
@@ -123,6 +179,33 @@ public:
         return Reflection::SetFromValue(instance->nearPlane, value);
     }
 
+    //按具体类型读取 Camera.nearPlane
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_nearPlane(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->nearPlane;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.nearPlane，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_nearPlane(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->nearPlane = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.farPlane 字段
     static std::string Get_Camera_farPlane(Object* object)
     {
@@ -150,6 +233,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->farPlane, value);
+    }
+
+    //按具体类型读取 Camera.farPlane
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_farPlane(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->farPlane;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.farPlane，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_farPlane(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->farPlane = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.depth 字段
@@ -181,6 +291,33 @@ public:
         return Reflection::SetFromValue(instance->depth, value);
     }
 
+    //按具体类型读取 Camera.depth
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_depth(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->depth;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.depth，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_depth(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->depth = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.drawLayerMask 字段
     static std::string Get_Camera_drawLayerMask(Object* object)
     {
@@ -208,6 +345,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->drawLayerMask, value);
+    }
+
+    //按具体类型读取 Camera.drawLayerMask
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_drawLayerMask(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->drawLayerMask;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.drawLayerMask，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_drawLayerMask(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->drawLayerMask = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.clearMode 字段
@@ -268,6 +432,33 @@ public:
         return Reflection::SetFromValue(instance->clearColor, value);
     }
 
+    //按具体类型读取 Camera.clearColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_clearColor(Object* object, color* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->clearColor;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.clearColor，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_clearColor(Object* object, color value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->clearColor = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.viewportX 字段
     static std::string Get_Camera_viewportX(Object* object)
     {
@@ -295,6 +486,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->viewportX, value);
+    }
+
+    //按具体类型读取 Camera.viewportX
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_viewportX(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->viewportX;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.viewportX，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_viewportX(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->viewportX = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.viewportY 字段
@@ -326,6 +544,33 @@ public:
         return Reflection::SetFromValue(instance->viewportY, value);
     }
 
+    //按具体类型读取 Camera.viewportY
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_viewportY(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->viewportY;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.viewportY，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_viewportY(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->viewportY = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.viewportWidth 字段
     static std::string Get_Camera_viewportWidth(Object* object)
     {
@@ -353,6 +598,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->viewportWidth, value);
+    }
+
+    //按具体类型读取 Camera.viewportWidth
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_viewportWidth(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->viewportWidth;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.viewportWidth，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_viewportWidth(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->viewportWidth = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.viewportHeight 字段
@@ -384,6 +656,33 @@ public:
         return Reflection::SetFromValue(instance->viewportHeight, value);
     }
 
+    //按具体类型读取 Camera.viewportHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_viewportHeight(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->viewportHeight;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.viewportHeight，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_viewportHeight(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->viewportHeight = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Camera.overrideExposure 字段
     static std::string Get_Camera_overrideExposure(Object* object)
     {
@@ -411,6 +710,33 @@ public:
         Camera* instance = static_cast<Camera*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->overrideExposure, value);
+    }
+
+    //按具体类型读取 Camera.overrideExposure
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_overrideExposure(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->overrideExposure) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.overrideExposure，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_overrideExposure(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->overrideExposure = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Camera.exposure 字段
@@ -442,6 +768,33 @@ public:
         return Reflection::SetFromValue(instance->exposure, value);
     }
 
+    //按具体类型读取 Camera.exposure
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Camera_exposure(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->exposure;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Camera.exposure，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Camera_exposure(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Camera*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->exposure = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Camera.GetEnabled 方法
     static Reflection::Value Invoke_Camera_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -452,6 +805,26 @@ public:
         auto result = instance->GetEnabled();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Camera.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_GetEnabled_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Camera.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_GetEnabled_0(Object* object, uint8* output)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetEnabled() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Camera.SetEnabled 方法
@@ -468,6 +841,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Camera.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_SetEnabled_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Camera.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Camera.IsRenderSceneEligible 方法
     static Reflection::Value Invoke_Camera_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -478,6 +874,26 @@ public:
         auto result = instance->IsRenderSceneEligible();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Camera.IsRenderSceneEligible 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_IsRenderSceneEligible_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        return ScriptInterop::WriteResult(instance->IsRenderSceneEligible(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Camera.IsRenderSceneEligible
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_IsRenderSceneEligible_2(Object* object, uint8* output)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsRenderSceneEligible() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Camera.OnAttach 方法
@@ -492,6 +908,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Camera.OnAttach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_OnAttach_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        instance->OnAttach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Camera.OnAttach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_OnAttach_3(Object* object)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            instance->OnAttach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Camera.OnDetach 方法
     static Reflection::Value Invoke_Camera_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -502,6 +939,27 @@ public:
         instance->OnDetach();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Camera.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_OnDetach_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Camera.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_OnDetach_4(Object* object)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Camera.OnWorldActiveChanged 方法
@@ -516,6 +974,29 @@ public:
         instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Camera.OnWorldActiveChanged 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Camera_OnWorldActiveChanged_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Camera* instance = static_cast<Camera*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->OnWorldActiveChanged(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Camera.OnWorldActiveChanged
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Camera_OnWorldActiveChanged_5(Object* object, uint8 value0)
+    {
+        try
+        {
+            Camera* instance = static_cast<Camera*>(object);
+            instance->OnWorldActiveChanged(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CharacterController.enabled 字段
@@ -547,6 +1028,33 @@ public:
         return Reflection::SetFromValue(instance->enabled, value);
     }
 
+    //按具体类型读取 CharacterController.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->enabled) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->enabled = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CharacterController.radius 字段
     static std::string Get_CharacterController_radius(Object* object)
     {
@@ -574,6 +1082,33 @@ public:
         CharacterController* instance = static_cast<CharacterController*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //按具体类型读取 CharacterController.radius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_radius(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->radius;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.radius，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_radius(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->radius = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CharacterController.height 字段
@@ -605,6 +1140,33 @@ public:
         return Reflection::SetFromValue(instance->height, value);
     }
 
+    //按具体类型读取 CharacterController.height
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_height(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->height;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.height，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_height(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->height = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CharacterController.halfExtents 字段
     static std::string Get_CharacterController_halfExtents(Object* object)
     {
@@ -632,6 +1194,33 @@ public:
         CharacterController* instance = static_cast<CharacterController*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->halfExtents, value);
+    }
+
+    //按具体类型读取 CharacterController.halfExtents
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_halfExtents(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->halfExtents;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.halfExtents，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_halfExtents(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->halfExtents = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CharacterController.stepOffset 字段
@@ -663,6 +1252,33 @@ public:
         return Reflection::SetFromValue(instance->stepOffset, value);
     }
 
+    //按具体类型读取 CharacterController.stepOffset
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_stepOffset(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->stepOffset;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.stepOffset，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_stepOffset(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->stepOffset = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CharacterController.contactOffset 字段
     static std::string Get_CharacterController_contactOffset(Object* object)
     {
@@ -690,6 +1306,33 @@ public:
         CharacterController* instance = static_cast<CharacterController*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->contactOffset, value);
+    }
+
+    //按具体类型读取 CharacterController.contactOffset
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_contactOffset(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->contactOffset;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.contactOffset，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_contactOffset(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->contactOffset = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CharacterController.slopeLimit 字段
@@ -721,6 +1364,33 @@ public:
         return Reflection::SetFromValue(instance->slopeLimit, value);
     }
 
+    //按具体类型读取 CharacterController.slopeLimit
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_slopeLimit(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->slopeLimit;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.slopeLimit，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_slopeLimit(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->slopeLimit = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CharacterController.minMoveDistance 字段
     static std::string Get_CharacterController_minMoveDistance(Object* object)
     {
@@ -748,6 +1418,33 @@ public:
         CharacterController* instance = static_cast<CharacterController*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->minMoveDistance, value);
+    }
+
+    //按具体类型读取 CharacterController.minMoveDistance
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_minMoveDistance(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->minMoveDistance;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.minMoveDistance，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_minMoveDistance(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->minMoveDistance = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CharacterController.collisionLayer 字段
@@ -779,6 +1476,33 @@ public:
         return Reflection::SetFromValue(instance->collisionLayer, value);
     }
 
+    //按具体类型读取 CharacterController.collisionLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_collisionLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->collisionLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.collisionLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_collisionLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->collisionLayer = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CharacterController.collisionMask 字段
     static std::string Get_CharacterController_collisionMask(Object* object)
     {
@@ -806,6 +1530,33 @@ public:
         CharacterController* instance = static_cast<CharacterController*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //按具体类型读取 CharacterController.collisionMask
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CharacterController_collisionMask(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->collisionMask;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CharacterController.collisionMask，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CharacterController_collisionMask(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CharacterController*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->collisionMask = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Collider.enabled 字段
@@ -837,6 +1588,33 @@ public:
         return Reflection::SetFromValue(instance->enabled, value);
     }
 
+    //按具体类型读取 Collider.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->enabled) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->enabled = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Collider.isTrigger 字段
     static std::string Get_Collider_isTrigger(Object* object)
     {
@@ -864,6 +1642,33 @@ public:
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->isTrigger, value);
+    }
+
+    //按具体类型读取 Collider.isTrigger
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_isTrigger(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->isTrigger) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.isTrigger，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_isTrigger(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->isTrigger = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Collider.center 字段
@@ -895,6 +1700,33 @@ public:
         return Reflection::SetFromValue(instance->center, value);
     }
 
+    //按具体类型读取 Collider.center
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_center(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->center;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.center，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_center(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->center = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Collider.staticFriction 字段
     static std::string Get_Collider_staticFriction(Object* object)
     {
@@ -922,6 +1754,33 @@ public:
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->staticFriction, value);
+    }
+
+    //按具体类型读取 Collider.staticFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_staticFriction(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->staticFriction;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.staticFriction，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_staticFriction(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->staticFriction = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Collider.dynamicFriction 字段
@@ -953,6 +1812,33 @@ public:
         return Reflection::SetFromValue(instance->dynamicFriction, value);
     }
 
+    //按具体类型读取 Collider.dynamicFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_dynamicFriction(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->dynamicFriction;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.dynamicFriction，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_dynamicFriction(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->dynamicFriction = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Collider.restitution 字段
     static std::string Get_Collider_restitution(Object* object)
     {
@@ -980,6 +1866,33 @@ public:
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->restitution, value);
+    }
+
+    //按具体类型读取 Collider.restitution
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_restitution(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->restitution;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.restitution，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_restitution(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->restitution = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Collider.collisionLayer 字段
@@ -1011,6 +1924,33 @@ public:
         return Reflection::SetFromValue(instance->collisionLayer, value);
     }
 
+    //按具体类型读取 Collider.collisionLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_collisionLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->collisionLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.collisionLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_collisionLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->collisionLayer = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Collider.collisionMask 字段
     static std::string Get_Collider_collisionMask(Object* object)
     {
@@ -1038,6 +1978,33 @@ public:
         Collider* instance = static_cast<Collider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->collisionMask, value);
+    }
+
+    //按具体类型读取 Collider.collisionMask
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Collider_collisionMask(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->collisionMask;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Collider.collisionMask，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Collider_collisionMask(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Collider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->collisionMask = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 BoxCollider.halfExtents 字段
@@ -1069,6 +2036,33 @@ public:
         return Reflection::SetFromValue(instance->halfExtents, value);
     }
 
+    //按具体类型读取 BoxCollider.halfExtents
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_BoxCollider_halfExtents(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<BoxCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->halfExtents;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 BoxCollider.halfExtents，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_BoxCollider_halfExtents(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<BoxCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->halfExtents = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 SphereCollider.radius 字段
     static std::string Get_SphereCollider_radius(Object* object)
     {
@@ -1096,6 +2090,33 @@ public:
         SphereCollider* instance = static_cast<SphereCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->radius, value);
+    }
+
+    //按具体类型读取 SphereCollider.radius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_SphereCollider_radius(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<SphereCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->radius;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 SphereCollider.radius，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_SphereCollider_radius(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<SphereCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->radius = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 CapsuleCollider.radius 字段
@@ -1127,6 +2148,33 @@ public:
         return Reflection::SetFromValue(instance->radius, value);
     }
 
+    //按具体类型读取 CapsuleCollider.radius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CapsuleCollider_radius(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->radius;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CapsuleCollider.radius，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CapsuleCollider_radius(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->radius = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 CapsuleCollider.halfHeight 字段
     static std::string Get_CapsuleCollider_halfHeight(Object* object)
     {
@@ -1154,6 +2202,33 @@ public:
         CapsuleCollider* instance = static_cast<CapsuleCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->halfHeight, value);
+    }
+
+    //按具体类型读取 CapsuleCollider.halfHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_CapsuleCollider_halfHeight(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->halfHeight;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 CapsuleCollider.halfHeight，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_CapsuleCollider_halfHeight(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<CapsuleCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->halfHeight = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 ConvexMeshCollider.mesh 字段
@@ -1197,6 +2272,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ConvexMeshCollider.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ConvexMeshCollider_OnDetach_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ConvexMeshCollider.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ConvexMeshCollider_OnDetach_0(Object* object)
+    {
+        try
+        {
+            ConvexMeshCollider* instance = static_cast<ConvexMeshCollider*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 TriangleMeshCollider.mesh 字段
     static std::string Get_TriangleMeshCollider_mesh(Object* object)
     {
@@ -1238,6 +2334,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 TriangleMeshCollider.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_TriangleMeshCollider_OnDetach_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 TriangleMeshCollider.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_TriangleMeshCollider_OnDetach_0(Object* object)
+    {
+        try
+        {
+            TriangleMeshCollider* instance = static_cast<TriangleMeshCollider*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.enabled 字段
     static std::string Get_DirectionalLight_enabled(Object* object)
     {
@@ -1273,6 +2390,33 @@ public:
         return true;
     }
 
+    //按具体类型读取 DirectionalLight.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->GetEnabled()) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetEnabled(value != 0);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.color 字段
     static std::string Get_DirectionalLight_color(Object* object)
     {
@@ -1300,6 +2444,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->color, value);
+    }
+
+    //按具体类型读取 DirectionalLight.color
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_color(Object* object, color* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->color;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.color，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_color(Object* object, color value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->color = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.intensity 字段
@@ -1331,6 +2502,33 @@ public:
         return Reflection::SetFromValue(instance->intensity, value);
     }
 
+    //按具体类型读取 DirectionalLight.intensity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_intensity(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->intensity;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.intensity，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_intensity(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->intensity = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.castShadows 字段
     static std::string Get_DirectionalLight_castShadows(Object* object)
     {
@@ -1358,6 +2556,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->castShadows, value);
+    }
+
+    //按具体类型读取 DirectionalLight.castShadows
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_castShadows(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->castShadows) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.castShadows，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_castShadows(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->castShadows = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.shadowBias 字段
@@ -1389,6 +2614,33 @@ public:
         return Reflection::SetFromValue(instance->shadowBias, value);
     }
 
+    //按具体类型读取 DirectionalLight.shadowBias
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowBias(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowBias;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowBias，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowBias(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowBias = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.shadowStrength 字段
     static std::string Get_DirectionalLight_shadowStrength(Object* object)
     {
@@ -1416,6 +2668,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->shadowStrength, value);
+    }
+
+    //按具体类型读取 DirectionalLight.shadowStrength
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowStrength(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowStrength;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowStrength，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowStrength(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowStrength = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.shadowDistance 字段
@@ -1447,6 +2726,33 @@ public:
         return Reflection::SetFromValue(instance->shadowDistance, value);
     }
 
+    //按具体类型读取 DirectionalLight.shadowDistance
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowDistance(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowDistance;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowDistance，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowDistance(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowDistance = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.shadowCascadeCount 字段
     static std::string Get_DirectionalLight_shadowCascadeCount(Object* object)
     {
@@ -1474,6 +2780,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->shadowCascadeCount, value);
+    }
+
+    //按具体类型读取 DirectionalLight.shadowCascadeCount
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowCascadeCount(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowCascadeCount;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowCascadeCount，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowCascadeCount(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowCascadeCount = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.shadowMapResolution 字段
@@ -1505,6 +2838,33 @@ public:
         return Reflection::SetFromValue(instance->shadowMapResolution, value);
     }
 
+    //按具体类型读取 DirectionalLight.shadowMapResolution
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowMapResolution(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowMapResolution;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowMapResolution，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowMapResolution(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowMapResolution = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.shadowSplitLambda 字段
     static std::string Get_DirectionalLight_shadowSplitLambda(Object* object)
     {
@@ -1532,6 +2892,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->shadowSplitLambda, value);
+    }
+
+    //按具体类型读取 DirectionalLight.shadowSplitLambda
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowSplitLambda(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowSplitLambda;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowSplitLambda，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowSplitLambda(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowSplitLambda = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.shadowAdaptive 字段
@@ -1563,6 +2950,33 @@ public:
         return Reflection::SetFromValue(instance->shadowAdaptive, value);
     }
 
+    //按具体类型读取 DirectionalLight.shadowAdaptive
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowAdaptive(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->shadowAdaptive) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowAdaptive，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowAdaptive(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowAdaptive = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 DirectionalLight.shadowNormalBias 字段
     static std::string Get_DirectionalLight_shadowNormalBias(Object* object)
     {
@@ -1590,6 +3004,33 @@ public:
         DirectionalLight* instance = static_cast<DirectionalLight*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->shadowNormalBias, value);
+    }
+
+    //按具体类型读取 DirectionalLight.shadowNormalBias
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowNormalBias(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowNormalBias;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowNormalBias，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowNormalBias(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowNormalBias = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 DirectionalLight.shadowBlendRatio 字段
@@ -1621,6 +3062,33 @@ public:
         return Reflection::SetFromValue(instance->shadowBlendRatio, value);
     }
 
+    //按具体类型读取 DirectionalLight.shadowBlendRatio
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_DirectionalLight_shadowBlendRatio(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->shadowBlendRatio;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 DirectionalLight.shadowBlendRatio，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_DirectionalLight_shadowBlendRatio(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<DirectionalLight*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->shadowBlendRatio = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 DirectionalLight.GetEnabled 方法
     static Reflection::Value Invoke_DirectionalLight_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -1631,6 +3099,26 @@ public:
         auto result = instance->GetEnabled();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 DirectionalLight.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_GetEnabled_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_GetEnabled_0(Object* object, uint8* output)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetEnabled() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 DirectionalLight.SetEnabled 方法
@@ -1647,6 +3135,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 DirectionalLight.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_SetEnabled_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 DirectionalLight.IsRenderSceneEligible 方法
     static Reflection::Value Invoke_DirectionalLight_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -1657,6 +3168,26 @@ public:
         auto result = instance->IsRenderSceneEligible();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 DirectionalLight.IsRenderSceneEligible 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_IsRenderSceneEligible_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        return ScriptInterop::WriteResult(instance->IsRenderSceneEligible(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.IsRenderSceneEligible
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_IsRenderSceneEligible_2(Object* object, uint8* output)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsRenderSceneEligible() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 DirectionalLight.OnAttach 方法
@@ -1671,6 +3202,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 DirectionalLight.OnAttach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_OnAttach_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        instance->OnAttach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.OnAttach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_OnAttach_3(Object* object)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            instance->OnAttach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 DirectionalLight.OnDetach 方法
     static Reflection::Value Invoke_DirectionalLight_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -1681,6 +3233,27 @@ public:
         instance->OnDetach();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 DirectionalLight.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_OnDetach_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_OnDetach_4(Object* object)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 DirectionalLight.OnWorldActiveChanged 方法
@@ -1695,6 +3268,29 @@ public:
         instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 DirectionalLight.OnWorldActiveChanged 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_DirectionalLight_OnWorldActiveChanged_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->OnWorldActiveChanged(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 DirectionalLight.OnWorldActiveChanged
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_DirectionalLight_OnWorldActiveChanged_5(Object* object, uint8 value0)
+    {
+        try
+        {
+            DirectionalLight* instance = static_cast<DirectionalLight*>(object);
+            instance->OnWorldActiveChanged(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Font.faceIndex 字段
@@ -1726,6 +3322,33 @@ public:
         return Reflection::SetFromValue(instance->faceIndex, value);
     }
 
+    //按具体类型读取 Font.faceIndex
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Font_faceIndex(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Font*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->faceIndex;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Font.faceIndex，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Font_faceIndex(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Font*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->faceIndex = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Font.GetRevision 方法
     static Reflection::Value Invoke_Font_GetRevision_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -1738,6 +3361,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Font.GetRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Font_GetRevision_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Font* instance = static_cast<Font*>(object);
+        return ScriptInterop::WriteResult(instance->GetRevision(), Reflection::ValueKind::UInt64, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Font.GetRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Font_GetRevision_0(Object* object, uint64* output)
+    {
+        try
+        {
+            Font* instance = static_cast<Font*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetRevision();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Font.BumpRevision 方法
     static Reflection::Value Invoke_Font_BumpRevision_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -1748,6 +3391,27 @@ public:
         instance->BumpRevision();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Font.BumpRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Font_BumpRevision_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Font* instance = static_cast<Font*>(object);
+        instance->BumpRevision();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Font.BumpRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Font_BumpRevision_1(Object* object)
+    {
+        try
+        {
+            Font* instance = static_cast<Font*>(object);
+            instance->BumpRevision();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.enabled 字段
@@ -1777,6 +3441,33 @@ public:
         HeightField* instance = static_cast<HeightField*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->enabled, value);
+    }
+
+    //按具体类型读取 HeightField.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->enabled) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->enabled = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.seed 字段
@@ -1812,6 +3503,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.seed
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_seed(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->seed;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.seed，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_seed(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->seed = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.sampleTileX 字段
     static std::string Get_HeightField_sampleTileX(Object* object)
     {
@@ -1843,6 +3562,34 @@ public:
         if (!Reflection::SetFromValue(instance->sampleTileX, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.sampleTileX
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_sampleTileX(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->sampleTileX;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.sampleTileX，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_sampleTileX(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->sampleTileX = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.sampleTileZ 字段
@@ -1878,6 +3625,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.sampleTileZ
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_sampleTileZ(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->sampleTileZ;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.sampleTileZ，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_sampleTileZ(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->sampleTileZ = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.sizeX 字段
     static std::string Get_HeightField_sizeX(Object* object)
     {
@@ -1909,6 +3684,34 @@ public:
         if (!Reflection::SetFromValue(instance->sizeX, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.sizeX
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_sizeX(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->sizeX;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.sizeX，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_sizeX(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->sizeX = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.sizeZ 字段
@@ -1944,6 +3747,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.sizeZ
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_sizeZ(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->sizeZ;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.sizeZ，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_sizeZ(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->sizeZ = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.rowCount 字段
     static std::string Get_HeightField_rowCount(Object* object)
     {
@@ -1975,6 +3806,34 @@ public:
         if (!Reflection::SetFromValue(instance->rowCount, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.rowCount
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_rowCount(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->rowCount;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.rowCount，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_rowCount(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->rowCount = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.columnCount 字段
@@ -2010,6 +3869,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.columnCount
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_columnCount(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->columnCount;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.columnCount，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_columnCount(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->columnCount = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.amplitude 字段
     static std::string Get_HeightField_amplitude(Object* object)
     {
@@ -2041,6 +3928,34 @@ public:
         if (!Reflection::SetFromValue(instance->amplitude, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.amplitude
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_amplitude(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->amplitude;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.amplitude，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_amplitude(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->amplitude = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.frequency 字段
@@ -2076,6 +3991,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.frequency
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_frequency(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->frequency;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.frequency，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_frequency(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->frequency = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.octaves 字段
     static std::string Get_HeightField_octaves(Object* object)
     {
@@ -2107,6 +4050,34 @@ public:
         if (!Reflection::SetFromValue(instance->octaves, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.octaves
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_octaves(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->octaves;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.octaves，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_octaves(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->octaves = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.flattenMinX 字段
@@ -2142,6 +4113,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.flattenMinX
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenMinX(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenMinX;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenMinX，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenMinX(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenMinX = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.flattenMaxX 字段
     static std::string Get_HeightField_flattenMaxX(Object* object)
     {
@@ -2173,6 +4172,34 @@ public:
         if (!Reflection::SetFromValue(instance->flattenMaxX, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.flattenMaxX
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenMaxX(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenMaxX;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenMaxX，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenMaxX(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenMaxX = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.flattenMinZ 字段
@@ -2208,6 +4235,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.flattenMinZ
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenMinZ(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenMinZ;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenMinZ，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenMinZ(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenMinZ = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.flattenMaxZ 字段
     static std::string Get_HeightField_flattenMaxZ(Object* object)
     {
@@ -2239,6 +4294,34 @@ public:
         if (!Reflection::SetFromValue(instance->flattenMaxZ, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.flattenMaxZ
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenMaxZ(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenMaxZ;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenMaxZ，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenMaxZ(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenMaxZ = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.flattenHeight 字段
@@ -2274,6 +4357,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.flattenHeight
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenHeight(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenHeight;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenHeight，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenHeight(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenHeight = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.flattenBlendDistance 字段
     static std::string Get_HeightField_flattenBlendDistance(Object* object)
     {
@@ -2307,6 +4418,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.flattenBlendDistance
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_flattenBlendDistance(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->flattenBlendDistance;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.flattenBlendDistance，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_flattenBlendDistance(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->flattenBlendDistance = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.collisionLayer 字段
     static std::string Get_HeightField_collisionLayer(Object* object)
     {
@@ -2338,6 +4477,34 @@ public:
         if (!Reflection::SetFromValue(instance->collisionLayer, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.collisionLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_collisionLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->collisionLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.collisionLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_collisionLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->collisionLayer = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.material 字段
@@ -2406,6 +4573,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.generateNoiseTexture
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_generateNoiseTexture(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->generateNoiseTexture) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.generateNoiseTexture，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_generateNoiseTexture(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->generateNoiseTexture = value != 0;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.noiseTextureSize 字段
     static std::string Get_HeightField_noiseTextureSize(Object* object)
     {
@@ -2437,6 +4632,34 @@ public:
         if (!Reflection::SetFromValue(instance->noiseTextureSize, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.noiseTextureSize
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_noiseTextureSize(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->noiseTextureSize;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.noiseTextureSize，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_noiseTextureSize(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->noiseTextureSize = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.noiseLowColor 字段
@@ -2472,6 +4695,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.noiseLowColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_noiseLowColor(Object* object, color* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->noiseLowColor;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.noiseLowColor，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_noiseLowColor(Object* object, color value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->noiseLowColor = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 HeightField.noiseHighColor 字段
     static std::string Get_HeightField_noiseHighColor(Object* object)
     {
@@ -2503,6 +4754,34 @@ public:
         if (!Reflection::SetFromValue(instance->noiseHighColor, value)) return false;
         instance->Regenerate();
         return true;
+    }
+
+    //按具体类型读取 HeightField.noiseHighColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_noiseHighColor(Object* object, color* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->noiseHighColor;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.noiseHighColor，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_noiseHighColor(Object* object, color value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->noiseHighColor = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 HeightField.tileSize 字段
@@ -2538,6 +4817,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 HeightField.tileSize
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_HeightField_tileSize(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->tileSize;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 HeightField.tileSize，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_HeightField_tileSize(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<HeightField*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->tileSize = value;
+            instance->Regenerate();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 HeightField.Regenerate 方法
     static Reflection::Value Invoke_HeightField_Regenerate_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2548,6 +4855,27 @@ public:
         instance->Regenerate();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 HeightField.Regenerate 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_Regenerate_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        instance->Regenerate();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 HeightField.Regenerate
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_Regenerate_0(Object* object)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            instance->Regenerate();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 HeightField.GetHeightAtWorldXZ 方法
@@ -2566,6 +4894,30 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 HeightField.GetHeightAtWorldXZ 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_GetHeightAtWorldXZ_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        float32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        float32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->GetHeightAtWorldXZ(arg0, arg1), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 HeightField.GetHeightAtWorldXZ
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_GetHeightAtWorldXZ_1(Object* object, float32 value0, float32 value1, float32* output)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetHeightAtWorldXZ(value0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 HeightField.GetRowScale 方法
     static Reflection::Value Invoke_HeightField_GetRowScale_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2576,6 +4928,26 @@ public:
         auto result = instance->GetRowScale();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 HeightField.GetRowScale 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_GetRowScale_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return ScriptInterop::WriteResult(instance->GetRowScale(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 HeightField.GetRowScale
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_GetRowScale_2(Object* object, float32* output)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetRowScale();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 HeightField.GetColumnScale 方法
@@ -2590,6 +4962,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 HeightField.GetColumnScale 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_GetColumnScale_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return ScriptInterop::WriteResult(instance->GetColumnScale(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 HeightField.GetColumnScale
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_GetColumnScale_3(Object* object, float32* output)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetColumnScale();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 HeightField.GetGeneration 方法
     static Reflection::Value Invoke_HeightField_GetGeneration_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2600,6 +4992,26 @@ public:
         auto result = instance->GetGeneration();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 HeightField.GetGeneration 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_GetGeneration_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        return ScriptInterop::WriteResult(instance->GetGeneration(), Reflection::ValueKind::UInt32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 HeightField.GetGeneration
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_GetGeneration_4(Object* object, uint32* output)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetGeneration();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 HeightField.SyncPendingGeneration 方法
@@ -2614,6 +5026,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 HeightField.SyncPendingGeneration 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_HeightField_SyncPendingGeneration_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        HeightField* instance = static_cast<HeightField*>(object);
+        instance->SyncPendingGeneration();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 HeightField.SyncPendingGeneration
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_HeightField_SyncPendingGeneration_5(Object* object)
+    {
+        try
+        {
+            HeightField* instance = static_cast<HeightField*>(object);
+            instance->SyncPendingGeneration();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 InstanceDrawList.GetInstanceCount 方法
     static Reflection::Value Invoke_InstanceDrawList_GetInstanceCount_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2624,6 +5057,26 @@ public:
         auto result = instance->GetInstanceCount();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 InstanceDrawList.GetInstanceCount 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_GetInstanceCount_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        return ScriptInterop::WriteResult(instance->GetInstanceCount(), Reflection::ValueKind::Int32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 InstanceDrawList.GetInstanceCount
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_GetInstanceCount_0(Object* object, int32* output)
+    {
+        try
+        {
+            InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetInstanceCount();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 InstanceDrawList.Submit 方法
@@ -2638,6 +5091,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 InstanceDrawList.Submit 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Submit_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        return ScriptInterop::WriteResult(instance->Submit(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 InstanceDrawList.Submit
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Submit_1(Object* object, uint8* output)
+    {
+        try
+        {
+            InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->Submit() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 InstanceDrawList.Clear 方法
     static Reflection::Value Invoke_InstanceDrawList_Clear_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2648,6 +5121,27 @@ public:
         instance->Clear();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 InstanceDrawList.Clear 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_InstanceDrawList_Clear_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+        instance->Clear();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 InstanceDrawList.Clear
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_InstanceDrawList_Clear_2(Object* object)
+    {
+        try
+        {
+            InstanceDrawList* instance = static_cast<InstanceDrawList*>(object);
+            instance->Clear();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Material.name 字段
@@ -2677,6 +5171,35 @@ public:
         Material* instance = static_cast<Material*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->name, value);
+    }
+
+    //按具体类型读取 Material.name
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Material_name(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Material*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->name);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Material.name，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Material_name(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Material*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->name = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Material.shader 字段
@@ -2726,6 +5249,31 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Material.SetShader 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_SetShader_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        StringId arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetShader(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.SetShader
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_SetShader_0(Object* object, ScriptInterop::NativeUtf8 value0)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetShader(StringId(text0));
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.SetTexture 方法
     static Reflection::Value Invoke_Material_SetTexture_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2742,6 +5290,35 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Material.SetTexture 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_SetTexture_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        StringId arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetTexture(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.SetTexture
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_SetTexture_1(Object* object, ScriptInterop::NativeUtf8 value0, ScriptInterop::NativeUtf8 value1)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text1;
+            if (!ScriptInterop::ReadDirectString(value1, text1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetTexture(text0, StringId(text1));
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.HasTexture 方法
     static Reflection::Value Invoke_Material_HasTexture_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2756,6 +5333,30 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Material.HasTexture 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_HasTexture_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->HasTexture(arg0), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.HasTexture
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_HasTexture_2(Object* object, ScriptInterop::NativeUtf8 value0, uint8* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->HasTexture(text0) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.ClearTexture 方法
     static Reflection::Value Invoke_Material_ClearTexture_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2768,6 +5369,31 @@ public:
         instance->ClearTexture(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Material.ClearTexture 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_ClearTexture_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->ClearTexture(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.ClearTexture
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_ClearTexture_3(Object* object, ScriptInterop::NativeUtf8 value0)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->ClearTexture(text0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Material.SetColor 方法
@@ -2786,6 +5412,33 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Material.SetColor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_SetColor_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        color arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetColor(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.SetColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_SetColor_4(Object* object, ScriptInterop::NativeUtf8 value0, color value1)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetColor(text0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.GetColor 方法
     static Reflection::Value Invoke_Material_GetColor_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2802,6 +5455,32 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Material.GetColor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_GetColor_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        color arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->GetColor(arg0, arg1), Reflection::ValueKind::Color, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.GetColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_GetColor_5(Object* object, ScriptInterop::NativeUtf8 value0, color value1, color* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetColor(text0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.HasColor 方法
     static Reflection::Value Invoke_Material_HasColor_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2816,6 +5495,30 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Material.HasColor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_HasColor_6(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->HasColor(arg0), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.HasColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_HasColor_6(Object* object, ScriptInterop::NativeUtf8 value0, uint8* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->HasColor(text0) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.ClearColor 方法
     static Reflection::Value Invoke_Material_ClearColor_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2828,6 +5531,31 @@ public:
         instance->ClearColor(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Material.ClearColor 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_ClearColor_7(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->ClearColor(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.ClearColor
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_ClearColor_7(Object* object, ScriptInterop::NativeUtf8 value0)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->ClearColor(text0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Material.SetFloat 方法
@@ -2846,6 +5574,33 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Material.SetFloat 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_SetFloat_8(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        float32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetFloat(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.SetFloat
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_SetFloat_8(Object* object, ScriptInterop::NativeUtf8 value0, float32 value1)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetFloat(text0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.GetFloat 方法
     static Reflection::Value Invoke_Material_GetFloat_9(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2862,6 +5617,32 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Material.GetFloat 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_GetFloat_9(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        float32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->GetFloat(arg0, arg1), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.GetFloat
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_GetFloat_9(Object* object, ScriptInterop::NativeUtf8 value0, float32 value1, float32* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetFloat(text0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.HasFloat 方法
     static Reflection::Value Invoke_Material_HasFloat_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2874,6 +5655,30 @@ public:
         auto result = instance->HasFloat(arg0);
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Material.HasFloat 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_HasFloat_10(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->HasFloat(arg0), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.HasFloat
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_HasFloat_10(Object* object, ScriptInterop::NativeUtf8 value0, uint8* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->HasFloat(text0) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Material.ClearFloat 方法
@@ -2890,6 +5695,31 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Material.ClearFloat 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_ClearFloat_11(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->ClearFloat(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.ClearFloat
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_ClearFloat_11(Object* object, ScriptInterop::NativeUtf8 value0)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->ClearFloat(text0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.IsDirty 方法
     static Reflection::Value Invoke_Material_IsDirty_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2902,6 +5732,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Material.IsDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_IsDirty_12(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        return ScriptInterop::WriteResult(instance->IsDirty(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Material.IsDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_IsDirty_12(Object* object, uint8* output)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsDirty() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Material.MarkDirty 方法
     static Reflection::Value Invoke_Material_MarkDirty_13(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2912,6 +5762,27 @@ public:
         instance->MarkDirty();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Material.MarkDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Material_MarkDirty_13(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Material* instance = static_cast<Material*>(object);
+        instance->MarkDirty();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Material.MarkDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Material_MarkDirty_13(Object* object)
+    {
+        try
+        {
+            Material* instance = static_cast<Material*>(object);
+            instance->MarkDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Mesh.name 字段
@@ -2943,6 +5814,35 @@ public:
         return Reflection::SetFromValue(instance->name, value);
     }
 
+    //按具体类型读取 Mesh.name
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Mesh_name(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Mesh*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->name);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Mesh.name，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Mesh_name(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Mesh*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->name = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Mesh.GetContentVersion 方法
     static Reflection::Value Invoke_Mesh_GetContentVersion_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2953,6 +5853,26 @@ public:
         auto result = instance->GetContentVersion();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Mesh.GetContentVersion 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_GetContentVersion_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        return ScriptInterop::WriteResult(instance->GetContentVersion(), Reflection::ValueKind::UInt64, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Mesh.GetContentVersion
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_GetContentVersion_0(Object* object, uint64* output)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetContentVersion();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Mesh.MarkDirty 方法
@@ -2967,6 +5887,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Mesh.MarkDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_MarkDirty_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        instance->MarkDirty();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Mesh.MarkDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_MarkDirty_1(Object* object)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            instance->MarkDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Mesh.ClearGeometry 方法
     static Reflection::Value Invoke_Mesh_ClearGeometry_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -2977,6 +5918,27 @@ public:
         instance->ClearGeometry();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Mesh.ClearGeometry 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_ClearGeometry_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        instance->ClearGeometry();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Mesh.ClearGeometry
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_ClearGeometry_2(Object* object)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            instance->ClearGeometry();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Mesh.ResizeSubMeshes 方法
@@ -2991,6 +5953,28 @@ public:
         auto result = instance->ResizeSubMeshes(arg0);
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Mesh.ResizeSubMeshes 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_ResizeSubMeshes_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        int32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->ResizeSubMeshes(arg0), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Mesh.ResizeSubMeshes
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_ResizeSubMeshes_3(Object* object, int32 value0, uint8* output)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->ResizeSubMeshes(value0) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Mesh.ConfigureSubMesh 方法
@@ -3013,6 +5997,36 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Mesh.ConfigureSubMesh 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_ConfigureSubMesh_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        int32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        std::string arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        uint32 arg2{};
+        if (!ScriptInterop::ReadArgument(args[2], arg2)) return ScriptInterop::InteropStatus::UnsupportedType;
+        uint32 arg3{};
+        if (!ScriptInterop::ReadArgument(args[3], arg3)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->ConfigureSubMesh(arg0, arg1, arg2, arg3), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Mesh.ConfigureSubMesh
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_ConfigureSubMesh_4(Object* object, int32 value0, ScriptInterop::NativeUtf8 value1, uint32 value2, uint32 value3, uint8* output)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text1;
+            if (!ScriptInterop::ReadDirectString(value1, text1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->ConfigureSubMesh(value0, text1, value2, value3) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Mesh.RefreshNormals 方法
     static Reflection::Value Invoke_Mesh_RefreshNormals_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3023,6 +6037,26 @@ public:
         auto result = instance->RefreshNormals();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Mesh.RefreshNormals 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Mesh_RefreshNormals_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Mesh* instance = static_cast<Mesh*>(object);
+        return ScriptInterop::WriteResult(instance->RefreshNormals(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Mesh.RefreshNormals
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Mesh_RefreshNormals_5(Object* object, uint8* output)
+    {
+        try
+        {
+            Mesh* instance = static_cast<Mesh*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->RefreshNormals() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 ParticleSystem.mesh 字段
@@ -3222,6 +6256,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 ParticleSystem.drawLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_ParticleSystem_drawLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->drawLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 ParticleSystem.drawLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_ParticleSystem_drawLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->drawLayer = value;
+            instance->OnConfigurationChanged();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 ParticleSystem.castShadows 字段
     static std::string Get_ParticleSystem_castShadows(Object* object)
     {
@@ -3253,6 +6315,34 @@ public:
         if (!Reflection::SetFromValue(instance->castShadows, value)) return false;
         instance->OnConfigurationChanged();
         return true;
+    }
+
+    //按具体类型读取 ParticleSystem.castShadows
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_ParticleSystem_castShadows(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->castShadows) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 ParticleSystem.castShadows，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_ParticleSystem_castShadows(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->castShadows = value != 0;
+            instance->OnConfigurationChanged();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 ParticleSystem.receiveShadows 字段
@@ -3288,6 +6378,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 ParticleSystem.receiveShadows
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_ParticleSystem_receiveShadows(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->receiveShadows) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 ParticleSystem.receiveShadows，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_ParticleSystem_receiveShadows(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<ParticleSystem*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->receiveShadows = value != 0;
+            instance->OnConfigurationChanged();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.GetEnabled 方法
     static Reflection::Value Invoke_ParticleSystem_GetEnabled_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3298,6 +6416,26 @@ public:
         auto result = instance->GetEnabled();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 ParticleSystem.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_GetEnabled_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_GetEnabled_0(Object* object, uint8* output)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetEnabled() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.SetEnabled 方法
@@ -3314,6 +6452,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ParticleSystem.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_SetEnabled_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.GetConfigurationRevision 方法
     static Reflection::Value Invoke_ParticleSystem_GetConfigurationRevision_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3324,6 +6485,26 @@ public:
         auto result = instance->GetConfigurationRevision();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 ParticleSystem.GetConfigurationRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_GetConfigurationRevision_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return ScriptInterop::WriteResult(instance->GetConfigurationRevision(), Reflection::ValueKind::UInt64, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.GetConfigurationRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_GetConfigurationRevision_2(Object* object, uint64* output)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetConfigurationRevision();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.OnConfigurationChanged 方法
@@ -3338,6 +6519,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ParticleSystem.OnConfigurationChanged 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_OnConfigurationChanged_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        instance->OnConfigurationChanged();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.OnConfigurationChanged
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_OnConfigurationChanged_3(Object* object)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->OnConfigurationChanged();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.GetLastError 方法
     static Reflection::Value Invoke_ParticleSystem_GetLastError_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3348,6 +6550,27 @@ public:
         auto result = instance->GetLastError();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 ParticleSystem.GetLastError 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_GetLastError_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        return ScriptInterop::WriteResult(instance->GetLastError(), Reflection::ValueKind::String, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.GetLastError
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_GetLastError_4(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            auto result = instance->GetLastError();
+            *output = ScriptInterop::StoreDirectString(result);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.Play 方法
@@ -3364,6 +6587,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ParticleSystem.Play 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_Play_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->Play(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.Play
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_Play_5(Object* object, uint8 value0)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->Play(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.Pause 方法
     static Reflection::Value Invoke_ParticleSystem_Pause_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3374,6 +6620,27 @@ public:
         instance->Pause();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 ParticleSystem.Pause 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_Pause_6(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        instance->Pause();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.Pause
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_Pause_6(Object* object)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->Pause();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.Stop 方法
@@ -3390,6 +6657,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ParticleSystem.Stop 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_Stop_7(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->Stop(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.Stop
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_Stop_7(Object* object, uint8 value0)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->Stop(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.Clear 方法
     static Reflection::Value Invoke_ParticleSystem_Clear_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3400,6 +6690,27 @@ public:
         instance->Clear();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 ParticleSystem.Clear 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_Clear_8(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        instance->Clear();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.Clear
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_Clear_8(Object* object)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->Clear();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.Emit 方法
@@ -3416,6 +6727,28 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 ParticleSystem.Emit 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_Emit_9(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        uint32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->Emit(arg0), Reflection::ValueKind::UInt32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.Emit
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_Emit_9(Object* object, uint32 value0, uint32* output)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->Emit(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.OnAttach 方法
     static Reflection::Value Invoke_ParticleSystem_OnAttach_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3426,6 +6759,27 @@ public:
         instance->OnAttach();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 ParticleSystem.OnAttach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_OnAttach_10(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        instance->OnAttach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.OnAttach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_OnAttach_10(Object* object)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->OnAttach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 ParticleSystem.OnDetach 方法
@@ -3440,6 +6794,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 ParticleSystem.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_OnDetach_11(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_OnDetach_11(Object* object)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 ParticleSystem.OnWorldActiveChanged 方法
     static Reflection::Value Invoke_ParticleSystem_OnWorldActiveChanged_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3452,6 +6827,29 @@ public:
         instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 ParticleSystem.OnWorldActiveChanged 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_ParticleSystem_OnWorldActiveChanged_12(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->OnWorldActiveChanged(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 ParticleSystem.OnWorldActiveChanged
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_ParticleSystem_OnWorldActiveChanged_12(Object* object, uint8 value0)
+    {
+        try
+        {
+            ParticleSystem* instance = static_cast<ParticleSystem*>(object);
+            instance->OnWorldActiveChanged(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.enabled 字段
@@ -3483,6 +6881,33 @@ public:
         return Reflection::SetFromValue(instance->enabled, value);
     }
 
+    //按具体类型读取 RigidBody.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->enabled) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->enabled = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.mass 字段
     static std::string Get_RigidBody_mass(Object* object)
     {
@@ -3510,6 +6935,33 @@ public:
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->mass, value);
+    }
+
+    //按具体类型读取 RigidBody.mass
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_mass(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->mass;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.mass，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_mass(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->mass = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.useGravity 字段
@@ -3541,6 +6993,33 @@ public:
         return Reflection::SetFromValue(instance->useGravity, value);
     }
 
+    //按具体类型读取 RigidBody.useGravity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_useGravity(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->useGravity) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.useGravity，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_useGravity(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->useGravity = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.linearDamping 字段
     static std::string Get_RigidBody_linearDamping(Object* object)
     {
@@ -3568,6 +7047,33 @@ public:
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->linearDamping, value);
+    }
+
+    //按具体类型读取 RigidBody.linearDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_linearDamping(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->linearDamping;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.linearDamping，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_linearDamping(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->linearDamping = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.angularDamping 字段
@@ -3599,6 +7105,33 @@ public:
         return Reflection::SetFromValue(instance->angularDamping, value);
     }
 
+    //按具体类型读取 RigidBody.angularDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_angularDamping(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->angularDamping;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.angularDamping，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_angularDamping(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->angularDamping = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.linearVelocity 字段
     static std::string Get_RigidBody_linearVelocity(Object* object)
     {
@@ -3626,6 +7159,33 @@ public:
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->linearVelocity, value);
+    }
+
+    //按具体类型读取 RigidBody.linearVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_linearVelocity(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->linearVelocity;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.linearVelocity，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_linearVelocity(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->linearVelocity = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.angularVelocity 字段
@@ -3657,6 +7217,33 @@ public:
         return Reflection::SetFromValue(instance->angularVelocity, value);
     }
 
+    //按具体类型读取 RigidBody.angularVelocity
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_angularVelocity(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->angularVelocity;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.angularVelocity，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_angularVelocity(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->angularVelocity = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.continuousCollisionDetection 字段
     static std::string Get_RigidBody_continuousCollisionDetection(Object* object)
     {
@@ -3684,6 +7271,33 @@ public:
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->continuousCollisionDetection, value);
+    }
+
+    //按具体类型读取 RigidBody.continuousCollisionDetection
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_continuousCollisionDetection(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->continuousCollisionDetection) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.continuousCollisionDetection，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_continuousCollisionDetection(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->continuousCollisionDetection = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.lockFlags 字段
@@ -3715,6 +7329,33 @@ public:
         return Reflection::SetFromValue(instance->lockFlags, value);
     }
 
+    //按具体类型读取 RigidBody.lockFlags
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_lockFlags(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->lockFlags;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.lockFlags，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_lockFlags(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->lockFlags = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 RigidBody.pendingForce 字段
     static std::string Get_RigidBody_pendingForce(Object* object)
     {
@@ -3742,6 +7383,33 @@ public:
         RigidBody* instance = static_cast<RigidBody*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->pendingForce, value);
+    }
+
+    //按具体类型读取 RigidBody.pendingForce
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_pendingForce(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->pendingForce;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.pendingForce，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_pendingForce(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->pendingForce = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 RigidBody.pendingTorque 字段
@@ -3773,6 +7441,33 @@ public:
         return Reflection::SetFromValue(instance->pendingTorque, value);
     }
 
+    //按具体类型读取 RigidBody.pendingTorque
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_RigidBody_pendingTorque(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->pendingTorque;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 RigidBody.pendingTorque，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_RigidBody_pendingTorque(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<RigidBody*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->pendingTorque = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 RigidBody.AddForce 方法
     static Reflection::Value Invoke_RigidBody_AddForce_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3785,6 +7480,29 @@ public:
         instance->AddForce(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.AddForce 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForce_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->AddForce(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 RigidBody.AddForce
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForce_0(Object* object, vector3 value0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            instance->AddForce(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 RigidBody.AddTorque 方法
@@ -3801,6 +7519,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 RigidBody.AddTorque 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddTorque_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->AddTorque(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 RigidBody.AddTorque
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddTorque_1(Object* object, vector3 value0)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            instance->AddTorque(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 RigidBody.AddForceAtPosition 方法
     static Reflection::Value Invoke_RigidBody_AddForceAtPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3815,6 +7556,31 @@ public:
         instance->AddForceAtPosition(arg0, arg1);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 RigidBody.AddForceAtPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_RigidBody_AddForceAtPosition_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        RigidBody* instance = static_cast<RigidBody*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        vector3 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->AddForceAtPosition(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 RigidBody.AddForceAtPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_RigidBody_AddForceAtPosition_2(Object* object, vector3 value0, vector3 value1)
+    {
+        try
+        {
+            RigidBody* instance = static_cast<RigidBody*>(object);
+            instance->AddForceAtPosition(value0, value1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Shader.name 字段
@@ -3846,6 +7612,35 @@ public:
         return Reflection::SetFromValue(instance->name, value);
     }
 
+    //按具体类型读取 Shader.name
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Shader_name(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->name);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Shader.name，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Shader_name(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->name = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Shader.vertexPath 字段
     static std::string Get_Shader_vertexPath(Object* object)
     {
@@ -3873,6 +7668,35 @@ public:
         Shader* instance = static_cast<Shader*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->vertexPath, value);
+    }
+
+    //按具体类型读取 Shader.vertexPath
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Shader_vertexPath(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->vertexPath);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Shader.vertexPath，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Shader_vertexPath(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->vertexPath = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Shader.fragmentPath 字段
@@ -3904,6 +7728,35 @@ public:
         return Reflection::SetFromValue(instance->fragmentPath, value);
     }
 
+    //按具体类型读取 Shader.fragmentPath
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Shader_fragmentPath(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->fragmentPath);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Shader.fragmentPath，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Shader_fragmentPath(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->fragmentPath = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Shader.vertexSource 字段
     static std::string Get_Shader_vertexSource(Object* object)
     {
@@ -3931,6 +7784,19 @@ public:
         Shader* instance = static_cast<Shader*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->vertexSource, value);
+    }
+
+    //按具体类型读取 Shader.vertexSource
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Shader_vertexSource(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->vertexSource);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Shader.fragmentSource 字段
@@ -3962,6 +7828,19 @@ public:
         return Reflection::SetFromValue(instance->fragmentSource, value);
     }
 
+    //按具体类型读取 Shader.fragmentSource
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Shader_fragmentSource(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Shader*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->fragmentSource);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Shader.ReflectSlotsFromSource 方法
     static Reflection::Value Invoke_Shader_ReflectSlotsFromSource_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3974,6 +7853,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Shader.ReflectSlotsFromSource 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_ReflectSlotsFromSource_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return ScriptInterop::WriteResult(instance->ReflectSlotsFromSource(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Shader.ReflectSlotsFromSource
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_ReflectSlotsFromSource_0(Object* object, uint8* output)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->ReflectSlotsFromSource() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Shader.GetMaterialSlotRevision 方法
     static Reflection::Value Invoke_Shader_GetMaterialSlotRevision_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -3984,6 +7883,26 @@ public:
         auto result = instance->GetMaterialSlotRevision();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Shader.GetMaterialSlotRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_GetMaterialSlotRevision_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return ScriptInterop::WriteResult(instance->GetMaterialSlotRevision(), Reflection::ValueKind::UInt32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Shader.GetMaterialSlotRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_GetMaterialSlotRevision_1(Object* object, uint32* output)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetMaterialSlotRevision();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Shader.ReplaceSource 方法
@@ -4002,6 +7921,35 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Shader.ReplaceSource 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_ReplaceSource_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        std::string arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        std::string arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->ReplaceSource(arg0, arg1);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Shader.ReplaceSource
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_ReplaceSource_2(Object* object, ScriptInterop::NativeUtf8 value0, ScriptInterop::NativeUtf8 value1)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            std::string text0;
+            if (!ScriptInterop::ReadDirectString(value0, text0)) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text1;
+            if (!ScriptInterop::ReadDirectString(value1, text1)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->ReplaceSource(text0, text1);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Shader.GetPassCount 方法
     static Reflection::Value Invoke_Shader_GetPassCount_3(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4012,6 +7960,26 @@ public:
         auto result = instance->GetPassCount();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Shader.GetPassCount 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_GetPassCount_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return ScriptInterop::WriteResult(instance->GetPassCount(), Reflection::ValueKind::UInt32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Shader.GetPassCount
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_GetPassCount_3(Object* object, uint32* output)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetPassCount();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Shader.IsDirty 方法
@@ -4026,6 +7994,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Shader.IsDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_IsDirty_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        return ScriptInterop::WriteResult(instance->IsDirty(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Shader.IsDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_IsDirty_4(Object* object, uint8* output)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsDirty() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Shader.MarkDirty 方法
     static Reflection::Value Invoke_Shader_MarkDirty_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4036,6 +8024,27 @@ public:
         instance->MarkDirty();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Shader.MarkDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Shader_MarkDirty_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Shader* instance = static_cast<Shader*>(object);
+        instance->MarkDirty();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Shader.MarkDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Shader_MarkDirty_5(Object* object)
+    {
+        try
+        {
+            Shader* instance = static_cast<Shader*>(object);
+            instance->MarkDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Skybox.right 字段
@@ -4247,6 +8256,33 @@ public:
         return true;
     }
 
+    //按具体类型读取 StaticMeshRenderer.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->GetEnabled()) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetEnabled(value != 0);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 StaticMeshRenderer.mesh 字段
     static std::string Get_StaticMeshRenderer_mesh(Object* object)
     {
@@ -4350,6 +8386,33 @@ public:
         return Reflection::SetFromValue(instance->drawLayer, value);
     }
 
+    //按具体类型读取 StaticMeshRenderer.drawLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_drawLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->drawLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.drawLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_drawLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->drawLayer = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 StaticMeshRenderer.castShadows 字段
     static std::string Get_StaticMeshRenderer_castShadows(Object* object)
     {
@@ -4379,6 +8442,33 @@ public:
         return Reflection::SetFromValue(instance->castShadows, value);
     }
 
+    //按具体类型读取 StaticMeshRenderer.castShadows
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_castShadows(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->castShadows) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.castShadows，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_castShadows(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->castShadows = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 StaticMeshRenderer.receiveShadows 字段
     static std::string Get_StaticMeshRenderer_receiveShadows(Object* object)
     {
@@ -4406,6 +8496,33 @@ public:
         StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->receiveShadows, value);
+    }
+
+    //按具体类型读取 StaticMeshRenderer.receiveShadows
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_StaticMeshRenderer_receiveShadows(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->receiveShadows) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 StaticMeshRenderer.receiveShadows，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_StaticMeshRenderer_receiveShadows(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->receiveShadows = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 StaticMeshRenderer.drawStrategy 字段
@@ -4449,6 +8566,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 StaticMeshRenderer.GetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_GetEnabled_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return ScriptInterop::WriteResult(instance->GetEnabled(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.GetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_GetEnabled_0(Object* object, uint8* output)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetEnabled() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 StaticMeshRenderer.SetEnabled 方法
     static Reflection::Value Invoke_StaticMeshRenderer_SetEnabled_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4463,6 +8600,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 StaticMeshRenderer.SetEnabled 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_SetEnabled_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetEnabled(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.SetEnabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_SetEnabled_1(Object* object, uint8 value0)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            instance->SetEnabled(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 StaticMeshRenderer.IsRenderSceneEligible 方法
     static Reflection::Value Invoke_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4473,6 +8633,26 @@ public:
         auto result = instance->IsRenderSceneEligible();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 StaticMeshRenderer.IsRenderSceneEligible 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        return ScriptInterop::WriteResult(instance->IsRenderSceneEligible(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.IsRenderSceneEligible
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_2(Object* object, uint8* output)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsRenderSceneEligible() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 StaticMeshRenderer.OnAttach 方法
@@ -4487,6 +8667,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 StaticMeshRenderer.OnAttach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnAttach_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        instance->OnAttach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.OnAttach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnAttach_3(Object* object)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            instance->OnAttach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 StaticMeshRenderer.OnDetach 方法
     static Reflection::Value Invoke_StaticMeshRenderer_OnDetach_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4497,6 +8698,27 @@ public:
         instance->OnDetach();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 StaticMeshRenderer.OnDetach 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnDetach_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        instance->OnDetach();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.OnDetach
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnDetach_4(Object* object)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            instance->OnDetach();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 StaticMeshRenderer.OnWorldActiveChanged 方法
@@ -4511,6 +8733,29 @@ public:
         instance->OnWorldActiveChanged(arg0);
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 StaticMeshRenderer.OnWorldActiveChanged 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+        bool arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->OnWorldActiveChanged(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 StaticMeshRenderer.OnWorldActiveChanged
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_5(Object* object, uint8 value0)
+    {
+        try
+        {
+            StaticMeshRenderer* instance = static_cast<StaticMeshRenderer*>(object);
+            instance->OnWorldActiveChanged(value0 != 0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 TextResource.text 字段
@@ -4542,6 +8787,35 @@ public:
         return Reflection::SetFromValue(instance->text, value);
     }
 
+    //按具体类型读取 TextResource.text
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_TextResource_text(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<TextResource*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->text);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 TextResource.text，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_TextResource_text(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<TextResource*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->text = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Texture2D.name 字段
     static std::string Get_Texture2D_name(Object* object)
     {
@@ -4569,6 +8843,35 @@ public:
         Texture2D* instance = static_cast<Texture2D*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->name, value);
+    }
+
+    //按具体类型读取 Texture2D.name
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Texture2D_name(Object* object, ScriptInterop::NativeUtf8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = ScriptInterop::StoreDirectString(instance->name);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Texture2D.name，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Texture2D_name(Object* object, ScriptInterop::NativeUtf8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            std::string text;
+            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->name = text;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Texture2D.width 字段
@@ -4604,6 +8907,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 Texture2D.width
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Texture2D_width(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->width;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Texture2D.width，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Texture2D_width(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->width = value;
+            instance->MarkDirty();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Texture2D.height 字段
     static std::string Get_Texture2D_height(Object* object)
     {
@@ -4635,6 +8966,34 @@ public:
         if (!Reflection::SetFromValue(instance->height, value)) return false;
         instance->MarkDirty();
         return true;
+    }
+
+    //按具体类型读取 Texture2D.height
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Texture2D_height(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->height;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Texture2D.height，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Texture2D_height(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->height = value;
+            instance->MarkDirty();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Texture2D.channels 字段
@@ -4670,6 +9029,34 @@ public:
         return true;
     }
 
+    //按具体类型读取 Texture2D.channels
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Texture2D_channels(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->channels;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Texture2D.channels，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Texture2D_channels(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->channels = value;
+            instance->MarkDirty();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Texture2D.format 字段
     static std::string Get_Texture2D_format(Object* object)
     {
@@ -4701,6 +9088,34 @@ public:
         if (!Reflection::SetFromValue(instance->format, value)) return false;
         instance->MarkDirty();
         return true;
+    }
+
+    //按具体类型读取 Texture2D.format
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Texture2D_format(Object* object, int32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->format;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Texture2D.format，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Texture2D_format(Object* object, int32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Texture2D*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->format = value;
+            instance->MarkDirty();
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Texture2D.colorSpace 字段
@@ -4748,6 +9163,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Texture2D.IsDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_IsDirty_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return ScriptInterop::WriteResult(instance->IsDirty(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Texture2D.IsDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_IsDirty_0(Object* object, uint8* output)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsDirty() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Texture2D.MarkDirty 方法
     static Reflection::Value Invoke_Texture2D_MarkDirty_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4760,6 +9195,27 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Texture2D.MarkDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_MarkDirty_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        instance->MarkDirty();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Texture2D.MarkDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_MarkDirty_1(Object* object)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            instance->MarkDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Texture2D.ClearDirty 方法
     static Reflection::Value Invoke_Texture2D_ClearDirty_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4770,6 +9226,27 @@ public:
         instance->ClearDirty();
         success = true;
         return Reflection::Value();
+    }
+
+    //直接调用 Texture2D.ClearDirty 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_ClearDirty_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        instance->ClearDirty();
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Texture2D.ClearDirty
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_ClearDirty_2(Object* object)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            instance->ClearDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Texture2D.ResizeRenderTarget 方法
@@ -4788,6 +9265,30 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Texture2D.ResizeRenderTarget 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_ResizeRenderTarget_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        int32 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        int32 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->ResizeRenderTarget(arg0, arg1), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Texture2D.ResizeRenderTarget
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_ResizeRenderTarget_3(Object* object, int32 value0, int32 value1, uint8* output)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->ResizeRenderTarget(value0, value1) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Texture2D.IsRenderTarget 方法
     static Reflection::Value Invoke_Texture2D_IsRenderTarget_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4800,6 +9301,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Texture2D.IsRenderTarget 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_IsRenderTarget_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return ScriptInterop::WriteResult(instance->IsRenderTarget(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Texture2D.IsRenderTarget
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_IsRenderTarget_4(Object* object, uint8* output)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsRenderTarget() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Texture2D.GetRevision 方法
     static Reflection::Value Invoke_Texture2D_GetRevision_5(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4810,6 +9331,26 @@ public:
         auto result = instance->GetRevision();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Texture2D.GetRevision 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Texture2D_GetRevision_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Texture2D* instance = static_cast<Texture2D*>(object);
+        return ScriptInterop::WriteResult(instance->GetRevision(), Reflection::ValueKind::UInt64, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Texture2D.GetRevision
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Texture2D_GetRevision_5(Object* object, uint64* output)
+    {
+        try
+        {
+            Texture2D* instance = static_cast<Texture2D*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetRevision();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Transform.localPosition 字段
@@ -4847,6 +9388,33 @@ public:
         return true;
     }
 
+    //按具体类型读取 Transform.localPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Transform_localPosition(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalPosition();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Transform.localPosition，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Transform_localPosition(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLocalPosition(value);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 Transform.localRotation 字段
     static std::string Get_Transform_localRotation(Object* object)
     {
@@ -4880,6 +9448,33 @@ public:
         if (!Reflection::SetFromValue(parsedValue, value)) return false;
         instance->SetLocalRotation(parsedValue);
         return true;
+    }
+
+    //按具体类型读取 Transform.localRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Transform_localRotation(Object* object, quaternion* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalRotation();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Transform.localRotation，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Transform_localRotation(Object* object, quaternion value)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLocalRotation(value);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 Transform.localScale 字段
@@ -4917,6 +9512,33 @@ public:
         return true;
     }
 
+    //按具体类型读取 Transform.localScale
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_Transform_localScale(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalScale();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 Transform.localScale，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_Transform_localScale(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<Transform*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->SetLocalScale(value);
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetParent 方法
     static Reflection::Value Invoke_Transform_GetParent_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4927,6 +9549,26 @@ public:
         auto result = instance->GetParent();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetParent 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetParent_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetParent(), Reflection::ValueKind::EnsId, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetParent
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetParent_0(Object* object, EnsId* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetParent();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetParent 方法
@@ -4943,6 +9585,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.SetParent 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetParent_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        EnsId arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetParent(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.SetParent
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetParent_1(Object* object, EnsId value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->SetParent(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetWorldPosition 方法
     static Reflection::Value Invoke_Transform_GetWorldPosition_2(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4953,6 +9618,26 @@ public:
         auto result = instance->GetWorldPosition();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetWorldPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldPosition_2(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetWorldPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetWorldPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldPosition_2(Object* object, vector3* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetWorldPosition();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.GetWorldRotation 方法
@@ -4967,6 +9652,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Transform.GetWorldRotation 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetWorldRotation_3(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetWorldRotation(), Reflection::ValueKind::Quaternion, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetWorldRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetWorldRotation_3(Object* object, quaternion* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetWorldRotation();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetLocalPosition 方法
     static Reflection::Value Invoke_Transform_GetLocalPosition_4(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -4977,6 +9682,26 @@ public:
         auto result = instance->GetLocalPosition();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalPosition_4(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetLocalPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalPosition_4(Object* object, vector3* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalPosition();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetDerivedLocalPosition 方法
@@ -4995,6 +9720,30 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Transform.SetDerivedLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetDerivedLocalPosition_5(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        uint64 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        vector3 arg1{};
+        if (!ScriptInterop::ReadArgument(args[1], arg1)) return ScriptInterop::InteropStatus::UnsupportedType;
+        return ScriptInterop::WriteResult(instance->SetDerivedLocalPosition(arg0, arg1), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.SetDerivedLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetDerivedLocalPosition_5(Object* object, uint64 value0, vector3 value1, uint8* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->SetDerivedLocalPosition(value0, value1) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.ClearDerivedLocalPosition 方法
     static Reflection::Value Invoke_Transform_ClearDerivedLocalPosition_6(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5009,6 +9758,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.ClearDerivedLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_ClearDerivedLocalPosition_6(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        uint64 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->ClearDerivedLocalPosition(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.ClearDerivedLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_ClearDerivedLocalPosition_6(Object* object, uint64 value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->ClearDerivedLocalPosition(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.HasDerivedLocalPosition 方法
     static Reflection::Value Invoke_Transform_HasDerivedLocalPosition_7(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5021,6 +9793,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Transform.HasDerivedLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_HasDerivedLocalPosition_7(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->HasDerivedLocalPosition(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.HasDerivedLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_HasDerivedLocalPosition_7(Object* object, uint8* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->HasDerivedLocalPosition() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetResolvedLocalPosition 方法
     static Reflection::Value Invoke_Transform_GetResolvedLocalPosition_8(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5031,6 +9823,26 @@ public:
         auto result = instance->GetResolvedLocalPosition();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetResolvedLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetResolvedLocalPosition_8(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetResolvedLocalPosition(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetResolvedLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetResolvedLocalPosition_8(Object* object, vector3* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetResolvedLocalPosition();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetLocalPosition 方法
@@ -5047,6 +9859,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.SetLocalPosition 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalPosition_9(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLocalPosition(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.SetLocalPosition
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalPosition_9(Object* object, vector3 value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->SetLocalPosition(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetLocalRotation 方法
     static Reflection::Value Invoke_Transform_GetLocalRotation_10(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5057,6 +9892,26 @@ public:
         auto result = instance->GetLocalRotation();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetLocalRotation 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalRotation_10(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetLocalRotation(), Reflection::ValueKind::Quaternion, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetLocalRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalRotation_10(Object* object, quaternion* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalRotation();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetLocalRotation 方法
@@ -5073,6 +9928,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.SetLocalRotation 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalRotation_11(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        quaternion arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLocalRotation(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.SetLocalRotation
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalRotation_11(Object* object, quaternion value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->SetLocalRotation(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetLocalScale 方法
     static Reflection::Value Invoke_Transform_GetLocalScale_12(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5083,6 +9961,26 @@ public:
         auto result = instance->GetLocalScale();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetLocalScale 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalScale_12(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetLocalScale(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetLocalScale
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalScale_12(Object* object, vector3* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalScale();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetLocalScale 方法
@@ -5099,6 +9997,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.SetLocalScale 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalScale_13(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLocalScale(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.SetLocalScale
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalScale_13(Object* object, vector3 value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->SetLocalScale(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetLocalEulerAngles 方法
     static Reflection::Value Invoke_Transform_GetLocalEulerAngles_14(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5109,6 +10030,26 @@ public:
         auto result = instance->GetLocalEulerAngles();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetLocalEulerAngles 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetLocalEulerAngles_14(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetLocalEulerAngles(), Reflection::ValueKind::Vector3, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetLocalEulerAngles
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetLocalEulerAngles_14(Object* object, vector3* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetLocalEulerAngles();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //调用 Transform.SetLocalEulerAngles 方法
@@ -5125,6 +10066,29 @@ public:
         return Reflection::Value();
     }
 
+    //直接调用 Transform.SetLocalEulerAngles 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_SetLocalEulerAngles_15(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        vector3 arg0{};
+        if (!ScriptInterop::ReadArgument(args[0], arg0)) return ScriptInterop::InteropStatus::UnsupportedType;
+        instance->SetLocalEulerAngles(arg0);
+        *output = {};
+        return ScriptInterop::InteropStatus::Ok;
+    }
+
+    //按具体 ABI 签名调用 Transform.SetLocalEulerAngles
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_SetLocalEulerAngles_15(Object* object, vector3 value0)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            instance->SetLocalEulerAngles(value0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetFirstChild 方法
     static Reflection::Value Invoke_Transform_GetFirstChild_16(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5137,6 +10101,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 Transform.GetFirstChild 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetFirstChild_16(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetFirstChild(), Reflection::ValueKind::EnsId, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetFirstChild
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetFirstChild_16(Object* object, EnsId* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetFirstChild();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 Transform.GetNextSibling 方法
     static Reflection::Value Invoke_Transform_GetNextSibling_17(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5147,6 +10131,26 @@ public:
         auto result = instance->GetNextSibling();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 Transform.GetNextSibling 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_Transform_GetNextSibling_17(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        Transform* instance = static_cast<Transform*>(object);
+        return ScriptInterop::WriteResult(instance->GetNextSibling(), Reflection::ValueKind::EnsId, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 Transform.GetNextSibling
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_Transform_GetNextSibling_17(Object* object, EnsId* output)
+    {
+        try
+        {
+            Transform* instance = static_cast<Transform*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetNextSibling();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.enabled 字段
@@ -5178,6 +10182,33 @@ public:
         return Reflection::SetFromValue(instance->enabled, value);
     }
 
+    //按具体类型读取 WheelCollider.enabled
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_enabled(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->enabled) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.enabled，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_enabled(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->enabled = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.wheelOffset 字段
     static std::string Get_WheelCollider_wheelOffset(Object* object)
     {
@@ -5205,6 +10236,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->wheelOffset, value);
+    }
+
+    //按具体类型读取 WheelCollider.wheelOffset
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_wheelOffset(Object* object, vector3* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->wheelOffset;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.wheelOffset，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_wheelOffset(Object* object, vector3 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->wheelOffset = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.wheelRadius 字段
@@ -5236,6 +10294,33 @@ public:
         return Reflection::SetFromValue(instance->wheelRadius, value);
     }
 
+    //按具体类型读取 WheelCollider.wheelRadius
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_wheelRadius(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->wheelRadius;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.wheelRadius，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_wheelRadius(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->wheelRadius = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.suspensionRestLength 字段
     static std::string Get_WheelCollider_suspensionRestLength(Object* object)
     {
@@ -5263,6 +10348,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->suspensionRestLength, value);
+    }
+
+    //按具体类型读取 WheelCollider.suspensionRestLength
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_suspensionRestLength(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->suspensionRestLength;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.suspensionRestLength，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_suspensionRestLength(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->suspensionRestLength = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.suspensionTravel 字段
@@ -5294,6 +10406,33 @@ public:
         return Reflection::SetFromValue(instance->suspensionTravel, value);
     }
 
+    //按具体类型读取 WheelCollider.suspensionTravel
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_suspensionTravel(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->suspensionTravel;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.suspensionTravel，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_suspensionTravel(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->suspensionTravel = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.suspensionStiffness 字段
     static std::string Get_WheelCollider_suspensionStiffness(Object* object)
     {
@@ -5321,6 +10460,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->suspensionStiffness, value);
+    }
+
+    //按具体类型读取 WheelCollider.suspensionStiffness
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_suspensionStiffness(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->suspensionStiffness;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.suspensionStiffness，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_suspensionStiffness(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->suspensionStiffness = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.suspensionDamping 字段
@@ -5352,6 +10518,33 @@ public:
         return Reflection::SetFromValue(instance->suspensionDamping, value);
     }
 
+    //按具体类型读取 WheelCollider.suspensionDamping
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_suspensionDamping(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->suspensionDamping;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.suspensionDamping，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_suspensionDamping(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->suspensionDamping = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.rollingFriction 字段
     static std::string Get_WheelCollider_rollingFriction(Object* object)
     {
@@ -5379,6 +10572,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->rollingFriction, value);
+    }
+
+    //按具体类型读取 WheelCollider.rollingFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_rollingFriction(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->rollingFriction;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.rollingFriction，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_rollingFriction(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->rollingFriction = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.lateralFriction 字段
@@ -5410,6 +10630,33 @@ public:
         return Reflection::SetFromValue(instance->lateralFriction, value);
     }
 
+    //按具体类型读取 WheelCollider.lateralFriction
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_lateralFriction(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->lateralFriction;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.lateralFriction，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_lateralFriction(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->lateralFriction = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.raycastDistance 字段
     static std::string Get_WheelCollider_raycastDistance(Object* object)
     {
@@ -5437,6 +10684,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->raycastDistance, value);
+    }
+
+    //按具体类型读取 WheelCollider.raycastDistance
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_raycastDistance(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->raycastDistance;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.raycastDistance，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_raycastDistance(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->raycastDistance = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.groundQueryLayer 字段
@@ -5468,6 +10742,33 @@ public:
         return Reflection::SetFromValue(instance->groundQueryLayer, value);
     }
 
+    //按具体类型读取 WheelCollider.groundQueryLayer
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_groundQueryLayer(Object* object, uint32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->groundQueryLayer;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.groundQueryLayer，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_groundQueryLayer(Object* object, uint32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->groundQueryLayer = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.steeringWheel 字段
     static std::string Get_WheelCollider_steeringWheel(Object* object)
     {
@@ -5495,6 +10796,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->steeringWheel, value);
+    }
+
+    //按具体类型读取 WheelCollider.steeringWheel
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_steeringWheel(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->steeringWheel) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.steeringWheel，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_steeringWheel(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->steeringWheel = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.steerAngle 字段
@@ -5526,6 +10854,33 @@ public:
         return Reflection::SetFromValue(instance->steerAngle, value);
     }
 
+    //按具体类型读取 WheelCollider.steerAngle
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_steerAngle(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->steerAngle;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.steerAngle，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_steerAngle(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->steerAngle = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.grounded 字段
     static std::string Get_WheelCollider_grounded(Object* object)
     {
@@ -5553,6 +10908,33 @@ public:
         WheelCollider* instance = static_cast<WheelCollider*>(object);
         if (!instance) return false;
         return Reflection::SetFromValue(instance->grounded, value);
+    }
+
+    //按具体类型读取 WheelCollider.grounded
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_grounded(Object* object, uint8* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = (instance->grounded) ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.grounded，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_grounded(Object* object, uint8 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->grounded = value != 0;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
     //读取 WheelCollider.compression 字段
@@ -5584,6 +10966,33 @@ public:
         return Reflection::SetFromValue(instance->compression, value);
     }
 
+    //按具体类型读取 WheelCollider.compression
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_compression(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->compression;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.compression，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_compression(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->compression = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //读取 WheelCollider.previousCompression 字段
     static std::string Get_WheelCollider_previousCompression(Object* object)
     {
@@ -5613,6 +11022,33 @@ public:
         return Reflection::SetFromValue(instance->previousCompression, value);
     }
 
+    //按具体类型读取 WheelCollider.previousCompression
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_WheelCollider_previousCompression(Object* object, float32* output)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->previousCompression;
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
+    //按具体类型写入 WheelCollider.previousCompression，保留业务通知
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_WheelCollider_previousCompression(Object* object, float32 value)
+    {
+        try
+        {
+            auto* instance = static_cast<WheelCollider*>(object);
+            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;
+            instance->previousCompression = value;
+            if (World* world = instance->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 WheelCollider.IsGrounded 方法
     static Reflection::Value Invoke_WheelCollider_IsGrounded_0(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5625,6 +11061,26 @@ public:
         return Reflection::Value(result);
     }
 
+    //直接调用 WheelCollider.IsGrounded 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_WheelCollider_IsGrounded_0(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return ScriptInterop::WriteResult(instance->IsGrounded(), Reflection::ValueKind::Bool, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 WheelCollider.IsGrounded
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_WheelCollider_IsGrounded_0(Object* object, uint8* output)
+    {
+        try
+        {
+            WheelCollider* instance = static_cast<WheelCollider*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->IsGrounded() ? uint8(1) : uint8(0);
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    }
+
     //调用 WheelCollider.GetCompression 方法
     static Reflection::Value Invoke_WheelCollider_GetCompression_1(Object* object, std::span<const Reflection::Value> args, bool& success)
     {
@@ -5635,6 +11091,26 @@ public:
         auto result = instance->GetCompression();
         success = true;
         return Reflection::Value(result);
+    }
+
+    //直接调用 WheelCollider.GetCompression 的 ABI 入口
+    static ScriptInterop::InteropStatus InvokeAbi_WheelCollider_GetCompression_1(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)
+    {
+        WheelCollider* instance = static_cast<WheelCollider*>(object);
+        return ScriptInterop::WriteResult(instance->GetCompression(), Reflection::ValueKind::Float32, output, stringStorage);
+    }
+
+    //按具体 ABI 签名调用 WheelCollider.GetCompression
+    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_WheelCollider_GetCompression_1(Object* object, float32* output)
+    {
+        try
+        {
+            WheelCollider* instance = static_cast<WheelCollider*>(object);
+            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;
+            *output = instance->GetCompression();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
     }
 
 };
@@ -5650,46 +11126,46 @@ namespace Reflection
 
         RegisterTypeFields(Camera::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Camera_enabled, ReflectionGeneratedAccess::SetValue_Camera_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr, ReflectionGeneratedAccess::GetValue_Camera_fieldOfView, ReflectionGeneratedAccess::SetValue_Camera_fieldOfView, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_nearPlane, ReflectionGeneratedAccess::SetValue_Camera_nearPlane, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_farPlane, ReflectionGeneratedAccess::SetValue_Camera_farPlane, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_depth, ReflectionGeneratedAccess::SetValue_Camera_depth, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr, ReflectionGeneratedAccess::GetValue_Camera_drawLayerMask, ReflectionGeneratedAccess::SetValue_Camera_drawLayerMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearMode, ReflectionGeneratedAccess::SetValue_Camera_clearMode, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearColor, ReflectionGeneratedAccess::SetValue_Camera_clearColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("viewportX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportX, ReflectionGeneratedAccess::Set_Camera_viewportX, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportX, ReflectionGeneratedAccess::SetValue_Camera_viewportX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("viewportY", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportY, ReflectionGeneratedAccess::Set_Camera_viewportY, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportY, ReflectionGeneratedAccess::SetValue_Camera_viewportY, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("viewportWidth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportWidth, ReflectionGeneratedAccess::Set_Camera_viewportWidth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportWidth, ReflectionGeneratedAccess::SetValue_Camera_viewportWidth, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("viewportHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportHeight, ReflectionGeneratedAccess::Set_Camera_viewportHeight, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportHeight, ReflectionGeneratedAccess::SetValue_Camera_viewportHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("renderTargetId", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("overrideExposure", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_overrideExposure, ReflectionGeneratedAccess::Set_Camera_overrideExposure, nullptr, ReflectionGeneratedAccess::GetValue_Camera_overrideExposure, ReflectionGeneratedAccess::SetValue_Camera_overrideExposure, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("exposure", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_exposure, ReflectionGeneratedAccess::Set_Camera_exposure, nullptr, ReflectionGeneratedAccess::GetValue_Camera_exposure, ReflectionGeneratedAccess::SetValue_Camera_exposure, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_enabled, ReflectionGeneratedAccess::Set_Camera_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Camera_enabled, ReflectionGeneratedAccess::SetValue_Camera_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_enabled)),
+                FieldInfo("fieldOfView", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_fieldOfView, ReflectionGeneratedAccess::Set_Camera_fieldOfView, nullptr, ReflectionGeneratedAccess::GetValue_Camera_fieldOfView, ReflectionGeneratedAccess::SetValue_Camera_fieldOfView, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_fieldOfView), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_fieldOfView)),
+                FieldInfo("nearPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_nearPlane, ReflectionGeneratedAccess::Set_Camera_nearPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_nearPlane, ReflectionGeneratedAccess::SetValue_Camera_nearPlane, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_nearPlane), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_nearPlane)),
+                FieldInfo("farPlane", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_farPlane, ReflectionGeneratedAccess::Set_Camera_farPlane, nullptr, ReflectionGeneratedAccess::GetValue_Camera_farPlane, ReflectionGeneratedAccess::SetValue_Camera_farPlane, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_farPlane), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_farPlane)),
+                FieldInfo("depth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_depth, ReflectionGeneratedAccess::Set_Camera_depth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_depth, ReflectionGeneratedAccess::SetValue_Camera_depth, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_depth), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_depth)),
+                FieldInfo("drawLayerMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_drawLayerMask, ReflectionGeneratedAccess::Set_Camera_drawLayerMask, nullptr, ReflectionGeneratedAccess::GetValue_Camera_drawLayerMask, ReflectionGeneratedAccess::SetValue_Camera_drawLayerMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_drawLayerMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_drawLayerMask)),
+                FieldInfo("clearMode", "ClearMode", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Camera_clearMode, ReflectionGeneratedAccess::Set_Camera_clearMode, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearMode, ReflectionGeneratedAccess::SetValue_Camera_clearMode, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("clearColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_Camera_clearColor, ReflectionGeneratedAccess::Set_Camera_clearColor, nullptr, ReflectionGeneratedAccess::GetValue_Camera_clearColor, ReflectionGeneratedAccess::SetValue_Camera_clearColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Color, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_clearColor), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_clearColor)),
+                FieldInfo("viewportX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportX, ReflectionGeneratedAccess::Set_Camera_viewportX, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportX, ReflectionGeneratedAccess::SetValue_Camera_viewportX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_viewportX), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_viewportX)),
+                FieldInfo("viewportY", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportY, ReflectionGeneratedAccess::Set_Camera_viewportY, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportY, ReflectionGeneratedAccess::SetValue_Camera_viewportY, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_viewportY), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_viewportY)),
+                FieldInfo("viewportWidth", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportWidth, ReflectionGeneratedAccess::Set_Camera_viewportWidth, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportWidth, ReflectionGeneratedAccess::SetValue_Camera_viewportWidth, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_viewportWidth), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_viewportWidth)),
+                FieldInfo("viewportHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_viewportHeight, ReflectionGeneratedAccess::Set_Camera_viewportHeight, nullptr, ReflectionGeneratedAccess::GetValue_Camera_viewportHeight, ReflectionGeneratedAccess::SetValue_Camera_viewportHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_viewportHeight), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_viewportHeight)),
+                FieldInfo("renderTargetId", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("overrideExposure", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Camera_overrideExposure, ReflectionGeneratedAccess::Set_Camera_overrideExposure, nullptr, ReflectionGeneratedAccess::GetValue_Camera_overrideExposure, ReflectionGeneratedAccess::SetValue_Camera_overrideExposure, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_overrideExposure), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_overrideExposure)),
+                FieldInfo("exposure", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Camera_exposure, ReflectionGeneratedAccess::Set_Camera_exposure, nullptr, ReflectionGeneratedAccess::GetValue_Camera_exposure, ReflectionGeneratedAccess::SetValue_Camera_exposure, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Camera_exposure), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Camera_exposure)),
             });
 
         RegisterTypeMethods(Camera::StaticType(),
             {
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_GetEnabled_0),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_SetEnabled_1),
-                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_IsRenderSceneEligible_2),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnAttach_3),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnDetach_4),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_OnWorldActiveChanged_5),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_Camera_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_Camera_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_SetEnabled_1)),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_IsRenderSceneEligible_2, ReflectionGeneratedAccess::InvokeAbi_Camera_IsRenderSceneEligible_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_IsRenderSceneEligible_2)),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnAttach_3, ReflectionGeneratedAccess::InvokeAbi_Camera_OnAttach_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_OnAttach_3)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Camera_OnDetach_4, ReflectionGeneratedAccess::InvokeAbi_Camera_OnDetach_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_OnDetach_4)),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_Camera_OnWorldActiveChanged_5, ReflectionGeneratedAccess::InvokeAbi_Camera_OnWorldActiveChanged_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Camera_OnWorldActiveChanged_5)),
             });
 
         RegisterTypeFields(CharacterController::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_CharacterController_enabled, ReflectionGeneratedAccess::Set_CharacterController_enabled, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_enabled, ReflectionGeneratedAccess::SetValue_CharacterController_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shape", "CharacterControllerShape", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_radius, ReflectionGeneratedAccess::Set_CharacterController_radius, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_radius, ReflectionGeneratedAccess::SetValue_CharacterController_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("height", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_height, ReflectionGeneratedAccess::Set_CharacterController_height, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_height, ReflectionGeneratedAccess::SetValue_CharacterController_height, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_CharacterController_halfExtents, ReflectionGeneratedAccess::Set_CharacterController_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_halfExtents, ReflectionGeneratedAccess::SetValue_CharacterController_halfExtents, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("stepOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_stepOffset, ReflectionGeneratedAccess::Set_CharacterController_stepOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_stepOffset, ReflectionGeneratedAccess::SetValue_CharacterController_stepOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_contactOffset, ReflectionGeneratedAccess::Set_CharacterController_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterController_contactOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_slopeLimit, ReflectionGeneratedAccess::Set_CharacterController_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterController_slopeLimit, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterController_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterController_minMoveDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionLayer, ReflectionGeneratedAccess::Set_CharacterController_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterController_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionMask, ReflectionGeneratedAccess::Set_CharacterController_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterController_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_CharacterController_enabled, ReflectionGeneratedAccess::Set_CharacterController_enabled, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_enabled, ReflectionGeneratedAccess::SetValue_CharacterController_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_enabled)),
+                FieldInfo("shape", "CharacterControllerShape", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_radius, ReflectionGeneratedAccess::Set_CharacterController_radius, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_radius, ReflectionGeneratedAccess::SetValue_CharacterController_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_radius), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_radius)),
+                FieldInfo("height", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_height, ReflectionGeneratedAccess::Set_CharacterController_height, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_height, ReflectionGeneratedAccess::SetValue_CharacterController_height, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_height), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_height)),
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_CharacterController_halfExtents, ReflectionGeneratedAccess::Set_CharacterController_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_halfExtents, ReflectionGeneratedAccess::SetValue_CharacterController_halfExtents, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_halfExtents), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_halfExtents)),
+                FieldInfo("stepOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_stepOffset, ReflectionGeneratedAccess::Set_CharacterController_stepOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_stepOffset, ReflectionGeneratedAccess::SetValue_CharacterController_stepOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_stepOffset), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_stepOffset)),
+                FieldInfo("contactOffset", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_contactOffset, ReflectionGeneratedAccess::Set_CharacterController_contactOffset, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_contactOffset, ReflectionGeneratedAccess::SetValue_CharacterController_contactOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_contactOffset), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_contactOffset)),
+                FieldInfo("slopeLimit", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_slopeLimit, ReflectionGeneratedAccess::Set_CharacterController_slopeLimit, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_slopeLimit, ReflectionGeneratedAccess::SetValue_CharacterController_slopeLimit, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_slopeLimit), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_slopeLimit)),
+                FieldInfo("minMoveDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CharacterController_minMoveDistance, ReflectionGeneratedAccess::Set_CharacterController_minMoveDistance, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_minMoveDistance, ReflectionGeneratedAccess::SetValue_CharacterController_minMoveDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_minMoveDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_minMoveDistance)),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionLayer, ReflectionGeneratedAccess::Set_CharacterController_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionLayer, ReflectionGeneratedAccess::SetValue_CharacterController_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_collisionLayer)),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_CharacterController_collisionMask, ReflectionGeneratedAccess::Set_CharacterController_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_CharacterController_collisionMask, ReflectionGeneratedAccess::SetValue_CharacterController_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CharacterController_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CharacterController_collisionMask)),
             });
 
         RegisterTypeMethods(CharacterController::StaticType(),
@@ -5698,14 +11174,14 @@ namespace Reflection
 
         RegisterTypeFields(Collider::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_enabled, ReflectionGeneratedAccess::Set_Collider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Collider_enabled, ReflectionGeneratedAccess::SetValue_Collider_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("isTrigger", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_isTrigger, ReflectionGeneratedAccess::Set_Collider_isTrigger, nullptr, ReflectionGeneratedAccess::GetValue_Collider_isTrigger, ReflectionGeneratedAccess::SetValue_Collider_isTrigger, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("center", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Collider_center, ReflectionGeneratedAccess::Set_Collider_center, nullptr, ReflectionGeneratedAccess::GetValue_Collider_center, ReflectionGeneratedAccess::SetValue_Collider_center, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_staticFriction, ReflectionGeneratedAccess::Set_Collider_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_staticFriction, ReflectionGeneratedAccess::SetValue_Collider_staticFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_dynamicFriction, ReflectionGeneratedAccess::Set_Collider_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_dynamicFriction, ReflectionGeneratedAccess::SetValue_Collider_dynamicFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_restitution, ReflectionGeneratedAccess::Set_Collider_restitution, nullptr, ReflectionGeneratedAccess::GetValue_Collider_restitution, ReflectionGeneratedAccess::SetValue_Collider_restitution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionLayer, ReflectionGeneratedAccess::Set_Collider_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionLayer, ReflectionGeneratedAccess::SetValue_Collider_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionMask, ReflectionGeneratedAccess::Set_Collider_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionMask, ReflectionGeneratedAccess::SetValue_Collider_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_enabled, ReflectionGeneratedAccess::Set_Collider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_Collider_enabled, ReflectionGeneratedAccess::SetValue_Collider_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_enabled)),
+                FieldInfo("isTrigger", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_Collider_isTrigger, ReflectionGeneratedAccess::Set_Collider_isTrigger, nullptr, ReflectionGeneratedAccess::GetValue_Collider_isTrigger, ReflectionGeneratedAccess::SetValue_Collider_isTrigger, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_isTrigger), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_isTrigger)),
+                FieldInfo("center", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Collider_center, ReflectionGeneratedAccess::Set_Collider_center, nullptr, ReflectionGeneratedAccess::GetValue_Collider_center, ReflectionGeneratedAccess::SetValue_Collider_center, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_center), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_center)),
+                FieldInfo("staticFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_staticFriction, ReflectionGeneratedAccess::Set_Collider_staticFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_staticFriction, ReflectionGeneratedAccess::SetValue_Collider_staticFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_staticFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_staticFriction)),
+                FieldInfo("dynamicFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_dynamicFriction, ReflectionGeneratedAccess::Set_Collider_dynamicFriction, nullptr, ReflectionGeneratedAccess::GetValue_Collider_dynamicFriction, ReflectionGeneratedAccess::SetValue_Collider_dynamicFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_dynamicFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_dynamicFriction)),
+                FieldInfo("restitution", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_Collider_restitution, ReflectionGeneratedAccess::Set_Collider_restitution, nullptr, ReflectionGeneratedAccess::GetValue_Collider_restitution, ReflectionGeneratedAccess::SetValue_Collider_restitution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_restitution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_restitution)),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionLayer, ReflectionGeneratedAccess::Set_Collider_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionLayer, ReflectionGeneratedAccess::SetValue_Collider_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_collisionLayer)),
+                FieldInfo("collisionMask", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Collider_collisionMask, ReflectionGeneratedAccess::Set_Collider_collisionMask, nullptr, ReflectionGeneratedAccess::GetValue_Collider_collisionMask, ReflectionGeneratedAccess::SetValue_Collider_collisionMask, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Collider_collisionMask), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Collider_collisionMask)),
             });
 
         RegisterTypeMethods(Collider::StaticType(),
@@ -5714,7 +11190,7 @@ namespace Reflection
 
         RegisterTypeFields(BoxCollider::StaticType(),
             {
-                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_BoxCollider_halfExtents, ReflectionGeneratedAccess::Set_BoxCollider_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_BoxCollider_halfExtents, ReflectionGeneratedAccess::SetValue_BoxCollider_halfExtents, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("halfExtents", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_BoxCollider_halfExtents, ReflectionGeneratedAccess::Set_BoxCollider_halfExtents, nullptr, ReflectionGeneratedAccess::GetValue_BoxCollider_halfExtents, ReflectionGeneratedAccess::SetValue_BoxCollider_halfExtents, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_BoxCollider_halfExtents), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_BoxCollider_halfExtents)),
             });
 
         RegisterTypeMethods(BoxCollider::StaticType(),
@@ -5723,7 +11199,7 @@ namespace Reflection
 
         RegisterTypeFields(SphereCollider::StaticType(),
             {
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_SphereCollider_radius, ReflectionGeneratedAccess::Set_SphereCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_SphereCollider_radius, ReflectionGeneratedAccess::SetValue_SphereCollider_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_SphereCollider_radius, ReflectionGeneratedAccess::Set_SphereCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_SphereCollider_radius, ReflectionGeneratedAccess::SetValue_SphereCollider_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_SphereCollider_radius), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_SphereCollider_radius)),
             });
 
         RegisterTypeMethods(SphereCollider::StaticType(),
@@ -5732,8 +11208,8 @@ namespace Reflection
 
         RegisterTypeFields(CapsuleCollider::StaticType(),
             {
-                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_radius, ReflectionGeneratedAccess::Set_CapsuleCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_radius, ReflectionGeneratedAccess::SetValue_CapsuleCollider_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("halfHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::Set_CapsuleCollider_halfHeight, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::SetValue_CapsuleCollider_halfHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("radius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_radius, ReflectionGeneratedAccess::Set_CapsuleCollider_radius, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_radius, ReflectionGeneratedAccess::SetValue_CapsuleCollider_radius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CapsuleCollider_radius), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CapsuleCollider_radius)),
+                FieldInfo("halfHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::Set_CapsuleCollider_halfHeight, nullptr, ReflectionGeneratedAccess::GetValue_CapsuleCollider_halfHeight, ReflectionGeneratedAccess::SetValue_CapsuleCollider_halfHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_CapsuleCollider_halfHeight), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_CapsuleCollider_halfHeight)),
             });
 
         RegisterTypeMethods(CapsuleCollider::StaticType(),
@@ -5742,22 +11218,22 @@ namespace Reflection
 
         RegisterTypeFields(ConvexMeshCollider::StaticType(),
             {
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::Set_ConvexMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_ConvexMeshCollider_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::Set_ConvexMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ConvexMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_ConvexMeshCollider_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(ConvexMeshCollider::StaticType(),
             {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_OnDetach_0),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ConvexMeshCollider_OnDetach_0, ReflectionGeneratedAccess::InvokeAbi_ConvexMeshCollider_OnDetach_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ConvexMeshCollider_OnDetach_0)),
             });
 
         RegisterTypeFields(TriangleMeshCollider::StaticType(),
             {
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::Set_TriangleMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshCollider_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::Set_TriangleMeshCollider_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_TriangleMeshCollider_mesh, ReflectionGeneratedAccess::SetValue_TriangleMeshCollider_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(TriangleMeshCollider::StaticType(),
             {
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_0),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_TriangleMeshCollider_OnDetach_0, ReflectionGeneratedAccess::InvokeAbi_TriangleMeshCollider_OnDetach_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_TriangleMeshCollider_OnDetach_0)),
             });
 
         RegisterTypeFields(Component::StaticType(),
@@ -5770,29 +11246,29 @@ namespace Reflection
 
         RegisterTypeFields(DirectionalLight::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_enabled, ReflectionGeneratedAccess::SetValue_DirectionalLight_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_color, ReflectionGeneratedAccess::SetValue_DirectionalLight_color, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_intensity, ReflectionGeneratedAccess::SetValue_DirectionalLight_intensity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_castShadows, ReflectionGeneratedAccess::SetValue_DirectionalLight_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowStrength, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowCascadeCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::Set_DirectionalLight_shadowCascadeCount, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowCascadeCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowMapResolution", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::Set_DirectionalLight_shadowMapResolution, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowMapResolution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowSplitLambda", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::Set_DirectionalLight_shadowSplitLambda, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowSplitLambda, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowAdaptive", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::Set_DirectionalLight_shadowAdaptive, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowAdaptive, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowNormalBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowNormalBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowNormalBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shadowBlendRatio", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBlendRatio, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBlendRatio, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_enabled, ReflectionGeneratedAccess::Set_DirectionalLight_enabled, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_enabled, ReflectionGeneratedAccess::SetValue_DirectionalLight_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_enabled)),
+                FieldInfo("color", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_DirectionalLight_color, ReflectionGeneratedAccess::Set_DirectionalLight_color, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_color, ReflectionGeneratedAccess::SetValue_DirectionalLight_color, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Color, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_color), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_color)),
+                FieldInfo("intensity", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_intensity, ReflectionGeneratedAccess::Set_DirectionalLight_intensity, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_intensity, ReflectionGeneratedAccess::SetValue_DirectionalLight_intensity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_intensity), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_intensity)),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_castShadows, ReflectionGeneratedAccess::Set_DirectionalLight_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_castShadows, ReflectionGeneratedAccess::SetValue_DirectionalLight_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_castShadows)),
+                FieldInfo("shadowBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowBias)),
+                FieldInfo("shadowStrength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::Set_DirectionalLight_shadowStrength, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowStrength, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowStrength, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowStrength), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowStrength)),
+                FieldInfo("shadowDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::Set_DirectionalLight_shadowDistance, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowDistance, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowDistance)),
+                FieldInfo("shadowCascadeCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::Set_DirectionalLight_shadowCascadeCount, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowCascadeCount, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowCascadeCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowCascadeCount), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowCascadeCount)),
+                FieldInfo("shadowMapResolution", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::Set_DirectionalLight_shadowMapResolution, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowMapResolution, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowMapResolution, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowMapResolution), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowMapResolution)),
+                FieldInfo("shadowSplitLambda", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::Set_DirectionalLight_shadowSplitLambda, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowSplitLambda, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowSplitLambda, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowSplitLambda), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowSplitLambda)),
+                FieldInfo("shadowAdaptive", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::Set_DirectionalLight_shadowAdaptive, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowAdaptive, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowAdaptive, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowAdaptive), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowAdaptive)),
+                FieldInfo("shadowNormalBias", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::Set_DirectionalLight_shadowNormalBias, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowNormalBias, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowNormalBias, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowNormalBias), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowNormalBias)),
+                FieldInfo("shadowBlendRatio", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::Set_DirectionalLight_shadowBlendRatio, nullptr, ReflectionGeneratedAccess::GetValue_DirectionalLight_shadowBlendRatio, ReflectionGeneratedAccess::SetValue_DirectionalLight_shadowBlendRatio, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_DirectionalLight_shadowBlendRatio), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_DirectionalLight_shadowBlendRatio)),
             });
 
         RegisterTypeMethods(DirectionalLight::StaticType(),
             {
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_GetEnabled_0),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_SetEnabled_1),
-                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_IsRenderSceneEligible_2),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_3),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_4),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_OnWorldActiveChanged_5),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_SetEnabled_1)),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_IsRenderSceneEligible_2, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_IsRenderSceneEligible_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_IsRenderSceneEligible_2)),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnAttach_3, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_OnAttach_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_OnAttach_3)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_DirectionalLight_OnDetach_4, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_OnDetach_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_OnDetach_4)),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_DirectionalLight_OnWorldActiveChanged_5, ReflectionGeneratedAccess::InvokeAbi_DirectionalLight_OnWorldActiveChanged_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_DirectionalLight_OnWorldActiveChanged_5)),
             });
 
         RegisterTypeFields(Ens::StaticType(),
@@ -5805,143 +11281,143 @@ namespace Reflection
 
         RegisterTypeFields(Font::StaticType(),
             {
-                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("prebakedAtlas", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("sourceBytes", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("faceIndex", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Font_faceIndex, ReflectionGeneratedAccess::Set_Font_faceIndex, nullptr, ReflectionGeneratedAccess::GetValue_Font_faceIndex, ReflectionGeneratedAccess::SetValue_Font_faceIndex, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("rasterMode", "FontRasterMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("atlasSize", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("distanceFieldSize", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("distanceFieldRange", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("familyName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("styleName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("unitsPerEm", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("ascender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("descender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("lineHeight", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("prebakedAtlas", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("sourceBytes", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("faceIndex", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Font_faceIndex, ReflectionGeneratedAccess::Set_Font_faceIndex, nullptr, ReflectionGeneratedAccess::GetValue_Font_faceIndex, ReflectionGeneratedAccess::SetValue_Font_faceIndex, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Font_faceIndex), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Font_faceIndex)),
+                FieldInfo("rasterMode", "FontRasterMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("atlasSize", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("distanceFieldSize", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("distanceFieldRange", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("familyName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("styleName", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("unitsPerEm", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("ascender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("descender", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("lineHeight", "float32", Reflection::FieldKind::Float32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Font::StaticType(),
             {
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_GetRevision_0),
-                MethodInfo("BumpRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_BumpRevision_1),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_GetRevision_0, ReflectionGeneratedAccess::InvokeAbi_Font_GetRevision_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Font_GetRevision_0)),
+                MethodInfo("BumpRevision", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Font_BumpRevision_1, ReflectionGeneratedAccess::InvokeAbi_Font_BumpRevision_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Font_BumpRevision_1)),
             });
 
         RegisterTypeFields(HeightField::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_enabled, ReflectionGeneratedAccess::Set_HeightField_enabled, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_enabled, ReflectionGeneratedAccess::SetValue_HeightField_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("seed", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_seed, ReflectionGeneratedAccess::Set_HeightField_seed, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_seed, ReflectionGeneratedAccess::SetValue_HeightField_seed, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("sampleTileX", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileX, ReflectionGeneratedAccess::Set_HeightField_sampleTileX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileX, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("sampleTileZ", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileZ, ReflectionGeneratedAccess::Set_HeightField_sampleTileZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileZ, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("sizeX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeX, ReflectionGeneratedAccess::Set_HeightField_sizeX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeX, ReflectionGeneratedAccess::SetValue_HeightField_sizeX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("sizeZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeZ, ReflectionGeneratedAccess::Set_HeightField_sizeZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeZ, ReflectionGeneratedAccess::SetValue_HeightField_sizeZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("rowCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_rowCount, ReflectionGeneratedAccess::Set_HeightField_rowCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_rowCount, ReflectionGeneratedAccess::SetValue_HeightField_rowCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("columnCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_columnCount, ReflectionGeneratedAccess::Set_HeightField_columnCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_columnCount, ReflectionGeneratedAccess::SetValue_HeightField_columnCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("amplitude", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_amplitude, ReflectionGeneratedAccess::Set_HeightField_amplitude, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_amplitude, ReflectionGeneratedAccess::SetValue_HeightField_amplitude, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("frequency", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_frequency, ReflectionGeneratedAccess::Set_HeightField_frequency, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_frequency, ReflectionGeneratedAccess::SetValue_HeightField_frequency, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("octaves", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_octaves, ReflectionGeneratedAccess::Set_HeightField_octaves, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_octaves, ReflectionGeneratedAccess::SetValue_HeightField_octaves, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenMinX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinX, ReflectionGeneratedAccess::Set_HeightField_flattenMinX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenMaxX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxX, ReflectionGeneratedAccess::Set_HeightField_flattenMaxX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenMinZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinZ, ReflectionGeneratedAccess::Set_HeightField_flattenMinZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenMaxZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxZ, ReflectionGeneratedAccess::Set_HeightField_flattenMaxZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenHeight, ReflectionGeneratedAccess::Set_HeightField_flattenHeight, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenHeight, ReflectionGeneratedAccess::SetValue_HeightField_flattenHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("flattenBlendDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::Set_HeightField_flattenBlendDistance, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::SetValue_HeightField_flattenBlendDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_collisionLayer, ReflectionGeneratedAccess::Set_HeightField_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_collisionLayer, ReflectionGeneratedAccess::SetValue_HeightField_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_HeightField_material, ReflectionGeneratedAccess::Set_HeightField_material, "Material", ReflectionGeneratedAccess::GetValue_HeightField_material, ReflectionGeneratedAccess::SetValue_HeightField_material, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("generateNoiseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::Set_HeightField_generateNoiseTexture, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::SetValue_HeightField_generateNoiseTexture, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("noiseTextureSize", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_noiseTextureSize, ReflectionGeneratedAccess::Set_HeightField_noiseTextureSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseTextureSize, ReflectionGeneratedAccess::SetValue_HeightField_noiseTextureSize, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("noiseLowColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseLowColor, ReflectionGeneratedAccess::Set_HeightField_noiseLowColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseLowColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseLowColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("noiseHighColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseHighColor, ReflectionGeneratedAccess::Set_HeightField_noiseHighColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseHighColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseHighColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("tileSize", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_tileSize, ReflectionGeneratedAccess::Set_HeightField_tileSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_tileSize, ReflectionGeneratedAccess::SetValue_HeightField_tileSize, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("heights", "std::vector<float32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("generatedMesh", "Mesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("noiseTexture", "Texture2D*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("runtimeMaterial", "Material*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_enabled, ReflectionGeneratedAccess::Set_HeightField_enabled, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_enabled, ReflectionGeneratedAccess::SetValue_HeightField_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_enabled)),
+                FieldInfo("seed", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_seed, ReflectionGeneratedAccess::Set_HeightField_seed, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_seed, ReflectionGeneratedAccess::SetValue_HeightField_seed, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_seed), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_seed)),
+                FieldInfo("sampleTileX", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileX, ReflectionGeneratedAccess::Set_HeightField_sampleTileX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileX, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_sampleTileX), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_sampleTileX)),
+                FieldInfo("sampleTileZ", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_sampleTileZ, ReflectionGeneratedAccess::Set_HeightField_sampleTileZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sampleTileZ, ReflectionGeneratedAccess::SetValue_HeightField_sampleTileZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_sampleTileZ), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_sampleTileZ)),
+                FieldInfo("sizeX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeX, ReflectionGeneratedAccess::Set_HeightField_sizeX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeX, ReflectionGeneratedAccess::SetValue_HeightField_sizeX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_sizeX), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_sizeX)),
+                FieldInfo("sizeZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_sizeZ, ReflectionGeneratedAccess::Set_HeightField_sizeZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_sizeZ, ReflectionGeneratedAccess::SetValue_HeightField_sizeZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_sizeZ), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_sizeZ)),
+                FieldInfo("rowCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_rowCount, ReflectionGeneratedAccess::Set_HeightField_rowCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_rowCount, ReflectionGeneratedAccess::SetValue_HeightField_rowCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_rowCount), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_rowCount)),
+                FieldInfo("columnCount", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_columnCount, ReflectionGeneratedAccess::Set_HeightField_columnCount, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_columnCount, ReflectionGeneratedAccess::SetValue_HeightField_columnCount, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_columnCount), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_columnCount)),
+                FieldInfo("amplitude", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_amplitude, ReflectionGeneratedAccess::Set_HeightField_amplitude, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_amplitude, ReflectionGeneratedAccess::SetValue_HeightField_amplitude, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_amplitude), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_amplitude)),
+                FieldInfo("frequency", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_frequency, ReflectionGeneratedAccess::Set_HeightField_frequency, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_frequency, ReflectionGeneratedAccess::SetValue_HeightField_frequency, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_frequency), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_frequency)),
+                FieldInfo("octaves", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_octaves, ReflectionGeneratedAccess::Set_HeightField_octaves, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_octaves, ReflectionGeneratedAccess::SetValue_HeightField_octaves, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_octaves), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_octaves)),
+                FieldInfo("flattenMinX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinX, ReflectionGeneratedAccess::Set_HeightField_flattenMinX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenMinX), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenMinX)),
+                FieldInfo("flattenMaxX", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxX, ReflectionGeneratedAccess::Set_HeightField_flattenMaxX, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxX, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxX, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenMaxX), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenMaxX)),
+                FieldInfo("flattenMinZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMinZ, ReflectionGeneratedAccess::Set_HeightField_flattenMinZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMinZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMinZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenMinZ), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenMinZ)),
+                FieldInfo("flattenMaxZ", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenMaxZ, ReflectionGeneratedAccess::Set_HeightField_flattenMaxZ, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenMaxZ, ReflectionGeneratedAccess::SetValue_HeightField_flattenMaxZ, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenMaxZ), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenMaxZ)),
+                FieldInfo("flattenHeight", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenHeight, ReflectionGeneratedAccess::Set_HeightField_flattenHeight, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenHeight, ReflectionGeneratedAccess::SetValue_HeightField_flattenHeight, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenHeight), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenHeight)),
+                FieldInfo("flattenBlendDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::Set_HeightField_flattenBlendDistance, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_flattenBlendDistance, ReflectionGeneratedAccess::SetValue_HeightField_flattenBlendDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_flattenBlendDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_flattenBlendDistance)),
+                FieldInfo("collisionLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_HeightField_collisionLayer, ReflectionGeneratedAccess::Set_HeightField_collisionLayer, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_collisionLayer, ReflectionGeneratedAccess::SetValue_HeightField_collisionLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_collisionLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_collisionLayer)),
+                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_HeightField_material, ReflectionGeneratedAccess::Set_HeightField_material, "Material", ReflectionGeneratedAccess::GetValue_HeightField_material, ReflectionGeneratedAccess::SetValue_HeightField_material, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("generateNoiseTexture", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::Set_HeightField_generateNoiseTexture, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_generateNoiseTexture, ReflectionGeneratedAccess::SetValue_HeightField_generateNoiseTexture, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_generateNoiseTexture), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_generateNoiseTexture)),
+                FieldInfo("noiseTextureSize", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_HeightField_noiseTextureSize, ReflectionGeneratedAccess::Set_HeightField_noiseTextureSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseTextureSize, ReflectionGeneratedAccess::SetValue_HeightField_noiseTextureSize, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_noiseTextureSize), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_noiseTextureSize)),
+                FieldInfo("noiseLowColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseLowColor, ReflectionGeneratedAccess::Set_HeightField_noiseLowColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseLowColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseLowColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Color, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_noiseLowColor), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_noiseLowColor)),
+                FieldInfo("noiseHighColor", "color", Reflection::FieldKind::Color, true, ReflectionGeneratedAccess::Get_HeightField_noiseHighColor, ReflectionGeneratedAccess::Set_HeightField_noiseHighColor, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_noiseHighColor, ReflectionGeneratedAccess::SetValue_HeightField_noiseHighColor, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Color, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_noiseHighColor), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_noiseHighColor)),
+                FieldInfo("tileSize", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_HeightField_tileSize, ReflectionGeneratedAccess::Set_HeightField_tileSize, nullptr, ReflectionGeneratedAccess::GetValue_HeightField_tileSize, ReflectionGeneratedAccess::SetValue_HeightField_tileSize, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_HeightField_tileSize), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_HeightField_tileSize)),
+                FieldInfo("heights", "std::vector<float32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("generation", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("meshPending", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("generatedMesh", "Mesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("noiseTexture", "Texture2D*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("runtimeMaterial", "Material*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("ownsRuntimeMaterial", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(HeightField::StaticType(),
             {
-                MethodInfo("Regenerate", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_Regenerate_0),
-                MethodInfo("GetHeightAtWorldXZ", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("x", "float32", Reflection::ValueKind::Float32), ParameterInfo("z", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_HeightField_GetHeightAtWorldXZ_1),
-                MethodInfo("GetRowScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetRowScale_2),
-                MethodInfo("GetColumnScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetColumnScale_3),
-                MethodInfo("GetGeneration", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetGeneration_4),
-                MethodInfo("SyncPendingGeneration", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_SyncPendingGeneration_5),
+                MethodInfo("Regenerate", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_Regenerate_0, ReflectionGeneratedAccess::InvokeAbi_HeightField_Regenerate_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_Regenerate_0)),
+                MethodInfo("GetHeightAtWorldXZ", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("x", "float32", Reflection::ValueKind::Float32), ParameterInfo("z", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_HeightField_GetHeightAtWorldXZ_1, ReflectionGeneratedAccess::InvokeAbi_HeightField_GetHeightAtWorldXZ_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_GetHeightAtWorldXZ_1)),
+                MethodInfo("GetRowScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetRowScale_2, ReflectionGeneratedAccess::InvokeAbi_HeightField_GetRowScale_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_GetRowScale_2)),
+                MethodInfo("GetColumnScale", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetColumnScale_3, ReflectionGeneratedAccess::InvokeAbi_HeightField_GetColumnScale_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_GetColumnScale_3)),
+                MethodInfo("GetGeneration", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_GetGeneration_4, ReflectionGeneratedAccess::InvokeAbi_HeightField_GetGeneration_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_GetGeneration_4)),
+                MethodInfo("SyncPendingGeneration", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_HeightField_SyncPendingGeneration_5, ReflectionGeneratedAccess::InvokeAbi_HeightField_SyncPendingGeneration_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_HeightField_SyncPendingGeneration_5)),
             });
 
         RegisterTypeFields(InstanceDrawList::StaticType(),
             {
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Material", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("subMeshIndex", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("options", "InstanceDrawOptions", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("instances", "List<MeshInstanceData>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("material", "Ref<Material>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Material", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("subMeshIndex", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("options", "InstanceDrawOptions", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("instances", "List<MeshInstanceData>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(InstanceDrawList::StaticType(),
             {
-                MethodInfo("GetInstanceCount", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_GetInstanceCount_0),
-                MethodInfo("Submit", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Submit_1),
-                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Clear_2),
+                MethodInfo("GetInstanceCount", "int32", Reflection::ValueKind::Int32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_GetInstanceCount_0, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_GetInstanceCount_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_GetInstanceCount_0)),
+                MethodInfo("Submit", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Submit_1, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Submit_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Submit_1)),
+                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_InstanceDrawList_Clear_2, ReflectionGeneratedAccess::InvokeAbi_InstanceDrawList_Clear_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_InstanceDrawList_Clear_2)),
             });
 
         RegisterTypeFields(Material::StaticType(),
             {
-                FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr, ReflectionGeneratedAccess::GetValue_Material_name, ReflectionGeneratedAccess::SetValue_Material_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("overrideDrawQueue", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("floatSlots", "List<MaterialFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("shader", "Ref<Shader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "Shader", ReflectionGeneratedAccess::GetValue_Material_shader, ReflectionGeneratedAccess::SetValue_Material_shader, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuMaterial", "GpuMaterial*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Material_name, ReflectionGeneratedAccess::Set_Material_name, nullptr, ReflectionGeneratedAccess::GetValue_Material_name, ReflectionGeneratedAccess::SetValue_Material_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Material_name), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Material_name)),
+                FieldInfo("overrideDrawQueue", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("textureSlots", "List<MaterialTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<MaterialColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<MaterialFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("shader", "Ref<Shader>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Material_shader, ReflectionGeneratedAccess::Set_Material_shader, "Shader", ReflectionGeneratedAccess::GetValue_Material_shader, ReflectionGeneratedAccess::SetValue_Material_shader, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Material::StaticType(),
             {
-                MethodInfo("SetShader", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("shaderId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetShader_0),
-                MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_1),
-                MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_2),
-                MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_3),
-                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_4),
-                MethodInfo("GetColor", "color", Reflection::ValueKind::Color, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_GetColor_5),
-                MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_6),
-                MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_7),
-                MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_8),
-                MethodInfo("GetFloat", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_GetFloat_9),
-                MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_10),
-                MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_11),
-                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_IsDirty_12),
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_MarkDirty_13),
+                MethodInfo("SetShader", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("shaderId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetShader_0, ReflectionGeneratedAccess::InvokeAbi_Material_SetShader_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_SetShader_0)),
+                MethodInfo("SetTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("textureId", "StringId", Reflection::ValueKind::StringId) }, ReflectionGeneratedAccess::Invoke_Material_SetTexture_1, ReflectionGeneratedAccess::InvokeAbi_Material_SetTexture_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_SetTexture_1)),
+                MethodInfo("HasTexture", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasTexture_2, ReflectionGeneratedAccess::InvokeAbi_Material_HasTexture_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_HasTexture_2)),
+                MethodInfo("ClearTexture", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearTexture_3, ReflectionGeneratedAccess::InvokeAbi_Material_ClearTexture_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_ClearTexture_3)),
+                MethodInfo("SetColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_SetColor_4, ReflectionGeneratedAccess::InvokeAbi_Material_SetColor_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_SetColor_4)),
+                MethodInfo("GetColor", "color", Reflection::ValueKind::Color, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "color", Reflection::ValueKind::Color) }, ReflectionGeneratedAccess::Invoke_Material_GetColor_5, ReflectionGeneratedAccess::InvokeAbi_Material_GetColor_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_GetColor_5)),
+                MethodInfo("HasColor", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasColor_6, ReflectionGeneratedAccess::InvokeAbi_Material_HasColor_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_HasColor_6)),
+                MethodInfo("ClearColor", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearColor_7, ReflectionGeneratedAccess::InvokeAbi_Material_ClearColor_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_ClearColor_7)),
+                MethodInfo("SetFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("value", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_SetFloat_8, ReflectionGeneratedAccess::InvokeAbi_Material_SetFloat_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_SetFloat_8)),
+                MethodInfo("GetFloat", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String), ParameterInfo("defaultValue", "float32", Reflection::ValueKind::Float32) }, ReflectionGeneratedAccess::Invoke_Material_GetFloat_9, ReflectionGeneratedAccess::InvokeAbi_Material_GetFloat_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_GetFloat_9)),
+                MethodInfo("HasFloat", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_HasFloat_10, ReflectionGeneratedAccess::InvokeAbi_Material_HasFloat_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_HasFloat_10)),
+                MethodInfo("ClearFloat", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("slotName", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Material_ClearFloat_11, ReflectionGeneratedAccess::InvokeAbi_Material_ClearFloat_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_ClearFloat_11)),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_IsDirty_12, ReflectionGeneratedAccess::InvokeAbi_Material_IsDirty_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_IsDirty_12)),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Material_MarkDirty_13, ReflectionGeneratedAccess::InvokeAbi_Material_MarkDirty_13, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Material_MarkDirty_13)),
             });
 
         RegisterTypeFields(Mesh::StaticType(),
             {
-                FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dirtyFlags", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("contentVersion", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("localBounds", "bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr, ReflectionGeneratedAccess::GetValue_Mesh_name, ReflectionGeneratedAccess::SetValue_Mesh_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("normals", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("tangents", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("indices", "List<uint32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("subMeshes", "List<SubMesh>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuMesh", "GpuMesh*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("dirtyFlags", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("contentVersion", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("localBounds", "bounds3", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Mesh_name, ReflectionGeneratedAccess::Set_Mesh_name, nullptr, ReflectionGeneratedAccess::GetValue_Mesh_name, ReflectionGeneratedAccess::SetValue_Mesh_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Mesh_name), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Mesh_name)),
+                FieldInfo("vertices", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("texcoords", "List<vector2>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("normals", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("tangents", "List<vector3>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("indices", "List<uint32>", Reflection::FieldKind::Array, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("subMeshes", "List<SubMesh>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Mesh::StaticType(),
             {
-                MethodInfo("GetContentVersion", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_GetContentVersion_0),
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_1),
-                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_2),
-                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_3),
-                MethodInfo("ConfigureSubMesh", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("index", "int32", Reflection::ValueKind::Int32), ParameterInfo("subMeshName", "std::string", Reflection::ValueKind::String), ParameterInfo("indexStart", "uint32", Reflection::ValueKind::UInt32), ParameterInfo("indexCount", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_Mesh_ConfigureSubMesh_4),
-                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_5),
+                MethodInfo("GetContentVersion", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_GetContentVersion_0, ReflectionGeneratedAccess::InvokeAbi_Mesh_GetContentVersion_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_GetContentVersion_0)),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_MarkDirty_1, ReflectionGeneratedAccess::InvokeAbi_Mesh_MarkDirty_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_MarkDirty_1)),
+                MethodInfo("ClearGeometry", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_ClearGeometry_2, ReflectionGeneratedAccess::InvokeAbi_Mesh_ClearGeometry_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_ClearGeometry_2)),
+                MethodInfo("ResizeSubMeshes", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("count", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Mesh_ResizeSubMeshes_3, ReflectionGeneratedAccess::InvokeAbi_Mesh_ResizeSubMeshes_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_ResizeSubMeshes_3)),
+                MethodInfo("ConfigureSubMesh", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("index", "int32", Reflection::ValueKind::Int32), ParameterInfo("subMeshName", "std::string", Reflection::ValueKind::String), ParameterInfo("indexStart", "uint32", Reflection::ValueKind::UInt32), ParameterInfo("indexCount", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_Mesh_ConfigureSubMesh_4, ReflectionGeneratedAccess::InvokeAbi_Mesh_ConfigureSubMesh_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_ConfigureSubMesh_4)),
+                MethodInfo("RefreshNormals", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Mesh_RefreshNormals_5, ReflectionGeneratedAccess::InvokeAbi_Mesh_RefreshNormals_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Mesh_RefreshNormals_5)),
             });
 
         RegisterTypeFields(Orbeden::Object::StaticType(),
@@ -5954,97 +11430,97 @@ namespace Reflection
 
         RegisterTypeFields(ParticleSystem::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("settings", "ParticleSettings", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("configurationRevision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("lastError", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_mesh, ReflectionGeneratedAccess::Set_ParticleSystem_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ParticleSystem_mesh, ReflectionGeneratedAccess::SetValue_ParticleSystem_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_ParticleSystem_materials, ReflectionGeneratedAccess::Set_ParticleSystem_materials, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_materials, ReflectionGeneratedAccess::SetValue_ParticleSystem_materials, ReflectionGeneratedAccess::Size_ParticleSystem_materials, ReflectionGeneratedAccess::Resize_ParticleSystem_materials, Reflection::FieldKind::ObjectRef, false),
-                FieldInfo("trailMaterial", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::Set_ParticleSystem_trailMaterial, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::SetValue_ParticleSystem_trailMaterial, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("subEmitterTargets", "std::array<EnsId,16>", Reflection::FieldKind::Array, true, ReflectionGeneratedAccess::Get_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Set_ParticleSystem_subEmitterTargets, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::SetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Size_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Resize_ParticleSystem_subEmitterTargets, Reflection::FieldKind::EnsId, true),
-                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ParticleSystem_drawLayer, ReflectionGeneratedAccess::Set_ParticleSystem_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_drawLayer, ReflectionGeneratedAccess::SetValue_ParticleSystem_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_castShadows, ReflectionGeneratedAccess::Set_ParticleSystem_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_castShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::Set_ParticleSystem_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("settings", "ParticleSettings", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("configurationRevision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("lastError", "std::string", Reflection::FieldKind::String, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_mesh, ReflectionGeneratedAccess::Set_ParticleSystem_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_ParticleSystem_mesh, ReflectionGeneratedAccess::SetValue_ParticleSystem_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_ParticleSystem_materials, ReflectionGeneratedAccess::Set_ParticleSystem_materials, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_materials, ReflectionGeneratedAccess::SetValue_ParticleSystem_materials, ReflectionGeneratedAccess::Size_ParticleSystem_materials, ReflectionGeneratedAccess::Resize_ParticleSystem_materials, Reflection::FieldKind::ObjectRef, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("trailMaterial", "Ref<Material>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::Set_ParticleSystem_trailMaterial, "Material", ReflectionGeneratedAccess::GetValue_ParticleSystem_trailMaterial, ReflectionGeneratedAccess::SetValue_ParticleSystem_trailMaterial, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("subEmitterTargets", "std::array<EnsId,16>", Reflection::FieldKind::Array, true, ReflectionGeneratedAccess::Get_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Set_ParticleSystem_subEmitterTargets, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::SetValue_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Size_ParticleSystem_subEmitterTargets, ReflectionGeneratedAccess::Resize_ParticleSystem_subEmitterTargets, Reflection::FieldKind::EnsId, true, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_ParticleSystem_drawLayer, ReflectionGeneratedAccess::Set_ParticleSystem_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_drawLayer, ReflectionGeneratedAccess::SetValue_ParticleSystem_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_drawLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_drawLayer)),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_castShadows, ReflectionGeneratedAccess::Set_ParticleSystem_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_castShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_castShadows)),
+                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::Set_ParticleSystem_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_ParticleSystem_receiveShadows, ReflectionGeneratedAccess::SetValue_ParticleSystem_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_ParticleSystem_receiveShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_ParticleSystem_receiveShadows)),
             });
 
         RegisterTypeMethods(ParticleSystem::StaticType(),
             {
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetEnabled_0),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_SetEnabled_1),
-                MethodInfo("GetConfigurationRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetConfigurationRevision_2),
-                MethodInfo("OnConfigurationChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnConfigurationChanged_3),
-                MethodInfo("GetLastError", "std::string", Reflection::ValueKind::String, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetLastError_4),
-                MethodInfo("Play", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("restart", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Play_5),
-                MethodInfo("Pause", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Pause_6),
-                MethodInfo("Stop", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("clear", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Stop_7),
-                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Clear_8),
-                MethodInfo("Emit", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>{ ParameterInfo("count", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Emit_9),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnAttach_10),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnDetach_11),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_OnWorldActiveChanged_12),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_SetEnabled_1)),
+                MethodInfo("GetConfigurationRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetConfigurationRevision_2, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_GetConfigurationRevision_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_GetConfigurationRevision_2)),
+                MethodInfo("OnConfigurationChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnConfigurationChanged_3, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_OnConfigurationChanged_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_OnConfigurationChanged_3)),
+                MethodInfo("GetLastError", "std::string", Reflection::ValueKind::String, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_GetLastError_4, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_GetLastError_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_GetLastError_4)),
+                MethodInfo("Play", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("restart", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Play_5, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_Play_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_Play_5)),
+                MethodInfo("Pause", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Pause_6, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_Pause_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_Pause_6)),
+                MethodInfo("Stop", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("clear", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Stop_7, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_Stop_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_Stop_7)),
+                MethodInfo("Clear", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_Clear_8, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_Clear_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_Clear_8)),
+                MethodInfo("Emit", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>{ ParameterInfo("count", "uint32", Reflection::ValueKind::UInt32) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_Emit_9, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_Emit_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_Emit_9)),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnAttach_10, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_OnAttach_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_OnAttach_10)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_ParticleSystem_OnDetach_11, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_OnDetach_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_OnDetach_11)),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_ParticleSystem_OnWorldActiveChanged_12, ReflectionGeneratedAccess::InvokeAbi_ParticleSystem_OnWorldActiveChanged_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_ParticleSystem_OnWorldActiveChanged_12)),
             });
 
         RegisterTypeFields(RigidBody::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_enabled, ReflectionGeneratedAccess::Set_RigidBody_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_enabled, ReflectionGeneratedAccess::SetValue_RigidBody_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_mass, ReflectionGeneratedAccess::Set_RigidBody_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_mass, ReflectionGeneratedAccess::SetValue_RigidBody_mass, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_useGravity, ReflectionGeneratedAccess::Set_RigidBody_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_useGravity, ReflectionGeneratedAccess::SetValue_RigidBody_useGravity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_linearDamping, ReflectionGeneratedAccess::Set_RigidBody_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBody_linearDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_angularDamping, ReflectionGeneratedAccess::Set_RigidBody_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBody_angularDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("linearVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_linearVelocity, ReflectionGeneratedAccess::Set_RigidBody_linearVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_linearVelocity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("angularVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_angularVelocity, ReflectionGeneratedAccess::Set_RigidBody_angularVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_angularVelocity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("continuousCollisionDetection", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::Set_RigidBody_continuousCollisionDetection, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::SetValue_RigidBody_continuousCollisionDetection, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("lockFlags", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_RigidBody_lockFlags, ReflectionGeneratedAccess::Set_RigidBody_lockFlags, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_lockFlags, ReflectionGeneratedAccess::SetValue_RigidBody_lockFlags, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("pendingForce", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingForce, ReflectionGeneratedAccess::Set_RigidBody_pendingForce, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingForce, ReflectionGeneratedAccess::SetValue_RigidBody_pendingForce, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("pendingTorque", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingTorque, ReflectionGeneratedAccess::Set_RigidBody_pendingTorque, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingTorque, ReflectionGeneratedAccess::SetValue_RigidBody_pendingTorque, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_enabled, ReflectionGeneratedAccess::Set_RigidBody_enabled, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_enabled, ReflectionGeneratedAccess::SetValue_RigidBody_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_enabled)),
+                FieldInfo("bodyType", "PhysicsBodyType", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("mass", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_mass, ReflectionGeneratedAccess::Set_RigidBody_mass, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_mass, ReflectionGeneratedAccess::SetValue_RigidBody_mass, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_mass), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_mass)),
+                FieldInfo("useGravity", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_useGravity, ReflectionGeneratedAccess::Set_RigidBody_useGravity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_useGravity, ReflectionGeneratedAccess::SetValue_RigidBody_useGravity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_useGravity), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_useGravity)),
+                FieldInfo("linearDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_linearDamping, ReflectionGeneratedAccess::Set_RigidBody_linearDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearDamping, ReflectionGeneratedAccess::SetValue_RigidBody_linearDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_linearDamping), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_linearDamping)),
+                FieldInfo("angularDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_RigidBody_angularDamping, ReflectionGeneratedAccess::Set_RigidBody_angularDamping, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularDamping, ReflectionGeneratedAccess::SetValue_RigidBody_angularDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_angularDamping), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_angularDamping)),
+                FieldInfo("linearVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_linearVelocity, ReflectionGeneratedAccess::Set_RigidBody_linearVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_linearVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_linearVelocity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_linearVelocity), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_linearVelocity)),
+                FieldInfo("angularVelocity", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_angularVelocity, ReflectionGeneratedAccess::Set_RigidBody_angularVelocity, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_angularVelocity, ReflectionGeneratedAccess::SetValue_RigidBody_angularVelocity, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_angularVelocity), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_angularVelocity)),
+                FieldInfo("continuousCollisionDetection", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::Set_RigidBody_continuousCollisionDetection, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_continuousCollisionDetection, ReflectionGeneratedAccess::SetValue_RigidBody_continuousCollisionDetection, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_continuousCollisionDetection), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_continuousCollisionDetection)),
+                FieldInfo("lockFlags", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_RigidBody_lockFlags, ReflectionGeneratedAccess::Set_RigidBody_lockFlags, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_lockFlags, ReflectionGeneratedAccess::SetValue_RigidBody_lockFlags, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_lockFlags), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_lockFlags)),
+                FieldInfo("pendingForce", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingForce, ReflectionGeneratedAccess::Set_RigidBody_pendingForce, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingForce, ReflectionGeneratedAccess::SetValue_RigidBody_pendingForce, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_pendingForce), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_pendingForce)),
+                FieldInfo("pendingTorque", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_RigidBody_pendingTorque, ReflectionGeneratedAccess::Set_RigidBody_pendingTorque, nullptr, ReflectionGeneratedAccess::GetValue_RigidBody_pendingTorque, ReflectionGeneratedAccess::SetValue_RigidBody_pendingTorque, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_RigidBody_pendingTorque), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_RigidBody_pendingTorque)),
             });
 
         RegisterTypeMethods(RigidBody::StaticType(),
             {
-                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForce_0),
-                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddTorque_1),
-                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForceAtPosition_2),
+                MethodInfo("AddForce", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForce_0, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForce_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForce_0)),
+                MethodInfo("AddTorque", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("torque", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddTorque_1, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddTorque_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddTorque_1)),
+                MethodInfo("AddForceAtPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("force", "vector3", Reflection::ValueKind::Vector3), ParameterInfo("worldPosition", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_RigidBody_AddForceAtPosition_2, ReflectionGeneratedAccess::InvokeAbi_RigidBody_AddForceAtPosition_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_RigidBody_AddForceAtPosition_2)),
             });
 
         Script::RegisterReflection();
         RegisterTypeFields(Shader::StaticType(),
             {
-                FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("materialSlotRevision", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr, ReflectionGeneratedAccess::GetValue_Shader_name, ReflectionGeneratedAccess::SetValue_Shader_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexPath, ReflectionGeneratedAccess::SetValue_Shader_vertexPath, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentPath, ReflectionGeneratedAccess::SetValue_Shader_fragmentPath, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexSource, ReflectionGeneratedAccess::SetValue_Shader_vertexSource, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentSource, ReflectionGeneratedAccess::SetValue_Shader_fragmentSource, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("passes", "List<ShaderPass>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuShader", "GpuShader*", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("materialSlotRevision", "uint32", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_name, ReflectionGeneratedAccess::Set_Shader_name, nullptr, ReflectionGeneratedAccess::GetValue_Shader_name, ReflectionGeneratedAccess::SetValue_Shader_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Shader_name), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Shader_name)),
+                FieldInfo("drawQueue", "DrawQueue", Reflection::FieldKind::UInt32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("vertexPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexPath, ReflectionGeneratedAccess::Set_Shader_vertexPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexPath, ReflectionGeneratedAccess::SetValue_Shader_vertexPath, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Shader_vertexPath), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Shader_vertexPath)),
+                FieldInfo("fragmentPath", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentPath, ReflectionGeneratedAccess::Set_Shader_fragmentPath, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentPath, ReflectionGeneratedAccess::SetValue_Shader_fragmentPath, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Shader_fragmentPath), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Shader_fragmentPath)),
+                FieldInfo("vertexSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_vertexSource, ReflectionGeneratedAccess::Set_Shader_vertexSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_vertexSource, ReflectionGeneratedAccess::SetValue_Shader_vertexSource, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Shader_vertexSource), nullptr),
+                FieldInfo("fragmentSource", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Shader_fragmentSource, ReflectionGeneratedAccess::Set_Shader_fragmentSource, nullptr, ReflectionGeneratedAccess::GetValue_Shader_fragmentSource, ReflectionGeneratedAccess::SetValue_Shader_fragmentSource, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Shader_fragmentSource), nullptr),
+                FieldInfo("passes", "List<ShaderPass>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("textureSlots", "List<ShaderTextureSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("colorSlots", "List<ShaderColorSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("floatSlots", "List<ShaderFloatSlot>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Shader::StaticType(),
             {
-                MethodInfo("ReflectSlotsFromSource", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0),
-                MethodInfo("GetMaterialSlotRevision", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetMaterialSlotRevision_1),
-                MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_2),
-                MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_3),
-                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_IsDirty_4),
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_MarkDirty_5),
+                MethodInfo("ReflectSlotsFromSource", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_ReflectSlotsFromSource_0, ReflectionGeneratedAccess::InvokeAbi_Shader_ReflectSlotsFromSource_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_ReflectSlotsFromSource_0)),
+                MethodInfo("GetMaterialSlotRevision", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetMaterialSlotRevision_1, ReflectionGeneratedAccess::InvokeAbi_Shader_GetMaterialSlotRevision_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_GetMaterialSlotRevision_1)),
+                MethodInfo("ReplaceSource", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("vertex", "std::string", Reflection::ValueKind::String), ParameterInfo("fragment", "std::string", Reflection::ValueKind::String) }, ReflectionGeneratedAccess::Invoke_Shader_ReplaceSource_2, ReflectionGeneratedAccess::InvokeAbi_Shader_ReplaceSource_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_ReplaceSource_2)),
+                MethodInfo("GetPassCount", "uint32", Reflection::ValueKind::UInt32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_GetPassCount_3, ReflectionGeneratedAccess::InvokeAbi_Shader_GetPassCount_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_GetPassCount_3)),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_IsDirty_4, ReflectionGeneratedAccess::InvokeAbi_Shader_IsDirty_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_IsDirty_4)),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Shader_MarkDirty_5, ReflectionGeneratedAccess::InvokeAbi_Shader_MarkDirty_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Shader_MarkDirty_5)),
             });
 
         RegisterTypeFields(Skybox::StaticType(),
             {
-                FieldInfo("gpuSkybox", "GpuCubeTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuSkyboxStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_right, ReflectionGeneratedAccess::SetValue_Skybox_right, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_left, ReflectionGeneratedAccess::SetValue_Skybox_left, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_top, ReflectionGeneratedAccess::SetValue_Skybox_top, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("bottom", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_bottom, ReflectionGeneratedAccess::Set_Skybox_bottom, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_bottom, ReflectionGeneratedAccess::SetValue_Skybox_bottom, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("front", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_front, ReflectionGeneratedAccess::Set_Skybox_front, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_front, ReflectionGeneratedAccess::SetValue_Skybox_front, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("back", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_back, ReflectionGeneratedAccess::Set_Skybox_back, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_back, ReflectionGeneratedAccess::SetValue_Skybox_back, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuSkybox", "GpuCubeTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuSkyboxStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("right", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_right, ReflectionGeneratedAccess::Set_Skybox_right, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_right, ReflectionGeneratedAccess::SetValue_Skybox_right, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("left", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_left, ReflectionGeneratedAccess::Set_Skybox_left, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_left, ReflectionGeneratedAccess::SetValue_Skybox_left, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("top", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_top, ReflectionGeneratedAccess::Set_Skybox_top, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_top, ReflectionGeneratedAccess::SetValue_Skybox_top, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("bottom", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_bottom, ReflectionGeneratedAccess::Set_Skybox_bottom, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_bottom, ReflectionGeneratedAccess::SetValue_Skybox_bottom, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("front", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_front, ReflectionGeneratedAccess::Set_Skybox_front, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_front, ReflectionGeneratedAccess::SetValue_Skybox_front, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("back", "Ref<Texture2D>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_Skybox_back, ReflectionGeneratedAccess::Set_Skybox_back, "Texture2D", ReflectionGeneratedAccess::GetValue_Skybox_back, ReflectionGeneratedAccess::SetValue_Skybox_back, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Skybox::StaticType(),
@@ -6053,30 +11529,30 @@ namespace Reflection
 
         RegisterTypeFields(StaticMeshRenderer::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("runtimeMesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Set_StaticMeshRenderer_materials, "Material", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Size_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Resize_StaticMeshRenderer_materials, Reflection::FieldKind::ObjectRef, false),
-                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("drawStrategy", "DrawStrategy", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawStrategy, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawStrategy, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::Set_StaticMeshRenderer_enabled, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_enabled, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_enabled)),
+                FieldInfo("runtimeMesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, false, nullptr, nullptr, "Mesh", nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("renderState", "StaticMeshRendererRenderState", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("mesh", "Ref<Mesh>", Reflection::FieldKind::ObjectRef, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::Set_StaticMeshRenderer_mesh, "Mesh", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_mesh, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_mesh, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("materials", "List<Ref<Material>>", Reflection::FieldKind::ObjectRefList, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Set_StaticMeshRenderer_materials, "Material", ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Size_StaticMeshRenderer_materials, ReflectionGeneratedAccess::Resize_StaticMeshRenderer_materials, Reflection::FieldKind::ObjectRef, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("drawLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawLayer, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawLayer, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_drawLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_drawLayer)),
+                FieldInfo("castShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_castShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_castShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_castShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_castShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_castShadows)),
+                FieldInfo("receiveShadows", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::Set_StaticMeshRenderer_receiveShadows, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_receiveShadows, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_receiveShadows, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_StaticMeshRenderer_receiveShadows), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_StaticMeshRenderer_receiveShadows)),
+                FieldInfo("drawStrategy", "DrawStrategy", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::Set_StaticMeshRenderer_drawStrategy, nullptr, ReflectionGeneratedAccess::GetValue_StaticMeshRenderer_drawStrategy, ReflectionGeneratedAccess::SetValue_StaticMeshRenderer_drawStrategy, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(StaticMeshRenderer::StaticType(),
             {
-                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_0),
-                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_1),
-                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_IsRenderSceneEligible_2),
-                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_3),
-                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_4),
-                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_5),
+                MethodInfo("GetEnabled", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_GetEnabled_0, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_GetEnabled_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_GetEnabled_0)),
+                MethodInfo("SetEnabled", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_SetEnabled_1, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_SetEnabled_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_SetEnabled_1)),
+                MethodInfo("IsRenderSceneEligible", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_IsRenderSceneEligible_2, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_IsRenderSceneEligible_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_IsRenderSceneEligible_2)),
+                MethodInfo("OnAttach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnAttach_3, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnAttach_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnAttach_3)),
+                MethodInfo("OnDetach", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnDetach_4, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnDetach_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnDetach_4)),
+                MethodInfo("OnWorldActiveChanged", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("worldActive", "bool", Reflection::ValueKind::Bool) }, ReflectionGeneratedAccess::Invoke_StaticMeshRenderer_OnWorldActiveChanged_5, ReflectionGeneratedAccess::InvokeAbi_StaticMeshRenderer_OnWorldActiveChanged_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_StaticMeshRenderer_OnWorldActiveChanged_5)),
             });
 
         RegisterTypeFields(TextResource::StaticType(),
             {
-                FieldInfo("text", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_TextResource_text, ReflectionGeneratedAccess::Set_TextResource_text, nullptr, ReflectionGeneratedAccess::GetValue_TextResource_text, ReflectionGeneratedAccess::SetValue_TextResource_text, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("text", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_TextResource_text, ReflectionGeneratedAccess::Set_TextResource_text, nullptr, ReflectionGeneratedAccess::GetValue_TextResource_text, ReflectionGeneratedAccess::SetValue_TextResource_text, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_TextResource_text), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_TextResource_text)),
             });
 
         RegisterTypeMethods(TextResource::StaticType(),
@@ -6085,104 +11561,104 @@ namespace Reflection
 
         RegisterTypeFields(Texture2D::StaticType(),
             {
-                FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuRenderTarget", "GpuRenderTargetID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("renderTarget", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("fullUpload", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dirtyX", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dirtyY", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dirtyWidth", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("dirtyHeight", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_name, ReflectionGeneratedAccess::SetValue_Texture2D_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_width, ReflectionGeneratedAccess::SetValue_Texture2D_width, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_height, ReflectionGeneratedAccess::SetValue_Texture2D_height, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_channels, ReflectionGeneratedAccess::SetValue_Texture2D_channels, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_format, ReflectionGeneratedAccess::SetValue_Texture2D_format, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("colorSpace", "TextureColorSpace", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Texture2D_colorSpace, ReflectionGeneratedAccess::Set_Texture2D_colorSpace, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_colorSpace, ReflectionGeneratedAccess::SetValue_Texture2D_colorSpace, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("alphaMode", "TextureAlphaMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("gpuTexture", "GpuTextureID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuRenderTarget", "GpuRenderTargetID", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuTextureStorageIndex", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("gpuDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("renderTarget", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("fullUpload", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("dirtyX", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("dirtyY", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("dirtyWidth", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("dirtyHeight", "int32", Reflection::FieldKind::Int32, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("name", "std::string", Reflection::FieldKind::String, true, ReflectionGeneratedAccess::Get_Texture2D_name, ReflectionGeneratedAccess::Set_Texture2D_name, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_name, ReflectionGeneratedAccess::SetValue_Texture2D_name, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::String, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Texture2D_name), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Texture2D_name)),
+                FieldInfo("width", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_width, ReflectionGeneratedAccess::Set_Texture2D_width, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_width, ReflectionGeneratedAccess::SetValue_Texture2D_width, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Texture2D_width), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Texture2D_width)),
+                FieldInfo("height", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_height, ReflectionGeneratedAccess::Set_Texture2D_height, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_height, ReflectionGeneratedAccess::SetValue_Texture2D_height, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Texture2D_height), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Texture2D_height)),
+                FieldInfo("channels", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_channels, ReflectionGeneratedAccess::Set_Texture2D_channels, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_channels, ReflectionGeneratedAccess::SetValue_Texture2D_channels, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Texture2D_channels), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Texture2D_channels)),
+                FieldInfo("format", "int32", Reflection::FieldKind::Int32, true, ReflectionGeneratedAccess::Get_Texture2D_format, ReflectionGeneratedAccess::Set_Texture2D_format, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_format, ReflectionGeneratedAccess::SetValue_Texture2D_format, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Int32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Texture2D_format), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Texture2D_format)),
+                FieldInfo("colorSpace", "TextureColorSpace", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_Texture2D_colorSpace, ReflectionGeneratedAccess::Set_Texture2D_colorSpace, nullptr, ReflectionGeneratedAccess::GetValue_Texture2D_colorSpace, ReflectionGeneratedAccess::SetValue_Texture2D_colorSpace, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("alphaMode", "TextureAlphaMode", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("pixels", "List<uint8>", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("revision", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Texture2D::StaticType(),
             {
-                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsDirty_0),
-                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_MarkDirty_1),
-                MethodInfo("ClearDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_ClearDirty_2),
-                MethodInfo("ResizeRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("width", "int32", Reflection::ValueKind::Int32), ParameterInfo("height", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Texture2D_ResizeRenderTarget_3),
-                MethodInfo("IsRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsRenderTarget_4),
-                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_GetRevision_5),
+                MethodInfo("IsDirty", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsDirty_0, ReflectionGeneratedAccess::InvokeAbi_Texture2D_IsDirty_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_IsDirty_0)),
+                MethodInfo("MarkDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_MarkDirty_1, ReflectionGeneratedAccess::InvokeAbi_Texture2D_MarkDirty_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_MarkDirty_1)),
+                MethodInfo("ClearDirty", "void", Reflection::ValueKind::Empty, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_ClearDirty_2, ReflectionGeneratedAccess::InvokeAbi_Texture2D_ClearDirty_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_ClearDirty_2)),
+                MethodInfo("ResizeRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("width", "int32", Reflection::ValueKind::Int32), ParameterInfo("height", "int32", Reflection::ValueKind::Int32) }, ReflectionGeneratedAccess::Invoke_Texture2D_ResizeRenderTarget_3, ReflectionGeneratedAccess::InvokeAbi_Texture2D_ResizeRenderTarget_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_ResizeRenderTarget_3)),
+                MethodInfo("IsRenderTarget", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_IsRenderTarget_4, ReflectionGeneratedAccess::InvokeAbi_Texture2D_IsRenderTarget_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_IsRenderTarget_4)),
+                MethodInfo("GetRevision", "uint64", Reflection::ValueKind::UInt64, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Texture2D_GetRevision_5, ReflectionGeneratedAccess::InvokeAbi_Texture2D_GetRevision_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Texture2D_GetRevision_5)),
             });
 
         RegisterTypeFields(Transform::StaticType(),
             {
-                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localPosition, ReflectionGeneratedAccess::Set_Transform_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localPosition, ReflectionGeneratedAccess::SetValue_Transform_localPosition, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_Transform_localRotation, ReflectionGeneratedAccess::Set_Transform_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localRotation, ReflectionGeneratedAccess::SetValue_Transform_localRotation, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localScale, ReflectionGeneratedAccess::Set_Transform_localScale, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localScale, ReflectionGeneratedAccess::SetValue_Transform_localScale, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("derivedOwnerToken", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("derivedPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("hasDerivedPosition", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("localPosition", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localPosition, ReflectionGeneratedAccess::Set_Transform_localPosition, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localPosition, ReflectionGeneratedAccess::SetValue_Transform_localPosition, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Transform_localPosition), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Transform_localPosition)),
+                FieldInfo("localRotation", "quaternion", Reflection::FieldKind::Quaternion, true, ReflectionGeneratedAccess::Get_Transform_localRotation, ReflectionGeneratedAccess::Set_Transform_localRotation, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localRotation, ReflectionGeneratedAccess::SetValue_Transform_localRotation, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Quaternion, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Transform_localRotation), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Transform_localRotation)),
+                FieldInfo("localScale", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_Transform_localScale, ReflectionGeneratedAccess::Set_Transform_localScale, nullptr, ReflectionGeneratedAccess::GetValue_Transform_localScale, ReflectionGeneratedAccess::SetValue_Transform_localScale, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_Transform_localScale), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_Transform_localScale)),
+                FieldInfo("derivedOwnerToken", "uint64", Reflection::FieldKind::UInt64, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("derivedPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("hasDerivedPosition", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("parent", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("firstChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("lastChild", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("prev", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("next", "EnsId", Reflection::FieldKind::EnsId, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("localMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("worldMatrix", "matrix4x4", Reflection::FieldKind::Unsupported, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("worldPosition", "vector3", Reflection::FieldKind::Vector3, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("worldRotation", "quaternion", Reflection::FieldKind::Quaternion, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("transformCacheInitialized", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
+                FieldInfo("transformDirty", "bool", Reflection::FieldKind::Bool, false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Empty, nullptr, nullptr),
             });
 
         RegisterTypeMethods(Transform::StaticType(),
             {
-                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetParent_0),
-                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Transform_SetParent_1),
-                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_2),
-                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_3),
-                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_4),
-                MethodInfo("SetDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64), ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetDerivedLocalPosition_5),
-                MethodInfo("ClearDerivedLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64) }, ReflectionGeneratedAccess::Invoke_Transform_ClearDerivedLocalPosition_6),
-                MethodInfo("HasDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_HasDerivedLocalPosition_7),
-                MethodInfo("GetResolvedLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetResolvedLocalPosition_8),
-                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_9),
-                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_10),
-                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_11),
-                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_12),
-                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_13),
-                MethodInfo("GetLocalEulerAngles", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalEulerAngles_14),
-                MethodInfo("SetLocalEulerAngles", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalEulerAngles_15),
-                MethodInfo("GetFirstChild", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetFirstChild_16),
-                MethodInfo("GetNextSibling", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetNextSibling_17),
+                MethodInfo("GetParent", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetParent_0, ReflectionGeneratedAccess::InvokeAbi_Transform_GetParent_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetParent_0)),
+                MethodInfo("SetParent", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "EnsId", Reflection::ValueKind::EnsId) }, ReflectionGeneratedAccess::Invoke_Transform_SetParent_1, ReflectionGeneratedAccess::InvokeAbi_Transform_SetParent_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetParent_1)),
+                MethodInfo("GetWorldPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldPosition_2, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldPosition_2, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldPosition_2)),
+                MethodInfo("GetWorldRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetWorldRotation_3, ReflectionGeneratedAccess::InvokeAbi_Transform_GetWorldRotation_3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetWorldRotation_3)),
+                MethodInfo("GetLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalPosition_4, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalPosition_4, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalPosition_4)),
+                MethodInfo("SetDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64), ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetDerivedLocalPosition_5, ReflectionGeneratedAccess::InvokeAbi_Transform_SetDerivedLocalPosition_5, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetDerivedLocalPosition_5)),
+                MethodInfo("ClearDerivedLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("owner", "uint64", Reflection::ValueKind::UInt64) }, ReflectionGeneratedAccess::Invoke_Transform_ClearDerivedLocalPosition_6, ReflectionGeneratedAccess::InvokeAbi_Transform_ClearDerivedLocalPosition_6, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_ClearDerivedLocalPosition_6)),
+                MethodInfo("HasDerivedLocalPosition", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_HasDerivedLocalPosition_7, ReflectionGeneratedAccess::InvokeAbi_Transform_HasDerivedLocalPosition_7, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_HasDerivedLocalPosition_7)),
+                MethodInfo("GetResolvedLocalPosition", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetResolvedLocalPosition_8, ReflectionGeneratedAccess::InvokeAbi_Transform_GetResolvedLocalPosition_8, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetResolvedLocalPosition_8)),
+                MethodInfo("SetLocalPosition", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalPosition_9, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalPosition_9, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalPosition_9)),
+                MethodInfo("GetLocalRotation", "quaternion", Reflection::ValueKind::Quaternion, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalRotation_10, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalRotation_10, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalRotation_10)),
+                MethodInfo("SetLocalRotation", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "quaternion", Reflection::ValueKind::Quaternion) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalRotation_11, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalRotation_11, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalRotation_11)),
+                MethodInfo("GetLocalScale", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalScale_12, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalScale_12, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalScale_12)),
+                MethodInfo("SetLocalScale", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalScale_13, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalScale_13, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalScale_13)),
+                MethodInfo("GetLocalEulerAngles", "vector3", Reflection::ValueKind::Vector3, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetLocalEulerAngles_14, ReflectionGeneratedAccess::InvokeAbi_Transform_GetLocalEulerAngles_14, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetLocalEulerAngles_14)),
+                MethodInfo("SetLocalEulerAngles", "void", Reflection::ValueKind::Empty, List<ParameterInfo>{ ParameterInfo("value", "vector3", Reflection::ValueKind::Vector3) }, ReflectionGeneratedAccess::Invoke_Transform_SetLocalEulerAngles_15, ReflectionGeneratedAccess::InvokeAbi_Transform_SetLocalEulerAngles_15, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_SetLocalEulerAngles_15)),
+                MethodInfo("GetFirstChild", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetFirstChild_16, ReflectionGeneratedAccess::InvokeAbi_Transform_GetFirstChild_16, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetFirstChild_16)),
+                MethodInfo("GetNextSibling", "EnsId", Reflection::ValueKind::EnsId, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_Transform_GetNextSibling_17, ReflectionGeneratedAccess::InvokeAbi_Transform_GetNextSibling_17, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_Transform_GetNextSibling_17)),
             });
 
         RegisterTypeFields(WheelCollider::StaticType(),
             {
-                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_enabled, ReflectionGeneratedAccess::Set_WheelCollider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_enabled, ReflectionGeneratedAccess::SetValue_WheelCollider_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("wheelOffset", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelOffset, ReflectionGeneratedAccess::Set_WheelCollider_wheelOffset, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelOffset, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("wheelRadius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelRadius, ReflectionGeneratedAccess::Set_WheelCollider_wheelRadius, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelRadius, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelRadius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("suspensionRestLength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::Set_WheelCollider_suspensionRestLength, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionRestLength, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("suspensionTravel", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::Set_WheelCollider_suspensionTravel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionTravel, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("suspensionStiffness", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::Set_WheelCollider_suspensionStiffness, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionStiffness, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("suspensionDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::Set_WheelCollider_suspensionDamping, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("rollingFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_rollingFriction, ReflectionGeneratedAccess::Set_WheelCollider_rollingFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_rollingFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_rollingFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("lateralFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_lateralFriction, ReflectionGeneratedAccess::Set_WheelCollider_lateralFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_lateralFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_lateralFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("raycastDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_raycastDistance, ReflectionGeneratedAccess::Set_WheelCollider_raycastDistance, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_raycastDistance, ReflectionGeneratedAccess::SetValue_WheelCollider_raycastDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("groundQueryLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::Set_WheelCollider_groundQueryLayer, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::SetValue_WheelCollider_groundQueryLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("steeringWheel", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_steeringWheel, ReflectionGeneratedAccess::Set_WheelCollider_steeringWheel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steeringWheel, ReflectionGeneratedAccess::SetValue_WheelCollider_steeringWheel, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("steerAngle", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_steerAngle, ReflectionGeneratedAccess::Set_WheelCollider_steerAngle, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steerAngle, ReflectionGeneratedAccess::SetValue_WheelCollider_steerAngle, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("grounded", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_grounded, ReflectionGeneratedAccess::Set_WheelCollider_grounded, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_grounded, ReflectionGeneratedAccess::SetValue_WheelCollider_grounded, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("compression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_compression, ReflectionGeneratedAccess::Set_WheelCollider_compression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_compression, ReflectionGeneratedAccess::SetValue_WheelCollider_compression, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
-                FieldInfo("previousCompression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_previousCompression, ReflectionGeneratedAccess::Set_WheelCollider_previousCompression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_previousCompression, ReflectionGeneratedAccess::SetValue_WheelCollider_previousCompression, nullptr, nullptr, Reflection::FieldKind::Unsupported, false),
+                FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_enabled, ReflectionGeneratedAccess::Set_WheelCollider_enabled, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_enabled, ReflectionGeneratedAccess::SetValue_WheelCollider_enabled, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_enabled), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_enabled)),
+                FieldInfo("wheelOffset", "vector3", Reflection::FieldKind::Vector3, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelOffset, ReflectionGeneratedAccess::Set_WheelCollider_wheelOffset, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelOffset, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelOffset, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Vector3, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_wheelOffset), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_wheelOffset)),
+                FieldInfo("wheelRadius", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_wheelRadius, ReflectionGeneratedAccess::Set_WheelCollider_wheelRadius, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_wheelRadius, ReflectionGeneratedAccess::SetValue_WheelCollider_wheelRadius, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_wheelRadius), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_wheelRadius)),
+                FieldInfo("suspensionRestLength", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::Set_WheelCollider_suspensionRestLength, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionRestLength, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionRestLength, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_suspensionRestLength), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_suspensionRestLength)),
+                FieldInfo("suspensionTravel", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::Set_WheelCollider_suspensionTravel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionTravel, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionTravel, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_suspensionTravel), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_suspensionTravel)),
+                FieldInfo("suspensionStiffness", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::Set_WheelCollider_suspensionStiffness, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionStiffness, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionStiffness, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_suspensionStiffness), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_suspensionStiffness)),
+                FieldInfo("suspensionDamping", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::Set_WheelCollider_suspensionDamping, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_suspensionDamping, ReflectionGeneratedAccess::SetValue_WheelCollider_suspensionDamping, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_suspensionDamping), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_suspensionDamping)),
+                FieldInfo("rollingFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_rollingFriction, ReflectionGeneratedAccess::Set_WheelCollider_rollingFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_rollingFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_rollingFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_rollingFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_rollingFriction)),
+                FieldInfo("lateralFriction", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_lateralFriction, ReflectionGeneratedAccess::Set_WheelCollider_lateralFriction, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_lateralFriction, ReflectionGeneratedAccess::SetValue_WheelCollider_lateralFriction, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_lateralFriction), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_lateralFriction)),
+                FieldInfo("raycastDistance", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_raycastDistance, ReflectionGeneratedAccess::Set_WheelCollider_raycastDistance, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_raycastDistance, ReflectionGeneratedAccess::SetValue_WheelCollider_raycastDistance, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_raycastDistance), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_raycastDistance)),
+                FieldInfo("groundQueryLayer", "uint32", Reflection::FieldKind::UInt32, true, ReflectionGeneratedAccess::Get_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::Set_WheelCollider_groundQueryLayer, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_groundQueryLayer, ReflectionGeneratedAccess::SetValue_WheelCollider_groundQueryLayer, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::UInt32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_groundQueryLayer), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_groundQueryLayer)),
+                FieldInfo("steeringWheel", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_steeringWheel, ReflectionGeneratedAccess::Set_WheelCollider_steeringWheel, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steeringWheel, ReflectionGeneratedAccess::SetValue_WheelCollider_steeringWheel, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_steeringWheel), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_steeringWheel)),
+                FieldInfo("steerAngle", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_steerAngle, ReflectionGeneratedAccess::Set_WheelCollider_steerAngle, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_steerAngle, ReflectionGeneratedAccess::SetValue_WheelCollider_steerAngle, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_steerAngle), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_steerAngle)),
+                FieldInfo("grounded", "bool", Reflection::FieldKind::Bool, true, ReflectionGeneratedAccess::Get_WheelCollider_grounded, ReflectionGeneratedAccess::Set_WheelCollider_grounded, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_grounded, ReflectionGeneratedAccess::SetValue_WheelCollider_grounded, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Bool, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_grounded), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_grounded)),
+                FieldInfo("compression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_compression, ReflectionGeneratedAccess::Set_WheelCollider_compression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_compression, ReflectionGeneratedAccess::SetValue_WheelCollider_compression, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_compression), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_compression)),
+                FieldInfo("previousCompression", "float32", Reflection::FieldKind::Float32, true, ReflectionGeneratedAccess::Get_WheelCollider_previousCompression, ReflectionGeneratedAccess::Set_WheelCollider_previousCompression, nullptr, ReflectionGeneratedAccess::GetValue_WheelCollider_previousCompression, ReflectionGeneratedAccess::SetValue_WheelCollider_previousCompression, nullptr, nullptr, Reflection::FieldKind::Unsupported, false, Reflection::ValueKind::Float32, reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_WheelCollider_previousCompression), reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_WheelCollider_previousCompression)),
             });
 
         RegisterTypeMethods(WheelCollider::StaticType(),
             {
-                MethodInfo("IsGrounded", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_IsGrounded_0),
-                MethodInfo("GetCompression", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_GetCompression_1),
+                MethodInfo("IsGrounded", "bool", Reflection::ValueKind::Bool, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_IsGrounded_0, ReflectionGeneratedAccess::InvokeAbi_WheelCollider_IsGrounded_0, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_WheelCollider_IsGrounded_0)),
+                MethodInfo("GetCompression", "float32", Reflection::ValueKind::Float32, List<ParameterInfo>(), ReflectionGeneratedAccess::Invoke_WheelCollider_GetCompression_1, ReflectionGeneratedAccess::InvokeAbi_WheelCollider_GetCompression_1, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_WheelCollider_GetCompression_1)),
             });
 
     }

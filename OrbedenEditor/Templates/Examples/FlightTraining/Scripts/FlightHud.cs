@@ -6,7 +6,19 @@ namespace FlightTraining;
 public sealed class FlightHud : Script
 {
     private ComponentProxy? controller;
-    private readonly Dictionary<string, ComponentMethod> controllerMethods = [];
+    private NativeMethod<float> airspeedMethod;
+    private NativeMethod<float> throttleMethod;
+    private NativeMethod<int> crashCountMethod;
+    private NativeMethod<float> pitchMethod;
+    private NativeMethod<float> rollMethod;
+    private NativeMethod<float> headingMethod;
+    private NativeMethod<float> altitudeMethod;
+    private NativeMethod<float> climbRateMethod;
+    private NativeMethod<float> sideslipMethod;
+    private NativeMethod<float> dragMethod;
+    private NativeMethod<float> liftMethod;
+    private NativeMethod<float> thrustMethod;
+    private NativeMethod<float> weightMethod;
 
     private const float WindowHeight = 232.0f;
     private const float PixelsPerDegree = 3.0f;
@@ -27,22 +39,21 @@ public sealed class FlightHud : Script
     {
         controller = Ens.GetNativeComponent("FlightController");
         if (controller == null) return;
-        //缓存飞行状态方法
-        foreach (string name in new[]
-        {
-            "GetAirspeed", "GetThrottle", "GetCrashCount", "GetPitchDegrees", "GetRollDegrees",
-            "GetHeadingDegrees", "GetAltitude", "GetClimbRate", "GetSideslipDegrees",
-            "GetDragNewtons", "GetLiftNewtons", "GetThrustNewtons", "GetWeightNewtons"
-        })
-        {
-            if (controller.TryResolveMethod(name, out ComponentMethod method) != InteropStatus.Ok)
-            {
-                controller = null;
-                controllerMethods.Clear();
-                return;
-            }
-            controllerMethods.Add(name, method);
-        }
+        //启动时校验完整签名，逐帧直接传值
+        if (controller.TryBindMethod("GetAirspeed", out airspeedMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetThrottle", out throttleMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetCrashCount", out crashCountMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetPitchDegrees", out pitchMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetRollDegrees", out rollMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetHeadingDegrees", out headingMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetAltitude", out altitudeMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetClimbRate", out climbRateMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetSideslipDegrees", out sideslipMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetDragNewtons", out dragMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetLiftNewtons", out liftMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetThrustNewtons", out thrustMethod) != InteropStatus.Ok
+            || controller.TryBindMethod("GetWeightNewtons", out weightMethod) != InteropStatus.Ok)
+            controller = null;
     }
 
     private void OnDrawGUI()
@@ -63,19 +74,19 @@ public sealed class FlightHud : Script
         }
 
         //读取原生飞行状态
-        if (controllerMethods["GetAirspeed"].Invoke(out InteropValue airspeedValue) != InteropStatus.Ok || !airspeedValue.TryGet(out float airspeed)
-            || controllerMethods["GetThrottle"].Invoke(out InteropValue throttleValue) != InteropStatus.Ok || !throttleValue.TryGet(out float throttle)
-            || controllerMethods["GetCrashCount"].Invoke(out InteropValue crashValue) != InteropStatus.Ok || !crashValue.TryGet(out int crashCount)
-            || controllerMethods["GetPitchDegrees"].Invoke(out InteropValue pitchValue) != InteropStatus.Ok || !pitchValue.TryGet(out float pitch)
-            || controllerMethods["GetRollDegrees"].Invoke(out InteropValue rollValue) != InteropStatus.Ok || !rollValue.TryGet(out float roll)
-            || controllerMethods["GetHeadingDegrees"].Invoke(out InteropValue headingValue) != InteropStatus.Ok || !headingValue.TryGet(out float heading)
-            || controllerMethods["GetAltitude"].Invoke(out InteropValue altitudeValue) != InteropStatus.Ok || !altitudeValue.TryGet(out float altitude)
-            || controllerMethods["GetClimbRate"].Invoke(out InteropValue climbValue) != InteropStatus.Ok || !climbValue.TryGet(out float climbRate)
-            || controllerMethods["GetSideslipDegrees"].Invoke(out InteropValue slipValue) != InteropStatus.Ok || !slipValue.TryGet(out float sideslip)
-            || controllerMethods["GetDragNewtons"].Invoke(out InteropValue dragValue) != InteropStatus.Ok || !dragValue.TryGet(out float drag)
-            || controllerMethods["GetLiftNewtons"].Invoke(out InteropValue liftValue) != InteropStatus.Ok || !liftValue.TryGet(out float lift)
-            || controllerMethods["GetThrustNewtons"].Invoke(out InteropValue thrustValue) != InteropStatus.Ok || !thrustValue.TryGet(out float thrust)
-            || controllerMethods["GetWeightNewtons"].Invoke(out InteropValue weightValue) != InteropStatus.Ok || !weightValue.TryGet(out float weight))
+        if (airspeedMethod.Invoke(out float airspeed) != InteropStatus.Ok
+            || throttleMethod.Invoke(out float throttle) != InteropStatus.Ok
+            || crashCountMethod.Invoke(out int crashCount) != InteropStatus.Ok
+            || pitchMethod.Invoke(out float pitch) != InteropStatus.Ok
+            || rollMethod.Invoke(out float roll) != InteropStatus.Ok
+            || headingMethod.Invoke(out float heading) != InteropStatus.Ok
+            || altitudeMethod.Invoke(out float altitude) != InteropStatus.Ok
+            || climbRateMethod.Invoke(out float climbRate) != InteropStatus.Ok
+            || sideslipMethod.Invoke(out float sideslip) != InteropStatus.Ok
+            || dragMethod.Invoke(out float drag) != InteropStatus.Ok
+            || liftMethod.Invoke(out float lift) != InteropStatus.Ok
+            || thrustMethod.Invoke(out float thrust) != InteropStatus.Ok
+            || weightMethod.Invoke(out float weight) != InteropStatus.Ok)
         {
             GUI.Text("FlightController telemetry is unavailable.", 12.0f, 12.0f, ColorRed);
             GUI.EndFixedWindow();

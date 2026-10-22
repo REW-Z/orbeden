@@ -325,7 +325,36 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 
 游戏原生模块不生成 C# 绑定类，使用 `ens.GetNativeComponent("MoveBehaviour")` 得到 `ComponentProxy`。例如 `proxy.SetField("speed", InteropValue.From(4.0f))`。MetaGen 仍为游戏 C++ 类型生成字段、方法和生命周期元数据，Inspector 编辑与场景序列化继续工作。Core 的 `Transform` 等内置类型保留强类型 C# 包装。C++ 调用 C# 脚本时，使用 `ScriptInterop::FindManagedComponent(ensId, "MyGame.MoveBehaviour", 0)`；最后一个参数选择同类型的第几个实例。
 
-重复调用应缓存成员句柄 `MemberHandle`、`ComponentField` 或 `ComponentMethod`。按名称的动态 `Invoke` 适合低频工具调用；每帧大量互操作优先使用批量 Proxy 接口，减少跨语言调用次数。程序集或原生模块重载后必须重新获取 Wrapper 和代理，重载前取得的句柄会失效。完整示例见 [脚本系统](../ScriptSystem.md)。
+签名已知的 C# → C++ 方法调用，在 `OnStart` 通过 `TryBindMethod` / `TryBindAction` 绑定，并把结果保存到脚本字段；逐帧通过 `NativeMethod` / `NativeAction` 直接传具体值。下面使用飞行模板已有的方法：
+
+```csharp
+//初始化时绑定并缓存
+ComponentProxy? flight = ens.GetNativeComponent("FlightController");
+NativeMethod<float> getAirspeed = default;
+if (flight != null)
+    flight.TryBindMethod("GetAirspeed", out getAirspeed);
+
+//后续调用，实际脚本中 getAirspeed 应保存为字段
+if (getAirspeed.Invoke(out float airspeed) == InteropStatus.Ok)
+    Console.WriteLine(airspeed);
+```
+
+`NativeMethod<T0, ..., TResult>` 的最后一个类型是返回值，无返回值使用 `NativeAction<T0, ...>`；最多支持 16 个输入参数。数值、向量等按具体 ABI 类型传递，不经过 `InteropValue`；字符串使用 `NativeUtf8` / `NativeStringId` 视图。签名必须与 C++ 完全匹配，不做隐式数值转换。
+
+类型已知的 C++ 字段也可以直接绑定，初始化时保存 `NativeField<T>`，后续无需按名称查询：
+
+```csharp
+if (flight != null && flight.TryBindField("throttleRate", out NativeField<float> throttleRate) == InteropStatus.Ok)
+{
+    throttleRate.Set(2.0f);
+    if (throttleRate.Get(out float current) == InteropStatus.Ok)
+        Console.WriteLine(current);
+}
+```
+
+实际脚本将 throttleRate 保存为字段。读写仍经过原生 setter、变更通知及 World 脏标记；`CanRead` / `CanWrite` 表示绑定的读写能力，只读或只写限制会被保留。运行时才知道签名的方法和字段继续使用 `ComponentMethod`、动态 `Invoke`、`SetField` / `TryGetField`。`Invoke` 自带有效性检查，不需要每次先检查 `IsValid`。程序集、World 或原生模块重载，以及反射成员表变化后，应重新获取组件并绑定方法；旧句柄不会自行恢复；字段绑定同样需要重新获取。调用应在主线程执行，按返回状态判断成功。
+
+完整缓存示例见模板 FlightHud / SampleBehaviour；字符串生命周期、错误状态和动态协议见[脚本系统](../ScriptSystem.md#8-跨语言代理)。大量互操作仍可通过批量接口减少跨语言调用次数。
 
 开发速度优先时使用 C#；需要大量计算或稳定高性能逻辑时使用 C++。
 

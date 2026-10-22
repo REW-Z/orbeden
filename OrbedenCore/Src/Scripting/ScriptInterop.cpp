@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <limits>
 #include <thread>
 #include <vector>
@@ -31,6 +32,30 @@ namespace
     thread_local uint32 reentrancyDepth = 0;
     thread_local std::string utf8Result;
 
+    struct ResolvedNativeMember
+    {
+        Type* instanceType;
+        MemberKind kind;
+        const void* address;
+    };
+    List<ResolvedNativeMember> nativeMembers;
+    uint32 memberGeneration = 1;
+    uint32 memberRegistryGeneration = 0;
+    Component* cachedComponent = nullptr;
+    uint64 cachedComponentId = 0;
+
+    class ComponentCache final : public IObjectDestroyListener
+    {
+    public:
+        //销毁前清空最近访问的组件指针
+        void OnObjectDestroyed(Object* object) override
+        {
+            if (object != cachedComponent) return;
+            cachedComponent = nullptr;
+            cachedComponentId = 0;
+        }
+    } componentCache;
+
     class CallGuard
     {
     private:
@@ -45,6 +70,9 @@ namespace
             entered = true;
             return InteropStatus::Ok;
         }
+
+        //把当前调用的退出职责交给类型化调用作用域
+        void Transfer() { entered = false; }
 
         ~CallGuard()
         {
@@ -232,10 +260,15 @@ namespace
 
     Component* ResolveNativeComponent(ComponentHandle handle)
     {
+        if (!currentWorld) return nullptr;
         if (handle.domain != ComponentDomain::Native || handle.generation != nativeGeneration || handle.slot > static_cast<uint64>(std::numeric_limits<int32>::max())) return nullptr;
+        if (handle.slot == cachedComponentId && cachedComponent && cachedComponent->GetWorld() == currentWorld) return cachedComponent;
         Object* object = Object::FindObjectById(static_cast<int32>(handle.slot));
         Component* component = object ? object->Cast<Component>() : nullptr;
-        return component && component->GetWorld() == currentWorld ? component : nullptr;
+        if (!component || component->GetWorld() != currentWorld) return nullptr;
+        cachedComponentId = handle.slot;
+        cachedComponent = component;
+        return component;
     }
 
     InteropStatus FindNative(EnsId ens, Type* type, int32 occurrence, ComponentHandle* output)
@@ -259,6 +292,29 @@ namespace
         return ResolveNativeComponent(component) ? InteropStatus::Ok : InteropStatus::StaleHandle;
     }
 
+    //切换成员代次并清空登记槽位
+    void ClearNativeMembers()
+    {
+        nativeMembers.clear();
+        memberRegistryGeneration = Reflection::GetRegistryGeneration();
+        if (++memberGeneration == 0) memberGeneration = 1;
+    }
+
+    //解析时登记成员归属，调用时按槽位读取
+    MemberHandle AddNativeMember(Type* type, MemberKind kind, const void* address)
+    {
+        if (memberRegistryGeneration != Reflection::GetRegistryGeneration()) ClearNativeMembers();
+        const uint32 generation = memberGeneration;
+        for (std::size_t index = 0; index < nativeMembers.size(); ++index)
+        {
+            const ResolvedNativeMember& entry = nativeMembers[index];
+            if (entry.instanceType == type && entry.kind == kind && entry.address == address)
+                return { ComponentDomain::Native, kind, index + 1, generation, 0 };
+        }
+        nativeMembers.push_back({ type, kind, address });
+        return { ComponentDomain::Native, kind, nativeMembers.size(), generation, 0 };
+    }
+
     InteropStatus ResolveNativeField(ComponentHandle component, std::string_view name, MemberHandle* output)
     {
         Component* instance = ResolveNativeComponent(component);
@@ -267,7 +323,7 @@ namespace
         const Reflection::FieldInfo* field = Reflection::FindField(instance->GetType(), std::string(name));
         if (!field) return InteropStatus::NotFound;
         if (field->kind == Reflection::FieldKind::Unsupported) return InteropStatus::UnsupportedType;
-        *output = { ComponentDomain::Native, MemberKind::Field, reinterpret_cast<uint64>(field), Reflection::GetRegistryGeneration(), 0 };
+        *output = AddNativeMember(instance->GetType(), MemberKind::Field, field);
         return InteropStatus::Ok;
     }
 
@@ -281,7 +337,7 @@ namespace
         kinds.reserve(rawKinds.size());
         for (uint32 rawKind : rawKinds)
         {
-            if (rawKind > static_cast<uint32>(Reflection::ValueKind::Object)) return InteropStatus::UnsupportedType;
+            if (rawKind > static_cast<uint32>(Reflection::ValueKind::Object) && rawKind != static_cast<uint32>(Reflection::ValueKind::Vector2)) return InteropStatus::UnsupportedType;
             kinds.push_back(static_cast<Reflection::ValueKind>(rawKind));
         }
 
@@ -289,49 +345,33 @@ namespace
         const Reflection::MethodInfo* method = Reflection::FindMethod(instance->GetType(), std::string(name), kinds, &ambiguous);
         if (ambiguous) return InteropStatus::AmbiguousMethod;
         if (!method) return InteropStatus::NotFound;
-        *output = { ComponentDomain::Native, MemberKind::Method, reinterpret_cast<uint64>(method), Reflection::GetRegistryGeneration(), 0 };
+        *output = AddNativeMember(instance->GetType(), MemberKind::Method, method);
         return InteropStatus::Ok;
     }
 
-    bool NativeMemberBelongsTo(Type* type, MemberHandle member)
+    //校验代次和登记槽位，不再遍历类型元数据
+    InteropStatus ValidateNativeMember(Type* type, MemberHandle member, MemberKind expected, const void*& address)
     {
-        const uintptr_t address = static_cast<uintptr_t>(member.slot);
-        for (Type* current = type; current; current = current->GetBaseType())
-        {
-            const Reflection::TypeInfo* info = Reflection::FindTypeInfo(current);
-            if (!info) continue;
-            if (member.kind == MemberKind::Field && !info->fields.empty())
-            {
-                const uintptr_t begin = reinterpret_cast<uintptr_t>(info->fields.data());
-                const uintptr_t end = begin + info->fields.size() * sizeof(Reflection::FieldInfo);
-                if (address >= begin && address < end && (address - begin) % sizeof(Reflection::FieldInfo) == 0) return true;
-            }
-            if (member.kind == MemberKind::Method && !info->methods.empty())
-            {
-                const uintptr_t begin = reinterpret_cast<uintptr_t>(info->methods.data());
-                const uintptr_t end = begin + info->methods.size() * sizeof(Reflection::MethodInfo);
-                if (address >= begin && address < end && (address - begin) % sizeof(Reflection::MethodInfo) == 0) return true;
-            }
-        }
-        return false;
-    }
-
-    InteropStatus ValidateNativeMember(Type* type, MemberHandle member, MemberKind expected)
-    {
+        address = nullptr;
         if (member.domain != ComponentDomain::Native || member.kind != expected || !member.slot) return InteropStatus::InvalidArgument;
-        if (member.generation != Reflection::GetRegistryGeneration()) return InteropStatus::StaleHandle;
-        return NativeMemberBelongsTo(type, member) ? InteropStatus::Ok : InteropStatus::InvalidArgument;
+        if (member.generation != memberGeneration || memberRegistryGeneration != Reflection::GetRegistryGeneration()) return InteropStatus::StaleHandle;
+        if (member.slot > nativeMembers.size()) return InteropStatus::InvalidArgument;
+        const ResolvedNativeMember& entry = nativeMembers[static_cast<std::size_t>(member.slot - 1)];
+        if (entry.instanceType != type || entry.kind != expected) return InteropStatus::InvalidArgument;
+        address = entry.address;
+        return InteropStatus::Ok;
     }
 
     InteropStatus GetNativeField(ComponentHandle component, MemberHandle member, InteropValueAbi* output)
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
-        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Field);
+        const void* address = nullptr;
+        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Field, address);
         if (memberStatus != InteropStatus::Ok) return memberStatus;
         if (!output) return InteropStatus::InvalidArgument;
 
-        const Reflection::FieldInfo* field = reinterpret_cast<const Reflection::FieldInfo*>(member.slot);
+        const Reflection::FieldInfo* field = static_cast<const Reflection::FieldInfo*>(address);
         Reflection::Value value = field->GetValue(instance);
         if (value.IsEmpty() && field->kind != Reflection::FieldKind::Unsupported) return InteropStatus::InvocationFailed;
         utf8Result.clear();
@@ -342,11 +382,12 @@ namespace
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
-        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Field);
+        const void* address = nullptr;
+        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Field, address);
         if (memberStatus != InteropStatus::Ok) return memberStatus;
         if (!input) return InteropStatus::InvalidArgument;
 
-        const Reflection::FieldInfo* field = reinterpret_cast<const Reflection::FieldInfo*>(member.slot);
+        const Reflection::FieldInfo* field = static_cast<const Reflection::FieldInfo*>(address);
         Reflection::Value value;
         if (!DecodeValue(*input, value)) return InteropStatus::UnsupportedType;
         if (static_cast<uint32>(value.GetKind()) != input->kind) return InteropStatus::TypeMismatch;
@@ -360,24 +401,21 @@ namespace
     {
         Component* instance = ResolveNativeComponent(component);
         if (!instance) return InteropStatus::StaleHandle;
-        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Method);
+        const void* address = nullptr;
+        InteropStatus memberStatus = ValidateNativeMember(instance->GetType(), member, MemberKind::Method, address);
         if (memberStatus != InteropStatus::Ok) return memberStatus;
         if (count < 0 || (count > 0 && !input) || !output) return InteropStatus::InvalidArgument;
 
-        const Reflection::MethodInfo* method = reinterpret_cast<const Reflection::MethodInfo*>(member.slot);
+        const Reflection::MethodInfo* method = static_cast<const Reflection::MethodInfo*>(address);
         if (count != static_cast<int32>(method->parameters.size())) return InteropStatus::TypeMismatch;
-        List<Reflection::Value> args(static_cast<std::size_t>(count));
         for (int32 index = 0; index < count; ++index)
         {
-            if (!DecodeValue(input[index], args[index])) return InteropStatus::UnsupportedType;
-            if (index >= static_cast<int32>(method->parameters.size()) || args[index].GetKind() != method->parameters[index].kind) return InteropStatus::TypeMismatch;
+            if (input[index].kind > static_cast<uint32>(Reflection::ValueKind::Object)
+                && input[index].kind != static_cast<uint32>(Reflection::ValueKind::Vector2)) return InteropStatus::UnsupportedType;
+            if (input[index].kind != static_cast<uint32>(method->parameters[index].kind)) return InteropStatus::TypeMismatch;
         }
-
-        bool success = false;
-        Reflection::Value result = method->Invoke(instance, std::span<const Reflection::Value>(args.data(), args.size()), &success);
-        if (!success) return InteropStatus::InvocationFailed;
-        utf8Result.clear();
-        return EncodeValue(result, *output, &utf8Result) ? InteropStatus::Ok : InteropStatus::UnsupportedType;
+        if (!method->abiInvoker) return InteropStatus::UnsupportedType;
+        return method->abiInvoker(instance, input, output, utf8Result);
     }
 
     template<typename TCallback, typename... TArgs>
@@ -468,6 +506,106 @@ namespace
         if (status != InteropStatus::Ok) return status;
         try { return InvokeNative(component, member, input, count, output); }
         catch (...) { return InteropStatus::InvocationFailed; }
+    }
+
+    //绑定时一次性校验完整参数和返回类型
+    InteropStatus ORBEDEN_NATIVE_CALL ResolveDirect(ComponentHandle component, const uint8* name, int32 length, uint32 returnKind, const uint32* kinds, int32 count, MemberHandle* output)
+    {
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (!name || length <= 0 || count < 0 || (count && !kinds) || !output) return InteropStatus::InvalidArgument;
+        try
+        {
+            MemberHandle methodHandle;
+            status = ResolveNativeMethod(component, ReadUtf8(name, length), { kinds, static_cast<std::size_t>(count) }, &methodHandle);
+            if (status != InteropStatus::Ok) return status;
+            Component* instance = ResolveNativeComponent(component);
+            const void* address = nullptr;
+            status = ValidateNativeMember(instance->GetType(), methodHandle, MemberKind::Method, address);
+            if (status != InteropStatus::Ok) return status;
+            const auto* method = static_cast<const Reflection::MethodInfo*>(address);
+            if (static_cast<uint32>(method->returnKind) != returnKind) return InteropStatus::TypeMismatch;
+            if (!method->directInvoker) return InteropStatus::UnsupportedType;
+            *output = AddNativeMember(instance->GetType(), MemberKind::DirectMethod, method);
+            return InteropStatus::Ok;
+        }
+        catch (...) { return InteropStatus::InvocationFailed; }
+    }
+
+    //此入口只读注册表，不分配、不调用脚本，允许省略 GC 切换
+    InteropStatus ORBEDEN_NATIVE_CALL PrepareDirect(ComponentHandle component, MemberHandle member, void** instanceOutput, void** entryOutput)
+    {
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (!instanceOutput || !entryOutput) return InteropStatus::InvalidArgument;
+        *instanceOutput = nullptr;
+        *entryOutput = nullptr;
+        Component* instance = ResolveNativeComponent(component);
+        if (!instance) return InteropStatus::StaleHandle;
+        const void* address = nullptr;
+        status = ValidateNativeMember(instance->GetType(), member, MemberKind::DirectMethod, address);
+        if (status != InteropStatus::Ok) return status;
+        const auto* method = static_cast<const Reflection::MethodInfo*>(address);
+        if (!method->directInvoker) return InteropStatus::UnsupportedType;
+        *instanceOutput = static_cast<Object*>(instance);
+        *entryOutput = method->directInvoker;
+        guard.Transfer();
+        return InteropStatus::Ok;
+    }
+
+    //匹配成功的 Prepare，调用期间禁止卸载原生模块
+    void ORBEDEN_NATIVE_CALL CompleteDirect()
+    {
+        if (std::this_thread::get_id() == mainThread && reentrancyDepth > 0) --reentrancyDepth;
+    }
+
+    //只在绑定时查找字段并校验完整类型
+    InteropStatus ORBEDEN_NATIVE_CALL ResolveDirectField(ComponentHandle component, const uint8* name, int32 length, uint32 valueKind, MemberHandle* output, uint32* access)
+    {
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (!name || length <= 0 || !output || !access) return InteropStatus::InvalidArgument;
+        *output = {};
+        *access = 0;
+        try
+        {
+            Component* instance = ResolveNativeComponent(component);
+            if (!instance) return InteropStatus::StaleHandle;
+            const Reflection::FieldInfo* field = Reflection::FindField(instance->GetType(), std::string(ReadUtf8(name, length)));
+            if (!field) return InteropStatus::NotFound;
+            if (field->directKind == Reflection::ValueKind::Empty || (!field->directGetter && !field->directSetter)) return InteropStatus::UnsupportedType;
+            if (static_cast<uint32>(field->directKind) != valueKind) return InteropStatus::TypeMismatch;
+            *output = AddNativeMember(instance->GetType(), MemberKind::DirectField, field);
+            *access = (field->directGetter ? 1u : 0u) | (field->directSetter ? 2u : 0u);
+            return InteropStatus::Ok;
+        }
+        catch (...) { return InteropStatus::InvocationFailed; }
+    }
+
+    //只校验句柄及访问权限；实际读写使用正常 GC 切换
+    InteropStatus ORBEDEN_NATIVE_CALL PrepareDirectField(ComponentHandle component, MemberHandle member, uint32 access, void** instanceOutput, void** entryOutput)
+    {
+        CallGuard guard;
+        InteropStatus status = guard.Enter();
+        if (status != InteropStatus::Ok) return status;
+        if (!instanceOutput || !entryOutput || access > 2) return InteropStatus::InvalidArgument;
+        *instanceOutput = nullptr;
+        *entryOutput = nullptr;
+        Component* instance = ResolveNativeComponent(component);
+        if (!instance) return InteropStatus::StaleHandle;
+        const void* address = nullptr;
+        status = ValidateNativeMember(instance->GetType(), member, MemberKind::DirectField, address);
+        if (status != InteropStatus::Ok) return status;
+        const auto* field = static_cast<const Reflection::FieldInfo*>(address);
+        void* entry = access == 1 ? field->directGetter : access == 2 ? field->directSetter : nullptr;
+        if (access && !entry) return InteropStatus::UnsupportedType;
+        *instanceOutput = static_cast<Object*>(instance);
+        *entryOutput = entry;
+        guard.Transfer();
+        return InteropStatus::Ok;
     }
 
     InteropStatus ORBEDEN_NATIVE_CALL NativeRegisterManagedApi(const ManagedScriptInteropApi* api)
@@ -675,8 +813,43 @@ namespace ScriptInterop
         return status == InteropStatus::Ok ? ComponentProxy(handle) : ComponentProxy();
     }
 
+    const TypedMethodsApi* GetTypedMethodsApi()
+    {
+        static const TypedMethodsApi api
+        {
+            reinterpret_cast<void*>(&ResolveDirect),
+            reinterpret_cast<void*>(&PrepareDirect),
+            reinterpret_cast<void*>(&CompleteDirect),
+        };
+        return &api;
+    }
+
+    const TypedFieldsApi* GetTypedFieldsApi()
+    {
+        static const TypedFieldsApi api
+        {
+            reinterpret_cast<void*>(&ResolveDirectField),
+            reinterpret_cast<void*>(&PrepareDirectField),
+            reinterpret_cast<void*>(&CompleteDirect),
+        };
+        return &api;
+    }
+
+    bool HasActiveCalls() { return reentrancyDepth != 0; }
+
+    NativeUtf8 StoreDirectString(std::string_view text)
+    {
+        if (text.size() > static_cast<std::size_t>(std::numeric_limits<int32>::max())) throw std::length_error("Native UTF-8 result is too large");
+        utf8Result.assign(text);
+        return { reinterpret_cast<const uint8*>(utf8Result.data()), static_cast<int32>(utf8Result.size()), 0 };
+    }
+
     void Initialize(World* world)
     {
+        cachedComponent = nullptr;
+        cachedComponentId = 0;
+        ClearNativeMembers();
+        Object::AddDestroyListener(&componentCache);
         currentWorld = world;
         mainThread = std::this_thread::get_id();
         ++nativeGeneration;
@@ -686,6 +859,10 @@ namespace ScriptInterop
 
     void Shutdown()
     {
+        Object::RemoveDestroyListener(&componentCache);
+        cachedComponent = nullptr;
+        cachedComponentId = 0;
+        ClearNativeMembers();
         managedApi = {};
         currentWorld = nullptr;
         ++nativeGeneration;

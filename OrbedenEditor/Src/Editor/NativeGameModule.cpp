@@ -4,6 +4,7 @@
 #include "Runtime/Object/Object.h"
 #include "Runtime/Object/Component.h"
 #include "Scripting/NativeGameModule.h"
+#include "Scripting/ScriptInterop.h"
 
 #include <filesystem>
 
@@ -70,6 +71,12 @@ bool NativeGameModule::LoadCandidate(const std::string& sourcePath,
     const std::string& shadowDirectory,
     std::string& error)
 {
+    //互操作回调期间不加载或卸载游戏代码
+    if (ScriptInterop::HasActiveCalls())
+    {
+        error = "Native game module cannot be loaded during an active interop call.";
+        return false;
+    }
     std::string candidatePath;
     if (!CopyModuleShadow(sourcePath, shadowDirectory, ++shadowVersion, candidatePath, error)) return false;
 
@@ -155,7 +162,7 @@ bool NativeGameModule::Unload(std::string& error)
     if (!IsLoaded()) return true;
     if (!Object::UnregisterModuleTypes(this))
     {
-        error = "Native game module still owns live objects or is a base of another loaded module.";
+        error = "Native game module is in use by an interop call, owns live objects, or is a base of another loaded module.";
         return false;
     }
 

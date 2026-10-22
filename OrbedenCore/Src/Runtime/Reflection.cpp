@@ -430,8 +430,8 @@ namespace Reflection
     }
 
     //创建字段元数据
-    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue, FieldListSizeGetter getListSize, FieldListResizer resizeList, FieldKind arrayElementKind, bool isFixedSize)
-        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue), listSizeGetter(getListSize), listResizer(resizeList), elementKind(arrayElementKind), fixedSize(isFixedSize)
+    FieldInfo::FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName, FieldValueGetter getTypedValue, FieldValueSetter setTypedValue, FieldListSizeGetter getListSize, FieldListResizer resizeList, FieldKind arrayElementKind, bool isFixedSize, ValueKind fieldValueKind, void* getDirect, void* setDirect)
+        : name(fieldName), typeName(fieldTypeName), objectRefTypeName(refTypeName), kind(fieldKind), persistent(isPersistent), getter(getValue), setter(setValue), valueGetter(getTypedValue), valueSetter(setTypedValue), listSizeGetter(getListSize), listResizer(resizeList), elementKind(arrayElementKind), fixedSize(isFixedSize), directKind(fieldValueKind), directGetter(getDirect), directSetter(setDirect)
     {
     }
 
@@ -540,8 +540,8 @@ namespace Reflection
     }
 
     //创建使用连续参数视图的方法元数据
-    MethodInfo::MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod)
-        : name(methodName), returnTypeName(methodReturnTypeName), returnKind(methodReturnKind), parameters(methodParameters), spanInvoker(invokeMethod)
+    MethodInfo::MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod, MethodAbiInvoker invokeAbi, void* invokeDirect)
+        : name(methodName), returnTypeName(methodReturnTypeName), returnKind(methodReturnKind), parameters(methodParameters), spanInvoker(invokeMethod), abiInvoker(invokeAbi), directInvoker(invokeDirect)
     {
     }
 

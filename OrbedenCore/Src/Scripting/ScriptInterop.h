@@ -41,6 +41,8 @@ namespace ScriptInterop
         None,
         Field,
         Method,
+        DirectMethod,
+        DirectField,
     };
 
 #pragma pack(push, 8)
@@ -68,6 +70,30 @@ namespace ScriptInterop
         uint32 kind = 0;
         uint32 reserved = 0;
         uint8 payload[16]{};
+    };
+
+    //字符串按 UTF-8 视图传值，不携带运行时值标签
+    struct NativeUtf8
+    {
+        const uint8* data = nullptr;
+        int32 length = 0;
+        uint32 reserved = 0;
+    };
+
+    //类型化调用先由 Core 校验，再取得本次调用的原生入口
+    struct TypedMethodsApi
+    {
+        void* Resolve = nullptr;
+        void* Prepare = nullptr;
+        void* Complete = nullptr;
+    };
+
+    //字段绑定与读写共享类型化调用保护，不暴露字段地址
+    struct TypedFieldsApi
+    {
+        void* Resolve = nullptr;
+        void* Prepare = nullptr;
+        void* Complete = nullptr;
     };
 
     //由 CLR/NativeAOT 初始化时注册给 C++ 的托管组件操作表。
@@ -148,6 +174,18 @@ namespace ScriptInterop
         InteropStatus Invoke(const MemberHandle& method, std::span<const Reflection::Value> args, Reflection::Value& result) const;
     };
 
+    //获取 Core 持有的类型化调用函数表
+    const TypedMethodsApi* GetTypedMethodsApi();
+
+    //获取 Core 持有的类型化字段函数表
+    const TypedFieldsApi* GetTypedFieldsApi();
+
+    //判断当前线程是否正在执行受保护的互操作调用
+    bool HasActiveCalls();
+
+    //复制字符串返回值，视图在下次字符串调用前有效
+    NativeUtf8 StoreDirectString(std::string_view text);
+
     //按本进程 TypeRuntimeId 查找原生组件。
     ComponentProxy FindNativeComponent(EnsId ens, TypeRuntimeId typeRuntimeId, int32 occurrence = 0);
 
@@ -181,3 +219,8 @@ namespace ScriptInterop
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ManagedScriptInteropApi, 11);
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::ScriptInteropApi, 9);
+
+static_assert(sizeof(ScriptInterop::NativeUtf8) == 16);
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::TypedMethodsApi, 3);
+
+ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptInterop::TypedFieldsApi, 3);

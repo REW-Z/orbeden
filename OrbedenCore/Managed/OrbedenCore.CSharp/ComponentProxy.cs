@@ -56,6 +56,8 @@ internal enum InteropMemberKind : uint
     None,
     Field,
     Method,
+    DirectMethod,
+    DirectField,
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
@@ -101,51 +103,166 @@ internal unsafe struct InteropValueAbi
 }
 
 /// <summary>跨 C++/C# 边界复制的受限值。</summary>
-public readonly struct InteropValue : IEquatable<InteropValue>
+public readonly unsafe struct InteropValue : IEquatable<InteropValue>
 {
-    private readonly object? data;
+    internal readonly InteropValueAbi Abi;
+    private readonly string? text;
 
-    public InteropValueKind Kind { get; }
-    public object? Value => data;
+    public InteropValueKind Kind => (InteropValueKind)Abi.Kind;
 
-    private InteropValue(InteropValueKind kind, object? value)
+    /// <summary>按需取得对象表示；数值仅在访问此属性时装箱。</summary>
+    public object? Value => Kind switch
     {
-        Kind = kind;
-        data = value;
+        InteropValueKind.Bool => Read<bool>(),
+        InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => Read<int>(),
+        InteropValueKind.UInt32 => Read<uint>(),
+        InteropValueKind.UInt64 => Read<ulong>(),
+        InteropValueKind.Float32 => Read<float>(),
+        InteropValueKind.Vector2 => Read<vector2>(),
+        InteropValueKind.Vector3 => Read<vector3>(),
+        InteropValueKind.Color => Read<color>(),
+        InteropValueKind.Quaternion => Read<quaternion>(),
+        InteropValueKind.EnsId => Read<EnsId>(),
+        InteropValueKind.String or InteropValueKind.StringId => text,
+        _ => null,
+    };
+
+    internal InteropValue(InteropValueAbi abi, string? value = null)
+    {
+        Abi = abi;
+        text = value;
+    }
+
+    //内联保存受支持的值类型
+    private static InteropValue Scalar<T>(InteropValueKind kind, T value) where T : unmanaged
+    {
+        InteropValueAbi abi = default;
+        abi.Kind = (uint)kind;
+        Unsafe.WriteUnaligned(abi.Payload, value);
+        return new(abi);
+    }
+
+    //读取内联数值
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private T Read<T>()
+    {
+        InteropValueAbi abi = Abi;
+        return Unsafe.ReadUnaligned<T>(abi.Payload);
     }
 
     public static InteropValue Empty => default;
-    public static InteropValue From(bool value) => new(InteropValueKind.Bool, value);
-    public static InteropValue From(int value) => new(InteropValueKind.Int32, value);
-    public static InteropValue From(uint value) => new(InteropValueKind.UInt32, value);
-    public static InteropValue From(ulong value) => new(InteropValueKind.UInt64, value);
-    public static InteropValue From(float value) => new(InteropValueKind.Float32, value);
-    public static InteropValue From(string? value) => new(InteropValueKind.String, value ?? string.Empty);
-    public static InteropValue FromStringId(string? value) => new(InteropValueKind.StringId, value ?? string.Empty);
-    public static InteropValue From(vector2 value) => new(InteropValueKind.Vector2, value);
-    public static InteropValue From(vector3 value) => new(InteropValueKind.Vector3, value);
-    public static InteropValue From(color value) => new(InteropValueKind.Color, value);
-    public static InteropValue From(quaternion value) => new(InteropValueKind.Quaternion, value);
-    public static InteropValue From(EnsId value) => new(InteropValueKind.EnsId, value);
-    public static InteropValue FromObject(Object? value) => new(InteropValueKind.Object, value?.InstanceId ?? 0);
-    public static InteropValue FromObjectId(int value) => new(InteropValueKind.Object, value);
-    public static InteropValue FromArray(int count) => new(InteropValueKind.Array, count);
+    public static InteropValue From(bool value) => Scalar(InteropValueKind.Bool, value);
+    public static InteropValue From(int value) => Scalar(InteropValueKind.Int32, value);
+    public static InteropValue From(uint value) => Scalar(InteropValueKind.UInt32, value);
+    public static InteropValue From(ulong value) => Scalar(InteropValueKind.UInt64, value);
+    public static InteropValue From(float value) => Scalar(InteropValueKind.Float32, value);
+    public static InteropValue From(string? value) => new(new InteropValueAbi { Kind = (uint)InteropValueKind.String }, value ?? string.Empty);
+    public static InteropValue FromStringId(string? value) => new(new InteropValueAbi { Kind = (uint)InteropValueKind.StringId }, value ?? string.Empty);
+    public static InteropValue From(vector2 value) => Scalar(InteropValueKind.Vector2, value);
+    public static InteropValue From(vector3 value) => Scalar(InteropValueKind.Vector3, value);
+    public static InteropValue From(color value) => Scalar(InteropValueKind.Color, value);
+    public static InteropValue From(quaternion value) => Scalar(InteropValueKind.Quaternion, value);
+    public static InteropValue From(EnsId value) => Scalar(InteropValueKind.EnsId, value);
+    public static InteropValue FromObject(Object? value) => FromObjectId(value?.InstanceId ?? 0);
+    public static InteropValue FromObjectId(int value) => Scalar(InteropValueKind.Object, value);
+    public static InteropValue FromArray(int count) => Scalar(InteropValueKind.Array, count);
 
+    /// <summary>按精确类型读取数值；值类型读取不装箱。</summary>
     public bool TryGet<T>(out T value)
     {
-        if (data is T typed)
+        bool scalar = typeof(T) == typeof(bool) && Kind == InteropValueKind.Bool
+            || typeof(T) == typeof(int) && Kind is InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array
+            || typeof(T) == typeof(uint) && Kind == InteropValueKind.UInt32
+            || typeof(T) == typeof(ulong) && Kind == InteropValueKind.UInt64
+            || typeof(T) == typeof(float) && Kind == InteropValueKind.Float32
+            || typeof(T) == typeof(vector2) && Kind == InteropValueKind.Vector2
+            || typeof(T) == typeof(vector3) && Kind == InteropValueKind.Vector3
+            || typeof(T) == typeof(color) && Kind == InteropValueKind.Color
+            || typeof(T) == typeof(quaternion) && Kind == InteropValueKind.Quaternion
+            || typeof(T) == typeof(EnsId) && Kind == InteropValueKind.EnsId;
+        if (scalar)
         {
-            value = typed;
+            value = Read<T>();
+            return true;
+        }
+        if (typeof(T) == typeof(string) && Kind is InteropValueKind.String or InteropValueKind.StringId)
+        {
+            string current = text!;
+            value = Unsafe.As<string, T>(ref current);
+            return true;
+        }
+        //对象类型读取保留显式装箱语义
+        if (!typeof(T).IsValueType && Value is T boxed)
+        {
+            value = boxed;
             return true;
         }
         value = default!;
         return false;
     }
 
-    public bool Equals(InteropValue other) => Kind == other.Kind && Equals(data, other.data);
+    //按浮点数值比较向量，保留 NaN 和正负零的相等语义
+    private bool FloatComponentsEqual(InteropValue other, int count)
+    {
+        InteropValueAbi left = Abi;
+        InteropValueAbi right = other.Abi;
+        for (int i = 0; i < count; i++)
+            if (!Unsafe.ReadUnaligned<float>(left.Payload + i * 4).Equals(Unsafe.ReadUnaligned<float>(right.Payload + i * 4))) return false;
+        return true;
+    }
+
+    /// <summary>比较内联值，不为数值创建对象表示。</summary>
+    public bool Equals(InteropValue other)
+    {
+        if (Kind != other.Kind) return false;
+        return Kind switch
+        {
+            InteropValueKind.Empty => true,
+            InteropValueKind.Bool => Read<bool>() == other.Read<bool>(),
+            InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => Read<int>() == other.Read<int>(),
+            InteropValueKind.UInt32 => Read<uint>() == other.Read<uint>(),
+            InteropValueKind.UInt64 or InteropValueKind.EnsId => Read<ulong>() == other.Read<ulong>(),
+            InteropValueKind.Float32 => Read<float>().Equals(other.Read<float>()),
+            InteropValueKind.Vector2 => FloatComponentsEqual(other, 2),
+            InteropValueKind.Vector3 => FloatComponentsEqual(other, 3),
+            InteropValueKind.Color or InteropValueKind.Quaternion => FloatComponentsEqual(other, 4),
+            InteropValueKind.String or InteropValueKind.StringId => string.Equals(text, other.text, StringComparison.Ordinal),
+            _ => false,
+        };
+    }
+
     public override bool Equals(object? obj) => obj is InteropValue other && Equals(other);
-    public override int GetHashCode() => HashCode.Combine(Kind, data);
-    public override string ToString() => data?.ToString() ?? string.Empty;
+
+    /// <summary>计算内联值的哈希，不为数值创建对象表示。</summary>
+    public override int GetHashCode()
+    {
+        int count = Kind switch
+        {
+            InteropValueKind.Vector2 => 2,
+            InteropValueKind.Vector3 => 3,
+            InteropValueKind.Color or InteropValueKind.Quaternion => 4,
+            _ => 0,
+        };
+        if (count > 0)
+        {
+            HashCode hash = new();
+            hash.Add(Kind);
+            InteropValueAbi abi = Abi;
+            for (int i = 0; i < count; i++) hash.Add(Unsafe.ReadUnaligned<float>(abi.Payload + i * 4));
+            return hash.ToHashCode();
+        }
+        return Kind switch
+        {
+            InteropValueKind.Bool => HashCode.Combine(Kind, Read<bool>()),
+            InteropValueKind.Int32 or InteropValueKind.Object or InteropValueKind.Array => HashCode.Combine(Kind, Read<int>()),
+            InteropValueKind.UInt32 => HashCode.Combine(Kind, Read<uint>()),
+            InteropValueKind.UInt64 or InteropValueKind.EnsId => HashCode.Combine(Kind, Read<ulong>()),
+            InteropValueKind.Float32 => HashCode.Combine(Kind, Read<float>()),
+            InteropValueKind.String or InteropValueKind.StringId => HashCode.Combine(Kind, text),
+            _ => HashCode.Combine(Kind, 0),
+        };
+    }
+    public override string ToString() => Value?.ToString() ?? string.Empty;
 }
 
 /// <summary>绑定到一个组件实例的预解析方法，可重复调用而不再按名称查找。</summary>
@@ -170,9 +287,9 @@ public readonly struct ComponentMethod
     }
 
     /// <summary>使用已解析的方法句柄同步调用。</summary>
-    public InteropStatus Invoke(out InteropValue result, params InteropValue[] arguments)
+    public InteropStatus Invoke(out InteropValue result, params ReadOnlySpan<InteropValue> arguments)
     {
-        return Invoke(arguments.AsSpan(), out result);
+        return Invoke(arguments, out result);
     }
 }
 
@@ -197,11 +314,11 @@ public sealed class BindableMethod
 }
 
 /// <summary>预解析组件字段和方法的统一代理。</summary>
-public sealed class ComponentProxy
+public sealed partial class ComponentProxy
 {
     private readonly ComponentHandle handle;
     private readonly Dictionary<string, MemberHandle> fieldCache = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, MemberHandle> methodCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<(InteropValueKind[] Kinds, MemberHandle Member)>> methodCache = new(StringComparer.Ordinal);
 
     internal ComponentProxy(ComponentHandle value)
     {
@@ -247,7 +364,7 @@ public sealed class ComponentProxy
         return ResolveFieldHandle(name, out _);
     }
 
-    public InteropStatus ResolveMethod(string name, params InteropValueKind[] parameterKinds)
+    public InteropStatus ResolveMethod(string name, params ReadOnlySpan<InteropValueKind> parameterKinds)
     {
         return ResolveMethodHandle(name, parameterKinds, out _);
     }
@@ -261,9 +378,9 @@ public sealed class ComponentProxy
     }
 
     /// <summary>解析一次方法名和参数签名，返回可重复调用的方法对象。</summary>
-    public InteropStatus TryResolveMethod(string name, out ComponentMethod method, params InteropValueKind[] parameterKinds)
+    public InteropStatus TryResolveMethod(string name, out ComponentMethod method, params ReadOnlySpan<InteropValueKind> parameterKinds)
     {
-        return TryResolveMethod(name, parameterKinds.AsSpan(), out method);
+        return TryResolveMethod(name, parameterKinds, out method);
     }
 
     public InteropStatus TryGetField(string name, out InteropValue value)
@@ -282,15 +399,15 @@ public sealed class ComponentProxy
     public InteropStatus Invoke(string name, ReadOnlySpan<InteropValue> arguments, out InteropValue result)
     {
         result = default;
-        InteropValueKind[] kinds = new InteropValueKind[arguments.Length];
+        Span<InteropValueKind> kinds = arguments.Length <= 16 ? stackalloc InteropValueKind[arguments.Length] : new InteropValueKind[arguments.Length];
         for (int index = 0; index < arguments.Length; ++index) kinds[index] = arguments[index].Kind;
         InteropStatus status = ResolveMethodHandle(name, kinds, out MemberHandle member);
         return status == InteropStatus.Ok ? ScriptInteropDispatch.Invoke(handle, member, arguments, out result) : status;
     }
 
-    public InteropStatus Invoke(string name, out InteropValue result, params InteropValue[] arguments)
+    public InteropStatus Invoke(string name, out InteropValue result, params ReadOnlySpan<InteropValue> arguments)
     {
-        return Invoke(name, arguments.AsSpan(), out result);
+        return Invoke(name, arguments, out result);
     }
 
     private InteropStatus ResolveFieldHandle(string name, out MemberHandle member)
@@ -309,13 +426,21 @@ public sealed class ComponentProxy
 
     private InteropStatus ResolveMethodHandle(string name, ReadOnlySpan<InteropValueKind> kinds, out MemberHandle member)
     {
-        StringBuilder keyBuilder = new(name);
-        foreach (InteropValueKind kind in kinds) keyBuilder.Append('#').Append((uint)kind);
-        string key = keyBuilder.ToString();
-        if (methodCache.TryGetValue(key, out member)) return InteropStatus.Ok;
-
+        member = default;
+        if (string.IsNullOrEmpty(name)) return InteropStatus.InvalidArgument;
+        if (methodCache.TryGetValue(name, out var overloads))
+        {
+            foreach (var cached in overloads)
+            {
+                if (!kinds.SequenceEqual(cached.Kinds)) continue;
+                member = cached.Member;
+                return InteropStatus.Ok;
+            }
+        }
         InteropStatus status = ScriptInteropDispatch.ResolveMethod(handle, name, kinds, out member);
-        if (status == InteropStatus.Ok) methodCache.Add(key, member);
+        if (status != InteropStatus.Ok) return status;
+        if (overloads == null) methodCache.Add(name, overloads = []);
+        overloads.Add((kinds.ToArray(), member));
         return status;
     }
 }
@@ -357,6 +482,8 @@ internal static unsafe class ScriptInteropDispatch
     internal static void Initialize(NativeScriptInteropApi api)
     {
         nativeApi = api;
+        NativeMethodRuntime.Initialize(default);
+        NativeFieldRuntime.Initialize(default);
     }
 
     internal static ComponentProxy? FindNative(EnsId ens, string typeName, int occurrence)
@@ -437,7 +564,7 @@ internal static unsafe class ScriptInteropDispatch
         if (nativeApi.ResolveMethod == null) return InteropStatus.StaleHandle;
 
         byte[] bytes = InteropText.EncodeUtf8(name);
-        uint[] rawKinds = new uint[kinds.Length];
+        Span<uint> rawKinds = kinds.Length <= 16 ? stackalloc uint[kinds.Length] : new uint[kinds.Length];
         for (int index = 0; index < kinds.Length; ++index) rawKinds[index] = (uint)kinds[index];
         fixed (byte* namePointer = bytes)
         fixed (uint* kindsPointer = rawKinds)
@@ -500,10 +627,24 @@ internal static unsafe class ScriptInteropDispatch
         result = default;
         if (nativeApi.Invoke == null) return InteropStatus.StaleHandle;
 
-        using InteropAbiConverter.EncodedValues encoded = InteropAbiConverter.Encode(arguments);
+        //无参数调用直接传空指针
+        if (arguments.IsEmpty)
+        {
+            InteropValueAbi emptyOutput = default;
+            InteropStatus emptyStatus = nativeApi.Invoke(handle, member, null, 0, &emptyOutput);
+            if (emptyStatus != InteropStatus.Ok) return emptyStatus;
+            return InteropAbiConverter.TryDecode(emptyOutput, out result) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
+        }
+
+        Span<InteropValueAbi> values = arguments.Length <= 16 ? stackalloc InteropValueAbi[arguments.Length] : new InteropValueAbi[arguments.Length];
+        Span<InteropAbiConverter.EncodedValue> resources = arguments.Length <= 16
+            ? stackalloc InteropAbiConverter.EncodedValue[arguments.Length] : new InteropAbiConverter.EncodedValue[arguments.Length];
+        using InteropAbiConverter.EncodedValues encoded = new(arguments, values, resources);
         if (!encoded.Success) return InteropStatus.UnsupportedType;
         InteropValueAbi output = default;
-        InteropStatus status = nativeApi.Invoke(handle, member, encoded.Pointer, encoded.Count, &output);
+        InteropStatus status;
+        fixed (InteropValueAbi* pointer = values)
+            status = nativeApi.Invoke(handle, member, pointer, arguments.Length, &output);
         if (status != InteropStatus.Ok) return status;
         return InteropAbiConverter.TryDecode(output, out result) ? InteropStatus.Ok : InteropStatus.UnsupportedType;
     }
@@ -516,7 +657,7 @@ internal static unsafe class ScriptInteropDispatch
 
 internal static unsafe class InteropAbiConverter
 {
-    internal sealed class EncodedValue : IDisposable
+    internal struct EncodedValue : IDisposable
     {
         internal InteropValueAbi Abi;
         internal bool Success;
@@ -538,98 +679,70 @@ internal static unsafe class InteropAbiConverter
         }
     }
 
-    internal sealed class EncodedValues : IDisposable
+    internal ref struct EncodedValues
     {
-        private readonly EncodedValue[] values;
-        private GCHandle pin;
+        private Span<EncodedValue> resources;
         internal bool Success { get; }
-        internal int Count => values.Length;
-        internal InteropValueAbi* Pointer => pin.IsAllocated ? (InteropValueAbi*)pin.AddrOfPinnedObject() : null;
 
-        internal EncodedValues(ReadOnlySpan<InteropValue> input)
+        internal EncodedValues(ReadOnlySpan<InteropValue> input, Span<InteropValueAbi> values, Span<EncodedValue> storage)
         {
-            values = new EncodedValue[input.Length];
-            InteropValueAbi[] abiValues = new InteropValueAbi[input.Length];
+            resources = storage;
+            resources.Clear();
             bool success = true;
-            for (int index = 0; index < input.Length; ++index)
+            try
             {
-                values[index] = Encode(input[index]);
-                success &= values[index].Success;
-                abiValues[index] = values[index].Abi;
+                for (int index = 0; index < input.Length; ++index)
+                {
+                    resources[index] = Encode(input[index]);
+                    success &= resources[index].Success;
+                    values[index] = resources[index].Abi;
+                }
+                Success = success;
             }
-            Success = success;
-            if (abiValues.Length != 0) pin = GCHandle.Alloc(abiValues, GCHandleType.Pinned);
+            catch
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public void Dispose()
         {
-            if (pin.IsAllocated) pin.Free();
-            foreach (EncodedValue value in values) value.Dispose();
+            foreach (ref EncodedValue resource in resources) resource.Dispose();
         }
     }
 
+    //复制内联 ABI，仅为字符串分配编码缓冲
     internal static EncodedValue Encode(InteropValue value)
     {
-        EncodedValue result = new() { Success = true };
-        result.Abi.Kind = (uint)value.Kind;
-        fixed (byte* payload = result.Abi.Payload)
+        EncodedValue result = new() { Abi = value.Abi, Success = IsSupported(value.Kind) };
+        if (value.Kind is InteropValueKind.String or InteropValueKind.StringId)
         {
-            switch (value.Kind)
-            {
-                case InteropValueKind.Empty: break;
-                case InteropValueKind.Bool: if (value.TryGet(out bool b)) *payload = b ? (byte)1 : (byte)0; else result.Success = false; break;
-                case InteropValueKind.Int32: if (value.TryGet(out int i)) *(int*)payload = i; else result.Success = false; break;
-                case InteropValueKind.UInt32: if (value.TryGet(out uint u)) *(uint*)payload = u; else result.Success = false; break;
-                case InteropValueKind.UInt64: if (value.TryGet(out ulong ul)) *(ulong*)payload = ul; else result.Success = false; break;
-                case InteropValueKind.Float32: if (value.TryGet(out float f)) *(float*)payload = f; else result.Success = false; break;
-                case InteropValueKind.String:
-                case InteropValueKind.StringId:
-                    if (value.TryGet(out string text)) result.Pin(InteropText.EncodeUtf8(text)); else result.Success = false;
-                    break;
-                case InteropValueKind.Vector2: if (value.TryGet(out vector2 v2)) *(vector2*)payload = v2; else result.Success = false; break;
-                case InteropValueKind.Vector3: if (value.TryGet(out vector3 v)) *(vector3*)payload = v; else result.Success = false; break;
-                case InteropValueKind.Color: if (value.TryGet(out color c)) *(color*)payload = c; else result.Success = false; break;
-                case InteropValueKind.Quaternion: if (value.TryGet(out quaternion q)) *(quaternion*)payload = q; else result.Success = false; break;
-                case InteropValueKind.EnsId: if (value.TryGet(out EnsId ens)) *(EnsId*)payload = ens; else result.Success = false; break;
-                case InteropValueKind.Object: if (value.TryGet(out int objectId)) *(int*)payload = objectId; else result.Success = false; break;
-                default: result.Success = false; break;
-            }
+            value.TryGet(out string text);
+            result.Pin(InteropText.EncodeUtf8(text));
         }
         return result;
     }
 
-    internal static EncodedValues Encode(ReadOnlySpan<InteropValue> values) => new(values);
+    private static bool IsSupported(InteropValueKind kind) => kind <= InteropValueKind.Object || kind == InteropValueKind.Vector2;
 
+    //直接保存数值 ABI，字符串在返回前复制
     internal static bool TryDecode(InteropValueAbi abi, out InteropValue value)
     {
-        byte* payload = abi.Payload;
-            InteropValueKind kind = (InteropValueKind)abi.Kind;
-            value = kind switch
-            {
-                InteropValueKind.Empty => InteropValue.Empty,
-                InteropValueKind.Bool => InteropValue.From(*payload != 0),
-                InteropValueKind.Int32 => InteropValue.From(*(int*)payload),
-                InteropValueKind.UInt32 => InteropValue.From(*(uint*)payload),
-                InteropValueKind.UInt64 => InteropValue.From(*(ulong*)payload),
-                InteropValueKind.Float32 => InteropValue.From(*(float*)payload),
-                InteropValueKind.String => InteropValue.From(ReadUtf8(payload)),
-                InteropValueKind.StringId => InteropValue.FromStringId(ReadUtf8(payload)),
-                InteropValueKind.Vector3 => InteropValue.From(*(vector3*)payload),
-                InteropValueKind.Color => InteropValue.From(*(color*)payload),
-                InteropValueKind.Quaternion => InteropValue.From(*(quaternion*)payload),
-                InteropValueKind.EnsId => InteropValue.From(*(EnsId*)payload),
-                InteropValueKind.Object => InteropValue.FromObjectId(*(int*)payload),
-                InteropValueKind.Vector2 => InteropValue.From(*(vector2*)payload),
-                _ => default,
-            };
-            //Array 是容器条目而不是可解码的值，其余已实现的值类型都在 Vector2 及之前。
-            return kind <= InteropValueKind.Object || kind == InteropValueKind.Vector2;
-    }
-
-    private static string ReadUtf8(byte* payload)
-    {
-        byte* pointer = *(byte**)payload;
-        int length = *(int*)(payload + 8);
-        return pointer == null || length <= 0 ? string.Empty : InteropText.DecodeUtf8(pointer, length);
+        InteropValueKind kind = (InteropValueKind)abi.Kind;
+        value = default;
+        if (!IsSupported(kind)) return false;
+        if (kind is InteropValueKind.String or InteropValueKind.StringId)
+        {
+            byte* payload = abi.Payload;
+            byte* pointer = *(byte**)payload;
+            int length = *(int*)(payload + 8);
+            if (length < 0 || length > 0 && pointer == null) return false;
+            string text = length == 0 ? string.Empty : InteropText.DecodeUtf8(pointer, length);
+            value = kind == InteropValueKind.String ? InteropValue.From(text) : InteropValue.FromStringId(text);
+            return true;
+        }
+        value = new InteropValue(abi);
+        return true;
     }
 }

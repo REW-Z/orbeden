@@ -15,7 +15,7 @@ public sealed class SampleBehaviour : Script
     [SerializeField]
     private int reportCount;
     private ComponentProxy? nativeSample;
-    private ComponentMethod nativePingMethod;
+    private NativeAction<float> nativePingMethod;
     private float interopTimer;
 
     /// <summary>创建示例托管脚本行为。</summary>
@@ -27,11 +27,11 @@ public sealed class SampleBehaviour : Script
     {
         startPosition = Ens.Transform.localPosition;
 
-        //按名称只解析一次；后续通过 ComponentMethod 调用 C++ public 方法。
+        //启动时绑定签名，后续直接传递 float 调用 C++ 方法。
         nativeSample = Ens.GetNativeComponent("SampleNativeBehaviour");
         if (nativeSample != null)
         {
-            nativeSample.TryResolveMethod("ReceiveManagedPing", out nativePingMethod, InteropValueKind.Float32);
+            nativeSample.TryBindAction("ReceiveManagedPing", out nativePingMethod);
         }
         Console.WriteLine($"SampleBehaviour start: Ens({EnsId.id}, {EnsId.version})");
     }
@@ -56,7 +56,7 @@ public sealed class SampleBehaviour : Script
         if (interopTimer >= 2.0f && nativePingMethod.IsValid)
         {
             interopTimer = 0.0f;
-            nativePingMethod.Invoke(out _, InteropValue.From(totalTime));
+            nativePingMethod.Invoke(totalTime);
         }
 
         elapsedTime += deltaTime;

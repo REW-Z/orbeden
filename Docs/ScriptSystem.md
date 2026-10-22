@@ -248,7 +248,218 @@ native?.SetField("speed", InteropValue.From(4.0f));
 
 方法按名称和精确参数种类匹配；不做隐式数值转换。生命周期名称不进入通用方法表。`InteropValue` 中的 ObjectId 和 EnsId 是调用期间的运行时表示，不能直接当作 .world 中的引用文本。
 
-高频互操作应缓存 `MemberHandle` / `ComponentField` / `ComponentMethod`。动态 `Invoke(name)` 只适用于低频通用调用。缓存句柄能避免重复成员查找，但不能消除 ABI 编解码、装箱和通用托管方法反射调用成本；大量每帧调用应减少跨域次数，优先在组件所属语言内完成计算或提供批量 Proxy 接口。
+### 8.1 选择调用方式
+
+| 场景 | 入口 | 参数与结果 |
+| --- | --- | --- |
+| C# 调用签名已知的 C++ 方法，尤其是每帧调用 | `TryBindMethod` / `TryBindAction`，缓存 `NativeMethod` / `NativeAction` | 具体 ABI 类型直接传值 |
+| 运行时才能确定方法签名，或工具动态调用 | 缓存 `ComponentMethod`，或 `ComponentProxy.Invoke(name, ...)` | `InteropValue` |
+| C# 读写类型已知的原生字段 | `TryBindField`，缓存 `NativeField<T>` | 具体 ABI 类型直接传值 |
+| 动态字段读写或 Inspector 属性 | `TryGetField` / `SetField` 等通用接口 | `InteropValue` |
+| C++ 调用 C# 方法 | `ScriptInterop::FindManagedComponent` 与 `MemberHandle` | 通用反射值协议 |
+
+类型化入口用于 C# → C++ 原生方法与字段。动态调用、动态字段和 C++ → C# 仍使用各自的通用协议。游戏 C++ 组件继续通过 Proxy 查询，不产生游戏专用 C# Binding。
+
+### 8.2 绑定一次，重复直接调用
+
+在 `OnStart` 获取组件并校验完整方法签名，随后缓存绑定结果。下面示例使用飞行模板已有的 `FlightController.GetAirspeed()`：
+
+```csharp
+using Orbeden;
+
+namespace Game;
+
+public sealed class AirspeedReader : Script
+{
+    private NativeMethod<float> getAirspeed;
+    public float airspeed;
+
+    public AirspeedReader(Ens ens) : base(ens) {}
+
+    private void OnStart()
+    {
+        ComponentProxy? flight = Ens.GetNativeComponent("FlightController");
+        getAirspeed = default;
+        if (flight != null)
+            flight.TryBindMethod("GetAirspeed", out getAirspeed);
+    }
+
+    private void OnUpdate(float deltaTime)
+    {
+        if (getAirspeed.Invoke(out float value) == InteropStatus.Ok)
+            airspeed = value;
+    }
+}
+```
+
+无返回值使用 `NativeAction`；有返回值使用 `NativeMethod`，最后一个泛型参数是返回类型，其余泛型参数按原生声明顺序对应输入参数。`Invoke` 返回调用状态，方法结果通过最后一个 `out` 参数取得。下面的无返回值方法来自模板 `SampleNativeBehaviour`：
+
+```csharp
+ComponentProxy? sample = ens.GetNativeComponent("SampleNativeBehaviour");
+if (sample != null && sample.TryBindAction("ReceiveManagedPing", out NativeAction<float> ping) == InteropStatus.Ok)
+    ping.Invoke(1.5f);
+```
+
+多参数绑定同样直接传值。假设原生组件声明了 `float32 Evaluate(float32 value, int32 count, bool enabled, const vector3& direction)`：
+
+```csharp
+if (native.TryBindMethod("Evaluate", out NativeMethod<float, int, bool, vector3, float> evaluate) == InteropStatus.Ok)
+{
+    InteropStatus status = evaluate.Invoke(1.5f, 3, true, new vector3(1, 2, 3), out float result);
+}
+```
+
+两个类型族支持 0～16 个输入参数，包括无泛型参数的 `NativeAction`。绑定按完整签名精确匹配，不做数值转换，也不补原生默认参数。`unmanaged` 约束只保证类型不含托管引用，允许的 ABI 类型仍由下面的白名单决定。
+
+| C++ 方法类型 | C# 类型化参数或结果 | ABI 约定 |
+| --- | --- | --- |
+| `bool` | `bool` | 单字节，原生 thunk 使用 `uint8` |
+| `int32` / `uint32` / `uint64` | `int` / `uint` / `ulong` | 同宽整数 |
+| `float32` | `float` | 32 位浮点 |
+| `vector2` / `vector3` / `color` / `quaternion` | 同名 Core 值类型 | 按约定布局传值 |
+| `EnsId` | `EnsId` | 运行时实体句柄，8 字节 |
+| `std::string` | `NativeUtf8` | 16 字节 UTF-8 视图 |
+| `StringId` | `NativeStringId` | 与字符串同布局，绑定种类不同 |
+| `void` 返回值 | `NativeAction` | 无结果输出参数 |
+
+`double`、任意自定义结构体、枚举、指针、Object / Ref 引用、数组、列表及托管 `string` 不在当前类型化白名单中。原生引用参数只采用 MetaGen 支持的输入值签名，不提供 `ref` / `out` 参数回写。需要对象身份时可设计为 `EnsId` 参数；需要其他语义时应明确设计接口或使用支持该值类型的动态协议。
+
+### 8.3 类型化字段绑定
+
+字段也可以像方法一样，在初始化时按名称和精确类型绑定一次，随后缓存 `NativeField<T>`。读写阶段不再查询名称字典、编码字段名或经过 `InteropValue` / `Reflection::Value`。下面使用 FlightController 已有的 `throttleRate` 字段：
+
+```csharp
+using Orbeden;
+
+namespace Game;
+
+public sealed class ThrottleRateWriter : Script
+{
+    private NativeField<float> throttleRate;
+    public float rate = 1.0f;
+
+    public ThrottleRateWriter(Ens ens) : base(ens) {}
+
+    private void OnStart()
+    {
+        ComponentProxy? flight = Ens.GetNativeComponent("FlightController");
+        throttleRate = default;
+        if (flight != null)
+            flight.TryBindField("throttleRate", out throttleRate);
+    }
+
+    private void OnUpdate(float deltaTime)
+    {
+        throttleRate.Set(rate);
+    }
+}
+```
+
+`Set(T value)` 返回写入状态，`Get(out T value)` 返回读取状态；仅在 Ok 时使用读取结果。字段类型与方法共用上面的 ABI 白名单，字符串对应 `NativeField<NativeUtf8>`，StringId 对应 `NativeField<NativeStringId>`，同样需要遵守输入固定和输出立即复制的约定。数组、对象引用、任意自定义结构体及没有类型化访问入口的手写字段返回 UnsupportedType；类型不匹配返回 TypeMismatch。可绑定受支持的继承字段和显式序列化字段。
+
+`CanRead` / `CanWrite` 表示绑定时是否存在相应访问入口，不代表组件仍然存活。`ORBEDEN_BIND_ACCESSORS(..., None)` 禁止类型化写入，`ORBEDEN_BIND_ACCESSORS(None, ...)` 禁止类型化读取；不可用的操作返回 UnsupportedType。`IsValid` 校验当前组件与字段代次，Get / Set 自身也会校验，无需逐次先检查 IsValid。
+
+MetaGen 为字段生成具体类型的读写 thunk。写入调用显式 setter；Transform、Script.enabled 等字段保留业务 setter，`ORBEDEN_BIND_CHANGED` 在成功写入后执行一次，随后标记所属 World 已修改。bool setter 返回 false 时返回 InvalidArgument，不继续变更通知或标脏。原生异常转为 InvocationFailed；若 setter 或回调在修改字段后抛异常，字段值可能已经改变，Set 本身不提供撤销事务。
+
+字段使用独立的 DirectField 成员种类和 TypedFieldsApi，复用方法的 Prepare / Complete 调用保护。绑定只保存组件身份与成员槽位，不暴露原生字段内存地址，也不跨调用保存游戏 DLL 访问函数。主线程、重入、模块卸载和代次规则与 NativeMethod 一致；World、反射表或运行库重载后应重新获取并绑定。
+
+### 8.4 UTF-8 字符串
+
+假设原生组件有公开方法 `std::string EchoText(const std::string& value)`，先缓存完整签名，再固定输入缓冲并立即复制输出：
+
+```csharp
+//在初始化阶段保存 echoText
+InteropStatus bindStatus = native.TryBindMethod("EchoText", out NativeMethod<NativeUtf8, NativeUtf8> echoText);
+
+//调用阶段；输入 byte[] 可按业务需要复用
+unsafe
+{
+    if (bindStatus == InteropStatus.Ok)
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes("中文\0🛩");
+        fixed (byte* pointer = bytes)
+        {
+            if (echoText.Invoke(new NativeUtf8(pointer, bytes.Length), out NativeUtf8 result) == InteropStatus.Ok)
+            {
+                string copy = result.ToString();
+                //保存 copy，不保存 result.Data
+            }
+        }
+    }
+}
+```
+
+输入视图包含 UTF-8 指针和显式字节长度，允许空文本和内嵌 NUL。输入内存在整个调用期间必须有效，托管缓冲须 `fixed`。输出借用 Core 线程局部缓冲，应在下一次返回字符串的互操作调用、上下文切换或关闭前立即 `ToString()` 复制；不能缓存输出指针，也不要把多个尚未复制的字符串结果当作独立存储。只在调用成功时读取输出。
+
+`StringId` 使用 `NativeStringId`，构造方式同样是指针加字节长度；即使两者布局相同，也不能拿 `NativeUtf8` 绑定 StringId 参数或结果。视图本身不分配，但 UTF-8 编码、C++ 字符串和托管文本复制仍可能分配。
+
+### 8.5 状态、失效与调用保护
+
+| 状态 | 常见原因与处理 |
+| --- | --- |
+| `Ok` | 绑定或调用成功，可以使用结果 |
+| `NotFound` | 名称或参数签名不匹配，核对原生方法声明 |
+| `TypeMismatch` | 类型化绑定的返回类型与原生声明不同 |
+| `UnsupportedType` | 组件域或 ABI 类型不受支持，或手写元数据缺少类型化入口 |
+| `StaleHandle` | API 未连接、绑定默认值、组件销毁、World 切换或成员代次失效 |
+| `WrongThread` | 调用线程不是互操作主线程，应回到主线程调用 |
+| `ReentrancyLimit` | 原生与托管嵌套调用达到 32 层上限 |
+| `InvalidArgument` | 字段 bool setter 拒绝写入，或 UTF-8 视图等输入无效 |
+| `InvocationFailed` | 原生方法、字段访问器或变更回调抛异常，或绑定过程发生异常 |
+
+组件缺失时 `GetNativeComponent` 返回 null。失败绑定会输出默认方法值；`Invoke` 自带有效性检查，逐帧调用无需先检查 `NativeMethod.IsValid`。`IsValid` 自身也会执行一次校验，并不为下一次调用保留保护。
+
+World 上下文切换、关闭和反射注册表更新都会使旧句柄失效。即使组件仍然存在，方法也可能已失效，应重新获取组件并重新绑定；不要反复调用旧句柄等待它自行恢复。绑定不拥有组件，不延长组件生命周期。
+
+类型化调用使用 MetaGen 生成的具体 C++ ABI thunk 与 Core 通用泛型调用器。参数按值传递，返回值写入具体类型的输出地址，调用过程不使用 `InteropValue`、固定 payload、`Reflection::Value` 或反射参数列表。数值调用不装箱、不创建参数数组。签名种类仅用于绑定阶段，不随每次参数值传输。Core 关闭 CLR 自动封送；新增类型需要同时实现两端布局与签名映射，不能仅放宽 unmanaged 白名单。
+
+调用按以下顺序进行：
+
+1. 绑定只保存组件身份和不透明成员槽位，不缓存游戏 DLL 函数地址。
+2. 每次经稳定 Core 的 `Prepare` 校验线程、World、对象存活、实际类型、成员归属与代次，并取得本次活跃入口。
+3. 通过具体签名的函数指针进入 C++ thunk，正常执行 GC 切换，允许原生回调托管。
+4. `finally` 经 `Complete` 释放调用保护；即使回调内断开 API，本次保存的 Core 退出入口仍能完成清理。
+
+只有不分配、不执行脚本的 `Prepare` / `Complete` 使用 `SuppressGCTransition`。原生异常转换为 `InvocationFailed`，调用期间拒绝加载或卸载游戏模块，避免回调卸载仍在执行的代码。模块与反射注册表遵守主线程串行修改契约。最近访问的组件指针通过对象销毁通知清理，并在上下文切换时清空。
+
+### 8.6 动态协议与手写入口
+
+运行时才知道签名的查询、Inspector 和通用跨语言操作保留 `ComponentMethod` / `MemberHandle` 与 `InteropValue` 协议。动态方法缓存不透明成员槽位，MetaGen 的 `abiInvoker` 从内联 payload 读写具体值，仍绕过 `Reflection::Value`。数值 From、精确类型 TryGet、相等比较与哈希不装箱；显式读取 Value 或使用托管反射时仍按需装箱。动态 Invoke 使用 params ReadOnlySpan，最多 16 个参数在栈上编码，更多参数使用受控数组。
+
+已有高频调用可以按以下方式迁移：将 `ComponentMethod` 字段替换为具体的 `NativeMethod<...>` 或 `NativeAction<...>`；初始化时将 `TryResolveMethod` 改为 `TryBindMethod` / `TryBindAction`；调用时直接传值，并将 `InteropValue.TryGet` 改为具体类型的 `out` 结果。签名已知的原生字段可将 SetField / TryGetField 改为 TryBindField 加 NativeField.Set / Get；动态字段与 Inspector 保留原协议。FlightHud 和 SampleBehaviour 是方法缓存示例，上面的 ThrottleRateWriter 展示字段缓存。
+
+手写字段的 FieldInfo 需提供 directKind、directGetter / directSetter，类型化入口分别为 `InteropStatus (Object*, WireValue*)` / `InteropStatus (Object*, WireValue)`；只读或只写入口可为空。生成字段会保留 setter、变更通知和 World 脏标记，手写入口须自行保持这些语义。
+
+手写注册方法需要提供 `MethodInfo::abiInvoker` 才能动态调用，提供符合完整 ABI 签名的 `directInvoker` 才能类型化绑定。类型化入口形如 `InteropStatus ORBEDEN_NATIVE_CALL Thunk(Object*, WireArg0, ..., WireResult*)`，void 方法省略结果指针；bool 使用 `uint8`，字符串和 StringId 使用 `ScriptInterop::NativeUtf8`。入口必须使用普通静态函数、按实例实际类型调整 Object 指针，并捕获原生异常返回调用状态；不能直接填入普通 C++ 成员函数指针。通常由 MetaGen 生成这些入口即可。
+
+C++ 调用 C# 的通用方法仍使用托管方法元数据；这一方向的反射调用与对象参数转换仍有成本。大量每帧调用应优先在组件所属语言内完成计算，或提供批量 Proxy 接口；不能把原生数值查询的零分配结论推广到字符串、托管反射及所有调用方向。
+
+### 8.7 性能验证范围
+
+2026-10-22，Windows x64，在 AviatorSage 的 `Tests/ScriptInteropChecks` 中用真实 FlightController 逐项读取 13 个 getter。每条路径预热 10,000 次，交错执行 5 轮，每轮 50,000 组，取单组中位耗时；所有路径的当前线程托管分配均为 0 字节：
+
+| 路径 | CLR Release，μs / 13 次 | NativeAOT Release，μs / 13 次 |
+| --- | ---: | ---: |
+| 无校验直接调用参考 | 0.286 | 0.334 |
+| 带校验直接调用参考 | 0.403 | 0.447 |
+| 类型化 NativeMethod | 0.551 | 0.613 |
+| 缓存 ComponentMethod | 0.744 | 0.815 |
+| Proxy.Invoke(name) | 0.996 | 1.286 |
+
+类型化路径相对同轮 ComponentMethod 耗时分别减少约 26% / 25%。它仍有成员校验及 Prepare / Complete 成本，不能视为与直接调用等价。CLR 为 .NET 10.0.13；NativeAOT 使用本机离线缓存的 10.0.12 工具包，各执行模式内分别比较。
+
+新增字段写入的同轮 CLR Release 测量如下。每组连续写同一 `throttleRate` 字段 13 次，再统一直接读一次用于消费结果；所有路径保留 World 脏标记，均为零托管分配：
+
+| 字段写入路径 | μs / 13 次写入 + 1 次直接读取 |
+| --- | ---: |
+| 无校验直接写参考 | 0.050 |
+| 带校验直接写参考 | 0.233 |
+| 类型化 NativeField.Set | 0.461 |
+| Proxy.SetField(name)，名称缓存已命中 | 1.094 |
+
+NativeField.Set 相对动态字段入口耗时减少约 58%。字段与上述 getter 测量的操作不同，分别比较，不用字段写入数字推算方法调用收益。
+
+255 项互操作检查已在 CLR Debug/Release、NativeAOT Release 下通过，覆盖方法与字段的具体类型、字符串、混合参数、只读/只写、setter 拒绝、Changed、World 脏标记、异常、原生回调、重入、卸载保护及句柄失效。该测试不启动渲染或物理模拟，不统计原生内存分配，也不代表 HUD 或整帧加速；尚未完成 Editor Play 人工画面验收及完整 Player 发布。
 
 ## 9. 重载、CLR 与 NativeAOT
 
@@ -262,7 +473,20 @@ Wrapper 断开原生连接后 `IsAlive` 为 false。组件代理和成员句柄�
 
 能重载的只有用户游戏程序集：`GameAssemblyLoadContext` 是唯一可收集的上下文。编辑器自身的 `Orbeden.Editor.dll` 由 hostfxr 加载进默认（非可收集）上下文，本仓库没有卸载或重启机制，改了编辑器 C# 代码必须重新构建 `OrbedenEditor.vcxproj`。
 
-ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 17 个指针槽，完整运行时表为 110 个；Editor GUI 表为 82 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，面板表为 2 个，资源表为 19 个，应用表为 16 个，完整 Editor 表为 162 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改。目前 Script 宿主表为 17 个指针槽，完整运行时表为 117 个（ABI 7，尾部依次指向独立的 3 槽 TypedMethodsApi 与 TypedFieldsApi；原 ScriptInteropApi 保持 9 槽，Editor 引擎子表仍为 ABI 5、74 槽）；Editor GUI 表为 82 个（包含列表控件与自定义 GUI 的 ID 作用域接口），组件表为 24 个，Gizmo 表为 5 个，面板表为 2 个，资源表为 19 个，应用表为 16 个，完整 Editor 表为 162 个（其中日志表 5 个、性能剖析表 8 个，排在组件表之后）。Editor 表的槽位序号是相对结构体起点的绝对偏移，改动排在前面的表会让后面所有表的偏移一起后移，C++ 的 `ORBEDEN_ASSERT_NATIVE_API_SLOT` 和 C# 的 `ValidateNativeApiLayout` 都要跟着改。
+
+类型化 Proxy 更新后的 ABI 对照如下；函数槽位数不包含完整表头的版本号和尺寸字段。
+
+| 表或模块 | ABI 版本 | 尺寸 / 槽位 |
+| --- | --- | --- |
+| `OrbedenNativeApi`，完整运行时表 | 7 | 8 字节表头 + 117 个指针槽，尾槽指向 TypedFieldsApi |
+| `OrbedenEngineNativeApi`，Editor 引擎子表 | 5 | 8 字节表头 + 74 个指针槽 |
+| `ScriptInteropApi`，动态互操作表 | 随外层表校验 | 9 个指针槽 |
+| `TypedMethodsApi`，类型化调用表 | 随完整运行时表校验 | Resolve / Prepare / Complete，3 个指针槽 |
+| `TypedFieldsApi`，类型化字段表 | 随完整运行时表校验 | Resolve / Prepare / Complete，3 个指针槽 |
+| `OrbedenNativeGameModuleApi`，游戏 DLL 描述 | 6 | 按 NativeGameModule.h 校验，与新的 FieldInfo / MethodInfo 布局配套 |
+
+升级时依次构建 Core（包含 MetaGen、托管运行库及所用配置的原生 SDK）、构建并重启 Editor、通过 Update Project 同步项目 SDK、重新生成游戏元数据并构建游戏 C++ / C#。用于发布时再重新 Build Player。更新的具体范围见[构建与打包说明](BuildAndPackaging.md#引擎更新与项目同步)。
 
 断言只保证结构体尺寸一致，保证不了字段顺序：两端同名表的槽位顺序必须逐字对应，新槽一律追加在表尾。顺序错了三个断言会全部通过，却把某个槽调成另一个函数。
 
@@ -286,11 +510,11 @@ ABI 两端使用 Pack=8，结构字段顺序和函数槽位数必须一起修改
 
 新项目模板存放在 `OrbedenEditor/Templates/FlightTraining/`（World、资源、C#/C++ 脚本、原生 `GameNative.vcxproj` 工程），随 Editor 构建拷贝到输出目录；新建项目时递归复制整个模板目录，并对文本文件替换 `{{PROJECT_NAME}}` 占位符（`Project.oeproj` 与 `Script/Project.csproj` 同时改名为项目名）。模板源码不参与 Editor 编译（Orbeden.Editor.csproj 显式排除）。
 
-模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 通过 `ComponentProxy` 读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](Manual/UserManual.md#6-运行和调试)。
+模板提供自由飞行场景：飞机挂载原生 `FlightController` 和 `FlightTerrainStreamer`，相机挂载 `FlightOrbitCamera`，托管 `FlightHud` 显示飞行状态。原生脚本负责气动力、舵面、复位、地形分块加载和鼠标环绕相机，起落架悬挂由物理系统处理。托管 HUD 通过 `ComponentProxy` 绑定并缓存 `NativeMethod<float>` / `NativeMethod<int>`，直接读取原生状态，并用 `GUI` 自由绘制 API 绘制 PFD、仪表盘和受力数值。操作方式见 [用户手册](Manual/UserManual.md#6-运行和调试)。
 
 首次创建或打开项目时，原生游戏类型可能尚未注册。Editor 会先接受项目元数据，将它提示为“Native scripts need to be compiled”，然后自动执行 MetaGen、MSBuild 编译、游戏 DLL 加载和启动 World 重载。构建失败时项目仍保持打开，可在 `Views > Build Game` 中修复工具链问题并重试 `Build Game C++`。启动 World 尚待 Native 重载时禁止保存，手动构建会跳过构建前保存，避免用空 World 覆盖磁盘场景。
 
-游戏 C++ 构建步骤先运行 MetaGen 生成反射、字段与方法访问器、生命周期 thunk，再由 MSBuild 编译游戏原生工程；不生成 C# 包装或 Binding 注册。Editor 使用 DLL；Player 将游戏源码和反射生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
+游戏 C++ 构建步骤先运行 MetaGen 生成反射、字段访问器、动态与类型化方法 ABI thunk、生命周期 thunk，再由 MSBuild 编译游戏原生工程；不生成游戏专用 C# 包装或 Binding 注册。Editor 使用 DLL；Player 将游戏源码和反射生成代码编入目标。C# 项目使用 Core SDK；AOT 导出文件只保留固定阶段入口，游戏程序集需要作为裁剪根保留被反射访问的脚本成员。
 
 ### Ens 的独立对象身份
 

@@ -110,13 +110,13 @@ IDE 的设计时项目加载（`DesignTimeBuild=true`）在未显式设置 `Orbe
 | --- | --- | --- |
 | `OrbedenCore.CSharp.dll` | 无其他 Orbeden / Game 程序集 | Core 托管 API、生成绑定、脚本域和 UI；不引用 Editor 或游戏 |
 | `Orbeden.Editor.dll` | `OrbedenCore.CSharp.dll` | Editor API、Inspector、构建前端；不静态引用具体游戏 |
-| `<Game>.dll`，Editor/PIE 构建 | `OrbedenCore.CSharp.dll`、`Orbeden.Editor.dll` | 普通目录脚本、游戏 C++ 类型的生成 C# 绑定、`#if ORBEDEN_EDITOR` 内的同文件编辑器 |
+| `<Game>.dll`，Editor/PIE 构建 | `OrbedenCore.CSharp.dll`、`Orbeden.Editor.dll` | 普通目录脚本与 `#if ORBEDEN_EDITOR` 内的同文件编辑器；游戏 C++ 方法经 Core 通用 Proxy 调用器访问 |
 | `<Game>.Editor.dll` | `<Game>.dll`、`OrbedenCore.CSharp.dll`、`Orbeden.Editor.dll` | `Content/**/Editor/**/*.cs`，始终定义 `ORBEDEN_EDITOR` |
-| `<Game>`，Player NativeAOT 编译输入 | `OrbedenCore.CSharp.dll` | 普通目录的 Runtime 代码与生成绑定；不定义 `ORBEDEN_EDITOR`，不引用两个 Editor 程序集 |
+| `<Game>`，Player NativeAOT 编译输入 | `OrbedenCore.CSharp.dll` | 普通目录的 Runtime 代码；引用 Core 的内置类型绑定与通用 Proxy 调用器，不生成游戏 C++ 的 C# 绑定；不定义 `ORBEDEN_EDITOR`，不引用两个 Editor 程序集 |
 
 `Orbeden.Editor.dll` 通过 `ManagedAssemblySession` 动态加载游戏及其 Editor 扩展，这与游戏的编译引用是两种关系，因此不构成编译循环。Core C# 与 Editor C# 在编辑器托管上下文中常驻；游戏及其 Editor 扩展加载到同一个可回收的 `SessionLoadContext`，并共享宿主已经加载的 Core / Editor 程序集。Inspector、场景回调与脚本域使用同一份游戏类型，重编译时一起卸载和重载。
 
-Core C# 与游戏 C# 通过原生 API 函数表访问 Core 类型，通过反射 Proxy 访问游戏 C++ 组件，不通过托管程序集引用原生 DLL。游戏原生模块只生成类型、字段、方法与生命周期元数据，不生成 C# 绑定。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和反射生成代码到可执行文件，不分发这个 Editor 模块 DLL。
+Core C# 与游戏 C# 通过原生 API 函数表访问 Core 类型，通过 ComponentProxy 访问游戏 C++ 组件，不通过托管程序集引用原生 DLL。签名已知的方法在绑定时解析元数据，随后由 Core 的 NativeMethod / NativeAction 调用器通过具体类型函数指针传值；类型已知的字段通过 NativeField<T> 直接读写；动态方法与动态字段继续使用 InteropValue 协议。游戏原生模块只生成类型、字段、方法与生命周期元数据，不生成 C# 绑定。Editor 动态加载 `<ProjectName>Native.dll`；Player 直接编译同一批游戏 C++ 源码和反射生成代码到可执行文件，不分发这个 Editor 模块 DLL。
 
 ## 构建入口与输出
 
@@ -573,6 +573,31 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+#### 版本 106：类型化原生方法与字段绑定
+
+完整运行时 OrbedenNativeApi 升至 ABI 7、117 个指针槽，尾部追加指向独立 3 槽 TypedFieldsApi 的指针。TypedMethodsApi 保持 3 槽、动态 ScriptInteropApi 保持 9 槽，Editor 引擎子表维持 ABI 5、74 槽。FieldInfo 新增具体类型与读写函数入口，原生游戏模块 ABI 升至 6；不能混用旧游戏 DLL、旧 MetaGen 生成物或旧 Core 程序集。
+
+新增 ComponentProxy.TryBindField 与 NativeField<T>.Get / Set，初始化时按名称和类型绑定，后续不再查名称或经过通用值容器。生成访问器保留显式 getter/setter、只读/只写、Changed 与 World 脏标记，bool setter 拒绝时不继续通知；继承的 Script.enabled 使用业务入口。字段和方法共用主线程、代次、重入与模块卸载保护。数组、对象引用和未定义 ABI 的自定义类型继续使用动态协议。
+
+按下列升级步骤重新构建 Core、Editor、游戏并同步 SDK。已有需要频繁调用 SetField / TryGetField 的 C# 脚本可迁移为缓存 NativeField<T>，无需手写字段偏移或游戏 C# Binding；没有场景或资源格式迁移。当前游戏的 255 项互操作检查已在 CLR Debug/Release 和 NativeAOT Release 通过；字段写入的同轮 Release 耗时减少约 58%，为零托管分配。验证范围和具体数据见[脚本系统](ScriptSystem.md#87-性能验证范围)。
+
+#### 2026-10-22：方法类型化更新记录（字段绑定之前）
+
+当前完整运行时表 `OrbedenNativeApi` 为 ABI 6、116 个指针槽，尾槽指向独立的 3 槽 `TypedMethodsApi`；动态 `ScriptInteropApi` 仍为 9 槽，Editor 引擎子表仍为 ABI 5、74 槽。原生游戏 DLL 描述 ABI 为 5，`MethodInfo` 增加具体类型调用入口。不能将旧生成代码或旧游戏 DLL 与新 Core 混用。项目存档版本与这些二进制 ABI 版本分别管理。
+
+Core MetaGen 在 `--bindings` 模式生成 `NativeMethods.Generated.cs`，包含 0～16 参数的通用 NativeMethod / NativeAction；游戏 `--game-module` 模式只生成游戏原生元数据与调用 thunk，不产生游戏专用 C# Binding。C# 数值调用直接传值，字符串使用 UTF-8 视图；CLR 与 NativeAOT 共用相同签名。接口及迁移示例见[脚本系统](ScriptSystem.md#8-跨语言代理)。
+
+升级现有工程时：
+
+1. 停止 Play，构建所用配置的 Core，刷新 MetaGen、原生 SDK 与 Core 托管程序集；若同时使用 Debug / Release，应分别构建对应原生库。
+2. 构建并重启 Editor，再通过 Update Project 同步游戏的 SDK 引用、工具、头文件与 `Lib` 程序集。Core 托管 SDK 路径由最后一次构建覆盖，测量 Release 时须确认其配置。
+3. 重新运行游戏 MetaGen，构建游戏 C++ DLL、C# 脚本及编辑器扩展。高频原生调用改为缓存 NativeMethod / NativeAction；FlightHud 与 SampleBehaviour 模板已更新，已有项目按需同步相应脚本。
+4. 发布项目时重新 Build Player，使 Core、游戏 C++ 与 NativeAOT 产物使用同一套新 ABI。更新不涉及场景或资源格式迁移。
+
+本次已通过 Windows x64 Core Debug/Release、Editor Debug、游戏原生 Debug/Release 和游戏托管 Release 构建；AviatorSage 的 173 项互操作检查在 CLR Debug/Release 及 NativeAOT Release 下通过。13 个 getter 的同轮类型化调用耗时分别减少约 26% / 25%，为零托管分配；这是互操作测试结果，未完成完整 Player 发布或 Editor Play 人工验收。性能方法和完整数值见[脚本系统](ScriptSystem.md#87-性能验证范围)。
+
+#### 项目存档版本历史
 
 版本 105：Core 托管包装改为强 GC 句柄保活，原生对象销毁、程序集卸载和引擎 API 断开时释放；显式未使用对象回收期间临时弱化可回收对象的包装，并恢复仍存活包装的强句柄。引擎原生 API 主版本升至 5，原生游戏模块 ABI 升至 3，Core、Editor、游戏模块和 Player 必须一起重建。整个游戏原生模块停止生成 C# 包装及 Binding 注册，但 MetaGen 继续生成类型、字段、方法、序列化和生命周期元数据，Inspector 与跨语言 Proxy 继续使用它们。游戏泛型组件查询跳过无绑定类型，引用编辑直接使用原生对象 ID 和稳定 Key。共享游戏构建目标改名为 `Orbeden.Game.targets`，更新 SDK 时迁移脚本工程导入并删除旧转发文件；原生构建删除旧游戏绑定生成物，Player 只编译游戏反射生成文件。FlightTraining 的 FlightHud 改为缓存 Proxy 方法句柄，Propeller 删除未使用的旧原生绑定字段。需先构建 Core 和 Editor，更新项目 SDK，再重建游戏 C++／C# 与 Player；已有游戏 C# 对生成原生类型的调用需改为 Proxy，示例需同步 FlightHud 源码。无场景、资源格式迁移。已通过 Windows x64 Debug 的 Core、原生与托管 Editor、FlightTraining 原生与托管模块及编辑器扩展构建；Player 仅完成编译阶段，未执行完整链接。未运行功能、回归或编辑器冒烟测试。
 

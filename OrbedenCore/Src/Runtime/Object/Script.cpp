@@ -1,6 +1,7 @@
 #include "Runtime/Object/Script.h"
 
 #include "Runtime/Reflection.h"
+#include "Runtime/World.h"
 #include "Scripting/ScriptSystem.h"
 #include "Scripting/ScriptInterop.h"
 
@@ -88,6 +89,25 @@ void Script::OnWorldActiveChanged(bool worldActive)
 
 void Script::RegisterReflection()
 {
+    //继承的 enabled 字段也通过业务 setter 直接读写
+    auto getDirect = +[](Object* object, uint8* output) -> ScriptInterop::InteropStatus
+    {
+        if (!object || !output) return ScriptInterop::InteropStatus::InvalidArgument;
+        *output = static_cast<Script*>(object)->GetEnabled() ? uint8(1) : uint8(0);
+        return ScriptInterop::InteropStatus::Ok;
+    };
+    auto setDirect = +[](Object* object, uint8 value) -> ScriptInterop::InteropStatus
+    {
+        if (!object) return ScriptInterop::InteropStatus::InvalidArgument;
+        try
+        {
+            auto* script = static_cast<Script*>(object);
+            script->SetEnabled(value != 0);
+            if (World* world = script->GetWorld()) world->SetDirty();
+            return ScriptInterop::InteropStatus::Ok;
+        }
+        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }
+    };
     static bool registered = false;
     if (registered) return;
     registered = true;
@@ -96,7 +116,8 @@ void Script::RegisterReflection()
         {
             Reflection::FieldInfo("enabled", "bool", Reflection::FieldKind::Bool, true,
                 &Script::GetEnabledField, &Script::SetEnabledField, nullptr,
-                &Script::GetEnabledValue, &Script::SetEnabledValue),
+                &Script::GetEnabledValue, &Script::SetEnabledValue, nullptr, nullptr, Reflection::FieldKind::Unsupported, false,
+                Reflection::ValueKind::Bool, reinterpret_cast<void*>(getDirect), reinterpret_cast<void*>(setDirect)),
         });
 }
 

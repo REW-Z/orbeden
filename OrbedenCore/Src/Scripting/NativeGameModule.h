@@ -2,7 +2,7 @@
 
 #include "Defines/types.h"
 
-constexpr uint32 OrbedenNativeGameModuleAbiVersion = 3;
+constexpr uint32 OrbedenNativeGameModuleAbiVersion = 6;
 
 //游戏原生 DLL 向 Editor 暴露的版本化模块描述。
 struct OrbedenNativeGameModuleApi

@@ -12,6 +12,11 @@
 #include "Runtime/EnsId.h"
 
 class OrbEvent;
+namespace ScriptInterop
+{
+    struct InteropValueAbi;
+    enum class InteropStatus : uint32;
+}
 
 namespace Reflection
 {
@@ -315,6 +320,9 @@ namespace Reflection
     typedef Value (*MethodInvoker)(Object* object, const List<Value>& args, bool& success);
     typedef Value (*MethodSpanInvoker)(Object* object, std::span<const Value> args, bool& success);
 
+    //直接读取 ABI 参数并调用原生方法
+    using MethodAbiInvoker = ScriptInterop::InteropStatus (*)(Object*, const ScriptInterop::InteropValueAbi*, ScriptInterop::InteropValueAbi*, std::string&);
+
     //反射字段元数据和读写入口
     struct FieldInfo
     {
@@ -332,11 +340,14 @@ namespace Reflection
         FieldListResizer listResizer = nullptr;
         FieldKind elementKind = FieldKind::Unsupported;
         bool fixedSize = false;
+        ValueKind directKind = ValueKind::Empty;
+        void* directGetter = nullptr;
+        void* directSetter = nullptr;
 
         FieldInfo() = default;
 
         //创建字段元数据
-        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr, FieldKind arrayElementKind = FieldKind::Unsupported, bool isFixedSize = false);
+        FieldInfo(const char* fieldName, const char* fieldTypeName, FieldKind fieldKind, bool isPersistent, FieldGetter getValue, FieldSetter setValue, const char* refTypeName = nullptr, FieldValueGetter getTypedValue = nullptr, FieldValueSetter setTypedValue = nullptr, FieldListSizeGetter getListSize = nullptr, FieldListResizer resizeList = nullptr, FieldKind arrayElementKind = FieldKind::Unsupported, bool isFixedSize = false, ValueKind fieldValueKind = ValueKind::Empty, void* getDirect = nullptr, void* setDirect = nullptr);
 
         //读取引用列表槽位数；不是引用列表字段时返回 0
         int32 GetListSize(Object* object) const;
@@ -367,6 +378,8 @@ namespace Reflection
         List<ParameterInfo> parameters;
         MethodInvoker invoker = nullptr;
         MethodSpanInvoker spanInvoker = nullptr;
+        MethodAbiInvoker abiInvoker = nullptr;
+        void* directInvoker = nullptr;
 
         MethodInfo() = default;
 
@@ -374,7 +387,7 @@ namespace Reflection
         MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodInvoker invokeMethod);
 
         //创建使用连续参数视图的方法元数据
-        MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod);
+        MethodInfo(const char* methodName, const char* methodReturnTypeName, ValueKind methodReturnKind, const List<ParameterInfo>& methodParameters, MethodSpanInvoker invokeMethod, MethodAbiInvoker invokeAbi = nullptr, void* invokeDirect = nullptr);
 
         //调用反射方法
         Value Invoke(Object* object, const List<Value>& args, bool* success = nullptr) const;

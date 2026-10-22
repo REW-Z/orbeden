@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Runtime/Gui/RetainedGuiBridge.h"
 #include "Runtime/Gui/RuntimeGuiBridge.h"
@@ -38,7 +38,7 @@ struct ScriptBindApi
 struct OrbedenNativeApi
 {
 public:
-    uint32 abiVersion = 5;
+    uint32 abiVersion = 7;
     uint32 structSize = sizeof(OrbedenNativeApi);
     RuntimeGuiApi Gui;
     WorldBind World;
@@ -57,6 +57,8 @@ public:
     //RetainedGUI 函数表地址；托管侧按 RetainedGuiApi* 直接解引用。
     void* GetRetainedGuiApi = nullptr;
     FileSystemBind FileSystem;
+    const ScriptInterop::TypedMethodsApi* TypedMethods = nullptr;
+    const ScriptInterop::TypedFieldsApi* TypedFields = nullptr;
 
     //创建完整原生 API 函数表。
     static OrbedenNativeApi Create(::World* world);
@@ -65,6 +67,10 @@ public:
 #pragma pack(pop)
 
 ORBEDEN_ASSERT_NATIVE_API_TABLE(ScriptBindApi, 17);
-static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 115);
+static_assert(sizeof(OrbedenNativeApi) == 8 + sizeof(void*) * 117);
 static_assert(offsetof(OrbedenNativeApi, Gui) == 8);
 static_assert(offsetof(OrbedenNativeApi, Bindings) == 8 + sizeof(void*) * 60);
+
+static_assert(offsetof(OrbedenNativeApi, TypedMethods) == 8 + sizeof(void*) * 115);
+
+static_assert(offsetof(OrbedenNativeApi, TypedFields) == 8 + sizeof(void*) * 116);

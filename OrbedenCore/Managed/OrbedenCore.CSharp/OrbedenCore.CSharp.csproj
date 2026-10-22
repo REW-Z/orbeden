@@ -4,6 +4,7 @@
     <AssemblyName>OrbedenCore.CSharp</AssemblyName>
     <RootNamespace>Orbeden</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DisableRuntimeMarshalling>true</DisableRuntimeMarshalling>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <EditorSdkOutputPath>$(MSBuildThisFileDirectory)..\..\..\OrbedenEditor\Sdk\Managed\OrbedenCore.CSharp\</EditorSdkOutputPath>
@@ -29,6 +30,7 @@
   </Target>
   <ItemGroup>
     <Compile Include="../../Src/Runtime/Generated/Bindings.Generated.cs" Link="Generated/Bindings.Generated.cs" />
+    <Compile Include="../../Src/Runtime/Generated/NativeMethods.Generated.cs" Link="Generated/NativeMethods.Generated.cs" />
   </ItemGroup>
   <Target Name="GenerateObjectBindings" BeforeTargets="BeforeCompile">
     <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)..\..\..\Tools\OrbedenMetaGen\OrbedenMetaGen.csproj&quot; -c $(Configuration) -- &quot;$(MSBuildThisFileDirectory)..\..\Src&quot; &quot;$(MSBuildThisFileDirectory)..\..\Src\Runtime\Generated&quot; --bindings" />

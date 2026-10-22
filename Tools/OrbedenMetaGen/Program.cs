@@ -189,6 +189,7 @@ if (generateBindings)
             return 1;
         }
         new BindingGenerator(bindings, bindingTypes).Generate(sourceRoot, outputDir, docsPath);
+        NativeMethodGenerator.Generate(outputDir);
     }
     catch (InvalidDataException exception) { Console.Error.WriteLine(exception.Message); return 1; }
 }
@@ -226,6 +227,7 @@ static string[] RequiredOutputs(string outputDir, bool bindings, bool docs)
     {
         paths.Add(Path.Combine(outputDir, "Bindings.Generated.cpp"));
         paths.Add(Path.Combine(outputDir, "Bindings.Generated.cs"));
+        paths.Add(Path.Combine(outputDir, "NativeMethods.Generated.cs"));
         paths.Add(Path.Combine(outputDir, "Bindings.Manifest.json"));
     }
     if (docs) paths.Add(Path.Combine(outputDir, "ApiDocs.json"));
@@ -270,7 +272,7 @@ static IEnumerable<ClassInfo> ParseClasses(List<CppType> declarations, string fi
             if (!member.IsMethod)
             {
                 if (!member.IsStatic)
-                    result.Fields.Add(new FieldInfo { Name = member.Name, Type = NormalizeType(member.Type), Access = member.Access, ExplicitPersistent = member.Serialize, Changed = member.Changed, Line = member.Line, FixedArray = member.FixedArray });
+                    result.Fields.Add(new FieldInfo { Name = member.Name, Type = NormalizeType(member.Type), Access = member.Access, ExplicitPersistent = member.Serialize, Changed = member.Changed, Getter = member.Getter, Setter = member.Setter, SetterReturnsBool = declaration.Members.Any(candidate => candidate.IsMethod && candidate.Name == member.Setter && NormalizeValueType(candidate.Type) == "bool"), Line = member.Line, FixedArray = member.FixedArray });
                 continue;
             }
             bool timed = member.Name is "OnUpdate" or "OnFixedUpdate" or "OnLateUpdate";
@@ -490,6 +492,14 @@ static ValueKindInfo? GetValueKind(string type)
     };
 }
 
+//字段访问器按固定的具体 ABI 类型传值
+static string DirectWireType(string type) => NormalizeValueType(type) switch
+{
+    "bool" => "uint8",
+    "std::string" or "StringId" => "ScriptInterop::NativeUtf8",
+    var value => value,
+};
+
 //生成 C++ 反射注册源码
 static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameModule)
 {
@@ -499,7 +509,9 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
     output.AppendLine("// </auto-generated>");
     output.AppendLine();
     output.AppendLine("#include \"Runtime/Reflection.h\"");
+    output.AppendLine("#include \"Runtime/World.h\"");
     output.AppendLine("#include \"Runtime/Object/Script.h\"");
+    output.AppendLine("#include \"Scripting/ScriptInteropInvoke.h\"");
     foreach (var file in classes.Select(value => Path.GetRelativePath(sourceRoot, value.File).Replace('\\', '/')).Distinct(StringComparer.Ordinal))
     {
         output.AppendLine($"#include \"{file}\"");
@@ -622,6 +634,63 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             output.AppendLine("    }");
             output.AppendLine();
 
+            if (!field.FixedArray && GetValueKind(field.Type) != null)
+            {
+                string type = NormalizeValueType(field.Type);
+                string wireType = DirectWireType(type);
+                string directGet = field.Getter.Length > 0 && field.Getter is not "Direct" and not "None"
+                    ? $"instance->{field.Getter}()" : getterExpression;
+                if (field.Getter != "None")
+                {
+                    output.AppendLine($"    //按具体类型读取 {classInfo.Name}.{field.Name}");
+                    output.AppendLine($"    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL GetDirect_{classInfo.Symbol}_{field.Name}(Object* object, {wireType}* output)");
+                    output.AppendLine("    {");
+                    output.AppendLine("        try");
+                    output.AppendLine("        {");
+                    output.AppendLine($"            auto* instance = static_cast<{classInfo.CppName}*>(object);");
+                    output.AppendLine("            if (!instance || !output) return ScriptInterop::InteropStatus::InvalidArgument;");
+                    string result = type is "std::string" or "StringId"
+                        ? $"ScriptInterop::StoreDirectString({directGet}{(type == "StringId" ? ".GetPath()" : "")})"
+                        : type == "bool" ? $"({directGet}) ? uint8(1) : uint8(0)" : directGet;
+                    output.AppendLine($"            *output = {result};");
+                    output.AppendLine("            return ScriptInterop::InteropStatus::Ok;");
+                    output.AppendLine("        }");
+                    output.AppendLine("        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }");
+                    output.AppendLine("    }");
+                    output.AppendLine();
+                }
+                if (field.Setter != "None" && !field.Type.StartsWith("const ", StringComparison.Ordinal))
+                {
+                    output.AppendLine($"    //按具体类型写入 {classInfo.Name}.{field.Name}，保留业务通知");
+                    output.AppendLine($"    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL SetDirect_{classInfo.Symbol}_{field.Name}(Object* object, {wireType} value)");
+                    output.AppendLine("    {");
+                    output.AppendLine("        try");
+                    output.AppendLine("        {");
+                    output.AppendLine($"            auto* instance = static_cast<{classInfo.CppName}*>(object);");
+                    output.AppendLine("            if (!instance) return ScriptInterop::InteropStatus::InvalidArgument;");
+                    string input = type == "bool" ? "value != 0" : "value";
+                    if (type is "std::string" or "StringId")
+                    {
+                        output.AppendLine("            std::string text;");
+                        output.AppendLine("            if (!ScriptInterop::ReadDirectString(value, text)) return ScriptInterop::InteropStatus::InvalidArgument;");
+                        input = type == "StringId" ? "StringId(text)" : "text";
+                    }
+                    string setter = field.Setter.Length > 0 && field.Setter != "Direct" ? field.Setter
+                        : setterBacked ? $"Set{char.ToUpperInvariant(field.Name[0])}{field.Name[1..]}" : "";
+                    if (setter.Length > 0 && field.SetterReturnsBool)
+                        output.AppendLine($"            if (!instance->{setter}({input})) return ScriptInterop::InteropStatus::InvalidArgument;");
+                    else output.AppendLine(setter.Length > 0 ? $"            instance->{setter}({input});" : $"            instance->{field.Name} = {input};");
+                    if (regenerateOnSet) output.AppendLine($"            instance->{field.Changed}();");
+                    else if (marksDirty && setter.Length == 0) output.AppendLine("            instance->MarkDirty();");
+                    output.AppendLine("            if (World* world = instance->GetWorld()) world->SetDirty();");
+                    output.AppendLine("            return ScriptInterop::InteropStatus::Ok;");
+                    output.AppendLine("        }");
+                    output.AppendLine("        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }");
+                    output.AppendLine("    }");
+                    output.AppendLine();
+                }
+            }
+
             //引用列表多两个入口：编辑器要真实槽位数，而列表文本给不出（空串无法区分 0 个槽位与 1 个空槽位）
             if (array || field.Kind?.CppName == "Reflection::FieldKind::ObjectRefList")
             {
@@ -680,6 +749,71 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
 
             output.AppendLine("    }");
             output.AppendLine();
+
+            output.AppendLine($"    //直接调用 {classInfo.Name}.{method.Name} 的 ABI 入口");
+            output.AppendLine($"    static ScriptInterop::InteropStatus InvokeAbi_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex}(Object* object, const ScriptInterop::InteropValueAbi* args, ScriptInterop::InteropValueAbi* output, std::string& stringStorage)");
+            output.AppendLine("    {");
+            output.AppendLine($"        {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
+            for (var index = 0; index < method.Parameters.Count; ++index)
+            {
+                output.AppendLine($"        {method.Parameters[index].Type} arg{index}{{}};");
+                output.AppendLine($"        if (!ScriptInterop::ReadArgument(args[{index}], arg{index})) return ScriptInterop::InteropStatus::UnsupportedType;");
+            }
+            if (method.ReturnType == "void")
+            {
+                output.AppendLine($"        instance->{method.Name}({argList});");
+                output.AppendLine("        *output = {};");
+                output.AppendLine("        return ScriptInterop::InteropStatus::Ok;");
+            }
+            else
+            {
+                output.AppendLine($"        return ScriptInterop::WriteResult(instance->{method.Name}({argList}), {method.ReturnKind!.CppName}, output, stringStorage);");
+            }
+            output.AppendLine("    }");
+            output.AppendLine();
+
+            //类型化入口按具体类型传参，不经过通用值容器
+            string WireType(string type) => type switch
+            {
+                "bool" => "uint8",
+                "std::string" or "StringId" => "ScriptInterop::NativeUtf8",
+                _ => type,
+            };
+            var directParameters = new List<string> { "Object* object" };
+            directParameters.AddRange(method.Parameters.Select((parameter, index) => $"{WireType(parameter.Type)} value{index}"));
+            if (method.ReturnType != "void") directParameters.Add($"{WireType(method.ReturnType)}* output");
+            output.AppendLine($"    //按具体 ABI 签名调用 {classInfo.Name}.{method.Name}");
+            output.AppendLine($"    static ScriptInterop::InteropStatus ORBEDEN_NATIVE_CALL InvokeDirect_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex}({string.Join(", ", directParameters)})");
+            output.AppendLine("    {");
+            output.AppendLine("        try");
+            output.AppendLine("        {");
+            output.AppendLine($"            {classInfo.CppName}* instance = static_cast<{classInfo.CppName}*>(object);");
+            if (method.ReturnType != "void") output.AppendLine("            if (!output) return ScriptInterop::InteropStatus::InvalidArgument;");
+            List<string> directArgs = [];
+            for (int index = 0; index < method.Parameters.Count; index++)
+            {
+                string type = method.Parameters[index].Type;
+                if (type is "std::string" or "StringId")
+                {
+                    output.AppendLine($"            std::string text{index};");
+                    output.AppendLine($"            if (!ScriptInterop::ReadDirectString(value{index}, text{index})) return ScriptInterop::InteropStatus::InvalidArgument;");
+                    directArgs.Add(type == "StringId" ? $"StringId(text{index})" : $"text{index}");
+                }
+                else directArgs.Add(type == "bool" ? $"value{index} != 0" : $"value{index}");
+            }
+            string call = $"instance->{method.Name}({string.Join(", ", directArgs)})";
+            if (method.ReturnType == "void") output.AppendLine($"            {call};");
+            else if (method.ReturnType is "std::string" or "StringId")
+            {
+                output.AppendLine($"            auto result = {call};");
+                output.AppendLine($"            *output = ScriptInterop::StoreDirectString(result{(method.ReturnType == "StringId" ? ".GetPath()" : "")});");
+            }
+            else output.AppendLine($"            *output = {call}{(method.ReturnType == "bool" ? " ? uint8(1) : uint8(0)" : "")};");
+            output.AppendLine("            return ScriptInterop::InteropStatus::Ok;");
+            output.AppendLine("        }");
+            output.AppendLine("        catch (...) { return ScriptInterop::InteropStatus::InvocationFailed; }");
+            output.AppendLine("    }");
+            output.AppendLine();
         }
     }
 
@@ -734,7 +868,11 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
             string elementKind = isList && GetArrayElementType(field.Type) is string elementType
                 ? GetFieldKind(elementType)?.CppName ?? "Reflection::FieldKind::Unsupported" : "Reflection::FieldKind::Unsupported";
             string fixedSize = field.FixedArray || NormalizeValueType(field.Type).StartsWith("std::array<") ? "true" : "false";
-            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}, {listSize}, {listResize}, {elementKind}, {fixedSize}),");
+            bool direct = field.Persistent && !field.FixedArray && GetValueKind(field.Type) != null;
+            string directKind = direct ? GetValueKind(field.Type)!.CppName : "Reflection::ValueKind::Empty";
+            string directGet = direct && field.Getter != "None" ? $"reinterpret_cast<void*>(&ReflectionGeneratedAccess::GetDirect_{classInfo.Symbol}_{field.Name})" : "nullptr";
+            string directSet = direct && field.Setter != "None" && !field.Type.StartsWith("const ", StringComparison.Ordinal) ? $"reinterpret_cast<void*>(&ReflectionGeneratedAccess::SetDirect_{classInfo.Symbol}_{field.Name})" : "nullptr";
+            output.AppendLine($"                FieldInfo(\"{field.Name}\", \"{field.Type}\", {kind}, {persistent}, {getter}, {setter}, {objectRefTypeName}, {valueGetter}, {valueSetter}, {listSize}, {listResize}, {elementKind}, {fixedSize}, {directKind}, {directGet}, {directSet}),");
         }
 
         output.AppendLine("            });");
@@ -771,7 +909,7 @@ static string GenerateCpp(List<ClassInfo> classes, string sourceRoot, bool gameM
                 ? "List<ParameterInfo>()"
                 : "List<ParameterInfo>{ " + string.Join(", ", method.Parameters.Select(parameter => $"ParameterInfo(\"{parameter.Name}\", \"{parameter.Type}\", {parameter.Kind.CppName})")) + " }";
 
-            output.AppendLine($"                MethodInfo(\"{method.Name}\", \"{method.ReturnType}\", {method.ReturnKind!.CppName}, {parameters}, ReflectionGeneratedAccess::Invoke_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex}),");
+            output.AppendLine($"                MethodInfo(\"{method.Name}\", \"{method.ReturnType}\", {method.ReturnKind!.CppName}, {parameters}, ReflectionGeneratedAccess::Invoke_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex}, ReflectionGeneratedAccess::InvokeAbi_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex}, reinterpret_cast<void*>(&ReflectionGeneratedAccess::InvokeDirect_{classInfo.Symbol}_{method.Name}_{method.InvokerIndex})),");
         }
 
         output.AppendLine("            });");
@@ -802,6 +940,9 @@ sealed class FieldInfo
     public string Type { get; set; } = "";
     public string Access { get; set; } = "";
     public string Changed { get; set; } = "";
+    public string Getter { get; set; } = "";
+    public string Setter { get; set; } = "";
+    public bool SetterReturnsBool { get; set; }
     public int Line { get; set; }
     public bool ExplicitPersistent { get; set; }
     public bool Persistent { get; set; }
