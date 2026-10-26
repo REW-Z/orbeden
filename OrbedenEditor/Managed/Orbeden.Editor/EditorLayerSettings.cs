@@ -12,6 +12,7 @@ internal static class EditorLayerSettings
     private const string SectionName = "Layers";
     internal static string[] Names { get; private set; } = Defaults();
     internal static uint[] Masks { get; private set; } = Enumerable.Repeat(uint.MaxValue, 32).ToArray();
+    private static string[] labels = Enumerable.Range(0, 32).Select(Label).ToArray();
     internal static string Error { get; private set; } = string.Empty;
     private static string loadedRoot = "\0";
     private static DateTime loadedTime;
@@ -30,6 +31,7 @@ internal static class EditorLayerSettings
         loadedRoot = root;
         loadedTime = modified;
         Names = Defaults();
+        labels = Enumerable.Range(0, 32).Select(Label).ToArray();
         Masks = Enumerable.Repeat(uint.MaxValue, 32).ToArray();
         Error = string.Empty;
         if (path.Length == 0 || !File.Exists(path)) return;
@@ -70,6 +72,7 @@ internal static class EditorLayerSettings
                     if (((masks[row] >> column) & 1u) != ((masks[column] >> row) & 1u))
                         throw new InvalidDataException("Collision matrix must be symmetric.");
             Names = names;
+            labels = Enumerable.Range(0, 32).Select(Label).ToArray();
             Masks = masks;
         }
         catch (Exception exception) when (exception is InvalidDataException)
@@ -106,54 +109,66 @@ internal static class EditorLayerSettings
     /// <summary>名称为空时使用层号，始终显示索引以区分重名层。</summary>
     internal static string Label(int index) => string.IsNullOrWhiteSpace(Names[index]) ? "Layer " + index : $"{index}: {Names[index]}";
 
-    /// <summary>仅对内建组件具有层语义的字段启用专用控件。</summary>
-    internal static bool Handles(string type, string name) =>
-        (type == "StaticMeshRenderer" && name == "drawLayer")
-        || (type == "Camera" && name == "drawLayerMask")
-        || ((type.EndsWith("Collider", StringComparison.Ordinal) || type is "HeightField" or "CharacterController")
-            && name is "collisionLayer" or "collisionMask");
+    /// <summary>按组件字段语义区分单层选择与多层掩码。</summary>
+    internal static bool TryGetField(string type, string name, out bool mask)
+    {
+        bool? selection = (type, name) switch
+        {
+            ("StaticMeshRenderer" or "ParticleSystem", "drawLayer") => false,
+            ("Camera", "drawLayerMask") or ("WheelCollider", "groundQueryLayer") or ("Orbeden.Canvas", "drawLayer") => true,
+            _ when (type.EndsWith("Collider", StringComparison.Ordinal) || type is "HeightField" or "CharacterController")
+                && name is "collisionLayer" or "collisionMask" => name == "collisionMask",
+            _ => null,
+        };
+        mask = selection ?? false;
+        return selection.HasValue;
+    }
 
     /// <summary>绘制单层或位掩码选择，保持历史非单个位值直到用户明确选择。</summary>
-    internal static bool Draw(string label, PropertyValue property, out InteropValue value)
+    internal static bool Draw(string label, PropertyValue property, bool mask, out InteropValue value)
+    {
+        uint selected;
+        if (property.Kind == InteropValueKind.Int32)
+        {
+            property.Value.TryGet(out int current);
+            selected = unchecked((uint)current);
+        }
+        else property.Value.TryGet(out selected);
+        bool changed = Draw(label, ref selected, mask, property.HasMultipleDifferentValues);
+        value = property.Kind == InteropValueKind.Int32 ? InteropValue.From(unchecked((int)selected)) : InteropValue.From(selected);
+        return changed;
+    }
+
+    /// <summary>绘制共享层选择控件，供组件属性与嵌套配置复用。</summary>
+    internal static bool Draw(string label, ref uint selected, bool mask, bool mixed = false)
     {
         Refresh();
-        property.Value.TryGet(out uint current);
-        uint selected = current;
-        bool mask = property.Name.EndsWith("Mask", StringComparison.Ordinal);
-        string preview = property.HasMultipleDifferentValues ? "Mixed"
+        uint current = selected;
+        string preview = mixed ? "Mixed"
             : mask ? current == 0 ? "Nothing" : current == uint.MaxValue ? "Everything" : $"{BitOperations.PopCount(current)} layers"
             : BitOperations.IsPow2(current) ? Label(BitOperations.TrailingZeroCount(current)) : $"Custom (0x{current:X8})";
+        if (mask)
+        {
+            Span<bool> selection = stackalloc bool[32];
+            for (int index = 0; index < selection.Length; ++index) selection[index] = (current & (1u << index)) != 0;
+            if (!EditorGUI.MultiSelectCombo(label, preview, labels, selection)) return false;
+            selected = 0;
+            for (int index = 0; index < selection.Length; ++index)
+                if (selection[index]) selected |= 1u << index;
+            return selected != current || mixed;
+        }
+
         bool changed = false;
-        value = property.Value;
         if (!EditorGUI.BeginCombo(label, preview)) return false;
         try
         {
-            if (mask)
-            {
-                if (EditorGUI.Selectable("Nothing", current == 0)) { selected = 0; changed = true; }
-                if (EditorGUI.Selectable("Everything", current == uint.MaxValue)) { selected = uint.MaxValue; changed = true; }
-            }
             for (int index = 0; index < 32; ++index)
             {
                 uint bit = 1u << index;
-                if (mask)
-                {
-                    bool enabled = (selected & bit) != 0;
-                    //下拉项里的勾选框：就地排布，名字在前、框在后，不套属性行的标签列
-                    //（弹窗只有下拉框那么宽，跳列会把框挤出可视区）
-                    EditorGUI.Label(Label(index));
-                    EditorGUI.SameLine();
-                    if (EditorGUI.Checkbox("##layer_" + index, ref enabled))
-                    {
-                        selected = enabled ? selected | bit : selected & ~bit;
-                        changed = true;
-                    }
-                }
-                else if (EditorGUI.Selectable(Label(index), current == bit)) { selected = bit; changed = true; }
+                if (EditorGUI.Selectable(labels[index], current == bit)) { selected = bit; changed = true; }
             }
         }
         finally { EditorGUI.EndCombo(); }
-        value = InteropValue.From(selected);
-        return changed && (selected != current || property.HasMultipleDifferentValues);
+        return changed && (selected != current || mixed);
     }
 }

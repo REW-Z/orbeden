@@ -1,4 +1,5 @@
 #include "FlightController.h"
+#include "Engine.h"
 #include "FlightTerrainStreamer.h"
 #include "Physics/PhysicsSystem.h"
 #include "Physics/PhysicsTypes.h"
@@ -77,15 +78,13 @@ void FlightController::OnUpdate(float32 deltaTime)
     if (Input::KeyDown(KeyEnum::F)) showForces = !showForces;
 }
 
-/// <summary>计算并施加机翼、垂尾、螺旋桨和舵面作用。</summary>
+/// <summary>计算并施加机翼、垂尾和舵面作用。</summary>
 void FlightController::OnFixedUpdate(float32 deltaTime)
 {
+    (void)deltaTime;
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     RigidBody* body = GetEns() ? GetEns()->GetComponent<RigidBody>() : nullptr;
     if (!transform || !body || !body->enabled) return;
-    float32 step = std::max(deltaTime, 0.0f);
-    float32 throttleInput = (Input::Key(KeyEnum::LSHIFT) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::LCTRL) ? 1.0f : 0.0f);
-    throttle = std::clamp(throttle + throttleInput * throttleRate * step, 0.0f, 1.0f);
     float32 pitchInput = (Input::Key(KeyEnum::S) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::W) ? 1.0f : 0.0f);
     float32 rollInput = (Input::Key(KeyEnum::D) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::A) ? 1.0f : 0.0f);
     float32 yawInput = (Input::Key(KeyEnum::Q) ? 1.0f : 0.0f) - (Input::Key(KeyEnum::E) ? 1.0f : 0.0f);
@@ -94,7 +93,6 @@ void FlightController::OnFixedUpdate(float32 deltaTime)
     EvaluateForces(*body, rotation);
     body->AddForce(liftForce);
     body->AddForce(dragForce);
-    body->AddForce(thrustForce);
     body->AddTorque(finTorque);
     vector3 right = Rotate(rotation, { 1, 0, 0 });
     vector3 up = Rotate(rotation, { 0, 1, 0 });
@@ -170,8 +168,6 @@ void FlightController::EvaluateForces(const RigidBody& body, const quaternion& r
     float32 drag = dynamicPressure * wingArea * (std::max(dragCoefficient, 0.0f)
         + std::max(inducedDragCoefficient, 0.0f) * effectiveCl * effectiveCl);
     dragForce = speed > 0.01f ? Scale(velocity, -drag / speed) : vector3();
-    float32 thrust = maxThrust * throttle * std::clamp(1.0f - std::max(forwardSpeed, 0.0f) / std::max(thrustFadeSpeed, 1.0f), 0.0f, 1.0f);
-    thrustForce = Scale(forward, thrust);
 
     //垂尾位于质心后方；侧向气流产生回正力矩，并通过局部角速度阻尼偏航。
     vector3 finOffset = Scale(forward, -std::max(verticalFinArm, 0.0f));
@@ -199,8 +195,9 @@ void FlightController::OnLateUpdate(float32 deltaTime)
     //使用模拟完成后的姿态与速度，避免旧力方向与新飞机姿态错位。
     EvaluateForces(*body, GetEns()->Transform()->GetLocalRotation());
     if (!showForces || !renderer) return;
+    Engine* engine = GetEns()->GetComponent<Engine>();
     vector3 origin = GetEns()->Transform()->GetLocalPosition();
-    const vector3 forces[] = { dragForce, liftForce, thrustForce, gravityForce };
+    const vector3 forces[] = { dragForce, liftForce, engine ? engine->GetThrustForce() : vector3(), gravityForce };
     const color colors[] = { { 1, 0, 0, 1 }, { 0, 0, 1, 1 }, { 1, 1, 0, 1 }, { 0, 0, 0, 1 } };
     for (int i = 0; i < 4; ++i)
     {
@@ -226,8 +223,6 @@ float32 FlightController::GetAirspeed()
     return body ? Length(body->linearVelocity) : 0.0f;
 }
 
-/// <summary>读取油门。</summary>
-float32 FlightController::GetThrottle() { return throttle; }
 /// <summary>读取坠毁次数。</summary>
 int32 FlightController::GetCrashCount() { return crashCount; }
 /// <summary>读取侧滑角。</summary>
@@ -236,8 +231,6 @@ float32 FlightController::GetSideslipDegrees() { return sideslipDegrees; }
 float32 FlightController::GetLiftNewtons() { return Length(liftForce); }
 /// <summary>读取阻力及垂尾侧向阻力合力牛顿数。</summary>
 float32 FlightController::GetDragNewtons() { return Length(dragForce); }
-/// <summary>读取推力牛顿数。</summary>
-float32 FlightController::GetThrustNewtons() { return Length(thrustForce); }
 /// <summary>读取重力牛顿数。</summary>
 float32 FlightController::GetWeightNewtons() { return Length(gravityForce); }
 /// <summary>读取垂直爬升速度。</summary>
@@ -289,9 +282,9 @@ void FlightController::ResetFlight()
     Transform* transform = GetEns() ? GetEns()->Transform() : nullptr;
     if (!transform) return;
     if (FlightTerrainStreamer* terrain = GetEns()->GetComponent<FlightTerrainStreamer>()) terrain->ResetOrigin();
-    throttle = 0;
+    if (Engine* engine = GetEns()->GetComponent<Engine>()) engine->ResetThrottle();
     sideslipDegrees = 0;
-    liftForce = dragForce = thrustForce = gravityForce = finTorque = vector3();
+    liftForce = dragForce = gravityForce = finTorque = vector3();
     alphaDegrees = 0;
     transform->SetLocalPosition(spawnPosition);
     transform->SetLocalRotation(spawnRotation);

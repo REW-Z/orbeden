@@ -52,12 +52,12 @@
     "Inputs": [
       {
         "Path": "Examples/FlightTraining/Materials/fuselage.orbmat",
-        "Length": 187,
-        "Modified": 639281728481358455,
-        "ContentHash": "505bd02a73722497c4dbdc83433d913abd47ab30051bec50caa21d98dc69880a"
+        "Length": 183,
+        "Modified": 639281848713836542,
+        "ContentHash": "5322f46a20ba4c5a19ffe9ccdfc76f65363d77de95aec4779d20683cc722adff"
       }
     ],
     "SettingsHash": "46c7a31985dc201ed0ef18035210a87feb0ffe86bb8c0acea84b168597cbaa3e",
-    "ContentHash": "d10ca563d71c8084b10ff0266f12081f4b5b8d7217cdd0cba22861b2227cc35f"
+    "ContentHash": "778a73f6725ec22cc085d67f78c4f56fb09e7aec6978b8b7033530795c6b56f2"
   }
 }

@@ -11,9 +11,6 @@ class FlightController final : public Script
     OBJECT_TYPE_DECLARE(FlightController)
 
 public:
-    float32 throttleRate = 1.0f;
-    float32 maxThrust = 15000.0f;
-    float32 thrustFadeSpeed = 90.0f;
     float32 wingArea = 24.0f;
     float32 liftSlope = 0.105f;
     float32 liftMultiplier = 1.3f;
@@ -40,7 +37,6 @@ public:
     float32 forceDrawScale = 0.0005f;
 
     float32 GetAirspeed();
-    float32 GetThrottle();
     int32 GetCrashCount();
     float32 GetPitchDegrees();
     float32 GetRollDegrees();
@@ -50,19 +46,16 @@ public:
     float32 GetSideslipDegrees();
     float32 GetLiftNewtons();
     float32 GetDragNewtons();
-    float32 GetThrustNewtons();
     float32 GetWeightNewtons();
     void ResetFlight();
 
 private:
     vector3 spawnPosition;
     quaternion spawnRotation;
-    float32 throttle = 0.0f;
     float32 sideslipDegrees = 0.0f;
     int32 crashCount = 0;
     vector3 liftForce;
     vector3 dragForce;
-    vector3 thrustForce;
     vector3 gravityForce;
     vector3 finTorque;
     float32 alphaDegrees = 0;

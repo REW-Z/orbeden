@@ -6,19 +6,20 @@ namespace FlightTraining;
 public sealed class FlightHud : Script
 {
     private ComponentProxy? controller;
-    private NativeMethod<float> airspeedMethod;
-    private NativeMethod<float> throttleMethod;
-    private NativeMethod<int> crashCountMethod;
-    private NativeMethod<float> pitchMethod;
-    private NativeMethod<float> rollMethod;
-    private NativeMethod<float> headingMethod;
-    private NativeMethod<float> altitudeMethod;
-    private NativeMethod<float> climbRateMethod;
-    private NativeMethod<float> sideslipMethod;
-    private NativeMethod<float> dragMethod;
-    private NativeMethod<float> liftMethod;
-    private NativeMethod<float> thrustMethod;
-    private NativeMethod<float> weightMethod;
+    private ComponentProxy? engine;
+    private NativeMethod<float> airspeedMethod = null!;
+    private NativeMethod<float> throttleMethod = null!;
+    private NativeMethod<int> crashCountMethod = null!;
+    private NativeMethod<float> pitchMethod = null!;
+    private NativeMethod<float> rollMethod = null!;
+    private NativeMethod<float> headingMethod = null!;
+    private NativeMethod<float> altitudeMethod = null!;
+    private NativeMethod<float> climbRateMethod = null!;
+    private NativeMethod<float> sideslipMethod = null!;
+    private NativeMethod<float> dragMethod = null!;
+    private NativeMethod<float> liftMethod = null!;
+    private NativeMethod<float> thrustMethod = null!;
+    private NativeMethod<float> weightMethod = null!;
 
     private const float WindowHeight = 232.0f;
     private const float PixelsPerDegree = 3.0f;
@@ -38,10 +39,11 @@ public sealed class FlightHud : Script
     private void OnStart()
     {
         controller = Ens.GetNativeComponent("FlightController");
-        if (controller == null) return;
+        engine = Ens.GetNativeComponent("Engine");
+        if (controller == null || engine == null) return;
         //启动时校验完整签名，逐帧直接传值
         if (controller.TryBindMethod("GetAirspeed", out airspeedMethod) != InteropStatus.Ok
-            || controller.TryBindMethod("GetThrottle", out throttleMethod) != InteropStatus.Ok
+            || engine.TryBindMethod("GetThrottle", out throttleMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetCrashCount", out crashCountMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetPitchDegrees", out pitchMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetRollDegrees", out rollMethod) != InteropStatus.Ok
@@ -51,9 +53,12 @@ public sealed class FlightHud : Script
             || controller.TryBindMethod("GetSideslipDegrees", out sideslipMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetDragNewtons", out dragMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetLiftNewtons", out liftMethod) != InteropStatus.Ok
-            || controller.TryBindMethod("GetThrustNewtons", out thrustMethod) != InteropStatus.Ok
+            || engine.TryBindMethod("GetThrustNewtons", out thrustMethod) != InteropStatus.Ok
             || controller.TryBindMethod("GetWeightNewtons", out weightMethod) != InteropStatus.Ok)
+        {
             controller = null;
+            engine = null;
+        }
     }
 
     private void OnDrawGUI()
@@ -66,45 +71,47 @@ public sealed class FlightHud : Script
         float y = viewport.y - WindowHeight - 6.0f;
         GUI.BeginFixedWindow("FlightHud", x, y, width, WindowHeight);
 
-        if (controller == null || !controller.IsValid)
+        if (controller == null || !controller.IsValid || engine == null || !engine.IsValid)
         {
-            GUI.Text("FlightController is unavailable. Build Game C++.", 12.0f, 12.0f, ColorRed);
+            GUI.Text("Flight controls are unavailable. Build Game C++.", 12.0f, 12.0f, ColorRed);
             GUI.EndFixedWindow();
             return;
         }
 
         //读取原生飞行状态
-        if (airspeedMethod.Invoke(out float airspeed) != InteropStatus.Ok
-            || throttleMethod.Invoke(out float throttle) != InteropStatus.Ok
-            || crashCountMethod.Invoke(out int crashCount) != InteropStatus.Ok
-            || pitchMethod.Invoke(out float pitch) != InteropStatus.Ok
-            || rollMethod.Invoke(out float roll) != InteropStatus.Ok
-            || headingMethod.Invoke(out float heading) != InteropStatus.Ok
-            || altitudeMethod.Invoke(out float altitude) != InteropStatus.Ok
-            || climbRateMethod.Invoke(out float climbRate) != InteropStatus.Ok
-            || sideslipMethod.Invoke(out float sideslip) != InteropStatus.Ok
-            || dragMethod.Invoke(out float drag) != InteropStatus.Ok
-            || liftMethod.Invoke(out float lift) != InteropStatus.Ok
-            || thrustMethod.Invoke(out float thrust) != InteropStatus.Ok
-            || weightMethod.Invoke(out float weight) != InteropStatus.Ok)
+        try
+        {
+            float airspeed = airspeedMethod();
+            float throttle = throttleMethod();
+            int crashCount = crashCountMethod();
+            float pitch = pitchMethod();
+            float roll = rollMethod();
+            float heading = headingMethod();
+            float altitude = altitudeMethod();
+            float climbRate = climbRateMethod();
+            float sideslip = sideslipMethod();
+            float drag = dragMethod();
+            float lift = liftMethod();
+            float thrust = thrustMethod();
+            float weight = weightMethod();
+
+            DrawStatusLine(climbRate, sideslip, crashCount);
+            DrawAirspeedDial(airspeed);
+            DrawThrottleDial(width, throttle);
+            DrawPfd(width, airspeed, altitude, heading, pitch, roll);
+
+            //四色数值与世界空间箭头对应，单位为 kN。
+            GUI.Text($"DRAG {drag / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
+            GUI.Text($"LIFT {lift / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
+            GUI.Text($"THRUST {thrust / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
+            GUI.RectFilled(width * 0.75f - 4, 199, width - 8, 222, GUI.Rgba(205, 205, 205), 3);
+            GUI.Text($"WEIGHT {weight / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
+        }
+        catch (NativeCallException)
         {
             GUI.Text("FlightController telemetry is unavailable.", 12.0f, 12.0f, ColorRed);
-            GUI.EndFixedWindow();
-            return;
         }
-
-        DrawStatusLine(climbRate, sideslip, crashCount);
-        DrawAirspeedDial(airspeed);
-        DrawThrottleDial(width, throttle);
-        DrawPfd(width, airspeed, altitude, heading, pitch, roll);
-
-        //四色数值与世界空间箭头对应，单位为 kN。
-        GUI.Text($"DRAG {drag / 1000:F1} kN", 12, 202, ColorRed, 0.7f);
-        GUI.Text($"LIFT {lift / 1000:F1} kN", width * 0.25f, 202, GUI.Rgba(60, 130, 255), 0.7f);
-        GUI.Text($"THRUST {thrust / 1000:F1} kN", width * 0.5f, 202, ColorYellow, 0.7f);
-        GUI.RectFilled(width * 0.75f - 4, 199, width - 8, 222, GUI.Rgba(205, 205, 205), 3);
-        GUI.Text($"WEIGHT {weight / 1000:F1} kN", width * 0.75f, 202, GUI.Rgba(0, 0, 0), 0.7f);
-        GUI.EndFixedWindow();
+        finally { GUI.EndFixedWindow(); }
     }
 
     /// <summary>顶部状态与按键提示行。</summary>

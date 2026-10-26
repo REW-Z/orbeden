@@ -271,7 +271,7 @@ namespace Game;
 
 public sealed class AirspeedReader : Script
 {
-    private NativeMethod<float> getAirspeed;
+    private NativeMethod<float>? getAirspeed;
     public float airspeed;
 
     public AirspeedReader(Ens ens) : base(ens) {}
@@ -279,25 +279,25 @@ public sealed class AirspeedReader : Script
     private void OnStart()
     {
         ComponentProxy? flight = Ens.GetNativeComponent("FlightController");
-        getAirspeed = default;
+        getAirspeed = null;
         if (flight != null)
             flight.TryBindMethod("GetAirspeed", out getAirspeed);
     }
 
     private void OnUpdate(float deltaTime)
     {
-        if (getAirspeed.Invoke(out float value) == InteropStatus.Ok)
-            airspeed = value;
+        if (getAirspeed != null)
+            airspeed = getAirspeed();
     }
 }
 ```
 
-无返回值使用 `NativeAction`；有返回值使用 `NativeMethod`，最后一个泛型参数是返回类型，其余泛型参数按原生声明顺序对应输入参数。`Invoke` 返回调用状态，方法结果通过最后一个 `out` 参数取得。下面的无返回值方法来自模板 `SampleNativeBehaviour`：
+无返回值使用 `NativeAction`；有返回值使用 `NativeMethod`，最后一个泛型参数是返回类型，其余泛型参数按原生声明顺序对应输入参数。两者都是真正的 C# 委托，用 `method(args)` 调用；NativeMethod 直接返回结果，NativeAction 返回 void。调用失败抛出 `NativeCallException`，其 `Status` 保留原始 InteropStatus。下面的无返回值方法来自模板 `SampleNativeBehaviour`：
 
 ```csharp
 ComponentProxy? sample = ens.GetNativeComponent("SampleNativeBehaviour");
 if (sample != null && sample.TryBindAction("ReceiveManagedPing", out NativeAction<float> ping) == InteropStatus.Ok)
-    ping.Invoke(1.5f);
+    ping(1.5f);
 ```
 
 多参数绑定同样直接传值。假设原生组件声明了 `float32 Evaluate(float32 value, int32 count, bool enabled, const vector3& direction)`：
@@ -305,11 +305,11 @@ if (sample != null && sample.TryBindAction("ReceiveManagedPing", out NativeActio
 ```csharp
 if (native.TryBindMethod("Evaluate", out NativeMethod<float, int, bool, vector3, float> evaluate) == InteropStatus.Ok)
 {
-    InteropStatus status = evaluate.Invoke(1.5f, 3, true, new vector3(1, 2, 3), out float result);
+    float result = evaluate(1.5f, 3, true, new vector3(1, 2, 3));
 }
 ```
 
-两个类型族支持 0～16 个输入参数，包括无泛型参数的 `NativeAction`。绑定按完整签名精确匹配，不做数值转换，也不补原生默认参数。`unmanaged` 约束只保证类型不含托管引用，允许的 ABI 类型仍由下面的白名单决定。
+两个委托族支持 0～16 个输入参数，包括无泛型参数的 `NativeAction`。绑定按完整签名精确匹配，不做数值转换，也不补原生默认参数。`unmanaged` 约束只保证类型不含托管引用，允许的 ABI 类型仍由下面的白名单决定。
 
 | C++ 方法类型 | C# 类型化参数或结果 | ABI 约定 |
 | --- | --- | --- |
@@ -350,16 +350,17 @@ public sealed class ThrottleRateWriter : Script
 
     private void OnUpdate(float deltaTime)
     {
-        throttleRate.Set(rate);
+        if (throttleRate.IsValid)
+            throttleRate.Value = rate;
     }
 }
 ```
 
-`Set(T value)` 返回写入状态，`Get(out T value)` 返回读取状态；仅在 Ok 时使用读取结果。字段类型与方法共用上面的 ABI 白名单，字符串对应 `NativeField<NativeUtf8>`，StringId 对应 `NativeField<NativeStringId>`，同样需要遵守输入固定和输出立即复制的约定。数组、对象引用、任意自定义结构体及没有类型化访问入口的手写字段返回 UnsupportedType；类型不匹配返回 TypeMismatch。可绑定受支持的继承字段和显式序列化字段。
+`Get()` 直接返回 T，`Set(T value)` 返回 void；`.Value` 属性转发到相同的 Get / Set。也支持 `T value = field` 的单向隐式读取；写入使用 `field.Value = value` 或 `field.Set(value)`，不会替换原绑定。不提供 T 到 NativeField 的反向转换。读写失败抛出 `NativeCallException`，其 `Status` 保留原生状态。字段类型与方法共用上面的 ABI 白名单，字符串对应 `NativeField<NativeUtf8>`，StringId 对应 `NativeField<NativeStringId>`，同样需要遵守输入固定和输出立即复制的约定。数组、对象引用、任意自定义结构体及没有类型化访问入口的手写字段返回 UnsupportedType；类型不匹配返回 TypeMismatch。可绑定受支持的继承字段和显式序列化字段。
 
-`CanRead` / `CanWrite` 表示绑定时是否存在相应访问入口，不代表组件仍然存活。`ORBEDEN_BIND_ACCESSORS(..., None)` 禁止类型化写入，`ORBEDEN_BIND_ACCESSORS(None, ...)` 禁止类型化读取；不可用的操作返回 UnsupportedType。`IsValid` 校验当前组件与字段代次，Get / Set 自身也会校验，无需逐次先检查 IsValid。
+`CanRead` / `CanWrite` 表示绑定时是否存在相应访问入口，不代表组件仍然存活。`ORBEDEN_BIND_ACCESSORS(..., None)` 禁止类型化写入，`ORBEDEN_BIND_ACCESSORS(None, ...)` 禁止类型化读取；不可用的操作抛出 Status 为 UnsupportedType 的 NativeCallException。`IsValid` 校验当前组件与字段代次，Get / Set 自身也会校验，无需逐次先检查 IsValid。
 
-MetaGen 为字段生成具体类型的读写 thunk。写入调用显式 setter；Transform、Script.enabled 等字段保留业务 setter，`ORBEDEN_BIND_CHANGED` 在成功写入后执行一次，随后标记所属 World 已修改。bool setter 返回 false 时返回 InvalidArgument，不继续变更通知或标脏。原生异常转为 InvocationFailed；若 setter 或回调在修改字段后抛异常，字段值可能已经改变，Set 本身不提供撤销事务。
+MetaGen 为字段生成具体类型的读写 thunk。写入调用显式 setter；Transform、Script.enabled 等字段保留业务 setter，`ORBEDEN_BIND_CHANGED` 在成功写入后执行一次，随后标记所属 World 已修改。bool setter 返回 false 时以 InvalidArgument 报告失败，不继续变更通知或标脏。原生异常转为 InvocationFailed；若 setter 或回调在修改字段后抛异常，字段值可能已经改变，Set 本身不提供撤销事务。
 
 字段使用独立的 DirectField 成员种类和 TypedFieldsApi，复用方法的 Prepare / Complete 调用保护。绑定只保存组件身份与成员槽位，不暴露原生字段内存地址，也不跨调用保存游戏 DLL 访问函数。主线程、重入、模块卸载和代次规则与 NativeMethod 一致；World、反射表或运行库重载后应重新获取并绑定。
 
@@ -379,11 +380,9 @@ unsafe
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes("中文\0🛩");
         fixed (byte* pointer = bytes)
         {
-            if (echoText.Invoke(new NativeUtf8(pointer, bytes.Length), out NativeUtf8 result) == InteropStatus.Ok)
-            {
-                string copy = result.ToString();
-                //保存 copy，不保存 result.Data
-            }
+            NativeUtf8 result = echoText(new NativeUtf8(pointer, bytes.Length));
+            string copy = result.ToString();
+            //保存 copy，不保存 result.Data
         }
     }
 }
@@ -407,11 +406,11 @@ unsafe
 | `InvalidArgument` | 字段 bool setter 拒绝写入，或 UTF-8 视图等输入无效 |
 | `InvocationFailed` | 原生方法、字段访问器或变更回调抛异常，或绑定过程发生异常 |
 
-组件缺失时 `GetNativeComponent` 返回 null。失败绑定会输出默认方法值；`Invoke` 自带有效性检查，逐帧调用无需先检查 `NativeMethod.IsValid`。`IsValid` 自身也会执行一次校验，并不为下一次调用保留保护。
+组件缺失时 `GetNativeComponent` 返回 null。TryBindMethod / TryBindAction 返回绑定状态，失败输出 null；只能调用成功绑定的非 null 委托。委托本身没有 IsValid 属性，非 null 只代表绑定成功，不保证组件或成员仍有效。每次调用仍执行有效性检查，失败抛出 `NativeCallException`；可通过 `exception.Status` 区分 StaleHandle、WrongThread 等状态。字段 IsValid 只执行当次校验，并不为下一次读写保留保护。
 
 World 上下文切换、关闭和反射注册表更新都会使旧句柄失效。即使组件仍然存在，方法也可能已失效，应重新获取组件并重新绑定；不要反复调用旧句柄等待它自行恢复。绑定不拥有组件，不延长组件生命周期。
 
-类型化调用使用 MetaGen 生成的具体 C++ ABI thunk 与 Core 通用泛型调用器。参数按值传递，返回值写入具体类型的输出地址，调用过程不使用 `InteropValue`、固定 payload、`Reflection::Value` 或反射参数列表。数值调用不装箱、不创建参数数组。签名种类仅用于绑定阶段，不随每次参数值传输。Core 关闭 CLR 自动封送；新增类型需要同时实现两端布局与签名映射，不能仅放宽 unmanaged 白名单。
+类型化调用使用 MetaGen 生成的具体 C++ ABI thunk 与 Core 通用泛型调用器。参数按值传递，返回值写入具体类型的输出地址，调用过程不使用 `InteropValue`、固定 payload、`Reflection::Value` 或反射参数列表。委托和捕获的句柄仅在绑定时分配；成功的数值调用不装箱、不创建参数数组，也不逐次创建委托。异常路径会分配异常对象。签名种类仅用于绑定阶段，不随每次参数值传输。Core 关闭 CLR 自动封送；新增类型需要同时实现两端布局与签名映射，不能仅放宽 unmanaged 白名单。
 
 调用按以下顺序进行：
 
@@ -426,7 +425,7 @@ World 上下文切换、关闭和反射注册表更新都会使旧句柄失效�
 
 运行时才知道签名的查询、Inspector 和通用跨语言操作保留 `ComponentMethod` / `MemberHandle` 与 `InteropValue` 协议。动态方法缓存不透明成员槽位，MetaGen 的 `abiInvoker` 从内联 payload 读写具体值，仍绕过 `Reflection::Value`。数值 From、精确类型 TryGet、相等比较与哈希不装箱；显式读取 Value 或使用托管反射时仍按需装箱。动态 Invoke 使用 params ReadOnlySpan，最多 16 个参数在栈上编码，更多参数使用受控数组。
 
-已有高频调用可以按以下方式迁移：将 `ComponentMethod` 字段替换为具体的 `NativeMethod<...>` 或 `NativeAction<...>`；初始化时将 `TryResolveMethod` 改为 `TryBindMethod` / `TryBindAction`；调用时直接传值，并将 `InteropValue.TryGet` 改为具体类型的 `out` 结果。签名已知的原生字段可将 SetField / TryGetField 改为 TryBindField 加 NativeField.Set / Get；动态字段与 Inspector 保留原协议。FlightHud 和 SampleBehaviour 是方法缓存示例，上面的 ThrottleRateWriter 展示字段缓存。
+已有高频调用可以按以下方式迁移：将 `ComponentMethod` 字段替换为具体的 `NativeMethod<...>` 或 `NativeAction<...>`；初始化时将 `TryResolveMethod` 改为 `TryBindMethod` / `TryBindAction`；调用时直接传值，用委托直接返回的具体类型结果替代 `InteropValue.TryGet`，失败通过 NativeCallException.Status 处理。签名已知的原生字段可将 SetField / TryGetField 改为 TryBindField 加 NativeField.Value 或 Set / Get；动态字段与 Inspector 保留原协议。FlightHud 和 SampleBehaviour 是方法缓存示例，上面的 ThrottleRateWriter 展示字段缓存。
 
 手写字段的 FieldInfo 需提供 directKind、directGetter / directSetter，类型化入口分别为 `InteropStatus (Object*, WireValue*)` / `InteropStatus (Object*, WireValue)`；只读或只写入口可为空。生成字段会保留 setter、变更通知和 World 脏标记，手写入口须自行保持这些语义。
 

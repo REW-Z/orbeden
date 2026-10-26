@@ -390,8 +390,7 @@ internal sealed class ParticleSystemEditor : ComponentEditor
             if (!expanded) return false;
             ParticleCollisionSettings collision = working.collision;
             bool changed = EditorGUI.Checkbox("Enabled", ref collision.enabled);
-            int layerMask = unchecked((int)collision.layerMask);
-            if (EditorGUI.InputInt("Layer Mask", ref layerMask)) { collision.layerMask = unchecked((uint)layerMask); changed = true; }
+            changed |= EditorLayerSettings.Draw("Layer Mask", ref collision.layerMask, mask: true);
             changed |= FloatField("Radius Scale", ref collision.radiusScale, 0.0001f, 1000.0f);
             changed |= FloatField("Restitution", ref collision.restitution, 0.0f, 1.0f);
             changed |= FloatField("Friction", ref collision.friction, 0.0f, 1.0f);

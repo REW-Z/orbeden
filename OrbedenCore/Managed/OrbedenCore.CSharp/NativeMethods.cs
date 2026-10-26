@@ -4,6 +4,15 @@ using System.Runtime.InteropServices;
 
 namespace Orbeden;
 
+/// <summary>类型化原生调用或字段读写失败，携带原始互操作状态。</summary>
+public sealed class NativeCallException : InvalidOperationException
+{
+    /// <summary>原生调用返回的失败状态。</summary>
+    public InteropStatus Status { get; }
+
+    internal NativeCallException(InteropStatus status) : base($"Native call failed: {status}.") => Status = status;
+}
+
 /// <summary>按值传递的 UTF-8 视图；输入指针须保持有效，输出应在下次字符串调用前复制。</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 8)]
 public readonly unsafe struct NativeUtf8
@@ -60,16 +69,6 @@ internal readonly unsafe struct NativeMethodBinding
         this.member = member;
     }
 
-    internal bool IsValid
-    {
-        get
-        {
-            if (TryEnter(out NativeCallFrame call) != InteropStatus.Ok) return false;
-            call.Dispose();
-            return true;
-        }
-    }
-
     //先进入稳定的 Core，成功后才取得游戏函数地址
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal InteropStatus TryEnter(out NativeCallFrame call)
@@ -96,6 +95,13 @@ internal unsafe ref struct NativeCallFrame
         Instance = instance;
         Entry = entry;
         this.complete = complete;
+    }
+
+    //将失败状态转为托管异常
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void ThrowIfFailed(InteropStatus status)
+    {
+        if (status != InteropStatus.Ok) throw new NativeCallException(status);
     }
 
     //即使运行库在回调内断开，也通过本次保存的 Core 入口退出

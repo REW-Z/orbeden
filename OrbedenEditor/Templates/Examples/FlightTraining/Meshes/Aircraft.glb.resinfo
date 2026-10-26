@@ -962,22 +962,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "20267 elements"
+            "Value": "20639 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "20267 elements"
+            "Value": "20639 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "20267 elements"
+            "Value": "20639 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "20267 elements"
+            "Value": "20639 elements"
           },
           {
             "Name": "indices",
@@ -1004,22 +1004,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "indices",
@@ -1046,22 +1046,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "938 elements"
+            "Value": "1030 elements"
           },
           {
             "Name": "indices",
@@ -1130,22 +1130,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "942 elements"
+            "Value": "1034 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "942 elements"
+            "Value": "1034 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "942 elements"
+            "Value": "1034 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "942 elements"
+            "Value": "1034 elements"
           },
           {
             "Name": "indices",
@@ -1214,22 +1214,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "1066 elements"
+            "Value": "1130 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "1066 elements"
+            "Value": "1130 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "1066 elements"
+            "Value": "1130 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "1066 elements"
+            "Value": "1130 elements"
           },
           {
             "Name": "indices",
@@ -1340,22 +1340,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "114 elements"
+            "Value": "184 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "114 elements"
+            "Value": "184 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "114 elements"
+            "Value": "184 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "114 elements"
+            "Value": "184 elements"
           },
           {
             "Name": "indices",
@@ -1592,22 +1592,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2054 elements"
+            "Value": "2686 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "2054 elements"
+            "Value": "2686 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2054 elements"
+            "Value": "2686 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2054 elements"
+            "Value": "2686 elements"
           },
           {
             "Name": "indices",
@@ -1760,22 +1760,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "indices",
@@ -1886,22 +1886,22 @@
           {
             "Name": "vertices",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "texcoords",
             "TypeName": "List\u003Cvector2\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "normals",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "tangents",
             "TypeName": "List\u003Cvector3\u003E",
-            "Value": "2221 elements"
+            "Value": "2283 elements"
           },
           {
             "Name": "indices",
@@ -6041,12 +6041,12 @@
     "Inputs": [
       {
         "Path": "Examples/FlightTraining/Meshes/Aircraft.glb",
-        "Length": 19453628,
-        "Modified": 639279742421801815,
-        "ContentHash": "9e8e407ed033e2bd2d858626abff31f1c8fd3637e186884a90b6b84c4980647c"
+        "Length": 19512968,
+        "Modified": 639281917338663067,
+        "ContentHash": "40ef5d174544a371ca345c524bfc4270bc51d44e0258e5fea5d2834ada737653"
       }
     ],
     "SettingsHash": "47f37544caa81de91239e860969d37a0637aafa64773ccca44e7c83884667ce7",
-    "ContentHash": "08ffa178cc1c81d14fdd0792b3d98c2f0c38200bfbf54cdce0561a87c49d909c"
+    "ContentHash": "7cb447bcee76d3c1e71f1c8797bbb9beb2cb778b26e04218e6b761f40229da51"
   }
 }

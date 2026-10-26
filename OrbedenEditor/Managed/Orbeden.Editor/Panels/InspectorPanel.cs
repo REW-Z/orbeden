@@ -675,7 +675,7 @@ internal sealed class InspectorPanel : EditorPanel
             }
             if (expanded)
             {
-                void DrawDefault() => DrawPropertyDocument(document.Document, title, primary.IsManaged ? "" : primary.TypeName,
+                void DrawDefault() => DrawPropertyDocument(document.Document, title, primary.TypeName,
                     hasEnabled ? EnabledProperty : string.Empty, refresh: false);
                 ComponentEditorTarget[] targets = components.Select((component, index) => new ComponentEditorTarget(
                     component.ObjectId, selection[index], component.TypeName, component.IsManaged)).ToArray();
@@ -870,11 +870,7 @@ internal sealed class InspectorPanel : EditorPanel
             {
                 if (!TryDrawEulerRotation(label, property, out value)) continue;
             }
-            else if (property.Kind == InteropValueKind.UInt32 && EditorLayerSettings.Handles(nativeType, property.Name))
-            {
-                if (!EditorLayerSettings.Draw(label, property, out value)) continue;
-            }
-            else if (!TryDrawProperty(label, property, out value)) continue;
+            else if (!TryDrawProperty(label, property, out value, nativeType)) continue;
             property.SetValue(value);
         }
         if (document.HasPendingChanges)
@@ -883,14 +879,14 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     /// <summary>供 CustomEditor 复用单个默认字段控件。</summary>
-    internal static void DrawCustomProperty(PropertyDocument document, string name)
+    internal static void DrawCustomProperty(PropertyDocument document, string name, string componentType)
     {
         PropertyValue? property = document.FindProperty(name);
         if (property == null || !property.IsReadable) return;
         string label = property.HasMultipleDifferentValues ? name + " (Mixed)" : name;
         if (property.Kind == InteropValueKind.Array) { DrawListSlots(document, property, label); return; }
         bool changed = property.ReferenceType.Length != 0 ? EditorObjectField.Draw(label, property, out InteropValue value)
-            : TryDrawProperty(label, property, out value);
+            : TryDrawProperty(label, property, out value, componentType);
         if (changed) property.SetValue(value);
     }
 
@@ -1092,9 +1088,12 @@ internal sealed class InspectorPanel : EditorPanel
     }
 
     //绘制单个属性并返回用户提交的新值。
-    private static bool TryDrawProperty(string label, PropertyValue property, out InteropValue value)
+    private static bool TryDrawProperty(string label, PropertyValue property, out InteropValue value, string componentType = "")
     {
         if (property.TypeName == "OrbEvent") return OrbEventEditor.Draw(label, property, out value);
+        if (property.Kind is InteropValueKind.Int32 or InteropValueKind.UInt32
+            && EditorLayerSettings.TryGetField(componentType, property.Name, out bool mask))
+            return EditorLayerSettings.Draw(label, property, mask, out value);
         value = property.Value;
         //枚举字段只画下拉框：选项在属性快照重建时解析好，画过就不再走数值控件。
         if (property.Kind is InteropValueKind.Int32 or InteropValueKind.UInt32

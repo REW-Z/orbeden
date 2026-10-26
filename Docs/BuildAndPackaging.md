@@ -574,6 +574,18 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 108：编辑器多选下拉框
+
+EditorGUI 新增 MultiSelectCombo，接收选项名称与逐项选中状态，统一绘制左侧勾选框、清空与全选入口。Layer/Mask 字段改用该控件，层名称、单层选择与位掩码转换继续由 EditorLayerSettings 提供。
+
+重建 Editor 托管程序集以发布 Orbeden.Editor SDK；使用新接口的游戏编辑器扩展需引用更新后的 SDK 并重新构建。重建原生 Editor 以更新项目版本检查；无需同步模板文件，无场景或资源格式迁移。
+
+#### 版本 107：原生委托调用与字段值接口
+
+NativeMethod / NativeAction 从值类型调用器改为 C# 委托，使用 `method(args)` 调用；NativeMethod 直接返回结果，NativeAction 返回 void，TryBindMethod / TryBindAction 绑定失败输出 null。NativeField.Get() 直接返回值，Set(value) 返回 void，并提供 Value 属性与 NativeField 到值类型的单向隐式读取；写入使用 `.Value = value` 或 Set，保留绑定。调用和字段读写失败抛出携带原始 InteropStatus 的 NativeCallException；原生 ABI、Prepare / Complete、setter、Changed 与脏标记保持原语义。
+
+重建 Core 托管程序集、MetaGen 和 Editor，通过 Update Project 同步 Lib 与 SDK 后重建游戏 C# 和编辑器扩展；已有脚本将 `.Invoke(..., out result)` 改为委托返回值，Get(out value) 改为 Get() 或 Value，并迁移原状态码判断为异常处理。需按需同步 `Content/Examples/FlightTraining/Scripts/FlightHud.cs`、`SampleBehaviour.cs`；Update Project 不覆盖 Examples。Player 重新构建托管产物并 Build Player。无场景或资源格式迁移，无需重置 Builtin。委托仅在绑定时创建，历史性能结果不代表此次接口变更的实测结果；本次仅做编译检查。
+
 #### 版本 106：类型化原生方法与字段绑定
 
 完整运行时 OrbedenNativeApi 升至 ABI 7、117 个指针槽，尾部追加指向独立 3 槽 TypedFieldsApi 的指针。TypedMethodsApi 保持 3 槽、动态 ScriptInteropApi 保持 9 槽，Editor 引擎子表维持 ABI 5、74 槽。FieldInfo 新增具体类型与读写函数入口，原生游戏模块 ABI 升至 6；不能混用旧游戏 DLL、旧 MetaGen 生成物或旧 Core 程序集。

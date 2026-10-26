@@ -273,9 +273,12 @@ internal static class DocPages
             Kind = ManagedKindLabel(type),
             Declaration = CSharpSignature.TypeDeclaration(type),
             Summary = summary,
-            BaseTypeName = type.IsEnum || type.IsValueType ? null : type.BaseType?.FullName,
+            BaseTypeName = type.IsEnum || type.IsValueType || type.BaseType == typeof(MulticastDelegate) ? null : type.BaseType?.FullName,
             Source = summary.Length != 0 ? DocSource.Xml : DocSource.None
         };
+
+        //委托签名已包含参数和返回值
+        if (type.BaseType == typeof(MulticastDelegate)) return page;
 
         foreach (var member in PublicMembers(type))
         {
@@ -391,6 +394,7 @@ internal static class DocPages
 
     private static string ManagedKindLabel(Type type)
     {
+        if (type.BaseType == typeof(MulticastDelegate)) return "委托";
         if (type.IsEnum) return "枚举";
         if (type.IsValueType) return "值类型";
         if (type.IsAbstract && type.IsSealed) return "静态类";

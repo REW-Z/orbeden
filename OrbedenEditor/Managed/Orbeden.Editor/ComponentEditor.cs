@@ -30,7 +30,7 @@ public abstract class ComponentEditor
     public void DrawDefaultInspector() => DefaultInspector?.Invoke();
 
     /// <summary>使用内置控件绘制一个字段，保留引用选择、集合编辑和撤销。</summary>
-    public void DrawProperty(string name) => InspectorPanel.DrawCustomProperty(Properties, name);
+    public void DrawProperty(string name) => InspectorPanel.DrawCustomProperty(Properties, name, Target.TypeName);
 
     /// <summary>按字段名读取当前多选公共属性。</summary>
     public PropertyValue? FindProperty(string name) => Properties.FindProperty(name);

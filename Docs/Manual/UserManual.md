@@ -330,25 +330,25 @@ Inspector 的添加菜单用 `[C++]` 和 `[C#]` 区分语言，每个 C# 脚本�
 ```csharp
 //初始化时绑定并缓存
 ComponentProxy? flight = ens.GetNativeComponent("FlightController");
-NativeMethod<float> getAirspeed = default;
+NativeMethod<float>? getAirspeed = null;
 if (flight != null)
     flight.TryBindMethod("GetAirspeed", out getAirspeed);
 
 //后续调用，实际脚本中 getAirspeed 应保存为字段
-if (getAirspeed.Invoke(out float airspeed) == InteropStatus.Ok)
-    Console.WriteLine(airspeed);
+if (getAirspeed != null)
+    Console.WriteLine(getAirspeed());
 ```
 
-`NativeMethod<T0, ..., TResult>` 的最后一个类型是返回值，无返回值使用 `NativeAction<T0, ...>`；最多支持 16 个输入参数。数值、向量等按具体 ABI 类型传递，不经过 `InteropValue`；字符串使用 `NativeUtf8` / `NativeStringId` 视图。签名必须与 C++ 完全匹配，不做隐式数值转换。
+`NativeMethod` / `NativeAction` 是 C# 委托，通过 `method(args)` 调用并直接返回结果；绑定失败输出 null。调用失败抛出 `NativeCallException`，`Status` 属性保留原始互操作状态。`NativeMethod<T0, ..., TResult>` 的最后一个类型是返回值，无返回值使用 `NativeAction<T0, ...>`；最多支持 16 个输入参数。数值、向量等按具体 ABI 类型传递，不经过 `InteropValue`；字符串使用 `NativeUtf8` / `NativeStringId` 视图。签名必须与 C++ 完全匹配，不做隐式数值转换。
 
 类型已知的 C++ 字段也可以直接绑定，初始化时保存 `NativeField<T>`，后续无需按名称查询：
 
 ```csharp
 if (flight != null && flight.TryBindField("throttleRate", out NativeField<float> throttleRate) == InteropStatus.Ok)
 {
-    throttleRate.Set(2.0f);
-    if (throttleRate.Get(out float current) == InteropStatus.Ok)
-        Console.WriteLine(current);
+    throttleRate.Value = 2.0f;
+    float current = throttleRate; //单向隐式读取，也可用 Get() 或 Value
+    Console.WriteLine(current);
 }
 ```
 

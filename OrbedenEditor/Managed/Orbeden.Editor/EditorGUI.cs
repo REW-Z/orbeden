@@ -93,6 +93,32 @@ public static class EditorGUI
     /// <summary>结束下拉选择框。</summary>
     public static void EndCombo() => NativeEditorGUI.EndCombo();
 
+    /// <summary>绘制左侧勾选框的多选下拉框，逐项更新选中状态，返回用户是否提交选择；选中状态长度须与选项数一致。</summary>
+    public static bool MultiSelectCombo(string label, string preview, IReadOnlyList<string> options, Span<bool> selection)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (selection.Length != options.Count)
+            throw new ArgumentException("Selection length must match the option count.", nameof(selection));
+        if (!BeginCombo(label, preview)) return false;
+        bool changed = false;
+        try
+        {
+            //绘制清空与全选入口
+            if (Selectable("Nothing", !selection.Contains(true))) { selection.Clear(); changed = true; }
+            if (Selectable("Everything", !selection.Contains(false))) { selection.Fill(true); changed = true; }
+
+            //绘制左侧勾选框与右侧选项名称
+            for (int index = 0; index < options.Count; ++index)
+            {
+                changed |= Checkbox("##option_" + index, ref selection[index]);
+                SameLine();
+                Label(options[index]);
+            }
+        }
+        finally { EndCombo(); }
+        return changed;
+    }
+
     /// <summary>绘制可搜索下拉框，确认后返回原选项下标；每个控件独立持有状态。</summary>
     public static bool SearchableCombo(string label, string preview, IReadOnlyList<string> options,
         SearchableComboState state, out int selectedIndex)

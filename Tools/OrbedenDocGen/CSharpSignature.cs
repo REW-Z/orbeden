@@ -37,8 +37,8 @@ internal static class CSharpSignature
         if (type.IsPointer) return Name(type.GetElementType()!) + "*";
         if (type.IsArray) return Name(type.GetElementType()!) + "[" + new string(',', type.GetArrayRank() - 1) + "]";
         if (type.IsGenericParameter) return type.Name;
-        if (type.IsGenericType && !type.IsGenericTypeDefinition)
-            return StripArity(Name(type.GetGenericTypeDefinition())) + "<" + string.Join(", ", type.GetGenericArguments().Select(Name)) + ">";
+        if (type.IsGenericType)
+            return StripArity(type.Name) + "<" + string.Join(", ", type.GetGenericArguments().Select(Name)) + ">";
         if (type.IsNested && type.DeclaringType != null) return Name(type.DeclaringType) + "." + type.Name;
 
         var full = type.FullName ?? type.Name;
@@ -49,6 +49,17 @@ internal static class CSharpSignature
     internal static string TypeDeclaration(Type type)
     {
         if (type.IsEnum) return $"public enum {type.Name} : {Name(Enum.GetUnderlyingType(type))}";
+        //将委托渲染为可直接调用的签名
+        if (type.BaseType == typeof(MulticastDelegate))
+        {
+            MethodInfo invoke = type.GetMethod("Invoke")!;
+            Type[] arguments = type.GetGenericArguments();
+            string generics = arguments.Length == 0 ? "" : "<" + string.Join(", ", arguments.Select(Name)) + ">";
+            StringBuilder declaration = new($"public delegate {Name(invoke.ReturnType)} {StripArity(type.Name)}{generics}{ParameterList(invoke.GetParameters())}");
+            foreach (Type argument in arguments)
+                if (Constraint(argument) is string constraint) declaration.Append($" where {argument.Name} : {constraint}");
+            return declaration.Append(';').ToString();
+        }
         StringBuilder result = new("public");
         if (type.IsAbstract && type.IsSealed) result.Append(" static");
         else if (type.IsAbstract) result.Append(" abstract");
@@ -217,7 +228,7 @@ internal static class CSharpSignature
         List<string> parts = [];
         var attributes = argument.GenericParameterAttributes;
         var valueType = attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint);
-        if (valueType) parts.Add("struct");
+        if (valueType) parts.Add(argument.GetCustomAttributesData().Any(data => data.AttributeType.FullName == "System.Runtime.CompilerServices.IsUnmanagedAttribute") ? "unmanaged" : "struct");
         else if (attributes.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint)) parts.Add("class");
         foreach (var constraint in argument.GetGenericParameterConstraints())
             if (constraint != typeof(ValueType)) parts.Add(Name(constraint));

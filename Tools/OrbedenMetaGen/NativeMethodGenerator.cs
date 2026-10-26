@@ -11,7 +11,7 @@ internal static class NativeMethodGenerator
             EmitType(code, count, false);
             EmitType(code, count, true);
         }
-        code.AppendLine("public sealed partial class ComponentProxy");
+        code.AppendLine("public sealed unsafe partial class ComponentProxy");
         code.AppendLine("{");
         for (int count = 0; count <= 16; count++)
         {
@@ -25,51 +25,34 @@ internal static class NativeMethodGenerator
             File.WriteAllText(path, source, new UTF8Encoding(false));
     }
 
+    //拼接泛型参数
     private static string Generic(IEnumerable<string> types)
     {
         string joined = string.Join(", ", types);
         return joined.Length == 0 ? "" : $"<{joined}>";
     }
 
+    //生成原生调用委托声明
     private static void EmitType(StringBuilder code, int count, bool action)
     {
         string[] args = Enumerable.Range(0, count).Select(i => $"T{i}").ToArray();
         string[] types = action ? args : [.. args, "TResult"];
         string name = (action ? "NativeAction" : "NativeMethod") + Generic(types);
-        code.AppendLine("/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>");
-        code.AppendLine($"public readonly unsafe struct {name}");
-        foreach (string type in types) code.AppendLine($"    where {type} : unmanaged");
-        code.AppendLine("{");
-        code.AppendLine("    private readonly NativeMethodBinding binding;");
-        code.AppendLine($"    internal {(action ? "NativeAction" : "NativeMethod")}(NativeMethodBinding binding) => this.binding = binding;");
-        code.AppendLine("    /// <summary>校验组件、成员及重载代次。</summary>");
-        code.AppendLine("    public bool IsValid => binding.IsValid;");
-        string parameters = string.Join(", ", args.Select((type, i) => $"{type} arg{i}").Concat(action ? [] : new[]{ "out TResult result" }));
-        code.AppendLine("    /// <summary>直接调用已绑定的原生方法。</summary>");
-        code.AppendLine($"    public InteropStatus Invoke({parameters})");
-        code.AppendLine("    {");
-        if (!action) code.AppendLine("        result = default;");
-        code.AppendLine("        InteropStatus status = binding.TryEnter(out NativeCallFrame call);");
-        code.AppendLine("        if (status != InteropStatus.Ok) return status;");
-        code.AppendLine("        try");
-        code.AppendLine("        {");
-        if (!action) code.AppendLine("            fixed (TResult* output = &result)");
-        string signature = string.Join(", ", new[]{ "void*" }.Concat(args).Concat(action ? [] : new[]{ "TResult*" }).Append("InteropStatus"));
-        string inputs = string.Join(", ", new[]{ "call.Instance" }.Concat(args.Select((_, i) => $"arg{i}")).Concat(action ? [] : new[]{ "output" }));
-        code.AppendLine($"                return ((delegate* unmanaged[Cdecl]<{signature}>)call.Entry)({inputs});");
-        code.AppendLine("        }");
-        code.AppendLine("        finally { call.Dispose(); }");
-        code.AppendLine("    }");
-        code.AppendLine("}");
+        string parameters = string.Join(", ", args.Select((type, i) => $"{type} arg{i}"));
+        code.AppendLine("/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>");
+        code.AppendLine($"public delegate {(action ? "void" : "TResult")} {name}({parameters}){(types.Length == 0 ? ";" : "")}");
+        for (int index = 0; index < types.Length; index++)
+            code.AppendLine($"    where {types[index]} : unmanaged{(index == types.Length - 1 ? ";" : "")}");
         code.AppendLine();
     }
 
+    //生成签名绑定与受保护的委托调用
     private static void EmitBind(StringBuilder code, int count, bool action)
     {
         string[] args = Enumerable.Range(0, count).Select(i => $"T{i}").ToArray();
         string[] types = action ? args : [.. args, "TResult"];
         string name = (action ? "NativeAction" : "NativeMethod") + Generic(types);
-        code.AppendLine("    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>");
+        code.AppendLine("    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>");
         code.AppendLine($"    public InteropStatus TryBind{(action ? "Action" : "Method")}{Generic(types)}(string name, out {name} method)");
         foreach (string type in types) code.AppendLine($"        where {type} : unmanaged");
         code.AppendLine("    {");
@@ -77,7 +60,19 @@ internal static class NativeMethodGenerator
             : $"stackalloc InteropValueKind[] {{ {string.Join(", ", args.Select(type => $"NativeValueType<{type}>.Kind"))} }}";
         string result = action ? "InteropValueKind.Empty" : "NativeValueType<TResult>.Kind";
         code.AppendLine($"        InteropStatus status = NativeMethodRuntime.Bind(handle, name, {result}, {kinds}, out NativeMethodBinding binding);");
-        code.AppendLine("        method = status == InteropStatus.Ok ? new(binding) : default;");
+        code.AppendLine($"        method = status == InteropStatus.Ok ? ({string.Join(", ", args.Select((_, i) => $"arg{i}"))}) =>");
+        code.AppendLine("        {");
+        code.AppendLine("            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));");
+        code.AppendLine("            try");
+        code.AppendLine("            {");
+        if (!action) code.AppendLine("                TResult result = default;");
+        string signature = string.Join(", ", new[]{ "void*" }.Concat(args).Concat(action ? [] : new[]{ "TResult*" }).Append("InteropStatus"));
+        string inputs = string.Join(", ", new[]{ "call.Instance" }.Concat(args.Select((_, i) => $"arg{i}")).Concat(action ? [] : new[]{ "&result" }));
+        code.AppendLine($"                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<{signature}>)call.Entry)({inputs}));");
+        if (!action) code.AppendLine("                return result;");
+        code.AppendLine("            }");
+        code.AppendLine("            finally { call.Dispose(); }");
+        code.AppendLine("        } : null!;");
         code.AppendLine("        return status;");
         code.AppendLine("    }");
         code.AppendLine();

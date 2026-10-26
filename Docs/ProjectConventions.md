@@ -210,7 +210,7 @@ public 受支持字段自动进入元数据；不支持的公开签名会由 Met
 - Core 的 C++ Object 类型在托管侧对应一个 `partial class`，生成部分提供绑定成员，手写部分补充运行时逻辑。游戏原生模块不生成 C# 包装类、游戏专用 Binding 注册或 `Native` 别名；Proxy 的原生调用 thunk 由 MetaGen 生成。
 - Core 托管类型位于 `Orbeden`；托管类名、成员名跟随 C++，改名时同步修改仓库调用方，不保留旧名兼容层。
 - 游戏 C# 通过 `Ens.GetNativeComponent` 和 `ComponentProxy` 访问游戏 C++ 组件；游戏 C++ 通过 `ScriptInterop::FindManagedComponent` 访问 C# 脚本。MetaGen 继续生成游戏类型、字段、方法和生命周期元数据及原生调用 thunk，供 Inspector、序列化和 Proxy 使用。
-- 签名已知的原生方法在初始化时用 `TryBindMethod` / `TryBindAction` 绑定，缓存 `NativeMethod<...>` / `NativeAction<...>`；调用直接传具体值，避免逐帧按名称解析或包装为 `InteropValue`。类型已知的原生字段用 TryBindField 绑定并缓存 NativeField<T>，通过 Get / Set 直接传值；保留字段 setter、Changed 和 World 脏标记。动态字段与运行时未知签名的方法保留通用协议，不能把数值调用的零分配结论推广到字符串和托管反射。
+- 签名已知的原生方法在初始化时用 `TryBindMethod` / `TryBindAction` 绑定，缓存 `NativeMethod<...>` / `NativeAction<...>`；通过 `method(args)` 委托调用并直接返回结果，失败抛出带 `InteropStatus` 的 `NativeCallException`；绑定失败输出 null。委托仅在绑定时分配，避免逐帧按名称解析或包装为 `InteropValue`。类型已知的原生字段用 TryBindField 绑定并缓存 NativeField<T>，通过 `Get()`、`.Value` 或到 T 的单向隐式转换读取，通过 `Set(value)` 或 `.Value = value` 写入；读写失败抛出 `NativeCallException`。不提供 T 到 NativeField 的隐式转换，赋值不得替换原生绑定；保留字段 setter、Changed 和 World 脏标记。动态字段与运行时未知签名的方法保留通用协议，不能把数值调用的零分配结论推广到字符串和托管反射。
 - 类型化 ABI 只接受显式白名单中的 unmanaged 类型；bool 为 1 字节，字符串使用 UTF-8 借用视图，输出须在下一次字符串返回或上下文切换前复制。不得缓存游戏 DLL 原始函数地址、跨重载复用方法绑定，或对可能回调托管的方法省略 GC 切换。调用和模块注册遵守主线程契约。类型、状态及调用保护见[脚本系统](ScriptSystem.md#8-跨语言代理)。
 - Core 包装按需创建并由原生对象关联的强 GC 句柄保活；原生对象销毁、程序集卸载或引擎 API 断开时释放句柄。用户代码仍持有的失效包装由 GC 最终回收。
 - 常用入口：

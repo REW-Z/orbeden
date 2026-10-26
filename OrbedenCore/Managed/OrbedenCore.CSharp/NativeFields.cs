@@ -27,26 +27,34 @@ public readonly unsafe struct NativeField<T> where T : unmanaged
     /// <summary>绑定时是否存在写入入口；不表示组件仍然存活。</summary>
     public bool CanWrite => (binding.Access & 2) != 0;
 
-    /// <summary>直接读取字段；仅在成功时使用结果。</summary>
-    public InteropStatus Get(out T value)
+    /// <summary>读取或写入原生字段，保留当前绑定。</summary>
+    public T Value
     {
-        value = default;
-        InteropStatus status = binding.TryEnter(1, out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
+        get => Get();
+        set => Set(value);
+    }
+
+    /// <summary>隐式读取原生字段，不改变绑定。</summary>
+    public static implicit operator T(NativeField<T> field) => field.Get();
+
+    /// <summary>直接返回字段值；读取失败时抛出 NativeCallException。</summary>
+    public T Get()
+    {
+        NativeCallFrame.ThrowIfFailed(binding.TryEnter(1, out NativeCallFrame call));
         try
         {
-            fixed (T* output = &value)
-                return ((delegate* unmanaged[Cdecl]<void*, T*, InteropStatus>)call.Entry)(call.Instance, output);
+            T value = default;
+            NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T*, InteropStatus>)call.Entry)(call.Instance, &value));
+            return value;
         }
         finally { call.Dispose(); }
     }
 
-    /// <summary>直接写入字段，保留原生 setter、变更通知和 World 脏标记。</summary>
-    public InteropStatus Set(T value)
+    /// <summary>写入字段并保留 setter、变更通知及脏标记；失败时抛出 NativeCallException。</summary>
+    public void Set(T value)
     {
-        InteropStatus status = binding.TryEnter(2, out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try { return ((delegate* unmanaged[Cdecl]<void*, T, InteropStatus>)call.Entry)(call.Instance, value); }
+        NativeCallFrame.ThrowIfFailed(binding.TryEnter(2, out NativeCallFrame call));
+        try { NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T, InteropStatus>)call.Entry)(call.Instance, value)); }
         finally { call.Dispose(); }
     }
 }

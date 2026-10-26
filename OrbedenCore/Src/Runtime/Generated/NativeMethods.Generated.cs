@@ -3,351 +3,99 @@
 using System;
 namespace Orbeden;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<TResult>
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, TResult*, InteropStatus>)call.Entry)(call.Instance, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<TResult>()
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke()
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, InteropStatus>)call.Entry)(call.Instance);
-        }
-        finally { call.Dispose(); }
-    }
-}
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction();
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, TResult>(T0 arg0)
     where T0 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0>
-    where T0 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, InteropStatus>)call.Entry)(call.Instance, arg0);
-        }
-        finally { call.Dispose(); }
-    }
-}
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0>(T0 arg0)
+    where T0 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, TResult>(T0 arg0, T1 arg1)
     where T0 : unmanaged
     where T1 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1>(T0 arg0, T1 arg1)
     where T0 : unmanaged
-    where T1 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, InteropStatus>)call.Entry)(call.Instance, arg0, arg1);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T1 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, TResult>(T0 arg0, T1 arg1, T2 arg2)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2>(T0 arg0, T1 arg1, T2 arg2)
     where T0 : unmanaged
     where T1 : unmanaged
-    where T2 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T2 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3>(T0 arg0, T1 arg1, T2 arg2, T3 arg3)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
-    where T3 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T3 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
     where T4 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
-    where T4 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T4 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
     where T4 : unmanaged
     where T5 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
     where T4 : unmanaged
-    where T5 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T5 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -355,56 +103,20 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, TResult>
     where T4 : unmanaged
     where T5 : unmanaged
     where T6 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
     where T3 : unmanaged
     where T4 : unmanaged
     where T5 : unmanaged
-    where T6 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T6 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -413,29 +125,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, TResu
     where T5 : unmanaged
     where T6 : unmanaged
     where T7 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -443,27 +136,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7>
     where T4 : unmanaged
     where T5 : unmanaged
     where T6 : unmanaged
-    where T7 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T7 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -473,29 +149,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T6 : unmanaged
     where T7 : unmanaged
     where T8 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -504,27 +161,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8>
     where T5 : unmanaged
     where T6 : unmanaged
     where T7 : unmanaged
-    where T8 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T8 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -535,29 +175,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T7 : unmanaged
     where T8 : unmanaged
     where T9 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -567,27 +188,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T6 : unmanaged
     where T7 : unmanaged
     where T8 : unmanaged
-    where T9 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T9 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -599,29 +203,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T8 : unmanaged
     where T9 : unmanaged
     where T10 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -632,27 +217,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T7 : unmanaged
     where T8 : unmanaged
     where T9 : unmanaged
-    where T10 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T10 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -665,29 +233,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T9 : unmanaged
     where T10 : unmanaged
     where T11 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -699,27 +248,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T8 : unmanaged
     where T9 : unmanaged
     where T10 : unmanaged
-    where T11 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T11 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -733,29 +265,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T10 : unmanaged
     where T11 : unmanaged
     where T12 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -768,27 +281,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T9 : unmanaged
     where T10 : unmanaged
     where T11 : unmanaged
-    where T12 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T12 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -803,29 +299,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T11 : unmanaged
     where T12 : unmanaged
     where T13 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -839,27 +316,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T10 : unmanaged
     where T11 : unmanaged
     where T12 : unmanaged
-    where T13 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T13 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -875,29 +335,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T12 : unmanaged
     where T13 : unmanaged
     where T14 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -912,27 +353,10 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T11 : unmanaged
     where T12 : unmanaged
     where T13 : unmanaged
-    where T14 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T14 : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate TResult NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -949,29 +373,10 @@ public readonly unsafe struct NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T13 : unmanaged
     where T14 : unmanaged
     where T15 : unmanaged
-    where TResult : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeMethod(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15, out TResult result)
-    {
-        result = default;
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-            fixed (TResult* output = &result)
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, output);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where TResult : unmanaged;
 
-/// <summary>已绑定的原生调用；参数和结果按具体 ABI 类型传递。</summary>
-public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
+/// <summary>直接调用原生方法的委托；失败时抛出 NativeCallException。</summary>
+public delegate void NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
     where T0 : unmanaged
     where T1 : unmanaged
     where T2 : unmanaged
@@ -987,85 +392,122 @@ public readonly unsafe struct NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T
     where T12 : unmanaged
     where T13 : unmanaged
     where T14 : unmanaged
-    where T15 : unmanaged
-{
-    private readonly NativeMethodBinding binding;
-    internal NativeAction(NativeMethodBinding binding) => this.binding = binding;
-    /// <summary>校验组件、成员及重载代次。</summary>
-    public bool IsValid => binding.IsValid;
-    /// <summary>直接调用已绑定的原生方法。</summary>
-    public InteropStatus Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
-    {
-        InteropStatus status = binding.TryEnter(out NativeCallFrame call);
-        if (status != InteropStatus.Ok) return status;
-        try
-        {
-                return ((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15);
-        }
-        finally { call.Dispose(); }
-    }
-}
+    where T15 : unmanaged;
 
-public sealed partial class ComponentProxy
+public sealed unsafe partial class ComponentProxy
 {
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<TResult>(string name, out NativeMethod<TResult> method)
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, ReadOnlySpan<InteropValueKind>.Empty, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? () =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, TResult*, InteropStatus>)call.Entry)(call.Instance, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction(string name, out NativeAction method)
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, ReadOnlySpan<InteropValueKind>.Empty, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? () =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, InteropStatus>)call.Entry)(call.Instance));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, TResult>(string name, out NativeMethod<T0, TResult> method)
         where T0 : unmanaged
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0>(string name, out NativeAction<T0> method)
         where T0 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, InteropStatus>)call.Entry)(call.Instance, arg0));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, TResult>(string name, out NativeMethod<T0, T1, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1>(string name, out NativeAction<T0, T1> method)
         where T0 : unmanaged
         where T1 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, InteropStatus>)call.Entry)(call.Instance, arg0, arg1));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, TResult>(string name, out NativeMethod<T0, T1, T2, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1073,22 +515,40 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2>(string name, out NativeAction<T0, T1, T2> method)
         where T0 : unmanaged
         where T1 : unmanaged
         where T2 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, TResult>(string name, out NativeMethod<T0, T1, T2, T3, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1097,11 +557,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3>(string name, out NativeAction<T0, T1, T2, T3> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1109,11 +579,19 @@ public sealed partial class ComponentProxy
         where T3 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1123,11 +601,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4>(string name, out NativeAction<T0, T1, T2, T3, T4> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1136,11 +624,19 @@ public sealed partial class ComponentProxy
         where T4 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1151,11 +647,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5>(string name, out NativeAction<T0, T1, T2, T3, T4, T5> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1165,11 +671,19 @@ public sealed partial class ComponentProxy
         where T5 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1181,11 +695,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1196,11 +720,19 @@ public sealed partial class ComponentProxy
         where T6 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1213,11 +745,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1229,11 +771,19 @@ public sealed partial class ComponentProxy
         where T7 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1247,11 +797,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1264,11 +824,19 @@ public sealed partial class ComponentProxy
         where T8 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1283,11 +851,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1301,11 +879,19 @@ public sealed partial class ComponentProxy
         where T9 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1321,11 +907,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1340,11 +936,19 @@ public sealed partial class ComponentProxy
         where T10 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1361,11 +965,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1381,11 +995,19 @@ public sealed partial class ComponentProxy
         where T11 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1403,11 +1025,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1424,11 +1056,19 @@ public sealed partial class ComponentProxy
         where T12 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1447,11 +1087,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1469,11 +1119,19 @@ public sealed partial class ComponentProxy
         where T13 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1493,11 +1151,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind, NativeValueType<T14>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1516,11 +1184,19 @@ public sealed partial class ComponentProxy
         where T14 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind, NativeValueType<T14>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult>(string name, out NativeMethod<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1541,11 +1217,21 @@ public sealed partial class ComponentProxy
         where TResult : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, NativeValueType<TResult>.Kind, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind, NativeValueType<T14>.Kind, NativeValueType<T15>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                TResult result = default;
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TResult*, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, &result));
+                return result;
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 
-    /// <summary>按完整签名绑定原生方法，绑定失败不返回可调用入口。</summary>
+    /// <summary>按完整签名绑定原生方法；失败时输出 null，成功后通过括号直接调用。</summary>
     public InteropStatus TryBindAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(string name, out NativeAction<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> method)
         where T0 : unmanaged
         where T1 : unmanaged
@@ -1565,7 +1251,15 @@ public sealed partial class ComponentProxy
         where T15 : unmanaged
     {
         InteropStatus status = NativeMethodRuntime.Bind(handle, name, InteropValueKind.Empty, stackalloc InteropValueKind[] { NativeValueType<T0>.Kind, NativeValueType<T1>.Kind, NativeValueType<T2>.Kind, NativeValueType<T3>.Kind, NativeValueType<T4>.Kind, NativeValueType<T5>.Kind, NativeValueType<T6>.Kind, NativeValueType<T7>.Kind, NativeValueType<T8>.Kind, NativeValueType<T9>.Kind, NativeValueType<T10>.Kind, NativeValueType<T11>.Kind, NativeValueType<T12>.Kind, NativeValueType<T13>.Kind, NativeValueType<T14>.Kind, NativeValueType<T15>.Kind }, out NativeMethodBinding binding);
-        method = status == InteropStatus.Ok ? new(binding) : default;
+        method = status == InteropStatus.Ok ? (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15) =>
+        {
+            NativeCallFrame.ThrowIfFailed(binding.TryEnter(out NativeCallFrame call));
+            try
+            {
+                NativeCallFrame.ThrowIfFailed(((delegate* unmanaged[Cdecl]<void*, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, InteropStatus>)call.Entry)(call.Instance, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15));
+            }
+            finally { call.Dispose(); }
+        } : null!;
         return status;
     }
 

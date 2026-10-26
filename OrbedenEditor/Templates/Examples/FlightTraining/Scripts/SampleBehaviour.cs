@@ -15,7 +15,7 @@ public sealed class SampleBehaviour : Script
     [SerializeField]
     private int reportCount;
     private ComponentProxy? nativeSample;
-    private NativeAction<float> nativePingMethod;
+    private NativeAction<float>? nativePingMethod;
     private float interopTimer;
 
     /// <summary>创建示例托管脚本行为。</summary>
@@ -53,10 +53,10 @@ public sealed class SampleBehaviour : Script
         }
 
         interopTimer += deltaTime;
-        if (interopTimer >= 2.0f && nativePingMethod.IsValid)
+        if (interopTimer >= 2.0f && nativePingMethod != null && nativeSample?.IsValid == true)
         {
             interopTimer = 0.0f;
-            nativePingMethod.Invoke(totalTime);
+            nativePingMethod(totalTime);
         }
 
         elapsedTime += deltaTime;

@@ -74,7 +74,7 @@ internal static class DocIds
 
         if (type.IsGenericParameter) return (type.DeclaringMethod != null ? "``" : "`") + type.GenericParameterPosition;
         //泛型实例写成 List{System.Int32}：名字部分去掉 `n 记号，参数逐个展开
-        if (type.IsGenericType && !type.IsGenericTypeDefinition)
+        if (type.IsGenericType)
             return StripArity(TypeName(type.GetGenericTypeDefinition())) + "{" + string.Join(",", type.GetGenericArguments().Select(TypeReference)) + "}";
         return TypeName(type);
     }
