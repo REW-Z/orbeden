@@ -18,6 +18,12 @@ internal static class EditorAssetInspection
     /// <summary>保留资源检查目标，切到 Inspector 时不丢失。</summary>
     internal static void Select(string? path, string key = "")
     {
+        //目录选择只用于 Project 导航和文件操作
+        if (Directory.Exists(path))
+        {
+            return;
+        }
+
         SourcePath = path ?? string.Empty;
         ObjectKey = key;
         if (SourcePath.Length != 0) EditorNativeComponents.SelectEns(EnsId.Null);

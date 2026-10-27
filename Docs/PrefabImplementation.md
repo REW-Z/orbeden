@@ -6,7 +6,7 @@
 
 - 采用增量扩展，保留现有场景、子树快照和复制流程。
 - 源 `.world` 保存完整实例，另附编辑绑定信息。关联数据由 Editor 管理，不放进运行时 `Ens`、`Component` 或 `World`。
-- 实例仅允许修改根节点的局部位置、旋转和缩放。更新时保留这三个字段、实例所在父级和同级位置，其余内容取自源 Prefab。
+- 实例允许修改根节点的局部位置、旋转、缩放和整个 Header（名称、`localActive`、Static）。更新时保留这些实例覆盖、实例所在父级和同级位置，其余内容取自源 Prefab。覆盖随场景保存，不写回源 Prefab，也不修改其他实例；Static 仍由现有层级约束校验。
 - 绑定实例的内部节点禁止改名、修改激活或静态状态、修改组件、增删节点和调整内部层级。整棵实例可以移动、复制、删除。
 - EnsView 中所有绑定节点的文字显示浅绿色 `#A8D8A0`；未激活时保留色相并降低亮度。解绑后恢复主题默认状态。
 - 不支持嵌套绑定。禁止将节点、模型或另一个实例插入绑定实例内部；禁止在 Prefab 编辑模式投放其他 Prefab。
@@ -72,7 +72,7 @@
 | `WriteBindings(XElement root, IEnumerable<EditorPrefabBinding> bindings)` | 返回 `void`，替换关联区块，集合为空时删除区块 |
 | `ReadSource(string contentRoot, string assetKey)` | 返回 `XElement`，校验内容根内的 Prefab 路径、文件和单根结构，读取源 Prefab 根元素 |
 | `MapObjects(XElement source, XElement instance)` | 返回 `Dictionary<string, string>`，按对应的子树对象建立身份映射并校验类型与结构 |
-| `Synchronize(XDocument world, string contentRoot, string? assetKey)` | 返回 `bool` 表示内容是否变化；更新全部关联或仅更新指定来源，保留根节点摆放和原有对象身份 |
+| `Synchronize(XDocument world, string contentRoot, string? assetKey)` | 返回 `bool` 表示内容是否变化；更新全部关联或仅更新指定来源，保留根节点 Header、局部变换和原有对象身份 |
 | `WriteFile(string path, XDocument document)` | 返回 `void`，在同目录写入临时文件后替换目标，失败时抛出异常并保留原文件 |
 
 ### EditorPrefabSession
@@ -139,7 +139,7 @@
 - `EditorAssetsNative` 现有保存 Prefab、实例化、捕获和销毁子树入口接入关联处理。新建 Prefab 后原子树成为绑定实例；复制与撤销带回关联。
 - `EditorWorldActions` 复用未保存场景确认流程进入 Prefab 模式；普通场景切换先完成退出。
 - `ProjectPanel` 双击 `.prefab` 打开独立模式，关联路径重写接入现有资源移动流程。
-- `InspectorPanel` 显示关联操作，绑定实例只开放根 Transform，关闭其他属性及组件结构编辑。
+- `InspectorPanel` 显示关联操作，绑定实例开放根 Transform 和整个 Header，关闭其他属性及组件结构编辑；EnsView 的改名、激活切换与撤销、重做使用相同权限。
 - `EnsPanel` 实施绑定颜色、Unpack 和层级操作限制；普通节点保持现有流程。
 - `NativeEditorGUI.TreeNode` 增加可选参数 `bool prefabBound = false`，通过空闲选项位传递；原生 `EditorGuiTreeNode` 使用浅绿色绘制绑定标签。
 - 场景手柄、组件自定义编辑器、属性写入和右键操作统一检查编辑策略；运行时脚本写入不受编辑器策略限制。

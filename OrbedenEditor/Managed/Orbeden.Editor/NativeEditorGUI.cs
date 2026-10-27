@@ -47,8 +47,8 @@ internal unsafe struct EditorGuiNativeApi
     public delegate* unmanaged[Cdecl]<byte*, int, byte> BeginPopup;
     public delegate* unmanaged[Cdecl]<void> ClosePopup;
     public delegate* unmanaged[Cdecl]<int, byte*, int, void> DragSource;
-    public delegate* unmanaged[Cdecl]<int*, byte*, int, int> ReadDrag;
-    public delegate* unmanaged[Cdecl]<byte, int, byte> AcceptDrag;
+    public delegate* unmanaged[Cdecl]<int*, byte*, int, byte, int> ReadDrag;
+    public delegate* unmanaged[Cdecl]<byte, int, byte, byte> AcceptDrag;
     public delegate* unmanaged[Cdecl]<int> FillRemainingArea;
     public delegate* unmanaged[Cdecl]<int> GetDropPlacement;
     public delegate* unmanaged[Cdecl]<EditorThemeData*, void> SetTheme;
@@ -169,18 +169,20 @@ internal static unsafe class NativeEditorGUI
     }
 
     //读取悬停目标上的共享载荷
-    internal static string ReadDrag(out int kind)
+    internal static string ReadDrag(out int kind, bool includeItemSpacing = false)
     {
         int nativeKind = 0;
-        int count = api.ReadDrag(&nativeKind, null, 0);
+        byte includeSpacing = includeItemSpacing ? (byte)1 : (byte)0;
+        int count = api.ReadDrag(&nativeKind, null, 0, includeSpacing);
         byte[] bytes = new byte[count];
-        fixed (byte* pointer = bytes) api.ReadDrag(&nativeKind, pointer, count);
+        fixed (byte* pointer = bytes) api.ReadDrag(&nativeKind, pointer, count, includeSpacing);
         kind = nativeKind;
         return InteropText.DecodeUtf8(bytes);
     }
 
     //绘制类型匹配预览并接收释放操作
-    internal static bool AcceptDrag(bool valid, int placement = 0) => api.AcceptDrag(valid ? (byte)1 : (byte)0, placement) != 0;
+    internal static bool AcceptDrag(bool valid, int placement = 0, bool includeItemSpacing = false)
+        => api.AcceptDrag(valid ? (byte)1 : (byte)0, placement, includeItemSpacing ? (byte)1 : (byte)0) != 0;
 
     //创建统一面板内容区域
     internal static bool BeginPanelContent(string id, ref ulong host, vector2 scroll, bool restoreScroll)

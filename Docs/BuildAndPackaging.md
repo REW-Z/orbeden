@@ -574,6 +574,12 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 
 ### 引擎更新与项目同步
 
+#### 版本 109：预制体根节点 Header 覆盖
+
+预制体绑定实例开放根节点整个 Header（名称、`localActive` 和 Static），Inspector、EnsView 菜单与快捷键及撤销、重做沿用同一权限；内部节点与其他组件继续只读，Static 仍经过现有层级约束检查。场景打开、实例同步、退出预制体编辑和 World Cook 均保留根节点 Header 与局部变换；两类覆盖只保存在当前实例中，不写回源 `.prefab`，不影响其他实例。
+
+重建原生与托管 Editor；项目更新无需同步模板文件，无场景或预制体格式迁移。发布包重新 Build Player 以保留场景实例覆盖。
+
 #### 版本 108：编辑器多选下拉框
 
 EditorGUI 新增 MultiSelectCombo，接收选项名称与逐项选中状态，统一绘制左侧勾选框、清空与全选入口。Layer/Mask 字段改用该控件，层名称、单层选择与位掩码转换继续由 EditorLayerSettings 提供。

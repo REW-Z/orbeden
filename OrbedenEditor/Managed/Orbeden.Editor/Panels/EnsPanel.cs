@@ -498,7 +498,7 @@ internal sealed class EnsPanel : EditorPanel
     //判断目标位置并在释放后排队提交
     private void DrawDropTarget(Ens target, int placement)
     {
-        string key = NativeEditorGUI.ReadDrag(out int kind);
+        string key = NativeEditorGUI.ReadDrag(out int kind, includeItemSpacing: target.IsValid);
         if (key.Length == 0) return;
         EnsId parent = EnsId.Null, before = EnsId.Null;
         if (target.IsValid)
@@ -531,7 +531,7 @@ internal sealed class EnsPanel : EditorPanel
             for (Ens ancestor = Ens.FromId(parent); valid && ancestor.IsValid; ancestor = Ens.FromId(ancestor.Transform.GetParent()))
                 if (moving.Any(ens => ens.Id.Equals(ancestor.Id))) valid = false;
         }
-        if (!NativeEditorGUI.AcceptDrag(valid, placement)) return;
+        if (!NativeEditorGUI.AcceptDrag(valid, placement, includeItemSpacing: target.IsValid)) return;
         if (kind == 2)
             pendingDrop = model ? () => EditorModelActions.Instantiate(key, parent, before, false, default)
                 : () => EditorPrefabActions.Instantiate(key, parent, before, false, default);

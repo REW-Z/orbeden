@@ -93,7 +93,7 @@ internal static class EditorPrefabDocuments
         return map;
     }
 
-    //更新实例内容并保留根节点摆放
+    //更新实例内容并保留根节点属性与局部变换
     internal static bool Synchronize(XDocument world, string contentRoot, string? assetKey)
     {
         XElement root = world.Root ?? throw new InvalidDataException("Missing world document.");
@@ -118,6 +118,11 @@ internal static class EditorPrefabDocuments
             foreach (var item in binding.ObjectKeys)
                 if (!sourceKeys.Contains(item.Key)) removed[item.Value] = string.Empty;
             XElement replacement = XDocument.Parse(EditorAssetsNative.RemapObjectIdentities(source.ToString(), map, true)).Root!.Element("Ens")!;
+
+            //保留实例根节点属性
+            replacement.SetAttributeValue("name", (string?)instance.Attribute("name") ?? string.Empty);
+            replacement.SetAttributeValue("localActive", (string?)instance.Attribute("localActive") ?? "true");
+            replacement.SetAttributeValue("static", (string?)instance.Attribute("static") ?? "false");
 
             //保留实例根节点局部变换
             XElement? oldTransform = instance.Elements("Component").FirstOrDefault(e => (string?)e.Attribute("type") == "Transform");

@@ -116,7 +116,7 @@ internal static class EditorPrefabSession
         EditorPrefabBinding? binding = FindBinding(ens);
         if (binding == null) return true;
         return binding.RootKey == ens.ResourceKey && operation is EditorPrefabEditOperation.RootTransform
-            or EditorPrefabEditOperation.Move or EditorPrefabEditOperation.Delete or EditorPrefabEditOperation.Copy;
+            or EditorPrefabEditOperation.Header or EditorPrefabEditOperation.Move or EditorPrefabEditOperation.Delete or EditorPrefabEditOperation.Copy;
     }
 
     //登记新实例的来源和对象映射

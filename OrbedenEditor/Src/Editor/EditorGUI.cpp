@@ -156,11 +156,31 @@ namespace
         ImGui::EndDragDropSource();
     }
 
+    //判断拖拽目标悬停，可将上下半个行间距纳入命中范围
+    bool IsDragTargetHovered(uint8 includeItemSpacing)
+    {
+        constexpr ImGuiHoveredFlags flags = ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+        if (ImGui::IsItemHovered(flags))
+        {
+            return true;
+        }
+        const ImGuiContext& context = *ImGui::GetCurrentContext();
+        if (!includeItemSpacing || (context.LastItemData.ItemFlags & ImGuiItemFlags_Disabled))
+        {
+            return false;
+        }
+
+        ImRect bounds(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+        bounds.Expand(ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y * 0.5f));
+        bounds.ClipWith(context.CurrentWindow->ClipRect);
+        return bounds.Contains(ImGui::GetIO().MousePos) && ImGui::IsWindowHovered(flags);
+    }
+
     //读取悬停目标上的共享拖拽载荷
-    int32 ORBEDEN_NATIVE_CALL EditorGuiReadDrag(int32* kind, uint8* buffer, int32 capacity)
+    int32 ORBEDEN_NATIVE_CALL EditorGuiReadDrag(int32* kind, uint8* buffer, int32 capacity, uint8 includeItemSpacing)
     {
         if (kind) *kind = 0;
-        if (!HasValidDrag() || !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) return 0;
+        if (!HasValidDrag() || !IsDragTargetHovered(includeItemSpacing)) return 0;
         if (kind) *kind = dragPayload.kind;
         int32 count = static_cast<int32>(dragPayload.key.size());
         if (buffer && capacity >= count) std::memcpy(buffer, dragPayload.key.data(), count);
@@ -168,9 +188,9 @@ namespace
     }
 
     //绘制接收预览并仅在鼠标释放时提交
-    uint8 ORBEDEN_NATIVE_CALL EditorGuiAcceptDrag(uint8 valid, int32 placement)
+    uint8 ORBEDEN_NATIVE_CALL EditorGuiAcceptDrag(uint8 valid, int32 placement, uint8 includeItemSpacing)
     {
-        if (!HasValidDrag() || !ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)) return 0;
+        if (!HasValidDrag() || !IsDragTargetHovered(includeItemSpacing)) return 0;
         ImVec2 min = ImGui::GetItemRectMin(), max = ImGui::GetItemRectMax();
         ImU32 color = valid ? IM_COL32(75, 180, 255, 255) : IM_COL32(220, 70, 70, 255);
         if (placement == 0) ImGui::GetWindowDrawList()->AddRect(min, max, color, 2.0f, 0, 2.0f);
