@@ -20,7 +20,7 @@ internal sealed class DevPanel : EditorPanel
             return;
         }
 
-        //同步当前项目的 SDK 运行库与构建引用
+        //同步当前项目的 SDK 与 VSCode 配置
         EditorGUI.BeginDisabled(EditorApplication.IsPlaying);
         try
         {
@@ -31,7 +31,7 @@ internal sealed class DevPanel : EditorPanel
             }
         }
         finally { EditorGUI.EndDisabled(); }
-        EditorGUI.Label("Sync this project's SDK, then rebuild Game C++ and Game C#.");
+        EditorGUI.Label("Sync this project's SDK and VSCode C++ configuration, then rebuild Game C++ and Game C#.");
         EditorGUI.Separator();
 
         //切换普通网格的 CPU 动态合批

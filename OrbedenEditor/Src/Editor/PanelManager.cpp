@@ -18,9 +18,10 @@
 namespace
 {
     constexpr float32 MinPanelWidth = 120.0f;
-    //停靠投放只在面板靠边这条比例范围内生效，正中留给浮动
-    constexpr float32 DockEdgeRatio = 0.2f;
     constexpr float32 MinPanelHeight = 80.0f;
+    constexpr float32 MinVisibleTitleWidth = 64.0f;
+    constexpr float32 DockEdgeSize = 12.0f;
+    constexpr float32 RootDockEdgeSize = 8.0f;
     constexpr const char* PanelDragPayload = "ORBEDEN_PANEL";
 
     //转换为 ImGui 二维向量。
@@ -326,7 +327,7 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
     layout.panels.clear();
     layout.dockNodes.clear();
     layout.dockRoot = dockRoot;
-    for (const PanelEntry& entry : panels)
+    auto writePanel = [&layout](const PanelEntry& entry)
     {
         EditorPanelState state;
         state.id = entry.info.id;
@@ -340,6 +341,26 @@ void PanelManager::WriteLayout(EditorLayoutState& layout) const
         state.dockNode = entry.dockNode;
         state.returnDockNode = entry.returnDockNode;
         layout.panels.push_back(state);
+    };
+
+    //按标签顺序写出停靠面板
+    for (const DockNode& node : dockNodes)
+    {
+        for (const std::string& panelId : node.tabs)
+        {
+            const PanelEntry* entry = FindPanel(panelId.c_str());
+            if (entry && entry->dockNode == node.id)
+            {
+                writePanel(*entry);
+            }
+        }
+    }
+    for (const PanelEntry& entry : panels)
+    {
+        if (entry.dockNode < 0)
+        {
+            writePanel(entry);
+        }
     }
     for (const DockNode& node : dockNodes)
     {
@@ -460,7 +481,7 @@ void PanelManager::ApplyVisibility(PanelEntry& entry, bool visible)
     }
 }
 
-//限制面板停留在主窗口内。
+//限制浮动面板尺寸并保留可触达的标题栏
 void PanelManager::ClampPanel(PanelEntry& entry) const
 {
     if (!entry.hasPosition && !entry.hasSize) return;
@@ -494,10 +515,13 @@ bool PanelManager::ClampPanelRect(vector2& position, vector2& size) const
     size.x = std::clamp(size.x, std::min(MinPanelWidth, maxWidth), maxWidth);
     size.y = std::clamp(size.y, std::min(MinPanelHeight, maxHeight), maxHeight);
 
-    float32 minX = viewport->WorkPos.x;
+    //保留可触达的标题栏，窗口内容允许超出工作区
+    float32 visibleWidth = std::min(size.x, MinVisibleTitleWidth);
+    float32 titleHeight = std::min(size.y, ImGui::GetFrameHeight());
+    float32 minX = viewport->WorkPos.x - size.x + visibleWidth;
     float32 minY = viewport->WorkPos.y;
-    float32 maxX = viewport->WorkPos.x + std::max(0.0f, viewport->WorkSize.x - size.x);
-    float32 maxY = viewport->WorkPos.y + std::max(0.0f, viewport->WorkSize.y - size.y);
+    float32 maxX = viewport->WorkPos.x + std::max(0.0f, viewport->WorkSize.x - visibleWidth);
+    float32 maxY = viewport->WorkPos.y + std::max(0.0f, viewport->WorkSize.y - titleHeight);
     position.x = std::clamp(position.x, minX, maxX);
     position.y = std::clamp(position.y, minY, maxY);
 
@@ -666,7 +690,7 @@ void PanelManager::DrawRootDockTarget(const vector2& position, const vector2& si
     const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
     if (!activePayload || !activePayload->IsDataType(PanelDragPayload)) return;
 
-    PanelDockPlacement placement = GetDockPlacement(position, size, 0.12f);
+    PanelDockPlacement placement = GetDockPlacement(position, size, RootDockEdgeSize);
     if (!IsRootDockPlacement(placement)) return;
 
     ImGui::SetCursorScreenPos(ToImVec2(position));
@@ -808,6 +832,10 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
     std::string closePanel;
     bool floatActive = false;
     bool detachActive = false;
+    ImVec2 tabBarMin;
+    ImVec2 tabBarMax;
+    int32 tabInsertIndex = -1;
+    float32 tabInsertX = 0.0f;
     if (!node.tabs.empty())
     {
         PanelEntry* activeEntry = FindPanel(node.activePanel.c_str());
@@ -834,6 +862,10 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
             ImGui::BeginChild("##PanelTabs", ImVec2(tabWidthAvailable, closeWidth), ImGuiChildFlags_None, ImGuiWindowFlags_NoScrollbar);
             ImGui::PopStyleVar();
+            tabBarMin = ImGui::GetWindowPos();
+            tabBarMax = ImVec2(tabBarMin.x + tabWidthAvailable, tabBarMin.y + closeWidth);
+            tabInsertIndex = 0;
+            tabInsertX = tabBarMin.x;
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1.0f, 2.0f));
             bool drewTab = false;
             for (std::size_t index = 0; index < node.tabs.size(); index++)
@@ -852,6 +884,11 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
 
                 //自绘标签：条底为卡片色，悬停上色，选中用面板底色挖出来并在顶部压一条强调线
                 ImVec2 tabMax(tabMin.x + tabWidth, tabMin.y + tabHeight);
+                if (ImGui::GetIO().MousePos.x >= (tabMin.x + tabMax.x) * 0.5f)
+                {
+                    tabInsertIndex = static_cast<int32>(index) + 1;
+                    tabInsertX = tabMax.x;
+                }
                 ImDrawList* tabList = ImGui::GetWindowDrawList();
                 float32 tabRounding = EditorGUI::GetPanelCornerRadius();
                 if (selected)
@@ -887,7 +924,6 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
                 {
                     draggedPanel = entry->info.id;
                     ImGui::SetDragDropPayload(PanelDragPayload, entry->info.id.c_str(), entry->info.id.size() + 1);
-                    ImGui::TextUnformatted(entry->info.title.c_str());
                     ImGui::EndDragDropSource();
                 }
                 drewTab = true;
@@ -923,27 +959,22 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
 
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    PanelDockPlacement rootPlacement = PanelDockPlacement::Center;
-    if (viewport)
-    {
-        rootPlacement = GetDockPlacement(ToVector2(viewport->WorkPos), ToVector2(viewport->WorkSize), 0.12f);
-    }
+    PanelDockPlacement rootPlacement = GetDockPlacement(dockAreaPosition, dockAreaSize, RootDockEdgeSize);
     ImVec2 mouse = ImGui::GetIO().MousePos;
     bool mergeOnTabBar = !fixedLeaf && !node.tabs.empty()
-        && mouse.x >= position.x
-        && mouse.x <= position.x + size.x
-        && mouse.y >= position.y
-        && mouse.y <= position.y + ImGui::GetFrameHeight() + 8.0f;
+        && mouse.x >= tabBarMin.x
+        && mouse.x < tabBarMax.x
+        && mouse.y >= tabBarMin.y
+        && mouse.y < tabBarMax.y;
     const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
     if (mergeOnTabBar && activePayload && activePayload->IsDataType(PanelDragPayload)) tabMergeTargetHovered = true;
 
     if ((mergeOnTabBar || !IsRootDockPlacement(rootPlacement)) && ImGui::BeginDragDropTarget())
     {
-        //只接受标签栏与靠边一圈的投放，正中区域不响应，浮动面板才不会一拖就停靠
+        //选择标签插入位置或窄边缘停靠目标
         PanelDockPlacement placement = mergeOnTabBar
             ? PanelDockPlacement::Center
-            : GetDockPlacement(position, size, DockEdgeRatio);
+            : GetDockPlacement(position, size, DockEdgeSize);
         bool dockable = mergeOnTabBar || placement != PanelDockPlacement::Center;
         const ImGuiPayload* payload = dockable
             ? ImGui::AcceptDragDropPayload(PanelDragPayload,
@@ -951,15 +982,21 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
             : nullptr;
         if (payload)
         {
-            //固定工作区面板只接受四边拆分，不接受并入为标签页
-            if (fixedLeaf && placement == PanelDockPlacement::Center) placement = PanelDockPlacement::Left;
-            DrawDockPreview(position, size, placement);
+            vector2 previewSize = { visualMax.x - visualMin.x, visualMax.y - visualMin.y };
+            DrawDockPreview(visualMin, previewSize, placement);
+            if (mergeOnTabBar)
+            {
+                float32 markerX = std::clamp(tabInsertX, tabBarMin.x, tabBarMax.x);
+                ImGui::GetForegroundDrawList()->AddLine(ImVec2(markerX, tabBarMin.y),
+                    ImVec2(markerX, tabBarMax.y), EditorGUI::GetActiveColor(), 3.0f);
+            }
             if (payload->IsDelivery())
             {
                 pendingDock.pending = true;
                 pendingDock.panelId = static_cast<const char*>(payload->Data);
                 pendingDock.targetNode = node.id;
                 pendingDock.placement = placement;
+                pendingDock.tabIndex = mergeOnTabBar ? tabInsertIndex : -1;
                 draggedPanel.clear();
             }
         }
@@ -986,21 +1023,42 @@ void PanelManager::DrawDockLeaf(DockNode& node, const vector2& position, const v
 }
 
 //根据鼠标到矩形四边的距离选择停靠方向。
-PanelDockPlacement PanelManager::GetDockPlacement(const vector2& position, const vector2& size, float32 edgeRatio) const
+PanelDockPlacement PanelManager::GetDockPlacement(const vector2& position, const vector2& size, float32 edgeSize) const
 {
-    if (size.x <= 0.0f || size.y <= 0.0f) return PanelDockPlacement::Center;
+    if (size.x <= 0.0f || size.y <= 0.0f)
+    {
+        return PanelDockPlacement::Center;
+    }
 
-    float32 x = std::clamp((ImGui::GetIO().MousePos.x - position.x) / size.x, 0.0f, 1.0f);
-    float32 y = std::clamp((ImGui::GetIO().MousePos.y - position.y) / size.y, 0.0f, 1.0f);
+    float32 x = ImGui::GetIO().MousePos.x - position.x;
+    float32 y = ImGui::GetIO().MousePos.y - position.y;
+    if (x < 0.0f || y < 0.0f || x >= size.x || y >= size.y)
+    {
+        return PanelDockPlacement::Center;
+    }
+
     float32 left = x;
-    float32 right = 1.0f - x;
+    float32 right = size.x - x;
     float32 top = y;
-    float32 bottom = 1.0f - y;
+    float32 bottom = size.y - y;
     float32 nearest = std::min(std::min(left, right), std::min(top, bottom));
-    if (nearest >= edgeRatio) return PanelDockPlacement::Center;
-    if (nearest == left) return PanelDockPlacement::Left;
-    if (nearest == right) return PanelDockPlacement::Right;
-    if (nearest == top) return PanelDockPlacement::Top;
+    float32 bandSize = std::min(edgeSize, std::min(size.x, size.y) * 0.15f);
+    if (nearest >= bandSize)
+    {
+        return PanelDockPlacement::Center;
+    }
+    if (nearest == left)
+    {
+        return PanelDockPlacement::Left;
+    }
+    if (nearest == right)
+    {
+        return PanelDockPlacement::Right;
+    }
+    if (nearest == top)
+    {
+        return PanelDockPlacement::Top;
+    }
     return PanelDockPlacement::Bottom;
 }
 
@@ -1009,7 +1067,8 @@ void PanelManager::DrawDockPreview(const vector2& position, const vector2& size,
 {
     ImVec2 min(position.x, position.y);
     ImVec2 max(position.x + size.x, position.y + size.y);
-    constexpr float32 previewRatio = 0.35f;
+    const PanelEntry* dragged = FindPanel(draggedPanel.c_str());
+    float32 previewRatio = dragged ? std::clamp(dragged->info.defaultDockRatio, 0.1f, 0.9f) : 0.35f;
     switch (placement)
     {
         case PanelDockPlacement::Left: max.x = min.x + size.x * previewRatio; break;
@@ -1017,10 +1076,10 @@ void PanelManager::DrawDockPreview(const vector2& position, const vector2& size,
         case PanelDockPlacement::Top: max.y = min.y + size.y * previewRatio; break;
         case PanelDockPlacement::Bottom: min.y = max.y - size.y * previewRatio; break;
         case PanelDockPlacement::Center:
-            min.x += size.x * 0.18f;
-            min.y += size.y * 0.18f;
-            max.x -= size.x * 0.18f;
-            max.y -= size.y * 0.18f;
+            min.x += std::min(3.0f, size.x * 0.1f);
+            min.y += std::min(3.0f, size.y * 0.1f);
+            max.x -= std::min(3.0f, size.x * 0.1f);
+            max.y -= std::min(3.0f, size.y * 0.1f);
             break;
         default: return;
     }
@@ -1051,7 +1110,7 @@ void PanelManager::ApplyPendingCommands()
 {
     if (pendingDock.pending)
     {
-        DockPanel(pendingDock.panelId, pendingDock.targetNode, pendingDock.placement);
+        DockPanel(pendingDock.panelId, pendingDock.targetNode, pendingDock.placement, pendingDock.tabIndex);
         pendingDock = PendingDockCommand();
     }
 
@@ -1340,7 +1399,7 @@ void PanelManager::DrawFloatingOsPanel(PanelEntry& entry)
 }
 
 //将面板放入标签区或在目标边缘创建新分区。
-void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, PanelDockPlacement placement)
+void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, PanelDockPlacement placement, int32 tabIndex)
 {
     PanelEntry* entry = FindPanel(panelId.c_str());
     DockNode* target = FindDockNode(targetNodeId);
@@ -1366,7 +1425,7 @@ void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, Pan
         if (NodeHostsFixedPanel(*target)) placement = PanelDockPlacement::Left;
     }
 
-    if (entry->dockNode == targetNodeId && placement == PanelDockPlacement::Center)
+    if (entry->dockNode == targetNodeId && placement == PanelDockPlacement::Center && tabIndex < 0)
     {
         target->activePanel = panelId;
         return;
@@ -1376,14 +1435,27 @@ void PanelManager::DockPanel(const std::string& panelId, int32 targetNodeId, Pan
         return;
     }
 
+    //把投放位置转换为移除源标签后的插入位置
+    if (placement == PanelDockPlacement::Center && tabIndex >= 0)
+    {
+        tabIndex = std::min(tabIndex, static_cast<int32>(target->tabs.size()));
+        auto source = std::find(target->tabs.begin(), target->tabs.end(), panelId);
+        if (source != target->tabs.end() && source - target->tabs.begin() < tabIndex)
+        {
+            tabIndex--;
+        }
+    }
+
     int32 oldNode = entry->dockNode;
+    entry->moving = false;
     RemovePanelFromDock(panelId);
     target = FindDockNode(targetNodeId);
     if (!target) return;
 
     if (placement == PanelDockPlacement::Center)
     {
-        if (std::find(target->tabs.begin(), target->tabs.end(), panelId) == target->tabs.end()) target->tabs.push_back(panelId);
+        auto insertion = tabIndex < 0 ? target->tabs.end() : target->tabs.begin() + tabIndex;
+        target->tabs.insert(insertion, panelId);
         target->activePanel = panelId;
         entry->dockNode = targetNodeId;
         if (oldNode >= 0 && oldNode != targetNodeId) CompactDockNode(oldNode);

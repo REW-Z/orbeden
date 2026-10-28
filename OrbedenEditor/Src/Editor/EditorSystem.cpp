@@ -847,11 +847,10 @@ void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std:
     SetDialogDirectory(project.GetProjectRoot());
     projectStatus = successLabel + ": " + project.GetProjectRoot();
 
-    std::string runtimeSyncError;
-    if (!SyncProjectRuntimeCSharpDll(runtimeSyncError))
+    std::string sdkSyncError;
+    if (!SyncProjectSdk(sdkSyncError))
     {
-        projectStatus += " Core C# sync failed: " + runtimeSyncError;
-        Log::Warning(runtimeSyncError.c_str());
+        Log::Warning(sdkSyncError.c_str());
     }
 
     if (!BuildNativeGameModule(false))
@@ -868,6 +867,10 @@ void EditorSystem::FinishProjectLoad(const std::string& successLabel, const std:
     ApplyEditorLayout();
     ApplyEditorGuiConfig();
     RefreshInspectorGameAssembly();
+    if (!sdkSyncError.empty())
+    {
+        projectStatus += " SDK sync failed: " + sdkSyncError;
+    }
 }
 
 //请求应用项目里的编辑器外观配置；实际重建在下一帧开头
@@ -1103,19 +1106,11 @@ void EditorSystem::UpdateProjectSdk()
     else if (scriptBuildRunning) projectStatus = "Wait for the script build to finish before updating the SDK.";
     else
     {
-        try
-        {
-            std::string csproj = GetProjectScriptProjectPath();
-            std::string error;
-            if (csproj.empty()) projectStatus = "No C# project found in script root.";
-            else if (!NewProjectGenerator::SyncRuntimeCSharpDll(csproj, FindRuntimeCSharpDll(), error)) projectStatus = error;
-            else
-            {
-                succeeded = true;
-                projectStatus = "SDK updated. Rebuild Game C++ and Game C# to refresh the game modules.";
-            }
-        }
-        catch (const std::exception& exception) { projectStatus = "Update SDK failed: " + std::string(exception.what()); }
+        std::string error;
+        succeeded = SyncProjectSdk(error);
+        projectStatus = succeeded
+            ? "SDK and VSCode C++ configuration updated. Rebuild Game C++ and Game C# to refresh the game modules."
+            : "Update SDK failed: " + error;
     }
     if (succeeded) Log::Info(projectStatus.c_str());
     else Log::Error(projectStatus.c_str());
@@ -2112,37 +2107,47 @@ std::string EditorSystem::FindRuntimeCSharpDll() const
     return std::string();
 }
 
-//Debug模式下同步Core C#运行库到当前游戏项目
-bool EditorSystem::SyncProjectRuntimeCSharpDll(std::string& outError) const
+//同步当前项目的 SDK 引用与 VSCode 配置
+bool EditorSystem::SyncProjectSdk(std::string& outError) const
 {
     outError.clear();
-#if defined(NDEBUG)
-    return true;
-#else
-    if (!project.HasProject()) return true;
-
-    std::string runtimeDll = FindRuntimeCSharpDll();
-    if (runtimeDll.empty())
+    if (!project.HasProject())
     {
-        outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
-        return false;
+        return true;
     }
 
-    std::string scriptProject = GetProjectScriptProjectPath();
-    if (scriptProject.empty())
+    try
     {
-        outError = "Project script project is empty.";
+        //定位当前 Editor 的 SDK 与游戏工程
+        std::string runtimeDll = FindRuntimeCSharpDll();
+        if (runtimeDll.empty())
+        {
+            outError = "OrbedenCore.CSharp.dll was not found. Build OrbedenCore.vcxproj first.";
+            return false;
+        }
+
+        std::string scriptProject = GetProjectScriptProjectPath();
+        if (scriptProject.empty())
+        {
+            outError = "Project script project is empty.";
+            return false;
+        }
+
+        //同步 SDK 引用与代码提示配置
+        if (!NewProjectGenerator::SyncRuntimeCSharpDll(scriptProject, runtimeDll, outError)
+            || !NewProjectGenerator::WriteVSCodeConfiguration(scriptProject, runtimeDll, outError))
+        {
+            return false;
+        }
+
+        Log::Info(("Synchronized project SDK: " + ToCleanPath(InteropText::PathFromUtf8(scriptProject).parent_path() / "Lib")).c_str());
+        return true;
+    }
+    catch (const std::exception& exception)
+    {
+        outError = exception.what();
         return false;
     }
-
-    if (!RefreshLocalRuntimeDllReference(scriptProject, runtimeDll, outError))
-    {
-        return false;
-    }
-
-    Log::Info(("Synchronized Core C# runtime: " + ToCleanPath(InteropText::PathFromUtf8(scriptProject).parent_path() / "Lib")).c_str());
-    return true;
-#endif
 }
 
 //获取 Play/Inspector 需要复制的托管依赖目录

@@ -20,6 +20,9 @@ namespace NewProjectGenerator
     //同步 Core C# 运行库与游戏构建配置
     bool SyncRuntimeCSharpDll(const std::string& scriptProjectPath, const std::string& runtimeDllPath, std::string& outError);
 
+    //生成当前 SDK 的 VSCode C++ 配置
+    bool WriteVSCodeConfiguration(const std::string& scriptProjectPath, const std::string& runtimeDllPath, std::string& outError);
+
     //修复并迁移脚本工程的 MSBuild 配置。
     bool RepairScriptProjectBuildProps(const std::string& scriptProjectPath, std::string& outError);
 

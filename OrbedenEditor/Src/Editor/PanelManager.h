@@ -58,6 +58,7 @@ private:
         std::string panelId;
         int32 targetNode = -1;
         PanelDockPlacement placement = PanelDockPlacement::Center;
+        int32 tabIndex = -1;
     };
 
     struct PendingFloatCommand
@@ -159,7 +160,7 @@ private:
         const vector2& visualMin, const vector2& visualMax);
     void DrawDockLeaf(DockNode& node, const vector2& position, const vector2& size,
         const vector2& visualMin, const vector2& visualMax);
-    PanelDockPlacement GetDockPlacement(const vector2& position, const vector2& size, float32 edgeRatio) const;
+    PanelDockPlacement GetDockPlacement(const vector2& position, const vector2& size, float32 edgeSize) const;
     void DrawDockPreview(const vector2& position, const vector2& size, PanelDockPlacement placement) const;
     bool IsRootDockPlacement(PanelDockPlacement placement) const;
     void ApplyPendingCommands();
@@ -169,7 +170,7 @@ private:
     void CreateFloatingOsWindow(PanelEntry& entry);
     void DestroyFloatingOsWindow(PanelEntry& entry);
     bool ClampScreenRect(vector2& position, vector2& size) const;
-    void DockPanel(const std::string& panelId, int32 targetNode, PanelDockPlacement placement);
+    void DockPanel(const std::string& panelId, int32 targetNode, PanelDockPlacement placement, int32 tabIndex = -1);
     void RemovePanelFromDock(const std::string& panelId);
     void CompactDockNode(int32 nodeId);
     int32 FindDockParent(int32 nodeId) const;

@@ -40,7 +40,9 @@ Windows Editor 开发需要：
 
 `Content/Examples/` 更新不动。要把它同步成模板版本，用 Dev 面板的 `Reset Examples`（同样是镜像语义，会覆盖你在其中的修改），或手工复制模板文件后重新导入资源。
 
-引擎 SDK 已构建后，可在 `Views > Dev` 面板点击 `Update SDK`，将当前 SDK 的 Core C# 运行库、绑定构建转发文件和 SDK 路径同步到游戏工程的 `Lib/`。结果显示在 Dev 面板和 Console。同步只更新 SDK 引用，保留项目内容；完成后通过 Build Game 面板重新构建游戏 C++ 和 C# 模块。Play 或脚本构建期间禁止同步，SDK 缺失时会提示先构建 Core。
+每次打开或新建项目时，Debug 和 Release Editor 都会验证当前 Editor 的 SDK，并将 Core C# 运行库、绑定构建转发文件和 SDK 路径同步到游戏工程的 `Lib/`，同时生成或刷新 `.vscode/c_cpp_properties.json`。SDK 路径缺失或仍指向其他安装位置时会自动修正，内容相同的路径和配置文件不重写。SDK 缺失或同步失败时会在 Console 和项目状态中报告。也可在 `Views > Dev` 面板点击 `Update SDK` 手动重新同步。
+
+VSCode 配置由引擎维护，包含 SDK 和第三方头文件路径、C++20、Windows x64 MSVC 模式与 Debug 宏；编译器由 VSCode 的微软 C/C++ 扩展自动检测。首次覆盖已有自定义配置时，原文件保存为同目录的 `c_cpp_properties.json.bak`。同步更新 SDK 引用和开发配置，保留项目内容；完成后通过 Build Game 面板重新构建游戏 C++ 和 C# 模块。Play 或脚本构建期间禁止手动同步。
 
 ### 项目目录
 

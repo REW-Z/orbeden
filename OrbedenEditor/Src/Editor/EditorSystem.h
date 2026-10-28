@@ -273,8 +273,8 @@ private:
 
     std::string FindRuntimeCSharpDll() const;
 
-    //Debug模式下同步Core C#运行库到当前游戏项目
-    bool SyncProjectRuntimeCSharpDll(std::string& outError) const;
+    //同步当前项目的 SDK 引用与 VSCode 配置
+    bool SyncProjectSdk(std::string& outError) const;
 
     //获取 Play/Inspector 需要复制的托管依赖目录
     List<std::string> GetManagedDependencyDirectories() const;

@@ -150,9 +150,9 @@ Windows x64 Editor/PIE 使用 CLR；Player 的 Core/Game C# 使用目标平台 N
 
 2. **构建 Editor**：构建同配置的 `OrbedenEditor.vcxproj`，生成 `OrbedenEditor.exe` 与 `Managed/Orbeden.Editor.dll`，同时复制 GLFW、nethost 和 runtimeconfig。Editor 仅支持 Windows x64。
 
-   SDK 已构建后，可在 Editor 的 Dev 面板点击 `Update SDK`，手动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Game.targets` 和 `Lib/OrbedenSdk.path`，同时将脚本工程导入迁移到新的共享游戏构建目标并删除旧转发文件；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。该操作不依赖项目版本差异，保留 `Content/`，不执行编译或内容重置。结果显示在 Dev 面板和 Console，完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
+   每次打开或新建项目时，Debug 和 Release Editor 都会验证当前 Editor 的 SDK，并自动刷新当前游戏工程 `Lib/OrbedenCore.CSharp.dll`、`Lib/Orbeden.Game.targets` 和 `Lib/OrbedenSdk.path`，同时将脚本工程导入迁移到新的共享游戏构建目标并删除旧转发文件；原生头文件、库与 MetaGen 工具继续通过 SDK 路径引用。也可在 Dev 面板点击 `Update SDK` 手动执行同一同步流程。同步还会生成或刷新 `.vscode/c_cpp_properties.json`，写入当前 SDK 和第三方头文件路径、C++20、Windows x64 MSVC 模式与 Debug 宏，编译器由微软 C/C++ 扩展自动检测。配置由引擎维护，首次覆盖自定义配置前备份为 `c_cpp_properties.json.bak`，内容未变时不重写路径和配置文件。同步保留 `Content/`，不执行内容重置；自动同步发生在项目加载后的原生模块检查之前，手动同步本身不执行编译。结果显示在项目状态和 Console，手动同步完成后通过 `Build Game C++`、`Build Game C#` 重建游戏模块。
 
-3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；最新 Core C# DLL 会覆盖到 `{ProjectRoot}/Lib/`。按 `Ctrl+R` 或点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。脚本构建在后台进程里跑，构建期间编辑器不冻结。
+3. **Debug 验证（可选）**：用 Debug Editor 打开 `.oeproj`；当前 Editor 的 SDK 引用与 VSCode 配置会自动同步到项目，Release Editor 同样执行此检查。按 `Ctrl+R` 或点击 `Build Game C#` 生成 `{ProjectRoot}/Build/Managed/{AssemblyName}.dll`，用于 Inspector 和 PIE。脚本构建在后台进程里跑，构建期间编辑器不冻结。
 
 4. **Release Player**：用 Release Editor 选择 `Target Platform` 并点击 `Build Player`。Editor 先将 Core/Game C# 发布为目标平台 NativeAOT 库，再以 MSBuild 构建 `OrbedenGame.vcxproj`：该工程编译游戏 C++ 源码，链接 SDK 预编译的 `OrbedenCoreStatic.lib`、第三方静态库与 AOT 导入库，并把 AOT DLL、`glfw3.dll` 拷贝到输出目录 `{ProjectRoot}/Build/windows-x64/bin/`。**Player 不编译 Core 源码**：SDK 静态库缺失时构建直接失败并提示重新构建 `OrbedenCore.vcxproj`，不会回退到源码编译。
 
@@ -573,6 +573,18 @@ if (FileSystem::ReadRawContent("Data/settings.json", content))
 内容根之外按定义不含用户内容；glob 只排除原始内容目录及独立编译的 Editor 脚本。这些通配符会让 Visual Studio 对工程给出通配符警告，只影响 IDE 设计时行为，不影响构建——编辑器构建游戏模块走命令行 MSBuild。
 
 ### 引擎更新与项目同步
+
+#### 版本 111：打开项目时自动同步 SDK
+
+打开、新建和更新后重新加载项目时，Debug 与 Release Editor 都验证当前 Editor 的 SDK，并同步 `Lib/OrbedenSdk.path`、Core C# 运行库、共享构建入口及 VSCode 配置。移除 Release 跳过同步及按 C# 引用文本跳过同步的限制，SDK 缺失或文件操作异常按同步失败报告；原生 SDK 的头文件目录与共享构建属性表也纳入检查。Dev 面板 `Update SDK` 复用同一入口。
+
+重建原生 Editor 后重新打开项目；无需手动点击 Update SDK 来修复 SDK 路径，无场景、资源或 ABI 迁移。已通过 Debug／Release 原生编译检查，并调用实际 SDK 同步代码验证路径文件缺失、旧路径修复、重复同步保留时间戳、SDK 搬移及中文／空格路径、不完整原生 SDK 报错。未重启运行中的 Editor，未执行项目打开与面板点击冒烟测试。
+
+#### 版本 110：Update SDK 生成 VSCode 配置
+
+Dev 面板的 `Update SDK` 在同步 SDK 成功后生成或刷新游戏项目的 `.vscode/c_cpp_properties.json`，包含 SDK、第三方头文件搜索目录和 Windows x64 Debug 的 C++20 解析设置。首次接管自定义配置前备份原文件；配置内容不变时保留文件时间戳，生成失败按更新失败报告。
+
+重建原生与托管 Editor 后点击 Update SDK；无需重置 Builtin／Examples，无场景、资源或 ABI 迁移。已通过原生 Editor 编译、托管 Editor 构建和真实 Engine.cpp 的配置编译检查，并验证重复生成、旧配置备份、中文与空格路径、SDK 缺失及目录写入失败的处理。未重启运行中的 Editor，未执行面板点击冒烟测试。
 
 #### 版本 109：预制体根节点 Header 覆盖
 
